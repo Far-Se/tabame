@@ -55,7 +55,7 @@ class _TaskbarState extends State<Taskbar> {
       } else {
         _iconCache[win.hWnd] = await getWindowIcon(win.hWnd); //  await nativeIconToBytes(win.process.path + win.process.exe);
       }
-      if (!(_iconCache[win.hWnd]!.any((element) => element != 204))) {
+      if (!win.isAppx && _iconCache.containsKey(win.hWnd) && !(_iconCache[win.hWnd]!.any((element) => element != 204))) {
         _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
       }
     }
@@ -67,7 +67,7 @@ class _TaskbarState extends State<Taskbar> {
       if (currentHeight < lastHeight) {
         Future.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, currentHeight + 100)));
       } else {
-        await windowManager.setSize(Size(300, currentHeight + 100));
+        await windowManager.setSize(Size(300, currentHeight + 150));
         // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height.clamp(100, 1000) + 100));
         // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height + 100));
         // MediaQuery.of(context).size.height;
@@ -143,7 +143,7 @@ class _TaskbarState extends State<Taskbar> {
                             height: 3,
                             color: Theme.of(context).dividerColor,
                           ),
-                        //#h
+                        //#h white
                         MouseRegion(
                           onEnter: (e) {
                             setState(() {
@@ -161,7 +161,8 @@ class _TaskbarState extends State<Taskbar> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 mainAxisAlignment: MainAxisAlignment.start,
 
-                                //#h
+                                //#h black
+
                                 children: [
                                   InkWell(
                                     onTap: () {
@@ -232,7 +233,7 @@ class _TaskbarState extends State<Taskbar> {
                                   right: 0,
                                   bottom: 1,
                                   //width: _audioMixer.contains(window.process.pId) ? 75 : 25,
-                                  width: (["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : 25,
+                                  width: (["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : (_audioMixerExes.contains(window.process.exe) ? 50 : 25),
                                   child: Container(
                                     color: Theme.of(context).scaffoldBackgroundColor,
                                     width: 100,
@@ -256,6 +257,13 @@ class _TaskbarState extends State<Taskbar> {
                                                   child: const SizedBox(width: 25, height: 25, child: Icon(Icons.skip_next, size: 15)),
                                                 ),
                                               ],
+                                            ),
+                                          if (_audioMixerExes.contains(window.process.exe) && !["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                            InkWell(
+                                              onTap: () {
+                                                windows.mediaControl(index);
+                                              },
+                                              child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
                                             ),
                                           InkWell(
                                             onTap: () {
