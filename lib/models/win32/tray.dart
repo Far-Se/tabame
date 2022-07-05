@@ -17,18 +17,19 @@ class TrayBarInfo extends TrayInfo {
 }
 
 class Tray {
-  static List<TrayBarInfo> tray = <TrayBarInfo>[];
+  static List<TrayBarInfo> trayList = <TrayBarInfo>[];
+  static bool newTray = false;
+  static Future<bool> fetchTray() async {
+    final winTray = await enumTrayIcons();
 
-  static Future<List<TrayBarInfo>> fetchTray() async {
-    final newTray = await enumTrayIcons();
-
-    if (newTray.length == tray.length) {
-      return tray;
+    if (winTray.length == trayList.length) {
+      newTray = false;
+      return newTray;
     }
+    newTray = true;
+    trayList.clear();
 
-    tray.clear();
-
-    for (var element in newTray) {
+    for (var element in winTray) {
       String processPath = HwndPath().getWindowExePath(element.hWnd);
       String exe = Win32.getExe(processPath);
 
@@ -50,8 +51,8 @@ class Tray {
         trayInfo.executionType = box.executionType;
       }
 
-      tray.add(trayInfo);
+      trayList.add(trayInfo);
     }
-    return tray;
+    return newTray;
   }
 }

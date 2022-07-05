@@ -1,5 +1,4 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, non_constant_identifier_names
-// ignore_for_file: avoid_print
 
 import 'dart:async';
 import 'dart:ffi' hide Size;
@@ -266,7 +265,6 @@ class WinUtils {
     free(ppszPath);
     path += "\\Taskbar";
     final allContents = await Directory(path).list().where((event) => event.path.endsWith(".lnk")).length;
-    print(allContents);
     List<String> commands = <String>[
       "\$WScript = New-Object -ComObject WScript.Shell;",
       "Get-ChildItem -Path \"$path\" | ForEach-Object {\$WScript.CreateShortcut(\$_.FullName).TargetPath};",
@@ -282,12 +280,15 @@ class WinUtils {
       ['-NoProfile', ...commands],
     );
     if (result.stderr != '') {
-      print(result.stderr);
       return <String>[];
     }
     var output = result.stdout.toString().trim().split('\n').map((e) => e.trim()).toList();
 
     return output;
+  }
+
+  static void openLink(String link) {
+    ShellExecute(NULL, TEXT("open"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
   }
 }
 

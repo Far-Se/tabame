@@ -371,6 +371,7 @@ float getVolume(EDataFlow deviceType = eRender)
     }
     return 0.0;
 }
+
 bool registerNotificationCallback(EDataFlow deviceType = eRender)
 {
     std::vector<DeviceProps> output;
@@ -391,9 +392,9 @@ bool registerNotificationCallback(EDataFlow deviceType = eRender)
     }
     return 0.0;
 }
+
 bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
 {
-    std::vector<DeviceProps> output;
 
     HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
     if (SUCCEEDED(hr))
@@ -422,6 +423,38 @@ bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
         }
     }
     return true;
+}
+bool getMuteAudioDevice(EDataFlow deviceType = eRender)
+{
+    BOOL muteState = false;
+
+    HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+    if (SUCCEEDED(hr))
+    {
+        IMMDeviceEnumerator *pEnumerator = NULL;
+        hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, reinterpret_cast<void **>(&pEnumerator));
+        if (SUCCEEDED(hr))
+        {
+            IMMDevice *pActive = NULL;
+
+            pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+            DeviceProps activeDevice;
+            getDeviceProperty(pActive, &activeDevice);
+            LPWSTR aid;
+            pActive->GetId(&aid);
+            activeDevice.id = aid;
+
+            IAudioEndpointVolume *m_spVolumeControl = NULL;
+            hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
+            if (SUCCEEDED(hr))
+            {
+                m_spVolumeControl->GetMute(&muteState);
+                m_spVolumeControl->Release();
+                pActive->Release();
+            }
+        }
+    }
+    return muteState;
 }
 bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
 {
@@ -458,7 +491,7 @@ bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
     return true;
 }
 
-static int switchDefaultDevice(EDataFlow deviceType = eRender)
+static bool switchDefaultDevice(EDataFlow deviceType = eRender)
 {
     std::vector<DeviceProps> result = EnumAudioDevices(deviceType);
     if (!result.empty())
@@ -477,9 +510,9 @@ static int switchDefaultDevice(EDataFlow deviceType = eRender)
         if (activateID == L"x" || activateID == L"")
             activateID = result[0].id;
         setDefaultDevice((LPWSTR)activateID.c_str());
-        return 1;
+        return true;
     }
-    return 0;
+    return false;
 }
 
 ///? Audio Session
@@ -746,12 +779,19 @@ namespace tabamewin32
             setMuteAudioDevice(state, (EDataFlow)deviceType);
             result->Success(flutter::EncodableValue((int)1));
         }
+        else if (method_call.method_name().compare("getMuteAudioDevice") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
+            bool muteState = getMuteAudioDevice((EDataFlow)deviceType);
+            result->Success(flutter::EncodableValue(muteState));
+        }
         else if (method_call.method_name().compare("switchDefaultDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
-            int nativeFuncResult = switchDefaultDevice((EDataFlow)deviceType);
-            result->Success(flutter::EncodableValue((double)nativeFuncResult));
+            bool nativeFuncResult = switchDefaultDevice((EDataFlow)deviceType);
+            result->Success(flutter::EncodableValue(nativeFuncResult));
         }
         //? AudioMixer
         else if (method_call.method_name().compare("enumAudioMixer") == 0)

@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import '../containers/two_sides.dart';
 import 'time_widget.dart';
 import 'weather_widget.dart';
 
@@ -9,12 +8,19 @@ class TimeWeatherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TwoSides(
-      left: TimeWidget(),
-      right: WeatherWidget(),
-      leftWidth: 95,
-      rightWidht: 30,
-      mainAxisAlignment: MainAxisAlignment.start,
+    return Container(
+      width: 100,
+      constraints: BoxConstraints(minWidth: 0, maxWidth: 100),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        verticalDirection: VerticalDirection.down,
+        children: [
+          TimeWidget(),
+          // Spacer(),
+          WeatherWidget(),
+        ],
+      ),
     );
   }
 }

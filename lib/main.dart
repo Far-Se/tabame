@@ -17,7 +17,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
   final locale = Platform.localeName.substring(0, 2);
-  print(locale);
   Intl.systemLocale = await findSystemLocale();
   await initializeDateFormatting(locale);
   //

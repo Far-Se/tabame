@@ -34,9 +34,6 @@ class _TaskbarState extends State<Taskbar> {
   late Timer mainTimer;
 
   Future<void> handleIcons() async {
-    // print(_iconCache[1114754]);
-    // print(_iconCache[265566]);
-    // WinUtils.getTaskbarPinnedApps().then((e) => print(e));
     if (windows.list.length != _iconCache.length) {
       _iconCache.removeWhere((key, value) => !windows.list.any((w) => w.hWnd == key));
     }
@@ -215,7 +212,7 @@ class _TaskbarState extends State<Taskbar> {
                                             child: Padding(
                                               padding: const EdgeInsets.symmetric(horizontal: 4),
                                               child: Text(
-                                                "${window.hWnd} ${window.title.toString()}",
+                                                "${window.title.toString()}",
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -276,7 +273,6 @@ class _TaskbarState extends State<Taskbar> {
                                               fetchWindows();
                                             },
                                             onLongPress: () {
-                                              print("force closed ${window.hWnd}.");
                                               Win32.closeWindow(window.hWnd, forced: true);
                                             },
                                             child: const SizedBox(width: 25, height: 25, child: Icon(Icons.close, size: 15)),

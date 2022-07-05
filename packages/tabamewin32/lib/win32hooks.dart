@@ -1,5 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-// ignore_for_file: avoid_print, non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';

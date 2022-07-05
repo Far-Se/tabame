@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../itzy/audio_button.dart';
 import '../itzy/simulate_key_button.dart';
 import 'bar_with_buttons.dart';
 
@@ -23,17 +24,21 @@ class TopBar extends StatelessWidget {
                 },
                 child: Icon(Icons.close),
               ),
-              SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.red),
+              SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.grey.shade300),
+              AudioButton(),
             ],
           )),
-          SizedBox(
-            width: 50,
-            child: BarWithButtons(
-              children: [
-                SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.red),
-                SimulateKeyButton(icon: Icons.settings, simulateKeys: "{#WIN}", color: Colors.red),
-              ],
-              withScroll: false,
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 50,
+              child: BarWithButtons(
+                children: [
+                  SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.grey.shade300),
+                  SimulateKeyButton(icon: Icons.settings, simulateKeys: "{#WIN}", color: Colors.grey.shade300),
+                ],
+                withScroll: false,
+              ),
             ),
           )
         ],
