@@ -55,7 +55,10 @@ std::vector<TrayIconData> EnumSystemTray()
         }
     }
 
-    assert(bFound);
+    if (!bFound)
+    {
+        return std::vector<TrayIconData>{};
+    }
 
     DWORD dwTrayPid;
     GetWindowThreadProcessId(trayWnd, &dwTrayPid);

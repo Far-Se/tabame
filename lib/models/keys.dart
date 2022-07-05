@@ -19,7 +19,6 @@ class WinKeys {
     //AB{#}{CTRL}{SHIFT}E{|}{#}{CTRL}EF{^}{CTRL}
     const Map<String, String> types = {'|': 'reset', '#': 'down', '^': 'up'};
     final map = <String>[];
-    final keyIds = <int>[];
     for (var i = 0; i < keys.length; i++) {
       final c = keys[i];
       if (c == '{') {
@@ -30,6 +29,7 @@ class WinKeys {
         var key = keys.substring(i + 1, end);
         if (key.contains("CTRL")) key = key.replaceAll("CTRL", "CONTROL");
         if (key.contains("ALT")) key = key.replaceAll("MENU", "MENU");
+
         if (key == " ") key = "space";
         i = end;
         if (['|', '#', '^'].contains(key[0]) && key.length > 1) {
@@ -39,19 +39,13 @@ class WinKeys {
         if (key == '|') {
           map.add("MODE_${types[key]}");
         } else {
+          if (["MENU", "CONTROL", "WIN", "SHIFT"].contains(key)) key = "L$key";
           map.add("VK_$key");
         }
       } else {
         map.add("VK_$c");
       }
     }
-    keyString.forEach((id, key) {
-      if (key.length > 3) {}
-      if (map.contains(key)) {
-        //print(key);
-        keyIds.add(id);
-      }
-    });
     return sendList(map);
   }
 
@@ -98,7 +92,6 @@ class WinKeys {
   /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
   static bool single(String key, KeySentMode mode) {
     int keyValue = keyMap[key] ?? 0;
-    // MapEntry entry = keyString.entries.firstWhere((entry) => entry.value == key, orElse: () => const MapEntry<int, String>(0, ""));
     if (keyValue == 0) {
       print("no key $key");
       return false;
@@ -124,181 +117,7 @@ class WinKeys {
   }
 }
 
-// #region (collapsed) keyString
-const keyString = <int, String>{
-  1: "VK_LBUTTON",
-  2: "VK_RBUTTON",
-  3: "VK_CANCEL",
-  4: "VK_MBUTTON",
-  5: "VK_XBUTTON1",
-  6: "VK_XBUTTON2",
-  8: "VK_BACK",
-  9: "VK_TAB",
-  10: "VK_TERMINATE1",
-  11: "VK_TERMINATE2",
-  12: "VK_CLEAR",
-  13: "VK_RETURN",
-  16: "VK_SHIFT",
-  17: "VK_CONTROL",
-  18: "VK_MENU",
-  19: "VK_PAUSE",
-  20: "VK_CAPITAL",
-  21: "VK_KANA",
-  23: "VK_JUNJA",
-  24: "VK_FINAL",
-  25: "VK_HANJA",
-  27: "VK_ESCAPE",
-  28: "VK_CONVERT",
-  29: "VK_NONCONVERT",
-  30: "VK_ACCEPT",
-  31: "VK_MODECHANGE",
-  32: "VK_SPACE",
-  33: "VK_PRIOR",
-  34: "VK_NEXT",
-  35: "VK_END",
-  36: "VK_HOME",
-  37: "VK_LEFT",
-  38: "VK_UP",
-  39: "VK_RIGHT",
-  40: "VK_DOWN",
-  41: "VK_SELECT",
-  42: "VK_PRINT",
-  43: "VK_EXECUTE",
-  44: "VK_SNAPSHOT",
-  45: "VK_INSERT",
-  46: "VK_DELETE",
-  47: "VK_HELP",
-  48: "VK_0",
-  49: "VK_1",
-  50: "VK_2",
-  51: "VK_3",
-  52: "VK_4",
-  53: "VK_5",
-  54: "VK_6",
-  55: "VK_7",
-  56: "VK_8",
-  57: "VK_9",
-  65: "VK_A",
-  66: "VK_B",
-  67: "VK_C",
-  68: "VK_D",
-  69: "VK_E",
-  70: "VK_F",
-  71: "VK_G",
-  72: "VK_H",
-  73: "VK_I",
-  74: "VK_J",
-  75: "VK_K",
-  76: "VK_L",
-  77: "VK_M",
-  78: "VK_N",
-  79: "VK_O",
-  80: "VK_P",
-  81: "VK_Q",
-  82: "VK_R",
-  83: "VK_S",
-  84: "VK_T",
-  85: "VK_U",
-  86: "VK_V",
-  87: "VK_W",
-  88: "VK_X",
-  89: "VK_Y",
-  90: "VK_Z",
-  91: "VK_LWIN",
-  92: "VK_RWIN",
-  93: "VK_APPS",
-  95: "VK_SLEEP",
-  96: "VK_NUMPAD0",
-  97: "VK_NUMPAD1",
-  98: "VK_NUMPAD2",
-  99: "VK_NUMPAD3",
-  100: "VK_NUMPAD4",
-  101: "VK_NUMPAD5",
-  102: "VK_NUMPAD6",
-  103: "VK_NUMPAD7",
-  104: "VK_NUMPAD8",
-  105: "VK_NUMPAD9",
-  106: "VK_MULTIPLY",
-  107: "VK_ADD",
-  108: "VK_SEPARATOR",
-  109: "VK_SUBTRACT",
-  110: "VK_DECIMAL",
-  111: "VK_DIVIDE",
-  112: "VK_F1",
-  113: "VK_F2",
-  114: "VK_F3",
-  115: "VK_F4",
-  116: "VK_F5",
-  117: "VK_F6",
-  118: "VK_F7",
-  119: "VK_F8",
-  120: "VK_F9",
-  121: "VK_F10",
-  122: "VK_F11",
-  123: "VK_F12",
-  124: "VK_F13",
-  125: "VK_F14",
-  126: "VK_F15",
-  127: "VK_F16",
-  128: "VK_F17",
-  129: "VK_F18",
-  130: "VK_F19",
-  131: "VK_F20",
-  132: "VK_F21",
-  133: "VK_F22",
-  134: "VK_F23",
-  135: "VK_F24",
-  144: "VK_NUMLOCK",
-  145: "VK_SCROLL",
-  160: "VK_LSHIFT",
-  161: "VK_RSHIFT",
-  162: "VK_LCONTROL",
-  163: "VK_RCONTROL",
-  164: "VK_LMENU",
-  165: "VK_RMENU",
-  166: "VK_BROWSER_BACK",
-  167: "VK_BROWSER_FORWARD",
-  168: "VK_BROWSER_REFRESH",
-  169: "VK_BROWSER_STOP",
-  170: "VK_BROWSER_SEARCH",
-  171: "VK_BROWSER_FAVORITES",
-  172: "VK_BROWSER_HOME",
-  173: "VK_VOLUME_MUTE",
-  174: "VK_VOLUME_DOWN",
-  175: "VK_VOLUME_UP",
-  176: "VK_MEDIA_NEXT_TRACK",
-  177: "VK_MEDIA_PREV_TRACK",
-  178: "VK_MEDIA_STOP",
-  179: "VK_MEDIA_PLAY_PAUSE",
-  180: "VK_LAUNCH_MAIL",
-  181: "VK_LAUNCH_MEDIA_SELECT",
-  182: "VK_LAUNCH_APP1",
-  183: "VK_LAUNCH_APP2",
-  186: "VK_;",
-  187: "VK_+",
-  188: "VK_,",
-  189: "VK_-",
-  190: "VK_.",
-  191: "VK_/",
-  192: "VK_`",
-  219: "VK_[",
-  220: "VK_\\",
-  221: "VK_]",
-  222: "VK_'",
-  223: "VK_'",
-  226: "VK_<",
-  229: "VK_PROCESSKEY",
-  231: "VK_PACKET",
-  246: "VK_ATTN",
-  247: "VK_CRSEL",
-  248: "VK_EXSEL",
-  249: "VK_EREOF",
-  250: "VK_PLAY",
-  251: "VK_ZOOM",
-  252: "VK_NONAME",
-  253: "VK_PA1",
-  254: "VK_OEM_CLEAR",
-};
+// #region (collapsed) Key Map
 const Map<String, int> keyMap = {
   "VK_LBUTTON": 1,
   "VK_RBUTTON": 2,

@@ -172,11 +172,20 @@ class Audio {
   /// This function sets the audio mixer volume for the specified process ID. The volume level is a number between 0 and 1, with 1 being the maximum volume.
   /// The process ID is the process ID of the process that is using the audio mixer.
   /// The process ID can be obtained by calling the enumAudioMixer function.
-  static Future<bool> setAudioMixerVolume(int processID, double volume) async {
+  static Future<ProcessVolume> setAudioMixerVolume(int processID, double volume) async {
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = {'processID': processID, 'volumeLevel': volume};
-    final result = await audioMethodChannel.invokeMethod<bool>('setAudioMixerVolume', arguments);
-    return result as bool;
+    final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('setAudioMixerVolume', arguments);
+    List<ProcessVolume>? processVolumes = [];
+    for (var key in map.keys) {
+      final processVolume = ProcessVolume();
+      processVolume.processId = key;
+      processVolume.processPath = map[key]['processPath'];
+      processVolume.maxVolume = map[key]['maxVolume'];
+      processVolume.peakVolume = map[key]['peakVolume'];
+      processVolumes.add(processVolume);
+    }
+    return processVolumes[0];
   }
 }
 
@@ -204,6 +213,29 @@ class TrayInfo {
   int uID = 0;
   int uCallbackMessage = 0;
   Uint8List hIcon = Uint8List(0);
+
+  @override
+  String toString() {
+    return 'TrayInfo(toolTip: $toolTip, isVisible: $isVisible, processID: $processID, hWnd: $hWnd, uID: $uID, uCallbackMessage: $uCallbackMessage)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is TrayInfo &&
+        other.toolTip == toolTip &&
+        other.isVisible == isVisible &&
+        other.processID == processID &&
+        other.hWnd == hWnd &&
+        other.uID == uID &&
+        other.uCallbackMessage == uCallbackMessage;
+  }
+
+  @override
+  int get hashCode {
+    return toolTip.hashCode ^ isVisible.hashCode ^ processID.hashCode ^ hWnd.hashCode ^ uID.hashCode ^ uCallbackMessage.hashCode;
+  }
 }
 
 Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
