@@ -1,13 +1,17 @@
+// ignore_for_file: unnecessary_string_interpolations
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:tabame/models/win32.dart';
+import '../models/window_watcher.dart';
+import '../models/win32/mixed.dart';
+import '../models/win32/win32.dart';
+import '../models/win32/window.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:tabame/models/utils.dart';
-import 'package:tabame/models/keys.dart';
+import '../models/keys.dart';
 
 final windows = WindowWatcher();
 
@@ -21,11 +25,18 @@ class Taskbar extends StatefulWidget {
 
 final _iconCache = <int, Uint8List?>{};
 double lastHeight = 0;
+bool fetching = false;
+List<int> _audioMixer = <int>[];
+List<String> _audioMixerExes = <String>[];
 
 class _TaskbarState extends State<Taskbar> {
   int _hoverElement = -1;
+  late Timer mainTimer;
 
   Future<void> handleIcons() async {
+    // print(_iconCache[1114754]);
+    // print(_iconCache[265566]);
+    // WinUtils.getTaskbarPinnedApps().then((e) => print(e));
     if (windows.list.length != _iconCache.length) {
       _iconCache.removeWhere((key, value) => !windows.list.any((w) => w.hWnd == key));
     }
@@ -33,43 +44,85 @@ class _TaskbarState extends State<Taskbar> {
       if (_iconCache.containsKey(win.hWnd)) {
         continue;
       }
-      if (win.isAppx && win.appxIcon != "") {
-        _iconCache[win.hWnd] = File(win.appxIcon).readAsBytesSync();
+      if (win.isAppx) {
+        if (win.appxIcon != "") {
+          if (File(win.appxIcon).existsSync()) {
+            _iconCache[win.hWnd] = File(win.appxIcon).readAsBytesSync();
+          }
+        }
       } else if (win.process.path == "") {
         _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
       } else {
+        _iconCache[win.hWnd] = await getWindowIcon(win.hWnd); //  await nativeIconToBytes(win.process.path + win.process.exe);
+      }
+      if (!(_iconCache[win.hWnd]!.any((element) => element != 204))) {
         _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
       }
     }
   }
 
   Future<void> changeHeight() async {
-    double currentHeight = windows.list.length * 33;
+    double currentHeight = windows.list.length * 28;
     if (currentHeight != lastHeight || true) {
-      windowManager.setSize(Size(300, currentHeight + 100));
+      if (currentHeight < lastHeight) {
+        Future.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, currentHeight + 100)));
+      } else {
+        await windowManager.setSize(Size(300, currentHeight + 100));
+        // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height.clamp(100, 1000) + 100));
+        // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height + 100));
+        // MediaQuery.of(context).size.height;
+      }
       lastHeight = currentHeight;
+    }
+  }
+
+  Future<void> audioHandle() async {
+    final audioMixer = await Audio.enumAudioMixer() ?? [];
+    if (audioMixer.isEmpty) return _audioMixer.clear();
+    _audioMixer.clear();
+    _audioMixer = audioMixer.where((element) => element.peakVolume > 0.01).map((x) => x.processId).toList();
+
+    _audioMixerExes = audioMixer.where((element) => element.peakVolume > 0.01).map((x) => x.processPath.substring(x.processPath.lastIndexOf('\\') + 1)).toList();
+  }
+
+  Future fetchWindows() async {
+    if (!fetching && windows.fetchWindows()) {
+      fetching = true;
+      await handleIcons();
+      await audioHandle();
+      await changeHeight();
+      if (!mounted) return;
+      setState(() => fetching = false);
     }
   }
 
   @override
   void initState() {
-    if (!mounted) return;
     super.initState();
-    windows.fetchWindows();
-    Timer.periodic(const Duration(milliseconds: 300), (timer) async {
-      if (windows.fetchWindows()) {
-        await handleIcons();
-        await changeHeight();
-        setState(() {});
-      }
+    if (!mounted) return;
+
+    Timer.periodic(const Duration(milliseconds: 300), (timer) {
+      mainTimer = timer;
+      fetchWindows();
     });
   }
 
   @override
+  void dispose() {
+    mainTimer.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return windows.list.isEmpty
-        ? const SizedBox(width: 300)
-        : Padding(
+    if (windows.list.isEmpty) {
+      return const SizedBox(width: 300);
+    } else {
+      return Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Padding(
             padding: const EdgeInsets.all(3.0),
             child: SizedBox(
               height: lastHeight,
@@ -90,88 +143,154 @@ class _TaskbarState extends State<Taskbar> {
                             height: 3,
                             color: Theme.of(context).dividerColor,
                           ),
-
                         //#h
-                        Listener(
-                          onPointerDown: (PointerDownEvent event) {
-                            print(event.position.dx);
-                            if (event.position.dx < 260) {
-                              print(windows.list[index].process.exe);
-                              windows.mediaControl(index);
-                              if (windows.list[index].process.exe == "Taskmgr.exe") {
-                                WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                              }
-                              Win32.activateWindow(windows.list[index].hWnd);
-                            } else {
-                              Win32.closeWindow(windows.list[index].hWnd);
-                            }
+                        MouseRegion(
+                          onEnter: (e) {
+                            setState(() {
+                              _hoverElement = index;
+                            });
                           },
-                          child: InkWell(
-                            onTap: () {
-                              //print("x");
-                            },
-                            //#h
-                            child: MouseRegion(
-                              onEnter: (e) {
-                                setState(() {
-                                  _hoverElement = index;
-                                });
-                              },
-                              onExit: (e) {
-                                setState(() {
-                                  _hoverElement = -1;
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 3.0),
-                                child: MouseRegion(
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Stack(
-                                      alignment: Alignment.centerLeft,
-                                      clipBehavior: Clip.none,
-                                      fit: StackFit.loose,
-                                      children: [
-                                        ((_iconCache.containsKey(windows.list[index].hWnd))
-                                            ? Image.memory(_iconCache[windows.list[index].hWnd] ?? Uint8List(0), width: 20, height: 20)
-                                            : const Icon(Icons.spoke_outlined)),
-                                        Positioned(
-                                          // top: 0,
-                                          left: 15,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                                            child: Text(
-                                              "${Monitor.monitorIds[window.appearance.monitor]}: ${window.title.toString().truncate(30, suffix: '...')}",
-                                            ),
-                                          ),
-                                        ),
-                                        if (index == _hoverElement)
-                                          Positioned(
-                                            // top: 0,
-                                            left: MediaQuery.of(context).size.width - 30,
-                                            // width: 30,
+                          onExit: (e) {
+                            setState(() {
+                              _hoverElement = -1;
+                            });
+                          },
+                          child: Stack(
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
 
-                                            child: InkWell(
-                                              onTap: () {},
-                                              onHover: (e) {},
-                                              child: const Icon(Icons.close),
+                                //#h
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                        WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                      }
+                                      Win32.activateWindow(window.hWnd);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 3.0),
+                                      //1 Window List
+                                      child: Wrap(
+                                        spacing: 0,
+                                        children: [
+                                          // ? Icon
+                                          SizedBox(
+                                            width: 20,
+                                            child: ((_iconCache.containsKey(window.hWnd))
+                                                ? Image.memory(_iconCache[window.hWnd] ?? Uint8List(0), width: 20, height: 20)
+                                                : const Icon(Icons.web_asset_sharp)),
+                                          ),
+
+                                          //2 Info
+                                          SizedBox(
+                                            width: 10,
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
+                                                  style: const TextStyle(fontSize: 8),
+                                                ),
+                                                SizedBox(
+                                                  width: 10,
+                                                  height: 10,
+                                                  child: ((_audioMixer.where((e) => [window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
+                                                          _audioMixerExes.contains(window.process.exe))
+                                                      ? const Icon(
+                                                          Icons.volume_up_rounded,
+                                                          size: 8,
+                                                          color: Colors.grey,
+                                                        )
+                                                      : const SizedBox(),
+                                                )
+                                              ],
                                             ),
                                           ),
-                                      ],
+                                          //2 Title
+                                          SizedBox(
+                                            width: 240,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                "${window.hWnd} ${window.title.toString()}",
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              //1 HOVER
+
+                              if (index == _hoverElement)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 1,
+                                  //width: _audioMixer.contains(window.process.pId) ? 75 : 25,
+                                  width: (["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : 25,
+                                  child: Container(
+                                    color: Theme.of(context).scaffoldBackgroundColor,
+                                    width: 100,
+                                    child: Material(
+                                      type: MaterialType.transparency,
+                                      child: Wrap(
+                                        children: [
+                                          if (["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                            Wrap(
+                                              children: [
+                                                InkWell(
+                                                  onTap: () {
+                                                    windows.mediaControl(index);
+                                                  },
+                                                  child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
+                                                ),
+                                                InkWell(
+                                                  onTap: () {
+                                                    windows.mediaControl(index, button: AppCommand.mediaNexttrack);
+                                                  },
+                                                  child: const SizedBox(width: 25, height: 25, child: Icon(Icons.skip_next, size: 15)),
+                                                ),
+                                              ],
+                                            ),
+                                          InkWell(
+                                            onTap: () {
+                                              if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                                WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                              }
+                                              Win32.closeWindow(window.hWnd);
+                                              windows.list.removeAt(index);
+                                              setState(() {});
+                                              fetchWindows();
+                                            },
+                                            onLongPress: () {
+                                              print("force closed ${window.hWnd}.");
+                                              Win32.closeWindow(window.hWnd, forced: true);
+                                            },
+                                            child: const SizedBox(width: 25, height: 25, child: Icon(Icons.close, size: 15)),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
+                            ],
+                            //#e
                           ),
                         ),
-                        //#e
                       ],
                     ),
                   );
                 },
               ),
             ),
-          );
+          ),
+        ),
+      );
+    }
   }
 }

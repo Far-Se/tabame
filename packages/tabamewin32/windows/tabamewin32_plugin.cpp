@@ -58,7 +58,7 @@ using namespace std;
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-
+//! Hooks
 LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (nCode != HC_ACTION) // Nothing to do :(
@@ -167,6 +167,7 @@ void CALLBACK HandleWinEvent(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG id
     // _EmitEvent(args, (int)((DWORD_PTR)g_EventHook), EVENTHOOK);
 }
 
+//! Volume
 struct ProcessVolume
 {
     int processId = 0;
@@ -481,7 +482,7 @@ static int switchDefaultDevice(EDataFlow deviceType = eRender)
     return 0;
 }
 
-/// Audio Session
+///? Audio Session
 
 IAudioSessionEnumerator *GetAudioSessionEnumerator()
 {
@@ -527,11 +528,11 @@ std::string GetProcessNameFromPid(DWORD pid)
     return std::move(name);
 }
 
-float getSetProcessMasterVolume(IAudioSessionControl *session, float volume = -1.0)
+float getSetProcessMasterVolume(IAudioSessionControl *session, float volume = 0.0)
 {
     ISimpleAudioVolume *info = nullptr;
     session->QueryInterface(__uuidof(ISimpleAudioVolume), (void **)&info);
-    if (volume >= 0.00)
+    if (volume != 0.00)
     {
         info->SetMasterVolume(volume, NULL);
     }
@@ -556,7 +557,7 @@ float GetPeakVolumeFromAudioSessionControl(IAudioSessionControl *session)
 
     return peakVolume;
 }
-std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = -1.0)
+std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0)
 {
     std::vector<ProcessVolume> volumes;
 
@@ -584,11 +585,19 @@ std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = -1.0)
                 session->Release();
                 continue;
             }
-            if (pID == (int)id && volume != -1.00)
+            if (pID == (int)id && volume != 0.00)
             {
-                getSetProcessMasterVolume(session, volume);
+                // getSetProcessMasterVolume(session, volume);
+                std::vector<ProcessVolume> volumes2;
+                ProcessVolume data;
+                data.processPath = processPath;
+                data.processId = (int)id;
+                data.maxVolume = getSetProcessMasterVolume(session, volume);
+                data.peakVolume = 0;
                 session2->Release();
                 session->Release();
+                volumes2.push_back(data);
+                return volumes2;
                 break;
             }
             float maxVolume = getSetProcessMasterVolume(session);
@@ -613,7 +622,7 @@ std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = -1.0)
     }
     return std::vector<ProcessVolume>{};
 }
-
+//! Mixed
 std::wstring getHwndName(HWND hWnd)
 {
     std::wstring processName;
@@ -644,6 +653,7 @@ std::wstring getHwndName(HWND hWnd)
     }
     return processName;
 }
+
 namespace tabamewin32
 {
 
@@ -767,7 +777,18 @@ namespace tabamewin32
             int processID = std::get<int>(args.at(flutter::EncodableValue("processID")));
             double volumeLevel = std::get<double>(args.at(flutter::EncodableValue("volumeLevel")));
             std::vector<ProcessVolume> devices = GetProcessVolumes(processID, (float)volumeLevel);
-            result->Success(flutter::EncodableValue(true));
+
+            flutter::EncodableMap map;
+            for (const auto &device : devices)
+            {
+                flutter::EncodableMap deviceMap;
+                deviceMap[flutter::EncodableValue("processId")] = flutter::EncodableValue(device.processId);
+                deviceMap[flutter::EncodableValue("processPath")] = flutter::EncodableValue(device.processPath);
+                deviceMap[flutter::EncodableValue("maxVolume")] = flutter::EncodableValue(device.maxVolume);
+                deviceMap[flutter::EncodableValue("peakVolume")] = flutter::EncodableValue(device.peakVolume);
+                map[flutter::EncodableValue(device.processId)] = flutter::EncodableValue(deviceMap);
+            }
+            result->Success(flutter::EncodableValue(map));
         }
         //? Utilities
         else if (method_call.method_name().compare("iconToBytes") == 0)
@@ -812,6 +833,7 @@ namespace tabamewin32
             std::wstring name = getHwndName((HWND)((LONG_PTR)hWND));
             result->Success(flutter::EncodableValue(Encoding::WideToUtf8(name)));
         }
+
         else if (method_call.method_name().compare("enumTrayIcons") == 0)
         {
             std::vector<TrayIconData> trayIcons = EnumSystemTray();
@@ -846,6 +868,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
+
         //? WIN HOOKS
         else if (method_call.method_name().compare("installHooks") == 0)
         {

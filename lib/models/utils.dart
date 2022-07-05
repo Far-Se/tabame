@@ -37,8 +37,18 @@ class Settings {
 
   @HiveField(7, defaultValue: "normal")
   String volumeOSDStyle = 'normal';
+
+  @HiveField(8, defaultValue: "normal")
+  String weather = '10 C';
+
+  @HiveField(9, defaultValue: "berlin")
+  String weatherCity = '10 C';
+
   TaskBarAppsStyle get taskBarStyle => TaskBarAppsStyle.values.firstWhere((e) => e.name == taskBarAppsStyle);
   set taskBarStyle(TaskBarAppsStyle value) => taskBarAppsStyle = value.name;
+
+  VolumeOSDStyle get volumeOSD => VolumeOSDStyle.values.firstWhere((e) => e.name == volumeOSDStyle);
+  set volumeOSD(VolumeOSDStyle value) => volumeOSDStyle = value.name;
 }
 
 Settings globalSettings = Settings();
@@ -126,6 +136,13 @@ class RunApi {
   });
 }
 
+@HiveType(typeId: 7)
+class TraySettings {
+  @HiveField(0)
+  bool visible = true;
+  @HiveField(1)
+  int executionType = 0;
+}
 //? mixed classes
 
 class MapStringInt {

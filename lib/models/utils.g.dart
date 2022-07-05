@@ -27,13 +27,15 @@ class SettingsAdapter extends TypeAdapter<Settings> {
       ..fullScreenModeShowTaskbar =
           fields[5] == null ? false : fields[5] as bool
       ..language = fields[6] == null ? 'en' : fields[6] as String
-      ..volumeOSDStyle = fields[7] == null ? 'normal' : fields[7] as String;
+      ..volumeOSDStyle = fields[7] == null ? 'normal' : fields[7] as String
+      ..weather = fields[8] == null ? 'normal' : fields[8] as String
+      ..weatherCity = fields[9] == null ? 'berlin' : fields[9] as String;
   }
 
   @override
   void write(BinaryWriter writer, Settings obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.runOnStartup)
       ..writeByte(1)
@@ -49,7 +51,11 @@ class SettingsAdapter extends TypeAdapter<Settings> {
       ..writeByte(6)
       ..write(obj.language)
       ..writeByte(7)
-      ..write(obj.volumeOSDStyle);
+      ..write(obj.volumeOSDStyle)
+      ..writeByte(8)
+      ..write(obj.weather)
+      ..writeByte(9)
+      ..write(obj.weatherCity);
   }
 
   @override
@@ -290,6 +296,42 @@ class RunApiAdapter extends TypeAdapter<RunApi> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is RunApiAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class TraySettingsAdapter extends TypeAdapter<TraySettings> {
+  @override
+  final int typeId = 7;
+
+  @override
+  TraySettings read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return TraySettings()
+      ..visible = fields[0] as bool
+      ..executionType = fields[1] as int;
+  }
+
+  @override
+  void write(BinaryWriter writer, TraySettings obj) {
+    writer
+      ..writeByte(2)
+      ..writeByte(0)
+      ..write(obj.visible)
+      ..writeByte(1)
+      ..write(obj.executionType);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TraySettingsAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
