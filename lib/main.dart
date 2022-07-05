@@ -65,15 +65,6 @@ Future<void> main() async {
   runApp(const Tabame());
 }
 
-class Main extends StatelessWidget {
-  const Main({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
-}
-
 class Tabame extends StatelessWidget {
   const Tabame({Key? key}) : super(key: key);
 
@@ -92,10 +83,6 @@ class Tabame extends StatelessWidget {
 }
 
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
-  // Override behavior methods and getters like dragDevices
   @override
-  Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-      };
+  Set<PointerDeviceKind> get dragDevices => {PointerDeviceKind.touch, PointerDeviceKind.mouse};
 }

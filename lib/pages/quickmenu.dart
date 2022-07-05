@@ -1,5 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../widgets/containers/two_sides.dart';
+import '../widgets/itzy/time_weather_widget.dart';
+import '../widgets/traybar.dart';
 import '../models/win32/win32.dart';
 import '../widgets/containers/bar_with_buttons.dart';
 import '../widgets/containers/top_bar.dart';
@@ -32,7 +35,7 @@ class QuickMenu extends StatelessWidget with WindowListener {
               ),
             ),
           )),
-      //#h
+      //#h red
       //1 Body
       body: Padding(
         padding: EdgeInsets.all(10) - EdgeInsets.only(top: 5),
@@ -51,7 +54,7 @@ class QuickMenu extends StatelessWidget with WindowListener {
                   children: <Widget>[
                     TopBar(),
                     Taskbar(),
-                    // TwoSides(left: TimeWeatherWidget(), right: Traybar()),
+                    TwoSides(left: TimeWeatherWidget(), right: Traybar()),
                     // BarWithButtons(children: [Traybar()], withScroll: false),
                     BarWithButtons(
                       children: [

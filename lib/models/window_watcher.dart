@@ -100,7 +100,7 @@ class WindowWatcher {
   bool mediaControl(index, {button = AppCommand.mediaPlayPause}) {
     if (list[index].process.exe == "Spotify.exe") {
       SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-    } else if (list[index].process.exe == "chrome.exe" && specialList.containsKey("Spotify") == true) {
+    } else if (/* list[index].process.exe == "chrome.exe" && */ specialList.containsKey("Spotify") == true) {
       Audio.enumAudioMixer().then((e) async {
         final Window spotify = specialList["Spotify"]!;
 
