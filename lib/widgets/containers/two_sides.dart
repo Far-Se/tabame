@@ -35,13 +35,22 @@ class TwoSides extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             verticalDirection: VerticalDirection.down,
             children: <Widget>[
-              Container(
-                width: leftWidth > 0 ? leftWidth : width / 2,
-                child: left,
+              Expanded(
+                // ! Align HERE
+                child: Container(
+                  width: leftWidth > 0 ? leftWidth : width / 2,
+                  // constraints: BoxConstraints(minWidth: 0, maxWidth: leftWidth > 0 ? leftWidth : width / 2),
+                  child: left,
+                ),
               ),
-              Container(
-                width: rightWidht > 0 ? rightWidht : width / 2,
-                child: right,
+              // Spacer(),
+              Expanded(
+                // ! Align HERE
+                child: Container(
+                  width: rightWidht > 0 ? rightWidht : width / 2,
+                  // constraints: BoxConstraints(minWidth: 0, maxWidth: leftWidth > 0 ? leftWidth : width / 2),
+                  child: right,
+                ),
               ),
             ],
           ),

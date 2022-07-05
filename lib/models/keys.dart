@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:ffi';
 import 'package:win32/win32.dart';
 import 'package:ffi/ffi.dart';
@@ -114,6 +116,15 @@ class WinKeys {
       SendInput(1, input, sizeOf<INPUT>());
     }
     return true;
+  }
+
+  static String vk(int vk) {
+    for (var key in keyMap.keys) {
+      if (keyMap[key] == vk) {
+        return key;
+      }
+    }
+    return "VK_";
   }
 }
 
@@ -299,4 +310,139 @@ const Map<String, int> keyMap = {
   "VK_PA1": 253,
   "VK_OEM_CLEAR": 254,
 };
+
+class VK {
+  static String LBUTTON = "VK_LBUTTON";
+  static String RBUTTON = "VK_RBUTTON";
+  static String CANCEL = "VK_CANCEL";
+  static String MBUTTON = "VK_MBUTTON";
+  static String XBUTTON1 = "VK_XBUTTON1";
+  static String XBUTTON2 = "VK_XBUTTON2";
+  static String BACK = "VK_BACK";
+  static String TAB = "VK_TAB";
+  static String CLEAR = "VK_CLEAR";
+  static String RETURN = "VK_RETURN";
+  static String SHIFT = "VK_SHIFT";
+  static String CONTROL = "VK_CONTROL";
+  static String MENU = "VK_MENU";
+  static String PAUSE = "VK_PAUSE";
+  static String CAPITAL = "VK_CAPITAL";
+  static String KANA = "VK_KANA";
+  static String HANGEUL = "VK_HANGEUL";
+  static String HANGUL = "VK_HANGUL";
+  static String JUNJA = "VK_JUNJA";
+  static String FINAL = "VK_FINAL";
+  static String HANJA = "VK_HANJA";
+  static String KANJI = "VK_KANJI";
+  static String ESCAPE = "VK_ESCAPE";
+  static String CONVERT = "VK_CONVERT";
+  static String NONCONVERT = "VK_NONCONVERT";
+  static String ACCEPT = "VK_ACCEPT";
+  static String MODECHANGE = "VK_MODECHANGE";
+  static String SPACE = "VK_SPACE";
+  static String PRIOR = "VK_PRIOR";
+  static String NEXT = "VK_NEXT";
+  static String END = "VK_END";
+  static String HOME = "VK_HOME";
+  static String LEFT = "VK_LEFT";
+  static String UP = "VK_UP";
+  static String RIGHT = "VK_RIGHT";
+  static String DOWN = "VK_DOWN";
+  static String SELECT = "VK_SELECT";
+  static String PRINT = "VK_PRINT";
+  static String EXECUTE = "VK_EXECUTE";
+  static String SNAPSHOT = "VK_SNAPSHOT";
+  static String INSERT = "VK_INSERT";
+  static String DELETE = "VK_DELETE";
+  static String HELP = "VK_HELP";
+  static String LWIN = "VK_LWIN";
+  static String RWIN = "VK_RWIN";
+  static String APPS = "VK_APPS";
+  static String SLEEP = "VK_SLEEP";
+  static String NUMPAD0 = "VK_NUMPAD0";
+  static String NUMPAD1 = "VK_NUMPAD1";
+  static String NUMPAD2 = "VK_NUMPAD2";
+  static String NUMPAD3 = "VK_NUMPAD3";
+  static String NUMPAD4 = "VK_NUMPAD4";
+  static String NUMPAD5 = "VK_NUMPAD5";
+  static String NUMPAD6 = "VK_NUMPAD6";
+  static String NUMPAD7 = "VK_NUMPAD7";
+  static String NUMPAD8 = "VK_NUMPAD8";
+  static String NUMPAD9 = "VK_NUMPAD9";
+  static String MULTIPLY = "VK_MULTIPLY";
+  static String ADD = "VK_ADD";
+  static String SEPARATOR = "VK_SEPARATOR";
+  static String SUBTRACT = "VK_SUBTRACT";
+  static String DECIMAL = "VK_DECIMAL";
+  static String DIVIDE = "VK_DIVIDE";
+  static String F1 = "VK_F1";
+  static String F2 = "VK_F2";
+  static String F3 = "VK_F3";
+  static String F4 = "VK_F4";
+  static String F5 = "VK_F5";
+  static String F6 = "VK_F6";
+  static String F7 = "VK_F7";
+  static String F8 = "VK_F8";
+  static String F9 = "VK_F9";
+  static String F10 = "VK_F10";
+  static String F11 = "VK_F11";
+  static String F12 = "VK_F12";
+  static String F13 = "VK_F13";
+  static String F14 = "VK_F14";
+  static String F15 = "VK_F15";
+  static String F16 = "VK_F16";
+  static String F17 = "VK_F17";
+  static String F18 = "VK_F18";
+  static String F19 = "VK_F19";
+  static String F20 = "VK_F20";
+  static String F21 = "VK_F21";
+  static String F22 = "VK_F22";
+  static String F23 = "VK_F23";
+  static String F24 = "VK_F24";
+  static String NUMLOCK = "VK_NUMLOCK";
+  static String SCROLL = "VK_SCROLL";
+  static String LSHIFT = "VK_LSHIFT";
+  static String RSHIFT = "VK_RSHIFT";
+  static String LCONTROL = "VK_LCONTROL";
+  static String RCONTROL = "VK_RCONTROL";
+  static String LMENU = "VK_LMENU";
+  static String RMENU = "VK_RMENU";
+  static String BROWSER_BACK = "VK_BROWSER_BACK";
+  static String BROWSER_FORWARD = "VK_BROWSER_FORWARD";
+  static String BROWSER_REFRESH = "VK_BROWSER_REFRESH";
+  static String BROWSER_STOP = "VK_BROWSER_STOP";
+  static String BROWSER_SEARCH = "VK_BROWSER_SEARCH";
+  static String BROWSER_FAVORITES = "VK_BROWSER_FAVORITES";
+  static String BROWSER_HOME = "VK_BROWSER_HOME";
+  static String VOLUME_MUTE = "VK_VOLUME_MUTE";
+  static String VOLUME_DOWN = "VK_VOLUME_DOWN";
+  static String VOLUME_UP = "VK_VOLUME_UP";
+  static String MEDIA_NEXT_TRACK = "VK_MEDIA_NEXT_TRACK";
+  static String MEDIA_PREV_TRACK = "VK_MEDIA_PREV_TRACK";
+  static String MEDIA_STOP = "VK_MEDIA_STOP";
+  static String MEDIA_PLAY_PAUSE = "VK_MEDIA_PLAY_PAUSE";
+  static String LAUNCH_MAIL = "VK_LAUNCH_MAIL";
+  static String LAUNCH_MEDIA_SELECT = "VK_LAUNCH_MEDIA_SELECT";
+  static String LAUNCH_APP1 = "VK_LAUNCH_APP1";
+  static String LAUNCH_APP2 = "VK_LAUNCH_APP2";
+  static String OEM_1 = "VK_OEM_1";
+  static String OEM_PLUS = "VK_OEM_PLUS";
+  static String OEM_COMMA = "VK_OEM_COMMA";
+  static String OEM_MINUS = "VK_OEM_MINUS";
+  static String OEM_PERIOD = "VK_OEM_PERIOD";
+  static String OEM_2 = "VK_OEM_2";
+  static String OEM_3 = "VK_OEM_3";
+  static String OEM_4 = "VK_OEM_4";
+  static String OEM_5 = "VK_OEM_5";
+  static String OEM_6 = "VK_OEM_6";
+  static String OEM_7 = "VK_OEM_7";
+  static String OEM_8 = "VK_OEM_8";
+  static String OEM_AX = "VK_OEM_AX";
+  static String OEM_102 = "VK_OEM_102";
+  static String ICO_HELP = "VK_ICO_HELP";
+  static String ICO_00 = "VK_ICO_00";
+  static String PROCESSKEY = "VK_PROCESSKEY";
+  static String ICO_CLEAR = "VK_ICO_CLEAR";
+  static String PACKET = "VK_PACKET";
+}
 // #endregion

@@ -83,7 +83,6 @@ class Window {
     String appxLocation = process.path;
     if (!process.exe.contains("exe")) appxLocation += "${process.exe}\\";
     // appxLocation += "AppxManifest.xml";
-    //print(appxLocation);
     if (File("${appxLocation}AppxManifest.xml").existsSync()) {
       final manifest = File("${appxLocation}AppxManifest.xml").readAsStringSync();
       //regex match Square44x44Logo="(.*?)"

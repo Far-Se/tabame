@@ -147,11 +147,19 @@ class Audio {
     return result as int;
   }
 
+  static Future<bool> getMuteAudioDevice(AudioDeviceType audioDeviceType) async {
+    final Map<String, dynamic> arguments = {
+      'deviceType': audioDeviceType.index,
+    };
+    final result = await audioMethodChannel.invokeMethod<bool>('getMuteAudioDevice', arguments);
+    return result!;
+  }
+
   /// This function switches the audio device to the specified type. The type is specified by the [AudioDeviceType] enum.
-  static Future<double> switchDefaultDevice(AudioDeviceType audioDeviceType) async {
+  static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType) async {
     final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index};
-    final result = await audioMethodChannel.invokeMethod<double>('switchDefaultDevice', arguments);
-    return result as double;
+    final result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
+    return result as bool;
   }
 
   /// Returns a Future with a list of ProcessVolume objects containing information about all audio mixers.
