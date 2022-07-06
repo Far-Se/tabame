@@ -7,11 +7,13 @@ class SimulateKeyButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String simulateKeys;
+  final String singleKey;
   const SimulateKeyButton({
     Key? key,
     required this.icon,
-    required this.simulateKeys,
+    this.simulateKeys = "",
     required this.color,
+    this.singleKey = "",
   }) : super(key: key);
 
   @override
@@ -31,7 +33,11 @@ class SimulateKeyButton extends StatelessWidget {
               // size: 15,
             ),
             onPressed: () {
-              WinKeys.send(simulateKeys);
+              if (simulateKeys.isNotEmpty) {
+                WinKeys.send(simulateKeys);
+              } else if (singleKey.isNotEmpty) {
+                WinKeys.single(singleKey, KeySentMode.normal);
+              }
             },
           ),
         ));

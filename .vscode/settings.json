@@ -4,5 +4,8 @@
             "filePath": "lib\\models\\win32.dart",
             "group": "Default"
         }
-    ]
+    ],
+    "files.associations": {
+        "ostream": "cpp"
+    }
 }

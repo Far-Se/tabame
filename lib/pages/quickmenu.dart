@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/containers/two_sides.dart';
-import '../widgets/itzy/audio_box.dart';
 import '../widgets/itzy/time_weather_widget.dart';
 import '../widgets/traybar.dart';
-import '../models/win32/win32.dart';
-import '../widgets/containers/bar_with_buttons.dart';
 import '../widgets/containers/top_bar.dart';
-import '../widgets/itzy/simulate_key_button.dart';
-import '../widgets/itzy/window_app_button.dart';
 import '../widgets/taskbar.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -26,11 +21,12 @@ class QuickMenu extends StatelessWidget with WindowListener {
               windowManager.startDragging();
             },
             child: Container(
-              margin: const EdgeInsets.all(0),
+              margin: const EdgeInsets.all(0) + EdgeInsets.only(left: 10),
               width: double.infinity,
               height: 15,
               color: Colors.transparent,
-              child: Center(
+              child: Align(
+                alignment: Alignment.centerLeft,
                 child: Image(image: AssetImage("resources/logo.png")),
               ),
             ),
@@ -54,14 +50,11 @@ class QuickMenu extends StatelessWidget with WindowListener {
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Stack(
-                        children: [Positioned(child: AudioBox())],
-                      ),
                       TopBar(),
                       Taskbar(),
                       TwoSides(left: TimeWeatherWidget(), right: Traybar()),
                       // BarWithButtons(children: [Traybar()], withScroll: false),
-                      BarWithButtons(
+                      /* BarWithButtons(
                         children: [
                           SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Theme.of(context).iconTheme.color!),
                           InkWell(
@@ -73,7 +66,7 @@ class QuickMenu extends StatelessWidget with WindowListener {
                           WindowsAppButton(path: "C:\\Windows\\explorer.exe"),
                         ],
                       )
-                      // Buttonbar(children: const [TimeWidget(), WeatherWidget()]),
+                       */ // Buttonbar(children: const [TimeWidget(), WeatherWidget()]),
                     ],
                   );
                 }),

@@ -8,19 +8,15 @@ class TimeWeatherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 100,
-      constraints: BoxConstraints(minWidth: 0, maxWidth: 100),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        verticalDirection: VerticalDirection.down,
-        children: [
-          TimeWidget(),
-          // Spacer(),
-          WeatherWidget(),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      verticalDirection: VerticalDirection.down,
+      children: [
+        TimeWidget(),
+        // Spacer(),
+        WeatherWidget(),
+      ],
     );
   }
 }

@@ -270,7 +270,9 @@ class WinUtils {
       "Get-ChildItem -Path \"$path\" | ForEach-Object {\$WScript.CreateShortcut(\$_.FullName).TargetPath};",
     ];
     List<String> output = await runPowerShell(commands);
-    output.insert(0, "C:\\Windows\\explorer.exe");
+    if (allContents != output.length) {
+      output.insert(0, "C:\\Windows\\explorer.exe");
+    }
     return output;
   }
 
@@ -287,8 +289,16 @@ class WinUtils {
     return output;
   }
 
-  static void openLink(String link) {
+  static void open(String link) {
     ShellExecute(NULL, TEXT("open"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
+  }
+
+  static void run(String link) {
+    ShellExecute(NULL, TEXT("run"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
+  }
+
+  static void sendCommand({int command = AppCommand.appCommand}) {
+    SendMessage(NULL, AppCommand.appCommand, 0, command);
   }
 }
 

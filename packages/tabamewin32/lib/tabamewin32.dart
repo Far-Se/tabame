@@ -207,6 +207,10 @@ Future<Uint8List?> nativeIconToBytes(String iconlocation, {int iconID = 0}) asyn
   return result;
 }
 
+Future<Uint8List?> getExecutableIcon(String iconlocation, {int iconID = 0}) async {
+  return nativeIconToBytes(iconlocation, iconID: iconID);
+}
+
 Future<Uint8List?> getWindowIcon(int hWnd) async {
   final Map<String, dynamic> arguments = {'hWnd': hWnd};
   final result = await audioMethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);

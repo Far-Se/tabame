@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../itzy/audio_button.dart';
+import '../itzy/media_control_button.dart';
 import '../itzy/simulate_key_button.dart';
+import '../itzy/window_app_button.dart';
 import 'bar_with_buttons.dart';
 
 class TopBar extends StatelessWidget {
@@ -18,14 +19,15 @@ class TopBar extends StatelessWidget {
           Flexible(
               child: BarWithButtons(
             children: [
-              InkWell(
-                onTap: () {
-                  WindowManager.instance.close();
-                },
-                child: Icon(Icons.close),
-              ),
-              SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.grey.shade300),
+              /* InkWell(
+                  onTap: () {
+                    WindowManager.instance.close();
+                  },
+                  child: Icon(Icons.close)), */
+              // SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Colors.grey.shade300),
               AudioButton(),
+              MediaControlButton(),
+              WindowsAppButton(path: "C:\\Windows\\explorer.exe")
             ],
           )),
           Align(

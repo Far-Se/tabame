@@ -30,37 +30,40 @@ class TimeWidget extends StatelessWidget {
           onTap: () {
             WinKeys.send("{#LWIN}C");
           },
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: Text(
-                  (snapshot.data as Map)["time"] as String,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textAlign: TextAlign.justify,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: 0, maxWidth: 140),
+            child: Wrap(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: Text(
+                    (snapshot.data as Map)["time"] as String,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    // textAlign: TextAlign,
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: 30,
-                height: 15,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      top: -5,
-                      child: Text(
-                        (snapshot.data as Map)["day"] as String,
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                SizedBox(
+                  width: 30,
+                  height: 15,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: -3,
+                        child: Text(
+                          (snapshot.data as Map)["day"] as String,
+                          style: const TextStyle(color: Colors.white, fontSize: 10),
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      top: 5,
-                      child: Text((snapshot.data as Map)["date"] as String, style: const TextStyle(color: Colors.white, fontSize: 10)),
-                    ),
-                  ],
-                ),
-              )
-            ],
+                      Positioned(
+                        top: 7,
+                        child: Text((snapshot.data as Map)["date"] as String, style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ),
           ),
         );
       },
