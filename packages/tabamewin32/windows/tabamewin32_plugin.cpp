@@ -424,6 +424,7 @@ bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
     }
     return true;
 }
+
 bool getMuteAudioDevice(EDataFlow deviceType = eRender)
 {
     BOOL muteState = false;
@@ -456,6 +457,7 @@ bool getMuteAudioDevice(EDataFlow deviceType = eRender)
     }
     return muteState;
 }
+
 bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
 {
     std::vector<DeviceProps> output;
@@ -590,6 +592,7 @@ float GetPeakVolumeFromAudioSessionControl(IAudioSessionControl *session)
 
     return peakVolume;
 }
+
 std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0)
 {
     std::vector<ProcessVolume> volumes;
@@ -837,11 +840,11 @@ namespace tabamewin32
             std::string iconLocation = std::get<std::string>(args.at(flutter::EncodableValue("iconLocation")));
             int iconID = std::get<int>(args.at(flutter::EncodableValue("iconID")));
             std::wstring iconLocationW = Encoding::Utf8ToWide(iconLocation);
-            BYTE buffer[(33 * 33) * 4];
+            BYTE buffer[(256 * 256) * 4];
             HICON icon = getIconFromFile((LPWSTR)iconLocationW.c_str(), iconID);
             convertIconToBytes(icon, buffer);
             std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (33 * 33) * 4; i++)
+            for (int i = 0; i < (256 * 256) * 4; i++)
             {
                 iconBytes.push_back(buffer[i]);
             }
@@ -855,16 +858,38 @@ namespace tabamewin32
             LRESULT iconResult = SendMessage((HWND)((LONG_PTR)hWND), WM_GETICON, 2, 0); // ICON_SMALL2 - User Made Apps
             if (iconResult == 0)
                 iconResult = GetClassLongPtr((HWND)((LONG_PTR)hWND), -14); // GCLP_HICON - Microsoft Win Apps
-
-            BYTE buffer[(33 * 33) * 4];
-            HICON icon = (HICON)iconResult;
-            convertIconToBytes(icon, buffer);
-            std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (33 * 33) * 4; i++)
+            if (iconResult != 0)
             {
-                iconBytes.push_back(buffer[i]);
+                BYTE buffer[(33 * 33) * 4];
+                HICON icon = (HICON)iconResult;
+                if (convertIconToBytes(icon, buffer))
+                {
+                    std::vector<uint8_t> iconBytes;
+                    for (int i = 0; i < (33 * 33) * 4; i++)
+                    {
+                        iconBytes.push_back(buffer[i]);
+                    }
+                    result->Success(flutter::EncodableValue(iconBytes));
+                }
+                else
+                {
+
+                    std::vector<uint8_t> iconBytes;
+                    iconBytes.push_back(204);
+                    iconBytes.push_back(204);
+                    iconBytes.push_back(204);
+                    result->Success(flutter::EncodableValue(iconBytes));
+                }
             }
-            result->Success(flutter::EncodableValue(iconBytes));
+            else
+            {
+
+                std::vector<uint8_t> iconBytes;
+                iconBytes.push_back(204);
+                iconBytes.push_back(204);
+                iconBytes.push_back(204);
+                result->Success(flutter::EncodableValue(iconBytes));
+            }
         }
         else if (method_call.method_name().compare("getHwndName") == 0)
         {

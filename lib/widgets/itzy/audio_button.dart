@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -26,6 +28,9 @@ class AudioButton extends StatelessWidget {
             },
             onPointerDown: (event) {
               if (event.kind == PointerDeviceKind.mouse) {
+                if (event.buttons == kMiddleMouseButton) {
+                  WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
+                }
                 if (event.buttons == kSecondaryMouseButton) {
                   // WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
                   Audio.switchDefaultDevice(AudioDeviceType.output);
@@ -33,21 +38,31 @@ class AudioButton extends StatelessWidget {
                   showModalBottomSheet<void>(
                     context: context,
                     anchorPoint: Offset(100, 200),
-                    elevation: 1,
+                    elevation: 0,
                     backgroundColor: Colors.transparent,
                     barrierColor: Colors.transparent,
                     constraints: BoxConstraints(maxWidth: 280),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    enableDrag: false,
+                    enableDrag: true,
                     isScrollControlled: true,
                     builder: (context) {
-                      return FractionallySizedBox(
-                        heightFactor: 0.8,
-                        child: Padding(
-                          padding: const EdgeInsets.all(2.0),
-                          child: Container(
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                            child: AudioBox(),
+                      return BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: FractionallySizedBox(
+                          // padding: const EdgeInsets.only(top: 10),
+                          heightFactor: 0.9,
+                          child: Listener(
+                            onPointerDown: (event) {
+                              if (event.kind == PointerDeviceKind.mouse) {
+                                if (event.buttons == kSecondaryMouseButton) {
+                                  Navigator.pop(context);
+                                }
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: AudioBox(),
+                            ),
                           ),
                         ),
                       );

@@ -33,7 +33,7 @@ class WeatherWidget extends StatelessWidget {
           }
           return InkWell(
             onTap: () {
-              WinUtils.openLink("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
+              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
             },
             child: Text(
               snapshot.data as String,

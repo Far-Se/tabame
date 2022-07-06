@@ -27,8 +27,7 @@ class _TraybarState extends State<Traybar> {
 
   void init() {
     fetchTray();
-    Timer.periodic(Duration(milliseconds: 400), (timer) {
-      mainTimer = timer;
+    mainTimer = Timer.periodic(Duration(milliseconds: 400), (timer) {
       fetchTray();
     });
   }

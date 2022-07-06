@@ -50,10 +50,18 @@ class _TaskbarState extends State<Taskbar> {
       } else if (win.process.path == "") {
         _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
       } else {
-        _iconCache[win.hWnd] = await getWindowIcon(win.hWnd); //  await nativeIconToBytes(win.process.path + win.process.exe);
+        if (/* ["rundll32.exe"].contains(win.process.exe) || */ win.process.path.contains("System32")) {
+          _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
+        } else {
+          _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
+        }
       }
       if (!win.isAppx && _iconCache.containsKey(win.hWnd) && !(_iconCache[win.hWnd]!.any((element) => element != 204))) {
-        _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
+        if (win.process.path != "") {
+          _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
+        } else {
+          _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
+        }
       }
     }
   }
@@ -98,8 +106,7 @@ class _TaskbarState extends State<Taskbar> {
     super.initState();
     if (!mounted) return;
 
-    Timer.periodic(const Duration(milliseconds: 300), (timer) {
-      mainTimer = timer;
+    mainTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
       fetchWindows();
     });
   }
@@ -121,8 +128,9 @@ class _TaskbarState extends State<Taskbar> {
           type: MaterialType.transparency,
           child: Padding(
             padding: const EdgeInsets.all(3.0),
-            child: SizedBox(
+            child: Container(
               height: lastHeight,
+              constraints: BoxConstraints(minHeight: 100),
               child: ListView.builder(
                 scrollDirection: Axis.vertical,
                 itemCount: windows.list.length,
@@ -154,74 +162,68 @@ class _TaskbarState extends State<Taskbar> {
                           },
                           child: Stack(
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.start,
-
-                                //#h black
-
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
-                                        WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                                      }
-                                      Win32.activateWindow(window.hWnd);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 3.0),
-                                      //1 Window List
-                                      child: Wrap(
-                                        spacing: 0,
-                                        children: [
-                                          // ? Icon
-                                          SizedBox(
-                                            width: 20,
-                                            child: ((_iconCache.containsKey(window.hWnd))
-                                                ? Image.memory(_iconCache[window.hWnd] ?? Uint8List(0), width: 20, height: 20)
-                                                : const Icon(Icons.web_asset_sharp)),
-                                          ),
-
-                                          //2 Info
-                                          SizedBox(
-                                            width: 10,
-                                            child: Column(
-                                              children: [
-                                                Text(
-                                                  Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
-                                                  style: const TextStyle(fontSize: 8),
-                                                ),
-                                                SizedBox(
-                                                  width: 10,
-                                                  height: 10,
-                                                  child: ((_audioMixer.where((e) => [window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
-                                                          _audioMixerExes.contains(window.process.exe))
-                                                      ? const Icon(
-                                                          Icons.volume_up_rounded,
-                                                          size: 8,
-                                                          color: Colors.grey,
-                                                        )
-                                                      : const SizedBox(),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                          //2 Title
-                                          SizedBox(
-                                            width: 240,
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              child: Text(
-                                                "${window.title.toString()}",
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                              InkWell(
+                                onTap: () {
+                                  if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                    WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                  }
+                                  Win32.activateWindow(window.hWnd);
+                                },
+                                onLongPress: () {
+                                  Win32.forceActivateWindow(window.hWnd);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 3.0),
+                                  //1 Window List
+                                  child: Wrap(
+                                    spacing: 0,
+                                    children: [
+                                      // ? Icon
+                                      SizedBox(
+                                        width: 20,
+                                        child: ((_iconCache.containsKey(window.hWnd))
+                                            ? Image.memory(_iconCache[window.hWnd] ?? Uint8List(0), width: 20, height: 20)
+                                            : const Icon(Icons.web_asset_sharp)),
                                       ),
-                                    ),
+
+                                      //2 Info
+                                      SizedBox(
+                                        width: 10,
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
+                                              style: const TextStyle(fontSize: 8),
+                                            ),
+                                            SizedBox(
+                                              width: 10,
+                                              height: 10,
+                                              child: ((_audioMixer.where((e) => [window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
+                                                      _audioMixerExes.contains(window.process.exe))
+                                                  ? const Icon(
+                                                      Icons.volume_up_rounded,
+                                                      size: 8,
+                                                      color: Colors.grey,
+                                                    )
+                                                  : const SizedBox(),
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                      //2 Title
+                                      SizedBox(
+                                        width: 240,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                                          child: Text(
+                                            "${window.title.toString()}",
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                               //1 HOVER
 

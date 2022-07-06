@@ -81,6 +81,7 @@ static UINT WriteIconData(BYTE *buffer, int *pBufferOffset, HBITMAP hBitmap)
         (*pBufferOffset) += bmp.bmWidthBytes;
         if (bmp.bmWidthBytes & 3)
         {
+
             DWORD padding = 0;
             memcpy(&buffer[*pBufferOffset], &padding, static_cast<size_t>(4) - bmp.bmWidthBytes);
             (*pBufferOffset) += 4 - bmp.bmWidthBytes;

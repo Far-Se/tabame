@@ -4,6 +4,8 @@ import 'dart:ffi';
 import 'package:win32/win32.dart';
 import 'package:ffi/ffi.dart';
 
+import 'win32/imports.dart';
+
 enum KeySentMode {
   normal,
   down,
@@ -92,7 +94,30 @@ class WinKeys {
   /// [key] is the key to send.
   /// [mode] is the mode to send the key.
   /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
+  static bool singleEvent(String key, KeySentMode mode) {
+    print("$key ${mode.toString()}");
+    int keyValue = keyMap[key] ?? 0;
+    if (keyValue == 0) {
+      print("no key $key");
+      return false;
+    }
+    if (mode == KeySentMode.up) {
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_KEYUP, 0);
+    } else {
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY, 0);
+      if (mode == KeySentMode.normal) {
+        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_KEYUP, 0);
+      }
+    }
+    return true;
+  }
+
+  /// Send a single key
+  /// [key] is the key to send.
+  /// [mode] is the mode to send the key.
+  /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
   static bool single(String key, KeySentMode mode) {
+    print(key);
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
       print("no key $key");
@@ -105,6 +130,9 @@ class WinKeys {
     } else {
       input.ref.ki.dwFlags = WM_KEYDOWN;
     }
+    input.ref.ki.wScan = MapVirtualKey(keyValue, 0);
+    // input.ref.ki.dwFlags = 0; // See docs for flags (mm keys may need Extended key flag)
+    // input.ref.ki.time = 0;
     input.ref.ki.wVk = keyValue;
     SendInput(1, input, sizeOf<INPUT>());
     free(input);
