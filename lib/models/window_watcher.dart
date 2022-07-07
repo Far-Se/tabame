@@ -80,7 +80,8 @@ class WindowWatcher {
       final lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
       final monitor = MonitorFromPoint(lpPoint.ref, 0);
-      if (Monitor.monitors.contains(monitor)) {
+      free(lpPoint);
+      if (Monitor.list.contains(monitor)) {
         if (type == TaskBarAppsStyle.activeMonitorFirst) {
           List<Window> firstItems = [];
           firstItems = list.where((element) => element.appearance.monitor == monitor ? true : false).toList();
@@ -91,7 +92,6 @@ class WindowWatcher {
           list.removeWhere((element) => element.appearance.monitor != monitor);
         }
       }
-      free(lpPoint);
     } else if (type == TaskBarAppsStyle.onlyActiveMonitor) {}
     return true;
   }
@@ -111,9 +111,12 @@ class WindowWatcher {
         Future.delayed(const Duration(milliseconds: 100), () async {
           SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
 
-          (AppCommand.mediaPlayPause == button && SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPlayPause) == 1) ||
-              (SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack) == 1 &&
-                  SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPause) == 1);
+          if (AppCommand.mediaPlayPause == button) {
+            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+          } else {
+            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
+            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPause);
+          }
 
           Future.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotify.process.pId, volume));
 

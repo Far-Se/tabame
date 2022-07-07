@@ -32,7 +32,7 @@ dependencies:
   ffi: ^2.0.0
   flutter:
     sdk: flutter
-  flutter_acrylic: ^1.0.0+2
+  # flutter_acrylic: ^1.0.0+2
   hive: ^2.2.2
   hive_flutter: ^1.1.0
   http: ^0.13.4

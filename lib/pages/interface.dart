@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 class Interface extends StatefulWidget {
@@ -24,6 +25,8 @@ class InterfaceState extends State<Interface> {
         title: Text('Interface'),
       ),
       body: Container(
+        width: 500,
+        height: 300,
         child: Center(
           child: Text("TEST"),
         ),

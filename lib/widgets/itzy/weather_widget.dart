@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../models/boxes.dart';
 
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
@@ -27,9 +26,9 @@ class WeatherWidget extends StatelessWidget {
         initialData: globalSettings.weather,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            globalSettings = Boxes.settings.getAt(0);
-            globalSettings.weather = snapshot.data as String;
-            Boxes.settings.putAt(0, globalSettings);
+            // globalSettings = Boxes.settings.getAt(0);
+            // globalSettings.weather = snapshot.data as String;
+            // Boxes.settings.putAt(0, globalSettings);
           }
           return InkWell(
             onTap: () {
@@ -42,6 +41,7 @@ class WeatherWidget extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w100,
                 color: Colors.white,
+                height: 1.1,
               ),
             ),
           );

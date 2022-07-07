@@ -1,8 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:tabamewin32/tabamewin32.dart';
 
-import '../boxes.dart';
-import '../utils.dart';
 import 'win32.dart';
 
 class TrayBarInfo extends TrayInfo {
@@ -21,11 +19,11 @@ class Tray {
   static bool newTray = false;
   static Future<bool> fetchTray() async {
     final winTray = await enumTrayIcons();
-
-    if (winTray.length == trayList.length) {
-      newTray = false;
-      return newTray;
-    }
+    // print(winTray);
+    // if (winTray.length == trayList.length) {
+    //   newTray = false;
+    //   return newTray;
+    // }
     newTray = true;
     trayList.clear();
 
@@ -40,16 +38,18 @@ class Tray {
         ..uID = element.uID
         ..uCallbackMessage = element.uCallbackMessage
         ..hWnd = element.hWnd
-        ..isVisible = element.isVisible;
-
+        ..processID = element.processID
+        ..isVisible = element.isVisible
+        ..toolTip = element.toolTip;
+      // print(element.toolTip);
       if (processPath.contains("explorer.exe")) trayInfo.isVisible = false;
 
-      if (Boxes.traySettings.containsKey(exe)) {
-        final box = Boxes.traySettings.get(exe) as TraySettings;
+      // if (Boxes.traySettings.containsKey(exe)) {
+      //   final box = Boxes.traySettings.get(exe) as TraySettings;
 
-        trayInfo.isVisible = box.visible;
-        trayInfo.executionType = box.executionType;
-      }
+      //   trayInfo.isVisible = box.visible;
+      //   trayInfo.executionType = box.executionType;
+      // }
 
       trayList.add(trayInfo);
     }

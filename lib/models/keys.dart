@@ -95,7 +95,7 @@ class WinKeys {
   /// [mode] is the mode to send the key.
   /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
   static bool singleEvent(String key, KeySentMode mode) {
-    print("$key ${mode.toString()}");
+    // print("$key ${mode.toString()}");
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
       print("no key $key");
@@ -117,7 +117,7 @@ class WinKeys {
   /// [mode] is the mode to send the key.
   /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
   static bool single(String key, KeySentMode mode) {
-    print(key);
+    // print(key);
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
       print("no key $key");

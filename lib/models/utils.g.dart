@@ -300,29 +300,25 @@ class RunApiAdapter extends TypeAdapter<RunApi> {
           typeId == other.typeId;
 }
 
-class TraySettingsAdapter extends TypeAdapter<TraySettings> {
+class KeyObjectAdapter extends TypeAdapter<KeyObject> {
   @override
   final int typeId = 7;
 
   @override
-  TraySettings read(BinaryReader reader) {
+  KeyObject read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return TraySettings()
-      ..visible = fields[0] as bool
-      ..executionType = fields[1] as int;
+    return KeyObject()..value = (fields[0] as Map).cast<int, dynamic>();
   }
 
   @override
-  void write(BinaryWriter writer, TraySettings obj) {
+  void write(BinaryWriter writer, KeyObject obj) {
     writer
-      ..writeByte(2)
-      ..writeByte(0)
-      ..write(obj.visible)
       ..writeByte(1)
-      ..write(obj.executionType);
+      ..writeByte(0)
+      ..write(obj.value);
   }
 
   @override
@@ -331,7 +327,7 @@ class TraySettingsAdapter extends TypeAdapter<TraySettings> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TraySettingsAdapter &&
+      other is KeyObjectAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

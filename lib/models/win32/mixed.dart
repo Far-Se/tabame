@@ -1,8 +1,10 @@
-import 'imports.dart';
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:ffi' hide Size;
 
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size;
+
+import 'imports.dart';
 
 enum OSDType {
   media,
@@ -20,40 +22,72 @@ enum ScreenState {
   app,
 }
 
+class Square {
+  int x = 0;
+  int y = 0;
+  int length = 0;
+  int wide = 0;
+  int width = 0;
+  int height = 0;
+  Square({
+    required this.x,
+    required this.y,
+    this.length = 0,
+    this.wide = 0,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  String toString() {
+    return 'Square(x: $x, y: $y, length: $length, wide: $wide, width: $width, height: $height)';
+  }
+}
+
 class Monitor {
   static List<int> _monitors = [];
-  static List<int> get monitors {
-    if (_monitors.isEmpty) {
-      fetchMonitor();
-    }
+  static Map<int, Map<int, int>> dpi = <int, Map<int, int>>{};
+  static final Map<int, int> _monitorIds = {};
+  static Map<int, Square> monitorSizes = <int, Square>{};
+  static List<int> get list {
+    if (_monitors.isEmpty) fetchMonitor();
     return _monitors;
   }
 
-  static final Map<int, int> _monitorIds = {};
   static Map<int, int> get monitorIds {
-    if (_monitorIds.isEmpty) {
-      fetchMonitor();
-    }
+    if (_monitorIds.isEmpty) fetchMonitor();
     return _monitorIds;
   }
 
-  static Map<int, Map<int, int>> dpi = <int, Map<int, int>>{};
   static void fetchMonitor() {
-    // EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MonitorEnumProc>(helperGetMonitorByIndex, 0), 0);
-    _monitors = enumMonitors();
-    // __helperMonitorList.clear();
+    final monitorsData = enumMonitors();
+    _monitors = monitorsData.keys.toList();
+    monitorSizes = monitorsData;
     for (var i = 0; i < _monitors.length; i++) {
       final dpiX = calloc<Uint32>();
       final dpiY = calloc<Uint32>();
       GetDpiForMonitor(_monitors[i], 0, dpiX, dpiY);
-      dpi[_monitors[i]] = {
-        0: dpiX.value,
-        1: dpiY.value,
-      };
+      dpi[_monitors[i]] = {0: dpiX.value, 1: dpiY.value};
       free(dpiX);
       free(dpiY);
       _monitorIds[_monitors[i]] = i + 1;
     }
+  }
+
+  static int getWindowMonitor(hwnd) {
+    final lpPoint = calloc<RECT>();
+    GetWindowRect(hwnd, lpPoint);
+    final monitor = MonitorFromRect(lpPoint, 0);
+    free(lpPoint);
+    return monitor;
+  }
+
+  static int getCursorMonitor() {
+    final lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final monitor = MonitorFromPoint(lpPoint.ref, 0);
+    free(lpPoint);
+    return monitor;
   }
 }
 

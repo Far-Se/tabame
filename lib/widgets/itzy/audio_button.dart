@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -7,8 +8,33 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../models/keys.dart';
 import 'audio_box.dart';
 
-class AudioButton extends StatelessWidget {
+class AudioButton extends StatefulWidget {
   const AudioButton({Key? key}) : super(key: key);
+
+  @override
+  State<AudioButton> createState() => _AudioButtonState();
+}
+
+class _AudioButtonState extends State<AudioButton> {
+  late Timer timer;
+  bool muteState = false;
+
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(Duration(milliseconds: 1000), (timer) async {
+      muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    timer.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -30,6 +56,8 @@ class AudioButton extends StatelessWidget {
               if (event.kind == PointerDeviceKind.mouse) {
                 if (event.buttons == kMiddleMouseButton) {
                   WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
+                  muteState = !muteState;
+                  setState(() {});
                 }
                 if (event.buttons == kSecondaryMouseButton) {
                   // WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
@@ -72,7 +100,7 @@ class AudioButton extends StatelessWidget {
               }
             },
             child: InkWell(
-              child: Icon(Icons.volume_down, color: Colors.white),
+              child: Icon(muteState == false ? Icons.volume_up : Icons.volume_off, color: Colors.white),
               onTap: () {},
             ),
           ),
