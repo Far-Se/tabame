@@ -136,13 +136,21 @@ class RunApi {
   });
 }
 
+// @HiveType(typeId: 7)
+// class TraySettings {
+//   @HiveField(0)
+//   bool visible = true;
+//   @HiveField(1)
+//   int executionType = 0;
+// }
+
 @HiveType(typeId: 7)
-class TraySettings {
+class KeyObject {
   @HiveField(0)
-  bool visible = true;
-  @HiveField(1)
-  int executionType = 0;
+  Map<int, dynamic> value = {};
+  // KeyObject(Map<String, List<String>> map);
 }
+
 //? mixed classes
 
 class MapStringInt {

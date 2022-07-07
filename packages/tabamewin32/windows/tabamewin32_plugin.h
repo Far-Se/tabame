@@ -17,7 +17,7 @@ namespace tabamewin32
     public:
         static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
 
-        Tabamewin32Plugin();
+        Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar);
 
         virtual ~Tabamewin32Plugin();
 
@@ -26,6 +26,8 @@ namespace tabamewin32
         Tabamewin32Plugin &operator=(const Tabamewin32Plugin &) = delete;
 
     private:
+        bool alreadySetTransparent = false;
+        flutter::PluginRegistrarWindows *registrar_ = nullptr;
         // Called when a method is called on this plugin's channel from Dart.
         void HandleMethodCall(
             const flutter::MethodCall<flutter::EncodableValue> &method_call,

@@ -33,6 +33,9 @@ struct TrayIconData
     TRAYDATA data;
 };
 
+#pragma warning(push)
+#pragma warning(disable : 4706)
+#pragma warning(disable : 4805)
 std::vector<TrayIconData> EnumSystemTray()
 {
     std::vector<TrayIconData> output;
@@ -113,12 +116,11 @@ std::vector<TrayIconData> EnumSystemTray()
                     break;
                 }
                 ReadProcessMemory(hProcess, (LPCVOID)pTip++, &TipChar, sizeof(wchar_t), NULL);
-                sTip[x++] = TipChar;
-            } while (true);
-            // } while (sTip[x++] = TipChar); // !HERE
+                // sTip[x++] = TipChar;
+                // } while (true);
+            } while (sTip[x++] = TipChar); // !HERE
             // wcout << sTip << endl;
         }
-
         DWORD dwProcessId = 0;
         GetWindowThreadProcessId(hwnd32, &dwProcessId);
 
@@ -134,3 +136,4 @@ std::vector<TrayIconData> EnumSystemTray()
     VirtualFreeEx(hProcess, lpData, NULL, MEM_RELEASE);
     return output;
 }
+#pragma warning(pop)

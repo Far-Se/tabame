@@ -201,9 +201,12 @@ class Audio {
 /// The icon location is the path to the icon file.
 /// The icon ID is the icon ID of the icon file.
 /// The icon ID can be obtained by calling the enumAudioDevices function.
+Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
 Future<Uint8List?> nativeIconToBytes(String iconlocation, {int iconID = 0}) async {
+  //if (___kCacheIcons.containsKey(iconlocation)) return ___kCacheIcons[iconlocation];
   final Map<String, dynamic> arguments = {'iconLocation': iconlocation, 'iconID': iconID};
   final result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
+  //___kCacheIcons[iconlocation] = result!;
   return result;
 }
 
@@ -276,4 +279,13 @@ Future<String> getHwndName(int hWnd) async {
   };
   final result = await audioMethodChannel.invokeMethod<String>('getHwndName', arguments) ?? "-";
   return result;
+}
+
+Future<int> getFlutterMainWindow() async {
+  final result = await audioMethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
+  return result;
+}
+
+Future<void> setWindowAsTransparent() async {
+  await audioMethodChannel.invokeMethod('setTransparent');
 }

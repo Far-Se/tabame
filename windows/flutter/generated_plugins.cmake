@@ -3,7 +3,6 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  flutter_acrylic
   screen_retriever
   tabamewin32
   window_manager

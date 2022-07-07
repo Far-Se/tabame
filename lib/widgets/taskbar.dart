@@ -19,26 +19,27 @@ class Taskbar extends StatefulWidget {
   const Taskbar({Key? key}) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
-  _TaskbarState createState() => _TaskbarState();
+  TaskbarState createState() => TaskbarState();
 }
 
+var _iconCacheCashed = <int, Uint8List?>{}; //xzibity
 final _iconCache = <int, Uint8List?>{};
 double lastHeight = 0;
 bool fetching = false;
 List<int> _audioMixer = <int>[];
 List<String> _audioMixerExes = <String>[];
 
-class _TaskbarState extends State<Taskbar> {
+class TaskbarState extends State<Taskbar> {
   int _hoverElement = -1;
   late Timer mainTimer;
 
-  Future<void> handleIcons() async {
+  Future<bool> handleIcons({bool refreshIcons = false}) async {
     if (windows.list.length != _iconCache.length) {
       _iconCache.removeWhere((key, value) => !windows.list.any((w) => w.hWnd == key));
     }
-    for (Window win in windows.list) {
-      if (_iconCache.containsKey(win.hWnd)) {
+    final tempWinList = {...windows.list};
+    for (Window win in tempWinList) {
+      if (_iconCache.containsKey(win.hWnd) && !refreshIcons) {
         continue;
       }
       if (win.isAppx) {
@@ -50,7 +51,7 @@ class _TaskbarState extends State<Taskbar> {
       } else if (win.process.path == "") {
         _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
       } else {
-        if (/* ["rundll32.exe"].contains(win.process.exe) || */ win.process.path.contains("System32")) {
+        if (win.process.path.contains("System32")) {
           _iconCache[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
         } else {
           _iconCache[win.hWnd] = await getWindowIcon(win.hWnd);
@@ -64,18 +65,17 @@ class _TaskbarState extends State<Taskbar> {
         }
       }
     }
+    _iconCacheCashed = _iconCache; //{..._iconCache};
+    return true;
   }
 
   Future<void> changeHeight() async {
-    double currentHeight = windows.list.length * 28;
+    double currentHeight = (windows.list.length * 28).clamp(0, Monitor.monitorSizes[Monitor.getWindowMonitor(Win32.hWnd)]!.height / 1.7).toDouble();
     if (currentHeight != lastHeight || true) {
       if (currentHeight < lastHeight) {
         Future.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, currentHeight + 100)));
       } else {
         await windowManager.setSize(Size(300, currentHeight + 150));
-        // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height.clamp(100, 1000) + 100));
-        // await windowManager.setSize(Size(300, MediaQuery.of(context).size.height + 100));
-        // MediaQuery.of(context).size.height;
       }
       lastHeight = currentHeight;
     }
@@ -90,24 +90,33 @@ class _TaskbarState extends State<Taskbar> {
     _audioMixerExes = audioMixer.where((element) => element.peakVolume > 0.01).map((x) => x.processPath.substring(x.processPath.lastIndexOf('\\') + 1)).toList();
   }
 
-  Future fetchWindows() async {
+  Future fetchWindows({bool refreshIcons = false}) async {
     if (!fetching && windows.fetchWindows()) {
       fetching = true;
-      await handleIcons();
+      await handleIcons(refreshIcons: refreshIcons);
       await audioHandle();
       await changeHeight();
       if (!mounted) return;
+
       setState(() => fetching = false);
     }
   }
 
+  int timerTicks = 0;
   @override
   void initState() {
     super.initState();
     if (!mounted) return;
 
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
-      fetchWindows();
+      timerTicks++;
+      if (timerTicks == 3) {
+        _iconCache.clear();
+        fetchWindows(refreshIcons: true);
+        timerTicks = 0;
+      } else {
+        fetchWindows();
+      }
     });
   }
 
@@ -119,184 +128,181 @@ class _TaskbarState extends State<Taskbar> {
 
   @override
   Widget build(BuildContext context) {
-    if (windows.list.isEmpty) {
-      return const SizedBox(width: 300);
-    } else {
-      return Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Material(
-          type: MaterialType.transparency,
-          child: Padding(
-            padding: const EdgeInsets.all(3.0),
-            child: Container(
-              height: lastHeight,
-              constraints: BoxConstraints(minHeight: 100),
-              child: ListView.builder(
-                scrollDirection: Axis.vertical,
-                itemCount: windows.list.length,
-                itemBuilder: (context, index) {
-                  final window = windows.list[index];
-                  return SizedBox(
-                    width: 300,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.max,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (index > 0 && window.appearance.monitor != windows.list[index - 1].appearance.monitor)
-                          Divider(
-                            height: 3,
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        //#h white
-                        MouseRegion(
-                          onEnter: (e) {
-                            setState(() {
-                              _hoverElement = index;
-                            });
-                          },
-                          onExit: (e) {
-                            setState(() {
-                              _hoverElement = -1;
-                            });
-                          },
-                          child: Stack(
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
-                                    WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                                  }
-                                  Win32.activateWindow(window.hWnd);
-                                },
-                                onLongPress: () {
-                                  Win32.forceActivateWindow(window.hWnd);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 3.0),
-                                  //1 Window List
-                                  child: Wrap(
-                                    spacing: 0,
-                                    children: [
-                                      // ? Icon
-                                      SizedBox(
-                                        width: 20,
-                                        child: ((_iconCache.containsKey(window.hWnd))
-                                            ? Image.memory(_iconCache[window.hWnd] ?? Uint8List(0), width: 20, height: 20)
-                                            : const Icon(Icons.web_asset_sharp)),
-                                      ),
+    return Container(
+      color: Theme.of(context).backgroundColor,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Padding(
+          padding: const EdgeInsets.all(3.0),
+          child: Container(
+            height: lastHeight,
+            constraints: BoxConstraints(minHeight: 100),
+            child: ListView.builder(
+              scrollDirection: Axis.vertical,
+              itemCount: windows.list.length,
+              itemBuilder: (context, index) {
+                final window = windows.list[index];
+                return SizedBox(
+                  width: 300,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (index > 0 && window.appearance.monitor != windows.list[index - 1].appearance.monitor)
+                        Divider(
+                          height: 3,
+                          color: Theme.of(context).dividerColor,
+                        ),
+                      //#h white
+                      MouseRegion(
+                        onEnter: (e) {
+                          setState(() {
+                            _hoverElement = index;
+                          });
+                        },
+                        onExit: (e) {
+                          setState(() {
+                            _hoverElement = -1;
+                          });
+                        },
+                        child: Stack(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                  WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                }
+                                Win32.activateWindow(window.hWnd);
+                              },
+                              onLongPress: () {
+                                Win32.forceActivateWindow(window.hWnd);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 3.0),
+                                //1 Window List
+                                child: Wrap(
+                                  spacing: 0,
+                                  children: [
+                                    // ? Icon
+                                    SizedBox(
+                                      width: 20,
+                                      child: ((_iconCache.containsKey(window.hWnd))
+                                          ? Image.memory(_iconCache[window.hWnd] ?? Uint8List(0), width: 20, height: 20, gaplessPlayback: true)
+                                          : (_iconCacheCashed.containsKey(window.hWnd)
+                                              ? Image.memory(_iconCacheCashed[window.hWnd] ?? Uint8List(0), width: 20, height: 20, gaplessPlayback: true)
+                                              : const Icon(Icons.web_asset_sharp, size: 20))),
+                                    ),
 
-                                      //2 Info
-                                      SizedBox(
-                                        width: 10,
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
-                                              style: const TextStyle(fontSize: 8),
-                                            ),
-                                            SizedBox(
-                                              width: 10,
-                                              height: 10,
-                                              child: ((_audioMixer.where((e) => [window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
-                                                      _audioMixerExes.contains(window.process.exe))
-                                                  ? const Icon(
-                                                      Icons.volume_up_rounded,
-                                                      size: 8,
-                                                      color: Colors.grey,
-                                                    )
-                                                  : const SizedBox(),
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                      //2 Title
-                                      SizedBox(
-                                        width: 240,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            "${window.title.toString()}",
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              //1 HOVER
-
-                              if (index == _hoverElement)
-                                Positioned(
-                                  right: 0,
-                                  bottom: 1,
-                                  //width: _audioMixer.contains(window.process.pId) ? 75 : 25,
-                                  width: (["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : (_audioMixerExes.contains(window.process.exe) ? 50 : 25),
-                                  child: Container(
-                                    color: Theme.of(context).scaffoldBackgroundColor,
-                                    width: 100,
-                                    child: Material(
-                                      type: MaterialType.transparency,
-                                      child: Wrap(
+                                    //2 Info
+                                    SizedBox(
+                                      width: 10,
+                                      child: Column(
                                         children: [
-                                          if (["Spotify.exe", "chrome.exe"].contains(window.process.exe))
-                                            Wrap(
-                                              children: [
-                                                InkWell(
-                                                  onTap: () {
-                                                    windows.mediaControl(index);
-                                                  },
-                                                  child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
-                                                ),
-                                                InkWell(
-                                                  onTap: () {
-                                                    windows.mediaControl(index, button: AppCommand.mediaNexttrack);
-                                                  },
-                                                  child: const SizedBox(width: 25, height: 25, child: Icon(Icons.skip_next, size: 15)),
-                                                ),
-                                              ],
-                                            ),
-                                          if (_audioMixerExes.contains(window.process.exe) && !["Spotify.exe", "chrome.exe"].contains(window.process.exe))
-                                            InkWell(
-                                              onTap: () {
-                                                windows.mediaControl(index);
-                                              },
-                                              child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
-                                            ),
-                                          InkWell(
-                                            onTap: () {
-                                              if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
-                                                WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                                              }
-                                              Win32.closeWindow(window.hWnd);
-                                              windows.list.removeAt(index);
-                                              setState(() {});
-                                              fetchWindows();
-                                            },
-                                            onLongPress: () {
-                                              Win32.closeWindow(window.hWnd, forced: true);
-                                            },
-                                            child: const SizedBox(width: 25, height: 25, child: Icon(Icons.close, size: 15)),
+                                          Text(
+                                            Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
+                                            style: const TextStyle(fontSize: 8),
                                           ),
+                                          SizedBox(
+                                            width: 10,
+                                            height: 10,
+                                            child: ((_audioMixer.where((e) => [window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
+                                                    _audioMixerExes.contains(window.process.exe))
+                                                ? const Icon(
+                                                    Icons.volume_up_rounded,
+                                                    size: 8,
+                                                    color: Colors.grey,
+                                                  )
+                                                : const SizedBox(),
+                                          )
                                         ],
                                       ),
                                     ),
+                                    //2 Title
+                                    SizedBox(
+                                      width: 240,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        child: Text(
+                                          "${window.title.toString()}",
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            //1 HOVER
+
+                            if (index == _hoverElement)
+                              Positioned(
+                                right: 0,
+                                bottom: 1,
+                                width: (["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : (_audioMixerExes.contains(window.process.exe) ? 50 : 25),
+                                child: Container(
+                                  color: Theme.of(context).backgroundColor,
+                                  width: 100,
+                                  child: Material(
+                                    type: MaterialType.transparency,
+                                    child: Wrap(
+                                      children: [
+                                        if (["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                          Wrap(
+                                            children: [
+                                              InkWell(
+                                                onTap: () {
+                                                  windows.mediaControl(index);
+                                                },
+                                                child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
+                                              ),
+                                              InkWell(
+                                                onTap: () {
+                                                  windows.mediaControl(index, button: AppCommand.mediaNexttrack);
+                                                },
+                                                child: const SizedBox(width: 25, height: 25, child: Icon(Icons.skip_next, size: 15)),
+                                              ),
+                                            ],
+                                          ),
+                                        if (_audioMixerExes.contains(window.process.exe) && !["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                          InkWell(
+                                            onTap: () {
+                                              windows.mediaControl(index);
+                                            },
+                                            child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
+                                          ),
+                                        InkWell(
+                                          onTap: () {
+                                            if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                              WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                            }
+                                            Win32.closeWindow(window.hWnd);
+                                            windows.list.removeAt(index);
+                                            setState(() {});
+                                            fetchWindows();
+                                          },
+                                          onLongPress: () {
+                                            Win32.closeWindow(window.hWnd, forced: true);
+                                          },
+                                          child: const SizedBox(width: 25, height: 25, child: Icon(Icons.close, size: 15)),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                            ],
-                            //#e
-                          ),
+                              ),
+                          ],
+                          //#e
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ),
-      );
-    }
+      ),
+    );
   }
 }

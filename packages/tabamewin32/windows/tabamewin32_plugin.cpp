@@ -22,6 +22,7 @@
 #pragma warning(disable : 4201)
 #include "hicon_to_bytes.cpp"
 #include "tray_info.cpp"
+#include "transparent.cpp"
 
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
@@ -38,7 +39,6 @@
 #include <psapi.h>
 #include <TlHelp32.h>
 #pragma warning(pop)
-
 #pragma comment(lib, "ole32")
 #pragma comment(lib, "propsys")
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>, std::default_delete<flutter::MethodChannel<flutter::EncodableValue>>> channel = nullptr;
@@ -702,7 +702,7 @@ namespace tabamewin32
                 registrar->messenger(), "tabamewin32",
                 &flutter::StandardMethodCodec::GetInstance());
 
-        auto plugin = std::make_unique<Tabamewin32Plugin>();
+        auto plugin = std::make_unique<Tabamewin32Plugin>(registrar);
 
         channel->SetMethodCallHandler(
             [plugin_pointer = plugin.get()](const auto &call, auto result)
@@ -713,7 +713,7 @@ namespace tabamewin32
         registrar->AddPlugin(std::move(plugin));
     }
 
-    Tabamewin32Plugin::Tabamewin32Plugin() {}
+    Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar) {}
 
     Tabamewin32Plugin::~Tabamewin32Plugin() {}
 
@@ -840,11 +840,11 @@ namespace tabamewin32
             std::string iconLocation = std::get<std::string>(args.at(flutter::EncodableValue("iconLocation")));
             int iconID = std::get<int>(args.at(flutter::EncodableValue("iconID")));
             std::wstring iconLocationW = Encoding::Utf8ToWide(iconLocation);
-            BYTE buffer[(256 * 256) * 4];
+            BYTE buffer[(66 * 66) * 4];
             HICON icon = getIconFromFile((LPWSTR)iconLocationW.c_str(), iconID);
             convertIconToBytes(icon, buffer);
             std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (256 * 256) * 4; i++)
+            for (int i = 0; i < (66 * 66) * 4; i++)
             {
                 iconBytes.push_back(buffer[i]);
             }
@@ -923,6 +923,7 @@ namespace tabamewin32
 
                 flutter::EncodableMap trayIconMap;
                 trayIconMap[flutter::EncodableValue("toolTip")] = flutter::EncodableValue(Encoding::WideToUtf8(trayIcon.toolTip));
+                // std::cout << Encoding::WideToUtf8(trayIcon.toolTip) << endl;
                 trayIconMap[flutter::EncodableValue("isVisible")] = flutter::EncodableValue((int)trayIcon.isVisible);
                 trayIconMap[flutter::EncodableValue("processID")] = flutter::EncodableValue((int)trayIcon.processID);
                 trayIconMap[flutter::EncodableValue("hWnd")] = flutter::EncodableValue((int)((LONG_PTR)trayIcon.data.hwnd));
@@ -1003,7 +1004,21 @@ namespace tabamewin32
                 mouseWatchButtons[button] = method == "add" ? 1 : 0;
             result->Success(flutter::EncodableValue(true));
         }
-
+        //? ACRYLIC
+        else if (method_call.method_name().compare("setTransparent") == 0)
+        {
+            // if (!alreadySetTransparent)
+            // {
+            // alreadySetTransparent = true;
+            setTransparent(::GetAncestor(registrar_->GetView()->GetNativeWindow(), GA_ROOT));
+            //}
+            result->Success();
+        }
+        else if (method_call.method_name().compare("getMainHandle") == 0)
+        {
+            HWND handle = ::GetAncestor(registrar_->GetView()->GetNativeWindow(), GA_ROOT);
+            result->Success(flutter::EncodableValue((int)((LONG_PTR)handle)));
+        }
         else
         {
             result->NotImplemented();

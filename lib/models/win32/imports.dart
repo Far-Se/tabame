@@ -5,6 +5,8 @@ import 'dart:ffi' hide Size;
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size;
 
+import 'mixed.dart';
+
 // #region (collapsed) DLL IMPORT
 
 /// [USER32]
@@ -93,15 +95,22 @@ List enumChildWins(hWnd) {
   return __helpEnumChildWins;
 }
 
-final __helperMonitorList = <int>[];
-int helperGetMonitorByIndex(int hMonitor, int hDC, Pointer lpRect, int lParam) {
-  __helperMonitorList.add(hMonitor);
+final __helperMonitorList = <int, Square>{};
+int helperGetMonitorInfo(int hMonitor, int hDC, Pointer lpRect, int lParam) {
+  final monitorInfo = Pointer<RECT>.fromAddress(lpRect.address);
+  __helperMonitorList[hMonitor] = Square(
+      x: monitorInfo.ref.left,
+      y: monitorInfo.ref.top,
+      width: monitorInfo.ref.right - monitorInfo.ref.left,
+      height: monitorInfo.ref.bottom - monitorInfo.ref.top,
+      length: monitorInfo.ref.right,
+      wide: monitorInfo.ref.bottom);
   return 1;
 }
 
-List<int> enumMonitors() {
+Map<int, Square> enumMonitors() {
   __helperMonitorList.clear();
-  EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MonitorEnumProc>(helperGetMonitorByIndex, 0), 0);
+  EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MonitorEnumProc>(helperGetMonitorInfo, 0), 0);
   return __helperMonitorList;
 }
 // #endregion

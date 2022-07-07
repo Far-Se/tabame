@@ -33,12 +33,21 @@ class TimeWidget extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: 0, maxWidth: 140),
             child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.start,
+              verticalDirection: VerticalDirection.down,
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   child: Text(
                     (snapshot.data as Map)["time"] as String,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+
+                      // height: 1.2,
+                    ),
+
                     // textAlign: TextAlign,
                   ),
                 ),

@@ -4,9 +4,11 @@ import 'dart:async';
 import 'dart:ffi' hide Size;
 import 'dart:io' as io;
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart' hide Size, Point;
 
 import 'imports.dart';
 import 'mixed.dart';
@@ -165,6 +167,72 @@ class Win32 {
     }
     return exe;
   }
+
+  static int hWnd = 0;
+  static int getMainHandle() {
+    if (hWnd == 0) getMainHandleByClass();
+    return hWnd;
+  }
+
+  static Future fetchMainWindowHandle() async {
+    hWnd = await getFlutterMainWindow();
+    return;
+  }
+
+  static getMainHandleByClass() {
+    if (hWnd != 0) return hWnd;
+    final hwnd = FindWindow(TEXT("TABAME_FLUTTER_WINDOW"), nullptr);
+    if (hwnd > 0) {
+      hWnd = GetAncestor(hwnd, 2);
+    }
+    return hWnd;
+  }
+
+  static Square getWindowRect({int? hwnd}) {
+    hwnd ??= hWnd;
+    final rect = calloc<RECT>();
+    GetWindowRect(hwnd, rect);
+    final output = Square(x: rect.ref.left, y: rect.ref.top, width: rect.ref.right - rect.ref.left, height: rect.ref.bottom - rect.ref.top);
+    free(rect);
+    return output;
+  }
+
+  static setPosition(Offset position, {int? monitor, int? hwnd}) {
+    hwnd ??= hWnd;
+    final rect = getWindowRect(hwnd: hwnd);
+    int x = position.dx ~/ 1;
+    int y = position.dy ~/ 1;
+    if (monitor != null) {
+      x += Monitor.monitorSizes[monitor]!.x;
+      y += Monitor.monitorSizes[monitor]!.y;
+    }
+    SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
+  }
+
+  static setCenter({bool useMouse = false, int? hwnd}) {
+    hwnd ??= hWnd;
+    if (!useMouse) {
+      final rect = getWindowRect(hwnd: hwnd);
+      final x = (GetSystemMetrics(SM_CXSCREEN) - rect.width) / 2;
+      final y = (GetSystemMetrics(SM_CYSCREEN) - rect.height) / 2;
+      SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
+    } else {
+      final rect = getWindowRect(hwnd: hwnd);
+      final monitor = Monitor.getCursorMonitor();
+      final monitorSize = Monitor.monitorSizes[monitor]!;
+      final x = (((monitorSize.width + monitorSize.x) - monitorSize.x - rect.width) / 2) + monitorSize.x;
+      final y = (((monitorSize.height + monitorSize.y) - monitorSize.y - rect.height) / 2) + monitorSize.y;
+      SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
+    }
+  }
+
+  static int getWindowMonitor(hwnd) {
+    return Monitor.getWindowMonitor(hwnd);
+  }
+
+  static int getCursorMonitor() {
+    return Monitor.getCursorMonitor();
+  }
 }
 
 class WinUtils {
@@ -249,8 +317,6 @@ class WinUtils {
     RoUninitialize();
     return localAppData;
   }
-  // C:\Users\Far Se\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch
-  // C:\Users\Far Se\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
 
   static Future<List<String>> getTaskbarPinnedApps() async {
     final appsFolder = GUIDFromString(FOLDERID_UserPinned);

@@ -1,38 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../widgets/containers/two_sides.dart';
 import '../widgets/itzy/time_weather_widget.dart';
 import '../widgets/traybar.dart';
 import '../widgets/containers/top_bar.dart';
 import '../widgets/taskbar.dart';
-import 'package:window_manager/window_manager.dart';
 
-class QuickMenu extends StatelessWidget with WindowListener {
+class QuickMenu extends StatefulWidget {
   const QuickMenu({Key? key}) : super(key: key);
+  @override
+  State<QuickMenu> createState() => _QuickMenuState();
+}
+
+class _QuickMenuState extends State<QuickMenu> {
+  @override
+  void initState() {
+    super.initState();
+    // Timer.periodic(Duration(seconds: 3), (timer) {
+    //   setState(() {});
+    // });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kWindowCaptionHeight),
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onPanStart: (details) {
-              windowManager.startDragging();
-            },
-            child: Container(
-              margin: const EdgeInsets.all(0) + EdgeInsets.only(left: 10),
-              width: double.infinity,
-              height: 15,
-              color: Colors.transparent,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Image(image: AssetImage("resources/logo.png")),
-              ),
-            ),
-          )),
-      //#h white
-      //1 Body
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: Padding(
@@ -50,30 +48,20 @@ class QuickMenu extends StatelessWidget with WindowListener {
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
+                      //3 Items
                       TopBar(),
                       Taskbar(),
+                      Divider(
+                        thickness: 1,
+                        height: 1,
+                      ),
                       TwoSides(left: TimeWeatherWidget(), right: Traybar()),
-                      // BarWithButtons(children: [Traybar()], withScroll: false),
-                      /* BarWithButtons(
-                        children: [
-                          SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", color: Theme.of(context).iconTheme.color!),
-                          InkWell(
-                            onTap: () {
-                              WinUtils.getTaskbarPinnedApps().then((e) => print(e));
-                            },
-                            child: Icon(Icons.run_circle_sharp),
-                          ),
-                          WindowsAppButton(path: "C:\\Windows\\explorer.exe"),
-                        ],
-                      )
-                       */ // Buttonbar(children: const [TimeWidget(), WeatherWidget()]),
                     ],
                   );
                 }),
           ),
         ),
       ),
-      //#e
     );
   }
 }

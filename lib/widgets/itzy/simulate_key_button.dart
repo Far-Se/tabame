@@ -8,38 +8,44 @@ class SimulateKeyButton extends StatelessWidget {
   final Color color;
   final String simulateKeys;
   final String singleKey;
+  final double iconSize;
   const SimulateKeyButton({
     Key? key,
     required this.icon,
+
+    /// [VK.KEY]
     this.simulateKeys = "",
-    required this.color,
     this.singleKey = "",
+    this.color = Colors.white,
+    this.iconSize = 0,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final size = iconSize != 0 ? iconSize : Theme.of(context).iconTheme.size;
     return Material(
-        type: MaterialType.transparency,
-        child: SizedBox(
-          width: 25,
-          child: IconButton(
-            // constraints: BoxConstraints.loose(Size(13?, 13?)),
-            iconSize: 18,
-            padding: EdgeInsets.all(0),
-            splashRadius: 18,
-            icon: Icon(
-              icon,
-              color: color,
-              // size: 15,
-            ),
-            onPressed: () {
-              if (simulateKeys.isNotEmpty) {
-                WinKeys.send(simulateKeys);
-              } else if (singleKey.isNotEmpty) {
-                WinKeys.single(singleKey, KeySentMode.normal);
-              }
-            },
+      type: MaterialType.transparency,
+      child: SizedBox(
+        width: size! + 5,
+        child: IconButton(
+          // constraints: BoxConstraints.loose(Size(13?, 13?)),
+          iconSize: size,
+          padding: EdgeInsets.all(0),
+          splashRadius: size,
+          icon: Icon(
+            icon,
+            color: color,
+            // size: 15,
           ),
-        ));
+          onPressed: () {
+            if (simulateKeys.isNotEmpty) {
+              WinKeys.send(simulateKeys);
+            } else if (singleKey.isNotEmpty) {
+              WinKeys.single(singleKey, KeySentMode.normal);
+            }
+          },
+        ),
+      ),
+    );
   }
 }

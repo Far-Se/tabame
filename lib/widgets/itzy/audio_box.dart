@@ -120,11 +120,14 @@ class AudioBoxState extends State<AudioBox> {
                   // splashRadius: 20,
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 5),
-                    child: Icon(deviceVar.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded, size: 14),
+                    child: Icon(
+                      deviceVar.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                      size: 14,
+                      color: Colors.black54,
+                    ),
                   ),
                   onTap: () {
                     Audio.setMuteAudioDevice(!deviceVar.isMuted, device);
-                    print(device);
                     deviceVar.isMuted = !deviceVar.isMuted;
                     fetchData();
                   },
@@ -155,26 +158,28 @@ class AudioBoxState extends State<AudioBox> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                InkWell(
-                  onTap: () {
-                    WinUtils.runPowerShell(["mmsys.cpl"]);
-                    Navigator.pop(context);
-                  },
-                  child: Text.rich(
-                    TextSpan(
+                SizedBox(
+                  height: 10,
+                ),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: InkWell(
+                    onTap: () {
+                      WinUtils.runPowerShell(["mmsys.cpl"]);
+                      Navigator.pop(context);
+                    },
+                    child: Wrap(
+                      verticalDirection: VerticalDirection.up,
                       children: [
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.middle,
-                          child: Icon(Icons.tune, size: 13),
-                        ),
-                        TextSpan(text: "Devices:", style: TextStyle(fontSize: 13)),
+                        Icon(Icons.tune, size: 14, color: Colors.black45),
+                        Text("Devices:", style: TextStyle(fontSize: 13, color: Colors.lightBlue.shade600)),
                       ],
                     ),
                   ),
                 ),
                 Divider(
                   thickness: 1,
-                  height: 1,
+                  height: 5,
                 ),
                 //#h red
                 //3 Devices List
@@ -186,33 +191,50 @@ class AudioBoxState extends State<AudioBox> {
                         for (final device in deviceVar.devices)
                           Material(
                             type: MaterialType.transparency,
-                            child: ListTile(
-                              visualDensity: VisualDensity(horizontal: 0, vertical: -4),
-                              // visualDensity: VisualDensity.compact,
-                              horizontalTitleGap: 0,
-                              minVerticalPadding: 0,
-                              minLeadingWidth: 20,
-                              dense: true,
-                              selected: device.id == deviceVar.defaultDevice.id ? true : false,
-                              selectedTileColor: Color.fromARGB(10, 0, 0, 0),
-                              selectedColor: Theme.of(context).textTheme.bodySmall?.color,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                              title: Text(
-                                device.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 13, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal),
+                            child: InkWell(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                  vertical: 2,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: deviceVar.icons.containsKey(device.id)
+                                          ? Image.memory(deviceVar.icons[device.id]!, width: 18, gaplessPlayback: true)
+                                          : Icon(Icons.audiotrack, size: 18),
+                                    ),
+                                    Expanded(
+                                      flex: 4,
+                                      child: Text(
+                                        device.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal),
+                                      ),
+                                    ),
+                                    if (device.id == deviceVar.defaultDevice.id)
+                                      Flexible(
+                                        fit: FlexFit.loose,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                          child: Icon(Icons.check, size: 18, color: Colors.black45),
+                                        ),
+                                      )
+                                  ],
+                                ),
                               ),
-                              leading: deviceVar.icons.containsKey(device.id) ? Image.memory(deviceVar.icons[device.id]!, width: 18) : Icon(Icons.audiotrack, size: 18),
-                              trailing: device.id == deviceVar.defaultDevice.id
-                                  ? Padding(padding: const EdgeInsets.symmetric(horizontal: 4.0), child: Icon(Icons.check, size: 18))
-                                  : null,
                               onTap: () {
                                 Audio.setDefaultDevice(device.id);
                                 fetchData();
                               },
                             ),
                           ),
+                        SizedBox(
+                          height: 5,
+                        )
                       ],
                     ),
                   ),
@@ -276,8 +298,7 @@ class AudioBoxState extends State<AudioBox> {
                         ],
                       ),
                     ),
-                    Divider(thickness: 1, height: 1, color: Colors.grey.shade300),
-                    SizedBox(height: 5),
+                    Divider(thickness: 1, height: 5),
                     //1 Mixer
                     (audioMixer.isEmpty)
                         ? SizedBox()
@@ -286,8 +307,10 @@ class AudioBoxState extends State<AudioBox> {
                             child: Container(
                               // height: 80,
                               // constraints: BoxConstraints(minWidth: 280, maxHeight: 80),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
+                              child: Wrap(
+                                // mainAxisAlignment: MainAxisAlignment.start,
+                                // crossAxis/Alignment: CrossAxisAlignment.center,
+                                // mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   Align(
                                     alignment: Alignment.centerLeft,
@@ -306,53 +329,71 @@ class AudioBoxState extends State<AudioBox> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          // SizedBox(height: 20),
                                           //#h white
                                           for (var mix in audioMixer)
                                             Flexible(
                                               fit: FlexFit.loose,
                                               child: Row(
-                                                // mainAxisAlignment: MainAxisAlignment.start,
-                                                // crossAxisAlignment: CrossAxisAlignment.center,
-                                                // mainAxisSize: MainAxisSize.max,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                mainAxisAlignment: MainAxisAlignment.start,
                                                 children: [
                                                   Padding(
                                                     padding: EdgeInsets.all(5),
                                                     child: audioMixerIcons.containsKey(mix.processId)
                                                         ? Image.memory(
                                                             audioMixerIcons[mix.processId]!,
-                                                            // fit: BoxFit.scaleDown,
                                                             width: 18,
+                                                            gaplessPlayback: true,
                                                           )
                                                         : Icon(Icons.audiotrack, size: 18),
                                                   ),
                                                   Flexible(
                                                     fit: FlexFit.loose,
-                                                    child: Column(
-                                                      mainAxisAlignment: MainAxisAlignment.start,
+                                                    child: Stack(
+                                                      // mainAxisAlignment: MainAxisAlignment.start,
                                                       children: [
                                                         Container(
-                                                          // color: Colors.red,
-                                                          // height: 10,
-                                                          // width: mix.peakVolume * 100,
+                                                          height: 20,
+                                                          child: SliderTheme(
+                                                            data: SliderTheme.of(context).copyWith(
+                                                                thumbShape: RoundSliderThumbShape(
+                                                                  enabledThumbRadius: 4.0,
+                                                                  elevation: 0,
+                                                                ),
+                                                                overlayShape: SliderComponentShape.noOverlay),
+                                                            child: Slider(
+                                                              value: mix.maxVolume,
+                                                              min: 0,
+                                                              max: 1,
+                                                              divisions: 25,
+                                                              onChanged: (e) {
+                                                                Audio.setAudioMixerVolume(mix.processId, e);
+                                                                mix.maxVolume = e;
+                                                                setState(() {});
+                                                              },
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          top: 6,
                                                           child: SliderTheme(
                                                             data: SliderTheme.of(context).copyWith(
                                                                 // activeTrackColor: Colors.white,
                                                                 thumbShape: RoundSliderThumbShape(
-                                                                  enabledThumbRadius: 5.0,
+                                                                  enabledThumbRadius: 4.0,
                                                                   elevation: 0,
                                                                 ),
                                                                 overlayShape: SliderComponentShape.noOverlay //(overlayRadius: 3.0),
                                                                 ),
-                                                            child: AbsorbPointer(
+                                                            child: IgnorePointer(
                                                               child: Slider(
                                                                 value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
                                                                 min: 0,
                                                                 max: 1,
 
                                                                 // divisions: 25,
-                                                                activeColor: Colors.grey,
-                                                                inactiveColor: Colors.grey.shade50,
+                                                                activeColor: Colors.blue.shade800,
+                                                                inactiveColor: Colors.transparent,
                                                                 thumbColor: Colors.transparent,
                                                                 onChanged: (e) {
                                                                   Audio.setAudioMixerVolume(mix.processId, e);
@@ -363,20 +404,6 @@ class AudioBoxState extends State<AudioBox> {
                                                             ),
                                                           ),
                                                         ),
-                                                        Container(
-                                                          height: 20,
-                                                          child: Slider(
-                                                            value: mix.maxVolume,
-                                                            min: 0,
-                                                            max: 1,
-                                                            divisions: 25,
-                                                            onChanged: (e) {
-                                                              Audio.setAudioMixerVolume(mix.processId, e);
-                                                              mix.maxVolume = e;
-                                                              setState(() {});
-                                                            },
-                                                          ),
-                                                        )
                                                       ],
                                                     ),
                                                   ),
