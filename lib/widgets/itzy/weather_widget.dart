@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../models/boxes.dart';
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 
@@ -26,22 +27,22 @@ class WeatherWidget extends StatelessWidget {
         initialData: globalSettings.weather,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            // globalSettings = Boxes.settings.getAt(0);
-            // globalSettings.weather = snapshot.data as String;
-            // Boxes.settings.putAt(0, globalSettings);
+            globalSettings.weather = snapshot.data as String;
+            Boxes.settings.put('settings', globalSettings);
           }
           return InkWell(
             onTap: () {
               WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
             },
-            child: Text(
-              snapshot.data as String,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w100,
-                color: Colors.white,
-                height: 1.1,
+            child: Align(
+              child: Text(
+                snapshot.data as String,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w100,
+                  height: 1.1,
+                ),
               ),
             ),
           );

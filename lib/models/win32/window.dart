@@ -7,6 +7,7 @@ import 'package:win32/win32.dart' hide Size;
 
 import '../utils.dart';
 
+import 'imports.dart';
 import 'win32.dart';
 
 class Appearance {
@@ -17,6 +18,7 @@ class Appearance {
   RECT? position;
   Point? size;
   bool isMinimized = false;
+  bool isPinned = false;
 
   @override
   String toString() {
@@ -63,6 +65,8 @@ class Window {
     appearance.visible = Win32.isWindowPresent(hWnd);
     appearance.cloaked = Win32.isWindowCloaked(hWnd);
     appearance.monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
+    final exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    appearance.isPinned = (exstyle & WS_EX_TOPMOST) != 0 ? true : false;
   }
 
   getPath() {
@@ -82,10 +86,8 @@ class Window {
   getManifestIcon() {
     String appxLocation = process.path;
     if (!process.exe.contains("exe")) appxLocation += "${process.exe}\\";
-    // appxLocation += "AppxManifest.xml";
     if (File("${appxLocation}AppxManifest.xml").existsSync()) {
       final manifest = File("${appxLocation}AppxManifest.xml").readAsStringSync();
-      //regex match Square44x44Logo="(.*?)"
       String icon = "";
       if (manifest.contains("Square44x44Logo")) {
         icon = manifest.split("Square44x44Logo=\"")[1].split("\"")[0];

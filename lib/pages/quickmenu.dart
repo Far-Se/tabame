@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/containers/two_sides.dart';
 import '../widgets/itzy/time_weather_widget.dart';
-import '../widgets/traybar.dart';
-import '../widgets/containers/top_bar.dart';
-import '../widgets/taskbar.dart';
+import '../widgets/quickmenu/tray_bar.dart';
+import '../widgets/quickmenu/top_bar.dart';
+import '../widgets/quickmenu/task_bar.dart';
+import '../models/globals.dart';
 
 class QuickMenu extends StatefulWidget {
   const QuickMenu({Key? key}) : super(key: key);
@@ -31,34 +32,53 @@ class _QuickMenuState extends State<QuickMenu> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Padding(
-          padding: EdgeInsets.all(10) - EdgeInsets.only(top: 5),
-          child: Container(
-            color: Colors.transparent,
-            // color: Theme.of(context).scaffoldBackgroundColor,
-            child: FutureBuilder<Object>(
-                future: Future.delayed(Duration(milliseconds: 50), () async {
-                  return true;
-                }),
-                builder: (context, snapshot) {
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      //3 Items
-                      TopBar(),
-                      Taskbar(),
-                      Divider(
-                        thickness: 1,
-                        height: 1,
-                      ),
-                      TwoSides(left: TimeWeatherWidget(), right: Traybar()),
-                    ],
-                  );
-                }),
+      body: MouseRegion(
+        onEnter: (event) => Globals.isWindowActive = true,
+        onExit: (event) => Globals.isWindowActive = false,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
+            padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+            child: Container(
+              color: Colors.black,
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Theme.of(context).backgroundColor,
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).backgroundColor,
+                        Theme.of(context).backgroundColor.withAlpha(200),
+                        Theme.of(context).backgroundColor,
+                      ],
+                      stops: [0, 0.4, 1],
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+                    ]),
+                child: FutureBuilder<Object>(
+                    future: Future.delayed(const Duration(milliseconds: 50), () async {
+                      return true;
+                    }),
+                    builder: (context, snapshot) {
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          //3 Items
+                          TopBar(),
+                          const TaskBar(),
+                          const Divider(
+                            thickness: 1,
+                            height: 1,
+                          ),
+                          const TwoSides(left: TimeWeatherWidget(), right: TrayBar()),
+                        ],
+                      );
+                    }),
+              ),
+            ),
           ),
         ),
       ),

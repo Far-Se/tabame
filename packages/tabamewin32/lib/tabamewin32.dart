@@ -203,10 +203,10 @@ class Audio {
 /// The icon ID can be obtained by calling the enumAudioDevices function.
 Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
 Future<Uint8List?> nativeIconToBytes(String iconlocation, {int iconID = 0}) async {
-  //if (___kCacheIcons.containsKey(iconlocation)) return ___kCacheIcons[iconlocation];
+  if (___kCacheIcons.containsKey(iconlocation)) return ___kCacheIcons[iconlocation];
   final Map<String, dynamic> arguments = {'iconLocation': iconlocation, 'iconID': iconID};
   final result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
-  //___kCacheIcons[iconlocation] = result!;
+  ___kCacheIcons[iconlocation] = result!;
   return result;
 }
 
@@ -281,6 +281,13 @@ Future<String> getHwndName(int hWnd) async {
   return result;
 }
 
+Future<void> setTaskbarVisibility(bool state) async {
+  final Map<String, dynamic> arguments = {
+    'state': state,
+  };
+  await audioMethodChannel.invokeMethod('toggleTaskbar', arguments);
+}
+
 Future<int> getFlutterMainWindow() async {
   final result = await audioMethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
   return result;
@@ -288,4 +295,36 @@ Future<int> getFlutterMainWindow() async {
 
 Future<void> setWindowAsTransparent() async {
   await audioMethodChannel.invokeMethod('setTransparent');
+}
+
+Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirection direction}) async {
+  final Map<String, dynamic> arguments = {
+    'hWnd': hWnd,
+    'direction': direction.index,
+  };
+  final result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  return result;
+}
+
+Future<bool> moveDesktopMethod(DesktopDirection direction) async {
+  final Map<String, dynamic> arguments = {
+    'hWnd': 0,
+    'direction': direction.index,
+  };
+  final result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  return result;
+}
+
+Future<bool> setSkipTaskbar({required int hWnd, required bool skip}) async {
+  final Map<String, dynamic> arguments = {
+    'hWnd': hWnd,
+    'skip': skip,
+  };
+  final result = await audioMethodChannel.invokeMethod<bool>('setSkipTaskbar', arguments) ?? false;
+  return result;
+}
+
+enum DesktopDirection {
+  left,
+  right,
 }

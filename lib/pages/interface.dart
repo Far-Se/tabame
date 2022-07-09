@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 // import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../models/win32/win32.dart';
+
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
 
@@ -12,8 +14,9 @@ class Interface extends StatefulWidget {
 class InterfaceState extends State<Interface> {
   @override
   void initState() {
-    WindowManager.instance.setPosition(const Offset(200, 200), animate: true);
+    // WindowManager.instance.setPosition(const Offset(200, 200), animate: true);
     WindowManager.instance.setSize(const Size(500, 500));
+    Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
 
     super.initState();
   }
@@ -22,12 +25,12 @@ class InterfaceState extends State<Interface> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Interface'),
+        title: const Text('Interface'),
       ),
       body: Container(
         width: 500,
         height: 300,
-        child: Center(
+        child: const Center(
           child: Text("TEST"),
         ),
       ),

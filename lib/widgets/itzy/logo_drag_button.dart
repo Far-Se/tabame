@@ -11,7 +11,7 @@ class LogoDragButton extends StatelessWidget {
       onPanStart: (details) {
         windowManager.startDragging();
       },
-      child: InkWell(
+      child: const InkWell(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 5),
           child: Align(

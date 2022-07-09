@@ -22,7 +22,7 @@ class _AudioButtonState extends State<AudioButton> {
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(Duration(milliseconds: 1000), (timer) async {
+    timer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
       muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
       if (!mounted) return;
       setState(() {});
@@ -37,72 +37,69 @@ class _AudioButtonState extends State<AudioButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      child: SizedBox(
-        width: 25,
-        child: Material(
-          type: MaterialType.transparency,
-          child: Listener(
-            onPointerSignal: (event) {
-              if (event is PointerScrollEvent) {
-                if (event.scrollDelta.dy < 0) {
-                  WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
-                } else {
-                  WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
-                }
+    return SizedBox(
+      width: 20,
+      height: double.maxFinite,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Listener(
+          onPointerSignal: (event) {
+            if (event is PointerScrollEvent) {
+              if (event.scrollDelta.dy < 0) {
+                WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
+              } else {
+                WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
               }
-            },
-            onPointerDown: (event) {
-              if (event.kind == PointerDeviceKind.mouse) {
-                if (event.buttons == kMiddleMouseButton) {
-                  WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
-                  muteState = !muteState;
-                  setState(() {});
-                }
-                if (event.buttons == kSecondaryMouseButton) {
-                  // WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
-                  Audio.switchDefaultDevice(AudioDeviceType.output);
-                } else if (event.buttons == kPrimaryMouseButton) {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    anchorPoint: Offset(100, 200),
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    barrierColor: Colors.transparent,
-                    constraints: BoxConstraints(maxWidth: 280),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    enableDrag: true,
-                    isScrollControlled: true,
-                    builder: (context) {
-                      return BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: FractionallySizedBox(
-                          // padding: const EdgeInsets.only(top: 10),
-                          heightFactor: 0.9,
-                          child: Listener(
-                            onPointerDown: (event) {
-                              if (event.kind == PointerDeviceKind.mouse) {
-                                if (event.buttons == kSecondaryMouseButton) {
-                                  Navigator.pop(context);
-                                }
+            }
+          },
+          onPointerDown: (event) {
+            if (event.kind == PointerDeviceKind.mouse) {
+              if (event.buttons == kMiddleMouseButton) {
+                WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
+                muteState = !muteState;
+                setState(() {});
+              }
+              if (event.buttons == kSecondaryMouseButton) {
+                Audio.switchDefaultDevice(AudioDeviceType.output);
+              } else if (event.buttons == kPrimaryMouseButton) {
+                showModalBottomSheet<void>(
+                  context: context,
+                  anchorPoint: const Offset(100, 200),
+                  elevation: 0,
+                  backgroundColor: Colors.transparent,
+                  barrierColor: Colors.transparent,
+                  constraints: const BoxConstraints(maxWidth: 280),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  enableDrag: true,
+                  isScrollControlled: true,
+                  builder: (context) {
+                    return BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: FractionallySizedBox(
+                        heightFactor: 0.85,
+                        child: Listener(
+                          onPointerDown: (event) {
+                            if (event.kind == PointerDeviceKind.mouse) {
+                              if (event.buttons == kSecondaryMouseButton) {
+                                Navigator.pop(context);
                               }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(2.0),
-                              child: AudioBox(),
-                            ),
+                            }
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: AudioBox(),
                           ),
                         ),
-                      );
-                    },
-                  );
-                }
+                      ),
+                    );
+                  },
+                );
               }
-            },
-            child: InkWell(
-              child: Icon(muteState == false ? Icons.volume_up : Icons.volume_off, color: Colors.white),
-              onTap: () {},
-            ),
+            }
+          },
+          child: InkWell(
+            child: Tooltip(message: "Audio Control", child: Icon(muteState == false ? Icons.volume_up : Icons.volume_off)),
+            onTap: () {},
           ),
         ),
       ),

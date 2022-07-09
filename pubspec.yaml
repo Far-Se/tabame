@@ -63,6 +63,25 @@ flutter:
   assets:
     - resources/logo.png
     - resources/wizzard1.png
+
+  # fonts:
+  #   - family: Georgia
+  #     fonts:
+  #     - asset: resources/fonts/georgia.ttf
+  #     - asset: resources/fonts/georgiab.ttf
+  #       weight: 700
+  #     - asset: resources/fonts/georgiai.ttf
+  #       style: italic
+  #   - family: Roboto
+  #     fonts:
+  #     - asset: resources/fonts/RobotoMono-Regular.ttf
+  #     - asset: resources/fonts/RobotoMono-Bold.ttf
+  #       weight: 700
+  #     - asset: resources/fonts/RobotoMono-Light.ttf
+  #       weight: 200
+  #     - asset: resources/fonts/RobotoMono-Italic.ttf
+  #       style: italic
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
   # For details regarding adding assets from package dependencies, see

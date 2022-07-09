@@ -7,6 +7,7 @@ import 'package:intl/intl_standalone.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'boxes.dart';
+import 'utils.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
@@ -20,9 +21,14 @@ Future registerAll() async {
   // ? Main Handle
   Win32.fetchMainWindowHandle();
   Monitor.fetchMonitor();
-  monitorChecker = Timer.periodic(Duration(seconds: 5), (timer) => Monitor.fetchMonitor());
+  monitorChecker = Timer.periodic(const Duration(seconds: 5), (timer) => Monitor.fetchMonitor());
   // ? Boxes
   await Boxes.registerBoxes();
+
+  globalSettings.volumeOSD = VolumeOSDStyle.media;
+  if (globalSettings.volumeOSD != VolumeOSDStyle.normal) {
+    WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSD, applyStyle: true);
+  }
 }
 
 unregisterAll() {

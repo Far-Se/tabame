@@ -38,6 +38,7 @@
 #include <audiopolicy.h>
 #include <psapi.h>
 #include <TlHelp32.h>
+#include "virtdesktop.cpp"
 #pragma warning(pop)
 #pragma comment(lib, "ole32")
 #pragma comment(lib, "propsys")
@@ -54,12 +55,78 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+bool VirtualDesktopWorks = false;
 // #pragma warning(disable: 4244)
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+ITaskbarList3 *taskbar_ = nullptr;
+
+void SetTransparent(HWND target_window, bool type)
+{
+    DWORD exstyle;
+    typedef BOOL(WINAPI * MySetLayeredWindowAttributesType)(HWND, COLORREF, BYTE, DWORD);
+    static MySetLayeredWindowAttributesType MySetLayeredWindowAttributes = (MySetLayeredWindowAttributesType)
+        GetProcAddress(GetModuleHandle(L"user32"), "SetLayeredWindowAttributes");
+    exstyle = GetWindowLong(target_window, GWL_EXSTYLE);
+    if (!MySetLayeredWindowAttributes || !exstyle)
+        return;
+    if (!type)
+    {
+        SetWindowLong(target_window, GWL_EXSTYLE, exstyle & ~WS_EX_LAYERED);
+        // InvalidateRect(target_window, NULL, TRUE);
+    }
+    else
+    {
+        SetWindowLong(target_window, GWL_EXSTYLE, exstyle | WS_EX_LAYERED);
+        MySetLayeredWindowAttributes(target_window, 0, 0, LWA_ALPHA);
+    }
+}
+void ToggleTaskbar(bool visible)
+{
+    APPBARDATA abd = {sizeof abd};
+    abd.lParam = visible ? ABS_ALWAYSONTOP : ABS_AUTOHIDE;
+    SHAppBarMessage(ABM_SETSTATE, &abd);
+    // SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
+    HWND mainHwnd = FindWindow(L"Shell_traywnd", L"");
+    SetTransparent(mainHwnd, !visible);
+    // ShowWindow(mainHwnd, visible ? SW_SHOWNA : SW_HIDE);
+    // SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
+
+    HWND hwndNext = nullptr;
+    HWND hwnd = nullptr;
+    do
+    {
+        hwnd = FindWindowEx(NULL, hwndNext, L"Shell_SecondaryTrayWnd", L"");
+        if (hwnd)
+        {
+            // ShowWindow(hwnd, visible ? SW_SHOWNA : SW_HIDE);
+            SetTransparent(hwnd, !visible);
+        }
+        hwndNext = hwnd;
+    } while (hwnd != nullptr);
+    SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
+}
+void SetHwndSkipTaskbar(HWND hWnd, bool skip)
+{
+    HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbar_));
+    if (SUCCEEDED(hr))
+    {
+        taskbar_->HrInit();
+        if (!skip)
+        {
+            taskbar_->AddTab(hWnd);
+        }
+        else
+        {
+            taskbar_->DeleteTab(hWnd);
+        }
+        taskbar_->Release();
+    }
+}
 //! Hooks
-LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK
+HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (nCode != HC_ACTION) // Nothing to do :(
         return CallNextHookEx(NULL, nCode, wParam, lParam);
@@ -713,9 +780,30 @@ namespace tabamewin32
         registrar->AddPlugin(std::move(plugin));
     }
 
-    Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar) {}
+    Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar)
+    {
+        // ITaskbarList3 *taskbar_ = nullptr;
+        // if (!CreateScratchDesktop())
+        // {
+        //     std::cout << "Couldn't create Virtual Desktop Manager" << endl;
+        // }
+        // else
+        // {
+        //     std::cout << "Virtual Desktop Manager initiated" << endl;
+        //     VirtualDesktopWorks = true;
+        //     scope_guard guard([]()
+        //                       { DestoryScratchDesktop(); });
+        // }
+    }
 
-    Tabamewin32Plugin::~Tabamewin32Plugin() {}
+    Tabamewin32Plugin::~Tabamewin32Plugin()
+    {
+        // DestoryScratchDesktop();
+        if (g_EventHook != NULL)
+            UnhookWinEvent(g_EventHook);
+        if (g_MouseHook != NULL)
+            UnhookWindowsHookEx(g_MouseHook);
+    }
 
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
@@ -935,6 +1023,15 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(map));
         }
 
+        else if (method_call.method_name().compare("toggleTaskbar") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            bool state = std::get<bool>(args.at(flutter::EncodableValue("state")));
+            std::cout << state << endl;
+            ToggleTaskbar(state);
+            result->Success(flutter::EncodableValue(true));
+        }
+
         //? WIN HOOKS
         else if (method_call.method_name().compare("installHooks") == 0)
         {
@@ -1019,6 +1116,55 @@ namespace tabamewin32
             HWND handle = ::GetAncestor(registrar_->GetView()->GetNativeWindow(), GA_ROOT);
             result->Success(flutter::EncodableValue((int)((LONG_PTR)handle)));
         }
+
+        //? Virtual Desktops
+        else if (method_call.method_name().compare("moveWindowToDesktop") == 0)
+        {
+            const flutter::EncodableMap &getArgs = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int iHwnd = std::get<int>(getArgs.at(flutter::EncodableValue("hWnd")));
+            int eventMin = std::get<int>(getArgs.at(flutter::EncodableValue("direction")));
+
+            if (CreateScratchDesktop())
+            {
+                if (iHwnd == 0)
+                {
+                    if (eventMin > 0)
+                        NextDesktop();
+                    else
+                        PrevDesktop();
+                }
+                else
+                {
+                    HWND hWnd = (HWND)((LONG_PTR)iHwnd);
+                    if (eventMin > 0)
+                    {
+                        NextDesktop();
+                        MoveToCurrent(hWnd);
+                    }
+                    else
+                    {
+                        PrevDesktop();
+                        MoveToCurrent(hWnd);
+                    }
+                    DestoryScratchDesktop();
+                }
+                result->Success(flutter::EncodableValue(true));
+            }
+            else
+                result->Success(flutter::EncodableValue(false));
+        }
+        else if (method_call.method_name().compare("setSkipTaskbar") == 0)
+        {
+
+            const flutter::EncodableMap &getArgs = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int iHwnd = std::get<int>(getArgs.at(flutter::EncodableValue("hWnd")));
+            bool skip = std::get<bool>(getArgs.at(flutter::EncodableValue("skip")));
+
+            HWND hWnd = (HWND)((LONG_PTR)iHwnd);
+            SetHwndSkipTaskbar(hWnd, skip);
+            result->Success(flutter::EncodableValue(true));
+        }
+
         else
         {
             result->NotImplemented();

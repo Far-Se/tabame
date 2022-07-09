@@ -1,4 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -11,13 +10,13 @@ class TimeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return StreamBuilder<Map>(
       initialData: {
         "time": DateFormat('hh:mm:ss').format(DateTime.now()),
         "date": DateFormat('dd MMM').format(DateTime.now()),
         "day": DateFormat('EE').format(DateTime.now()),
       },
-      stream: Stream.periodic(Duration(milliseconds: 500), (timer) {
+      stream: Stream.periodic(const Duration(milliseconds: 500), (timer) {
         final now = DateTime.now();
         return {
           "time": DateFormat('hh:mm:ss').format(now),
@@ -26,52 +25,43 @@ class TimeWidget extends StatelessWidget {
         };
       }),
       builder: (context, snapshot) {
-        return InkWell(
-          onTap: () {
-            WinKeys.send("{#LWIN}C");
-          },
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: 0, maxWidth: 140),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.start,
-              verticalDirection: VerticalDirection.down,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Text(
-                    (snapshot.data as Map)["time"] as String,
-
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-
-                      // height: 1.2,
-                    ),
-
-                    // textAlign: TextAlign,
-                  ),
-                ),
-                SizedBox(
-                  width: 30,
-                  height: 15,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        top: -3,
-                        child: Text(
-                          (snapshot.data as Map)["day"] as String,
-                          style: const TextStyle(color: Colors.white, fontSize: 10),
+        return Container(
+          width: 70,
+          child: InkWell(
+            onTap: () {
+              WinKeys.send("{#LWIN}C");
+            },
+            child: Align(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 0, maxWidth: 100),
+                child: Column(
+                  // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // mainAxisSize: MainAxisSize.max,
+                  // crossAxisAlignment: CrossAxisAlignment.center,
+                  // verticalDirection: VerticalDirection.down,
+                  children: [
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: SizedBox(
+                        width: 100,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Text(
+                            (snapshot.data as Map)["time"] as String,
+                            style: const TextStyle(
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
-                      Positioned(
-                        top: 7,
-                        child: Text((snapshot.data as Map)["date"] as String, style: const TextStyle(color: Colors.white, fontSize: 10)),
-                      ),
-                    ],
-                  ),
-                )
-              ],
+                    ),
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}", style: const TextStyle(fontSize: 10)),
+                    )
+                  ],
+                ),
+              ),
             ),
           ),
         );

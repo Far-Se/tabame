@@ -10,17 +10,13 @@ import 'package:ffi/ffi.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart' hide Size, Point;
 
+import '../keys.dart';
+import '../utils.dart';
 import 'imports.dart';
 import 'mixed.dart';
 
 class Win32 {
-  static void activateWindow(hWnd) {
-    //ShowWindow(hWnd, SW_RESTORE);
-    // SetForegroundWindow(hWnd);
-    // BringWindowToTop(hWnd);
-    // SetFocus(hWnd);
-    // SetActiveWindow(hWnd);
-    // UpdateWindow(hWnd);
+  static void activateWindow(int hWnd, {bool forced = false}) {
     final place = calloc<WINDOWPLACEMENT>();
     GetWindowPlacement(hWnd, place);
 
@@ -36,19 +32,22 @@ class Win32 {
         break;
     }
     free(place);
+    if (forced) {
+      ShowWindow(hWnd, SW_RESTORE);
+      SetForegroundWindow(hWnd);
+      BringWindowToTop(hWnd);
+      SetFocus(hWnd);
+      SetActiveWindow(hWnd);
+      UpdateWindow(hWnd);
+    }
     SetForegroundWindow(hWnd);
   }
 
-  static void forceActivateWindow(hWnd) {
-    ShowWindow(hWnd, SW_RESTORE);
-    SetForegroundWindow(hWnd);
-    BringWindowToTop(hWnd);
-    SetFocus(hWnd);
-    SetActiveWindow(hWnd);
-    UpdateWindow(hWnd);
+  static void forceActivateWindow(int hWnd) {
+    activateWindow(hWnd, forced: true);
   }
 
-  static void closeWindow(hWnd, {bool forced = false}) {
+  static void closeWindow(int hWnd, {bool forced = false}) {
     PostMessage(hWnd, WM_CLOSE, 0, 0);
     if (forced) {
       final pId = calloc<Uint32>();
@@ -64,10 +63,9 @@ class Win32 {
       TerminateProcess(mainPID, 0);
       TerminateProcess(prID, 0);
     }
-    // SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
   }
 
-  static String getProcessExePath(processID) {
+  static String getProcessExePath(int processID) {
     String exePath = "";
     final hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
@@ -92,7 +90,7 @@ class Win32 {
   }
 
   @Deprecated("Outdated method one getWindowsExePath or getProcessExePath")
-  static String getWindowExeModulePath(hWnd) {
+  static String getWindowExeModulePath(int hWnd) {
     final lpBaseName = wsalloc(MAX_PATH);
     GetWindowModuleFileName(hWnd, lpBaseName, MAX_PATH);
     String moduleName = lpBaseName.toDartString();
@@ -114,11 +112,11 @@ class Win32 {
     return moduleName;
   }
 
-  static String getWindowExePath(hWnd) {
+  static String getWindowExePath(int hWnd) {
     return HwndPath().getFullPathString(hWnd);
   }
 
-  static String getTitle(hWnd) {
+  static String getTitle(int hWnd) {
     String title = "";
     final length = GetWindowTextLength(hWnd);
     final buffer = wsalloc(length + 1);
@@ -129,12 +127,13 @@ class Win32 {
   }
 
   static bool isWindowPresent(int hWnd) {
-    final winInfo = calloc<WINDOWINFO>();
     var visible = true;
-    GetWindowInfo(hWnd, winInfo);
-    if ((winInfo.ref.dwExStyle & WS_EX_TOOLWINDOW) != 0) visible = false;
+    final exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    if ((exstyle & WS_EX_TOOLWINDOW) != 0) visible = false;
+    // final winInfo = calloc<WINDOWINFO>();
+    // GetWindowInfo(hWnd, winInfo);
     // if ((winInfo.ref.dwExStyle & WS_EX_APPWINDOW) != 0) visible = false;
-    free(winInfo);
+    // free(winInfo);
     return visible;
   }
 
@@ -226,66 +225,77 @@ class Win32 {
     }
   }
 
-  static int getWindowMonitor(hwnd) {
+  static int getWindowMonitor(int hwnd) {
     return Monitor.getWindowMonitor(hwnd);
   }
 
   static int getCursorMonitor() {
     return Monitor.getCursorMonitor();
   }
+
+  //
+  static Future<bool> moveWindowToDesktop(int hWnd, DesktopDirection direction, {bool classMethod = true}) async {
+    if (classMethod) return await moveWindowToDesktopMethod(hWnd: hWnd, direction: direction);
+    String key = "RIGHT";
+    if (direction == DesktopDirection.left) key = "LEFT";
+    await setSkipTaskbar(hWnd: hWnd, skip: true);
+    WinKeys.send("{#WIN}{#CTRL}{$key}");
+    await setSkipTaskbar(hWnd: hWnd, skip: false);
+    return true;
+  }
 }
 
 class WinUtils {
-  static void setVolumeOSDStyle({required OSDType type, enabled = true, int recursiveCheckHwnd = 5}) {
-    var hWnd = 0;
-    if (type == OSDType.media) {
-      hWnd = FindWindowEx(NULL, NULL, TEXT("NativeHWNDHost"), nullptr);
-      if (hWnd != 0) {
-        final dpi = GetDpiForWindow(hWnd);
-        final dpiCoef = dpi ~/ 96.0;
-        if (enabled == false) {
-          final newOsdRegion = CreateRectRgn(0, 0, (60 * dpiCoef).round(), (140 * dpiCoef).round());
-          SetWindowRgn(hWnd, newOsdRegion, 1);
-        } else {
-          SetWindowRgn(hWnd, 0, 1);
-        }
-        return;
-      }
-    } else if (type == OSDType.visibility) {
-      var vohuleHwnd = FindWindowEx(0, NULL, TEXT("NativeHWNDHost"), nullptr);
-      if (vohuleHwnd == 0) {
-        vohuleHwnd = FindWindowEx(0, 0, TEXT("DirectUIHWND"), nullptr);
-      }
-      if (vohuleHwnd != 0) {
-        if (enabled == true) {
-          ShowWindow(vohuleHwnd, 9);
-          keybd_event(VK_VOLUME_UP, 0, 0, 0);
-          keybd_event(VK_VOLUME_DOWN, 0, 0, 0);
-        } else {
-          ShowWindow(vohuleHwnd, 6);
-        }
-        return;
-      }
-    } else if (type == OSDType.thin) {
-      hWnd = FindWindowEx(NULL, NULL, TEXT("NativeHWNDHost"), nullptr);
-      if (hWnd != 0) {
-        final dpi = GetDpiForWindow(hWnd);
-        final dpiCoef = dpi ~/ 96.0;
-        if (enabled == true) {
-          final newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - 20, (140 * dpiCoef).round() - 16);
-          SetWindowRgn(hWnd, newOsdRegion, 1);
-          final dc = GetWindowDC(hWnd);
-          SetBkColor(dc, 0xFF00FF00);
-        } else {
-          SetWindowRgn(hWnd, 0, 1);
-        }
-      }
+  static void setVolumeOSDStyle({required VolumeOSDStyle type, bool applyStyle = true, int recursiveCheckHwnd = 5}) {
+    var volumeHwnd = FindWindowEx(0, NULL, TEXT("NativeHWNDHost"), nullptr);
+    if (volumeHwnd == 0) {
+      volumeHwnd = FindWindowEx(0, 0, TEXT("DirectUIHWND"), nullptr);
     }
 
-    if (hWnd == 0 && recursiveCheckHwnd > 0) {
+    if (volumeHwnd != 0) {
+      if (type == VolumeOSDStyle.media) {
+        final dpi = GetDpiForWindow(volumeHwnd);
+        final dpiCoef = dpi ~/ 96.0;
+        if (applyStyle == true) {
+          final newOsdRegion = CreateRectRgn(0, 0, (60 * dpiCoef).round(), (140 * dpiCoef).round());
+          SetWindowRgn(volumeHwnd, newOsdRegion, 1);
+        } else {
+          SetWindowRgn(volumeHwnd, 0, 1);
+        }
+        return;
+      } else if (type == VolumeOSDStyle.visible) {
+        if (volumeHwnd != 0) {
+          if (applyStyle == false) {
+            ShowWindow(volumeHwnd, 9);
+            keybd_event(VK_VOLUME_UP, 0, 0, 0);
+            keybd_event(VK_VOLUME_DOWN, 0, 0, 0);
+          } else {
+            ShowWindow(volumeHwnd, 6);
+          }
+          return;
+        }
+      } else if (type == VolumeOSDStyle.thin) {
+        volumeHwnd = FindWindowEx(NULL, NULL, TEXT("NativeHWNDHost"), nullptr);
+        if (volumeHwnd != 0) {
+          final dpi = GetDpiForWindow(volumeHwnd);
+          final dpiCoef = dpi ~/ 96.0;
+          if (applyStyle == true) {
+            final newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - 20, (140 * dpiCoef).round() - 16);
+            SetWindowRgn(volumeHwnd, newOsdRegion, 1);
+            final dc = GetWindowDC(volumeHwnd);
+            SetBkColor(dc, 0xFF00FF00);
+          } else {
+            SetWindowRgn(volumeHwnd, 0, 1);
+          }
+        }
+      }
+    } else {
+      print("no hwnd");
+    }
+    if (volumeHwnd == 0 && recursiveCheckHwnd > 0) {
       recursiveCheckHwnd--;
       Timer(const Duration(seconds: 3), () {
-        setVolumeOSDStyle(type: type, enabled: enabled, recursiveCheckHwnd: recursiveCheckHwnd);
+        setVolumeOSDStyle(type: type, applyStyle: applyStyle, recursiveCheckHwnd: recursiveCheckHwnd);
       });
     }
     return;
@@ -366,6 +376,34 @@ class WinUtils {
   static void sendCommand({int command = AppCommand.appCommand}) {
     SendMessage(NULL, AppCommand.appCommand, 0, command);
   }
+
+  static String getTaskManagerPath() {
+    String location = "";
+    final folder = GUIDFromString(FOLDERID_Windows);
+    final ppszPath = calloc<PWSTR>();
+    final hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    if (!FAILED(hr)) {
+      location = "${ppszPath.value.toDartString()}\\System32\\Taskmgr.exe";
+    }
+    free(ppszPath);
+    return location;
+  }
+
+  static bool taskbarVisible = true;
+  static void toggleTaskbar() {
+    taskbarVisible = !taskbarVisible;
+    setTaskbarVisibility(taskbarVisible);
+  }
+
+  static void moveDesktop(DesktopDirection direction, {bool classMethod = true}) {
+    if (classMethod) {
+      moveDesktopMethod(direction);
+      return;
+    }
+    String key = "RIGHT";
+    if (direction == DesktopDirection.left) key = "LEFT";
+    WinKeys.send("{#WIN}{#CTRL}{$key}");
+  }
 }
 
 class HProcess {
@@ -384,7 +422,7 @@ class HProcess {
 class HwndPath {
   HwndPath();
   bool isAppx = false;
-  String GetAppxInstallLocation(hWnd) {
+  String GetAppxInstallLocation(int hWnd) {
     //Ger Process Handle
     final ppID = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, ppID);
@@ -452,7 +490,7 @@ class HwndPath {
     return packageLocation;
   }
 
-  String getProcessExePath(processID) {
+  String getProcessExePath(int processID) {
     String exePath = "";
     final hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
@@ -475,7 +513,7 @@ class HwndPath {
     return exePath;
   }
 
-  String getWindowExePath(hWnd) {
+  String getWindowExePath(int hWnd) {
     String result = "";
     final pId = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, pId);
@@ -505,7 +543,7 @@ class HwndPath {
     return result;
   }
 
-  int getRealPID(hWnd) {
+  int getRealPID(int hWnd) {
     String result = "";
     final pId = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, pId);
@@ -535,7 +573,7 @@ class HwndPath {
     return processID;
   }
 
-  Map<String, dynamic> getFullPath(hWnd) {
+  Map<String, dynamic> getFullPath(int hWnd) {
     var exePath = getWindowExePath(hWnd);
     if (exePath.contains('WWAHost')) {
       isAppx = true;
@@ -548,7 +586,7 @@ class HwndPath {
     return {"isAppx": isAppx, "path": exePath};
   }
 
-  String getFullPathString(hWnd) {
+  String getFullPathString(int hWnd) {
     Map<String, dynamic> result = getFullPath(hWnd);
     return result["path"];
   }

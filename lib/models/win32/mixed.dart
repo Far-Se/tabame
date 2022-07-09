@@ -6,12 +6,6 @@ import 'package:win32/win32.dart' hide Size;
 
 import 'imports.dart';
 
-enum OSDType {
-  media,
-  visibility,
-  thin,
-}
-
 enum ScreenState {
   notPresent,
   busy,

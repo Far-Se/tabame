@@ -10,26 +10,21 @@ class PinnedApps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var pinned = Boxes.lists.get('pinned')!;
-    pinned = [...pinned, ...pinned, ...pinned, ...pinned, ...pinned, ...pinned, ...pinned, ...pinned, ...pinned];
-    // print(pinned.value[0]);
-    if (pinned.isEmpty) return SizedBox();
-    print("xx");
-    return SizedBox(
-      height: 25,
-      child: BarWithButtons(children: [
-        for (var item in pinned)
-          GestureDetector(
-            onSecondaryTap: () {
-              final x = pinned.indexWhere((element) => element == item);
-              WinKeys.send("{#WIN}{#ALT}${x + 1}");
-              print(x);
-            },
-            child: WindowsAppButton(
-              path: item,
-            ),
-          )
-      ]),
-    );
+    var pinned = Boxes.lists.get('pinned') ?? [];
+
+    if (pinned.isEmpty) return const SizedBox();
+    return BarWithButtons(children: [
+      for (var item in pinned)
+        GestureDetector(
+          onSecondaryTap: () {
+            final x = pinned.indexWhere((element) => element == item);
+            WinKeys.send("{#WIN}{#ALT}${x + 1}");
+            print(x);
+          },
+          child: WindowsAppButton(
+            path: item,
+          ),
+        )
+    ]);
   }
 }

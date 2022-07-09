@@ -1,4 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -22,11 +21,12 @@ class WindowsAppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = Theme.of(context).iconTheme.size ?? 12;
-    // final color = Theme.of(context).iconTheme.size;
+    if (!File(path).existsSync()) return const SizedBox();
     return Material(
       type: MaterialType.transparency,
       child: SizedBox(
         width: size + 5,
+        height: double.maxFinite,
         child: FutureBuilder(
           future: nativeIconToBytes(path),
           builder: (context, snapshot) {
@@ -34,22 +34,25 @@ class WindowsAppButton extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2.0),
                 child: snapshot.data is Uint8List
-                    ? Image.memory(
-                        snapshot.data! as Uint8List,
-                        fit: BoxFit.scaleDown,
-                        width: size,
-                        gaplessPlayback: true,
+                    ? Tooltip(
+                        message: path.substring(path.lastIndexOf('\\') + 1),
+                        child: Image.memory(
+                          snapshot.data! as Uint8List,
+                          fit: BoxFit.scaleDown,
+                          width: size,
+                          gaplessPlayback: true,
+                        ),
                       )
                     : Icon(Icons.circle_outlined, size: size),
               ),
               onTap: () {
-                Process.run(path, []);
+                WinUtils.open(path);
               },
               onDoubleTap: () async {
                 final startWindows = enumWindows().toSet();
-                await Process.start(path, []);
+                WinUtils.open(path);
                 int ticker = 0;
-                Timer.periodic(Duration(milliseconds: 100), (timer) {
+                Timer.periodic(const Duration(milliseconds: 100), (timer) {
                   ticker++;
                   if (ticker > 10) {
                     timer.cancel();

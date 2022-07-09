@@ -38,11 +38,11 @@ class AudioBoxState extends State<AudioBox> {
   void init() {
     fetchData();
     fetchAudioMixerData();
-    timerData = Timer.periodic(Duration(milliseconds: 1000), (timer) {
+    timerData = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
       timerData = timer;
       fetchData();
     });
-    timerMixer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+    timerMixer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       timerMixer = timer;
       fetchAudioMixerData();
     });
@@ -109,17 +109,15 @@ class AudioBoxState extends State<AudioBox> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(device.name.toUpperCase(), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w400)),
+          Text(device.name.toUpperCase(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black)),
           Flexible(
             fit: FlexFit.loose,
             //2 Mute Button and Slider
             child: Row(
               children: [
                 InkWell(
-                  // constraints: BoxConstraints(maxWidth: 20),
-                  // splashRadius: 20,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
                     child: Icon(
                       deviceVar.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                       size: 14,
@@ -158,7 +156,7 @@ class AudioBoxState extends State<AudioBox> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   height: 10,
                 ),
                 Flexible(
@@ -171,20 +169,21 @@ class AudioBoxState extends State<AudioBox> {
                     child: Wrap(
                       verticalDirection: VerticalDirection.up,
                       children: [
-                        Icon(Icons.tune, size: 14, color: Colors.black45),
+                        const Icon(Icons.tune, size: 14, color: Colors.black45),
                         Text("Devices:", style: TextStyle(fontSize: 13, color: Colors.lightBlue.shade600)),
                       ],
                     ),
                   ),
                 ),
-                Divider(
+                const Divider(
                   thickness: 1,
                   height: 5,
+                  color: Colors.black12,
                 ),
                 //#h red
                 //3 Devices List
                 Container(
-                  constraints: BoxConstraints(minWidth: 280, maxHeight: 80),
+                  constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
@@ -193,7 +192,7 @@ class AudioBoxState extends State<AudioBox> {
                             type: MaterialType.transparency,
                             child: InkWell(
                               child: Padding(
-                                padding: EdgeInsets.symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 2,
                                   vertical: 2,
                                 ),
@@ -204,7 +203,7 @@ class AudioBoxState extends State<AudioBox> {
                                       fit: FlexFit.loose,
                                       child: deviceVar.icons.containsKey(device.id)
                                           ? Image.memory(deviceVar.icons[device.id]!, width: 18, gaplessPlayback: true)
-                                          : Icon(Icons.audiotrack, size: 18),
+                                          : const Icon(Icons.audiotrack, size: 18),
                                     ),
                                     Expanded(
                                       flex: 4,
@@ -212,14 +211,15 @@ class AudioBoxState extends State<AudioBox> {
                                         device.name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal),
+                                        style: TextStyle(
+                                            fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal, color: Colors.black),
                                       ),
                                     ),
                                     if (device.id == deviceVar.defaultDevice.id)
-                                      Flexible(
+                                      const Flexible(
                                         fit: FlexFit.loose,
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                          padding: EdgeInsets.symmetric(horizontal: 4.0),
                                           child: Icon(Icons.check, size: 18, color: Colors.black45),
                                         ),
                                       )
@@ -232,7 +232,7 @@ class AudioBoxState extends State<AudioBox> {
                               },
                             ),
                           ),
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         )
                       ],
@@ -247,7 +247,6 @@ class AudioBoxState extends State<AudioBox> {
       );
     }
 
-    // print(output);
     return Material(
       type: MaterialType.transparency,
       child: Align(
@@ -255,8 +254,7 @@ class AudioBoxState extends State<AudioBox> {
         child: Container(
           height: double.infinity,
           width: 280,
-          // color: Colors.white,
-          constraints: BoxConstraints(maxWidth: 280, maxHeight: 300),
+          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
             border: Border.all(color: Colors.grey, width: 1),
@@ -266,9 +264,8 @@ class AudioBoxState extends State<AudioBox> {
             padding: const EdgeInsets.all(8.0),
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                // activeTrackColor: Colors.white,
-                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 5.0),
-                overlayShape: SliderComponentShape.noOverlay, //(overlayRadius: 3.0),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.0),
+                overlayShape: SliderComponentShape.noOverlay,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -283,14 +280,14 @@ class AudioBoxState extends State<AudioBox> {
                         children: [
                           //1 Ouput
                           (audioInfo.devices.isEmpty)
-                              ? SizedBox()
+                              ? const SizedBox()
                               : Flexible(
                                   fit: FlexFit.loose,
                                   child: output[AudioDeviceType.output.index]!,
                                 ),
                           //1 Input
                           (micInfo.devices.isEmpty)
-                              ? SizedBox()
+                              ? const SizedBox()
                               : Flexible(
                                   fit: FlexFit.loose,
                                   child: output[AudioDeviceType.input.index]!,
@@ -298,32 +295,31 @@ class AudioBoxState extends State<AudioBox> {
                         ],
                       ),
                     ),
-                    Divider(thickness: 1, height: 5),
+                    const Divider(
+                      thickness: 1,
+                      height: 5,
+                      color: Colors.black12,
+                    ),
                     //1 Mixer
                     (audioMixer.isEmpty)
-                        ? SizedBox()
+                        ? const SizedBox()
                         : Flexible(
                             fit: FlexFit.loose,
                             child: Container(
-                              // height: 80,
-                              // constraints: BoxConstraints(minWidth: 280, maxHeight: 80),
                               child: Wrap(
-                                // mainAxisAlignment: MainAxisAlignment.start,
-                                // crossAxis/Alignment: CrossAxisAlignment.center,
-                                // mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  Align(
+                                  const Align(
                                     alignment: Alignment.centerLeft,
                                     child: Padding(
-                                      padding: EdgeInsets.all(8) - EdgeInsets.only(top: 8),
+                                      padding: EdgeInsets.all(2),
                                       child: Text(
                                         "Mixer:",
-                                        style: TextStyle(fontSize: 13),
+                                        style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w400),
                                       ),
                                     ),
                                   ),
                                   Container(
-                                    constraints: BoxConstraints(minWidth: 280, maxHeight: 80),
+                                    constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
                                     child: SingleChildScrollView(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,25 +334,24 @@ class AudioBoxState extends State<AudioBox> {
                                                 mainAxisAlignment: MainAxisAlignment.start,
                                                 children: [
                                                   Padding(
-                                                    padding: EdgeInsets.all(5),
+                                                    padding: const EdgeInsets.all(5),
                                                     child: audioMixerIcons.containsKey(mix.processId)
                                                         ? Image.memory(
                                                             audioMixerIcons[mix.processId]!,
                                                             width: 18,
                                                             gaplessPlayback: true,
                                                           )
-                                                        : Icon(Icons.audiotrack, size: 18),
+                                                        : const Icon(Icons.audiotrack, size: 18),
                                                   ),
                                                   Flexible(
                                                     fit: FlexFit.loose,
                                                     child: Stack(
-                                                      // mainAxisAlignment: MainAxisAlignment.start,
                                                       children: [
                                                         Container(
                                                           height: 20,
                                                           child: SliderTheme(
                                                             data: SliderTheme.of(context).copyWith(
-                                                                thumbShape: RoundSliderThumbShape(
+                                                                thumbShape: const RoundSliderThumbShape(
                                                                   enabledThumbRadius: 4.0,
                                                                   elevation: 0,
                                                                 ),
@@ -379,12 +374,11 @@ class AudioBoxState extends State<AudioBox> {
                                                           child: SliderTheme(
                                                             data: SliderTheme.of(context).copyWith(
                                                                 // activeTrackColor: Colors.white,
-                                                                thumbShape: RoundSliderThumbShape(
+                                                                thumbShape: const RoundSliderThumbShape(
                                                                   enabledThumbRadius: 4.0,
                                                                   elevation: 0,
                                                                 ),
-                                                                overlayShape: SliderComponentShape.noOverlay //(overlayRadius: 3.0),
-                                                                ),
+                                                                overlayShape: SliderComponentShape.noOverlay),
                                                             child: IgnorePointer(
                                                               child: Slider(
                                                                 value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
