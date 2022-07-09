@@ -24,10 +24,7 @@ class TwoSides extends StatelessWidget {
       width: width,
       height: 30,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          // borderRadius: BorderRadius.circular(20),
-          color: Color(0xff3B414D),
-        ),
+        decoration: const BoxDecoration(color: Colors.transparent),
         child: Material(
           type: MaterialType.transparency,
           child: Row(
@@ -39,16 +36,13 @@ class TwoSides extends StatelessWidget {
                 // ! Align HERE
                 child: Container(
                   width: leftWidth > 0 ? leftWidth : width / 2,
-                  // constraints: BoxConstraints(minWidth: 0, maxWidth: leftWidth > 0 ? leftWidth : width / 2),
                   child: left,
                 ),
               ),
-              // Spacer(),
               Expanded(
                 // ! Align HERE
                 child: Container(
                   width: rightWidht > 0 ? rightWidht : width / 2,
-                  // constraints: BoxConstraints(minWidth: 0, maxWidth: leftWidth > 0 ? leftWidth : width / 2),
                   child: right,
                 ),
               ),

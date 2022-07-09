@@ -1,14 +1,13 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
 import '../../models/keys.dart';
 
 class SimulateKeyButton extends StatelessWidget {
   final IconData icon;
-  final Color color;
   final String simulateKeys;
   final String singleKey;
   final double iconSize;
+  final String tooltip;
   const SimulateKeyButton({
     Key? key,
     required this.icon,
@@ -16,8 +15,8 @@ class SimulateKeyButton extends StatelessWidget {
     /// [VK.KEY]
     this.simulateKeys = "",
     this.singleKey = "",
-    this.color = Colors.white,
     this.iconSize = 0,
+    this.tooltip = "",
   }) : super(key: key);
 
   @override
@@ -28,14 +27,12 @@ class SimulateKeyButton extends StatelessWidget {
       child: SizedBox(
         width: size! + 5,
         child: IconButton(
-          // constraints: BoxConstraints.loose(Size(13?, 13?)),
           iconSize: size,
-          padding: EdgeInsets.all(0),
+          padding: const EdgeInsets.all(0),
           splashRadius: size,
-          icon: Icon(
-            icon,
-            color: color,
-            // size: 15,
+          icon: Tooltip(
+            message: tooltip,
+            child: Icon(icon),
           ),
           onPressed: () {
             if (simulateKeys.isNotEmpty) {

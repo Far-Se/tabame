@@ -28,6 +28,7 @@ namespace tabamewin32
     private:
         bool alreadySetTransparent = false;
         flutter::PluginRegistrarWindows *registrar_ = nullptr;
+        // ITaskbarList3 *taskbar_ = nullptr;
         // Called when a method is called on this plugin's channel from Dart.
         void HandleMethodCall(
             const flutter::MethodCall<flutter::EncodableValue> &method_call,

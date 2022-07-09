@@ -23,6 +23,9 @@ final _GetClassName =
     _user32.lookupFunction<Int32 Function(IntPtr hWnd, Pointer<Utf16> lpClassName, Int32 nMaxCount), int Function(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount)>(
         'GetClassNameW');
 
+int GetWindowLong(int hWnd, int nIndex) => _GetWindowLong(hWnd, nIndex);
+final _GetWindowLong = _user32.lookupFunction<Int32 Function(IntPtr hWnd, Int32 nIndex), int Function(int hWnd, int nIndex)>('GetWindowLongW');
+
 /// [KERNEL32]
 final _kernel32 = DynamicLibrary.open('kernel32.dll');
 int QueryFullProcessImageName(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize) =>
@@ -74,8 +77,6 @@ List<int> enumWindows() {
   final wndProc = Pointer.fromFunction<EnumWindowsProc>(enumWindowsProc, 0);
   __helperWinsList.clear();
   EnumWindows(wndProc, 0);
-  // calloc<Nothing>
-  // free(wndProc);
   return __helperWinsList;
 }
 
@@ -90,8 +91,6 @@ List enumChildWins(hWnd) {
   __helpEnumChildWins.clear();
   //this was outside this function when i moved it..
   EnumChildWindows(hWnd, wndProc, 0);
-  // calloc<Nothing>
-  // free(wndProc);
   return __helpEnumChildWins;
 }
 

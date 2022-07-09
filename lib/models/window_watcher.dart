@@ -5,6 +5,7 @@ import 'dart:ffi' hide Size;
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size;
 
+import 'globals.dart';
 import 'utils.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -15,7 +16,6 @@ import 'win32/window.dart';
 
 class WindowWatcher {
   List<Window> list = <Window>[];
-  Map<int, Window> cacheList = <int, Window>{};
   Map<String, Window> specialList = <String, Window>{};
   int _activeWinHandle = 0;
   get active {
@@ -27,7 +27,6 @@ class WindowWatcher {
   }
 
   WindowWatcher() {
-    //fetchWindows();
     return;
   }
 
@@ -41,36 +40,27 @@ class WindowWatcher {
         allHWNDs.add(hWnd);
       }
     }
-
-    //cacheList.keys.where((hWnd) => !allHWNDs.contains(hWnd)).toList().forEach((hWnd) => cacheList.remove(hWnd));
-
-    list.clear();
+    final List<Window> newList = <Window>[];
     specialList.clear();
 
     for (int element in allHWNDs) {
-      // if (cacheList.containsKey(element)) {
-      //   cacheList[element]!.getWorkspace();
-      //   cacheList[element]!.getTitle();
-      //   cacheList[element]!.getTitle();
-      //   list.add(cacheList[element]!);
-      // } else {
-      list.add(Window(element));
-      // cacheList[element] = list.last;
-      // }
+      newList.add(Window(element));
 
-      if (list.last.process.exe == "Spotify.exe") specialList["Spotify"] = list.last;
+      if (newList.last.process.exe == "Spotify.exe") specialList["Spotify"] = newList.last;
     }
 
-    for (var element in list) {
+    for (var element in newList) {
       if (element.process.path == "" && (element.process.exe == "AccessBlocked.exe" || element.process.exe == "")) {
         getHwndName(element.hWnd).then((value) => element.process.exe = value);
       }
     }
 
     final activeWindow = GetForegroundWindow();
-    _activeWinHandle = list.indexWhere((element) => element.hWnd == activeWindow);
-    if (_activeWinHandle < 0) _activeWinHandle = 0;
-
+    _activeWinHandle = newList.indexWhere((element) => element.hWnd == activeWindow);
+    list = [...newList];
+    if (_activeWinHandle > -1) {
+      Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
+    }
     orderBy(globalSettings.taskBarStyle);
     return true;
   }
@@ -87,7 +77,6 @@ class WindowWatcher {
           firstItems = list.where((element) => element.appearance.monitor == monitor ? true : false).toList();
           list.removeWhere((element) => firstItems.contains(element));
           list = firstItems + list;
-          // list.sort((a, b) => monitor == a.appearance.monitor ? -1 : 1);
         } else if (type == TaskBarAppsStyle.onlyActiveMonitor) {
           list.removeWhere((element) => element.appearance.monitor != monitor);
         }

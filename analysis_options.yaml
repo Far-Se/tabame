@@ -27,6 +27,9 @@ linter:
     dead_code: false 
     prefer_relative_imports: true
     unnecessary_string_interpolations: false
+    prefer_const_declarations: true
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
 # Additional information about this file can be found at

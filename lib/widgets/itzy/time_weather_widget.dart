@@ -10,12 +10,12 @@ class TimeWeatherWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      verticalDirection: VerticalDirection.down,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      verticalDirection: VerticalDirection.up,
+      mainAxisSize: MainAxisSize.max,
       children: [
-        TimeWidget(),
-        // Spacer(),
-        WeatherWidget(),
+        const TimeWidget(),
+        const WeatherWidget(),
       ],
     );
   }
