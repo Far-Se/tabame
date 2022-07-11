@@ -5,7 +5,14 @@ import 'package:hive/hive.dart';
 part 'utils.g.dart';
 
 extension Truncate on String {
-  String truncate(int max, {suffix = ''}) => length < max ? this : replaceRange(max, null, suffix);
+  String truncate(int max, {String suffix = ''}) => length < max ? this : replaceRange(max, null, suffix);
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    if (length < 2) return this;
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  }
 }
 
 enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
@@ -27,18 +34,18 @@ class Settings {
   String language = 'en';
 
   @HiveField(7)
-  final maps = <String, dynamic>{};
+  final Map<String, dynamic> maps = <String, dynamic>{};
 
   @HiveField(8, defaultValue: "normal")
   String weather = '10 C';
 
   @HiveField(9, defaultValue: "berlin")
-  String weatherCity = '10 C';
+  String weatherCity = 'Iasi';
 
-  TaskBarAppsStyle get taskBarStyle => TaskBarAppsStyle.values.firstWhere((e) => e.name == taskBarAppsStyle);
+  TaskBarAppsStyle get taskBarStyle => TaskBarAppsStyle.values.firstWhere((TaskBarAppsStyle e) => e.name == taskBarAppsStyle);
   set taskBarStyle(TaskBarAppsStyle value) => taskBarAppsStyle = value.name;
 
-  VolumeOSDStyle get volumeOSD => VolumeOSDStyle.values.firstWhere((e) => e.index == (maps["volumeOSD"] ?? 0));
+  VolumeOSDStyle get volumeOSD => VolumeOSDStyle.values.firstWhere((VolumeOSDStyle e) => e.index == (maps["volumeOSD"] ?? 0));
   set volumeOSD(VolumeOSDStyle value) => maps["volumeOSD"] = value.index;
 }
 

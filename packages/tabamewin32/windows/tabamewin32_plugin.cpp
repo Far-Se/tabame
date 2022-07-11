@@ -747,14 +747,43 @@ std::wstring getHwndName(HWND hWnd)
             }
 
         } while (Process32Next(hSnapProcess, &process));
-
-        CloseHandle(hSnapProcess);
     }
     else
     {
         processName = L"-";
     }
+    CloseHandle(hSnapProcess);
     return processName;
+}
+
+HWND FindTopWindow(DWORD pid)
+{
+    std::pair<HWND, DWORD> params = {0, pid};
+
+    // Enumerate the windows using a lambda to process each window
+    BOOL bResult = EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL
+                               {
+        auto pParams = (std::pair<HWND, DWORD>*)(lParam);
+
+        DWORD processId;
+        if (GetWindowThreadProcessId(hwnd, &processId) && processId == pParams->second)
+        {
+            // Stop enumerating
+            SetLastError((DWORD)-1);
+            pParams->first = hwnd;
+            return FALSE;
+        }
+
+        // Continue enumerating
+        return TRUE; },
+                               (LPARAM)&params);
+
+    if (!bResult && GetLastError() == -1 && params.first)
+    {
+        return params.first;
+    }
+
+    return 0;
 }
 
 namespace tabamewin32
@@ -807,8 +836,10 @@ namespace tabamewin32
 
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
+
+        std::string method_name = method_call.method_name();
         //? Audio
-        if (method_call.method_name().compare("enumAudioDevices") == 0)
+        if (method_name.compare("enumAudioDevices") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -826,7 +857,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
-        else if (method_call.method_name().compare("getDefaultDevice") == 0)
+        else if (method_name.compare("getDefaultDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -839,7 +870,7 @@ namespace tabamewin32
             deviceMap[flutter::EncodableValue("isActive")] = flutter::EncodableValue(device.isActive);
             result->Success(flutter::EncodableValue(deviceMap));
         }
-        else if (method_call.method_name().compare("setDefaultAudioDevice") == 0)
+        else if (method_name.compare("setDefaultAudioDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             std::string deviceID = std::get<std::string>(args.at(flutter::EncodableValue("deviceID")));
@@ -847,14 +878,14 @@ namespace tabamewin32
             HRESULT nativeFuncResult = setDefaultDevice((LPWSTR)deviceIDW.c_str());
             result->Success(flutter::EncodableValue((int)nativeFuncResult));
         }
-        else if (method_call.method_name().compare("getAudioVolume") == 0)
+        else if (method_name.compare("getAudioVolume") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
             float nativeFuncResult = getVolume((EDataFlow)deviceType);
             result->Success(flutter::EncodableValue((double)nativeFuncResult));
         }
-        else if (method_call.method_name().compare("setAudioVolume") == 0)
+        else if (method_name.compare("setAudioVolume") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -862,7 +893,7 @@ namespace tabamewin32
             setVolume((float)volumeLevel, (EDataFlow)deviceType);
             result->Success(flutter::EncodableValue((int)1));
         }
-        else if (method_call.method_name().compare("setMuteAudioDevice") == 0)
+        else if (method_name.compare("setMuteAudioDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -870,14 +901,14 @@ namespace tabamewin32
             setMuteAudioDevice(state, (EDataFlow)deviceType);
             result->Success(flutter::EncodableValue((int)1));
         }
-        else if (method_call.method_name().compare("getMuteAudioDevice") == 0)
+        else if (method_name.compare("getMuteAudioDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
             bool muteState = getMuteAudioDevice((EDataFlow)deviceType);
             result->Success(flutter::EncodableValue(muteState));
         }
-        else if (method_call.method_name().compare("switchDefaultDevice") == 0)
+        else if (method_name.compare("switchDefaultDevice") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -885,7 +916,7 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(nativeFuncResult));
         }
         //? AudioMixer
-        else if (method_call.method_name().compare("enumAudioMixer") == 0)
+        else if (method_name.compare("enumAudioMixer") == 0)
         {
             std::vector<ProcessVolume> devices = GetProcessVolumes();
             // loop through devices and add them to a map
@@ -901,7 +932,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
-        else if (method_call.method_name().compare("setAudioMixerVolume") == 0)
+        else if (method_name.compare("setAudioMixerVolume") == 0)
         {
 
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -922,23 +953,23 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(map));
         }
         //? Utilities
-        else if (method_call.method_name().compare("iconToBytes") == 0)
+        else if (method_name.compare("iconToBytes") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             std::string iconLocation = std::get<std::string>(args.at(flutter::EncodableValue("iconLocation")));
             int iconID = std::get<int>(args.at(flutter::EncodableValue("iconID")));
             std::wstring iconLocationW = Encoding::Utf8ToWide(iconLocation);
-            BYTE buffer[(66 * 66) * 4];
+            BYTE buffer[(33 * 33) * 4];
             HICON icon = getIconFromFile((LPWSTR)iconLocationW.c_str(), iconID);
             convertIconToBytes(icon, buffer);
             std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (66 * 66) * 4; i++)
+            for (int i = 0; i < (33 * 33) * 4; i++)
             {
                 iconBytes.push_back(buffer[i]);
             }
             result->Success(flutter::EncodableValue(iconBytes));
         }
-        else if (method_call.method_name().compare("getWindowIcon") == 0)
+        else if (method_name.compare("getWindowIcon") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int hWND = std::get<int>(args.at(flutter::EncodableValue("hWnd")));
@@ -979,15 +1010,22 @@ namespace tabamewin32
                 result->Success(flutter::EncodableValue(iconBytes));
             }
         }
-        else if (method_call.method_name().compare("getHwndName") == 0)
+        else if (method_name.compare("getHwndName") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int hWND = std::get<int>(args.at(flutter::EncodableValue("hWnd")));
             std::wstring name = getHwndName((HWND)((LONG_PTR)hWND));
             result->Success(flutter::EncodableValue(Encoding::WideToUtf8(name)));
         }
+        else if (method_name.compare("findTopWindow") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int processID = std::get<int>(args.at(flutter::EncodableValue("processID")));
+            HWND name = FindTopWindow((DWORD)processID);
+            result->Success(flutter::EncodableValue((LONG_PTR)name));
+        }
 
-        else if (method_call.method_name().compare("enumTrayIcons") == 0)
+        else if (method_name.compare("enumTrayIcons") == 0)
         {
             std::vector<TrayIconData> trayIcons = EnumSystemTray();
             // loop through devices and add them to a map
@@ -1022,8 +1060,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
-
-        else if (method_call.method_name().compare("toggleTaskbar") == 0)
+        else if (method_name.compare("toggleTaskbar") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             bool state = std::get<bool>(args.at(flutter::EncodableValue("state")));
@@ -1033,7 +1070,7 @@ namespace tabamewin32
         }
 
         //? WIN HOOKS
-        else if (method_call.method_name().compare("installHooks") == 0)
+        else if (method_name.compare("installHooks") == 0)
         {
 
             const flutter::EncodableMap &getArgs = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -1053,7 +1090,7 @@ namespace tabamewin32
             args[flutter::EncodableValue("eventHookID")] = flutter::EncodableValue((int)((LONG_PTR)g_EventHook)); // DWORD_PTR
             result->Success(flutter::EncodableValue(args));
         }
-        else if (method_call.method_name().compare("uninstallHooks") == 0)
+        else if (method_name.compare("uninstallHooks") == 0)
         {
             if (g_EventHook != NULL)
                 UnhookWinEvent(g_EventHook);
@@ -1063,7 +1100,7 @@ namespace tabamewin32
             g_MouseHook = NULL;
             result->Success(flutter::EncodableValue("Hooks uninstalled"));
         }
-        else if (method_call.method_name().compare("cleanHooks") == 0)
+        else if (method_name.compare("cleanHooks") == 0)
         {
             for (int i = 0; i < 7; i++)
             {
@@ -1072,7 +1109,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(true));
         }
-        else if (method_call.method_name().compare("uninstallSpecificHookID") == 0)
+        else if (method_name.compare("uninstallSpecificHookID") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int hookID = std::get<int>(args.at(flutter::EncodableValue("hookID")));
@@ -1088,7 +1125,7 @@ namespace tabamewin32
                 result->Success(flutter::EncodableValue("Hook Mouse Uninstalled."));
             }
         }
-        else if (method_call.method_name().compare("manageMouseHook") == 0)
+        else if (method_name.compare("manageMouseHook") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int button = std::get<int>(args.at(flutter::EncodableValue("button")));
@@ -1102,7 +1139,7 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(true));
         }
         //? ACRYLIC
-        else if (method_call.method_name().compare("setTransparent") == 0)
+        else if (method_name.compare("setTransparent") == 0)
         {
             // if (!alreadySetTransparent)
             // {
@@ -1111,14 +1148,14 @@ namespace tabamewin32
             //}
             result->Success();
         }
-        else if (method_call.method_name().compare("getMainHandle") == 0)
+        else if (method_name.compare("getMainHandle") == 0)
         {
             HWND handle = ::GetAncestor(registrar_->GetView()->GetNativeWindow(), GA_ROOT);
             result->Success(flutter::EncodableValue((int)((LONG_PTR)handle)));
         }
 
         //? Virtual Desktops
-        else if (method_call.method_name().compare("moveWindowToDesktop") == 0)
+        else if (method_name.compare("moveWindowToDesktop") == 0)
         {
             const flutter::EncodableMap &getArgs = std::get<flutter::EncodableMap>(*method_call.arguments());
             int iHwnd = std::get<int>(getArgs.at(flutter::EncodableValue("hWnd")));
@@ -1153,7 +1190,7 @@ namespace tabamewin32
             else
                 result->Success(flutter::EncodableValue(false));
         }
-        else if (method_call.method_name().compare("setSkipTaskbar") == 0)
+        else if (method_name.compare("setSkipTaskbar") == 0)
         {
 
             const flutter::EncodableMap &getArgs = std::get<flutter::EncodableMap>(*method_call.arguments());

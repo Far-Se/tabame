@@ -28,12 +28,12 @@ class _MediaControlButtonState extends State<MediaControlButton> {
           child: Listener(
             onPointerDown: (PointerDownEvent event) {
               if (event.kind == PointerDeviceKind.mouse) {
-                final events = <int, String>{
+                final Map<int, String> events = <int, String>{
                   kPrimaryMouseButton: VK.MEDIA_PLAY_PAUSE,
                   kSecondaryMouseButton: VK.MEDIA_NEXT_TRACK,
                   kMiddleMouseButton: VK.MEDIA_PREV_TRACK,
                 };
-                final iconButton = <int, IconData>{
+                final Map<int, IconData> iconButton = <int, IconData>{
                   kPrimaryMouseButton: Icons.skip_next,
                   kSecondaryMouseButton: Icons.fast_forward,
                   kMiddleMouseButton: Icons.fast_rewind

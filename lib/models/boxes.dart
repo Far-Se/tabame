@@ -6,16 +6,8 @@ import 'win32/win32.dart';
 
 class Boxes {
   static late Box<Settings> settings;
-  static late Box remapKeys;
-  static late Box hotkeys;
-  static late Box projects;
-  static late Box runSettings;
-  static late Box shortcuts;
-  static late Box runApi;
-  // static late Box traySettings;
   static late Box<Map<int, dynamic>> keyObject;
-
-  static late Box<List> lists;
+  static late Box<List<dynamic>> lists;
 
   static Future<void> registerBoxes() async {
     await Hive.initFlutter('./.tabame');
@@ -36,15 +28,14 @@ class Boxes {
     await initiateData();
   }
 
-  static Future initiateData() async {
+  static Future<void> initiateData() async {
     if (!Boxes.settings.containsKey('settings')) {
       await Boxes.settings.put('settings', globalSettings);
     }
     globalSettings = Boxes.settings.get('settings') ?? globalSettings;
-
     if (!Boxes.lists.containsKey('pinned')) {
-      final pinnedApps = await WinUtils.getTaskbarPinnedApps();
-      final taskbarLocation = WinUtils.getTaskManagerPath();
+      final List<String> pinnedApps = await WinUtils.getTaskbarPinnedApps();
+      final String taskbarLocation = WinUtils.getTaskManagerPath();
       if (taskbarLocation != "") pinnedApps.add(taskbarLocation);
       Boxes.lists.put("pinned", pinnedApps);
     }

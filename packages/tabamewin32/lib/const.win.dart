@@ -1,7 +1,7 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
 // #region (collapsed) [Event Codes]
-const EVENT_AIA_START = 0xA000,
+const int EVENT_AIA_START = 0xA000,
     EVENT_AIA_END = 0xAFFF,
     EVENT_MIN = 0x00000001,
     EVENT_MAX = 0x7FFFFFFF,
@@ -148,7 +148,7 @@ enum WinHookEvent {
   UIA_PROPID_END,
 }
 
-Map<String, int> WinHookEventValues = {
+Map<String, int> WinHookEventValues = <String, int>{
   "DISABLED": 0x0000,
   "AIA_START": 0xA000,
   "AIA_END": 0xAFFF,
@@ -223,7 +223,7 @@ Map<String, int> WinHookEventValues = {
   "UIA_PROPID_END": 0x75FF,
 };
 
-const Map<int, String> eventNames = {
+const Map<int, String> eventNames = <int, String>{
   0xA000: "EVENT_AIA_START",
   0xAFFF: "EVENT_AIA_END",
   // 0x00000001: "EVENT_MIN",
@@ -297,7 +297,7 @@ const Map<int, String> eventNames = {
   0x75FF: "EVENT_UIA_PROPID_END",
 };
 
-const WINEVENT_OUTOFCONTEXT = 0x0000, // Events are ASYNC
+const int WINEVENT_OUTOFCONTEXT = 0x0000, // Events are ASYNC
     WINEVENT_SKIPOWNTHREAD = 0x0001, // Don't call back for events on installer's thread
     WINEVENT_SKIPOWNPROCESS = 0x0002, // Don't call back for events on installer's process
     WINEVENT_INCONTEXT = 0x0004;
@@ -328,7 +328,7 @@ enum MouseButtons {
 #define WM_MBUTTONUP                    0x0208
 
 */
-Map<String, int> mouseButtons = {
+Map<String, int> mouseButtons = <String, int>{
   "Left": 0x01,
   "Right": 0x02,
   "Middle": 0x04,

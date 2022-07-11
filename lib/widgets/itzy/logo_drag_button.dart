@@ -8,7 +8,7 @@ class LogoDragButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onPanStart: (details) {
+      onPanStart: (DragStartDetails details) {
         windowManager.startDragging();
       },
       child: const InkWell(

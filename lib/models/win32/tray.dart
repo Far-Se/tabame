@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:typed_data';
+
 import 'package:flutter/widgets.dart';
+
 import 'package:tabamewin32/tabamewin32.dart';
 
 import 'win32.dart';
@@ -14,23 +17,39 @@ class TrayBarInfo extends TrayInfo {
     required this.processPath,
     required this.processExe,
   }) : super();
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is TrayBarInfo &&
+        other.executionType == executionType &&
+        other.processPath == processPath &&
+        other.processExe == processExe &&
+        other.brightness == brightness;
+  }
+
+  @override
+  int get hashCode {
+    return executionType.hashCode ^ processPath.hashCode ^ processExe.hashCode ^ brightness.hashCode;
+  }
 }
 
-final __brightnessCache = <int, int>{};
+final Map<int, int> __brightnessCache = <int, int>{};
 
 class Tray {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
   static bool newTray = false;
   static Future<bool> fetchTray() async {
-    final winTray = await enumTrayIcons();
+    final List<TrayInfo> winTray = await enumTrayIcons();
     newTray = true;
     trayList.clear();
 
-    for (var element in winTray) {
-      String processPath = HwndPath().getProcessExePath(element.processID);
-      String exe = Win32.getExe(processPath);
+    for (TrayInfo element in winTray) {
+      HwndInfo processPath = HwndPath.getFullPath(element.processID);
+      String exe = Win32.getExe(processPath.path);
 
-      final trayInfo = TrayBarInfo(executionType: 1, processPath: processPath, processExe: exe);
+      final TrayBarInfo trayInfo = TrayBarInfo(executionType: 1, processPath: processPath.path, processExe: exe);
 
       trayInfo
         ..hIcon = element.hIcon
@@ -40,16 +59,17 @@ class Tray {
         ..processID = element.processID
         ..isVisible = element.isVisible
         ..toolTip = element.toolTip;
-      if (processPath.contains("explorer.exe")) trayInfo.isVisible = false;
+      if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
 
       if (__brightnessCache.containsKey(trayInfo.hWnd)) {
         trayInfo.brightness = __brightnessCache[trayInfo.hWnd]!;
       } else {
+        // ignore: always_specify_types
         final image = await decodeImageFromList(trayInfo.hIcon);
 
-        var data = trayInfo.hIcon;
-        var colorSum = 0;
-        for (var x = 0; x < data.length; x += 4) {
+        Uint8List data = trayInfo.hIcon;
+        int colorSum = 0;
+        for (int x = 0; x < data.length; x += 4) {
           int r = data[x];
           int g = data[x + 1];
           int b = data[x + 2];

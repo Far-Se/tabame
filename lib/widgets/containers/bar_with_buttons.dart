@@ -27,7 +27,7 @@ class _BarWithButtonsState extends State<BarWithButtons> {
       child: !widget.withScroll
           ? ListChildren(children: widget.children)
           : Listener(
-              onPointerSignal: (pointerSignal) {
+              onPointerSignal: (PointerSignalEvent pointerSignal) {
                 if (pointerSignal is PointerScrollEvent) {
                   if (pointerSignal.scrollDelta.dy < 0) {
                     _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
@@ -61,7 +61,7 @@ class ListChildren extends StatelessWidget {
         verticalDirection: VerticalDirection.down,
         children: List<Widget>.generate(
           children.length,
-          (index) {
+          (int index) {
             return Flexible(
               flex: 1,
               fit: FlexFit.loose,

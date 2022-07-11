@@ -14,7 +14,7 @@ class _MicMuteButtonState extends State<MicMuteButton> {
     return FutureBuilder<bool>(
       future: Audio.getMuteAudioDevice(AudioDeviceType.input),
       initialData: false,
-      builder: (context, snapshot) => SizedBox(
+      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) => SizedBox(
         width: 20,
         height: double.maxFinite,
         child: Material(

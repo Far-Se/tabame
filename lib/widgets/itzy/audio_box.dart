@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../models/globals.dart';
+import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 
 class AudioBox extends StatefulWidget {
@@ -22,12 +25,13 @@ class AudioInfo {
 }
 
 class AudioBoxState extends State<AudioBox> {
-  final audioInfo = AudioInfo();
-  final micInfo = AudioInfo();
-  late Timer timerData;
-  late Timer timerMixer;
+  final AudioInfo audioInfo = AudioInfo();
+  final AudioInfo micInfo = AudioInfo();
+  Timer? timerData;
+  Timer? timerMixer;
   List<ProcessVolume> audioMixer = <ProcessVolume>[];
   Map<int, Uint8List> audioMixerIcons = <int, Uint8List>{};
+  Map<int, String> audioMixerNames = <int, String>{};
 
   @override
   void initState() {
@@ -36,41 +40,44 @@ class AudioBoxState extends State<AudioBox> {
   }
 
   void init() {
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+    if (timerMixer != null) timerMixer?.cancel();
+    if (timerData != null) timerMixer?.cancel();
+
     fetchData();
     fetchAudioMixerData();
-    timerData = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
-      timerData = timer;
-      fetchData();
+    timerData = Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) {
+      if (Globals.audioBoxVisible) fetchData();
     });
-    timerMixer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      timerMixer = timer;
-      fetchAudioMixerData();
+    timerMixer = Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
+      if (Globals.audioBoxVisible) fetchAudioMixerData();
     });
   }
 
   @override
   void dispose() {
-    timerData.cancel();
-    timerMixer.cancel();
+    PaintingBinding.instance.imageCache.clear();
+    timerData?.cancel();
+    timerMixer?.cancel();
     super.dispose();
   }
 
   void fetchData() async {
-    audioInfo.devices = await Audio.enumDevices(AudioDeviceType.output) ?? [];
+    audioInfo.devices = await Audio.enumDevices(AudioDeviceType.output) ?? <AudioDevice>[];
     audioInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.output) ?? AudioDevice();
     audioInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.output);
     audioInfo.volume = await Audio.getVolume(AudioDeviceType.output);
 
-    micInfo.devices = await Audio.enumDevices(AudioDeviceType.input) ?? [];
+    micInfo.devices = await Audio.enumDevices(AudioDeviceType.input) ?? <AudioDevice>[];
     micInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.input) ?? AudioDevice();
     micInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.input);
     micInfo.volume = await Audio.getVolume(AudioDeviceType.input);
 
-    for (var inputType in [audioInfo, micInfo]) {
-      for (var device in inputType.devices) {
+    for (AudioInfo inputType in <AudioInfo>[audioInfo, micInfo]) {
+      for (AudioDevice device in inputType.devices) {
         if (inputType.icons.containsKey(device.id)) continue;
 
-        var icon = await nativeIconToBytes(device.iconPath, iconID: device.iconID);
+        Uint8List? icon = await nativeIconToBytes(device.iconPath, iconID: device.iconID);
         inputType.icons[device.id] = icon!;
       }
     }
@@ -79,13 +86,32 @@ class AudioBoxState extends State<AudioBox> {
     }
   }
 
-  Future fetchAudioMixerData() async {
-    audioMixer = await Audio.enumAudioMixer() ?? [];
-    for (var device in audioMixer) {
+  Future<void> fetchAudioMixerData() async {
+    audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
+    for (ProcessVolume device in audioMixer) {
       if (audioMixerIcons.containsKey(device.processId)) continue;
-
-      var icon = await nativeIconToBytes(device.processPath);
+      Uint8List? icon;
+      final int hWnd = await findTopWindow(device.processId);
+      //? Basic Way
+      if (hWnd == 0) {
+        audioMixerIcons[device.processId] = (await nativeIconToBytes(device.processPath))!;
+        audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).capitalize();
+        continue;
+      }
+      //? Fancy Way
+      final HwndInfo processPath = HwndPath.getFullPath(hWnd);
+      if (processPath.isAppx) {
+        final String appxLogo = Win32.getManifestIcon(processPath.path);
+        if (File(appxLogo).existsSync()) {
+          icon = File(appxLogo).readAsBytesSync();
+        } else {
+          icon = await nativeIconToBytes(device.processPath);
+        }
+      } else {
+        icon = await nativeIconToBytes(processPath.path);
+      }
       audioMixerIcons[device.processId] = icon!;
+      audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).capitalize();
     }
 
     if (mounted) {
@@ -98,23 +124,23 @@ class AudioBoxState extends State<AudioBox> {
     if (audioInfo.devices.isEmpty) {
       return Container();
     }
-    var output = <int, Widget>{};
+    Map<int, Widget> output = <int, Widget>{};
 
-    for (var device in AudioDeviceType.values) {
-      var deviceVar = audioInfo;
+    for (AudioDeviceType device in AudioDeviceType.values) {
+      AudioInfo deviceVar = audioInfo;
       if (device == AudioDeviceType.input) {
         deviceVar = micInfo;
       }
       output[device.index] = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: <Widget>[
           Text(device.name.toUpperCase(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black)),
           Flexible(
             fit: FlexFit.loose,
             //2 Mute Button and Slider
             child: Row(
-              children: [
+              children: <Widget>[
                 InkWell(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -138,7 +164,7 @@ class AudioBoxState extends State<AudioBox> {
                     min: 0,
                     max: 1,
                     divisions: 25,
-                    onChanged: (e) async {
+                    onChanged: (double e) async {
                       Audio.setVolume(e.toDouble(), device);
                       deviceVar.volume = e;
                       setState(() {});
@@ -155,7 +181,7 @@ class AudioBoxState extends State<AudioBox> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: <Widget>[
                 const SizedBox(
                   height: 10,
                 ),
@@ -163,12 +189,12 @@ class AudioBoxState extends State<AudioBox> {
                   fit: FlexFit.loose,
                   child: InkWell(
                     onTap: () {
-                      WinUtils.runPowerShell(["mmsys.cpl"]);
+                      WinUtils.runPowerShell(<String>["mmsys.cpl"]);
                       Navigator.pop(context);
                     },
                     child: Wrap(
                       verticalDirection: VerticalDirection.up,
-                      children: [
+                      children: <Widget>[
                         const Icon(Icons.tune, size: 14, color: Colors.black45),
                         Text("Devices:", style: TextStyle(fontSize: 13, color: Colors.lightBlue.shade600)),
                       ],
@@ -186,8 +212,8 @@ class AudioBoxState extends State<AudioBox> {
                   constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
                   child: SingleChildScrollView(
                     child: Column(
-                      children: [
-                        for (final device in deviceVar.devices)
+                      children: <Widget>[
+                        for (final AudioDevice device in deviceVar.devices)
                           Material(
                             type: MaterialType.transparency,
                             child: InkWell(
@@ -198,7 +224,7 @@ class AudioBoxState extends State<AudioBox> {
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
+                                  children: <Widget>[
                                     Flexible(
                                       fit: FlexFit.loose,
                                       child: deviceVar.icons.containsKey(device.id)
@@ -277,7 +303,7 @@ class AudioBoxState extends State<AudioBox> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        children: <Widget>[
                           //1 Ouput
                           (audioInfo.devices.isEmpty)
                               ? const SizedBox()
@@ -307,7 +333,7 @@ class AudioBoxState extends State<AudioBox> {
                             fit: FlexFit.loose,
                             child: Container(
                               child: Wrap(
-                                children: [
+                                children: <Widget>[
                                   const Align(
                                     alignment: Alignment.centerLeft,
                                     child: Padding(
@@ -324,29 +350,32 @@ class AudioBoxState extends State<AudioBox> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                        children: <Widget>[
                                           //#h white
-                                          for (var mix in audioMixer)
+                                          for (ProcessVolume mix in audioMixer)
                                             Flexible(
                                               fit: FlexFit.loose,
                                               child: Row(
                                                 crossAxisAlignment: CrossAxisAlignment.center,
                                                 mainAxisAlignment: MainAxisAlignment.start,
-                                                children: [
+                                                children: <Widget>[
                                                   Padding(
                                                     padding: const EdgeInsets.all(5),
-                                                    child: audioMixerIcons.containsKey(mix.processId)
-                                                        ? Image.memory(
-                                                            audioMixerIcons[mix.processId]!,
-                                                            width: 18,
-                                                            gaplessPlayback: true,
-                                                          )
-                                                        : const Icon(Icons.audiotrack, size: 18),
+                                                    child: Tooltip(
+                                                      message: audioMixerNames[mix.processId] ?? "",
+                                                      child: audioMixerIcons.containsKey(mix.processId)
+                                                          ? Image.memory(
+                                                              audioMixerIcons[mix.processId]!,
+                                                              width: 18,
+                                                              gaplessPlayback: true,
+                                                            )
+                                                          : const Icon(Icons.audiotrack, size: 18),
+                                                    ),
                                                   ),
                                                   Flexible(
                                                     fit: FlexFit.loose,
                                                     child: Stack(
-                                                      children: [
+                                                      children: <Widget>[
                                                         Container(
                                                           height: 20,
                                                           child: SliderTheme(
@@ -361,7 +390,7 @@ class AudioBoxState extends State<AudioBox> {
                                                               min: 0,
                                                               max: 1,
                                                               divisions: 25,
-                                                              onChanged: (e) {
+                                                              onChanged: (double e) {
                                                                 Audio.setAudioMixerVolume(mix.processId, e);
                                                                 mix.maxVolume = e;
                                                                 setState(() {});
@@ -389,7 +418,7 @@ class AudioBoxState extends State<AudioBox> {
                                                                 activeColor: Colors.blue.shade800,
                                                                 inactiveColor: Colors.transparent,
                                                                 thumbColor: Colors.transparent,
-                                                                onChanged: (e) {
+                                                                onChanged: (double e) {
                                                                   Audio.setAudioMixerVolume(mix.processId, e);
                                                                   mix.maxVolume = e;
                                                                   setState(() {});

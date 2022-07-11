@@ -13,7 +13,7 @@ class TimeWeatherWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       verticalDirection: VerticalDirection.up,
       mainAxisSize: MainAxisSize.max,
-      children: [
+      children: <Widget>[
         const TimeWidget(),
         const WeatherWidget(),
       ],

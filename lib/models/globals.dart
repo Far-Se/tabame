@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
 import 'package:win32/win32.dart';
 
 class Heights {
@@ -16,11 +15,13 @@ class Globals {
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;
 
+  static bool audioBoxVisible = false;
+
   static alwaysAwakeRun(bool state) {
     if (state == false) {
       SetThreadExecutionState(ES_CONTINUOUS);
     } else {
-      Timer.periodic(const Duration(seconds: 45), (timer) {
+      Timer.periodic(const Duration(seconds: 45), (Timer timer) {
         SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
         if (Globals.alwaysAwake == false) {
           SetThreadExecutionState(ES_CONTINUOUS);

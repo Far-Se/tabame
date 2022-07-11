@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../models/globals.dart';
 import '../../models/keys.dart';
 import 'audio_box.dart';
 
@@ -22,7 +23,7 @@ class _AudioButtonState extends State<AudioButton> {
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+    timer = Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) async {
       muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
       if (!mounted) return;
       setState(() {});
@@ -43,7 +44,7 @@ class _AudioButtonState extends State<AudioButton> {
       child: Material(
         type: MaterialType.transparency,
         child: Listener(
-          onPointerSignal: (event) {
+          onPointerSignal: (PointerSignalEvent event) {
             if (event is PointerScrollEvent) {
               if (event.scrollDelta.dy < 0) {
                 WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
@@ -52,7 +53,7 @@ class _AudioButtonState extends State<AudioButton> {
               }
             }
           },
-          onPointerDown: (event) {
+          onPointerDown: (PointerDownEvent event) {
             if (event.kind == PointerDeviceKind.mouse) {
               if (event.buttons == kMiddleMouseButton) {
                 WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
@@ -62,6 +63,7 @@ class _AudioButtonState extends State<AudioButton> {
               if (event.buttons == kSecondaryMouseButton) {
                 Audio.switchDefaultDevice(AudioDeviceType.output);
               } else if (event.buttons == kPrimaryMouseButton) {
+                Globals.audioBoxVisible = true;
                 showModalBottomSheet<void>(
                   context: context,
                   anchorPoint: const Offset(100, 200),
@@ -72,13 +74,13 @@ class _AudioButtonState extends State<AudioButton> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   enableDrag: true,
                   isScrollControlled: true,
-                  builder: (context) {
+                  builder: (BuildContext context) {
                     return BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                       child: FractionallySizedBox(
                         heightFactor: 0.85,
                         child: Listener(
-                          onPointerDown: (event) {
+                          onPointerDown: (PointerDownEvent event) {
                             if (event.kind == PointerDeviceKind.mouse) {
                               if (event.buttons == kSecondaryMouseButton) {
                                 Navigator.pop(context);
@@ -93,7 +95,9 @@ class _AudioButtonState extends State<AudioButton> {
                       ),
                     );
                   },
-                );
+                ).whenComplete(() {
+                  Globals.audioBoxVisible = false;
+                });
               }
             }
           },

@@ -47,7 +47,7 @@ abstract class WinHookEventListener {
 }
 
 class WinHooks {
-  final methodChannel = audioMethodChannel;
+  final MethodChannel methodChannel = audioMethodChannel;
   final ObserverList<WinHookEventListener> _winHookListeners = ObserverList<WinHookEventListener>();
   bool hookRunning = false;
 
@@ -58,8 +58,8 @@ class WinHooks {
   int eventMax = 0;
   int eventFilters = WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS;
 
-  List<MouseButtons> mouseWatchButtons = [];
-  List<MouseButtons> mouseControlButtons = [];
+  List<MouseButtons> mouseWatchButtons = <MouseButtons>[];
+  List<MouseButtons> mouseControlButtons = <MouseButtons>[];
 
   WinHooks() {
     methodChannel.setMethodCallHandler(_methodCallHandler);
@@ -75,7 +75,7 @@ class WinHooks {
       return;
     }
     if (call.arguments["hookType"] == HookTypes.eventHook.index) {
-      final event = WinEventStruct();
+      final WinEventStruct event = WinEventStruct();
       event.event = call.arguments["event"] as int;
       event.hWnd = call.arguments["hWnd"] as int;
       event.idObject = call.arguments["idObject"] as int;
@@ -90,7 +90,7 @@ class WinHooks {
       }
     }
     if (call.arguments["hookType"] == HookTypes.mouseHook.index) {
-      final mouse = MouseStruct();
+      final MouseStruct mouse = MouseStruct();
       mouse.button = MouseButtons.values[call.arguments["button"]];
       mouse.down = call.arguments["state"];
       mouse.up = !mouse.down;
@@ -144,7 +144,7 @@ class WinHooks {
   /// [button] - The mouse button to watch.
   /// [mouseEvent] - The mouse event to watch. Hold to block propagation, watch to not block.
   Future<bool?> addMouseHook({required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
-    await methodChannel.invokeMethod('manageMouseHook', {
+    await methodChannel.invokeMethod('manageMouseHook', <String, dynamic>{
       "method": "add",
       "button": button.index,
       "mouseEvent": mouseEvent.index == 0 ? "hold" : "watch",
@@ -158,7 +158,7 @@ class WinHooks {
   /// [button] - The mouse button to watch.
   /// [mouseEvent] - The mouse event to watch. Hold to block propagation, watch to not block.
   Future<bool?> removeMouseHook({required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
-    await methodChannel.invokeMethod('manageMouseHook', {
+    await methodChannel.invokeMethod('manageMouseHook', <String, dynamic>{
       "method": "remove",
       "button": button.index,
       "mouseEvent": mouseEvent.index == 0 ? "hold" : "watch",
@@ -172,7 +172,7 @@ class WinHooks {
     await uninstallWinHook();
     hookRunning = true;
 
-    Map dataToSend = {
+    Map<String, int> dataToSend = <String, int>{
       'eventMin': eventMin,
       'eventMax': eventMax,
       'eventFilters': eventFilters,
@@ -204,7 +204,7 @@ class WinHooks {
 
   /// Uninstalls a specific WinHook.
   Future<bool> uninstallSpecificHookID(int hookID, HookTypes hookType) async {
-    await methodChannel.invokeMethod('uninstallSpecificHookID', {'hookID': hookID, 'hookType': hookType.index});
+    await methodChannel.invokeMethod('uninstallSpecificHookID', <String, int>{'hookID': hookID, 'hookType': hookType.index});
     return true;
   }
 }

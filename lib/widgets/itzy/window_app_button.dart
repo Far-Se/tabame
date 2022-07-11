@@ -20,16 +20,17 @@ class WindowsAppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = Theme.of(context).iconTheme.size ?? 12;
+    final double size = Theme.of(context).iconTheme.size ?? 12;
     if (!File(path).existsSync()) return const SizedBox();
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     return Material(
       type: MaterialType.transparency,
       child: SizedBox(
         width: size + 5,
         height: double.maxFinite,
-        child: FutureBuilder(
+        child: FutureBuilder<Uint8List?>(
           future: nativeIconToBytes(path),
-          builder: (context, snapshot) {
+          builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
             return InkWell(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2.0),
@@ -49,21 +50,21 @@ class WindowsAppButton extends StatelessWidget {
                 WinUtils.open(path);
               },
               onDoubleTap: () async {
-                final startWindows = enumWindows().toSet();
+                final Set<int> startWindows = enumWindows().toSet();
                 WinUtils.open(path);
                 int ticker = 0;
-                Timer.periodic(const Duration(milliseconds: 100), (timer) {
+                Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
                   ticker++;
                   if (ticker > 10) {
                     timer.cancel();
                     return;
                   }
-                  final endWindows = enumWindows().toSet();
-                  final newWnds = List.from(endWindows.difference(startWindows));
-                  final windows = newWnds.where(((hWnd) => (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "") ? true : false)).toList();
+                  final Set<int> endWindows = enumWindows().toSet();
+                  final List<int> newWnds = List<int>.from(endWindows.difference(startWindows));
+                  final List<int> windows = newWnds.where(((int hWnd) => (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "") ? true : false)).toList();
                   if (windows.isEmpty) return;
-                  final hwnd = windows[0];
-                  final lpRect = calloc<RECT>();
+                  final int hwnd = windows[0];
+                  final Pointer<RECT> lpRect = calloc<RECT>();
                   GetWindowRect(Win32.hWnd, lpRect);
                   free(lpRect);
                   Win32.setCenter(hwnd: hwnd, useMouse: true);
