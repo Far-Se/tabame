@@ -10,14 +10,14 @@ class PinnedApps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var pinned = Boxes.lists.get('pinned') ?? [];
+    List<String> pinned = Boxes.lists.get('pinned') as List<String>;
 
     if (pinned.isEmpty) return const SizedBox();
-    return BarWithButtons(children: [
-      for (var item in pinned)
+    return BarWithButtons(children: <Widget>[
+      for (String item in pinned)
         GestureDetector(
           onSecondaryTap: () {
-            final x = pinned.indexWhere((element) => element == item);
+            final int x = pinned.indexWhere((String element) => element == item);
             WinKeys.send("{#WIN}{#ALT}${x + 1}");
             print(x);
           },

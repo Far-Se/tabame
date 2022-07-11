@@ -16,7 +16,7 @@ class TaskManagerButton extends StatelessWidget {
     );
   }
   /* Widget build(BuildContext context) {
-    final taskManagerPath = WinUtils.getTaskManagerPath();
+    final taskManagerPath = WinUtils().getTaskManagerPath();
     if (taskManagerPath == "") return const SizedBox();
     return WindowsAppButton(path: taskManagerPath);
   } */

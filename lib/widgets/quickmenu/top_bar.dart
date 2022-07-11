@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
 import '../../models/globals.dart';
 import '../../models/win32/win32.dart';
 import '../../pages/interface.dart';
 import '../itzy/always_awake_button.dart';
 import '../itzy/audio_button.dart';
+import '../itzy/change_theme_button.dart';
 import '../itzy/logo_drag_button.dart';
 import '../itzy/media_control_button.dart';
 import '../itzy/mic_mute_button.dart';
@@ -19,7 +19,7 @@ import '../itzy/virtual_desktop_button.dart';
 
 class TopBar extends StatelessWidget {
   TopBar({Key? key}) : super(key: key);
-  final futureTaskbarItems = WinUtils.getTaskbarPinnedApps();
+  final Future<List<String>> futureTaskbarItems = WinUtils.getTaskbarPinnedApps();
   @override
   Widget build(BuildContext context) {
     Globals.heights.topbar = 25;
@@ -39,42 +39,35 @@ class TopBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.max,
-            children: [
+            children: <Widget>[
               Flexible(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.max,
-                  children: [
+                  children: <Widget>[
                     const Flexible(
                       fit: FlexFit.loose,
                       child: BarWithButtons(
                         withScroll: false,
-                        children: [
+                        children: <Widget>[
                           LogoDragButton(),
                           AudioButton(),
                           MediaControlButton(),
                         ],
                       ),
                     ),
-                    Flexible(
+                    const Flexible(
                       fit: FlexFit.loose,
                       child: BarWithButtons(
-                        children: [
-                          const TaskManagerButton(),
-                          const VirtualDesktopButton(),
-                          const ToggleTaskbarButton(),
-                          const PinWindowButton(),
-                          const MicMuteButton(),
-                          const AlwaysAwakeButton(),
-                          Align(
-                            child: InkWell(
-                              onTap: () {
-                                darkThemeNotifier.value = !darkThemeNotifier.value;
-                              },
-                              child: const Icon(Icons.theater_comedy_sharp),
-                            ),
-                          )
+                        children: <Widget>[
+                          TaskManagerButton(),
+                          VirtualDesktopButton(),
+                          ToggleTaskbarButton(),
+                          PinWindowButton(),
+                          MicMuteButton(),
+                          AlwaysAwakeButton(),
+                          ChangeThemeButton()
                         ],
                       ),
                     ),
@@ -89,7 +82,7 @@ class TopBar extends StatelessWidget {
                   child: BarWithButtons(
                     height: 25,
                     withScroll: false,
-                    children: [
+                    children: <Widget>[
                       const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop"),
                       Material(
                         type: MaterialType.transparency,
@@ -102,10 +95,16 @@ class TopBar extends StatelessWidget {
                               Icons.settings,
                             ),
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const Interface()),
+                              PaintingBinding.instance.imageCache.clear();
+                              PaintingBinding.instance.imageCache.clearLiveImages();
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute<Interface>(maintainState: false, builder: (BuildContext context) => const Interface()),
+                                (Route<dynamic> route) => false,
                               );
+                              // Navigator.push(
+                              //   context,
+                              //   MaterialPageRoute<Interface>(builder: (BuildContext context) => const Interface()),
+                              // );
                             },
                           ),
                         ),

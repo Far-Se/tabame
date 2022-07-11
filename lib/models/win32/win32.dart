@@ -7,8 +7,9 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart' hide Size, Point;
+
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../keys.dart';
 import '../utils.dart';
@@ -17,7 +18,7 @@ import 'mixed.dart';
 
 class Win32 {
   static void activateWindow(int hWnd, {bool forced = false}) {
-    final place = calloc<WINDOWPLACEMENT>();
+    final Pointer<WINDOWPLACEMENT> place = calloc<WINDOWPLACEMENT>();
     GetWindowPlacement(hWnd, place);
 
     switch (place.ref.showCmd) {
@@ -50,33 +51,33 @@ class Win32 {
   static void closeWindow(int hWnd, {bool forced = false}) {
     PostMessage(hWnd, WM_CLOSE, 0, 0);
     if (forced) {
-      final pId = calloc<Uint32>();
+      final Pointer<Uint32> pId = calloc<Uint32>();
       GetWindowThreadProcessId(hWnd, pId);
-      final mainPID = pId.value;
-      final prID = HwndPath().getRealPID(hWnd);
+      // final int mainPID = pId.value;
+      // final int prID = HwndPath.getRealPID(hWnd);
       free(pId);
-      PostMessage(hWnd, WM_CLOSE, 0, 0);
-      PostMessage(hWnd, WM_QUIT, 0, 0);
+      // PostMessage(hWnd, WM_CLOSE, 0, 0);
+      // PostMessage(hWnd, WM_QUIT, 0, 0);
       PostMessage(hWnd, WM_DESTROY, 0, 0);
       PostMessage(hWnd, WM_NCDESTROY, 0, 0);
 
-      TerminateProcess(mainPID, 0);
-      TerminateProcess(prID, 0);
+      // TerminateProcess(mainPID, 0);
+      // TerminateProcess(prID, 0);
     }
   }
 
   static String getProcessExePath(int processID) {
     String exePath = "";
-    final hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+    final int hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
       CloseHandle(hProcess);
       return "";
     }
 
-    final imgName = wsalloc(MAX_PATH);
-    final buff = calloc<Uint32>()..value = MAX_PATH;
+    final LPWSTR imgName = wsalloc(MAX_PATH);
+    final Pointer<Uint32> buff = calloc<Uint32>()..value = MAX_PATH;
     if (QueryFullProcessImageName(hProcess, 0, imgName, buff) != 0) {
-      final szModName = wsalloc(MAX_PATH);
+      final LPWSTR szModName = wsalloc(MAX_PATH);
       GetModuleFileNameEx(hProcess, 0, szModName, MAX_PATH);
       exePath = szModName.toDartString();
       free(szModName);
@@ -91,18 +92,18 @@ class Win32 {
 
   @Deprecated("Outdated method one getWindowsExePath or getProcessExePath")
   static String getWindowExeModulePath(int hWnd) {
-    final lpBaseName = wsalloc(MAX_PATH);
+    final LPWSTR lpBaseName = wsalloc(MAX_PATH);
     GetWindowModuleFileName(hWnd, lpBaseName, MAX_PATH);
     String moduleName = lpBaseName.toDartString();
     free(lpBaseName);
     if (moduleName == "") {
-      final ppID = calloc<Uint32>();
+      final Pointer<Uint32> ppID = calloc<Uint32>();
       GetWindowThreadProcessId(hWnd, ppID);
-      final wppID = ppID.value;
+      final int wppID = ppID.value;
       free(ppID);
-      final hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, wppID);
+      final int hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, wppID);
       if (hProcess == 0) {
-        final szModName = wsalloc(MAX_PATH);
+        final LPWSTR szModName = wsalloc(MAX_PATH);
         GetModuleFileNameEx(hProcess, 0, szModName, MAX_PATH);
         moduleName = szModName.toDartString();
         free(szModName);
@@ -113,13 +114,13 @@ class Win32 {
   }
 
   static String getWindowExePath(int hWnd) {
-    return HwndPath().getFullPathString(hWnd);
+    return HwndPath.getFullPathString(hWnd);
   }
 
   static String getTitle(int hWnd) {
     String title = "";
-    final length = GetWindowTextLength(hWnd);
-    final buffer = wsalloc(length + 1);
+    final int length = GetWindowTextLength(hWnd);
+    final LPWSTR buffer = wsalloc(length + 1);
     GetWindowText(hWnd, buffer, length + 1);
     title = buffer.toDartString();
     free(buffer);
@@ -127,8 +128,8 @@ class Win32 {
   }
 
   static bool isWindowPresent(int hWnd) {
-    var visible = true;
-    final exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    bool visible = true;
+    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
     if ((exstyle & WS_EX_TOOLWINDOW) != 0) visible = false;
     // final winInfo = calloc<WINDOWINFO>();
     // GetWindowInfo(hWnd, winInfo);
@@ -138,7 +139,7 @@ class Win32 {
   }
 
   static bool isWindowCloaked(int hWnd) {
-    final cloaked = calloc<Int>();
+    final Pointer<Int> cloaked = calloc<Int>();
     DwmGetWindowAttribute(hWnd, DWMWINDOWATTRIBUTE.DWMWA_CLOAKED, cloaked, sizeOf<Int>());
     bool result = cloaked.value != 0;
     free(cloaked);
@@ -150,9 +151,9 @@ class Win32 {
   }
 
   static String getClass(int hWnd) {
-    final name = wsalloc(256);
+    final LPWSTR name = wsalloc(256);
     GetClassName(hWnd, name, 256);
-    final className = name.toDartString();
+    final String className = name.toDartString();
     free(name);
     return className;
   }
@@ -173,14 +174,14 @@ class Win32 {
     return hWnd;
   }
 
-  static Future fetchMainWindowHandle() async {
+  static Future<void> fetchMainWindowHandle() async {
     hWnd = await getFlutterMainWindow();
     return;
   }
 
   static getMainHandleByClass() {
     if (hWnd != 0) return hWnd;
-    final hwnd = FindWindow(TEXT("TABAME_FLUTTER_WINDOW"), nullptr);
+    final int hwnd = FindWindow(TEXT("TABAME_FLUTTER_WINDOW"), nullptr);
     if (hwnd > 0) {
       hWnd = GetAncestor(hwnd, 2);
     }
@@ -189,16 +190,16 @@ class Win32 {
 
   static Square getWindowRect({int? hwnd}) {
     hwnd ??= hWnd;
-    final rect = calloc<RECT>();
+    final Pointer<RECT> rect = calloc<RECT>();
     GetWindowRect(hwnd, rect);
-    final output = Square(x: rect.ref.left, y: rect.ref.top, width: rect.ref.right - rect.ref.left, height: rect.ref.bottom - rect.ref.top);
+    final Square output = Square(x: rect.ref.left, y: rect.ref.top, width: rect.ref.right - rect.ref.left, height: rect.ref.bottom - rect.ref.top);
     free(rect);
     return output;
   }
 
   static setPosition(Offset position, {int? monitor, int? hwnd}) {
     hwnd ??= hWnd;
-    final rect = getWindowRect(hwnd: hwnd);
+    final Square rect = getWindowRect(hwnd: hwnd);
     int x = position.dx ~/ 1;
     int y = position.dy ~/ 1;
     if (monitor != null) {
@@ -211,16 +212,16 @@ class Win32 {
   static setCenter({bool useMouse = false, int? hwnd}) {
     hwnd ??= hWnd;
     if (!useMouse) {
-      final rect = getWindowRect(hwnd: hwnd);
-      final x = (GetSystemMetrics(SM_CXSCREEN) - rect.width) / 2;
-      final y = (GetSystemMetrics(SM_CYSCREEN) - rect.height) / 2;
+      final Square rect = getWindowRect(hwnd: hwnd);
+      final double x = (GetSystemMetrics(SM_CXSCREEN) - rect.width) / 2;
+      final double y = (GetSystemMetrics(SM_CYSCREEN) - rect.height) / 2;
       SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
     } else {
-      final rect = getWindowRect(hwnd: hwnd);
-      final monitor = Monitor.getCursorMonitor();
-      final monitorSize = Monitor.monitorSizes[monitor]!;
-      final x = (((monitorSize.width + monitorSize.x) - monitorSize.x - rect.width) / 2) + monitorSize.x;
-      final y = (((monitorSize.height + monitorSize.y) - monitorSize.y - rect.height) / 2) + monitorSize.y;
+      final Square rect = getWindowRect(hwnd: hwnd);
+      final int monitor = Monitor.getCursorMonitor();
+      final Square monitorSize = Monitor.monitorSizes[monitor]!;
+      final double x = (((monitorSize.width + monitorSize.x) - monitorSize.x - rect.width) / 2) + monitorSize.x;
+      final double y = (((monitorSize.height + monitorSize.y) - monitorSize.y - rect.height) / 2) + monitorSize.y;
       SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
     }
   }
@@ -243,21 +244,66 @@ class Win32 {
     await setSkipTaskbar(hWnd: hWnd, skip: false);
     return true;
   }
+
+  static String getManifestIcon(String appxLocation) {
+    if (appxLocation.lastIndexOf('\\') != appxLocation.length) appxLocation += "\\";
+    if (File("${appxLocation}AppxManifest.xml").existsSync()) {
+      final String manifest = File("${appxLocation}AppxManifest.xml").readAsStringSync();
+      String icon = "";
+      if (manifest.contains("Square44x44Logo")) {
+        icon = manifest.split("Square44x44Logo=\"")[1].split("\"")[0];
+      } else if (manifest.contains("Square150x150Logo")) {
+        icon = manifest.split("Square150x150Logo=\"")[1].split("\"")[0];
+      } else if (manifest.contains("Logo")) {
+        icon = manifest.split("Logo=\"")[1].split("\"")[0];
+      } else {
+        icon = "";
+      }
+      String appxIcon = "$appxLocation$icon";
+      final String scale100 = appxIcon.replaceFirst(".png", ".scale-100.png");
+      if (File(scale100).existsSync()) {
+        appxIcon = scale100;
+      } else {
+        final String appxIcon2 = appxIcon.replaceFirst(".png", ".targetsize-32.png");
+        if (File(appxIcon2).existsSync()) {
+          appxIcon = appxIcon2;
+        } else {
+          final String appxIcon2 = appxIcon.replaceFirst(".png", ".targetsize-48.png");
+          if (File(appxIcon2).existsSync()) {
+            appxIcon = appxIcon2;
+          }
+        }
+      }
+      return appxIcon;
+    }
+    return "";
+  }
+
+  static String extractFileNameFromPath(String path) {
+    if (path == "") return "";
+    path = path.replaceAll('/', '\\');
+    if (path.contains('.exe')) {
+      return path.substring(path.lastIndexOf('\\') + 1, path.lastIndexOf('.exe'));
+    } else {
+      final String lastPart = path.substring(path.lastIndexOf('\\') + 1);
+      return lastPart.substring(lastPart.indexOf('.') + 1, lastPart.indexOf('_'));
+    }
+  }
 }
 
 class WinUtils {
   static void setVolumeOSDStyle({required VolumeOSDStyle type, bool applyStyle = true, int recursiveCheckHwnd = 5}) {
-    var volumeHwnd = FindWindowEx(0, NULL, TEXT("NativeHWNDHost"), nullptr);
+    int volumeHwnd = FindWindowEx(0, NULL, TEXT("NativeHWNDHost"), nullptr);
     if (volumeHwnd == 0) {
       volumeHwnd = FindWindowEx(0, 0, TEXT("DirectUIHWND"), nullptr);
     }
 
     if (volumeHwnd != 0) {
       if (type == VolumeOSDStyle.media) {
-        final dpi = GetDpiForWindow(volumeHwnd);
-        final dpiCoef = dpi ~/ 96.0;
+        final int dpi = GetDpiForWindow(volumeHwnd);
+        final int dpiCoef = dpi ~/ 96.0;
         if (applyStyle == true) {
-          final newOsdRegion = CreateRectRgn(0, 0, (60 * dpiCoef).round(), (140 * dpiCoef).round());
+          final int newOsdRegion = CreateRectRgn(0, 0, (60 * dpiCoef).round(), (140 * dpiCoef).round());
           SetWindowRgn(volumeHwnd, newOsdRegion, 1);
         } else {
           SetWindowRgn(volumeHwnd, 0, 1);
@@ -267,8 +313,9 @@ class WinUtils {
         if (volumeHwnd != 0) {
           if (applyStyle == false) {
             ShowWindow(volumeHwnd, 9);
-            keybd_event(VK_VOLUME_UP, 0, 0, 0);
-            keybd_event(VK_VOLUME_DOWN, 0, 0, 0);
+
+            keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+            keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
           } else {
             ShowWindow(volumeHwnd, 6);
           }
@@ -277,12 +324,12 @@ class WinUtils {
       } else if (type == VolumeOSDStyle.thin) {
         volumeHwnd = FindWindowEx(NULL, NULL, TEXT("NativeHWNDHost"), nullptr);
         if (volumeHwnd != 0) {
-          final dpi = GetDpiForWindow(volumeHwnd);
-          final dpiCoef = dpi ~/ 96.0;
+          final int dpi = GetDpiForWindow(volumeHwnd);
+          final int dpiCoef = dpi ~/ 96.0;
           if (applyStyle == true) {
-            final newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - 20, (140 * dpiCoef).round() - 16);
+            final int newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - 20, (140 * dpiCoef).round() - 16);
             SetWindowRgn(volumeHwnd, newOsdRegion, 1);
-            final dc = GetWindowDC(volumeHwnd);
+            final int dc = GetWindowDC(volumeHwnd);
             SetBkColor(dc, 0xFF00FF00);
           } else {
             SetWindowRgn(volumeHwnd, 0, 1);
@@ -291,6 +338,14 @@ class WinUtils {
       }
     } else {
       print("no hwnd");
+      // WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
+      // WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
+      // keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), KEYEVENTF_EXTENDEDKEY, 0);
+      // keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), KEYEVENTF_KEYUP, 0);
+
+      // keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_DOWN, 0), KEYEVENTF_EXTENDEDKEY, 0);
+      keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+      keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
     }
     if (volumeHwnd == 0 && recursiveCheckHwnd > 0) {
       recursiveCheckHwnd--;
@@ -302,7 +357,7 @@ class WinUtils {
   }
 
   static ScreenState checkUserScreenState() {
-    final pquns = calloc<Int32>();
+    final Pointer<Int32> pquns = calloc<Int32>();
     SHQueryUserNotificationState(pquns);
     int state = pquns.value;
     free(pquns);
@@ -319,20 +374,20 @@ class WinUtils {
 
   static String getLocalAppData() {
     RoInitialize(RO_INIT_TYPE.RO_INIT_SINGLETHREADED);
-    final userData = UserDataPaths.GetDefault();
-    final hStrLocalAppData = userData.LocalAppData; //userData.RoamingAppData;
+    final UserDataPaths userData = UserDataPaths.GetDefault();
+    final int hStrLocalAppData = userData.LocalAppData; //userData.RoamingAppData;
 
-    final localAppData = WindowsGetStringRawBuffer(hStrLocalAppData, nullptr).toDartString();
+    final String localAppData = WindowsGetStringRawBuffer(hStrLocalAppData, nullptr).toDartString();
 
     RoUninitialize();
     return localAppData;
   }
 
   static Future<List<String>> getTaskbarPinnedApps() async {
-    final appsFolder = GUIDFromString(FOLDERID_UserPinned);
-    final ppszPath = calloc<PWSTR>();
+    final Pointer<GUID> appsFolder = GUIDFromString(FOLDERID_UserPinned);
+    final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
     String path = "";
-    final hr = SHGetKnownFolderPath(appsFolder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final int hr = SHGetKnownFolderPath(appsFolder, KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       path = ppszPath.value.toDartString();
     } else {
@@ -340,7 +395,7 @@ class WinUtils {
     }
     free(ppszPath);
     path += "\\Taskbar";
-    final allContents = await Directory(path).list().where((event) => event.path.endsWith(".lnk")).length;
+    final int allContents = await Directory(path).list().where((io.FileSystemEntity event) => event.path.endsWith(".lnk")).length;
     List<String> commands = <String>[
       "\$WScript = New-Object -ComObject WScript.Shell;",
       "Get-ChildItem -Path \"$path\" | ForEach-Object {\$WScript.CreateShortcut(\$_.FullName).TargetPath};",
@@ -353,14 +408,14 @@ class WinUtils {
   }
 
   static Future<List<String>> runPowerShell(List<String> commands) async {
-    final result = await io.Process.run(
+    final io.ProcessResult result = await io.Process.run(
       'powershell',
-      ['-NoProfile', ...commands],
+      <String>['-NoProfile', ...commands],
     );
     if (result.stderr != '') {
       return <String>[];
     }
-    var output = result.stdout.toString().trim().split('\n').map((e) => e.trim()).toList();
+    List<String> output = result.stdout.toString().trim().split('\n').map((String e) => e.trim()).toList();
 
     return output;
   }
@@ -379,13 +434,28 @@ class WinUtils {
 
   static String getTaskManagerPath() {
     String location = "";
-    final folder = GUIDFromString(FOLDERID_Windows);
-    final ppszPath = calloc<PWSTR>();
-    final hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final Pointer<GUID> folder = GUIDFromString(FOLDERID_Windows);
+    final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
+    final int hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       location = "${ppszPath.value.toDartString()}\\System32\\Taskmgr.exe";
     }
     free(ppszPath);
+    return location;
+  }
+
+  static String __programFiles = "";
+  static String getProgramFilesFolder() {
+    if (__programFiles != "") return __programFiles;
+    String location = "";
+    final Pointer<GUID> folder = GUIDFromString(FOLDERID_ProgramFiles);
+    final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
+    final int hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    if (!FAILED(hr)) {
+      location = ppszPath.value.toDartString();
+    }
+    free(ppszPath);
+    __programFiles = location;
     return location;
   }
 
@@ -417,39 +487,77 @@ class HProcess {
   String toString() {
     return 'HProcess(path: $path, exe: $exe, pId: $pId, className: $className)';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is HProcess && other.path == path && other.exe == exe && other.pId == pId && other.mainPID == mainPID && other.className == className;
+  }
+
+  @override
+  int get hashCode {
+    return path.hashCode ^ exe.hashCode ^ pId.hashCode ^ mainPID.hashCode ^ className.hashCode;
+  }
 }
 
-class HwndPath {
-  HwndPath();
+class HwndInfo {
+  String path = "";
   bool isAppx = false;
-  String GetAppxInstallLocation(int hWnd) {
-    //Ger Process Handle
-    final ppID = calloc<Uint32>();
-    GetWindowThreadProcessId(hWnd, ppID);
-    var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
-    free(ppID);
+  HwndInfo({
+    required this.path,
+    required this.isAppx,
+  });
 
+  @override
+  String toString() => 'HwndInfo(path: $path, isAppx: $isAppx)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is HwndInfo && other.path == path && other.isAppx == isAppx;
+  }
+
+  @override
+  int get hashCode => path.hashCode ^ isAppx.hashCode;
+}
+
+final Map<int, HwndInfo> __cacheHwnds = <int, HwndInfo>{};
+
+//create a singletonclass with a function
+
+class HwndPath {
+  // HwndPath();
+  // static bool isAppx = false;
+  static String GetAppxInstallLocation(int hWnd) {
+    //Ger Process Handle
+    int process;
+    final Pointer<Uint32> ppID = calloc<Uint32>();
+    GetWindowThreadProcessId(hWnd, ppID);
+    process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
+    free(ppID);
     //Get Text
-    final cMax = calloc<Uint32>()..value = 512;
-    var cAppName = wsalloc(cMax.value);
+    final Pointer<Uint32> cMax = calloc<Uint32>()..value = 512;
+    LPWSTR cAppName = wsalloc(cMax.value);
     GetApplicationUserModelId(process, cMax, cAppName);
-    var name = cAppName.toDartString();
+    String name = cAppName.toDartString();
     free(cMax);
 
     //It's main Window Handle On EdgeView Apps, query first child
     if (name.isEmpty) {
-      final parentHwnd = GetAncestor(hWnd, 2);
-      final childWins = enumChildWins(parentHwnd);
+      final int parentHwnd = GetAncestor(hWnd, 2);
+      final List<int> childWins = enumChildWins(parentHwnd);
       if (childWins.length > 1) {
         CloseHandle(process);
         hWnd = childWins[1];
 
-        final ppID = calloc<Uint32>();
+        final Pointer<Uint32> ppID = calloc<Uint32>();
         GetWindowThreadProcessId(hWnd, ppID);
         process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
         free(ppID);
 
-        final cMax = calloc<Uint32>()..value = 512;
+        final Pointer<Uint32> cMax = calloc<Uint32>()..value = 512;
         GetApplicationUserModelId(process, cMax, cAppName);
         name = cAppName.toDartString();
         free(cMax);
@@ -460,22 +568,22 @@ class HwndPath {
     }
 
     //Get Package Name
-    final familyLength = calloc<Uint32>()..value = 65 * 2;
-    final familyName = wsalloc(familyLength.value);
-    final packageLength = calloc<Uint32>()..value = 65 * 2;
-    final packageName = wsalloc(familyLength.value);
+    final Pointer<Uint32> familyLength = calloc<Uint32>()..value = 65 * 2;
+    final LPWSTR familyName = wsalloc(familyLength.value);
+    final Pointer<Uint32> packageLength = calloc<Uint32>()..value = 65 * 2;
+    final LPWSTR packageName = wsalloc(familyLength.value);
     ParseApplicationUserModelId(cAppName, familyLength, familyName, packageLength, packageName);
 
     //Get Count
-    final count = calloc<Uint32>();
-    final buffer = calloc<Uint32>();
+    final Pointer<Uint32> count = calloc<Uint32>();
+    final Pointer<Uint32> buffer = calloc<Uint32>();
     FindPackagesByPackageFamily(familyName, 0x00000010 | 0x00000000, count, nullptr, buffer, nullptr, nullptr);
-    final packageFullnames = calloc<Pointer<Utf16>>();
-    final bufferString = wsalloc(buffer.value * 2);
+    final Pointer<Pointer<Utf16>> packageFullnames = calloc<Pointer<Utf16>>();
+    final LPWSTR bufferString = wsalloc(buffer.value * 2);
 
     //Get Path
     FindPackagesByPackageFamily(familyName, 0x00000010 | 0x00000000, count, packageFullnames, buffer, bufferString, nullptr);
-    final packageLocation = bufferString.toDartString();
+    final String packageLocation = bufferString.toDartString();
 
     CloseHandle(process);
     free(cAppName);
@@ -490,17 +598,17 @@ class HwndPath {
     return packageLocation;
   }
 
-  String getProcessExePath(int processID) {
+  static String getProcessExePath(int processID) {
     String exePath = "";
-    final hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+    final int hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
       CloseHandle(hProcess);
       return "";
     }
-    final imgName = wsalloc(MAX_PATH);
-    final buff = calloc<Uint32>()..value = MAX_PATH;
+    final LPWSTR imgName = wsalloc(MAX_PATH);
+    final Pointer<Uint32> buff = calloc<Uint32>()..value = MAX_PATH;
     if (QueryFullProcessImageName(hProcess, 0, imgName, buff) != 0) {
-      final szModName = wsalloc(MAX_PATH);
+      final LPWSTR szModName = wsalloc(MAX_PATH);
       GetModuleFileNameEx(hProcess, 0, szModName, MAX_PATH);
       exePath = szModName.toDartString();
       free(szModName);
@@ -513,21 +621,22 @@ class HwndPath {
     return exePath;
   }
 
-  String getWindowExePath(int hWnd) {
+  static HwndInfo getWindowExePath(int hWnd) {
+    bool isAppx = false;
     String result = "";
-    final pId = calloc<Uint32>();
+    final Pointer<Uint32> pId = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, pId);
-    final processID = pId.value;
+    final int processID = pId.value;
     free(pId);
 
     result = getProcessExePath(processID);
     if (result.contains("FrameHost.exe")) {
       isAppx = true;
-      final wins = enumChildWins(hWnd);
-      final winsProc = <int>[];
+      final List<int> wins = enumChildWins(hWnd);
+      final List<int> winsProc = <int>[];
       int mainWinProcs = 0;
-      for (var e in wins) {
-        final xpId = calloc<Uint32>();
+      for (int e in wins) {
+        final Pointer<Uint32> xpId = calloc<Uint32>();
 
         GetWindowThreadProcessId(e, xpId);
         winsProc.add(xpId.value);
@@ -540,24 +649,23 @@ class HwndPath {
         result = getProcessExePath(mainWinProcs);
       }
     }
-    return result;
+    return HwndInfo(path: result, isAppx: isAppx);
   }
 
-  int getRealPID(int hWnd) {
+  static int getRealPID(int hWnd) {
     String result = "";
-    final pId = calloc<Uint32>();
+    final Pointer<Uint32> pId = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, pId);
-    final processID = pId.value;
+    final int processID = pId.value;
     free(pId);
 
     result = getProcessExePath(processID);
     if (result.contains("FrameHost.exe")) {
-      isAppx = true;
-      final wins = enumChildWins(hWnd);
-      final winsProc = <int>[];
+      final List<int> wins = enumChildWins(hWnd);
+      final List<int> winsProc = <int>[];
       int mainWinProcs = 0;
-      for (var e in wins) {
-        final xpId = calloc<Uint32>();
+      for (int e in wins) {
+        final Pointer<Uint32> xpId = calloc<Uint32>();
 
         GetWindowThreadProcessId(e, xpId);
         winsProc.add(xpId.value);
@@ -573,21 +681,33 @@ class HwndPath {
     return processID;
   }
 
-  Map<String, dynamic> getFullPath(int hWnd) {
-    var exePath = getWindowExePath(hWnd);
-    if (exePath.contains('WWAHost')) {
+  static HwndInfo getFullPath(int hWnd) {
+    String exePath = "";
+    if (__cacheHwnds.containsKey(hWnd)) {
+      // exePath = __cacheHwnds[hWnd]![0]!;
+      // isAppx = __cacheHwnds[hWnd]![1]!;
+      if (!__cacheHwnds[hWnd]!.isAppx) {
+        return HwndInfo(isAppx: __cacheHwnds[hWnd]!.isAppx, path: __cacheHwnds[hWnd]!.path);
+      }
+      // print(exePath);
+    }
+    final HwndInfo hwndPath = getWindowExePath(hWnd);
+    exePath = hwndPath.path;
+    bool isAppx = hwndPath.isAppx;
+    if (exePath.contains('WWAHost') || exePath.contains("ApplicationFrameHost")) {
       isAppx = true;
-      final appx = GetAppxInstallLocation(hWnd);
+      final String appx = GetAppxInstallLocation(hWnd);
       exePath = "";
       if (appx != "") {
-        exePath = "C:\\Program Files\\WindowsApps\\$appx";
+        exePath = "${WinUtils.getProgramFilesFolder()}\\WindowsApps\\$appx";
       }
     }
-    return {"isAppx": isAppx, "path": exePath};
+    // __cacheHwnds[hWnd] = <dynamic>[exePath, isAppx];
+    return HwndInfo(isAppx: isAppx, path: exePath);
   }
 
-  String getFullPathString(int hWnd) {
-    Map<String, dynamic> result = getFullPath(hWnd);
-    return result["path"];
+  static String getFullPathString(int hWnd) {
+    final HwndInfo result = getFullPath(hWnd);
+    return result.path;
   }
 }

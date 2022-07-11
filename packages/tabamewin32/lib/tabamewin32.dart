@@ -2,6 +2,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 
 class AudioDevice {
   String id = "";
@@ -16,7 +17,7 @@ class AudioDevice {
 
   //tomap
   Map<String, dynamic> toMap() {
-    return {
+    return <String, dynamic>{
       'id': id,
       'name': name,
       'iconPath': iconPath,
@@ -43,6 +44,7 @@ class ProcessVolume {
   String processPath = "";
   double maxVolume = 1.0;
   double peakVolume = 0.0;
+
   @override
   String toString() {
     return "ProcessVolume{processId: $processId, processPath: $processPath, maxVolume: $maxVolume, peakVolume: $peakVolume}";
@@ -50,7 +52,7 @@ class ProcessVolume {
 
   // tomap
   Map<String, dynamic> toMap() {
-    return {
+    return <String, dynamic>{
       'processId': processId,
       'processPath': processPath,
       'maxVolume': maxVolume,
@@ -76,21 +78,21 @@ enum AudioDeviceType {
   input,
 }
 
-const audioMethodChannel = MethodChannel('tabamewin32');
+const MethodChannel audioMethodChannel = MethodChannel('tabamewin32');
 
 class Audio {
   /// Returns a Future list of audio devices of a specified type.
   /// The type is specified by the [AudioDeviceType] enum.
   ///
   static Future<List<AudioDevice>?> enumDevices(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index};
+    final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioDevices', arguments);
-    List<AudioDevice>? audioDevices = [];
-    for (var key in map.keys) {
-      final audioDevice = AudioDevice();
+    List<AudioDevice>? audioDevices = <AudioDevice>[];
+    for (String key in map.keys) {
+      final AudioDevice audioDevice = AudioDevice();
       audioDevice.id = key;
       audioDevice.name = map[key]['name'];
-      final iconData = map[key]['iconInfo'].split(",");
+      final List<String> iconData = map[key]['iconInfo'].split(",");
       audioDevice.iconPath = iconData[0];
       audioDevice.iconID = int.parse(iconData[1]);
       audioDevice.isActive = map[key]['isActive'];
@@ -103,12 +105,12 @@ class Audio {
   /// The type is specified by the [AudioDeviceType] enum.
   ///
   static Future<AudioDevice?> getDefaultDevice(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index};
+    final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('getDefaultDevice', arguments);
-    final audioDevice = AudioDevice();
+    final AudioDevice audioDevice = AudioDevice();
     audioDevice.id = map['id'];
     audioDevice.name = map['name'];
-    final iconData = map['iconInfo'].split(",");
+    final List<String> iconData = map['iconInfo'].split(",");
     audioDevice.iconPath = iconData[0];
     audioDevice.iconID = int.parse(iconData[1]);
     audioDevice.isActive = map['isActive'];
@@ -118,16 +120,16 @@ class Audio {
   /// Sets the default audio device.
   /// The type is specified by the [AudioDeviceType] enum.
   static Future<int> setDefaultDevice(String deviceID) async {
-    final Map<String, dynamic> arguments = {'deviceID': deviceID};
-    final result = await audioMethodChannel.invokeMethod<int>('setDefaultAudioDevice', arguments);
+    final Map<String, dynamic> arguments = <String, String>{'deviceID': deviceID};
+    final int? result = await audioMethodChannel.invokeMethod<int>('setDefaultAudioDevice', arguments);
     return result as int;
   }
 
   /// Returns the current volume for the given audio device type.
   /// The type is specified by the [AudioDeviceType] enum.
   static Future<double> getVolume(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index};
-    final result = await audioMethodChannel.invokeMethod<double>('getAudioVolume', arguments);
+    final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
+    final double? result = await audioMethodChannel.invokeMethod<double>('getAudioVolume', arguments);
     return result as double;
   }
 
@@ -136,38 +138,38 @@ class Audio {
   ///
   static Future<int> setVolume(double volume, AudioDeviceType audioDeviceType) async {
     if (volume > 1) volume = (volume / 100).toDouble();
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index, 'volumeLevel': volume};
-    final result = await audioMethodChannel.invokeMethod<int>('setAudioVolume', arguments);
+    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'volumeLevel': volume};
+    final int? result = await audioMethodChannel.invokeMethod<int>('setAudioVolume', arguments);
     return result as int;
   }
 
   static Future<int> setMuteAudioDevice(bool muteState, AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index, 'muteState': muteState};
-    final result = await audioMethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
+    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'muteState': muteState};
+    final int? result = await audioMethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
     return result as int;
   }
 
   static Future<bool> getMuteAudioDevice(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {
+    final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceType': audioDeviceType.index,
     };
-    final result = await audioMethodChannel.invokeMethod<bool>('getMuteAudioDevice', arguments);
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('getMuteAudioDevice', arguments);
     return result!;
   }
 
   /// This function switches the audio device to the specified type. The type is specified by the [AudioDeviceType] enum.
   static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = {'deviceType': audioDeviceType.index};
-    final result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
+    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index};
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
     return result as bool;
   }
 
   /// Returns a Future with a list of ProcessVolume objects containing information about all audio mixers.
   static Future<List<ProcessVolume>?> enumAudioMixer() async {
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioMixer');
-    List<ProcessVolume>? processVolumes = [];
-    for (var key in map.keys) {
-      final processVolume = ProcessVolume();
+    List<ProcessVolume>? processVolumes = <ProcessVolume>[];
+    for (int key in map.keys) {
+      final ProcessVolume processVolume = ProcessVolume();
       processVolume.processId = key;
       processVolume.processPath = map[key]['processPath'];
       processVolume.maxVolume = map[key]['maxVolume'];
@@ -182,11 +184,11 @@ class Audio {
   /// The process ID can be obtained by calling the enumAudioMixer function.
   static Future<ProcessVolume> setAudioMixerVolume(int processID, double volume) async {
     if (volume > 1) volume = (volume / 100).toDouble();
-    final Map<String, dynamic> arguments = {'processID': processID, 'volumeLevel': volume};
+    final Map<String, dynamic> arguments = <String, dynamic>{'processID': processID, 'volumeLevel': volume};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('setAudioMixerVolume', arguments);
-    List<ProcessVolume>? processVolumes = [];
-    for (var key in map.keys) {
-      final processVolume = ProcessVolume();
+    List<ProcessVolume>? processVolumes = <ProcessVolume>[];
+    for (int key in map.keys) {
+      final ProcessVolume processVolume = ProcessVolume();
       processVolume.processId = key;
       processVolume.processPath = map[key]['processPath'];
       processVolume.maxVolume = map[key]['maxVolume'];
@@ -197,15 +199,19 @@ class Audio {
   }
 }
 
+resizeImage(Uint8List data) {
+  ui.decodeImageFromList(data, (ui.Image image) {});
+}
+
 /// This function converts a native icon location to bytes.
 /// The icon location is the path to the icon file.
 /// The icon ID is the icon ID of the icon file.
 /// The icon ID can be obtained by calling the enumAudioDevices function.
 Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
 Future<Uint8List?> nativeIconToBytes(String iconlocation, {int iconID = 0}) async {
-  if (___kCacheIcons.containsKey(iconlocation)) return ___kCacheIcons[iconlocation];
-  final Map<String, dynamic> arguments = {'iconLocation': iconlocation, 'iconID': iconID};
-  final result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
+  if (___kCacheIcons.containsKey(iconlocation) && iconID == 0) return ___kCacheIcons[iconlocation];
+  final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconlocation, 'iconID': iconID};
+  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
   ___kCacheIcons[iconlocation] = result!;
   return result;
 }
@@ -215,8 +221,8 @@ Future<Uint8List?> getExecutableIcon(String iconlocation, {int iconID = 0}) asyn
 }
 
 Future<Uint8List?> getWindowIcon(int hWnd) async {
-  final Map<String, dynamic> arguments = {'hWnd': hWnd};
-  final result = await audioMethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);
+  final Map<String, dynamic> arguments = <String, dynamic>{'hWnd': hWnd};
+  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);
   return result;
 }
 
@@ -255,9 +261,9 @@ class TrayInfo {
 
 Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
   final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumTrayIcons');
-  List<TrayInfo> trayInfos = [];
-  for (var key in map.keys) {
-    final trayInfo = TrayInfo();
+  List<TrayInfo> trayInfos = <TrayInfo>[];
+  for (int key in map.keys) {
+    final TrayInfo trayInfo = TrayInfo();
     trayInfo.toolTip = map[key]['toolTip'] ?? "";
     trayInfo.isVisible = map[key]['isVisible'] > 0 ? true : false;
     trayInfo.processID = map[key]['processID'] ?? 0;
@@ -268,28 +274,36 @@ Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
     trayInfos.add(trayInfo);
   }
   if (filter) {
-    trayInfos.removeWhere((element) => element.isVisible);
+    trayInfos.removeWhere((TrayInfo element) => element.isVisible);
   }
   return trayInfos;
 }
 
 Future<String> getHwndName(int hWnd) async {
-  final Map<String, dynamic> arguments = {
+  final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
   };
-  final result = await audioMethodChannel.invokeMethod<String>('getHwndName', arguments) ?? "-";
+  final String result = await audioMethodChannel.invokeMethod<String>('getHwndName', arguments) ?? "-";
+  return result;
+}
+
+Future<int> findTopWindow(int processID) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'processID': processID,
+  };
+  final int result = await audioMethodChannel.invokeMethod<int>('findTopWindow', arguments) ?? 0;
   return result;
 }
 
 Future<void> setTaskbarVisibility(bool state) async {
-  final Map<String, dynamic> arguments = {
+  final Map<String, dynamic> arguments = <String, dynamic>{
     'state': state,
   };
   await audioMethodChannel.invokeMethod('toggleTaskbar', arguments);
 }
 
 Future<int> getFlutterMainWindow() async {
-  final result = await audioMethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
+  final int result = await audioMethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
   return result;
 }
 
@@ -298,29 +312,29 @@ Future<void> setWindowAsTransparent() async {
 }
 
 Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirection direction}) async {
-  final Map<String, dynamic> arguments = {
+  final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
     'direction': direction.index,
   };
-  final result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  final bool result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
   return result;
 }
 
 Future<bool> moveDesktopMethod(DesktopDirection direction) async {
-  final Map<String, dynamic> arguments = {
+  final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': 0,
     'direction': direction.index,
   };
-  final result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  final bool result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
   return result;
 }
 
 Future<bool> setSkipTaskbar({required int hWnd, required bool skip}) async {
-  final Map<String, dynamic> arguments = {
+  final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
     'skip': skip,
   };
-  final result = await audioMethodChannel.invokeMethod<bool>('setSkipTaskbar', arguments) ?? false;
+  final bool result = await audioMethodChannel.invokeMethod<bool>('setSkipTaskbar', arguments) ?? false;
   return result;
 }
 

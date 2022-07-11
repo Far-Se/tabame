@@ -39,9 +39,9 @@ class Square {
 }
 
 class Monitor {
-  static List<int> _monitors = [];
+  static List<int> _monitors = <int>[];
   static Map<int, Map<int, int>> dpi = <int, Map<int, int>>{};
-  static final Map<int, int> _monitorIds = {};
+  static final Map<int, int> _monitorIds = <int, int>{};
   static Map<int, Square> monitorSizes = <int, Square>{};
   static List<int> get list {
     if (_monitors.isEmpty) fetchMonitor();
@@ -54,32 +54,32 @@ class Monitor {
   }
 
   static void fetchMonitor() {
-    final monitorsData = enumMonitors();
+    final Map<int, Square> monitorsData = enumMonitors();
     _monitors = monitorsData.keys.toList();
     monitorSizes = monitorsData;
-    for (var i = 0; i < _monitors.length; i++) {
-      final dpiX = calloc<Uint32>();
-      final dpiY = calloc<Uint32>();
+    for (int i = 0; i < _monitors.length; i++) {
+      final Pointer<Uint32> dpiX = calloc<Uint32>();
+      final Pointer<Uint32> dpiY = calloc<Uint32>();
       GetDpiForMonitor(_monitors[i], 0, dpiX, dpiY);
-      dpi[_monitors[i]] = {0: dpiX.value, 1: dpiY.value};
+      dpi[_monitors[i]] = <int, int>{0: dpiX.value, 1: dpiY.value};
       free(dpiX);
       free(dpiY);
       _monitorIds[_monitors[i]] = i + 1;
     }
   }
 
-  static int getWindowMonitor(hwnd) {
-    final lpPoint = calloc<RECT>();
+  static int getWindowMonitor(int hwnd) {
+    final Pointer<RECT> lpPoint = calloc<RECT>();
     GetWindowRect(hwnd, lpPoint);
-    final monitor = MonitorFromRect(lpPoint, 0);
+    final int monitor = MonitorFromRect(lpPoint, 0);
     free(lpPoint);
     return monitor;
   }
 
   static int getCursorMonitor() {
-    final lpPoint = calloc<POINT>();
+    final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
-    final monitor = MonitorFromPoint(lpPoint.ref, 0);
+    final int monitor = MonitorFromPoint(lpPoint.ref, 0);
     free(lpPoint);
     return monitor;
   }
@@ -92,57 +92,57 @@ class Point {
 }
 
 class AppCommand {
-  static const appCommand = 0x319;
-  static const bassBoost = 20 << 16;
-  static const bassDown = 19 << 16;
-  static const bassUp = 21 << 16;
-  static const browserBackward = 1 << 16;
-  static const browserFavorites = 6 << 16;
-  static const browserForward = 2 << 16;
-  static const browserHome = 7 << 16;
-  static const browserRefresh = 3 << 16;
-  static const browserSearch = 5 << 16;
-  static const browserStop = 4 << 16;
-  static const close = 31 << 16;
-  static const copy = 36 << 16;
-  static const correctionList = 45 << 16;
-  static const cut = 37 << 16;
-  static const dictateOrCommandControlToggle = 43 << 16;
-  static const find = 28 << 16;
-  static const forwardMail = 40 << 16;
-  static const help = 27 << 16;
-  static const launchApp1 = 17 << 16;
-  static const launchApp2 = 18 << 16;
-  static const launchMail = 15 << 16;
-  static const launchMediaSelect = 16 << 16;
-  static const mediaChannelDown = 52 << 16;
-  static const mediaChannelUp = 51 << 16;
-  static const mediaFastForward = 49 << 16;
-  static const mediaNexttrack = 11 << 16;
-  static const mediaPause = 47 << 16;
-  static const mediaPlay = 46 << 16;
-  static const mediaPlayPause = 14 << 16;
-  static const mediaPrevioustrack = 12 << 16;
-  static const mediaRecord = 48 << 16;
-  static const mediaRewind = 50 << 16;
-  static const mediaStop = 13 << 16;
-  static const micOnOffToggle = 44 << 16;
-  static const microphoneVolumeDown = 25 << 16;
-  static const microphoneVolumeMute = 24 << 16;
-  static const microphoneVolumeUp = 26 << 16;
-  static const newFile = 29 << 16;
-  static const open = 30 << 16;
-  static const paste = 38 << 16;
-  static const print = 33 << 16;
-  static const redo = 35 << 16;
-  static const replyToMail = 39 << 16;
-  static const save = 32 << 16;
-  static const sendMail = 41 << 16;
-  static const spellCheck = 42 << 16;
-  static const trebleDown = 22 << 16;
-  static const trebleUp = 23 << 16;
-  static const undo = 34 << 16;
-  static const volumeDown = 9 << 16;
-  static const volumeMute = 8 << 16;
-  static const volumeUp = 10 << 16;
+  static const int appCommand = 0x319;
+  static const int bassBoost = 20 << 16;
+  static const int bassDown = 19 << 16;
+  static const int bassUp = 21 << 16;
+  static const int browserBackward = 1 << 16;
+  static const int browserFavorites = 6 << 16;
+  static const int browserForward = 2 << 16;
+  static const int browserHome = 7 << 16;
+  static const int browserRefresh = 3 << 16;
+  static const int browserSearch = 5 << 16;
+  static const int browserStop = 4 << 16;
+  static const int close = 31 << 16;
+  static const int copy = 36 << 16;
+  static const int correctionList = 45 << 16;
+  static const int cut = 37 << 16;
+  static const int dictateOrCommandControlToggle = 43 << 16;
+  static const int find = 28 << 16;
+  static const int forwardMail = 40 << 16;
+  static const int help = 27 << 16;
+  static const int launchApp1 = 17 << 16;
+  static const int launchApp2 = 18 << 16;
+  static const int launchMail = 15 << 16;
+  static const int launchMediaSelect = 16 << 16;
+  static const int mediaChannelDown = 52 << 16;
+  static const int mediaChannelUp = 51 << 16;
+  static const int mediaFastForward = 49 << 16;
+  static const int mediaNexttrack = 11 << 16;
+  static const int mediaPause = 47 << 16;
+  static const int mediaPlay = 46 << 16;
+  static const int mediaPlayPause = 14 << 16;
+  static const int mediaPrevioustrack = 12 << 16;
+  static const int mediaRecord = 48 << 16;
+  static const int mediaRewind = 50 << 16;
+  static const int mediaStop = 13 << 16;
+  static const int micOnOffToggle = 44 << 16;
+  static const int microphoneVolumeDown = 25 << 16;
+  static const int microphoneVolumeMute = 24 << 16;
+  static const int microphoneVolumeUp = 26 << 16;
+  static const int newFile = 29 << 16;
+  static const int open = 30 << 16;
+  static const int paste = 38 << 16;
+  static const int print = 33 << 16;
+  static const int redo = 35 << 16;
+  static const int replyToMail = 39 << 16;
+  static const int save = 32 << 16;
+  static const int sendMail = 41 << 16;
+  static const int spellCheck = 42 << 16;
+  static const int trebleDown = 22 << 16;
+  static const int trebleUp = 23 << 16;
+  static const int undo = 34 << 16;
+  static const int volumeDown = 9 << 16;
+  static const int volumeMute = 8 << 16;
+  static const int volumeUp = 10 << 16;
 }

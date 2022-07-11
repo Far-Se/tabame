@@ -36,23 +36,23 @@ Future<void> main() async {
   runApp(const Tabame());
 }
 
-final kInitialColor = Color(0xff3B414D);
-final kTintColor = Color(0xFF373C47);
+final Color kInitialColor = Color(0xff3B414D);
+final Color kTintColor = Color(0xFF373C47);
 
-final kLightBackground = Color(0xffFFFFFF);
-final kLightTint = Color(0xff4DCF72);
-final kLightText = Color.fromRGBO(169, 69, 138, 1);
+final Color kLightBackground = Color(0xffFFFFFF);
+final Color kLightTint = Color(0xff4DCF72);
+final Color kLightText = Color.fromRGBO(169, 69, 138, 1);
 
-final kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
-final kDarkTint = Color.fromRGBO(250, 249, 248, 1);
-final kDarkText = Color.fromRGBO(250, 249, 248, 1);
+final Color kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
+final Color kDarkTint = Color.fromRGBO(250, 249, 248, 1);
+final Color kDarkText = Color.fromRGBO(250, 249, 248, 1);
 
 num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
-  final darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
+  final num darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
   return darkerHex;
 }
 
-final ValueNotifier<bool> darkThemeNotifier = ValueNotifier(true);
+final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
 
 class Tabame extends StatelessWidget {
   const Tabame({Key? key}) : super(key: key);
@@ -60,7 +60,7 @@ class Tabame extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: darkThemeNotifier,
-      builder: (_, mode, __) => MaterialApp(
+      builder: (_, bool mode, __) => MaterialApp(
         scrollBehavior: MyCustomScrollBehavior(),
         debugShowCheckedModeBanner: false,
         title: 'Tabame - Taskbar Menu',
@@ -107,5 +107,5 @@ class Tabame extends StatelessWidget {
 
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
-  Set<PointerDeviceKind> get dragDevices => {PointerDeviceKind.touch, PointerDeviceKind.mouse};
+  Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{PointerDeviceKind.touch, PointerDeviceKind.mouse};
 }

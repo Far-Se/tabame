@@ -18,8 +18,8 @@ class PinWindowButton extends StatelessWidget {
         child: const Tooltip(message: "Pin window", child: Icon(Icons.pin_end)),
         onTap: () async {
           if (Globals.lastFocusedWinHWND == 0) return;
-          final exstyle = GetWindowLong(Globals.lastFocusedWinHWND, GWL_EXSTYLE);
-          final topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+          final int exstyle = GetWindowLong(Globals.lastFocusedWinHWND, GWL_EXSTYLE);
+          final int topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
           SetWindowPos(Globals.lastFocusedWinHWND, topmostOrNot, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         },
       ),

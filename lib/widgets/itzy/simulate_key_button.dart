@@ -21,7 +21,7 @@ class SimulateKeyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = iconSize != 0 ? iconSize : Theme.of(context).iconTheme.size;
+    final double? size = iconSize != 0 ? iconSize : Theme.of(context).iconTheme.size;
     return Material(
       type: MaterialType.transparency,
       child: SizedBox(

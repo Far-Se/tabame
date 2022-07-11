@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:win32/win32.dart';
-import 'package:window_manager/window_manager.dart';
 
-import '../models/win32/win32.dart';
+import 'quickmenu.dart';
+// import 'package:win32/win32.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -15,10 +14,15 @@ class InterfaceState extends State<Interface> {
   @override
   void initState() {
     // WindowManager.instance.setPosition(const Offset(200, 200), animate: true);
-    WindowManager.instance.setSize(const Size(500, 500));
-    Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
+    // WindowManager.instance.setSize(const Size(500, 500));
+    // Win32().setCenter(useMouse: true, hwnd: Win32().hWnd);
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -30,8 +34,18 @@ class InterfaceState extends State<Interface> {
       body: Container(
         width: 500,
         height: 300,
-        child: const Center(
-          child: Text("TEST"),
+        child: IconButton(
+          padding: const EdgeInsets.all(0),
+          splashRadius: 25,
+          icon: const Icon(
+            Icons.settings,
+          ),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute<QuickMenu>(maintainState: false, builder: (BuildContext context) => const QuickMenu()),
+              (Route<dynamic> route) => false,
+            );
+          },
         ),
       ),
     );

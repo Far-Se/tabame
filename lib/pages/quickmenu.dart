@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../widgets/containers/two_sides.dart';
-import '../widgets/itzy/time_weather_widget.dart';
-import '../widgets/quickmenu/tray_bar.dart';
+// ignore: implementation_imports
+import 'package:flutter/src/gestures/events.dart';
+import '../widgets/quickmenu/bottom_bar.dart';
 import '../widgets/quickmenu/top_bar.dart';
 import '../widgets/quickmenu/task_bar.dart';
 import '../models/globals.dart';
@@ -18,6 +18,7 @@ class _QuickMenuState extends State<QuickMenu> {
   @override
   void initState() {
     super.initState();
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     // Timer.periodic(Duration(seconds: 3), (timer) {
     //   setState(() {});
     // });
@@ -25,6 +26,7 @@ class _QuickMenuState extends State<QuickMenu> {
 
   @override
   void dispose() {
+    PaintingBinding.instance.imageCache.clear();
     super.dispose();
   }
 
@@ -33,8 +35,8 @@ class _QuickMenuState extends State<QuickMenu> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: MouseRegion(
-        onEnter: (event) => Globals.isWindowActive = true,
-        onExit: (event) => Globals.isWindowActive = false,
+        onEnter: (PointerEnterEvent event) => Globals.isWindowActive = true,
+        onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
         child: SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: Padding(
@@ -45,22 +47,22 @@ class _QuickMenuState extends State<QuickMenu> {
                 decoration: BoxDecoration(
                     color: Theme.of(context).backgroundColor,
                     gradient: LinearGradient(
-                      colors: [
+                      colors: <Color>[
                         Theme.of(context).backgroundColor,
                         Theme.of(context).backgroundColor.withAlpha(200),
                         Theme.of(context).backgroundColor,
                       ],
-                      stops: [0, 0.4, 1],
+                      stops: <double>[0, 0.4, 1],
                       end: Alignment.bottomRight,
                     ),
-                    boxShadow: [
+                    boxShadow: <BoxShadow>[
                       const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                     ]),
                 child: FutureBuilder<Object>(
-                    future: Future.delayed(const Duration(milliseconds: 50), () async {
+                    future: Future<bool>.delayed(const Duration(milliseconds: 50), () async {
                       return true;
                     }),
-                    builder: (context, snapshot) {
+                    builder: (BuildContext context, AsyncSnapshot<Object> snapshot) {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         mainAxisSize: MainAxisSize.max,
@@ -73,7 +75,7 @@ class _QuickMenuState extends State<QuickMenu> {
                             thickness: 1,
                             height: 1,
                           ),
-                          const TwoSides(left: TimeWeatherWidget(), right: TrayBar()),
+                          const BottomBar(),
                         ],
                       );
                     }),

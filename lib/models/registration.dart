@@ -12,16 +12,16 @@ import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
 late Timer monitorChecker;
-Future registerAll() async {
+Future<void> registerAll() async {
   await windowManager.ensureInitialized();
-  final locale = Platform.localeName.substring(0, 2);
+  final String locale = Platform.localeName.substring(0, 2);
   Intl.systemLocale = await findSystemLocale();
   await initializeDateFormatting(locale);
 
   // ? Main Handle
   Win32.fetchMainWindowHandle();
   Monitor.fetchMonitor();
-  monitorChecker = Timer.periodic(const Duration(seconds: 5), (timer) => Monitor.fetchMonitor());
+  monitorChecker = Timer.periodic(const Duration(seconds: 5), (Timer timer) => Monitor.fetchMonitor());
   // ? Boxes
   await Boxes.registerBoxes();
 

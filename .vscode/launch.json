@@ -20,26 +20,6 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
-        },
-        {
-            "name": "tabamewin32",
-            "cwd": "packages\\tabamewin32",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "tabamewin32 (profile mode)",
-            "cwd": "packages\\tabamewin32",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "tabamewin32 (release mode)",
-            "cwd": "packages\\tabamewin32",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
         }
     ]
 }
