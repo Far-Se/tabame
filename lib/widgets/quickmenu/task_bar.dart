@@ -63,7 +63,12 @@ class TaskBarState extends State<TaskBar> {
   Future<void> fetchWindows({bool refreshIcons = false}) async {
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!fetching && await WindowWatcher.fetchWindows(refreshIcons: refreshIcons)) {
-      if (listEquals(WindowWatcher.list, windows)) return;
+      if (listEquals(WindowWatcher.list, windows)) {
+        await audioHandle();
+        if (!mounted) return;
+        setState(() => fetching = false);
+        return;
+      }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
       // await handleIcons(refreshIcons: refreshIcons);

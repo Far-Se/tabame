@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:ffi' hide Size;
 import 'dart:io' as io;
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
@@ -301,7 +302,7 @@ class WinUtils {
     if (volumeHwnd != 0) {
       if (type == VolumeOSDStyle.media) {
         final int dpi = GetDpiForWindow(volumeHwnd);
-        final int dpiCoef = dpi ~/ 96.0;
+        final double dpiCoef = dpi / 96.0;
         if (applyStyle == true) {
           final int newOsdRegion = CreateRectRgn(0, 0, (60 * dpiCoef).round(), (140 * dpiCoef).round());
           SetWindowRgn(volumeHwnd, newOsdRegion, 1);
@@ -325,9 +326,9 @@ class WinUtils {
         volumeHwnd = FindWindowEx(NULL, NULL, TEXT("NativeHWNDHost"), nullptr);
         if (volumeHwnd != 0) {
           final int dpi = GetDpiForWindow(volumeHwnd);
-          final int dpiCoef = dpi ~/ 96.0;
+          final double dpiCoef = dpi / 96.0;
           if (applyStyle == true) {
-            final int newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - 20, (140 * dpiCoef).round() - 16);
+            final int newOsdRegion = CreateRectRgn(25, 18, (60 * dpiCoef).round() - (20 * dpiCoef).round(), (140 * dpiCoef).round() - (16 * dpiCoef).round());
             SetWindowRgn(volumeHwnd, newOsdRegion, 1);
             final int dc = GetWindowDC(volumeHwnd);
             SetBkColor(dc, 0xFF00FF00);
@@ -412,6 +413,7 @@ class WinUtils {
       'powershell',
       <String>['-NoProfile', ...commands],
     );
+    // print(commands);
     if (result.stderr != '') {
       return <String>[];
     }
@@ -473,6 +475,60 @@ class WinUtils {
     String key = "RIGHT";
     if (direction == DesktopDirection.left) key = "LEFT";
     WinKeys.send("{#WIN}{#CTRL}{$key}");
+  }
+
+  static Point getMousePos() {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    Point point = Point(X: 0, Y: 0);
+    point.X = lpPoint.ref.x;
+    point.Y = lpPoint.ref.y;
+    free(lpPoint);
+    point = Monitor.adjustPointToDPI(point);
+    return point;
+  }
+}
+
+class WinIcons {
+  static Future<Uint8List?> getIconFromPath(String path, {int iconID = 0}) async {
+    // if (iconID > 0) {
+    //   return await nativeIconToBytes(path, iconID: iconID);
+    // }
+    String dir = "${Directory.current.path}\\data\\cache";
+    if (!Directory(dir).existsSync()) Directory(dir).createSync();
+    final String exe = Win32.getExe(path);
+    final String exeCache = "$dir\\$exe.png";
+    if (iconID > 0) exeCache.replaceFirst(".png", "$iconID.png");
+
+    if (File(exeCache).existsSync()) {
+      return File(exeCache).readAsBytesSync();
+    }
+
+    List<String> commands = <String>[
+      "Add-Type -AssemblyName System.Drawing;",
+      "\$Path = '$path';",
+      "\$Format = [System.Drawing.Imaging.ImageFormat]::Png;",
+      "\$MemoryStream = New-Object System.IO.MemoryStream;",
+    ];
+    if (iconID > 0) {
+      commands.addAll(<String>[
+        "[System.IntPtr] \$phiconLarge = 0;",
+        "[System.IntPtr] \$phiconSmall = 0;",
+        "[Shell32_Extract]::ExtractIconEx('$path', $iconID, [ref] \$phiconLarge, [ref] \$phiconSmall, 1);",
+        "\$Icon = [System.Drawing.Icon]::FromHandle(\$phiconSmall).ToBitMap();",
+      ]);
+    } else {
+      commands.addAll(<String>[
+        "\$Icon = [System.Drawing.Icon]::ExtractAssociatedIcon(\$Path).ToBitMap().Save(\$MemoryStream,\$Format);",
+      ]);
+    }
+    commands.addAll(<String>["\$MemoryStream.ToArray();", "\$MemoryStream.Flush();", "\$MemoryStream.Dispose();"]);
+    final List<String> output = await WinUtils.runPowerShell(commands);
+    List<int> lint = output.map(int.parse).toList();
+    final Uint8List out = Uint8List.fromList(lint);
+    File(exeCache).createSync();
+    File(exeCache).writeAsBytes(out);
+    return out;
   }
 }
 

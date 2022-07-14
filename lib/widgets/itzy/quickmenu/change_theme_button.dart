@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
+import '../../../main.dart';
 
 class ChangeThemeButton extends StatelessWidget {
   const ChangeThemeButton({

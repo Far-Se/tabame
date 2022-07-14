@@ -208,11 +208,11 @@ resizeImage(Uint8List data) {
 /// The icon ID is the icon ID of the icon file.
 /// The icon ID can be obtained by calling the enumAudioDevices function.
 Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
-Future<Uint8List?> nativeIconToBytes(String iconlocation, {int iconID = 0}) async {
-  if (___kCacheIcons.containsKey(iconlocation) && iconID == 0) return ___kCacheIcons[iconlocation];
-  final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconlocation, 'iconID': iconID};
+Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) async {
+  if (___kCacheIcons.containsKey(iconLocation) && iconID == 0) return ___kCacheIcons[iconLocation];
+  final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconLocation, 'iconID': iconID};
   final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
-  ___kCacheIcons[iconlocation] = result!;
+  ___kCacheIcons[iconLocation] = result!;
   return result;
 }
 

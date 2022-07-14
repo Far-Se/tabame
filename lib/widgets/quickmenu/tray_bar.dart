@@ -63,7 +63,6 @@ class TrayBarState extends State<TrayBar> {
   Widget build(BuildContext context) {
     if (tray.isEmpty) return Container();
 
-    Globals.heights.traybar = 30;
     return Align(
       alignment: Alignment.centerRight,
       child: Theme(
@@ -72,7 +71,7 @@ class TrayBarState extends State<TrayBar> {
         child: Padding(
           padding: const EdgeInsets.only(right: 3),
           child: SizedBox(
-            height: 20,
+            height: Globals.heights.traybar - 13,
             child: SingleChildScrollView(
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
@@ -100,11 +99,8 @@ class TrayBarState extends State<TrayBar> {
                                 // if (info.processPath.isEmpty) return;
                                 final int hWnd = await findTopWindow(info.processID);
                                 if (hWnd > 0) {
-                                  print("$hWnd ${info.processID}");
                                   Win32.closeWindow(hWnd, forced: true);
-                                } else {
-                                  print("dsa");
-                                }
+                                } else {}
 
                                 // final windows = enumWindows();
                                 // for (var win in windows) {

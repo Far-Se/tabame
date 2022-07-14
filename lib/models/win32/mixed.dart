@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:convert';
 import 'dart:ffi' hide Size;
 
 import 'package:ffi/ffi.dart';
@@ -83,12 +84,76 @@ class Monitor {
     free(lpPoint);
     return monitor;
   }
+
+  static int getMonitorFromPoint(Point point) {
+    final Pointer<POINT> winPoint = calloc<POINT>()
+      ..ref.x = point.X
+      ..ref.y = point.Y;
+    final int monitor = MonitorFromPoint(winPoint.ref, 0);
+    free(winPoint);
+    return monitor;
+  }
+
+  static Point adjustPointToDPI(Point point) {
+    Point newPoint = Point(X: 0, Y: 0);
+    final int monitor = getMonitorFromPoint(point);
+    final double dpiCoefX = dpi[monitor]![0]! / 96.0;
+    final double dpiCoefY = dpi[monitor]![1]! / 96.0;
+    newPoint.X = (point.X / dpiCoefX).round();
+    newPoint.Y = (point.Y / dpiCoefY).round();
+
+    return newPoint;
+  }
 }
 
 class Point {
   int X;
   int Y;
-  Point({this.X = 0, this.Y = 0});
+  Point({
+    required this.X,
+    required this.Y,
+  });
+
+  @override
+  String toString() => 'Point(X: $X, Y: $Y)';
+
+  Point copyWith({
+    int? X,
+    int? Y,
+  }) {
+    return Point(
+      X: X ?? this.X,
+      Y: Y ?? this.Y,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'X': X,
+      'Y': Y,
+    };
+  }
+
+  factory Point.fromMap(Map<String, dynamic> map) {
+    return Point(
+      X: map['X'] as int,
+      Y: map['Y'] as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory Point.fromJson(String source) => Point.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  bool operator ==(covariant Point other) {
+    if (identical(this, other)) return true;
+
+    return other.X == X && other.Y == Y;
+  }
+
+  @override
+  int get hashCode => X.hashCode ^ Y.hashCode;
 }
 
 class AppCommand {

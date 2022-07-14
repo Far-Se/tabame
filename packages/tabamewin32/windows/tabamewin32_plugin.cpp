@@ -1064,7 +1064,6 @@ namespace tabamewin32
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             bool state = std::get<bool>(args.at(flutter::EncodableValue("state")));
-            std::cout << state << endl;
             ToggleTaskbar(state);
             result->Success(flutter::EncodableValue(true));
         }

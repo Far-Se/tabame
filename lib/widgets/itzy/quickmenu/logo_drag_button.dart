@@ -16,7 +16,7 @@ class LogoDragButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 5),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Image(image: AssetImage("resources/logo.png"), width: 15),
+            child: Image(image: AssetImage("resources/logo_light.png"), width: 15),
           ),
         ),
       ),
