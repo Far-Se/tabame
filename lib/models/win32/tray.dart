@@ -1,8 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
-
 import 'package:tabamewin32/tabamewin32.dart';
 
 import 'win32.dart';
@@ -12,6 +10,7 @@ class TrayBarInfo extends TrayInfo {
   String processPath = "";
   String processExe = "";
   int brightness = 0;
+  Uint8List iconData = Uint8List.fromList(<int>[0]);
   TrayBarInfo({
     required this.executionType,
     required this.processPath,
@@ -35,7 +34,7 @@ class TrayBarInfo extends TrayInfo {
   }
 }
 
-final Map<int, int> __brightnessCache = <int, int>{};
+Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
 
 class Tray {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
@@ -61,24 +60,6 @@ class Tray {
         ..toolTip = element.toolTip;
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
 
-      if (__brightnessCache.containsKey(trayInfo.hWnd)) {
-        trayInfo.brightness = __brightnessCache[trayInfo.hWnd]!;
-      } else {
-        // ignore: always_specify_types
-        final image = await decodeImageFromList(trayInfo.hIcon);
-
-        Uint8List data = trayInfo.hIcon;
-        int colorSum = 0;
-        for (int x = 0; x < data.length; x += 4) {
-          int r = data[x];
-          int g = data[x + 1];
-          int b = data[x + 2];
-          int avg = ((r + g + b) / 3).floor();
-          colorSum += avg;
-        }
-        trayInfo.brightness = (colorSum / (image.width * image.height)).floor();
-      }
-      // print("${trayInfo.processExe}: ${trayInfo.brightness}");
       // if (Boxes.traySettings.containsKey(exe)) {
       //   final box = Boxes.traySettings.get(exe) as TraySettings;
 
@@ -87,6 +68,22 @@ class Tray {
       // }
 
       trayList.add(trayInfo);
+    }
+
+    final List<int> handles = trayList.map((TrayBarInfo e) => e.hIcon).toList();
+    final List<Uint8List> iconOutput = await WinIcons().getHandleIcons(handles);
+    if (handles.length == iconOutput.length) {
+      for (int x = 0; x < handles.length; x++) {
+        final TrayBarInfo trayInfo = trayList[x];
+        trayInfo.iconData = iconOutput[x];
+        __trayIconCache[trayInfo.hWnd] = iconOutput[x];
+      }
+    } else {
+      for (TrayBarInfo trayInfo in trayList) {
+        if (__trayIconCache.containsKey(trayInfo.hWnd)) {
+          trayInfo.iconData = __trayIconCache[trayInfo.hWnd]!;
+        }
+      }
     }
     return newTray;
   }

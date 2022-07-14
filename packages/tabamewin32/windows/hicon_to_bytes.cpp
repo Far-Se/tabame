@@ -21,15 +21,6 @@ using namespace std;
 #endif
 #endif
 
-// Check GCC
-#if __GNUC__
-#if __x86_64__ || __ppc64__
-#define ENV64BIT
-#else
-#define ENV32BIT
-#endif
-#endif
-
 typedef struct
 {
     WORD idReserved; // must be 0
@@ -81,7 +72,6 @@ static UINT WriteIconData(BYTE *buffer, int *pBufferOffset, HBITMAP hBitmap)
         (*pBufferOffset) += bmp.bmWidthBytes;
         if (bmp.bmWidthBytes & 3)
         {
-
             DWORD padding = 0;
             memcpy(&buffer[*pBufferOffset], &padding, static_cast<size_t>(4) - bmp.bmWidthBytes);
             (*pBufferOffset) += 4 - bmp.bmWidthBytes;
@@ -93,7 +83,7 @@ static UINT WriteIconData(BYTE *buffer, int *pBufferOffset, HBITMAP hBitmap)
     return nBitmapBytes;
 }
 
-BOOL convertIconToBytes(HICON hIcon, BYTE *buffer)
+BOOL SaveIcon3(HICON hIcon, BYTE *buffer)
 {
     int nNumIcons = 1;
     int bufferOffset = 0;
@@ -104,7 +94,7 @@ BOOL convertIconToBytes(HICON hIcon, BYTE *buffer)
     ICONHEADER iconheader{};
     iconheader.idReserved = 0;            // Must be 0
     iconheader.idType = 1;                // Type 1 = ICON (type 2 = CURSOR)
-    iconheader.idCount = (BYTE)nNumIcons; // number of ICONDIRs
+    iconheader.idCount = (WORD)nNumIcons; // number of ICONDIRs
     memcpy(&(buffer[bufferOffset]), &iconheader, sizeof(iconheader));
     bufferOffset += sizeof(iconheader);
 
@@ -154,7 +144,7 @@ BOOL convertIconToBytes(HICON hIcon, BYTE *buffer)
     iconDir.bWidth = (BYTE)bmpColor.bmWidth;
     iconDir.bHeight = (BYTE)bmpColor.bmHeight;
     iconDir.bColorCount = (BYTE)nColorCount;
-    iconDir.bReserved = 0;
+    iconDir.bReserved = (BYTE)0;
     iconDir.wPlanes = bmpColor.bmPlanes;
     iconDir.wBitCount = bmpColor.bmBitsPixel;
     iconDir.dwBytesInRes = sizeof(BITMAPINFOHEADER) + nImageBytes;

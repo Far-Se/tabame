@@ -233,7 +233,7 @@ class TrayInfo {
   int hWnd = 0;
   int uID = 0;
   int uCallbackMessage = 0;
-  Uint8List hIcon = Uint8List(0);
+  int hIcon = 0;
 
   @override
   String toString() {

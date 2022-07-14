@@ -55,6 +55,7 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+//! VIRTUAL DESKTOP
 bool VirtualDesktopWorks = false;
 // #pragma warning(disable: 4244)
 
@@ -959,11 +960,12 @@ namespace tabamewin32
             std::string iconLocation = std::get<std::string>(args.at(flutter::EncodableValue("iconLocation")));
             int iconID = std::get<int>(args.at(flutter::EncodableValue("iconID")));
             std::wstring iconLocationW = Encoding::Utf8ToWide(iconLocation);
-            BYTE buffer[(33 * 33) * 4];
+            BYTE buffer[(66 * 66) * 4];
             HICON icon = getIconFromFile((LPWSTR)iconLocationW.c_str(), iconID);
-            convertIconToBytes(icon, buffer);
+
+            SaveIcon3(icon, buffer);
             std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (33 * 33) * 4; i++)
+            for (int i = 0; i < (66 * 66) * 4; i++)
             {
                 iconBytes.push_back(buffer[i]);
             }
@@ -979,12 +981,12 @@ namespace tabamewin32
                 iconResult = GetClassLongPtr((HWND)((LONG_PTR)hWND), -14); // GCLP_HICON - Microsoft Win Apps
             if (iconResult != 0)
             {
-                BYTE buffer[(33 * 33) * 4];
+                BYTE buffer[(66 * 66) * 4];
                 HICON icon = (HICON)iconResult;
-                if (convertIconToBytes(icon, buffer))
+                if (SaveIcon3(icon, buffer))
                 {
                     std::vector<uint8_t> iconBytes;
-                    for (int i = 0; i < (33 * 33) * 4; i++)
+                    for (int i = 0; i < (66 * 66) * 4; i++)
                     {
                         iconBytes.push_back(buffer[i]);
                     }
@@ -1039,13 +1041,13 @@ namespace tabamewin32
                 DWORD Reserved[2];
                 HICON hIcon;
                 */
-                BYTE buffer[(33 * 33) * 4];
-                convertIconToBytes(trayIcon.data.hIcon, buffer);
+                /* BYTE buffer[(65 * 65) * 4];
+                SaveIcon3(trayIcon.data.hIcon, buffer);
                 std::vector<uint8_t> iconBytes;
-                for (int i = 0; i < (33 * 33) * 4; i++)
+                for (int i = 0; i < (65 * 65) * 4; i++)
                 {
                     iconBytes.push_back(buffer[i]);
-                }
+                } */
 
                 flutter::EncodableMap trayIconMap;
                 trayIconMap[flutter::EncodableValue("toolTip")] = flutter::EncodableValue(Encoding::WideToUtf8(trayIcon.toolTip));
@@ -1055,7 +1057,7 @@ namespace tabamewin32
                 trayIconMap[flutter::EncodableValue("hWnd")] = flutter::EncodableValue((int)((LONG_PTR)trayIcon.data.hwnd));
                 trayIconMap[flutter::EncodableValue("uID")] = flutter::EncodableValue((int)trayIcon.data.uID);
                 trayIconMap[flutter::EncodableValue("uCallbackMessage")] = flutter::EncodableValue((int)trayIcon.data.uCallbackMessage);
-                trayIconMap[flutter::EncodableValue("hIcon")] = flutter::EncodableValue(iconBytes);
+                trayIconMap[flutter::EncodableValue("hIcon")] = flutter::EncodableValue((int)((LONG_PTR)trayIcon.data.hIcon));
                 map[flutter::EncodableValue(trayIcon.processID)] = flutter::EncodableValue(trayIconMap);
             }
             result->Success(flutter::EncodableValue(map));
