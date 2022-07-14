@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, non_constant_identifier_names
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io' as io;
 import 'dart:io';
@@ -12,6 +13,7 @@ import 'package:win32/win32.dart' hide Size, Point;
 
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../globals.dart';
 import '../keys.dart';
 import '../utils.dart';
 import 'imports.dart';
@@ -413,7 +415,6 @@ class WinUtils {
       'powershell',
       <String>['-NoProfile', ...commands],
     );
-    // print(commands);
     if (result.stderr != '') {
       return <String>[];
     }
@@ -487,48 +488,103 @@ class WinUtils {
     point = Monitor.adjustPointToDPI(point);
     return point;
   }
+
+  static Future<Uint8List> getCachedIcon(String path, {int iconID = 0}) async {
+    final WinIcons winIcon = WinIcons();
+    if (iconID == 0) {
+      winIcon.add(path);
+    } else {
+      winIcon.add('$path,$iconID');
+    }
+    await winIcon.fetch(Globals.iconCachePath);
+    if (iconID == 0) {
+      return File("${Globals.iconCachePath}\\${Win32.getExe(path)}.cached").readAsBytesSync();
+    } else {
+      return File("${Globals.iconCachePath}\\dll_${iconID}_${Win32.getExe(path)}.cached").readAsBytesSync();
+    }
+  }
 }
 
 class WinIcons {
-  static Future<Uint8List?> getIconFromPath(String path, {int iconID = 0}) async {
-    // if (iconID > 0) {
-    //   return await nativeIconToBytes(path, iconID: iconID);
-    // }
-    String dir = "${Directory.current.path}\\data\\cache";
-    if (!Directory(dir).existsSync()) Directory(dir).createSync();
-    final String exe = Win32.getExe(path);
-    final String exeCache = "$dir\\$exe.png";
-    if (iconID > 0) exeCache.replaceFirst(".png", "$iconID.png");
-
-    if (File(exeCache).existsSync()) {
-      return File(exeCache).readAsBytesSync();
+  List<List<dynamic>> list = <List<dynamic>>[];
+  WinIcons();
+  void add(String item) {
+    int dll = 0;
+    if (item.contains(',')) {
+      final String lastItem = item.substring(item.lastIndexOf('.'));
+      final List<String> xploded = lastItem.split(',');
+      if (xploded.length == 2) {
+        dll = int.parse(xploded[1]);
+        item = item.replaceAll(',$dll', '');
+      }
     }
+    list.add(<dynamic>[item, dll]);
+  }
 
+  void addAll(List<String> item) {
+    for (String element in item) {
+      add(element);
+    }
+  }
+
+  Future<void> fetch(String directory) async {
     List<String> commands = <String>[
       "Add-Type -AssemblyName System.Drawing;",
-      "\$Path = '$path';",
       "\$Format = [System.Drawing.Imaging.ImageFormat]::Png;",
-      "\$MemoryStream = New-Object System.IO.MemoryStream;",
     ];
-    if (iconID > 0) {
+    if (list.where((List<dynamic> e) => e[1] != 0).isNotEmpty) {
+      commands.add(
+          '''add-type -typeDefinition ' using System; using System.Runtime.InteropServices; public class Shell32_Extract {  [DllImport(  "Shell32.dll",  EntryPoint = "ExtractIconExW",  CharSet = CharSet.Unicode,  ExactSpelling = true,  CallingConvention = CallingConvention.StdCall)  ]  public static extern int ExtractIconEx(  string lpszFile ,   int iconIndex ,   out IntPtr phiconLarge,  out IntPtr phiconSmall,  int nIcons  ); }';''');
+    }
+    int totalAdded = 0;
+    for (List<dynamic> element in list) {
+      final String path = element[0];
+      final int iconID = element[1];
+      final String exePath = Win32.getExe(path);
+      String exeCache = directory;
+
+      if (iconID != 0) {
+        exeCache += "\\dll_${iconID}_$exePath.cached";
+        if (File(exeCache).existsSync()) continue;
+        totalAdded++;
+        commands.addAll(<String>[
+          "[System.IntPtr] \$phiconLarge = 0;",
+          "[System.IntPtr] \$phiconSmall = 0;",
+          "[Shell32_Extract]::ExtractIconEx('$path', $iconID, [ref] \$phiconLarge, [ref] \$phiconSmall, 1);",
+          "\$Icon = [System.Drawing.Icon]::FromHandle(\$phiconSmall).ToBitMap().Save('$exeCache',\$Format);",
+        ]);
+      } else {
+        exeCache += "\\$exePath.cached";
+        if (File(exeCache).existsSync()) continue;
+        totalAdded++;
+        commands.add("\$Icon = [System.Drawing.Icon]::ExtractAssociatedIcon('$path').ToBitMap().Save('$exeCache',\$Format);");
+      }
+    }
+    if (totalAdded > 0) {
+      print("total new: $totalAdded");
+      await WinUtils.runPowerShell(commands);
+    }
+  }
+
+  Future<List<Uint8List>> getHandleIcons(List<int> handles) async {
+    List<String> commands = <String>[
+      "Add-Type -AssemblyName System.Drawing;",
+      "\$Format = [System.Drawing.Imaging.ImageFormat]::Png;",
+    ];
+    for (int handle in handles) {
       commands.addAll(<String>[
-        "[System.IntPtr] \$phiconLarge = 0;",
-        "[System.IntPtr] \$phiconSmall = 0;",
-        "[Shell32_Extract]::ExtractIconEx('$path', $iconID, [ref] \$phiconLarge, [ref] \$phiconSmall, 1);",
-        "\$Icon = [System.Drawing.Icon]::FromHandle(\$phiconSmall).ToBitMap();",
-      ]);
-    } else {
-      commands.addAll(<String>[
-        "\$Icon = [System.Drawing.Icon]::ExtractAssociatedIcon(\$Path).ToBitMap().Save(\$MemoryStream,\$Format);",
+        "\$MemoryStream = New-Object System.IO.MemoryStream;",
+        "[System.Drawing.Icon]::FromHandle($handle).ToBitMap().Save(\$MemoryStream,\$Format);",
+        "\$Bytes = \$MemoryStream.ToArray();",
+        "\$MemoryStream.Flush();",
+        "\$MemoryStream.Dispose();",
+        "[convert]::ToBase64String(\$Bytes);",
       ]);
     }
-    commands.addAll(<String>["\$MemoryStream.ToArray();", "\$MemoryStream.Flush();", "\$MemoryStream.Dispose();"]);
     final List<String> output = await WinUtils.runPowerShell(commands);
-    List<int> lint = output.map(int.parse).toList();
-    final Uint8List out = Uint8List.fromList(lint);
-    File(exeCache).createSync();
-    File(exeCache).writeAsBytes(out);
-    return out;
+    List<Uint8List> list = output.map(base64Decode).toList();
+
+    return list;
   }
 }
 
@@ -745,7 +801,6 @@ class HwndPath {
       if (!__cacheHwnds[hWnd]!.isAppx) {
         return HwndInfo(isAppx: __cacheHwnds[hWnd]!.isAppx, path: __cacheHwnds[hWnd]!.path);
       }
-      // print(exePath);
     }
     final HwndInfo hwndPath = getWindowExePath(hWnd);
     exePath = hwndPath.path;

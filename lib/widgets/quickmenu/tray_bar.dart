@@ -1,9 +1,9 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -25,10 +25,13 @@ class TrayBarState extends State<TrayBar> {
   final ScrollController _scrollController = ScrollController();
   late Timer mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
-
+  List<Uint8List> iconData = <Uint8List>[];
+  bool fetching = false;
   void fetchTray() async {
+    fetching = true;
     await Tray.fetchTray();
-    if (listEquals(Tray.trayList, tray)) return;
+    fetching = false;
+    // if (listEquals(Tray.trayList, tray)) return;
     tray = <TrayBarInfo>[...Tray.trayList];
     if (mounted) setState(() {});
   }
@@ -39,7 +42,7 @@ class TrayBarState extends State<TrayBar> {
     mainTimer = Timer.periodic(const Duration(milliseconds: 600), (Timer timer) async {
       if (Globals.isWindowActive || true) {
         PaintingBinding.instance.imageCache.clear();
-        fetchTray();
+        if (!fetching) fetchTray();
       }
     });
   }
@@ -138,12 +141,12 @@ class TrayBarState extends State<TrayBar> {
                                 height: 0,
                                 preferBelow: false,
                                 child: (info.brightness < 400)
-                                    ? Image.memory(info.hIcon, fit: BoxFit.scaleDown, gaplessPlayback: true)
+                                    ? Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)
                                     : ColorFiltered(
                                         colorFilter: ColorFilter.matrix(ColorFilterGenerator.brightnessAdjustMatrix(
                                           value: -0.5,
                                         )),
-                                        child: Image.memory(info.hIcon, fit: BoxFit.scaleDown, gaplessPlayback: true),
+                                        child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true),
                                       ),
                               ),
                             ),

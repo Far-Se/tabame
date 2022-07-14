@@ -95,6 +95,12 @@ class WindowWatcher {
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
     }
+    final WinIcons winIcons = WinIcons();
+    winIcons.addAll(list.where((Window e) => !e.isAppx).map((Window x) => x.process.path + x.process.exe).toList());
+
+    // final String Globals.iconCachePath = "${Directory.current.path}\\data\\cache";
+    await winIcons.fetch(Globals.iconCachePath);
+
     for (Window win in list) {
       if (icons.containsKey(win.hWnd) && !refreshIcons) continue;
 
@@ -102,13 +108,14 @@ class WindowWatcher {
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
         continue;
       }
+      if (File("${Globals.iconCachePath}\\${win.process.exe}.cached").existsSync()) {
+        icons[win.hWnd] = File("${Globals.iconCachePath}\\${win.process.exe}.cached").readAsBytesSync();
+      } else {
+        // icons[win.hWnd] = win.process.path.contains("System32") ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
 
-      icons[win.hWnd] = win.process.path != "" ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
-      // icons[win.hWnd] = await WinIcons.getIcon(win.process.path + win.process.exe);
-      // icons[win.hWnd] = win.process.path.contains("System32") ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
-
-      if (!(icons.containsKey(win.hWnd) && !(icons[win.hWnd]!.any((int element) => element != 204)))) continue;
-      icons[win.hWnd] = win.process.path != "" ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
+        // if (!(icons.containsKey(win.hWnd) && !(icons[win.hWnd]!.any((int element) => element != 204)))) continue;
+        // icons[win.hWnd] = win.process.path != "" ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
+      }
     }
     // icons = {...tempIcons};
     return true;

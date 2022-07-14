@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:win32/win32.dart';
 
@@ -14,7 +15,7 @@ class Globals {
   static final Heights heights = Heights();
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;
-
+  static String iconCachePath = "${Directory.current.path}\\data\\cache";
   static bool audioBoxVisible = false;
 
   static bool opacity = true;

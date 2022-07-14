@@ -28,7 +28,7 @@ class WindowsAppButton extends StatelessWidget {
         width: size + 5,
         height: double.maxFinite,
         child: FutureBuilder<Uint8List?>(
-          future: WinIcons.getIconFromPath(path),
+          future: WinUtils.getCachedIcon(path),
           // future: nativeIconToBytes(path),
           builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
             return InkWell(
