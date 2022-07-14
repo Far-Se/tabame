@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../models/keys.dart';
+import '../../../models/keys.dart';
 
 class TimeWidget extends StatelessWidget {
   const TimeWidget({Key? key}) : super(key: key);

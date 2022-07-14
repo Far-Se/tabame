@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
-import '../../models/globals.dart';
-import '../../models/win32/imports.dart';
+import '../../../models/globals.dart';
+import '../../../models/win32/imports.dart';
 
 class PinWindowButton extends StatelessWidget {
   const PinWindowButton({

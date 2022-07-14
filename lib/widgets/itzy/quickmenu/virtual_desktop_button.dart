@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
-import '../../models/win32/win32.dart';
+import '../../../models/win32/win32.dart';
 
 class VirtualDesktopButton extends StatelessWidget {
   const VirtualDesktopButton({Key? key}) : super(key: key);

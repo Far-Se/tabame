@@ -1,13 +1,19 @@
 // ignore_for_file: unnecessary_import, prefer_const_constructors
 
+import 'dart:ffi' hide Size;
 import 'dart:math';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart' hide Size, Point;
 import 'models/registration.dart';
-import 'pages/quickmenu.dart';
 import 'package:window_manager/window_manager.dart';
+
+import 'models/win32/mixed.dart';
+import 'models/win32/win32.dart';
+import 'pages/quickmenu.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +27,7 @@ Future<void> main() async {
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
     alwaysOnTop: true,
-    minimumSize: Size(300, 150),
+    // minimumSize: Size(300, 150),
     title: "Tabame",
   );
   windowManager.setMinimizable(false);
@@ -36,14 +42,15 @@ Future<void> main() async {
   runApp(const Tabame());
 }
 
-final Color kInitialColor = Color(0xff3B414D);
+final Color kInitialColor = Color.fromRGBO(59, 65, 77, 1);
 final Color kTintColor = Color(0xFF373C47);
 
 final Color kLightBackground = Color(0xffFFFFFF);
 final Color kLightTint = Color(0xff4DCF72);
 final Color kLightText = Color.fromRGBO(169, 69, 138, 1);
 
-final Color kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
+// final Color kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
+final Color kDarkBackground = Color.fromRGBO(59, 65, 77, 1);
 final Color kDarkTint = Color.fromRGBO(250, 249, 248, 1);
 final Color kDarkText = Color.fromRGBO(250, 249, 248, 1);
 
@@ -108,4 +115,51 @@ class Tabame extends StatelessWidget {
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{PointerDeviceKind.touch, PointerDeviceKind.mouse};
+}
+
+class Main extends StatefulWidget {
+  const Main({Key? key}) : super(key: key);
+
+  @override
+  _MainState createState() => _MainState();
+}
+
+class _MainState extends State<Main> {
+  @override
+  void initState() {
+    super.initState();
+    init();
+  }
+
+  void init() async {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    await WindowManager.instance.setPosition(Offset(lpPoint.ref.x.toDouble(), lpPoint.ref.y.toDouble()));
+    free(lpPoint);
+    Win32.setCenter(useMouse: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanStart: (DragStartDetails details) {
+        windowManager.startDragging();
+      },
+      child: Container(
+        decoration: BoxDecoration(border: Border.all(width: 1, color: Colors.black)),
+        child: Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+                onTap: () async {
+                  final Point point = WinUtils.getMousePos();
+                  await WindowManager.instance.setPosition(Offset(point.X.toDouble(), point.Y.toDouble()));
+                },
+                child: Text("TEST")),
+          ),
+        ),
+      ),
+    );
+  }
 }

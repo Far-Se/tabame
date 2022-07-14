@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
-import '../../models/globals.dart';
-import '../../models/utils.dart';
-import '../../models/win32/win32.dart';
+import '../../../models/globals.dart';
+import '../../../models/utils.dart';
+import '../../../models/win32/win32.dart';
 
 class AudioBox extends StatefulWidget {
   const AudioBox({Key? key}) : super(key: key);
@@ -77,7 +77,7 @@ class AudioBoxState extends State<AudioBox> {
       for (AudioDevice device in inputType.devices) {
         if (inputType.icons.containsKey(device.id)) continue;
 
-        Uint8List? icon = await nativeIconToBytes(device.iconPath, iconID: device.iconID);
+        Uint8List? icon = await WinIcons.getIconFromPath(device.iconPath, iconID: device.iconID);
         inputType.icons[device.id] = icon!;
       }
     }
@@ -94,7 +94,7 @@ class AudioBoxState extends State<AudioBox> {
       final int hWnd = await findTopWindow(device.processId);
       //? Basic Way
       if (hWnd == 0) {
-        audioMixerIcons[device.processId] = (await nativeIconToBytes(device.processPath))!;
+        audioMixerIcons[device.processId] = (await WinIcons.getIconFromPath(device.processPath))!;
         audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).capitalize();
         continue;
       }
@@ -105,10 +105,10 @@ class AudioBoxState extends State<AudioBox> {
         if (File(appxLogo).existsSync()) {
           icon = File(appxLogo).readAsBytesSync();
         } else {
-          icon = await nativeIconToBytes(device.processPath);
+          icon = await WinIcons.getIconFromPath(device.processPath);
         }
       } else {
-        icon = await nativeIconToBytes(processPath.path);
+        icon = await WinIcons.getIconFromPath(processPath.path);
       }
       audioMixerIcons[device.processId] = icon!;
       audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).capitalize();

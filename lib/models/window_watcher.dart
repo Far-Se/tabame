@@ -103,10 +103,12 @@ class WindowWatcher {
         continue;
       }
 
-      icons[win.hWnd] = win.process.path.contains("System32") ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
+      icons[win.hWnd] = win.process.path != "" ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
+      // icons[win.hWnd] = await WinIcons.getIcon(win.process.path + win.process.exe);
+      // icons[win.hWnd] = win.process.path.contains("System32") ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
 
       if (!(icons.containsKey(win.hWnd) && !(icons[win.hWnd]!.any((int element) => element != 204)))) continue;
-      icons[win.hWnd] = win.process.path != "" ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
+      icons[win.hWnd] = win.process.path != "" ? await WinIcons.getIconFromPath(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
     }
     // icons = {...tempIcons};
     return true;

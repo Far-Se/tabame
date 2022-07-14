@@ -17,6 +17,8 @@ class Globals {
 
   static bool audioBoxVisible = false;
 
+  static bool opacity = true;
+
   static alwaysAwakeRun(bool state) {
     if (state == false) {
       SetThreadExecutionState(ES_CONTINUOUS);

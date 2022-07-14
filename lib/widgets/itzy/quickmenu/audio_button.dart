@@ -5,8 +5,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
-import '../../models/globals.dart';
-import '../../models/keys.dart';
+import '../../../models/globals.dart';
+import '../../../models/keys.dart';
 import 'audio_box.dart';
 
 class AudioButton extends StatefulWidget {

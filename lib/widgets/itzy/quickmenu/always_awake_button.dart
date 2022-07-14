@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../models/globals.dart';
+import '../../../models/globals.dart';
 
 class AlwaysAwakeButton extends StatefulWidget {
   const AlwaysAwakeButton({

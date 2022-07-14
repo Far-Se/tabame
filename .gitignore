@@ -31,7 +31,10 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-
+/data/
+desktop.ini
+test.plugins
+.vscode
 # Web related
 lib/generated_plugin_registrant.dart
 
@@ -50,3 +53,5 @@ app.*.map.json
 **/.history/
 pubspec.lock
 **/pubspec.lock
+.a.Release.lnk
+.vscode
