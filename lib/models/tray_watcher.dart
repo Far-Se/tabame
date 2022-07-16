@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:tabamewin32/tabamewin32.dart';
 
-import 'win32.dart';
+import 'win32/win32.dart';
 
 class TrayBarInfo extends TrayInfo {
   int executionType = 0;
@@ -35,6 +35,7 @@ class TrayBarInfo extends TrayInfo {
 }
 
 Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
+Map<int, int> __trayIconCacheHandle = <int, int>{};
 
 class Tray {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
@@ -42,14 +43,17 @@ class Tray {
   static Future<bool> fetchTray() async {
     final List<TrayInfo> winTray = await enumTrayIcons();
     newTray = true;
+    Map<int, int> oldIconHandles = <int, int>{};
+    for (TrayBarInfo element in trayList) {
+      oldIconHandles[element.hWnd] = element.hIcon;
+    }
     trayList.clear();
-
+    final Map<int, int> handlesToFetch = <int, int>{};
     for (TrayInfo element in winTray) {
       HwndInfo processPath = HwndPath.getFullPath(element.processID);
       String exe = Win32.getExe(processPath.path);
 
       final TrayBarInfo trayInfo = TrayBarInfo(executionType: 1, processPath: processPath.path, processExe: exe);
-
       trayInfo
         ..hIcon = element.hIcon
         ..uID = element.uID
@@ -59,32 +63,34 @@ class Tray {
         ..isVisible = element.isVisible
         ..toolTip = element.toolTip;
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
-
-      // if (Boxes.traySettings.containsKey(exe)) {
-      //   final box = Boxes.traySettings.get(exe) as TraySettings;
-
-      //   trayInfo.isVisible = box.visible;
-      //   trayInfo.executionType = box.executionType;
-      // }
+      if (__trayIconCacheHandle.containsKey(element.hWnd)) {
+        if (__trayIconCacheHandle[element.hWnd] != element.hIcon) {
+          handlesToFetch[trayList.length] = element.hIcon;
+          __trayIconCacheHandle[element.hWnd] = element.hIcon;
+        } else {
+          if (__trayIconCache.containsKey(element.hWnd)) {
+            trayInfo.iconData = __trayIconCache[element.hWnd]!;
+          }
+        }
+      } else {
+        handlesToFetch[trayList.length] = element.hIcon;
+        __trayIconCacheHandle[element.hWnd] = element.hIcon;
+      }
 
       trayList.add(trayInfo);
     }
-
-    final List<int> handles = trayList.map((TrayBarInfo e) => e.hIcon).toList();
-    final List<Uint8List> iconOutput = await WinIcons().getHandleIcons(handles);
-    if (handles.length == iconOutput.length) {
-      for (int x = 0; x < handles.length; x++) {
-        final TrayBarInfo trayInfo = trayList[x];
-        trayInfo.iconData = iconOutput[x];
-        __trayIconCache[trayInfo.hWnd] = iconOutput[x];
-      }
-    } else {
-      for (TrayBarInfo trayInfo in trayList) {
-        if (__trayIconCache.containsKey(trayInfo.hWnd)) {
-          trayInfo.iconData = __trayIconCache[trayInfo.hWnd]!;
+    if (handlesToFetch.isNotEmpty) {
+      final List<Uint8List> result = await WinIcons().getHandleIcons(handlesToFetch.values.toList());
+      int i = 0;
+      if (result.length == handlesToFetch.keys.length) {
+        for (int key in handlesToFetch.keys) {
+          trayList[key].iconData = result[i];
+          __trayIconCache[trayList[key].hWnd] = result[i];
+          i++;
         }
       }
     }
+    __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);
     return newTray;
   }
 }
