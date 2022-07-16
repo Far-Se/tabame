@@ -19,7 +19,7 @@ class Globals {
   static String iconCachePath = "${Directory.current.path}\\data\\cache";
   static bool audioBoxVisible = false;
 
-  static bool opacity = true;
+  static bool justStarted = false;
 
   static alwaysAwakeRun(bool state) {
     if (state == false) {

@@ -1,15 +1,14 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../main.dart';
 import '../models/globals.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/quickmenu_settings.dart';
-import 'quickmenu.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -38,9 +37,10 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
+  await WindowManager.instance.setAspectRatio(1.3);
   await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
-  sleep(const Duration(milliseconds: 200));
+  // sleep(const Duration(milliseconds: 200));
   return 1;
 }
 
@@ -172,25 +172,9 @@ class InterfaceState extends State<Interface> {
                                           width: 25,
                                           child: InkWell(
                                             onTap: () async {
-                                              Globals.opacity = true;
                                               Globals.changingPages = true;
-                                              final NavigatorState navOfContext = Navigator.of(context);
                                               setState(() {});
-                                              Future<void>.delayed(const Duration(milliseconds: 100), () {
-                                                // navOfContext.pushAndRemoveUntil(
-                                                //   MaterialPageRoute<QuickMenu>(maintainState: false, builder: (BuildContext context) => const QuickMenu()),
-                                                //   (Route<dynamic> route) => false,
-                                                // );
-                                                navOfContext.pushAndRemoveUntil(
-                                                  PageRouteBuilder<QuickMenu>(
-                                                    maintainState: false,
-                                                    pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
-                                                    transitionDuration: Duration.zero,
-                                                    reverseTransitionDuration: Duration.zero,
-                                                  ),
-                                                  (Route<dynamic> route) => false,
-                                                );
-                                              });
+                                              mainPageViewController.jumpToPage(0);
                                             },
                                             child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                           ),
