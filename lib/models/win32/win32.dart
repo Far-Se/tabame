@@ -184,7 +184,7 @@ class Win32 {
 
   static getMainHandleByClass() {
     if (hWnd != 0) return hWnd;
-    final int hwnd = FindWindow(TEXT("TABAME_FLUTTER_WINDOW"), nullptr);
+    final int hwnd = FindWindow(TEXT("FLUTTER_RUNNER_WIN32_WINDOW"), nullptr);
     if (hwnd > 0) {
       hWnd = GetAncestor(hwnd, 2);
     }

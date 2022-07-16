@@ -18,7 +18,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
           mainAxisAlignment: MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[TopBar()],
+          children: <Widget>[const TopBar()],
         ),
       ),
     );

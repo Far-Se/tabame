@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'models/globals.dart';
 import 'models/registration.dart';
 import 'models/win32/win32.dart';
+import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
 Future<void> main() async {
@@ -16,6 +18,7 @@ Future<void> main() async {
   await windowManager.ensureInitialized();
 
   await registerAll();
+  Globals.justStarted = true;
 
   /// ? Window
   WindowOptions windowOptions = const WindowOptions(
@@ -58,9 +61,23 @@ num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
 }
 
 final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
+PageController mainPageViewController = PageController();
 
-class Tabame extends StatelessWidget {
+class Tabame extends StatefulWidget {
   const Tabame({Key? key}) : super(key: key);
+
+  @override
+  State<Tabame> createState() => _TabameState();
+}
+
+class _TabameState extends State<Tabame> {
+  @override
+  void dispose() {
+    mainPageViewController.dispose();
+    darkThemeNotifier.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
@@ -104,7 +121,22 @@ class Tabame extends StatelessWidget {
               ),
         ),
         themeMode: mode ? ThemeMode.dark : ThemeMode.light,
-        home: const QuickMenu(),
+        home: PageView.builder(
+          controller: mainPageViewController,
+          allowImplicitScrolling: false,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (BuildContext context, int index) {
+            if (index == 0) {
+              print("in here");
+              return const QuickMenu();
+            } else if (index == 1) {
+              return const Interface();
+            } else {
+              print("here $index");
+              return const QuickMenu();
+            }
+          },
+        ),
       ),
     );
   }
