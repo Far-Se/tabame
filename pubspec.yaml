@@ -28,7 +28,6 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   cupertino_icons: ^1.0.2
-  # easy_sidemenu: ^0.3.1
   equatable: ^2.0.3
   ffi: ^2.0.0
   flutter:
@@ -37,6 +36,7 @@ dependencies:
   hive_flutter: ^1.1.0
   http: ^0.13.4
   intl: ^0.17.0
+  shared_preferences: ^2.0.15
   tabamewin32:
     path: packages/tabamewin32
   win32: ^2.7.0

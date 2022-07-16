@@ -419,7 +419,6 @@ class WinUtils {
       return <String>[];
     }
     List<String> output = result.stdout.toString().trim().split('\n').map((String e) => e.trim()).toList();
-
     return output;
   }
 
@@ -503,9 +502,14 @@ class WinUtils {
       return File("${Globals.iconCachePath}\\dll_${iconID}_${Win32.getExe(path)}.cached").readAsBytesSync();
     }
   }
+
+  static String getIconPath(String exe) {
+    return "${Globals.iconCachePath}\\$exe.cached";
+  }
 }
 
 class WinIcons {
+  //[0] - Path, [1] - iconINDEX, which is +/- int
   List<List<dynamic>> list = <List<dynamic>>[];
   WinIcons();
   void add(String item) {
@@ -585,6 +589,16 @@ class WinIcons {
     List<Uint8List> list = output.map(base64Decode).toList();
 
     return list;
+  }
+
+  Future<Uint8List> getHandleIcon(int handle) async {
+    final List<int> handles = <int>[handle];
+    final List<Uint8List> output = await getHandleIcons(handles);
+    if (output.isNotEmpty) {
+      return output[0];
+    } else {
+      return Uint8List.fromList(<int>[0]);
+    }
   }
 }
 

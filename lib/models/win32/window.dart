@@ -53,6 +53,7 @@ class Window {
   Appearance appearance = Appearance();
   bool isAppx = false;
   String appxIcon = "";
+  String iconPath = "";
   String toJson() {
     JsonEncoder encoder = const JsonEncoder.withIndent("");
     return encoder
@@ -101,6 +102,7 @@ class Window {
       process.exe = process.path.substring(process.path.lastIndexOf('\\') + 1);
     }
     process.path = process.path.replaceAll(process.exe, "");
+    iconPath = WinUtils.getIconPath(process.exe);
   }
 
   getManifestIcon2() {

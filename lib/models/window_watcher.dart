@@ -5,7 +5,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:flutter/widgets.dart';
 import 'package:win32/win32.dart' hide Size;
 
 import 'package:tabamewin32/tabamewin32.dart';
@@ -54,7 +53,8 @@ class WindowWatcher {
     fetching = true;
     final List<int> winHWNDS = enumWindows();
     final List<int> allHWNDs = <int>[];
-
+    // if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
+    // print(winHWNDS.length);
     for (int hWnd in winHWNDS) {
       if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "" && Win32.getTitle(hWnd) != "Tabame") {
         allHWNDs.add(hWnd);
@@ -83,24 +83,29 @@ class WindowWatcher {
       Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
     }
     await handleIcons(refreshIcons: refreshIcons);
-    orderBy(globalSettings.taskBarStyle);
+    orderBy(globalSettings.taskBarAppsStyle);
     return true;
   }
 
   static Future<bool> handleIcons({bool refreshIcons = false}) async {
-    // final tempIcons = {...icons};
-    if (refreshIcons) {
-      imageCache.clear();
-    }
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
     }
     final WinIcons winIcons = WinIcons();
-    winIcons.addAll(list.where((Window e) => !e.isAppx).map((Window x) => x.process.path + x.process.exe).toList());
+    winIcons.addAll(list.where((Window e) => !e.isAppx && e.process.path.isNotEmpty).map((Window x) => x.process.path + x.process.exe).toList());
 
-    // final String Globals.iconCachePath = "${Directory.current.path}\\data\\cache";
     await winIcons.fetch(Globals.iconCachePath);
-
+    final List<Window> noPath = list.where((Window e) => !e.isAppx && e.process.path.isEmpty && e.process.exe.isNotEmpty).toList();
+    if (noPath.isNotEmpty) {
+      for (Window win in noPath) {
+        if (File(win.iconPath).existsSync()) continue;
+        int icon = SendMessage(win.hWnd, WM_GETICON, 2, 0); // ICON_SMALL2 - User Made Apps
+        if (icon == 0) icon = GetClassLongPtr(win.hWnd, -14); // GCLP_HICON - Microsoft Win Apps
+        if (icon == 0) continue;
+        final Uint8List iconU8List = await WinIcons().getHandleIcon(icon);
+        File(win.iconPath).writeAsBytesSync(iconU8List);
+      }
+    }
     for (Window win in list) {
       if (icons.containsKey(win.hWnd) && !refreshIcons) continue;
 
@@ -108,16 +113,10 @@ class WindowWatcher {
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
         continue;
       }
-      if (File("${Globals.iconCachePath}\\${win.process.exe}.cached").existsSync()) {
-        icons[win.hWnd] = File("${Globals.iconCachePath}\\${win.process.exe}.cached").readAsBytesSync();
-      } else {
-        // icons[win.hWnd] = win.process.path.contains("System32") ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
-
-        // if (!(icons.containsKey(win.hWnd) && !(icons[win.hWnd]!.any((int element) => element != 204)))) continue;
-        // icons[win.hWnd] = win.process.path != "" ? await nativeIconToBytes(win.process.path + win.process.exe) : await getWindowIcon(win.hWnd);
-      }
+      if (!icons.containsKey(win.hWnd) && File(win.iconPath).existsSync()) {
+        icons[win.hWnd] = File(win.iconPath).readAsBytesSync();
+      } else {}
     }
-    // icons = {...tempIcons};
     return true;
   }
 

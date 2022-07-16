@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../models/globals.dart';
-import '../../models/utils.dart';
-import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/always_awake_button.dart';
 import '../itzy/quickmenu/audio_button.dart';
 import '../itzy/quickmenu/change_theme_button.dart';
@@ -19,8 +17,7 @@ import '../itzy/quickmenu/toggle_taskbar_button.dart';
 import '../itzy/quickmenu/virtual_desktop_button.dart';
 
 class TopBar extends StatelessWidget {
-  TopBar({Key? key}) : super(key: key);
-  final Future<List<String>> futureTaskbarItems = WinUtils.getTaskbarPinnedApps();
+  const TopBar({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     Globals.heights.topbar = 25;

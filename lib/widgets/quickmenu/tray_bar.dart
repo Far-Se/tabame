@@ -10,7 +10,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../../models/globals.dart';
-import '../../models/win32/tray.dart';
+import '../../models/tray_watcher.dart';
 import '../../models/win32/win32.dart';
 
 class TrayBar extends StatefulWidget {

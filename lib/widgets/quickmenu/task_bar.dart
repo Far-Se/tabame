@@ -36,6 +36,7 @@ class TaskBarState extends State<TaskBar> {
   late Timer mainTimer;
   List<Window> windows = <Window>[];
   Future<void> changeHeight() async {
+    if (Globals.changingPages == true) return;
     double currentHeight = (windows.length * 27).clamp(100, (Monitor.monitorSizes[Monitor.getWindowMonitor(Win32.hWnd)]?.height ?? 1080) / 1.7) + 5;
     Globals.heights.taskbar = currentHeight;
     if (currentHeight != Caches.lastHeight || true) {
@@ -65,6 +66,7 @@ class TaskBarState extends State<TaskBar> {
     if (!fetching && await WindowWatcher.fetchWindows(refreshIcons: refreshIcons)) {
       if (listEquals(WindowWatcher.list, windows)) {
         await audioHandle();
+        await changeHeight();
         if (!mounted) return;
         setState(() => fetching = false);
         return;
@@ -88,14 +90,7 @@ class TaskBarState extends State<TaskBar> {
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
       // if (!Globals.isWindowActive) return;
-      timerTicks++;
-      if (timerTicks == 3) {
-        PaintingBinding.instance.imageCache.clear();
-        fetchWindows(refreshIcons: true);
-        timerTicks = 0;
-      } else {
-        fetchWindows();
-      }
+      fetchWindows();
     });
   }
 

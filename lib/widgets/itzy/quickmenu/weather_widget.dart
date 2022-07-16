@@ -7,16 +7,18 @@ import '../../../models/boxes.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 
+Future<String> fetchWeather() async {
+  final http.Response response = await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=%c+%t"));
+  if (response.statusCode == 200) {
+    return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
+  }
+  return "";
+}
+
+final Future<String> _fetchWeather = fetchWeather();
+
 class WeatherWidget extends StatelessWidget {
   const WeatherWidget({Key? key}) : super(key: key);
-
-  Future<String> fetchWeather() async {
-    final http.Response response = await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=%c+%t"));
-    if (response.statusCode == 200) {
-      return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
-    }
-    return "";
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,12 +26,14 @@ class WeatherWidget extends StatelessWidget {
       width: 30,
       height: double.infinity,
       child: FutureBuilder<String>(
-        future: fetchWeather(),
+        future: _fetchWeather,
         initialData: globalSettings.weather,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            globalSettings.weather = snapshot.data as String;
-            Boxes.settings.put('settings', globalSettings);
+            if (snapshot.hasData) {
+              globalSettings.weather = snapshot.data as String;
+              Boxes.updateSettings("weather", snapshot.data as String, PTYPE.stringT);
+            }
           }
           return Theme(
             data: Theme.of(context)

@@ -91,14 +91,10 @@ void setTransparent(HWND hWnd)
     data.pvData = &accent;
     data.cbData = sizeof(accent);
     set_window_composition_attribute_(hWnd, &data);
-    int vA = 0, vB = 0, vG = 0, vR = 0;
+    // int vA = 0, vB = 0, vG = 0, vR = 0;
     accent = {
         static_cast<ACCENT_STATE>(2), 2,
-        static_cast<DWORD>(
-            (vA << 24) +
-            (vB << 16) +
-            (vG << 8) +
-            (vR)),
+        static_cast<DWORD>(0),
         0};
     data.Attrib = WCA_ACCENT_POLICY;
     data.pvData = &accent;

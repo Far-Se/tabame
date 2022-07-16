@@ -80,8 +80,8 @@ int enumWindowsProc(int hWnd, int lParam) {
 }
 
 List<int> enumWindows() {
-  final Pointer<NativeFunction<EnumWindowsProc>> wndProc = Pointer.fromFunction<EnumWindowsProc>(enumWindowsProc, 0);
   __helperWinsList.clear();
+  final Pointer<NativeFunction<EnumWindowsProc>> wndProc = Pointer.fromFunction<EnumWindowsProc>(enumWindowsProc, 0);
   EnumWindows(wndProc, 0);
   return __helperWinsList;
 }

@@ -11,6 +11,7 @@ class Heights {
 }
 
 class Globals {
+  static bool changingPages = false;
   static bool isWindowActive = false;
   static final Heights heights = Heights();
   static int lastFocusedWinHWND = 0;

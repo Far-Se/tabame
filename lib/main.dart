@@ -1,22 +1,19 @@
 // ignore_for_file: unnecessary_import, prefer_const_constructors
 
-import 'dart:ffi' hide Size;
 import 'dart:math';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart' hide Size, Point;
-import 'models/registration.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'models/win32/mixed.dart';
+import 'models/registration.dart';
 import 'models/win32/win32.dart';
 import 'pages/quickmenu.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
 
   await registerAll();
 
@@ -36,6 +33,7 @@ Future<void> main() async {
     await windowManager.focus();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
+    Win32.fetchMainWindowHandle();
   });
 
   await setWindowAsTransparent();
@@ -115,51 +113,4 @@ class Tabame extends StatelessWidget {
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{PointerDeviceKind.touch, PointerDeviceKind.mouse};
-}
-
-class Main extends StatefulWidget {
-  const Main({Key? key}) : super(key: key);
-
-  @override
-  _MainState createState() => _MainState();
-}
-
-class _MainState extends State<Main> {
-  @override
-  void initState() {
-    super.initState();
-    init();
-  }
-
-  void init() async {
-    final Pointer<POINT> lpPoint = calloc<POINT>();
-    GetCursorPos(lpPoint);
-    await WindowManager.instance.setPosition(Offset(lpPoint.ref.x.toDouble(), lpPoint.ref.y.toDouble()));
-    free(lpPoint);
-    Win32.setCenter(useMouse: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onPanStart: (DragStartDetails details) {
-        windowManager.startDragging();
-      },
-      child: Container(
-        decoration: BoxDecoration(border: Border.all(width: 1, color: Colors.black)),
-        child: Center(
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-                onTap: () async {
-                  final Point point = WinUtils.getMousePos();
-                  await WindowManager.instance.setPosition(Offset(point.X.toDouble(), point.Y.toDouble()));
-                },
-                child: Text("TEST")),
-          ),
-        ),
-      ),
-    );
-  }
 }
