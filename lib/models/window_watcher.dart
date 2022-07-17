@@ -49,7 +49,7 @@ class WindowWatcher {
 
   static bool fetching = false;
 
-  static Future<bool> fetchWindows({bool refreshIcons = false}) async {
+  static Future<bool> fetchWindows() async {
     if (fetching) return false;
     fetching = true;
     final List<int> winHWNDS = enumWindows();
@@ -83,12 +83,12 @@ class WindowWatcher {
     if (_activeWinHandle > -1) {
       Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
     }
-    await handleIcons(refreshIcons: refreshIcons);
+    await handleIcons();
     orderBy(globalSettings.taskBarAppsStyle);
     return true;
   }
 
-  static Future<bool> handleIcons({bool refreshIcons = false}) async {
+  static Future<bool> handleIcons() async {
     //Delete closed windows
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
@@ -112,7 +112,7 @@ class WindowWatcher {
 
       if (fetchingIcon) {
         icons[win.hWnd] = await getWindowIcon(win.hWnd);
-        if (icons[win.hWnd]!.length == 3) icons[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
+        if (icons[win.hWnd]!.length == 3) icons[win.hWnd] = await getExecutableIcon(win.process.path + win.process.exe);
         iconsHandles[win.hWnd] = win.process.iconHandle;
       }
     }
@@ -122,7 +122,7 @@ class WindowWatcher {
 // #region (collapsed) PowerShell Icons
 
   //! Uses Powershell as alternative to extract icons, got a cpp function that does that faster
-  static Future<bool> handleIconsPowerShell({bool refreshIcons = false}) async {
+  static Future<bool> handleIconsPowerShell() async {
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
     }
@@ -142,7 +142,7 @@ class WindowWatcher {
       }
     }
     for (Window win in list) {
-      if (icons.containsKey(win.hWnd) && !refreshIcons) continue;
+      if (icons.containsKey(win.hWnd)) continue;
 
       if (win.isAppx) {
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();

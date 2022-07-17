@@ -76,9 +76,7 @@ class AudioBoxState extends State<AudioBox> {
     for (AudioInfo inputType in <AudioInfo>[audioInfo, micInfo]) {
       for (AudioDevice device in inputType.devices) {
         if (inputType.icons.containsKey(device.id)) continue;
-
-        Uint8List? icon = await WinUtils.getCachedIcon(device.iconPath, iconID: device.iconID);
-        inputType.icons[device.id] = icon;
+        inputType.icons[device.id] = (await getExecutableIcon(device.iconPath, iconID: device.iconID))!;
       }
     }
     if (mounted) {
@@ -94,7 +92,7 @@ class AudioBoxState extends State<AudioBox> {
       final int hWnd = await findTopWindow(device.processId);
       //? Basic Way
       if (hWnd == 0) {
-        audioMixerIcons[device.processId] = (await WinUtils.getCachedIcon(device.processPath));
+        audioMixerIcons[device.processId] = (await getExecutableIcon(device.processPath))!;
         audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).capitalize();
         continue;
       }
@@ -105,12 +103,12 @@ class AudioBoxState extends State<AudioBox> {
         if (File(appxLogo).existsSync()) {
           icon = File(appxLogo).readAsBytesSync();
         } else {
-          icon = await WinUtils.getCachedIcon(device.processPath);
+          icon = await getExecutableIcon(device.processPath);
         }
       } else {
-        icon = await WinUtils.getCachedIcon(processPath.path);
+        icon = await getExecutableIcon(processPath.path);
       }
-      audioMixerIcons[device.processId] = icon;
+      audioMixerIcons[device.processId] = icon!;
       audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).capitalize();
     }
 

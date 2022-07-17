@@ -45,6 +45,9 @@ class Win32 {
       UpdateWindow(hWnd);
     }
     SetForegroundWindow(hWnd);
+    SetFocus(hWnd);
+    SetActiveWindow(hWnd);
+    SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
   }
 
   static void forceActivateWindow(int hWnd) {

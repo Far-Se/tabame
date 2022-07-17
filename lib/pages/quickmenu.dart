@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,9 +23,7 @@ Future<int> quickMenuWindowSetup() async {
   Globals.lastPage = Globals.currentPage;
   Globals.currentPage = Pages.quickmenu;
   // ! For Release Build
-  print("p1");
   if (kReleaseMode && Globals.justStarted) {
-    print("p11");
     Globals.justStarted = false;
     final Point mousePos = WinUtils.getMousePos();
     await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
@@ -32,26 +31,21 @@ Future<int> quickMenuWindowSetup() async {
   }
   // ! ^^^^^^^^^^^
 
-  print("p2");
   if (Globals.lastPage != Pages.quickmenu) {
-    print("p9");
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    print("p3");
     await WindowManager.instance.setSize(const Size(300, 300));
-    print("p3");
     await WindowManager.instance.setSkipTaskbar(true);
-    print("p3");
     await WindowManager.instance.setResizable(false);
-    print("p3");
     await WindowManager.instance.setAlwaysOnTop(true);
-    print("p3");
     await WindowManager.instance.setAspectRatio(0);
-    print("p3");
     final Point mousePos = WinUtils.getMousePos();
-    print("p3");
     await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+  } else {
+    Point mousePos = WinUtils.getMousePos();
+    WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+    sleep(const Duration(milliseconds: 100));
   }
-  print("p3");
+
   return 1;
 }
 
@@ -73,7 +67,9 @@ class QuickMenuState extends State<QuickMenu> {
 
   @override
   Widget build(BuildContext context) {
-    if (Globals.changingPages) return const SizedBox(width: 10);
+    if (Globals.changingPages) {
+      return const SizedBox(width: 10);
+    }
     return FutureBuilder<int>(
       future: quickMenuWindow,
       builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
@@ -81,7 +77,13 @@ class QuickMenuState extends State<QuickMenu> {
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: MouseRegion(
-            onEnter: (PointerEnterEvent event) => Globals.isWindowActive = true,
+            onEnter: (PointerEnterEvent event) async {
+              if (!await WindowManager.instance.isFocused()) {}
+              await WindowManager.instance.focus();
+              Globals.isWindowActive = true;
+              Win32.activateWindow(Win32.hWnd);
+              setState(() {});
+            },
             onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,

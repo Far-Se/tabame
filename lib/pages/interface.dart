@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../main.dart';
 import '../models/globals.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/quickmenu_settings.dart';
+import 'quickmenu.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -81,7 +81,9 @@ class InterfaceState extends State<Interface> {
 
   @override
   Widget build(BuildContext context) {
-    if (Globals.changingPages) return const SizedBox(width: 10);
+    if (Globals.changingPages) {
+      return const SizedBox(width: 10);
+    }
     return FutureBuilder<int>(
       future: interfaceWindow,
       builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
@@ -174,9 +176,19 @@ class InterfaceState extends State<Interface> {
                                           width: 25,
                                           child: InkWell(
                                             onTap: () async {
+                                              final NavigatorState noc = Navigator.of(context);
                                               Globals.changingPages = true;
                                               setState(() {});
-                                              mainPageViewController.jumpToPage(0);
+
+                                              noc.pushAndRemoveUntil(
+                                                PageRouteBuilder<QuickMenu>(
+                                                  maintainState: false,
+                                                  pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
+                                                  transitionDuration: Duration.zero,
+                                                  reverseTransitionDuration: Duration.zero,
+                                                ),
+                                                (Route<dynamic> route) => false,
+                                              );
                                             },
                                             child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                           ),

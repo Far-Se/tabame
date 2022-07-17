@@ -48,7 +48,6 @@ class Tray {
       oldIconHandles[element.hWnd] = element.hIcon;
     }
     trayList.clear();
-    final Map<int, int> handlesToFetch = <int, int>{};
     for (TrayInfo element in winTray) {
       HwndInfo processPath = HwndPath.getFullPath(element.processID);
       String exe = Win32.getExe(processPath.path);
@@ -63,32 +62,23 @@ class Tray {
         ..isVisible = element.isVisible
         ..toolTip = element.toolTip;
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
-      if (__trayIconCacheHandle.containsKey(element.hWnd)) {
+      if (__trayIconCache.containsKey(element.hWnd)) {
         if (__trayIconCacheHandle[element.hWnd] != element.hIcon) {
-          handlesToFetch[trayList.length] = element.hIcon;
+          final Uint8List? icon = await getIconPng(element.hIcon);
+          trayInfo.iconData = icon!;
+          __trayIconCache[element.hWnd] = trayInfo.iconData;
           __trayIconCacheHandle[element.hWnd] = element.hIcon;
         } else {
-          if (__trayIconCache.containsKey(element.hWnd)) {
-            trayInfo.iconData = __trayIconCache[element.hWnd]!;
-          }
+          trayInfo.iconData = __trayIconCache[element.hWnd]!;
         }
       } else {
-        handlesToFetch[trayList.length] = element.hIcon;
+        final Uint8List? icon = await getIconPng(element.hIcon);
+        trayInfo.iconData = icon!;
+        __trayIconCache[element.hWnd] = trayInfo.iconData;
         __trayIconCacheHandle[element.hWnd] = element.hIcon;
       }
 
       trayList.add(trayInfo);
-    }
-    if (handlesToFetch.isNotEmpty) {
-      final List<Uint8List> result = await WinIcons().getHandleIcons(handlesToFetch.values.toList());
-      int i = 0;
-      if (result.length == handlesToFetch.keys.length) {
-        for (int key in handlesToFetch.keys) {
-          trayList[key].iconData = result[i];
-          __trayIconCache[trayList[key].hWnd] = result[i];
-          i++;
-        }
-      }
     }
     __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);
     return newTray;

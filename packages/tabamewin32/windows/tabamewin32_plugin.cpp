@@ -996,6 +996,47 @@ namespace tabamewin32
                     buff.clear();
                     resultIcon = GetIconData(icon, 24, buff);
                 }
+                if (resultIcon)
+                {
+                    std::vector<uint8_t> buff_uint8;
+                    for (auto i : buff)
+                    {
+                        buff_uint8.push_back(i);
+                    }
+                    result->Success(flutter::EncodableValue(buff_uint8));
+                }
+                else
+                {
+                    std::vector<uint8_t> iconBytes;
+                    iconBytes.push_back(204);
+                    iconBytes.push_back(204);
+                    iconBytes.push_back(204);
+                    result->Success(flutter::EncodableValue(iconBytes));
+                }
+            }
+            else
+            {
+
+                std::vector<uint8_t> iconBytes;
+                iconBytes.push_back(204);
+                iconBytes.push_back(204);
+                iconBytes.push_back(204);
+                result->Success(flutter::EncodableValue(iconBytes));
+            }
+        }
+        else if (method_name.compare("getIconPng") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int hIcon = std::get<int>(args.at(flutter::EncodableValue("hIcon")));
+            std::vector<CHAR> buff;
+            bool resultIcon = GetIconData((HICON)((LONG_PTR)hIcon), 32, buff);
+            if (!resultIcon)
+            {
+                buff.clear();
+                resultIcon = GetIconData((HICON)((LONG_PTR)hIcon), 24, buff);
+            }
+            if (resultIcon)
+            {
                 std::vector<uint8_t> buff_uint8;
                 for (auto i : buff)
                 {
@@ -1005,7 +1046,6 @@ namespace tabamewin32
             }
             else
             {
-
                 std::vector<uint8_t> iconBytes;
                 iconBytes.push_back(204);
                 iconBytes.push_back(204);
