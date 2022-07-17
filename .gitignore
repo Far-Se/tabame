@@ -55,4 +55,4 @@ pubspec.lock
 **/pubspec.lock
 .a.Release.lnk
 .vscode
-*.lnk
+*Release*
