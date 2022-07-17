@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'boxes.dart';
 import 'globals.dart';
 import 'utils.dart';
 import 'win32/mixed.dart';
