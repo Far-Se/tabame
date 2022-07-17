@@ -36,6 +36,7 @@ class WindowDummy {
 class WindowWatcher {
   static List<Window> list = <Window>[];
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
+  static Map<int, int> iconsHandles = <int, int>{};
   static Map<String, Window> specialList = <String, Window>{};
   static int _activeWinHandle = 0;
   static get active {
@@ -88,6 +89,40 @@ class WindowWatcher {
   }
 
   static Future<bool> handleIcons({bool refreshIcons = false}) async {
+    //Delete closed windows
+    if (list.length != icons.length) {
+      icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
+      iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
+    }
+
+    for (Window win in list) {
+      //APPX
+      if (icons.containsKey(win.hWnd) && win.isAppx) continue;
+      if (win.isAppx) {
+        if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
+        continue;
+      }
+      //EXE
+      bool fetchingIcon = false;
+      if (!iconsHandles.containsKey(win.hWnd)) {
+        fetchingIcon = true;
+      } else if (iconsHandles[win.hWnd] != win.process.iconHandle) {
+        fetchingIcon = true;
+      }
+
+      if (fetchingIcon) {
+        icons[win.hWnd] = await getWindowIcon(win.hWnd);
+        if (icons[win.hWnd]!.length == 3) icons[win.hWnd] = await nativeIconToBytes(win.process.path + win.process.exe);
+        iconsHandles[win.hWnd] = win.process.iconHandle;
+      }
+    }
+    return true;
+  }
+
+// #region (collapsed) PowerShell Icons
+
+  //! Uses Powershell as alternative to extract icons, got a cpp function that does that faster
+  static Future<bool> handleIconsPowerShell({bool refreshIcons = false}) async {
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
     }
@@ -114,11 +149,14 @@ class WindowWatcher {
         continue;
       }
       if (!icons.containsKey(win.hWnd) && File(win.iconPath).existsSync()) {
+        // print(icons[win.hWnd]!.length);
         icons[win.hWnd] = File(win.iconPath).readAsBytesSync();
       } else {}
     }
     return true;
   }
+
+// #endregion
 
   static bool orderBy(TaskBarAppsStyle type) {
     if (<TaskBarAppsStyle>[TaskBarAppsStyle.activeMonitorFirst, TaskBarAppsStyle.onlyActiveMonitor].contains(type)) {

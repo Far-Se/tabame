@@ -10,6 +10,13 @@ class Heights {
   double get allSummed => taskbar + traybar + topbar;
 }
 
+enum Pages {
+  quickmenu,
+  interface,
+  run,
+  views,
+}
+
 class Globals {
   static bool changingPages = false;
   static bool isWindowActive = false;
@@ -18,7 +25,8 @@ class Globals {
   static bool alwaysAwake = false;
   static String iconCachePath = "${Directory.current.path}\\data\\cache";
   static bool audioBoxVisible = false;
-
+  static Pages lastPage = Pages.quickmenu;
+  static Pages currentPage = Pages.quickmenu;
   static bool justStarted = false;
 
   static alwaysAwakeRun(bool state) {

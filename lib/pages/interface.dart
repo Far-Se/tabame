@@ -26,11 +26,13 @@ class PageClass {
   });
 }
 
-double maxHeight = 0;
+// double maxHeight = 0;
 Future<int> interfaceWindowSetup() async {
+  Globals.lastPage = Globals.currentPage;
+  Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
-  maxHeight = monitor.height / 1.25;
+  // maxHeight = monitor.height / 1.25;
   await WindowManager.instance.setMinimumSize(const Size(400, 400));
   await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));

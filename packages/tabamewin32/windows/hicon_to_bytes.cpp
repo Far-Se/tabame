@@ -12,151 +12,105 @@
 #include <cstdlib>
 using namespace std;
 
-// Check windows
-#if _WIN32 || _WIN64
-#if _WIN64
-#define ENV64BIT
-#else
-#define ENV32BIT
-#endif
-#endif
-
-typedef struct
+struct ICONDIRENTRY
 {
-    WORD idReserved; // must be 0
-    WORD idType;     // 1 = ICON, 2 = CURSOR
-    WORD idCount;    // number of images (and ICONDIRs)
+    UCHAR nWidth;
+    UCHAR nHeight;
+    UCHAR nNumColorsInPalette;
+    UCHAR nReserved;
+    WORD nNumColorPlanes;
+    WORD nBitsPerPixel;
+    ULONG nDataLength;
+    ULONG nOffset;
+};
 
-} ICONHEADER;
-
-typedef struct
+bool GetIconData(HICON hIcon, int nColorBits, std::vector<char> &buff)
 {
-    BYTE bWidth;
-    BYTE bHeight;
-    BYTE bColorCount;
-    BYTE bReserved;
-    WORD wPlanes;   // for cursors, this field = wXHotSpot
-    WORD wBitCount; // for cursors, this field = wYHotSpot
-    DWORD dwBytesInRes;
-    DWORD dwImageOffset; // file-offset to the start of ICONIMAGE
 
-} ICONDIR;
+    // if (offsetof(ICONDIRENTRY, nOffset) != 12)
+    // {
+    //     return false;
+    // }
 
-static UINT NumBitmapBytes(BITMAP *pBitmap)
-{
-    int nWidthBytes = pBitmap->bmWidthBytes;
-    if (nWidthBytes & 3)
-        nWidthBytes = (nWidthBytes + 4) & ~3;
+    HDC dc = CreateCompatibleDC(NULL);
+    char icoHeader[6] = {0, 0, 1, 0, 1, 0};
+    buff.insert(buff.end(), reinterpret_cast<const char *>(icoHeader), reinterpret_cast<const char *>(icoHeader) + sizeof(icoHeader));
 
-    return nWidthBytes * pBitmap->bmHeight;
-}
-
-static UINT WriteIconData(BYTE *buffer, int *pBufferOffset, HBITMAP hBitmap)
-{
-    BITMAP bmp{};
-    int i;
-    BYTE *pIconData;
-
-    UINT nBitmapBytes;
-
-    GetObject(hBitmap, sizeof(BITMAP), &bmp);
-
-    nBitmapBytes = NumBitmapBytes(&bmp);
-
-    pIconData = (BYTE *)malloc(nBitmapBytes);
-
-    GetBitmapBits(hBitmap, nBitmapBytes, pIconData);
-    for (i = bmp.bmHeight - 1; i >= 0; i--)
+    ICONINFO iconInfo;
+    GetIconInfo(hIcon, &iconInfo);
+    BITMAPINFO bmInfo = {0};
+    bmInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmInfo.bmiHeader.biBitCount = 0;
+    if (!GetDIBits(dc, iconInfo.hbmColor, 0, 0, NULL, &bmInfo, DIB_RGB_COLORS))
     {
-        memcpy(&buffer[*pBufferOffset], pIconData + (i * bmp.bmWidthBytes), bmp.bmWidthBytes);
-        (*pBufferOffset) += bmp.bmWidthBytes;
-        if (bmp.bmWidthBytes & 3)
-        {
-            DWORD padding = 0;
-            memcpy(&buffer[*pBufferOffset], &padding, static_cast<size_t>(4) - bmp.bmWidthBytes);
-            (*pBufferOffset) += 4 - bmp.bmWidthBytes;
-        }
+        return false;
     }
 
-    free(pIconData);
+    int nBmInfoSize = sizeof(BITMAPINFOHEADER);
+    if (nColorBits < 24)
+    {
+        nBmInfoSize += sizeof(RGBQUAD) * (int)(static_cast<unsigned long long>(1) << nColorBits);
+    }
 
-    return nBitmapBytes;
-}
+    std::vector<UCHAR> bitmapInfo;
+    bitmapInfo.resize(nBmInfoSize);
+    BITMAPINFO *pBmInfo = (BITMAPINFO *)bitmapInfo.data();
+    memcpy(pBmInfo, &bmInfo, sizeof(BITMAPINFOHEADER));
 
-BOOL SaveIcon3(HICON hIcon, BYTE *buffer)
-{
-    int nNumIcons = 1;
-    int bufferOffset = 0;
+    if (!bmInfo.bmiHeader.biSizeImage)
+        return false;
+    std::vector<UCHAR> bits;
+    bits.resize(bmInfo.bmiHeader.biSizeImage);
+    pBmInfo->bmiHeader.biBitCount = (WORD)nColorBits;
+    pBmInfo->bmiHeader.biCompression = BI_RGB;
+    if (!GetDIBits(dc, iconInfo.hbmColor, 0, bmInfo.bmiHeader.biHeight, bits.data(), pBmInfo, DIB_RGB_COLORS))
+    {
+        return false;
+    }
 
-    if (hIcon == 0 || nNumIcons < 1)
-        return 0;
+    BITMAPINFO maskInfo = {0};
+    maskInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    maskInfo.bmiHeader.biBitCount = 0;
+    if (!GetDIBits(dc, iconInfo.hbmMask, 0, 0, NULL, &maskInfo, DIB_RGB_COLORS) || maskInfo.bmiHeader.biBitCount != 1)
+        return false;
 
-    ICONHEADER iconheader{};
-    iconheader.idReserved = 0;            // Must be 0
-    iconheader.idType = 1;                // Type 1 = ICON (type 2 = CURSOR)
-    iconheader.idCount = (WORD)nNumIcons; // number of ICONDIRs
-    memcpy(&(buffer[bufferOffset]), &iconheader, sizeof(iconheader));
-    bufferOffset += sizeof(iconheader);
+    std::vector<UCHAR> maskBits;
+    maskBits.resize(maskInfo.bmiHeader.biSizeImage);
+    std::vector<UCHAR> maskInfoBytes;
+    maskInfoBytes.resize(sizeof(BITMAPINFO) + 2 * sizeof(RGBQUAD));
+    BITMAPINFO *pMaskInfo = (BITMAPINFO *)maskInfoBytes.data();
+    memcpy(pMaskInfo, &maskInfo, sizeof(maskInfo));
+    if (!GetDIBits(dc, iconInfo.hbmMask, 0, maskInfo.bmiHeader.biHeight, maskBits.data(), pMaskInfo, DIB_RGB_COLORS))
+    {
+        return false;
+    }
 
-    bufferOffset += sizeof(ICONDIR) * nNumIcons;
-    ICONINFO iconInfo;
-    BITMAP bmpColor{}, bmpMask{};
-    // GetIconBitmapInfo(hIcon, &iconInfo, &bmpColor, &bmpMask);
+    ICONDIRENTRY dir;
+    dir.nWidth = (UCHAR)pBmInfo->bmiHeader.biWidth;
+    dir.nHeight = (UCHAR)pBmInfo->bmiHeader.biHeight;
+    dir.nNumColorsInPalette = (nColorBits == 4 ? 16 : 0);
+    dir.nReserved = 0;
+    dir.nNumColorPlanes = 0;
+    dir.nBitsPerPixel = pBmInfo->bmiHeader.biBitCount;
+    dir.nDataLength = pBmInfo->bmiHeader.biSizeImage + pMaskInfo->bmiHeader.biSizeImage + nBmInfoSize;
+    dir.nOffset = sizeof(dir) + sizeof(icoHeader);
+    buff.insert(buff.end(), reinterpret_cast<const char *>(&dir), reinterpret_cast<const char *>(&dir) + sizeof(dir));
+    int nBitsSize = pBmInfo->bmiHeader.biSizeImage;
+    pBmInfo->bmiHeader.biHeight *= 2;
+    pBmInfo->bmiHeader.biCompression = 0;
+    pBmInfo->bmiHeader.biSizeImage += pMaskInfo->bmiHeader.biSizeImage;
+    buff.insert(buff.end(), reinterpret_cast<const char *>(&pBmInfo->bmiHeader), reinterpret_cast<const char *>(&pBmInfo->bmiHeader) + nBmInfoSize);
 
-    if (!GetIconInfo(hIcon, &iconInfo))
-        return FALSE;
-
-    if (!GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmpColor))
-        return FALSE;
-
-    if (!GetObject(iconInfo.hbmMask, sizeof(BITMAP), &bmpMask))
-        return FALSE;
-
-    int buffOffset = bufferOffset;
-
-    BITMAPINFOHEADER biHeader;
-    UINT nImageBytes;
-    nImageBytes = NumBitmapBytes(&bmpColor) + NumBitmapBytes(&bmpMask);
-    ZeroMemory(&biHeader, sizeof(biHeader));
-    biHeader.biSize = sizeof(biHeader);
-    biHeader.biWidth = bmpColor.bmWidth;
-    biHeader.biHeight = bmpColor.bmHeight * 2; // height of color+mono
-    biHeader.biPlanes = bmpColor.bmPlanes;
-    biHeader.biBitCount = bmpColor.bmBitsPixel;
-    biHeader.biSizeImage = nImageBytes;
-    memcpy(&(buffer[bufferOffset]), &biHeader, sizeof(biHeader));
-    bufferOffset += sizeof(biHeader);
-    WriteIconData(buffer, &bufferOffset, iconInfo.hbmColor);
-    WriteIconData(buffer, &bufferOffset, iconInfo.hbmMask);
+    buff.insert(buff.end(), reinterpret_cast<const char *>(bits.data()), reinterpret_cast<const char *>(bits.data()) + nBitsSize);
+    buff.insert(buff.end(), reinterpret_cast<const char *>(maskBits.data()), reinterpret_cast<const char *>(maskBits.data()) + pMaskInfo->bmiHeader.biSizeImage);
 
     DeleteObject(iconInfo.hbmColor);
     DeleteObject(iconInfo.hbmMask);
-    bufferOffset = sizeof(ICONHEADER);
 
-    // Secon Part;
-    ICONDIR iconDir{};
-    UINT nColorCount;
-    nImageBytes = NumBitmapBytes(&bmpColor) + NumBitmapBytes(&bmpMask);
-    if (bmpColor.bmBitsPixel >= 8)
-        nColorCount = 0;
-    else
-        nColorCount = 1 << (bmpColor.bmBitsPixel * bmpColor.bmPlanes);
-    iconDir.bWidth = (BYTE)bmpColor.bmWidth;
-    iconDir.bHeight = (BYTE)bmpColor.bmHeight;
-    iconDir.bColorCount = (BYTE)nColorCount;
-    iconDir.bReserved = (BYTE)0;
-    iconDir.wPlanes = bmpColor.bmPlanes;
-    iconDir.wBitCount = bmpColor.bmBitsPixel;
-    iconDir.dwBytesInRes = sizeof(BITMAPINFOHEADER) + nImageBytes;
-    iconDir.dwImageOffset = buffOffset;
-    memcpy(&buffer[bufferOffset], &iconDir, sizeof(iconDir));
-    (bufferOffset) += sizeof(iconDir);
-    DeleteObject(iconInfo.hbmColor);
-    DeleteObject(iconInfo.hbmMask);
+    DeleteDC(dc);
 
-    return 1;
+    return true;
 }
-
 HICON getIconFromFile(wstring file, int index = 0)
 {
     HICON hIcon;

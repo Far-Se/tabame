@@ -19,8 +19,12 @@ class QuickMenu extends StatefulWidget {
 }
 
 Future<int> quickMenuWindowSetup() async {
+  Globals.lastPage = Globals.currentPage;
+  Globals.currentPage = Pages.quickmenu;
   // ! For Release Build
+  print("p1");
   if (kReleaseMode && Globals.justStarted) {
+    print("p11");
     Globals.justStarted = false;
     final Point mousePos = WinUtils.getMousePos();
     await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
@@ -28,16 +32,26 @@ Future<int> quickMenuWindowSetup() async {
   }
   // ! ^^^^^^^^^^^
 
-  // await WindowManager.instance.setSize(Size(monitor.width / 2, monitor.height / 1.25));
-  await WindowManager.instance.setMinimumSize(const Size(300, 150));
-  await WindowManager.instance.setSize(const Size(300, 300));
-  // await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
-  await WindowManager.instance.setSkipTaskbar(true);
-  await WindowManager.instance.setResizable(false);
-  await WindowManager.instance.setAlwaysOnTop(true);
-  await WindowManager.instance.setAspectRatio(0);
-  final Point mousePos = WinUtils.getMousePos();
-  await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+  print("p2");
+  if (Globals.lastPage != Pages.quickmenu) {
+    print("p9");
+    await WindowManager.instance.setMinimumSize(const Size(300, 150));
+    print("p3");
+    await WindowManager.instance.setSize(const Size(300, 300));
+    print("p3");
+    await WindowManager.instance.setSkipTaskbar(true);
+    print("p3");
+    await WindowManager.instance.setResizable(false);
+    print("p3");
+    await WindowManager.instance.setAlwaysOnTop(true);
+    print("p3");
+    await WindowManager.instance.setAspectRatio(0);
+    print("p3");
+    final Point mousePos = WinUtils.getMousePos();
+    print("p3");
+    await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+  }
+  print("p3");
   return 1;
 }
 

@@ -607,6 +607,7 @@ class HProcess {
   String exe = "";
   int pId = 0;
   int mainPID = 0;
+  int iconHandle = 0;
   String className = "";
 
   @override
