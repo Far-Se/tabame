@@ -54,8 +54,7 @@ class WindowWatcher {
     fetching = true;
     final List<int> winHWNDS = enumWindows();
     final List<int> allHWNDs = <int>[];
-    // if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
-    // print(winHWNDS.length);
+    if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
     for (int hWnd in winHWNDS) {
       if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "" && Win32.getTitle(hWnd) != "Tabame") {
         allHWNDs.add(hWnd);

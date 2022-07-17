@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/boxes.dart';
 import '../../../models/keys.dart';
+import '../../../models/registration.dart';
 import '../../containers/bar_with_buttons.dart';
 import 'window_app_button.dart';
 
