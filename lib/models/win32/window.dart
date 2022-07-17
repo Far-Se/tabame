@@ -77,6 +77,10 @@ class Window {
     free(pId);
     process.pId = HwndPath.getRealPID(hWnd);
     process.className = Win32.getClass(hWnd);
+
+    int icon = SendMessage(hWnd, WM_GETICON, 2, 0); // ICON_SMALL2 - User Made Apps
+    if (icon == 0) icon = GetClassLongPtr(hWnd, -14); // GCLP_HICON - Microsoft Win Apps
+    process.iconHandle = icon;
   }
 
   getTitle() {

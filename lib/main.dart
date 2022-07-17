@@ -1,6 +1,7 @@
 // ignore_for_file: unnecessary_import, prefer_const_constructors
 
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -121,6 +122,7 @@ class _TabameState extends State<Tabame> {
               ),
         ),
         themeMode: mode ? ThemeMode.dark : ThemeMode.light,
+        //home: QuickMenu()
         home: PageView.builder(
           controller: mainPageViewController,
           allowImplicitScrolling: false,
@@ -131,10 +133,8 @@ class _TabameState extends State<Tabame> {
               return const QuickMenu();
             } else if (index == 1) {
               return const Interface();
-            } else {
-              print("here $index");
-              return const QuickMenu();
             }
+            return const QuickMenu();
           },
         ),
       ),
@@ -145,4 +145,28 @@ class _TabameState extends State<Tabame> {
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{PointerDeviceKind.touch, PointerDeviceKind.mouse};
+}
+
+class Main extends StatefulWidget {
+  const Main({Key? key}) : super(key: key);
+
+  @override
+  _MainState createState() => _MainState();
+}
+
+class _MainState extends State<Main> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        child: Center(
+      child: FutureBuilder<Uint8List?>(
+          future: nativeIconToBytes("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"),
+          builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
+            if (!snapshot.hasData) {
+              return Text("ye");
+            }
+            return Image.memory(snapshot.data as Uint8List);
+          }),
+    ));
+  }
 }

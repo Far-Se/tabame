@@ -38,6 +38,7 @@
 #include <audiopolicy.h>
 #include <psapi.h>
 #include <TlHelp32.h>
+// #include <shobjidl.h>
 #include "virtdesktop.cpp"
 #pragma warning(pop)
 #pragma comment(lib, "ole32")
@@ -960,16 +961,21 @@ namespace tabamewin32
             std::string iconLocation = std::get<std::string>(args.at(flutter::EncodableValue("iconLocation")));
             int iconID = std::get<int>(args.at(flutter::EncodableValue("iconID")));
             std::wstring iconLocationW = Encoding::Utf8ToWide(iconLocation);
-            BYTE buffer[(66 * 66) * 4];
             HICON icon = getIconFromFile((LPWSTR)iconLocationW.c_str(), iconID);
 
-            SaveIcon3(icon, buffer);
-            std::vector<uint8_t> iconBytes;
-            for (int i = 0; i < (66 * 66) * 4; i++)
+            std::vector<CHAR> buff;
+            bool resultIcon = GetIconData(icon, 32, buff);
+            if (!resultIcon)
             {
-                iconBytes.push_back(buffer[i]);
+                buff.clear();
+                resultIcon = GetIconData(icon, 24, buff);
             }
-            result->Success(flutter::EncodableValue(iconBytes));
+            std::vector<uint8_t> buff_uint8;
+            for (auto i : buff)
+            {
+                buff_uint8.push_back(i);
+            }
+            result->Success(flutter::EncodableValue(buff_uint8));
         }
         else if (method_name.compare("getWindowIcon") == 0)
         {
@@ -981,26 +987,21 @@ namespace tabamewin32
                 iconResult = GetClassLongPtr((HWND)((LONG_PTR)hWND), -14); // GCLP_HICON - Microsoft Win Apps
             if (iconResult != 0)
             {
-                BYTE buffer[(66 * 66) * 4];
-                HICON icon = (HICON)iconResult;
-                if (SaveIcon3(icon, buffer))
-                {
-                    std::vector<uint8_t> iconBytes;
-                    for (int i = 0; i < (66 * 66) * 4; i++)
-                    {
-                        iconBytes.push_back(buffer[i]);
-                    }
-                    result->Success(flutter::EncodableValue(iconBytes));
-                }
-                else
-                {
 
-                    std::vector<uint8_t> iconBytes;
-                    iconBytes.push_back(204);
-                    iconBytes.push_back(204);
-                    iconBytes.push_back(204);
-                    result->Success(flutter::EncodableValue(iconBytes));
+                HICON icon = (HICON)iconResult;
+                std::vector<CHAR> buff;
+                bool resultIcon = GetIconData(icon, 32, buff);
+                if (!resultIcon)
+                {
+                    buff.clear();
+                    resultIcon = GetIconData(icon, 24, buff);
                 }
+                std::vector<uint8_t> buff_uint8;
+                for (auto i : buff)
+                {
+                    buff_uint8.push_back(i);
+                }
+                result->Success(flutter::EncodableValue(buff_uint8));
             }
             else
             {
