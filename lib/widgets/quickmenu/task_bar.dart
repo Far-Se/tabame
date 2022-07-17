@@ -61,9 +61,9 @@ class TaskBarState extends State<TaskBar> {
         .toList();
   }
 
-  Future<void> fetchWindows({bool refreshIcons = false}) async {
+  Future<void> fetchWindows() async {
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
-    if (!fetching && await WindowWatcher.fetchWindows(refreshIcons: refreshIcons)) {
+    if (!fetching && await WindowWatcher.fetchWindows()) {
       if (listEquals(WindowWatcher.list, windows)) {
         await audioHandle();
         await changeHeight();
@@ -73,7 +73,6 @@ class TaskBarState extends State<TaskBar> {
       }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
-      // await handleIcons(refreshIcons: refreshIcons);
       await audioHandle();
       await changeHeight();
       if (!mounted) return;
@@ -90,7 +89,7 @@ class TaskBarState extends State<TaskBar> {
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
       // if (!Globals.isWindowActive) return;
-      fetchWindows();
+      if (!fetching) fetchWindows();
     });
   }
 
@@ -299,11 +298,13 @@ class TaskBarState extends State<TaskBar> {
                                             if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
                                               WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
                                             }
+                                            fetching = true;
                                             Win32.closeWindow(window.hWnd);
-                                            // windows.removeAt(index);
-                                            // await windowManager.setSize(Size(300, Globals.heights.allSummed + 70 - 27));
+                                            windows.removeAt(index);
+                                            await audioHandle();
+                                            await changeHeight();
                                             fetchWindows();
-                                            setState(() {});
+                                            setState(() => fetching = false);
                                           },
                                           onLongPress: () {
                                             Win32.closeWindow(window.hWnd, forced: true);

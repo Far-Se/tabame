@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/win32/imports.dart';
@@ -28,7 +29,7 @@ class WindowsAppButton extends StatelessWidget {
         width: size + 5,
         height: double.maxFinite,
         child: FutureBuilder<Uint8List?>(
-          future: WinUtils.getCachedIcon(path),
+          future: getExecutableIcon(path),
           // future: nativeIconToBytes(path),
           builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
             return InkWell(

@@ -26,12 +26,6 @@ struct ICONDIRENTRY
 
 bool GetIconData(HICON hIcon, int nColorBits, std::vector<char> &buff)
 {
-
-    // if (offsetof(ICONDIRENTRY, nOffset) != 12)
-    // {
-    //     return false;
-    // }
-
     HDC dc = CreateCompatibleDC(NULL);
     char icoHeader[6] = {0, 0, 1, 0, 1, 0};
     buff.insert(buff.end(), reinterpret_cast<const char *>(icoHeader), reinterpret_cast<const char *>(icoHeader) + sizeof(icoHeader));

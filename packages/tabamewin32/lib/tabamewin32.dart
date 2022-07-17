@@ -226,6 +226,12 @@ Future<Uint8List?> getWindowIcon(int hWnd) async {
   return result;
 }
 
+Future<Uint8List?> getIconPng(int hIcon) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{'hIcon': hIcon};
+  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getIconPng', arguments);
+  return result;
+}
+
 class TrayInfo {
   String toolTip = "";
   bool isVisible = false;
