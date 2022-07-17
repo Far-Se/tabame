@@ -10,6 +10,7 @@ import 'package:window_manager/window_manager.dart';
 import 'models/globals.dart';
 import 'models/registration.dart';
 import 'models/win32/win32.dart';
+import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
 Future<void> main() async {
@@ -21,7 +22,7 @@ Future<void> main() async {
 
   /// ? Window
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(300, 150),
+    size: Size(300, 500),
     center: false,
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
@@ -60,7 +61,7 @@ num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
 }
 
 final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
-// PageController mainPageViewController = PageController();
+PageController mainPageViewController = PageController();
 
 class Tabame extends StatefulWidget {
   const Tabame({Key? key}) : super(key: key);
@@ -82,60 +83,60 @@ class _TabameState extends State<Tabame> {
     return ValueListenableBuilder<bool>(
       valueListenable: darkThemeNotifier,
       builder: (_, bool mode, __) => MaterialApp(
-          scrollBehavior: MyCustomScrollBehavior(),
-          debugShowCheckedModeBanner: false,
-          title: 'Tabame - Taskbar Menu',
-          theme: ThemeData(
-            splashColor: Color.fromARGB(40, 0, 0, 0),
-            backgroundColor: kLightBackground,
-            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kLightBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
-            cardColor: kLightBackground,
-            errorColor: kLightTint,
-            iconTheme: Theme.of(context).iconTheme.copyWith(color: kLightText),
-            textTheme: Theme.of(context).textTheme.apply(bodyColor: kLightText, displayColor: kLightText, decorationColor: kLightText),
-            tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
-                  verticalOffset: 10,
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  height: 0,
-                  margin: EdgeInsets.all(0),
-                  textStyle: TextStyle(color: kLightText, fontSize: 12, height: 0),
-                  decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
-                ),
-          ),
-          darkTheme: ThemeData(
-            splashColor: Color.fromARGB(40, 0, 0, 0),
-            backgroundColor: kDarkBackground,
-            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
-            cardColor: kDarkBackground,
-            errorColor: kDarkTint,
-            iconTheme: Theme.of(context).iconTheme.copyWith(color: kDarkText),
-            textTheme: Theme.of(context).textTheme.apply(bodyColor: kDarkText, displayColor: kDarkText, decorationColor: kDarkText),
-            tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
-                  verticalOffset: 10,
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  height: 0,
-                  margin: EdgeInsets.all(0),
-                  textStyle: TextStyle(color: kDarkText, fontSize: 12, height: 0),
-                  decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
-                ),
-          ),
-          themeMode: mode ? ThemeMode.dark : ThemeMode.light,
-          home: QuickMenu()
-          // home: PageView.builder(
-          //   controller: mainPageViewController,
-          //   allowImplicitScrolling: false,
-          //   physics: const NeverScrollableScrollPhysics(),
-          //   itemBuilder: (BuildContext context, int index) {
-          //     if (index == Pages.quickMenu.index) {
-          //       print("in here");
-          //       return const QuickMenu();
-          //     } else if (index == Pages.interface.index) {
-          //       return const Interface();
-          //     }
-          //     return const QuickMenu();
-          //   },
-          // ),
-          ),
+        scrollBehavior: MyCustomScrollBehavior(),
+        debugShowCheckedModeBanner: false,
+        title: 'Tabame - Taskbar Menu',
+        theme: ThemeData(
+          splashColor: Color.fromARGB(40, 0, 0, 0),
+          backgroundColor: kLightBackground,
+          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kLightBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
+          cardColor: kLightBackground,
+          errorColor: kLightTint,
+          iconTheme: Theme.of(context).iconTheme.copyWith(color: kLightText),
+          textTheme: Theme.of(context).textTheme.apply(bodyColor: kLightText, displayColor: kLightText, decorationColor: kLightText),
+          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
+                verticalOffset: 10,
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                height: 0,
+                margin: EdgeInsets.all(0),
+                textStyle: TextStyle(color: kLightText, fontSize: 12, height: 0),
+                decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+              ),
+        ),
+        darkTheme: ThemeData(
+          splashColor: Color.fromARGB(40, 0, 0, 0),
+          backgroundColor: kDarkBackground,
+          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
+          cardColor: kDarkBackground,
+          errorColor: kDarkTint,
+          iconTheme: Theme.of(context).iconTheme.copyWith(color: kDarkText),
+          textTheme: Theme.of(context).textTheme.apply(bodyColor: kDarkText, displayColor: kDarkText, decorationColor: kDarkText),
+          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
+                verticalOffset: 10,
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                height: 0,
+                margin: EdgeInsets.all(0),
+                textStyle: TextStyle(color: kDarkText, fontSize: 12, height: 0),
+                decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+              ),
+        ),
+        themeMode: mode ? ThemeMode.dark : ThemeMode.light,
+        // home: QuickMenu()
+        home: PageView.builder(
+          controller: mainPageViewController,
+          allowImplicitScrolling: false,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (BuildContext context, int index) {
+            if (index == Pages.quickmenu.index) {
+              print("in here");
+              return const QuickMenu();
+            } else if (index == Pages.interface.index) {
+              return const Interface();
+            }
+            return const QuickMenu();
+          },
+        ),
+      ),
     );
   }
 }

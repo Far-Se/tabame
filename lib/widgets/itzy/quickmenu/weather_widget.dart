@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../models/boxes.dart';
+import '../../../models/registration.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 

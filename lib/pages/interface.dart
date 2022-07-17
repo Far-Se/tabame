@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../main.dart';
 import '../models/globals.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/quickmenu_settings.dart';
-import 'quickmenu.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -179,16 +179,17 @@ class InterfaceState extends State<Interface> {
                                               final NavigatorState noc = Navigator.of(context);
                                               Globals.changingPages = true;
                                               setState(() {});
+                                              mainPageViewController.jumpToPage(Pages.quickmenu.index);
 
-                                              noc.pushAndRemoveUntil(
-                                                PageRouteBuilder<QuickMenu>(
-                                                  maintainState: false,
-                                                  pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
-                                                  transitionDuration: Duration.zero,
-                                                  reverseTransitionDuration: Duration.zero,
-                                                ),
-                                                (Route<dynamic> route) => false,
-                                              );
+                                              // noc.pushAndRemoveUntil(
+                                              //   PageRouteBuilder<QuickMenu>(
+                                              //     maintainState: false,
+                                              //     pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
+                                              //     transitionDuration: Duration.zero,
+                                              //     reverseTransitionDuration: Duration.zero,
+                                              //   ),
+                                              //   (Route<dynamic> route) => false,
+                                              // );
                                             },
                                             child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                           ),

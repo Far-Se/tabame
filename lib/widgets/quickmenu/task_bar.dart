@@ -12,7 +12,6 @@ import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:window_manager/window_manager.dart';
 import '../../models/keys.dart';
 import '../../models/globals.dart';
 
@@ -34,16 +33,18 @@ class TaskBarState extends State<TaskBar> {
   int _hoverElement = -1;
   bool fetching = false;
   late Timer mainTimer;
+  final bool _skipFirst = true;
   List<Window> windows = <Window>[];
   Future<void> changeHeight() async {
     if (Globals.changingPages == true) return;
-    double currentHeight = (windows.length * 27).clamp(100, (Monitor.monitorSizes[Monitor.getWindowMonitor(Win32.hWnd)]?.height ?? 1080) / 1.7) + 5;
+    // double currentHeight = (windows.length * 27).clamp(100, (Monitor.monitorSizes[Monitor.getWindowMonitor(Win32.hWnd)]?.height ?? 1080) / 1.7) + 5;
+    double currentHeight = (windows.length * 27).clamp(100, 400) + 5;
     Globals.heights.taskbar = currentHeight;
     if (currentHeight != Caches.lastHeight || true) {
       if (currentHeight < Caches.lastHeight) {
-        Future<void>.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, Globals.heights.allSummed + 50)));
+        // Future<void>.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, Globals.heights.allSummed + 50)));
       } else {
-        await windowManager.setSize(Size(300, Globals.heights.allSummed + 70));
+        // await windowManager.setSize(Size(300, Globals.heights.allSummed + 70));
       }
       Caches.lastHeight = currentHeight;
     }
@@ -67,17 +68,16 @@ class TaskBarState extends State<TaskBar> {
       if (listEquals(WindowWatcher.list, windows)) {
         await audioHandle();
         await changeHeight();
-        if (!mounted) return;
-        setState(() => fetching = false);
+        if (mounted) setState(() => fetching = false);
         return;
       }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
+
       await audioHandle();
       await changeHeight();
-      if (!mounted) return;
 
-      setState(() => fetching = false);
+      if (mounted) setState(() => fetching = false);
     }
   }
 

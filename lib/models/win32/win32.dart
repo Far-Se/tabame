@@ -12,6 +12,7 @@ import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size, Point;
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../globals.dart';
 import '../keys.dart';
@@ -294,6 +295,14 @@ class Win32 {
       final String lastPart = path.substring(path.lastIndexOf('\\') + 1);
       return lastPart.substring(lastPart.indexOf('.') + 1, lastPart.indexOf('_'));
     }
+  }
+
+  static Future<void> setMainWindowToMousePos() async {
+    Point mousePos = WinUtils.getMousePos();
+    double horizontal = mousePos.X.toDouble() - 10;
+    double vertical = mousePos.Y.toDouble() - 30;
+    if (globalSettings.showQuickMenuAtTaskbarLevel == true) vertical -= 30;
+    await WindowManager.instance.setPosition(Offset(horizontal, vertical));
   }
 }
 

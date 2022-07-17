@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import 'package:window_manager/window_manager.dart';
-import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../models/globals.dart';
 import '../widgets/quickmenu/bottom_bar.dart';
@@ -25,25 +23,22 @@ Future<int> quickMenuWindowSetup() async {
   // ! For Release Build
   if (kReleaseMode && Globals.justStarted) {
     Globals.justStarted = false;
-    final Point mousePos = WinUtils.getMousePos();
-    await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+    await Win32.setMainWindowToMousePos();
     return 1;
   }
   // ! ^^^^^^^^^^^
 
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    await WindowManager.instance.setSize(const Size(300, 300));
+    await WindowManager.instance.setSize(const Size(300, 500));
     await WindowManager.instance.setSkipTaskbar(true);
     await WindowManager.instance.setResizable(false);
     await WindowManager.instance.setAlwaysOnTop(true);
     await WindowManager.instance.setAspectRatio(0);
-    final Point mousePos = WinUtils.getMousePos();
-    await WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
+    await Win32.setMainWindowToMousePos();
   } else {
-    Point mousePos = WinUtils.getMousePos();
-    WindowManager.instance.setPosition(Offset(mousePos.X.toDouble(), mousePos.Y.toDouble()));
-    sleep(const Duration(milliseconds: 100));
+    await Win32.setMainWindowToMousePos();
+    // sleep(const Duration(milliseconds: 100));
   }
 
   return 1;
@@ -120,10 +115,7 @@ class QuickMenuState extends State<QuickMenu> {
                               //3 Items
                               const TopBar(),
                               const TaskBar(),
-                              const Divider(
-                                thickness: 1,
-                                height: 1,
-                              ),
+                              const Divider(thickness: 1, height: 1),
                               const BottomBar(),
                             ],
                           );

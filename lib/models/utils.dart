@@ -25,6 +25,7 @@ class Settings {
   String language = 'en';
   String weather = '10 C';
   String weatherCity = 'Iasi';
+  bool showQuickMenuAtTaskbarLevel = true;
   VolumeOSDStyle volumeOSD = VolumeOSDStyle.normal;
 }
 
