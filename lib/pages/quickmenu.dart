@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
@@ -20,17 +19,17 @@ class QuickMenu extends StatefulWidget {
 Future<int> quickMenuWindowSetup() async {
   Globals.lastPage = Globals.currentPage;
   Globals.currentPage = Pages.quickmenu;
-  // ! For Release Build
-  if (kReleaseMode && Globals.justStarted) {
-    Globals.justStarted = false;
-    await Win32.setMainWindowToMousePos();
-    return 1;
-  }
-  // ! ^^^^^^^^^^^
+  // // ! For Release Build
+  // if (kReleaseMode && Globals.justStarted) {
+  //   Globals.justStarted = false;
+  //   await Win32.setMainWindowToMousePos();
+  //   return 1;
+  // }
+  // // ! ^^^^^^^^^^^
 
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    await WindowManager.instance.setSize(const Size(300, 500));
+    await WindowManager.instance.setSize(const Size(300, 520));
     await WindowManager.instance.setSkipTaskbar(true);
     await WindowManager.instance.setResizable(false);
     await WindowManager.instance.setAlwaysOnTop(true);

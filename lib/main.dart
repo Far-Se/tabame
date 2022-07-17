@@ -22,7 +22,7 @@ Future<void> main() async {
 
   /// ? Window
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(300, 500),
+    size: Size(300, 520),
     center: false,
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
@@ -128,7 +128,6 @@ class _TabameState extends State<Tabame> {
           physics: const NeverScrollableScrollPhysics(),
           itemBuilder: (BuildContext context, int index) {
             if (index == Pages.quickmenu.index) {
-              print("in here");
               return const QuickMenu();
             } else if (index == Pages.interface.index) {
               return const Interface();

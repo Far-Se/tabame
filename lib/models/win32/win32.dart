@@ -577,7 +577,6 @@ class WinIcons {
       }
     }
     if (totalAdded > 0) {
-      print("total new: $totalAdded");
       await WinUtils.runPowerShell(commands);
     }
   }

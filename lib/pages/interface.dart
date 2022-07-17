@@ -176,11 +176,11 @@ class InterfaceState extends State<Interface> {
                                           width: 25,
                                           child: InkWell(
                                             onTap: () async {
-                                              final NavigatorState noc = Navigator.of(context);
                                               Globals.changingPages = true;
                                               setState(() {});
                                               mainPageViewController.jumpToPage(Pages.quickmenu.index);
 
+                                              // final NavigatorState noc = Navigator.of(context);
                                               // noc.pushAndRemoveUntil(
                                               //   PageRouteBuilder<QuickMenu>(
                                               //     maintainState: false,
