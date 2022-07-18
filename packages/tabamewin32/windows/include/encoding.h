@@ -1,3 +1,5 @@
+#ifndef TABAMEWIN32_ENCODING
+#define TABAMEWIN32_ENCODING
 #include <windows.h>
 #include <string>
 namespace Encoding
@@ -34,3 +36,5 @@ namespace Encoding
         return wstr;
     }
 }
+
+#endif
