@@ -8,7 +8,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'models/globals.dart';
-import 'models/registration.dart';
+import 'models/utils.dart';
 import 'models/win32/win32.dart';
 import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
@@ -18,7 +18,6 @@ Future<void> main() async {
   await windowManager.ensureInitialized();
 
   await registerAll();
-  Globals.justStarted = true;
 
   /// ? Window
   WindowOptions windowOptions = const WindowOptions(

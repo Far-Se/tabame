@@ -16,23 +16,6 @@ import 'win32/mixed.dart';
 import 'win32/win32.dart';
 import 'win32/window.dart';
 
-class WindowDummy {
-  int hWnd = 0;
-  String title = "";
-  HProcess process = HProcess();
-  Appearance appearance = Appearance();
-  bool isAppx = false;
-  String appxIcon = "";
-  WindowDummy({
-    required this.hWnd,
-    required this.title,
-    required this.isAppx,
-    required this.appxIcon,
-    required this.process,
-    required this.appearance,
-  });
-}
-
 class WindowWatcher {
   static List<Window> list = <Window>[];
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
@@ -118,45 +101,6 @@ class WindowWatcher {
     return true;
   }
 
-// #region (collapsed) PowerShell Icons
-
-  //! Uses Powershell as alternative to extract icons, got a cpp function that does that faster
-  static Future<bool> handleIconsPowerShell() async {
-    if (list.length != icons.length) {
-      icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
-    }
-    final WinIcons winIcons = WinIcons();
-    winIcons.addAll(list.where((Window e) => !e.isAppx && e.process.path.isNotEmpty).map((Window x) => x.process.path + x.process.exe).toList());
-
-    await winIcons.fetch(Globals.iconCachePath);
-    final List<Window> noPath = list.where((Window e) => !e.isAppx && e.process.path.isEmpty && e.process.exe.isNotEmpty).toList();
-    if (noPath.isNotEmpty) {
-      for (Window win in noPath) {
-        if (File(win.iconPath).existsSync()) continue;
-        int icon = SendMessage(win.hWnd, WM_GETICON, 2, 0); // ICON_SMALL2 - User Made Apps
-        if (icon == 0) icon = GetClassLongPtr(win.hWnd, -14); // GCLP_HICON - Microsoft Win Apps
-        if (icon == 0) continue;
-        final Uint8List iconU8List = await WinIcons().getHandleIcon(icon);
-        File(win.iconPath).writeAsBytesSync(iconU8List);
-      }
-    }
-    for (Window win in list) {
-      if (icons.containsKey(win.hWnd)) continue;
-
-      if (win.isAppx) {
-        if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
-        continue;
-      }
-      if (!icons.containsKey(win.hWnd) && File(win.iconPath).existsSync()) {
-        // print(icons[win.hWnd]!.length);
-        icons[win.hWnd] = File(win.iconPath).readAsBytesSync();
-      } else {}
-    }
-    return true;
-  }
-
-// #endregion
-
   static bool orderBy(TaskBarAppsStyle type) {
     if (<TaskBarAppsStyle>[TaskBarAppsStyle.activeMonitorFirst, TaskBarAppsStyle.onlyActiveMonitor].contains(type)) {
       final Pointer<POINT> lpPoint = calloc<POINT>();
@@ -166,11 +110,11 @@ class WindowWatcher {
       if (Monitor.list.contains(monitor)) {
         if (type == TaskBarAppsStyle.activeMonitorFirst) {
           List<Window> firstItems = <Window>[];
-          firstItems = list.where((Window element) => element.appearance.monitor == monitor ? true : false).toList();
+          firstItems = list.where((Window element) => element.monitor == monitor ? true : false).toList();
           list.removeWhere((Window element) => firstItems.contains(element));
           list = firstItems + list;
         } else if (type == TaskBarAppsStyle.onlyActiveMonitor) {
-          list.removeWhere((Window element) => element.appearance.monitor != monitor);
+          list.removeWhere((Window element) => element.monitor != monitor);
         }
       }
     } else if (type == TaskBarAppsStyle.onlyActiveMonitor) {}

@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
+            VALUE "CompanyName", "Far Se" "\0"
             VALUE "FileDescription", "tabame" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tabame" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2022 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2022 Far Se. All rights reserved." "\0"
             VALUE "OriginalFilename", "tabame.exe" "\0"
             VALUE "ProductName", "tabame" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

@@ -27,6 +27,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  contextual_menu: ^0.1.2
   cupertino_icons: ^1.0.2
   equatable: ^2.0.3
   ffi: ^2.0.0
@@ -61,7 +62,7 @@ flutter:
   uses-material-design: true
   # To add assets to your application, add an assets section, like this:
   assets:
-    - resources/logo.png
+    # - resources/logo.png
     - resources/logo_light.png
     - resources/wizzard1.png
   # fonts:

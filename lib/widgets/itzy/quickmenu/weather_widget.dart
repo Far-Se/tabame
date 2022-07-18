@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../models/registration.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 
 Future<String> fetchWeather() async {
   final http.Response response = await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=%c+%t"));
   if (response.statusCode == 200) {
+    print(response.body);
     return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
   }
   return "";

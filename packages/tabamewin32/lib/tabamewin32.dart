@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -326,6 +327,8 @@ Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirec
   return result;
 }
 
+enum DesktopDirection { left, right }
+
 Future<bool> moveDesktopMethod(DesktopDirection direction) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': 0,
@@ -344,7 +347,20 @@ Future<bool> setSkipTaskbar({required int hWnd, required bool skip}) async {
   return result;
 }
 
-enum DesktopDirection {
-  left,
-  right,
+Future<String> convertLinkToPath(String lnkPath) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'lnkPath': lnkPath,
+  };
+  final String result = await audioMethodChannel.invokeMethod<String>('convertLinkToPath', arguments) ?? "";
+  return result;
+}
+
+Future<String> setStartOnSystemStartup(bool enabled, {String? exePath}) async {
+  exePath ??= Platform.resolvedExecutable;
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'exePath': exePath,
+    'enabled': enabled,
+  };
+  final String result = await audioMethodChannel.invokeMethod<String>('setStartOnSystemStartup', arguments) ?? "";
+  return result;
 }

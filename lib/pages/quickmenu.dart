@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
@@ -17,15 +18,7 @@ class QuickMenu extends StatefulWidget {
 }
 
 Future<int> quickMenuWindowSetup() async {
-  Globals.lastPage = Globals.currentPage;
   Globals.currentPage = Pages.quickmenu;
-  // // ! For Release Build
-  // if (kReleaseMode && Globals.justStarted) {
-  //   Globals.justStarted = false;
-  //   await Win32.setMainWindowToMousePos();
-  //   return 1;
-  // }
-  // // ! ^^^^^^^^^^^
 
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
@@ -37,18 +30,30 @@ Future<int> quickMenuWindowSetup() async {
     await Win32.setMainWindowToMousePos();
   } else {
     await Win32.setMainWindowToMousePos();
-    // sleep(const Duration(milliseconds: 100));
   }
 
   return 1;
 }
 
 class QuickMenuState extends State<QuickMenu> {
+  double lastHeight = 0;
   @override
   void initState() {
     super.initState();
     Globals.changingPages = false;
-    // init();
+    Globals.quickMenuFullyInitiated = false;
+    //!RELEASE MODE
+    if (kReleaseMode) {
+      Timer.periodic(const Duration(seconds: 1), (Timer t) async {
+        if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive) return;
+        final double newHeight = Globals.heights.allSummed + 80;
+        if (lastHeight != newHeight) {
+          if (!mounted) return;
+          await windowManager.setSize(Size(300, newHeight));
+          lastHeight = newHeight;
+        }
+      });
+    }
   }
 
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
@@ -101,24 +106,18 @@ class QuickMenuState extends State<QuickMenu> {
                         boxShadow: <BoxShadow>[
                           const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                         ]),
-                    child: FutureBuilder<Object>(
-                        future: Future<bool>.delayed(const Duration(milliseconds: 50), () async {
-                          return true;
-                        }),
-                        builder: (BuildContext context, AsyncSnapshot<Object> snapshot) {
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              //3 Items
-                              const TopBar(),
-                              const TaskBar(),
-                              const Divider(thickness: 1, height: 1),
-                              const BottomBar(),
-                            ],
-                          );
-                        }),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.max,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        //3 Items
+                        const TopBar(),
+                        const TaskBar(),
+                        const Divider(thickness: 1, height: 1),
+                        const BottomBar(),
+                      ],
+                    ),
                   ),
                 ),
               ),

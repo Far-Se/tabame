@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -74,7 +73,7 @@ class TrayBarState extends State<TrayBar> {
         child: Padding(
           padding: const EdgeInsets.only(right: 3),
           child: SizedBox(
-            height: Globals.heights.traybar - 13,
+            height: Globals.heights.traybar - 10,
             child: SingleChildScrollView(
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
@@ -128,27 +127,14 @@ class TrayBarState extends State<TrayBar> {
                             }
                           },
                           child: InkWell(
-                            child: IconButton(
-                              splashRadius: 15,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 0,
-                                minHeight: 0,
-                              ),
-                              onPressed: () {},
-                              icon: Tooltip(
-                                message: info.toolTip.length > 1 ? info.toolTip : "",
-                                height: 0,
-                                preferBelow: false,
-                                child: (info.brightness < 400)
-                                    ? Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)
-                                    : ColorFiltered(
-                                        colorFilter: ColorFilter.matrix(ColorFilterGenerator.brightnessAdjustMatrix(
-                                          value: -0.5,
-                                        )),
-                                        child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true),
-                                      ),
-                              ),
+                            onTap: () {},
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                              child: Tooltip(
+                                  message: info.toolTip.length > 1 ? info.toolTip : "",
+                                  height: 0,
+                                  preferBelow: false,
+                                  child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)),
                             ),
                           ),
                         ),
@@ -160,96 +146,3 @@ class TrayBarState extends State<TrayBar> {
     );
   }
 }
-
-// #region [collapsed] ColorFilterGenerator
-
-class ColorFilterGenerator {
-  static List<double> hueAdjustMatrix({required double value}) {
-    value = value * pi;
-
-    if (value == 0) {
-      return <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
-    }
-
-    double cosVal = cos(value);
-    double sinVal = sin(value);
-    double lumR = 0.213;
-    double lumG = 0.715;
-    double lumB = 0.072;
-
-    return List<double>.from(<double>[
-      (lumR + (cosVal * (1 - lumR))) + (sinVal * (-lumR)),
-      (lumG + (cosVal * (-lumG))) + (sinVal * (-lumG)),
-      (lumB + (cosVal * (-lumB))) + (sinVal * (1 - lumB)),
-      0,
-      0,
-      (lumR + (cosVal * (-lumR))) + (sinVal * 0.143),
-      (lumG + (cosVal * (1 - lumG))) + (sinVal * 0.14),
-      (lumB + (cosVal * (-lumB))) + (sinVal * (-0.283)),
-      0,
-      0,
-      (lumR + (cosVal * (-lumR))) + (sinVal * (-(1 - lumR))),
-      (lumG + (cosVal * (-lumG))) + (sinVal * lumG),
-      (lumB + (cosVal * (1 - lumB))) + (sinVal * lumB),
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0
-    ]).map((double i) => i.toDouble()).toList();
-  }
-
-  static List<double> brightnessAdjustMatrix({required double value}) {
-    if (value <= 0) {
-      value = value * 255;
-    } else {
-      value = value * 100;
-    }
-
-    if (value == 0) {
-      return <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
-    }
-
-    return List<double>.from(<double>[1, 0, 0, 0, value, 0, 1, 0, 0, value, 0, 0, 1, 0, value, 0, 0, 0, 1, 0]).map((double i) => i.toDouble()).toList();
-  }
-
-  static List<double> saturationAdjustMatrix({required double value}) {
-    value = value * 100;
-
-    if (value == 0) {
-      return <double>[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
-    }
-
-    double x = ((1 + ((value > 0) ? ((3 * value) / 100) : (value / 100)))).toDouble();
-    double lumR = 0.3086;
-    double lumG = 0.6094;
-    double lumB = 0.082;
-
-    return List<double>.from(<double>[
-      (lumR * (1 - x)) + x,
-      lumG * (1 - x),
-      lumB * (1 - x),
-      0,
-      0,
-      lumR * (1 - x),
-      (lumG * (1 - x)) + x,
-      lumB * (1 - x),
-      0,
-      0,
-      lumR * (1 - x),
-      lumG * (1 - x),
-      (lumB * (1 - x)) + x,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0
-    ]).map((double i) => i.toDouble()).toList();
-  }
-}
-
-// #endregion

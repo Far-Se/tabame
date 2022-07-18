@@ -21,21 +21,17 @@ class TrayBarInfo extends TrayInfo {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is TrayBarInfo &&
-        other.executionType == executionType &&
-        other.processPath == processPath &&
-        other.processExe == processExe &&
-        other.brightness == brightness;
+    return other is TrayBarInfo && other.executionType == executionType && other.processPath == processPath && other.processExe == processExe;
   }
 
   @override
   int get hashCode {
-    return executionType.hashCode ^ processPath.hashCode ^ processExe.hashCode ^ brightness.hashCode;
+    return executionType.hashCode ^ processPath.hashCode ^ processExe.hashCode;
   }
 }
 
 Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
-Map<int, int> __trayIconCacheHandle = <int, int>{};
+Map<int, int> __trayIconHandleCache = <int, int>{};
 
 class Tray {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
@@ -53,6 +49,7 @@ class Tray {
       String exe = Win32.getExe(processPath.path);
 
       final TrayBarInfo trayInfo = TrayBarInfo(executionType: 1, processPath: processPath.path, processExe: exe);
+
       trayInfo
         ..hIcon = element.hIcon
         ..uID = element.uID
@@ -61,23 +58,24 @@ class Tray {
         ..processID = element.processID
         ..isVisible = element.isVisible
         ..toolTip = element.toolTip;
+
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
+
       if (__trayIconCache.containsKey(element.hWnd)) {
-        if (__trayIconCacheHandle[element.hWnd] != element.hIcon) {
+        if (__trayIconHandleCache[element.hWnd] != element.hIcon) {
           final Uint8List? icon = await getIconPng(element.hIcon);
           trayInfo.iconData = icon!;
           __trayIconCache[element.hWnd] = trayInfo.iconData;
-          __trayIconCacheHandle[element.hWnd] = element.hIcon;
+          __trayIconHandleCache[element.hWnd] = element.hIcon; //? Fetch New
         } else {
-          trayInfo.iconData = __trayIconCache[element.hWnd]!;
+          trayInfo.iconData = __trayIconCache[element.hWnd]!; //? Cache
         }
       } else {
-        final Uint8List? icon = await getIconPng(element.hIcon);
+        final Uint8List? icon = await getIconPng(element.hIcon); //? First Fetch
         trayInfo.iconData = icon!;
         __trayIconCache[element.hWnd] = trayInfo.iconData;
-        __trayIconCacheHandle[element.hWnd] = element.hIcon;
+        __trayIconHandleCache[element.hWnd] = element.hIcon;
       }
-
       trayList.add(trayInfo);
     }
     __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);

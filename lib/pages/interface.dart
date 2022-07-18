@@ -26,13 +26,10 @@ class PageClass {
   });
 }
 
-// double maxHeight = 0;
 Future<int> interfaceWindowSetup() async {
-  Globals.lastPage = Globals.currentPage;
   Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
-  // maxHeight = monitor.height / 1.25;
   await WindowManager.instance.setMinimumSize(const Size(400, 400));
   await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
@@ -42,7 +39,6 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setAspectRatio(1.3);
   await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
-  // sleep(const Duration(milliseconds: 200));
   return 1;
 }
 
@@ -149,7 +145,7 @@ class InterfaceState extends State<Interface> {
                                               crossAxisAlignment: CrossAxisAlignment.stretch,
                                               // textBaseline: TextBaseline.alphabetic,
                                               children: <Widget>[
-                                                const Image(image: AssetImage("resources/logo.png"), width: 15),
+                                                const Image(image: AssetImage("resources/logo_light.png"), width: 15),
                                                 const SizedBox(width: 5),
                                                 const Text("Tabame", style: TextStyle(fontSize: 20)),
                                               ],
