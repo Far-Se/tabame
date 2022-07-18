@@ -421,42 +421,15 @@ namespace tabamewin32
         if (g_MouseHook != NULL)
             UnhookWindowsHookEx(g_MouseHook);
     }
-    //#h white
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
 
         std::string method_name = method_call.method_name();
         //?
-        if (method_name.compare("convertLinkToPath") == 0)
-        {
-            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
-            std::string deviceID = std::get<std::string>(args.at(flutter::EncodableValue("lnkPath")));
-            std::wstring linkFile = Encoding::Utf8ToWide(deviceID);
 
-            TCHAR achPath[MAX_PATH] = {0};
-            HRESULT hres;
-            hres = LinkToPath(linkFile.c_str(), achPath, _countof(achPath));
-            if (hres)
-            {
-                result->Success(flutter::EncodableValue(Encoding::WideToUtf8(achPath)));
-            }
-            else
-            {
-                cout << "ResolveIt Failed" << endl;
-                result->Success(flutter::EncodableValue(""));
-            }
-        }
-        if (method_name.compare("setStartOnSystemStartup") == 0)
-        {
-            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
-            std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
-            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
-
-            SetStartOnSystemStartup(enabled, exePath);
-            result->Success(flutter::EncodableValue(""));
-        }
+        //#h white
         //? Audio
-        else if (method_name.compare("enumAudioDevices") == 0)
+        if (method_name.compare("enumAudioDevices") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -569,6 +542,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
+        //#e
         //? Utilities
         else if (method_name.compare("iconToBytes") == 0)
         {
@@ -710,7 +684,7 @@ namespace tabamewin32
             ToggleTaskbar(state);
             result->Success(flutter::EncodableValue(true));
         }
-
+        //#h white
         //? WIN HOOKS
         else if (method_name.compare("installHooks") == 0)
         {
@@ -780,6 +754,7 @@ namespace tabamewin32
                 mouseWatchButtons[button] = method == "add" ? 1 : 0;
             result->Success(flutter::EncodableValue(true));
         }
+        //#e
         //? ACRYLIC
         else if (method_name.compare("setTransparent") == 0)
         {
@@ -842,6 +817,34 @@ namespace tabamewin32
             HWND hWnd = (HWND)((LONG_PTR)iHwnd);
             SetHwndSkipTaskbar(hWnd, skip);
             result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("convertLinkToPath") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string deviceID = std::get<std::string>(args.at(flutter::EncodableValue("lnkPath")));
+            std::wstring linkFile = Encoding::Utf8ToWide(deviceID);
+
+            TCHAR achPath[MAX_PATH] = {0};
+            HRESULT hres;
+            hres = LinkToPath(linkFile.c_str(), achPath, _countof(achPath));
+            if (hres)
+            {
+                result->Success(flutter::EncodableValue(Encoding::WideToUtf8(achPath)));
+            }
+            else
+            {
+                cout << "ResolveIt Failed" << endl;
+                result->Success(flutter::EncodableValue(""));
+            }
+        }
+        else if (method_name.compare("setStartOnSystemStartup") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+
+            SetStartOnSystemStartup(enabled, exePath);
+            result->Success(flutter::EncodableValue(""));
         }
 
         else
