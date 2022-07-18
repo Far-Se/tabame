@@ -10,50 +10,14 @@ import '../utils.dart';
 import 'imports.dart';
 import 'win32.dart';
 
-class Appearance {
-  int? monitor;
-  int? heirarchy;
-  bool? visible;
-  bool? cloaked;
-  RECT? position;
-  Point? size;
-  bool isMinimized = false;
-  bool isPinned = false;
-
-  @override
-  String toString() {
-    return 'Appearance(monitor: $monitor, heirarchy: $heirarchy, visible: $visible, cloaked: $cloaked, position: $position, size: $size, isMinimized: $isMinimized)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is Appearance &&
-        other.monitor == monitor &&
-        other.heirarchy == heirarchy &&
-        other.visible == visible &&
-        other.cloaked == cloaked &&
-        other.position == position &&
-        other.size == size &&
-        other.isMinimized == isMinimized &&
-        other.isPinned == isPinned;
-  }
-
-  @override
-  int get hashCode {
-    return monitor.hashCode ^ heirarchy.hashCode ^ visible.hashCode ^ cloaked.hashCode ^ position.hashCode ^ size.hashCode ^ isMinimized.hashCode ^ isPinned.hashCode;
-  }
-}
-
 class Window {
   int hWnd;
   String title = "";
-  HProcess process = HProcess();
-  Appearance appearance = Appearance();
+  late HProcess process;
+  int? monitor;
+  bool isPinned = false;
   bool isAppx = false;
   String appxIcon = "";
-  String iconPath = "";
   String toJson() {
     JsonEncoder encoder = const JsonEncoder.withIndent("");
     return encoder
@@ -61,6 +25,7 @@ class Window {
   }
 
   Window(this.hWnd) {
+    process = HProcess();
     getHandles();
     getTitle();
     getWorkspace();
@@ -88,11 +53,9 @@ class Window {
   }
 
   getWorkspace() {
-    appearance.visible = Win32.isWindowPresent(hWnd);
-    appearance.cloaked = Win32.isWindowCloaked(hWnd);
-    appearance.monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
+    monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
     final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-    appearance.isPinned = (exstyle & WS_EX_TOPMOST) != 0 ? true : false;
+    isPinned = (exstyle & WS_EX_TOPMOST) != 0 ? true : false;
   }
 
   getPath() {
@@ -106,7 +69,6 @@ class Window {
       process.exe = process.path.substring(process.path.lastIndexOf('\\') + 1);
     }
     process.path = process.path.replaceAll(process.exe, "");
-    iconPath = WinUtils.getIconPath(process.exe);
   }
 
   getManifestIcon2() {
@@ -152,17 +114,11 @@ class Window {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is Window &&
-        other.hWnd == hWnd &&
-        other.title == title &&
-        other.isAppx == isAppx &&
-        other.appxIcon == appxIcon &&
-        other.appearance == appearance &&
-        other.process == process;
+    return other is Window && other.hWnd == hWnd && other.title == title && other.isAppx == isAppx && other.appxIcon == appxIcon && other.process == process;
   }
 
   @override
   int get hashCode {
-    return hWnd.hashCode ^ title.hashCode ^ isAppx.hashCode ^ appxIcon.hashCode ^ appearance.hashCode ^ process.hashCode;
+    return hWnd.hashCode ^ title.hashCode ^ isAppx.hashCode ^ appxIcon.hashCode ^ process.hashCode;
   }
 }

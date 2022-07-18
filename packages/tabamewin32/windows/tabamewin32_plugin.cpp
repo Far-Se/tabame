@@ -56,6 +56,112 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+//! Lnk to Path
+
+void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
+{
+
+    WCHAR startMenuPath[MAX_PATH];
+    HRESULT result = SHGetFolderPathW(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
+    std::string exe = exePath.substr(exePath.find_last_of("\\") + 1);
+    std::wstring wExe = Encoding::Utf8ToWide(exe);
+    wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
+
+    std::wstring wStartMenuPath = std::wstring(startMenuPath);
+    wStartMenuPath.append(L"\\Startup\\");
+    wStartMenuPath.append(wExe);
+    if (!fAutoStart)
+    {
+        std::string startMenupath = Encoding::WideToUtf8(wStartMenuPath.c_str());
+        std::remove(startMenupath.c_str());
+        return;
+    }
+
+    CoInitialize(NULL);
+
+    if (SUCCEEDED(result))
+    {
+        IShellLink *psl = NULL;
+        HRESULT hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, reinterpret_cast<void **>(&psl));
+
+        if (SUCCEEDED(hres))
+        {
+            TCHAR pszExePath[MAX_PATH];
+            MultiByteToWideChar(CP_ACP, 0, exePath.c_str(), -1, pszExePath, MAX_PATH);
+            psl->SetPath(pszExePath);
+            PathRemoveFileSpec(pszExePath);
+            psl->SetWorkingDirectory(pszExePath);
+            psl->SetShowCmd(SW_SHOWMINNOACTIVE);
+            IPersistFile *ppf = NULL;
+            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf));
+            if (SUCCEEDED(hres))
+            {
+                hres = ppf->Save(wStartMenuPath.c_str(), TRUE);
+                ppf->Release();
+            }
+            psl->Release();
+        }
+    }
+    CoUninitialize();
+}
+int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
+{
+    // if (::CoInitializeEx(0, COINIT_MULTITHREADED) != S_OK)
+    // {
+    //     std::cout << "CoInitializeEx error" << std::endl;
+    //     return 1;
+    // }
+
+    HRESULT rc;
+
+    IShellLink *iShellLink;
+    rc = CoCreateInstance(
+        CLSID_ShellLink,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_IShellLink,
+        (LPVOID *)&iShellLink);
+
+    if (!SUCCEEDED(rc))
+    {
+        std::cout << "CoCreateInstance error" << std::endl;
+        return 0;
+    }
+
+    IPersistFile *iPersistFile;
+
+    rc = iShellLink->QueryInterface(IID_IPersistFile, (LPVOID *)&iPersistFile);
+
+    if (!SUCCEEDED(rc))
+    {
+        std::cout << "QueryInterface(IID_IPersistFile) error" << std::endl;
+        return 0;
+    }
+    // Load the shortcut.
+    rc = iPersistFile->Load(path, STGM_READ);
+    if (!SUCCEEDED(rc))
+    {
+        std::cout << "iPersistFile->Load() error" << std::endl;
+        return 0;
+    }
+    rc = iShellLink->Resolve((HWND)0, 0);
+
+    if (!SUCCEEDED(rc))
+    {
+        std::cout << "..." << std::endl;
+        return 0;
+    }
+    rc = iShellLink->GetPath(
+        lpszPath,
+        iPathBufferSize,
+        0,
+        SLGP_SHORTPATH);
+
+    iPersistFile->Release();
+    iShellLink->Release();
+    // ::CoUninitialize();
+    return 1;
+}
 //! VIRTUAL DESKTOP
 bool VirtualDesktopWorks = false;
 // #pragma warning(disable: 4244)
@@ -835,13 +941,42 @@ namespace tabamewin32
         if (g_MouseHook != NULL)
             UnhookWindowsHookEx(g_MouseHook);
     }
-
+    //#h white
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
 
         std::string method_name = method_call.method_name();
+        //?
+        if (method_name.compare("convertLinkToPath") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string deviceID = std::get<std::string>(args.at(flutter::EncodableValue("lnkPath")));
+            std::wstring linkFile = Encoding::Utf8ToWide(deviceID);
+
+            TCHAR achPath[MAX_PATH] = {0};
+            HRESULT hres;
+            hres = LinkToPath(linkFile.c_str(), achPath, _countof(achPath));
+            if (hres)
+            {
+                result->Success(flutter::EncodableValue(Encoding::WideToUtf8(achPath)));
+            }
+            else
+            {
+                cout << "ResolveIt Failed" << endl;
+                result->Success(flutter::EncodableValue(""));
+            }
+        }
+        if (method_name.compare("setStartOnSystemStartup") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+
+            SetStartOnSystemStartup(enabled, exePath);
+            result->Success(flutter::EncodableValue(""));
+        }
         //? Audio
-        if (method_name.compare("enumAudioDevices") == 0)
+        else if (method_name.compare("enumAudioDevices") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
@@ -1249,5 +1384,5 @@ namespace tabamewin32
             result->NotImplemented();
         }
     }
-
+    //#e
 } // namespace tabamewin32

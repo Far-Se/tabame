@@ -38,14 +38,15 @@ class TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.max,
             children: <Widget>[
-              Flexible(
+              Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
-                    const Flexible(
-                      fit: FlexFit.loose,
+                    const Expanded(
+                      flex: 3,
+                      // fit: FlexFit.loose,
                       child: BarWithButtons(
                         withScroll: false,
                         children: <Widget>[
@@ -65,8 +66,9 @@ class TopBar extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Flexible(
-                      fit: FlexFit.loose,
+                    const Expanded(
+                      flex: 4,
+                      // fit: FlexFit.loose,
                       child: BarWithButtons(
                         children: <Widget>[
                           TaskManagerButton(),
@@ -79,8 +81,8 @@ class TopBar extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 3),
-                    const Flexible(fit: FlexFit.loose, child: PinnedApps()),
+                    const SizedBox(width: 2),
+                    const Expanded(flex: 3, child: PinnedApps()),
                   ],
                 ),
               ),

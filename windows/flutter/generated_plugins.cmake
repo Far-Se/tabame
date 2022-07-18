@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  contextual_menu
   screen_retriever
   tabamewin32
   window_manager

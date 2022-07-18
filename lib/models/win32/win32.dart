@@ -10,9 +10,9 @@ import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size, Point;
+import 'package:window_manager/window_manager.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../globals.dart';
 import '../keys.dart';
@@ -304,6 +304,12 @@ class Win32 {
     if (globalSettings.showQuickMenuAtTaskbarLevel == true) vertical -= 30;
     await WindowManager.instance.setPosition(Offset(horizontal, vertical));
   }
+
+  static void setAlwaysOnTop(int hWnd) {
+    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    final int topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+    SetWindowPos(hWnd, topmostOrNot, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
 }
 
 class WinUtils {
@@ -398,17 +404,41 @@ class WinUtils {
     return localAppData;
   }
 
-  static Future<List<String>> getTaskbarPinnedApps() async {
-    final Pointer<GUID> appsFolder = GUIDFromString(FOLDERID_UserPinned);
+  static String getKnownFolder(String FOLDERID) {
+    final Pointer<GUID> appsFolder = GUIDFromString(FOLDERID);
     final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
     String path = "";
     final int hr = SHGetKnownFolderPath(appsFolder, KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       path = ppszPath.value.toDartString();
-    } else {
-      path = "${getLocalAppData()}\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned";
     }
     free(ppszPath);
+    free(appsFolder);
+    return path;
+  }
+
+  static Future<List<String>> getTaskbarPinnedApps() async {
+    List<String> output = <String>[];
+    String path = getKnownFolder(FOLDERID_UserPinned);
+    if (path == "") {
+      path = "${getLocalAppData()}\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned";
+    }
+    final Iterable<io.FileSystemEntity> items = Directory("$path\\TaskBar").listSync().where((io.FileSystemEntity event) => event.path.endsWith(".lnk"));
+    for (io.FileSystemEntity element in items) {
+      String newPath = await convertLinkToPath(element.path);
+      if (newPath == "") {
+        newPath = "${getKnownFolder(FOLDERID_Windows)}\\explorer.exe";
+      }
+      output.add(newPath);
+    }
+    return output;
+  }
+
+  static Future<List<String>> getTaskbarPinnedAppsPowerShell() async {
+    String path = getKnownFolder(FOLDERID_UserPinned);
+    if (path == "") {
+      path = "${getLocalAppData()}\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned";
+    }
     path += "\\Taskbar";
     final int allContents = await Directory(path).list().where((io.FileSystemEntity event) => event.path.endsWith(".lnk")).length;
     List<String> commands = <String>[
@@ -417,7 +447,7 @@ class WinUtils {
     ];
     List<String> output = await runPowerShell(commands);
     if (allContents != output.length) {
-      output.insert(0, "C:\\Windows\\explorer.exe");
+      output.insert(0, "${getKnownFolder(FOLDERID_Windows)}\\explorer.exe");
     }
     return output;
   }
@@ -473,10 +503,9 @@ class WinUtils {
     return location;
   }
 
-  static bool taskbarVisible = true;
-  static void toggleTaskbar() {
-    taskbarVisible = !taskbarVisible;
-    setTaskbarVisibility(taskbarVisible);
+  static void toggleTaskbar({bool? visible}) {
+    Globals.taskbarVisible = visible ?? !Globals.taskbarVisible;
+    setTaskbarVisibility(Globals.taskbarVisible);
   }
 
   static void moveDesktop(DesktopDirection direction, {bool classMethod = true}) {
@@ -498,25 +527,6 @@ class WinUtils {
     free(lpPoint);
     point = Monitor.adjustPointToDPI(point);
     return point;
-  }
-
-  static Future<Uint8List> getCachedIcon(String path, {int iconID = 0}) async {
-    final WinIcons winIcon = WinIcons();
-    if (iconID == 0) {
-      winIcon.add(path);
-    } else {
-      winIcon.add('$path,$iconID');
-    }
-    await winIcon.fetch(Globals.iconCachePath);
-    if (iconID == 0) {
-      return File("${Globals.iconCachePath}\\${Win32.getExe(path)}.cached").readAsBytesSync();
-    } else {
-      return File("${Globals.iconCachePath}\\dll_${iconID}_${Win32.getExe(path)}.cached").readAsBytesSync();
-    }
-  }
-
-  static String getIconPath(String exe) {
-    return "${Globals.iconCachePath}\\$exe.cached";
   }
 }
 
@@ -620,6 +630,7 @@ class HProcess {
   int mainPID = 0;
   int iconHandle = 0;
   String className = "";
+  HProcess();
 
   @override
   String toString() {

@@ -3,8 +3,9 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:contextual_menu/contextual_menu.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import '../../models/win32/window.dart';
@@ -30,28 +31,16 @@ class Caches {
 }
 
 class TaskBarState extends State<TaskBar> {
+  List<Window> windows = <Window>[];
   int _hoverElement = -1;
   bool fetching = false;
   late Timer mainTimer;
-  List<Window> windows = <Window>[];
+
   Future<void> changeHeight() async {
     if (Globals.changingPages == true) return;
     double currentHeight = (windows.length * 27).clamp(100, 400) + 5;
     Globals.heights.taskbar = currentHeight;
     if (currentHeight != Caches.lastHeight) Caches.lastHeight = currentHeight;
-
-    // #region (collapsed) old Version
-
-    // // double currentHeight = (windows.length * 27).clamp(100, (Monitor.monitorSizes[Monitor.getWindowMonitor(Win32.hWnd)]?.height ?? 1080) / 1.7) + 5;
-    // if (currentHeight != Caches.lastHeight || true) {
-    //   if (currentHeight < Caches.lastHeight) {
-    //     // Future<void>.delayed(const Duration(milliseconds: 100), () => windowManager.setSize(Size(300, Globals.heights.allSummed + 50)));
-    //   } else {
-    //     // await windowManager.setSize(Size(300, Globals.heights.allSummed + 70));
-    //   }
-    //   Caches.lastHeight = currentHeight;
-    // }
-    // #endregion
   }
 
   Future<void> audioHandle() async {
@@ -77,11 +66,15 @@ class TaskBarState extends State<TaskBar> {
       }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
-
       await audioHandle();
       await changeHeight();
 
-      if (mounted) setState(() => fetching = false);
+      if (mounted) {
+        setState(() {
+          fetching = false;
+          Globals.quickMenuFullyInitiated = true;
+        });
+      }
     }
   }
 
@@ -92,7 +85,6 @@ class TaskBarState extends State<TaskBar> {
     if (!mounted) return;
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
-      // if (!Globals.isWindowActive) return;
       if (!fetching) fetchWindows();
     });
   }
@@ -132,7 +124,7 @@ class TaskBarState extends State<TaskBar> {
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      if (index > 0 && window.appearance.monitor != windows[index - 1].appearance.monitor)
+                      if (index > 0 && window.monitor != windows[index - 1].monitor)
                         Divider(
                           height: 3,
                           color: Theme.of(context).dividerColor,
@@ -149,6 +141,7 @@ class TaskBarState extends State<TaskBar> {
                             _hoverElement = -1;
                           });
                         },
+
                         //x3
                         child: Stack(
                           children: <Widget>[
@@ -162,6 +155,19 @@ class TaskBarState extends State<TaskBar> {
                                   }
                                   Win32.activateWindow(window.hWnd);
                                   Globals.lastFocusedWinHWND = window.hWnd;
+                                },
+                                onSecondaryTap: () {
+                                  Menu menu = Menu(
+                                    items: <MenuItem>[
+                                      MenuItem(
+                                          label: 'To Right Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false)),
+                                      MenuItem(
+                                          label: 'To Left Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false)),
+                                      MenuItem.separator(),
+                                      MenuItem(label: window.isPinned ? "Unpin" : 'Set Always on Top', onClick: (_) => Win32.setAlwaysOnTop(window.hWnd))
+                                    ],
+                                  );
+                                  popUpContextualMenu(menu, placement: Placement.bottomLeft);
                                 },
                                 onLongPress: () {
                                   Win32.forceActivateWindow(window.hWnd);
@@ -213,13 +219,13 @@ class TaskBarState extends State<TaskBar> {
                                         child: Column(
                                           children: <Widget>[
                                             Text(
-                                              Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.appearance.monitor]}" : " ",
+                                              Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.monitor]}" : " ",
                                               style: const TextStyle(fontSize: 8),
                                             ),
                                             SizedBox(
                                               width: 10,
                                               height: 10,
-                                              child: (window.appearance.isPinned
+                                              child: (window.isPinned
                                                   ? const Icon(Icons.bookmark, size: 8, color: Colors.grey)
                                                   : ((Caches.audioMixer.where((int e) => <int>[window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
                                                           Caches.audioMixerExes.contains(window.process.exe))

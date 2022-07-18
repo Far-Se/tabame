@@ -23,11 +23,18 @@ class Globals {
   static final Heights heights = Heights();
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;
-  static String iconCachePath = "${Directory.current.path}\\data\\cache";
   static bool audioBoxVisible = false;
   static Pages lastPage = Pages.quickmenu;
-  static Pages currentPage = Pages.quickmenu;
-  static bool justStarted = false;
+  static Pages _currentPage = Pages.quickmenu;
+
+  static bool taskbarVisible = true;
+  static Pages get currentPage => _currentPage;
+  static set currentPage(Pages page) {
+    lastPage = _currentPage;
+    _currentPage = page;
+  }
+
+  static bool quickMenuFullyInitiated = false;
 
   static alwaysAwakeRun(bool state) {
     if (state == false) {
