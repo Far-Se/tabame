@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
 import '../itzy/quickmenu/list_powershell.dart';
 import '../itzy/quickmenu/widget_time_weather.dart';
+import '../itzy/quickmenu/widget_usage.dart';
 import 'tray_bar.dart';
 
 class BottomBar extends StatelessWidget {
@@ -26,21 +28,11 @@ class BottomBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               verticalDirection: VerticalDirection.down,
               children: <Widget>[
-                const SizedBox(
-                  width: 100,
-                  child: TimeWeatherWidget(),
-                ),
-                if (Boxes().getPowerShellScripts().isNotEmpty)
-                  const Expanded(
-                    flex: 3,
-                    child: PowershellList(),
-                  ),
+                const SizedBox(width: 100, child: TimeWeatherWidget()),
+                if (Boxes().getPowerShellScripts().isNotEmpty) const Expanded(flex: 3, child: PowershellList()),
                 if (Boxes().getPowerShellScripts().isNotEmpty) const SizedBox(width: 3),
-                // const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
-                const Expanded(
-                  flex: 4,
-                  child: TrayBar(),
-                ),
+                if (kReleaseMode) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
+                const Expanded(flex: 4, child: TrayBar()),
               ],
             ),
           ),

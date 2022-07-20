@@ -46,29 +46,18 @@ class TopBar extends StatelessWidget {
                   children: <Widget>[
                     const Expanded(
                       flex: 3,
-                      // fit: FlexFit.loose,
                       child: BarWithButtons(
                         withScroll: false,
                         children: <Widget>[
+                          SizedBox(width: 4),
                           LogoDragButton(),
                           AudioButton(),
                           MediaControlButton(),
-                          /* Align(
-                            child: InkWell(
-                              onTap: () {
-                                WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.media, applyStyle: false);
-                                WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.thin, applyStyle: true);
-                              },
-                              child: const Icon(Icons.auto_fix_high),
-                            ),
-                          ), */
-                          // const WindowsAppButton(path: "C:\\Windows\\System32\\Taskmgr.exe"),
                         ],
                       ),
                     ),
                     const Expanded(
                       flex: 4,
-                      // fit: FlexFit.loose,
                       child: BarWithButtons(
                         children: <Widget>[
                           TaskManagerButton(),
@@ -82,7 +71,7 @@ class TopBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Expanded(flex: 3, child: PinnedApps()),
+                    const Expanded(flex: 4, child: PinnedApps()),
                   ],
                 ),
               ),

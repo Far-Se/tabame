@@ -70,6 +70,7 @@ unregisterAll() {
 class Boxes {
   // static List<String> pinnedApps = <String>[];
   static late SharedPreferences pref;
+  static List<String> mediaControls = <String>[];
   Boxes();
   static Future<void> registerBoxes() async {
     pref = await SharedPreferences.getInstance();
@@ -119,8 +120,8 @@ class Boxes {
     if (globalSettings.volumeOSD != VolumeOSDStyle.normal) {
       WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSD, applyStyle: true);
     }
-    //? Powershell
-    // pinnedApps = prefs.getStringList("pinnedApps") ?? <String>[];
+    //? Media Controls
+    mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
   }
 
   List<String> getPinnedApps() {

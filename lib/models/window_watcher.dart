@@ -45,7 +45,7 @@ class WindowWatcher {
     }
 
     final List<Window> newList = <Window>[];
-    specialList.clear();
+    // specialList.clear();
 
     for (int element in allHWNDs) {
       newList.add(Window(element));
@@ -125,7 +125,9 @@ class WindowWatcher {
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
     if (list[index].process.exe == "Spotify.exe") {
       SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-    } else if (/* list[index].process.exe == "chrome.exe" && */ specialList.containsKey("Spotify") == true) {
+    } else if (!specialList.containsKey("Spotify")) {
+      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
+    } else {
       Audio.enumAudioMixer().then((List<ProcessVolume>? e) async {
         final Window spotify = specialList["Spotify"]!;
 
@@ -149,8 +151,6 @@ class WindowWatcher {
           return;
         });
       });
-    } else {
-      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
     }
     return true;
   }

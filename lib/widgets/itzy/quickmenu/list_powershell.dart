@@ -42,7 +42,7 @@ class PowershellListState extends State<PowershellList> {
                     child: Center(
                       child: Text(
                         item.name.substring(0, 1),
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: 12, height: 1),
                       ),
                     ),
                     onTap: () async {
