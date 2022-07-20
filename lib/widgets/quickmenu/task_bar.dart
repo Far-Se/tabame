@@ -4,10 +4,10 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:contextual_menu/contextual_menu.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
+import '../../models/utils.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
@@ -58,12 +58,12 @@ class TaskBarState extends State<TaskBar> {
   Future<void> fetchWindows() async {
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!fetching && await WindowWatcher.fetchWindows()) {
-      if (listEquals(WindowWatcher.list, windows)) {
-        await audioHandle();
-        await changeHeight();
-        if (mounted) setState(() => fetching = false);
-        return;
-      }
+      // if (listEquals(WindowWatcher.list, windows)) {
+      //   await audioHandle();
+      //   await changeHeight();
+      //   if (mounted) setState(() => fetching = false);
+      //   return;
+      // }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
       await audioHandle();
@@ -115,8 +115,7 @@ class TaskBarState extends State<TaskBar> {
               itemCount: windows.length,
               itemBuilder: (BuildContext context, int index) {
                 final Window window = windows.elementAt(index);
-                double hoverButtonsWidth =
-                    (<String>["Spotify.exe", "chrome.exe"].contains(window.process.exe)) ? 75 : (Caches.audioMixerExes.contains(window.process.exe) ? 50 : 25);
+                double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe)) ? 75 : (Caches.audioMixerExes.contains(window.process.exe) ? 50 : 25);
                 return SizedBox(
                   width: 300,
                   child: Column(
@@ -164,7 +163,12 @@ class TaskBarState extends State<TaskBar> {
                                       MenuItem(
                                           label: 'To Left Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false)),
                                       MenuItem.separator(),
-                                      MenuItem(label: window.isPinned ? "Unpin" : 'Set Always on Top', onClick: (_) => Win32.setAlwaysOnTop(window.hWnd))
+                                      MenuItem(
+                                          label: window.isPinned ? "Unpin" : 'Set Always on Top',
+                                          onClick: (_) {
+                                            Win32.setAlwaysOnTop(window.hWnd);
+                                            setState(() {});
+                                          })
                                     ],
                                   );
                                   popUpContextualMenu(menu, placement: Placement.bottomLeft);
@@ -278,7 +282,7 @@ class TaskBarState extends State<TaskBar> {
                                     child: Wrap(
                                       children: <Widget>[
                                         //2 Play & Next Button
-                                        if (<String>["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                        if (Boxes.mediaControls.contains(window.process.exe))
                                           Wrap(
                                             children: <Widget>[
                                               InkWell(
@@ -298,7 +302,7 @@ class TaskBarState extends State<TaskBar> {
 
                                         //2 Play Button
 
-                                        if (Caches.audioMixerExes.contains(window.process.exe) && !<String>["Spotify.exe", "chrome.exe"].contains(window.process.exe))
+                                        if (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))
                                           InkWell(
                                             onTap: () {
                                               WindowWatcher.mediaControl(index);

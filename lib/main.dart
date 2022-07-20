@@ -1,7 +1,5 @@
 // ignore_for_file: unnecessary_import, prefer_const_constructors
 
-import 'dart:math';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';

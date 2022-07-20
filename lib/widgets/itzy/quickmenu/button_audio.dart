@@ -20,6 +20,8 @@ class _AudioButtonState extends State<AudioButton> {
   late Timer timer;
   bool muteState = false;
 
+  bool switchedAudio = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +64,13 @@ class _AudioButtonState extends State<AudioButton> {
               }
               if (event.buttons == kSecondaryMouseButton) {
                 Audio.switchDefaultDevice(AudioDeviceType.output);
+                switchedAudio = true;
+                setState(() {});
+                Timer(const Duration(milliseconds: 1000), () {
+                  switchedAudio = false;
+                  if (!mounted) return;
+                  setState(() {});
+                });
               } else if (event.buttons == kPrimaryMouseButton) {
                 Globals.audioBoxVisible = true;
                 showModalBottomSheet<void>(
@@ -102,7 +111,9 @@ class _AudioButtonState extends State<AudioButton> {
             }
           },
           child: InkWell(
-            child: Tooltip(message: "Audio Control", child: Icon(muteState == false ? Icons.volume_up : Icons.volume_off)),
+            child: switchedAudio
+                ? const Tooltip(message: "Audio Channel Changed", child: Icon(Icons.published_with_changes))
+                : Tooltip(message: "Audio Control", child: Icon(muteState == false ? Icons.volume_up : Icons.volume_off)),
             onTap: () {},
           ),
         ),

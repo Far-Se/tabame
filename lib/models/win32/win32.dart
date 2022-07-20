@@ -305,9 +305,12 @@ class Win32 {
     await WindowManager.instance.setPosition(Offset(horizontal, vertical));
   }
 
-  static void setAlwaysOnTop(int hWnd) {
-    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-    final int topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+  static void setAlwaysOnTop(int hWnd, {bool? alwaysOnTop}) {
+    int topmostOrNot = alwaysOnTop == true ? HWND_TOPMOST : HWND_NOTOPMOST;
+    if (alwaysOnTop == null) {
+      final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+      topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+    }
     SetWindowPos(hWnd, topmostOrNot, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
   }
 }
