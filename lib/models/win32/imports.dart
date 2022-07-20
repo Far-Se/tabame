@@ -83,7 +83,7 @@ List<int> enumWindows() {
   __helperWinsList.clear();
   final Pointer<NativeFunction<EnumWindowsProc>> wndProc = Pointer.fromFunction<EnumWindowsProc>(enumWindowsProc, 0);
   EnumWindows(wndProc, 0);
-  return __helperWinsList;
+  return <int>[...__helperWinsList];
 }
 
 List<int> __helpEnumChildWins = <int>[];
@@ -97,7 +97,7 @@ List<int> enumChildWins(int hWnd) {
   __helpEnumChildWins.clear();
   //this was outside this function when i moved it..
   EnumChildWindows(hWnd, wndProc, 0);
-  return __helpEnumChildWins;
+  return <int>[...__helpEnumChildWins];
 }
 
 final Map<int, Square> __helperMonitorList = <int, Square>{};
@@ -117,6 +117,6 @@ int helperGetMonitorInfo(int hMonitor, int hDC, Pointer<RECT> lpRect, int lParam
 Map<int, Square> enumMonitors() {
   __helperMonitorList.clear();
   EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MonitorEnumProc>(helperGetMonitorInfo, 0), 0);
-  return __helperMonitorList;
+  return <int, Square>{...__helperMonitorList};
 }
 // #endregion

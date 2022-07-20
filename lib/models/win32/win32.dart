@@ -528,6 +528,21 @@ class WinUtils {
     point = Monitor.adjustPointToDPI(point);
     return point;
   }
+
+  static alwaysAwakeRun(bool state) {
+    if (state == false) {
+      SetThreadExecutionState(ES_CONTINUOUS);
+    } else {
+      Timer.periodic(const Duration(seconds: 45), (Timer timer) {
+        if (Globals.alwaysAwake == false) {
+          SetThreadExecutionState(ES_CONTINUOUS);
+          timer.cancel();
+        } else {
+          SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+        }
+      });
+    }
+  }
 }
 
 class WinIcons {

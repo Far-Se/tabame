@@ -248,6 +248,10 @@ class TaskBarState extends State<TaskBar> {
                                               overflow: index == _hoverElement ? TextOverflow.visible : TextOverflow.ellipsis,
                                               maxLines: 1,
                                               softWrap: false,
+                                              style: const TextStyle(
+                                                // fontSize: 13,
+                                                height: 1.2,
+                                              ),
                                             ),
                                           ),
                                         ),

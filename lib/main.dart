@@ -54,11 +54,6 @@ final Color kDarkBackground = Color.fromRGBO(59, 65, 77, 1);
 final Color kDarkTint = Color.fromRGBO(250, 249, 248, 1);
 final Color kDarkText = Color.fromRGBO(250, 249, 248, 1);
 
-num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
-  final num darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
-  return darkerHex;
-}
-
 final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
 PageController mainPageViewController = PageController();
 

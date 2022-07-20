@@ -67,79 +67,75 @@ class TrayBarState extends State<TrayBar> {
 
     return Align(
       alignment: Alignment.centerRight,
-      child: Theme(
-        data: Theme.of(context)
-            .copyWith(tooltipTheme: Theme.of(context).tooltipTheme.copyWith(preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).backgroundColor))),
-        child: Padding(
-          padding: const EdgeInsets.only(right: 3),
-          child: SizedBox(
-            height: Globals.heights.traybar - 10,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.antiAliasWithSaveLayer,
-              child: Row(children: <Widget>[
-                for (final TrayBarInfo info in tray)
-                  (info.isVisible == false)
-                      ? const SizedBox(width: 0)
-                      : Listener(
-                          onPointerDown: (PointerDownEvent event) async {
-                            if (event.kind == PointerDeviceKind.mouse) {
-                              if (event.buttons == kSecondaryMouseButton) {
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                              } else if (event.buttons == kPrimaryMouseButton) {
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                              } else if (event.buttons == kMiddleMouseButton) {
-                                // if (info.processPath.isEmpty) return;
-                                final int hWnd = await findTopWindow(info.processID);
-                                if (hWnd > 0) {
-                                  Win32.closeWindow(hWnd, forced: true);
-                                } else {}
+      child: Padding(
+        padding: const EdgeInsets.only(right: 3),
+        child: SizedBox(
+          height: Globals.heights.traybar - 10,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.antiAliasWithSaveLayer,
+            child: Row(children: <Widget>[
+              for (final TrayBarInfo info in tray)
+                (info.isVisible == false)
+                    ? const SizedBox(width: 0)
+                    : Listener(
+                        onPointerDown: (PointerDownEvent event) async {
+                          if (event.kind == PointerDeviceKind.mouse) {
+                            if (event.buttons == kSecondaryMouseButton) {
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                            } else if (event.buttons == kPrimaryMouseButton) {
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                              PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                            } else if (event.buttons == kMiddleMouseButton) {
+                              // if (info.processPath.isEmpty) return;
+                              final int hWnd = await findTopWindow(info.processID);
+                              if (hWnd > 0) {
+                                Win32.closeWindow(hWnd, forced: true);
+                              } else {}
 
-                                // final windows = enumWindows();
-                                // for (var win in windows) {
-                                //   final path = Win32.getWindowExePath(win);
-                                //   if (path == info.processPath) {
-                                //     print(win);
-                                //     Win32.closeWindow(win);
-                                //     await Tray.fetchTray();
-                                //     setState(() {});
-                                //   }
-                                // }
-                              }
+                              // final windows = enumWindows();
+                              // for (var win in windows) {
+                              //   final path = Win32.getWindowExePath(win);
+                              //   if (path == info.processPath) {
+                              //     print(win);
+                              //     Win32.closeWindow(win);
+                              //     await Tray.fetchTray();
+                              //     setState(() {});
+                              //   }
+                              // }
                             }
-                          },
-                          onPointerSignal: (PointerSignalEvent pointerSignal) {
-                            if (pointerSignal is PointerScrollEvent) {
-                              if (pointerSignal.scrollDelta.dy < 0) {
-                                _scrollController.animateTo(_scrollController.position.minScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                              } else {
-                                _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                              }
+                          }
+                        },
+                        onPointerSignal: (PointerSignalEvent pointerSignal) {
+                          if (pointerSignal is PointerScrollEvent) {
+                            if (pointerSignal.scrollDelta.dy < 0) {
+                              _scrollController.animateTo(_scrollController.position.minScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
+                            } else {
+                              _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
                             }
-                          },
-                          child: InkWell(
-                            onTap: () {},
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                              child: Tooltip(
-                                  message: info.toolTip.length > 1 ? info.toolTip : "",
-                                  height: 0,
-                                  preferBelow: false,
-                                  child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)),
-                            ),
+                          }
+                        },
+                        child: InkWell(
+                          onTap: () {},
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                            child: Tooltip(
+                                message: info.toolTip.length > 1 ? info.toolTip : "",
+                                height: 0,
+                                preferBelow: false,
+                                child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)),
                           ),
                         ),
-              ]),
-            ),
+                      ),
+            ]),
           ),
         ),
       ),
