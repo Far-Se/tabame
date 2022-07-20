@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../models/globals.dart';
-import '../itzy/quickmenu/always_awake_button.dart';
-import '../itzy/quickmenu/audio_button.dart';
-import '../itzy/quickmenu/change_theme_button.dart';
-import '../itzy/quickmenu/logo_drag_button.dart';
-import '../itzy/quickmenu/media_control_button.dart';
-import '../itzy/quickmenu/mic_mute_button.dart';
-import '../itzy/quickmenu/open_settings_button.dart';
-import '../itzy/quickmenu/pin_window_button.dart';
-import '../itzy/quickmenu/pinned_apps.dart';
-import '../itzy/quickmenu/simulate_key_button.dart';
+import '../itzy/quickmenu/button_always_awake.dart';
+import '../itzy/quickmenu/button_audio.dart';
+import '../itzy/quickmenu/button_change_theme.dart';
+import '../itzy/quickmenu/button_logo_drag.dart';
+import '../itzy/quickmenu/button_media_control.dart';
+import '../itzy/quickmenu/button_mic_mute.dart';
+import '../itzy/quickmenu/button_open_settings.dart';
+import '../itzy/quickmenu/button_pin_window.dart';
+import '../itzy/quickmenu/list_pinned_apps.dart';
+import '../itzy/quickmenu/button_simulate_key.dart';
 import '../containers/bar_with_buttons.dart';
-import '../itzy/quickmenu/task_manager_button.dart';
-import '../itzy/quickmenu/toggle_taskbar_button.dart';
-import '../itzy/quickmenu/virtual_desktop_button.dart';
+import '../itzy/quickmenu/button_task_manager.dart';
+import '../itzy/quickmenu/button_toggle_taskbar.dart';
+import '../itzy/quickmenu/button_virtual_desktop.dart';
 
 class TopBar extends StatelessWidget {
   const TopBar({Key? key}) : super(key: key);

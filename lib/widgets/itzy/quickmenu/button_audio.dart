@@ -7,7 +7,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/globals.dart';
 import '../../../models/keys.dart';
-import 'audio_box.dart';
+import 'widget_audio.dart';
 
 class AudioButton extends StatefulWidget {
   const AudioButton({Key? key}) : super(key: key);

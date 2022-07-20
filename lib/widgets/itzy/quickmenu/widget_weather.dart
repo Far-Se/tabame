@@ -15,10 +15,29 @@ Future<String> fetchWeather() async {
   return "";
 }
 
-final Future<String> _fetchWeather = fetchWeather();
-
-class WeatherWidget extends StatelessWidget {
+class WeatherWidget extends StatefulWidget {
   const WeatherWidget({Key? key}) : super(key: key);
+
+  @override
+  State<WeatherWidget> createState() => _WeatherWidgetState();
+}
+
+class _WeatherWidgetState extends State<WeatherWidget> {
+  late Timer refreshWeather;
+  @override
+  void initState() {
+    super.initState();
+    refreshWeather = Timer.periodic(const Duration(minutes: 30), (Timer timer) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    refreshWeather.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +45,7 @@ class WeatherWidget extends StatelessWidget {
       width: 30,
       height: double.infinity,
       child: FutureBuilder<String>(
-        future: _fetchWeather,
+        future: fetchWeather(),
         initialData: globalSettings.weather,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {

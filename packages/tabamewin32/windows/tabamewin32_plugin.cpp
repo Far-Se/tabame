@@ -44,8 +44,6 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
-//! Lnk to Path
-
 void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
 {
 
@@ -150,9 +148,8 @@ int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
     // ::CoUninitialize();
     return 1;
 }
-//! VIRTUAL DESKTOP
-// #pragma warning(disable: 4244)
 
+//! VIRTUAL DESKTOP
 void SetTransparent(HWND target_window, bool type)
 {
     DWORD exstyle;

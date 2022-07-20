@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/globals.dart';
+import '../../../models/win32/win32.dart';
 
 class AlwaysAwakeButton extends StatefulWidget {
   const AlwaysAwakeButton({
@@ -21,7 +22,7 @@ class _AlwaysAwakeButtonState extends State<AlwaysAwakeButton> {
         child: Tooltip(message: "Always awake", child: Icon(Icons.running_with_errors, color: Globals.alwaysAwake ? Colors.red : Theme.of(context).iconTheme.color)),
         onTap: () async {
           Globals.alwaysAwake = !Globals.alwaysAwake;
-          Globals.alwaysAwakeRun(Globals.alwaysAwake);
+          WinUtils.alwaysAwakeRun(Globals.alwaysAwake);
           setState(() {});
         },
       ),

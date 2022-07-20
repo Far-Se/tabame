@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'time_widget.dart';
-import 'weather_widget.dart';
+import 'widget_time.dart';
+import 'widget_weather.dart';
 
 class TimeWeatherWidget extends StatelessWidget {
   const TimeWeatherWidget({Key? key}) : super(key: key);

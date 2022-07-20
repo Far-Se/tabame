@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../models/keys.dart';
 import '../../../models/utils.dart';
 import '../../containers/bar_with_buttons.dart';
-import 'window_app_button.dart';
+import 'button_window_app.dart';
 
 class PinnedApps extends StatelessWidget {
   const PinnedApps({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final List<String> pinned = Boxes.pinnedApps;
+    final List<String> pinned = Boxes().getPinnedApps();
 
     if (pinned.isEmpty) return const SizedBox();
     return BarWithButtons(children: <Widget>[

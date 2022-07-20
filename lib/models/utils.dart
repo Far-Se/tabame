@@ -1,18 +1,19 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 /// [flutter pub run build_runner build]
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:tabamewin32/tabamewin32.dart';
 
-import 'globals.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
@@ -25,6 +26,11 @@ extension StringExtension on String {
     if (length < 2) return this;
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
+}
+
+num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
+  final num darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
+  return darkerHex;
 }
 
 enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
@@ -62,56 +68,152 @@ unregisterAll() {
 }
 
 class Boxes {
-  static List<String> pinnedApps = <String>[];
+  // static List<String> pinnedApps = <String>[];
+  static late SharedPreferences pref;
+  Boxes();
   static Future<void> registerBoxes() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    pref = await SharedPreferences.getInstance();
     //? Settings
-    if (prefs.getString("language") == null) {
-      await prefs.setBool("runOnStartup", true);
-      await prefs.setBool("autoHideTaskbar", false);
-      await prefs.setBool("showQuickMenuAtTaskbarLevel", true);
-      await prefs.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
-      await prefs.setString("language", "en");
-      await prefs.setString("weather", "10 C");
-      await prefs.setString("weatherCity", "berlin");
-      await prefs.setInt("volumeOSD", VolumeOSDStyle.normal.index);
+    if (pref.getString("language") == null) {
+      await pref.setBool("runOnStartup", true);
+      await pref.setBool("autoHideTaskbar", false);
+      await pref.setBool("showQuickMenuAtTaskbarLevel", true);
+      await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
+      await pref.setString("language", "en");
+      await pref.setString("weather", "10 C");
+      await pref.setString("weatherCity", "berlin, germany");
+      await pref.setInt("volumeOSD", VolumeOSDStyle.normal.index);
       await setStartOnSystemStartup(true);
     }
     globalSettings
-      ..runOnStartup = prefs.getBool("runOnStartup") ?? true
-      ..autoHideTaskbar = prefs.getBool("autoHideTaskbar") ?? false
-      ..taskBarAppsStyle = TaskBarAppsStyle.values[prefs.getInt("taskBarAppsStyle") ?? 0]
-      ..language = prefs.getString("language") ?? "en"
-      ..weather = prefs.getString("weather") ?? "10 C"
-      ..weatherCity = prefs.getString("weatherCity") ?? "berlin"
-      ..volumeOSD = VolumeOSDStyle.values[prefs.getInt("volumeOSD") ?? 0]
-      ..showQuickMenuAtTaskbarLevel = prefs.getBool("showQuickMenuAtTaskbarLevel") ?? true;
+      ..runOnStartup = pref.getBool("runOnStartup") ?? true
+      ..autoHideTaskbar = pref.getBool("autoHideTaskbar") ?? false
+      ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
+      ..language = pref.getString("language") ?? "en"
+      ..weather = pref.getString("weather") ?? "10 C"
+      ..weatherCity = pref.getString("weatherCity") ?? "berlin"
+      ..volumeOSD = VolumeOSDStyle.values[pref.getInt("volumeOSD") ?? 0]
+      ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true;
 
     //? Pinned Apps
-    if (prefs.getStringList("pinnedApps") == null) {
+    if (pref.getStringList("pinnedApps") == null) {
       final List<String> pinnedApps2 = await WinUtils.getTaskbarPinnedApps();
       final String taskManagerPath = WinUtils.getTaskManagerPath();
       if (taskManagerPath != "") pinnedApps2.add(taskManagerPath);
-      await prefs.setStringList("pinnedApps", pinnedApps2);
+      await pref.setStringList("pinnedApps", pinnedApps2);
     }
+    if (pref.getStringList("powerShellScripts") == null) {
+      final List<String> powerShellScripts = <String>[
+        PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson()
+      ];
+      await pref.setStringList("powerShellScripts", powerShellScripts);
+    }
+    //? Taskbar
     if (kReleaseMode) {
       if (globalSettings.autoHideTaskbar) {
         WinUtils.toggleTaskbar(visible: true);
       }
     }
+    //? Volume
     globalSettings.volumeOSD = VolumeOSDStyle.media;
     if (globalSettings.volumeOSD != VolumeOSDStyle.normal) {
       WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSD, applyStyle: true);
     }
-    pinnedApps = prefs.getStringList("pinnedApps") ?? <String>[];
+    //? Powershell
+    // pinnedApps = prefs.getStringList("pinnedApps") ?? <String>[];
+  }
+
+  List<String> getPinnedApps() {
+    return pref.getStringList("pinnedApps") ?? <String>[];
+  }
+
+  /*
+  PowerShellScript(name: "Open AI", command: "Import-Module \"E:\\Playground\\Scripts\\openai.ps1\"", showTerminal: true).toJson(),
+  PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson(),
+  PowerShellScript(name: "Clear Temp", command: "E:\\Playground\\Scripts\\tempRemove.ps1", showTerminal: false, disabled: true).toJson(),
+  */
+  List<PowerShellScript> getPowerShellScripts() {
+    final List<String> scriptsString = pref.getStringList("powerShellScripts") ?? <String>[];
+    if (scriptsString.isEmpty) return <PowerShellScript>[];
+    final List<PowerShellScript> scripts = <PowerShellScript>[];
+    for (String script in scriptsString) {
+      scripts.add(PowerShellScript.fromJson(script));
+    }
+    return scripts;
   }
 
   static Future<void> updateSettings(String key, dynamic value, PTYPE type) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (type == PTYPE.boolT) await prefs.setBool(key, value);
-    if (type == PTYPE.intT) await prefs.setInt(key, value);
-    if (type == PTYPE.stringT) await prefs.setString(key, value);
-    if (type == PTYPE.stringListT) await prefs.setStringList(key, value);
+    if (type == PTYPE.boolT) await pref.setBool(key, value);
+    if (type == PTYPE.intT) await pref.setInt(key, value);
+    if (type == PTYPE.stringT) await pref.setString(key, value);
+    if (type == PTYPE.stringListT) await pref.setStringList(key, value);
+    pref = await SharedPreferences.getInstance();
+  }
+}
+
+class PowerShellScript {
+  String command;
+  String name;
+  bool showTerminal;
+  bool disabled = false;
+  PowerShellScript({
+    required this.command,
+    required this.name,
+    required this.showTerminal,
+    this.disabled = false,
+  });
+
+  PowerShellScript copyWith({
+    String? command,
+    String? name,
+    bool? showTerminal,
+    bool? disabled,
+  }) {
+    return PowerShellScript(
+      command: command ?? this.command,
+      name: name ?? this.name,
+      showTerminal: showTerminal ?? this.showTerminal,
+      disabled: disabled ?? this.disabled,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'command': command,
+      'name': name,
+      'showTerminal': showTerminal,
+      'disabled': disabled,
+    };
+  }
+
+  factory PowerShellScript.fromMap(Map<String, dynamic> map) {
+    return PowerShellScript(
+      command: map['command'] as String,
+      name: map['name'] as String,
+      showTerminal: map['showTerminal'] as bool,
+      disabled: map['disabled'] as bool,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory PowerShellScript.fromJson(String source) => PowerShellScript.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'PowerShellScript(command: $command, name: $name, showTerminal: $showTerminal, disabled: $disabled)';
+  }
+
+  @override
+  bool operator ==(covariant PowerShellScript other) {
+    if (identical(this, other)) return true;
+
+    return other.command == command && other.name == name && other.showTerminal == showTerminal && other.disabled == disabled;
+  }
+
+  @override
+  int get hashCode {
+    return command.hashCode ^ name.hashCode ^ showTerminal.hashCode ^ disabled.hashCode;
   }
 }
 
