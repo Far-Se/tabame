@@ -39,7 +39,7 @@ dependencies:
   intl: ^0.17.0
   shared_preferences: ^2.0.15
   tabamewin32:
-    path: packages/tabamewin32
+    path: tabamewin32
   win32: ^2.7.0
   window_manager: ^0.2.5
 
