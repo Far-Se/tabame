@@ -9,11 +9,12 @@ import '../../../models/win32/win32.dart';
 Future<String> fetchWeather() async {
   final http.Response response = await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=%c+%t"));
   if (response.statusCode == 200) {
-    print(response.body);
     return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
   }
   return "";
 }
+
+Future<String> _fetchWeather = fetchWeather();
 
 class WeatherWidget extends StatefulWidget {
   const WeatherWidget({Key? key}) : super(key: key);
@@ -29,6 +30,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     super.initState();
     refreshWeather = Timer.periodic(const Duration(minutes: 30), (Timer timer) {
       if (!mounted) return;
+      _fetchWeather = fetchWeather();
       setState(() {});
     });
   }
@@ -45,13 +47,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       width: 30,
       height: double.infinity,
       child: FutureBuilder<String>(
-        future: fetchWeather(),
+        future: _fetchWeather,
         initialData: globalSettings.weather,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.hasData) {
               globalSettings.weather = snapshot.data as String;
-              Boxes.updateSettings("weather", snapshot.data as String, PTYPE.stringT);
+              Boxes.updateSettings("weather", snapshot.data as String);
             }
           }
           return Theme(
@@ -62,7 +64,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                 WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
               },
               child: Tooltip(
-                message: globalSettings.weatherCity.capitalize(),
+                message: globalSettings.weatherCity.toUpperCaseEach(),
                 child: Align(
                   child: Text(
                     snapshot.data as String,

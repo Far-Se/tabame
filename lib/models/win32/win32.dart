@@ -58,18 +58,24 @@ class Win32 {
   static void closeWindow(int hWnd, {bool forced = false}) {
     PostMessage(hWnd, WM_CLOSE, 0, 0);
     if (forced) {
-      final Pointer<Uint32> pId = calloc<Uint32>();
-      GetWindowThreadProcessId(hWnd, pId);
-      // final int mainPID = pId.value;
-      // final int prID = HwndPath.getRealPID(hWnd);
-      free(pId);
-      // PostMessage(hWnd, WM_CLOSE, 0, 0);
-      // PostMessage(hWnd, WM_QUIT, 0, 0);
+      // final Pointer<Uint32> pId = calloc<Uint32>();
+      // GetWindowThreadProcessId(hWnd, pId);
+      // free(pId);
+      PostMessage(hWnd, WM_CLOSE, 0, 0);
       PostMessage(hWnd, WM_DESTROY, 0, 0);
       PostMessage(hWnd, WM_NCDESTROY, 0, 0);
+    }
+  }
 
-      // TerminateProcess(mainPID, 0);
-      // TerminateProcess(prID, 0);
+  static void forceCloseWindow(int hWnd, int pId) {
+    final List<int> windows = enumWindows();
+    for (int hwnd in windows) {
+      final Pointer<Uint32> dwID = calloc<Uint32>();
+      GetWindowThreadProcessId(hwnd, dwID);
+      if (dwID.value == pId) {
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+      }
+      free(dwID);
     }
   }
 
@@ -301,8 +307,29 @@ class Win32 {
     Point mousePos = WinUtils.getMousePos();
     double horizontal = mousePos.X.toDouble() - 10;
     double vertical = mousePos.Y.toDouble() - 30;
+
+    int flags = TPM_LEFTALIGN;
+
+    final Pointer<POINT> anchorPoint = calloc<POINT>();
+    anchorPoint.ref.x = horizontal.toInt();
+    anchorPoint.ref.y = vertical.toInt();
+    final Pointer<RECT> popupWindowPosition = calloc<RECT>();
+
+    final Pointer<SIZE> windowSize = calloc<SIZE>();
+    windowSize.ref.cx = 300;
+    windowSize.ref.cy = Globals.heights.allSummed.toInt();
+    if (windowSize.ref.cy == 0) windowSize.ref.cy = 300;
+
+    CalculatePopupWindowPosition(anchorPoint, windowSize, flags, nullptr, popupWindowPosition);
+    horizontal = popupWindowPosition.ref.left.toDouble();
+    vertical = popupWindowPosition.ref.top.toDouble();
+
     if (globalSettings.showQuickMenuAtTaskbarLevel == true) vertical -= 30;
-    await WindowManager.instance.setPosition(Offset(horizontal, vertical));
+    await WindowManager.instance.setPosition(Offset(horizontal + 1, vertical));
+
+    free(anchorPoint);
+    free(popupWindowPosition);
+    free(windowSize);
   }
 
   static void setAlwaysOnTop(int hWnd, {bool? alwaysOnTop}) {

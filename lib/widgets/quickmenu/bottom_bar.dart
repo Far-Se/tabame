@@ -27,12 +27,16 @@ class BottomBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               verticalDirection: VerticalDirection.down,
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 const SizedBox(width: 100, child: TimeWeatherWidget()),
+                if (kReleaseMode && globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
                 if (Boxes().getPowerShellScripts().isNotEmpty) const Expanded(flex: 3, child: PowershellList()),
-                if (Boxes().getPowerShellScripts().isNotEmpty) const SizedBox(width: 3),
-                if (kReleaseMode) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
-                const Expanded(flex: 4, child: TrayBar()),
+                if (Boxes().getPowerShellScripts().isNotEmpty) const SizedBox(width: 5),
+                ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: 200 - (Boxes().getPowerShellScripts().isNotEmpty ? 65 : 0) - (kReleaseMode && globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
+                    child: const TrayBar()),
               ],
             ),
           ),

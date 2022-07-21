@@ -21,23 +21,35 @@ class _BarWithButtonsState extends State<BarWithButtons> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      controller: _buttonBarScrollController,
-      child: !widget.withScroll
-          ? ListChildren(children: widget.children)
-          : Listener(
-              onPointerSignal: (PointerSignalEvent pointerSignal) {
-                if (pointerSignal is PointerScrollEvent) {
-                  if (pointerSignal.scrollDelta.dy < 0) {
-                    _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
-                  } else {
-                    _buttonBarScrollController.animateTo(_buttonBarScrollController.offset + 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+    return ShaderMask(
+      shaderCallback: (Rect rect) {
+        return const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, 0.93, 1.0],
+        ).createShader(rect);
+      },
+      blendMode: BlendMode.dstOut,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _buttonBarScrollController,
+        physics: widget.withScroll ? const NeverScrollableScrollPhysics() : null,
+        child: !widget.withScroll
+            ? ListChildren(children: widget.children)
+            : Listener(
+                onPointerSignal: (PointerSignalEvent pointerSignal) {
+                  if (pointerSignal is PointerScrollEvent) {
+                    if (pointerSignal.scrollDelta.dy < 0) {
+                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+                    } else {
+                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset + 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+                    }
                   }
-                }
-              },
-              child: ListChildren(children: widget.children),
-            ),
+                },
+                child: ListChildren(children: widget.children),
+              ),
+      ),
     );
   }
 }

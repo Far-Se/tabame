@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import '../../models/utils.dart';
+import '../../models/win32/imports.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
@@ -30,6 +31,8 @@ class Caches {
   List<Window> windows = <Window>[];
 }
 
+const double oneColumnHeight = 26.4;
+
 class TaskBarState extends State<TaskBar> {
   List<Window> windows = <Window>[];
   int _hoverElement = -1;
@@ -38,7 +41,7 @@ class TaskBarState extends State<TaskBar> {
 
   Future<void> changeHeight() async {
     if (Globals.changingPages == true) return;
-    double currentHeight = (windows.length * 27).clamp(100, 400) + 5;
+    double currentHeight = (windows.length * oneColumnHeight).clamp(100, 400) + 5;
     Globals.heights.taskbar = currentHeight;
     if (currentHeight != Caches.lastHeight) Caches.lastHeight = currentHeight;
   }
@@ -105,11 +108,19 @@ class TaskBarState extends State<TaskBar> {
       color: Colors.transparent,
       child: Material(
         type: MaterialType.transparency,
-        child: Padding(
-          padding: const EdgeInsets.all(3.0),
-          child: Container(
-            height: Caches.lastHeight,
-            constraints: const BoxConstraints(minHeight: 100),
+        child: Container(
+          height: Caches.lastHeight,
+          constraints: const BoxConstraints(minHeight: 100),
+          child: ShaderMask(
+            shaderCallback: (Rect rect) {
+              return const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+                stops: <double>[0.00, 0.93, 1.0],
+              ).createShader(rect);
+            },
+            blendMode: BlendMode.dstOut,
             child: ListView.builder(
               scrollDirection: Axis.vertical,
               itemCount: windows.length,
@@ -118,227 +129,230 @@ class TaskBarState extends State<TaskBar> {
                 double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe)) ? 75 : (Caches.audioMixerExes.contains(window.process.exe) ? 50 : 25);
                 return SizedBox(
                   width: 300,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      if (index > 0 && window.monitor != windows[index - 1].monitor)
-                        Divider(
-                          height: 3,
-                          color: Theme.of(context).dividerColor,
-                        ),
-                      //#h white
-                      MouseRegion(
-                        onEnter: (PointerEnterEvent e) {
-                          setState(() {
-                            _hoverElement = index;
-                          });
-                        },
-                        onExit: (PointerExitEvent e) {
-                          setState(() {
-                            _hoverElement = -1;
-                          });
-                        },
+                  child: MouseRegion(
+                    onEnter: (PointerEnterEvent e) {
+                      setState(() {
+                        _hoverElement = index;
+                      });
+                    },
+                    onExit: (PointerExitEvent e) {
+                      setState(() {
+                        _hoverElement = -1;
+                      });
+                    },
 
-                        //x3
-                        child: Stack(
-                          children: <Widget>[
-                            InkWell(
-                              onTap: () {},
-                              hoverColor: Colors.black12.withOpacity(0.15),
-                              child: GestureDetector(
-                                onTap: () {
+                    //x3
+                    child: Stack(
+                      children: <Widget>[
+                        Container(
+                          margin: !(index > 0 && window.monitor != windows[index - 1].monitor) ? null : const EdgeInsets.only(top: 2),
+                          decoration: BoxDecoration(
+                              color: _hoverElement == index ? Colors.black12.withOpacity(0.15) : Colors.transparent,
+                              border: !(index > 0 && window.monitor != windows[index - 1].monitor)
+                                  ? null
+                                  : Border(top: BorderSide(width: 1, color: Theme.of(context).dividerColor))),
+                          child: InkWell(
+                            onTap: () {},
+                            // hoverColor: Colors.black12.withOpacity(0.15),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                  WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                }
+                                Win32.activateWindow(window.hWnd);
+                                Globals.lastFocusedWinHWND = window.hWnd;
+                              },
+                              onSecondaryTap: () async {
+                                Menu menu = Menu(
+                                  items: <MenuItem>[
+                                    MenuItem(
+                                        label: 'To Right Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false)),
+                                    MenuItem(label: 'To Left Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false)),
+                                    MenuItem.separator(),
+                                    MenuItem(
+                                        label: window.isPinned ? "Unpin" : 'Set Always on Top',
+                                        onClick: (_) {
+                                          Win32.setAlwaysOnTop(window.hWnd);
+                                          setState(() {});
+                                        }),
+                                    MenuItem(
+                                        label: "Force Close",
+                                        onClick: (_) {
+                                          Win32.forceCloseWindow(window.hWnd, window.process.pId);
+                                        })
+                                  ],
+                                );
+                                popUpContextualMenu(menu, placement: Placement.bottomRight);
+                              },
+                              onLongPress: () {
+                                Win32.forceActivateWindow(window.hWnd);
+                              },
+                              onHorizontalDragUpdate: (DragUpdateDetails details) {
+                                dragMovement += details.delta.dx;
+                              },
+                              onHorizontalDragEnd: (DragEndDetails details) {
+                                if (dragMovement.abs() < 50) {
                                   if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
                                     WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
                                   }
                                   Win32.activateWindow(window.hWnd);
                                   Globals.lastFocusedWinHWND = window.hWnd;
-                                },
-                                onSecondaryTap: () {
-                                  Menu menu = Menu(
-                                    items: <MenuItem>[
-                                      MenuItem(
-                                          label: 'To Right Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false)),
-                                      MenuItem(
-                                          label: 'To Left Desktop', onClick: (_) => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false)),
-                                      MenuItem.separator(),
-                                      MenuItem(
-                                          label: window.isPinned ? "Unpin" : 'Set Always on Top',
-                                          onClick: (_) {
-                                            Win32.setAlwaysOnTop(window.hWnd);
-                                            setState(() {});
-                                          })
-                                    ],
-                                  );
-                                  popUpContextualMenu(menu, placement: Placement.bottomLeft);
-                                },
-                                onLongPress: () {
-                                  Win32.forceActivateWindow(window.hWnd);
-                                },
-                                onHorizontalDragUpdate: (DragUpdateDetails details) {
-                                  dragMovement += details.delta.dx;
-                                },
-                                onHorizontalDragEnd: (DragEndDetails details) {
-                                  if (dragMovement.abs() < 50) {
-                                    if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
-                                      WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                                    }
-                                    Win32.activateWindow(window.hWnd);
-                                    Globals.lastFocusedWinHWND = window.hWnd;
-                                    return;
-                                  }
-                                  if (dragMovement > 0) {
-                                    Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left);
-                                  } else {
-                                    Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right);
-                                  }
-                                  dragMovement = 0.0;
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 3.0),
-                                  //1 Window List
-                                  child: Wrap(
-                                    spacing: 0,
-                                    children: <Widget>[
-                                      const SizedBox(
-                                        width: 2,
-                                      ),
-                                      //2 Icon
-                                      SizedBox(
-                                        width: 20,
-                                        child: ((WindowWatcher.icons.containsKey(window.hWnd))
-                                            ? Image.memory(
-                                                WindowWatcher.icons[window.hWnd] ?? Uint8List(0),
-                                                width: 20,
-                                                height: 20,
-                                                gaplessPlayback: true,
-                                              )
-                                            : const Icon(Icons.web_asset_sharp, size: 20)),
-                                      ),
-
-                                      //2 Info
-                                      SizedBox(
-                                        width: 10,
-                                        child: Column(
-                                          children: <Widget>[
-                                            Text(
-                                              Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.monitor]}" : " ",
-                                              style: const TextStyle(fontSize: 8),
-                                            ),
-                                            SizedBox(
-                                              width: 10,
-                                              height: 10,
-                                              child: (window.isPinned
-                                                  ? const Icon(Icons.bookmark, size: 8, color: Colors.grey)
-                                                  : ((Caches.audioMixer.where((int e) => <int>[window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
-                                                          Caches.audioMixerExes.contains(window.process.exe))
-                                                      ? const Icon(Icons.volume_up_rounded, size: 8, color: Colors.grey)
-                                                      : const SizedBox()),
+                                  return;
+                                }
+                                if (dragMovement > 0) {
+                                  Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left);
+                                } else {
+                                  Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right);
+                                }
+                                dragMovement = 0.0;
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 3.0),
+                                //1 Window List
+                                child: Wrap(
+                                  spacing: 0,
+                                  clipBehavior: Clip.hardEdge,
+                                  children: <Widget>[
+                                    const SizedBox(
+                                      width: 5,
+                                    ),
+                                    //2 Icon
+                                    SizedBox(
+                                      width: 20,
+                                      child: ((WindowWatcher.icons.containsKey(window.hWnd))
+                                          ? Image.memory(
+                                              WindowWatcher.icons[window.hWnd] ?? Uint8List(0),
+                                              width: 20,
+                                              height: 20,
+                                              gaplessPlayback: true,
                                             )
-                                          ],
-                                        ),
-                                      ),
+                                          : const Icon(Icons.web_asset_sharp, size: 20)),
+                                    ),
 
-                                      //2 Title
-                                      ClipRect(
-                                        clipBehavior: Clip.hardEdge,
-                                        child: SizedBox(
-                                          width: index != _hoverElement ? 240 : 240 - hoverButtonsWidth,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                                            child: Text(
-                                              "${window.title.toString()}",
-                                              overflow: index == _hoverElement ? TextOverflow.visible : TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                              softWrap: false,
-                                              style: const TextStyle(
-                                                // fontSize: 13,
-                                                height: 1.2,
-                                              ),
-                                            ),
+                                    //2 Info
+                                    SizedBox(
+                                      width: 10,
+                                      child: Column(
+                                        children: <Widget>[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            Monitor.monitorIds.length > 1 ? "${Monitor.monitorIds[window.monitor]}" : " ",
+                                            style: const TextStyle(fontSize: 8, height: 1),
                                           ),
+                                          SizedBox(
+                                            width: 10,
+                                            height: 10,
+                                            child: (window.isPinned
+                                                ? const Icon(Icons.bookmark, size: 8, color: Colors.grey)
+                                                : ((Caches.audioMixer.where((int e) => <int>[window.process.pId, window.process.mainPID].contains(e)).isNotEmpty) ||
+                                                        Caches.audioMixerExes.contains(window.process.exe))
+                                                    ? const Icon(Icons.volume_up_rounded, size: 8, color: Colors.grey)
+                                                    : const SizedBox()),
+                                          )
+                                        ],
+                                      ),
+                                    ),
+
+                                    //2 Title
+                                    SizedBox(
+                                      width: index != _hoverElement ? 240 : 240 - hoverButtonsWidth + 5,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        child: Text(
+                                          "${window.title.toString()}",
+                                          overflow: TextOverflow.fade,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          style: const TextStyle(
+                                              // fontSize: 13,
+                                              // height: 1.2,
+                                              ),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            //x1
+                          ),
+                        ),
+                        //x1
 
-                            //1 HOVER
+                        //1 HOVER
 
-                            if (index == _hoverElement)
-                              Positioned(
-                                right: 0,
-                                bottom: 1,
-                                width: hoverButtonsWidth,
-                                child: Container(
-                                  color: Colors.transparent,
-                                  width: 100,
-                                  child: Material(
-                                    type: MaterialType.transparency,
-                                    child: Wrap(
-                                      children: <Widget>[
-                                        //2 Play & Next Button
-                                        if (Boxes.mediaControls.contains(window.process.exe))
-                                          Wrap(
-                                            children: <Widget>[
-                                              InkWell(
-                                                onTap: () {
-                                                  WindowWatcher.mediaControl(index);
-                                                },
-                                                child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
-                                              ),
-                                              InkWell(
-                                                onTap: () {
-                                                  WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack);
-                                                },
-                                                child: const SizedBox(width: 25, height: 25, child: Icon(Icons.skip_next, size: 15)),
-                                              ),
-                                            ],
-                                          ),
-
-                                        //2 Play Button
-
-                                        if (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))
+                        if (index == _hoverElement)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            width: hoverButtonsWidth,
+                            child: Container(
+                              color: Colors.black12.withOpacity(0.15),
+                              // width: hoverButtonsWidth,
+                              constraints: BoxConstraints(minWidth: hoverButtonsWidth, maxWidth: hoverButtonsWidth, minHeight: oneColumnHeight),
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: Wrap(
+                                  children: <Widget>[
+                                    //2 Play & Next Button
+                                    if (Boxes.mediaControls.contains(window.process.exe))
+                                      Wrap(
+                                        children: <Widget>[
                                           InkWell(
+                                            hoverColor: Colors.black12.withOpacity(0.25),
                                             onTap: () {
                                               WindowWatcher.mediaControl(index);
                                             },
-                                            child: const SizedBox(width: 25, height: 25, child: Icon(Icons.play_arrow, size: 15)),
+                                            child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),
                                           ),
+                                          InkWell(
+                                            hoverColor: Colors.black12.withOpacity(0.25),
+                                            onTap: () {
+                                              WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack);
+                                            },
+                                            child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.skip_next, size: 15)),
+                                          ),
+                                        ],
+                                      ),
 
-                                        //2 Close Button
-                                        InkWell(
-                                          onTap: () async {
-                                            if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
-                                              WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
-                                            }
-                                            fetching = true;
-                                            Win32.closeWindow(window.hWnd);
-                                            windows.removeAt(index);
-                                            await audioHandle();
-                                            await changeHeight();
-                                            fetchWindows();
-                                            setState(() => fetching = false);
-                                          },
-                                          onLongPress: () {
-                                            Win32.closeWindow(window.hWnd, forced: true);
-                                          },
-                                          child: const SizedBox(width: 25, height: 25, child: Icon(Icons.close, size: 15)),
-                                        ),
-                                      ],
+                                    //2 Play Button
+
+                                    if (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))
+                                      InkWell(
+                                        hoverColor: Colors.black12.withOpacity(0.25),
+                                        onTap: () {
+                                          WindowWatcher.mediaControl(index);
+                                        },
+                                        child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),
+                                      ),
+
+                                    //2 Close Button
+                                    InkWell(
+                                      hoverColor: Colors.black12.withOpacity(0.25),
+                                      onTap: () async {
+                                        if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                          WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                        }
+                                        fetching = true;
+                                        Win32.closeWindow(window.hWnd);
+                                        windows.removeAt(index);
+                                        await audioHandle();
+                                        await changeHeight();
+                                        fetchWindows();
+                                        setState(() => fetching = false);
+                                      },
+                                      onLongPress: () {
+                                        Win32.closeWindow(window.hWnd, forced: true);
+                                      },
+                                      child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.close, size: 15)),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ),
-                          ],
-                          //#e
-                        ),
-                      ),
-                    ],
+                            ),
+                          ),
+                      ],
+                      //#e
+                    ),
                   ),
                 );
               },
