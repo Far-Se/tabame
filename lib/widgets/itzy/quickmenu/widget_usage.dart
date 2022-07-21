@@ -12,7 +12,7 @@ class SystemUsageWidget extends StatefulWidget {
 late Process process;
 String cpuUsage = '0%';
 String memUsage = '0%';
-void runPowerShellCpu() async {
+Future<void> runPowerShellCpu() async {
   process = await Process.start(
     "powershell",
     <String>[

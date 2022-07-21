@@ -1,9 +1,13 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 class Heights {
   double taskbar = 0;
   double traybar = 0;
   double topbar = 0;
   double get allSummed => taskbar + traybar + topbar;
   Heights();
+
+  @override
+  String toString() => 'Heights(taskbar: $taskbar, traybar: $traybar, topbar: $topbar)';
 }
 
 enum Pages {

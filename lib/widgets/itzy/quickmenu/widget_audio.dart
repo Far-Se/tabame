@@ -93,7 +93,7 @@ class AudioBoxState extends State<AudioBox> {
       //? Basic Way
       if (hWnd == 0) {
         audioMixerIcons[device.processId] = (await getExecutableIcon(device.processPath))!;
-        audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).capitalize();
+        audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).toUpperCaseFirst();
         continue;
       }
       //? Fancy Way
@@ -109,7 +109,7 @@ class AudioBoxState extends State<AudioBox> {
         icon = await getExecutableIcon(processPath.path);
       }
       audioMixerIcons[device.processId] = icon!;
-      audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).capitalize();
+      audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).toUpperCaseFirst();
     }
 
     if (mounted) {

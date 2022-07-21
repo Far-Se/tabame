@@ -22,10 +22,13 @@ extension Truncate on String {
 }
 
 extension StringExtension on String {
-  String capitalize() {
-    if (length < 2) return this;
+  String toUpperCaseFirst() {
+    if (length < 2) return toUpperCase();
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
+
+  String toUperCaseAll() => toUpperCase();
+  String toUpperCaseEach() => split(" ").map((String str) => str.toUpperCaseFirst()).join(" ");
 }
 
 num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
@@ -47,6 +50,8 @@ class Settings {
   String weatherCity = 'Iasi';
   bool showQuickMenuAtTaskbarLevel = true;
   VolumeOSDStyle volumeOSD = VolumeOSDStyle.normal;
+
+  bool showSystemUsage = false;
 }
 
 Settings globalSettings = Settings();
@@ -83,6 +88,7 @@ class Boxes {
       await pref.setString("language", "en");
       await pref.setString("weather", "10 C");
       await pref.setString("weatherCity", "berlin, germany");
+      await pref.setBool("showSystemUsage", false);
       await pref.setInt("volumeOSD", VolumeOSDStyle.normal.index);
       await setStartOnSystemStartup(true);
     }
@@ -94,7 +100,8 @@ class Boxes {
       ..weather = pref.getString("weather") ?? "10 C"
       ..weatherCity = pref.getString("weatherCity") ?? "berlin"
       ..volumeOSD = VolumeOSDStyle.values[pref.getInt("volumeOSD") ?? 0]
-      ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true;
+      ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
+      ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
     //? Pinned Apps
     if (pref.getStringList("pinnedApps") == null) {
@@ -135,6 +142,11 @@ class Boxes {
   */
   List<PowerShellScript> getPowerShellScripts() {
     final List<String> scriptsString = pref.getStringList("powerShellScripts") ?? <String>[];
+    scriptsString.addAll([
+      PowerShellScript(name: "Open AI", command: "Import-Module \"E:\\Playground\\Scripts\\openai.ps1\"", showTerminal: true).toJson(),
+      PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson(),
+      PowerShellScript(name: "Clear Temp", command: "E:\\Playground\\Scripts\\tempRemove.ps1", showTerminal: false, disabled: true).toJson(),
+    ]);
     if (scriptsString.isEmpty) return <PowerShellScript>[];
     final List<PowerShellScript> scripts = <PowerShellScript>[];
     for (String script in scriptsString) {
@@ -143,11 +155,11 @@ class Boxes {
     return scripts;
   }
 
-  static Future<void> updateSettings(String key, dynamic value, PTYPE type) async {
-    if (type == PTYPE.boolT) await pref.setBool(key, value);
-    if (type == PTYPE.intT) await pref.setInt(key, value);
-    if (type == PTYPE.stringT) await pref.setString(key, value);
-    if (type == PTYPE.stringListT) await pref.setStringList(key, value);
+  static Future<void> updateSettings(String key, dynamic value) async {
+    if (value is bool) await pref.setBool(key, value);
+    if (value is int) await pref.setInt(key, value);
+    if (value is String) await pref.setString(key, value);
+    if (value is List<String>) await pref.setStringList(key, value);
     pref = await SharedPreferences.getInstance();
   }
 }
@@ -217,5 +229,3 @@ class PowerShellScript {
     return command.hashCode ^ name.hashCode ^ showTerminal.hashCode ^ disabled.hashCode;
   }
 }
-
-enum PTYPE { boolT, intT, stringT, stringListT }

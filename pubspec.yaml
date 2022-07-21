@@ -1,7 +1,7 @@
 name: tabame
 description: Tabame is a quick menu app.
 
-publish_to: 'none' 
+publish_to: 'none'
 
 version: 1.0.0+1
 

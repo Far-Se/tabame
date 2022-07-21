@@ -20,6 +20,32 @@ class TopBar extends StatelessWidget {
   const TopBar({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    Map<String, Widget> widgets = <String, Widget>{
+      "TaskManagerButton": const TaskManagerButton(),
+      "VirtualDesktopButton": const VirtualDesktopButton(),
+      "ToggleTaskbarButton": const ToggleTaskbarButton(),
+      "PinWindowButton": const PinWindowButton(),
+      "MicMuteButton": const MicMuteButton(),
+      "AlwaysAwakeButton": const AlwaysAwakeButton(),
+      "ChangeThemeButton": const ChangeThemeButton()
+    };
+    List<Widget> showWidgets = <Widget>[];
+    final List<String> showWidgetsNames = <String>[
+      "TaskManagerButton",
+      "VirtualDesktopButton",
+      "ToggleTaskbarButton",
+      "PinWindowButton",
+      "MicMuteButton",
+      "AlwaysAwakeButton",
+      "ChangeThemeButton",
+      "Deactivated",
+    ];
+    for (String x in showWidgetsNames) {
+      if (x == "Deactivated") break;
+      if (widgets.containsKey(x)) {
+        showWidgets.add(widgets[x]!);
+      }
+    }
     Globals.heights.topbar = 25;
     return Theme(
       data: Theme.of(context).copyWith(
@@ -45,7 +71,7 @@ class TopBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
                     const Expanded(
-                      flex: 3,
+                      flex: 7,
                       child: BarWithButtons(
                         withScroll: false,
                         children: <Widget>[
@@ -56,22 +82,14 @@ class TopBar extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Expanded(
-                      flex: 4,
+                    Expanded(
+                      flex: 8,
                       child: BarWithButtons(
-                        children: <Widget>[
-                          TaskManagerButton(),
-                          VirtualDesktopButton(),
-                          ToggleTaskbarButton(),
-                          PinWindowButton(),
-                          MicMuteButton(),
-                          AlwaysAwakeButton(),
-                          ChangeThemeButton()
-                        ],
+                        children: showWidgets,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Expanded(flex: 4, child: PinnedApps()),
+                    const Expanded(flex: 8, child: PinnedApps()),
                   ],
                 ),
               ),

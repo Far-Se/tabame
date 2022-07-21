@@ -37,6 +37,7 @@ Future<void> main() async {
   });
 
   await setWindowAsTransparent();
+
   runApp(const Tabame());
 }
 
