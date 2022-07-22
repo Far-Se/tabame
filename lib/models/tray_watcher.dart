@@ -2,7 +2,9 @@
 import 'dart:typed_data';
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 
+import 'utils.dart';
 import 'win32/win32.dart';
 
 class TrayBarInfo extends TrayInfo {
@@ -10,6 +12,7 @@ class TrayBarInfo extends TrayInfo {
   String processPath = "";
   String processExe = "";
   int brightness = 0;
+  bool isPinned = false;
   Uint8List iconData = Uint8List.fromList(<int>[0]);
   TrayBarInfo({
     required this.executionType,
@@ -28,6 +31,11 @@ class TrayBarInfo extends TrayInfo {
   int get hashCode {
     return executionType.hashCode ^ processPath.hashCode ^ processExe.hashCode;
   }
+
+  @override
+  String toString() {
+    return 'TrayBarInfo(executionType: $executionType, processPath: $processPath, processExe: $processExe, brightness: $brightness)';
+  }
 }
 
 Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
@@ -35,21 +43,22 @@ Map<int, int> __trayIconHandleCache = <int, int>{};
 
 class Tray {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
-  static bool newTray = false;
-  static Future<bool> fetchTray() async {
+  static Future<bool> fetchTray({bool sort = true}) async {
+    final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
+    final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
     final List<TrayInfo> winTray = await enumTrayIcons();
-    newTray = true;
     Map<int, int> oldIconHandles = <int, int>{};
     for (TrayBarInfo element in trayList) {
       oldIconHandles[element.hWnd] = element.hIcon;
     }
     trayList.clear();
     for (TrayInfo element in winTray) {
-      HwndInfo processPath = HwndPath.getFullPath(element.processID);
+      HwndInfo processPath = HwndPath.getFullPath(GetAncestor(element.hWnd, 2));
+      // print(processPath);
       String exe = Win32.getExe(processPath.path);
-
+      // print(element.processID);
       final TrayBarInfo trayInfo = TrayBarInfo(executionType: 1, processPath: processPath.path, processExe: exe);
-
+      // print(trayInfo);
       trayInfo
         ..hIcon = element.hIcon
         ..uID = element.uID
@@ -59,6 +68,8 @@ class Tray {
         ..isVisible = element.isVisible
         ..toolTip = element.toolTip;
 
+      if (pinned.contains(exe)) trayInfo.isPinned = true;
+      if (hidden.contains(exe)) trayInfo.isVisible = false;
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
 
       if (__trayIconCache.containsKey(element.hWnd)) {
@@ -79,6 +90,15 @@ class Tray {
       trayList.add(trayInfo);
     }
     __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);
-    return newTray;
+    // order trayList by pinned and visible
+    if (!sort) return true;
+    trayList.sort((TrayBarInfo a, TrayBarInfo b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isVisible && !b.isVisible) return -1;
+      if (!a.isVisible && b.isVisible) return 1;
+      return 0;
+    });
+    return true;
   }
 }

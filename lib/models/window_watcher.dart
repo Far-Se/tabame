@@ -21,7 +21,7 @@ class WindowWatcher {
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
   static Map<int, int> iconsHandles = <int, int>{};
   static Map<String, Window> specialList = <String, Window>{};
-  static final Map<String, String> taskBarRewrites = Boxes().taskBarRewrites;
+  static Map<String, String> taskBarRewrites = Boxes().taskBarRewrites;
   static int _activeWinHandle = 0;
   static get active {
     if (list.length > _activeWinHandle) {

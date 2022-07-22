@@ -241,7 +241,7 @@ class TrayInfo {
   int uID = 0;
   int uCallbackMessage = 0;
   int hIcon = 0;
-
+  TrayInfo();
   @override
   String toString() {
     return 'TrayInfo(toolTip: $toolTip, isVisible: $isVisible, processID: $processID, hWnd: $hWnd, uID: $uID, uCallbackMessage: $uCallbackMessage)';

@@ -41,6 +41,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (!globalSettings.showWeather) return const SizedBox();
     return Container(
       width: 30,
       height: double.infinity,

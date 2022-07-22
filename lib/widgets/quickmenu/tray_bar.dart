@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -10,6 +9,7 @@ import 'package:win32/win32.dart' hide Rect;
 
 import '../../models/globals.dart';
 import '../../models/tray_watcher.dart';
+import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 
 class TrayBar extends StatefulWidget {
@@ -24,7 +24,6 @@ class TrayBarState extends State<TrayBar> {
   final ScrollController _scrollController = ScrollController();
   late Timer mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
-  List<Uint8List> iconData = <Uint8List>[];
   bool fetching = false;
   void fetchTray() async {
     fetching = true;
@@ -63,7 +62,7 @@ class TrayBarState extends State<TrayBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (tray.isEmpty) return Container();
+    if (tray.isEmpty || !globalSettings.showTrayBar) return Container();
 
     return Padding(
       padding: const EdgeInsets.only(right: 3),
@@ -123,7 +122,8 @@ class TrayBarState extends State<TrayBar> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
                       child: Tooltip(
-                          message: info.toolTip.length > 1 ? info.toolTip : "",
+                          message: info.processExe,
+                          // message: info.toolTip.length > 1 ? info.toolTip : "",
                           height: 0,
                           preferBelow: false,
                           child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)),
