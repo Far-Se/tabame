@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/globals.dart';
 import '../../models/utils.dart';
@@ -21,6 +22,7 @@ class TopBar extends StatelessWidget {
   const TopBar({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    bool mata = false;
     Map<String, Widget> widgets = <String, Widget>{
       "TaskManagerButton": const TaskManagerButton(),
       "VirtualDesktopButton": const VirtualDesktopButton(),
@@ -62,15 +64,24 @@ class TopBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
-                    const SizedBox(
+                    SizedBox(
                       width: 70,
                       child: BarWithButtons(
                         withScroll: false,
                         children: <Widget>[
-                          SizedBox(width: 4),
-                          LogoDragButton(),
-                          AudioButton(),
-                          MediaControlButton(),
+                          const SizedBox(width: 4),
+                          const LogoDragButton(),
+                          Align(
+                            child: InkWell(
+                              onTap: () async {
+                                mata = !mata;
+                                await toggleMonitorWallpaper(mata);
+                              },
+                              child: const Icon(Icons.data_array),
+                            ),
+                          ),
+                          const AudioButton(),
+                          const MediaControlButton(),
                         ],
                       ),
                     ),

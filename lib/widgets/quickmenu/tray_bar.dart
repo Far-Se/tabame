@@ -33,9 +33,9 @@ class TrayBarState extends State<TrayBar> {
     tray = <TrayBarInfo>[...Tray.trayList.where((TrayBarInfo element) => element.isVisible)];
     final List<TrayBarInfo> spotify = tray.where((TrayBarInfo element) => element.processExe == "Spotify.exe").toList();
     if (spotify.isNotEmpty) {
-      Globals.spotifyTrayHwnd = [spotify[0].hWnd, spotify[0].processID];
+      Globals.spotifyTrayHwnd = <int>[spotify[0].hWnd, spotify[0].processID];
     } else {
-      Globals.spotifyTrayHwnd = [0, 0];
+      Globals.spotifyTrayHwnd = <int>[0, 0];
     }
     if (mounted) setState(() {});
   }

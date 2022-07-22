@@ -40,8 +40,7 @@ enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
 enum VolumeOSDStyle { normal, media, visible, thin }
 
 class Settings {
-  bool runOnStartup = true;
-  bool autoHideTaskbar = true;
+  bool hideTaskbarOnStartup = true;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   String language = 'en';
   List<String> weather = <String>['10 C', "berlin, Germany", "m", "%c+%t"]; //u for US
@@ -67,7 +66,7 @@ class Settings {
   String get weatherFormat => weather[3];
 
   bool showQuickMenuAtTaskbarLevel = true;
-  VolumeOSDStyle volumeOSD = VolumeOSDStyle.normal;
+  VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
 
   bool showSystemUsage = false;
 }
@@ -101,8 +100,7 @@ class Boxes {
     // pref = await SharedPreferences.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
-      await pref.setBool("runOnStartup", true);
-      await pref.setBool("autoHideTaskbar", false);
+      await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
       await pref.setBool("showTrayBar", true);
@@ -112,16 +110,15 @@ class Boxes {
       await pref.setString("language", Platform.localeName.substring(0, 2));
       await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
       await pref.setBool("showSystemUsage", false);
-      await pref.setInt("volumeOSD", VolumeOSDStyle.normal.index);
+      await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
       await setStartOnSystemStartup(true);
     }
     globalSettings
-      ..runOnStartup = pref.getBool("runOnStartup") ?? true
-      ..autoHideTaskbar = pref.getBool("autoHideTaskbar") ?? false
+      ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
       ..weather = pref.getStringList("weather") ?? <String>["10 C", "berlin, germany", "m", "%c+%t"]
-      ..volumeOSD = VolumeOSDStyle.values[pref.getInt("volumeOSD") ?? 0]
+      ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
       ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
       ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? true
       ..showTrayBar = pref.getBool("showTrayBar") ?? false
@@ -145,15 +142,15 @@ class Boxes {
     }
     //? Taskbar
     if (kReleaseMode) {
-      if (globalSettings.autoHideTaskbar) {
-        WinUtils.toggleTaskbar(visible: true);
+      if (globalSettings.hideTaskbarOnStartup) {
+        WinUtils.toggleTaskbar(visible: false);
       }
     }
 
     //? Volume
-    globalSettings.volumeOSD = VolumeOSDStyle.media;
-    if (globalSettings.volumeOSD != VolumeOSDStyle.normal) {
-      WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSD, applyStyle: true);
+    globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
+    if (globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+      WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
     }
     //? Media Controls
     mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];

@@ -44,6 +44,28 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+void ToggleMonitorWallpaper(bool enabled)
+{
+    CoInitialize(NULL);
+    IDesktopWallpaper *p;
+    if (SUCCEEDED(CoCreateInstance(__uuidof(DesktopWallpaper), 0, CLSCTX_LOCAL_SERVER, __uuidof(IDesktopWallpaper), (void **)&p)))
+    {
+        p->Enable(enabled);
+        p->Release();
+    }
+    CoUninitialize();
+}
+void SetWallpaperColor(int color)
+{
+    CoInitialize(NULL);
+    IDesktopWallpaper *p;
+    if (SUCCEEDED(CoCreateInstance(__uuidof(DesktopWallpaper), 0, CLSCTX_LOCAL_SERVER, __uuidof(IDesktopWallpaper), (void **)&p)))
+    {
+        p->SetBackgroundColor((COLORREF)color);
+        p->Release();
+    }
+    CoUninitialize();
+}
 void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
 {
 
@@ -882,6 +904,24 @@ namespace tabamewin32
             map.emplace(flutter::EncodableValue("cpuLoad"), flutter::EncodableValue(cpuLoad));
             map.emplace(flutter::EncodableValue("memoryLoad"), flutter::EncodableValue(memoryLoad));
             result->Success(flutter::EncodableValue(map));
+        }
+        else if (method_name.compare("toggleMonitorWallpaper") == 0)
+        {
+
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+
+            ToggleMonitorWallpaper(enabled);
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("setWallpaperColor") == 0)
+        {
+
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int color = std::get<int>(args.at(flutter::EncodableValue("color")));
+
+            SetWallpaperColor(color);
+            result->Success(flutter::EncodableValue(true));
         }
 
         else

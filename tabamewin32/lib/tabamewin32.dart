@@ -369,3 +369,19 @@ Future<List<dynamic>> getSystemUsage() async {
   final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getSystemUsage');
   return <dynamic>[result["cpuLoad"], result["memoryLoad"]];
 }
+
+Future<void> toggleMonitorWallpaper(bool enabled) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'enabled': enabled,
+  };
+  await audioMethodChannel.invokeMethod('toggleMonitorWallpaper', arguments);
+  return;
+}
+
+Future<void> setWallpaperColor(int color) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'color': color,
+  };
+  await audioMethodChannel.invokeMethod('setWallpaperColor', arguments);
+  return;
+}
