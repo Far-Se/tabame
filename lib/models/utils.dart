@@ -48,6 +48,10 @@ class Settings {
 
   bool showMediaControlForApp = true;
 
+  bool showTrayBar = true;
+
+  bool showWeather = true;
+
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
 
@@ -55,7 +59,7 @@ class Settings {
   String get weatherCity => weather[1];
 
   set weatherUnit(String temp) => weather[2] = temp;
-  String get weatherUnit => weather[2];
+  String get weatherUnit => weather[2]; //m for metric, u for US
 
   set weatherFormat(String temp) => weather[3] = temp;
   String get weatherFormat => weather[3];
@@ -97,6 +101,8 @@ class Boxes {
       await pref.setBool("autoHideTaskbar", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
+      await pref.setBool("showTrayBar", true);
+      await pref.setBool("showWeather", true);
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setString("language", Platform.localeName.substring(0, 2));
       await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
@@ -113,6 +119,8 @@ class Boxes {
       ..volumeOSD = VolumeOSDStyle.values[pref.getInt("volumeOSD") ?? 0]
       ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
       ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? true
+      ..showTrayBar = pref.getBool("showTrayBar") ?? false
+      ..showWeather = pref.getBool("showWeather") ?? false
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
     //? Pinned Apps
@@ -186,6 +194,8 @@ class Boxes {
     if (value is int) await pref.setInt(key, value);
     if (value is String) await pref.setString(key, value);
     if (value is List<String>) await pref.setStringList(key, value);
+    if (value is Map<dynamic, dynamic>) await pref.setString(key, jsonEncode(value));
+
     pref = await SharedPreferences.getInstance();
   }
 }

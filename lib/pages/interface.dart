@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -36,7 +38,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setAspectRatio(1.3);
+  // await WindowManager.instance.setAspectRatio(1.3);
   await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
@@ -106,6 +108,14 @@ class InterfaceState extends State<Interface> {
                             behavior: HitTestBehavior.translucent,
                             onPanStart: (DragStartDetails details) {
                               windowManager.startDragging();
+                            },
+                            onDoubleTap: () async {
+                              bool isMaximized = await windowManager.isMaximized();
+                              if (!isMaximized) {
+                                windowManager.maximize();
+                              } else {
+                                windowManager.unmaximize();
+                              }
                             },
                             child: Container(
                               height: 30,
@@ -203,12 +213,12 @@ class InterfaceState extends State<Interface> {
                           decoration: BoxDecoration(
                               color: Theme.of(context).backgroundColor,
                               gradient: LinearGradient(
-                                colors: <Color>[Theme.of(context).backgroundColor, Theme.of(context).backgroundColor.withAlpha(225), Theme.of(context).backgroundColor],
+                                colors: <Color>[Theme.of(context).backgroundColor, Theme.of(context).backgroundColor.withAlpha(180), Theme.of(context).backgroundColor],
                                 stops: <double>[0, 0.4, 1],
                                 end: Alignment.bottomRight,
                               )),
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: constraints.maxWidth),
+                            constraints: const BoxConstraints(maxHeight: 1080),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: <Widget>[
@@ -278,20 +288,25 @@ class InterfaceState extends State<Interface> {
                                 //1 Pages
                                 //#h white
                                 Expanded(
-                                  child: PageView.builder(
-                                    controller: page,
-                                    allowImplicitScrolling: false,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: pages.length,
-                                    itemBuilder: (BuildContext context, int index) {
-                                      if (index < pagesWidget.length) {
-                                        return SingleChildScrollView(controller: ScrollController(), child: pagesWidget[index]);
-                                      } else {
-                                        return Container(
-                                          child: const Center(child: Text("NOT IMPLEMENTED")),
-                                        );
-                                      }
-                                    },
+                                  child: ClipRect(
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                                      child: PageView.builder(
+                                        controller: page,
+                                        allowImplicitScrolling: false,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        itemCount: pages.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          if (index < pagesWidget.length) {
+                                            return SingleChildScrollView(controller: ScrollController(), child: pagesWidget[index]);
+                                          } else {
+                                            return Container(
+                                              child: const Center(child: Text("NOT IMPLEMENTED")),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 //#e

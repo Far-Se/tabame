@@ -34,7 +34,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
       builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
         if (!snapshot.hasData) return const SizedBox();
         return ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 300, minHeight: 200),
+          constraints: const BoxConstraints(maxHeight: 200, minHeight: 100),
           child: ReorderableListView.builder(
             padding: const EdgeInsets.all(0),
             dragStartBehavior: DragStartBehavior.down,
