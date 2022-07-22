@@ -36,7 +36,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
         return ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 200, minHeight: 100),
           child: ReorderableListView.builder(
-            padding: const EdgeInsets.all(0),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             dragStartBehavior: DragStartBehavior.down,
             header: Center(
               child: ListTile(

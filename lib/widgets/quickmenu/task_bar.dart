@@ -177,7 +177,7 @@ class TaskBarState extends State<TaskBar> {
                                     MenuItem(
                                         label: "Force Close",
                                         onClick: (_) {
-                                          Win32.forceCloseWindow(window.hWnd, window.process.pId);
+                                          Win32.forceCloseWindowbyProcess(window.process.pId);
                                         })
                                   ],
                                 );

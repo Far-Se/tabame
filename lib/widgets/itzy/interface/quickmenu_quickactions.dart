@@ -28,7 +28,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
       child: ListTileTheme(
         dense: true,
         style: ListTileStyle.drawer,
-        contentPadding: const EdgeInsets.only(left: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         minVerticalPadding: 0,
         minLeadingWidth: 10,
         child: ReorderableListView.builder(

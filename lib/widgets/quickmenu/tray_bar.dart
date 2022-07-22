@@ -31,6 +31,12 @@ class TrayBarState extends State<TrayBar> {
     fetching = false;
     // if (listEquals(Tray.trayList, tray)) return;
     tray = <TrayBarInfo>[...Tray.trayList.where((TrayBarInfo element) => element.isVisible)];
+    final List<TrayBarInfo> spotify = tray.where((TrayBarInfo element) => element.processExe == "Spotify.exe").toList();
+    if (spotify.isNotEmpty) {
+      Globals.spotifyTrayHwnd = [spotify[0].hWnd, spotify[0].processID];
+    } else {
+      Globals.spotifyTrayHwnd = [0, 0];
+    }
     if (mounted) setState(() {});
   }
 
@@ -89,12 +95,26 @@ class TrayBarState extends State<TrayBar> {
                   onPointerDown: (PointerDownEvent event) async {
                     if (event.kind == PointerDeviceKind.mouse) {
                       if (event.buttons == kSecondaryMouseButton) {
+                        if (info.clickOpensExe) {
+                          if (info.processPath.isNotEmpty) {
+                            Win32.closeWindow(info.hWnd);
+                            Future<void>.delayed(const Duration(milliseconds: 300), () => Win32.forceCloseWindowbyProcess(info.processID));
+                            Future<void>.delayed(const Duration(milliseconds: 600), () => Win32.forceCloseWindowbyPath(info.processPath));
+                          }
+                          return;
+                        }
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
                       } else if (event.buttons == kPrimaryMouseButton) {
+                        if (info.clickOpensExe) {
+                          if (info.processPath.isNotEmpty) {
+                            WinUtils.open(info.processPath);
+                          }
+                          return;
+                        }
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
                         PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);

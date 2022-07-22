@@ -32,14 +32,14 @@ Future<int> interfaceWindowSetup() async {
   Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
-  await WindowManager.instance.setMinimumSize(const Size(400, 400));
+  await WindowManager.instance.setMinimumSize(const Size(700, 400));
   await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
-  await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
+  // await WindowManager.instance.setSize(Size(monitor.width / 2, monitor.height / 1.7));
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
   // await WindowManager.instance.setAspectRatio(1.3);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.5, monitor.height / 1.7));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.7));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }
@@ -140,16 +140,16 @@ class InterfaceState extends State<Interface> {
                                   Flexible(
                                     fit: FlexFit.loose,
                                     // flex: 13,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onPanStart: (DragStartDetails details) {
-                                        windowManager.startDragging();
-                                      },
-                                      child: InkWell(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                                          child: Align(
-                                            alignment: Alignment.centerLeft,
+                                    child: InkWell(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.translucent,
+                                            onPanStart: (DragStartDetails details) {
+                                              windowManager.startDragging();
+                                            },
                                             child: Row(
                                               // alignment: WrapAlignment.center,
                                               crossAxisAlignment: CrossAxisAlignment.stretch,

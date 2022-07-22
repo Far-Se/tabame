@@ -67,7 +67,7 @@ class Win32 {
     }
   }
 
-  static void forceCloseWindow(int hWnd, int pId) {
+  static void forceCloseWindowbyProcess(int pId) {
     final List<int> windows = enumWindows();
     for (int hwnd in windows) {
       final Pointer<Uint32> dwID = calloc<Uint32>();
@@ -77,6 +77,44 @@ class Win32 {
       }
       free(dwID);
     }
+  }
+
+  //might be useless
+  static void forceCloseWindowbyPath(String path) {
+    path = path.replaceFirst(Win32.getExe(path), '');
+    print(path);
+    final List<int> windows = enumWindows();
+    for (int hwnd in windows) {
+      String hwndPath = HwndPath.getFullPathString(hwnd);
+      hwndPath = hwndPath.replaceAll(Win32.getExe(hwndPath), '');
+      if (hwndPath == path) {
+        closeWindow(hwnd, forced: true);
+      }
+    }
+  }
+
+  //useless
+  static void forceCloseByProcessID(int pId) {
+    String processPath = Win32.getProcessExePath(pId);
+    processPath = processPath.replaceFirst(Win32.getExe(processPath), '');
+    if (processPath == "") return;
+
+    final Pointer<Uint32> lpcbNeeded = calloc<Uint32>();
+    final Pointer<Uint32> lpidProcess = calloc<Uint32>(1024);
+
+    EnumProcesses(lpidProcess, 1024, lpcbNeeded);
+    final int cProcesses = lpcbNeeded.value ~/ sizeOf<DWORD>();
+
+    for (int i = cProcesses - 1; i >= 0; i--) {
+      String path = Win32.getProcessExePath(lpidProcess[i]);
+      path = path.replaceFirst(Win32.getExe(path), '');
+      if (path == processPath) {
+        TerminateProcess(lpidProcess[i], 0);
+      }
+    }
+
+    free(lpcbNeeded);
+    free(lpidProcess);
   }
 
   static String getProcessExePath(int processID) {
@@ -571,6 +609,31 @@ class WinUtils {
         }
       });
     }
+  }
+
+  static void openAndFocus(String path, {bool centered = false}) {
+    final Set<int> startWindows = enumWindows().toSet();
+    WinUtils.open(path);
+    int ticker = 0;
+    Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
+      ticker++;
+      if (ticker > 10) {
+        timer.cancel();
+        return;
+      }
+      final Set<int> endWindows = enumWindows().toSet();
+      final List<int> newWnds = List<int>.from(endWindows.difference(startWindows));
+      final List<int> windows = newWnds.where(((int hWnd) => (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "") ? true : false)).toList();
+      if (windows.isEmpty) return;
+      final int hwnd = windows[0];
+      Win32.activateWindow(hwnd);
+      if (!centered) return;
+      final Pointer<RECT> lpRect = calloc<RECT>();
+      GetWindowRect(Win32.hWnd, lpRect);
+      free(lpRect);
+      Win32.setCenter(hwnd: hwnd, useMouse: true);
+      timer.cancel();
+    });
   }
 }
 

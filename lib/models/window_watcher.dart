@@ -138,30 +138,37 @@ class WindowWatcher {
   }
 
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
+    List<int> spotify = <int>[0, 0]; // HWND , PID
+    if (specialList.containsKey("Spotify")) {
+      spotify = <int>[specialList["Spotify"]!.hWnd, specialList["Spotify"]!.process.pId];
+    } else if (Globals.spotifyTrayHwnd[0] != 0) {
+      spotify = Globals.spotifyTrayHwnd;
+    }
+
     if (list[index].process.exe == "Spotify.exe") {
       SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-    } else if (!specialList.containsKey("Spotify")) {
+    } else if (spotify[0] == 0) {
       SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
     } else {
       Audio.enumAudioMixer().then((List<ProcessVolume>? e) async {
-        final Window spotify = specialList["Spotify"]!;
+        // final Window spotify = specialList["Spotify"]!;
 
         List<ProcessVolume> elements = e as List<ProcessVolume>;
-        final double volume = elements.firstWhere((ProcessVolume element) => element.processId == spotify.process.pId).maxVolume;
+        final double volume = elements.firstWhere((ProcessVolume element) => element.processId == spotify[1]).maxVolume;
 
-        await Audio.setAudioMixerVolume(spotify.process.pId, 0.1);
+        await Audio.setAudioMixerVolume(spotify[1], 0.1);
 
         Future<void>.delayed(const Duration(milliseconds: 100), () async {
           SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
 
           if (AppCommand.mediaPlayPause == button) {
-            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+            SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
           } else {
-            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
-            SendMessage(spotify.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPause);
+            SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
+            SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPause);
           }
 
-          Future<void>.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotify.process.pId, volume));
+          Future<void>.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotify[1], volume));
 
           return;
         });
