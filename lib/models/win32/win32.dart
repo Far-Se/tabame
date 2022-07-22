@@ -388,7 +388,12 @@ class WinUtils {
     }
 
     if (volumeHwnd != 0) {
-      if (type == VolumeOSDStyle.media) {
+      if (type == VolumeOSDStyle.normal) {
+        SetWindowRgn(volumeHwnd, 0, 1);
+        ShowWindow(volumeHwnd, 9);
+        keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+        keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+      } else if (type == VolumeOSDStyle.media) {
         final int dpi = GetDpiForWindow(volumeHwnd);
         final double dpiCoef = dpi / 96.0;
         if (applyStyle == true) {
@@ -499,6 +504,20 @@ class WinUtils {
       output.add(newPath);
     }
     return output;
+  }
+
+  static bool checkIfRegisterAsStartup() {
+    final LPWSTR startMenuPath = wsalloc(MAX_PATH);
+    int result = SHGetFolderPath(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
+    if (result != S_OK) {
+      free(startMenuPath);
+      return false;
+    }
+    final String path = startMenuPath.toDartString();
+    free(startMenuPath);
+    final String filePath = "$path\\Startup\\tabame.lnk";
+    final io.File file = io.File(filePath);
+    return file.existsSync();
   }
 
   static Future<List<String>> getTaskbarPinnedAppsPowerShell() async {

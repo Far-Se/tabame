@@ -98,7 +98,7 @@ class _TabameState extends State<Tabame> {
               ),
         ),
         darkTheme: ThemeData.dark().copyWith(
-          splashColor: Color.fromARGB(40, 0, 0, 0),
+          splashColor: Color.fromARGB(225, 0, 0, 0),
           backgroundColor: kDarkBackground,
           dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground),
           cardColor: kDarkBackground,

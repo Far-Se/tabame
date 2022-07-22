@@ -126,6 +126,7 @@ class TaskBarState extends State<TaskBar> {
               itemBuilder: (BuildContext context, int index) {
                 final Window window = windows.elementAt(index);
                 double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe)) ? 75 : (Caches.audioMixerExes.contains(window.process.exe) ? 50 : 25);
+                if (!globalSettings.showMediaControlForApp) hoverButtonsWidth = 25;
                 return SizedBox(
                   width: 300,
                   child: MouseRegion(
@@ -293,7 +294,7 @@ class TaskBarState extends State<TaskBar> {
                                 child: Wrap(
                                   children: <Widget>[
                                     //2 Play & Next Button
-                                    if (Boxes.mediaControls.contains(window.process.exe))
+                                    if (Boxes.mediaControls.contains(window.process.exe) && globalSettings.showMediaControlForApp)
                                       Wrap(
                                         children: <Widget>[
                                           InkWell(
@@ -315,7 +316,9 @@ class TaskBarState extends State<TaskBar> {
 
                                     //2 Play Button
 
-                                    if (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))
+                                    if (Caches.audioMixerExes.contains(window.process.exe) &&
+                                        !Boxes.mediaControls.contains(window.process.exe) &&
+                                        globalSettings.showMediaControlForApp)
                                       InkWell(
                                         hoverColor: Colors.black12.withOpacity(0.25),
                                         onTap: () {

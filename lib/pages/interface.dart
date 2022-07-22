@@ -10,7 +10,7 @@ import '../models/globals.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
-import '../widgets/interface/quickmenu_settings.dart';
+import '../widgets/interface/quickmenu.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -298,7 +298,20 @@ class InterfaceState extends State<Interface> {
                                         itemCount: pages.length,
                                         itemBuilder: (BuildContext context, int index) {
                                           if (index < pagesWidget.length) {
-                                            return SingleChildScrollView(controller: ScrollController(), child: pagesWidget[index]);
+                                            return SingleChildScrollView(
+                                              controller: ScrollController(),
+                                              child: LayoutBuilder(
+                                                builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
+                                                  constraints: BoxConstraints(
+                                                    maxHeight: constraints.maxHeight,
+                                                    maxWidth: constraints.maxWidth,
+                                                    minHeight: constraints.minHeight,
+                                                    minWidth: constraints.minWidth,
+                                                  ),
+                                                  child: Material(type: MaterialType.transparency, child: pagesWidget[index]),
+                                                ),
+                                              ),
+                                            );
                                           } else {
                                             return Container(
                                               child: const Center(child: Text("NOT IMPLEMENTED")),
