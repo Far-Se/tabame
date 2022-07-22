@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 class SystemUsageWidget extends StatefulWidget {
   const SystemUsageWidget({Key? key}) : super(key: key);
@@ -9,11 +8,15 @@ class SystemUsageWidget extends StatefulWidget {
   SystemUsageWidgetState createState() => SystemUsageWidgetState();
 }
 
-late Process process;
 String cpuUsage = '0%';
 String memUsage = '0%';
 Future<void> runPowerShellCpu() async {
-  process = await Process.start(
+  final List<dynamic> output = await getSystemUsage();
+  cpuUsage = "${(output[0] * 100).toStringAsFixed(0)}%";
+  memUsage = "${output[1]}%";
+  return;
+/* // * PowerShell
+   process = await Process.start(
     "powershell",
     <String>[
       '-NoProfile',
@@ -39,19 +42,21 @@ Future<void> runPowerShellCpu() async {
       match = regex.firstMatch(output)!;
       memUsage = '${match.group(1)}%';
     }
-  });
+  }); */
 }
 
 class SystemUsageWidgetState extends State<SystemUsageWidget> {
   @override
   void initState() {
     super.initState();
-    runPowerShellCpu();
+    runPowerShellCpu().then((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    process.kill();
     super.dispose();
   }
 
@@ -59,10 +64,13 @@ class SystemUsageWidgetState extends State<SystemUsageWidget> {
   Widget build(BuildContext context) {
     return StreamBuilder<String>(
         stream: Stream<String>.periodic(const Duration(seconds: 2), (_) => cpuUsage),
-        builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) => Text(
-              "🏼$cpuUsage\n💾$memUsage",
-              style: const TextStyle(fontSize: 11, height: 1.1),
-              softWrap: false,
+        builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) => FutureBuilder<void>(
+              future: runPowerShellCpu(),
+              builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) => Text(
+                "🏼$cpuUsage\n💾$memUsage",
+                style: const TextStyle(fontSize: 11, height: 1.1),
+                softWrap: false,
+              ),
             ));
   }
 }

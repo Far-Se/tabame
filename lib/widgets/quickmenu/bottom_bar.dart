@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
@@ -30,12 +29,12 @@ class BottomBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 const SizedBox(width: 100, child: TimeWeatherWidget()),
-                if (kReleaseMode && globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
+                if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
                 if (Boxes().getPowerShellScripts().isNotEmpty) const Expanded(flex: 3, child: PowershellList()),
                 if (Boxes().getPowerShellScripts().isNotEmpty) const SizedBox(width: 5),
                 ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: 200 - (Boxes().getPowerShellScripts().isNotEmpty ? 65 : 0) - (kReleaseMode && globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
+                    constraints:
+                        BoxConstraints(maxWidth: 200 - (Boxes().getPowerShellScripts().isNotEmpty ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
                     child: const TrayBar()),
               ],
             ),

@@ -97,8 +97,8 @@ class WinKeys {
   static bool singleEvent(String key, KeySentMode mode) {
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
-      print("no key $key");
-      return false;
+      throw ("no key $key");
+      // return false;
     }
     if (mode == KeySentMode.up) {
       keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_KEYUP, 0);
@@ -118,8 +118,8 @@ class WinKeys {
   static bool single(String key, KeySentMode mode) {
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
-      print("no key $key");
-      return false;
+      throw ("no key $key");
+      // return false;
     }
     final Pointer<INPUT> input = calloc<INPUT>();
     input.ref.type = INPUT_KEYBOARD;

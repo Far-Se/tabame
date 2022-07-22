@@ -10,7 +10,7 @@ class PinnedApps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> pinned = Boxes().getPinnedApps();
+    final List<String> pinned = Boxes().pinnedApps;
 
     if (pinned.isEmpty) return const SizedBox();
     return BarWithButtons(children: <Widget>[

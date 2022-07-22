@@ -218,7 +218,7 @@ Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) asyn
 }
 
 Future<Uint8List?> getExecutableIcon(String iconlocation, {int iconID = 0}) async {
-  return nativeIconToBytes(iconlocation, iconID: iconID);
+  return await nativeIconToBytes(iconlocation, iconID: iconID);
 }
 
 Future<Uint8List?> getWindowIcon(int hWnd) async {
@@ -363,4 +363,9 @@ Future<String> setStartOnSystemStartup(bool enabled, {String? exePath}) async {
   };
   final String result = await audioMethodChannel.invokeMethod<String>('setStartOnSystemStartup', arguments) ?? "";
   return result;
+}
+
+Future<List<dynamic>> getSystemUsage() async {
+  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getSystemUsage');
+  return <dynamic>[result["cpuLoad"], result["memoryLoad"]];
 }

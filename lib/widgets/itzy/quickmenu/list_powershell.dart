@@ -25,7 +25,6 @@ class PowershellListState extends State<PowershellList> {
   @override
   Widget build(BuildContext context) {
     if (scripts.isEmpty) return const SizedBox(width: 0);
-    final Color color = Color(darkerColor(Theme.of(context).backgroundColor.value, darkenBy: 0x30) as int).withOpacity(0.3);
     return Align(
       alignment: Alignment.centerRight,
       child: BarWithButtons(

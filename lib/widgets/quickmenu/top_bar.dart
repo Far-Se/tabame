@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/globals.dart';
+import '../../models/utils.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -30,18 +31,9 @@ class TopBar extends StatelessWidget {
       "ChangeThemeButton": const ChangeThemeButton()
     };
     List<Widget> showWidgets = <Widget>[];
-    final List<String> showWidgetsNames = <String>[
-      "TaskManagerButton",
-      "VirtualDesktopButton",
-      "ToggleTaskbarButton",
-      "PinWindowButton",
-      "MicMuteButton",
-      "AlwaysAwakeButton",
-      "ChangeThemeButton",
-      "Deactivated",
-    ];
+    final List<String> showWidgetsNames = Boxes().topBarWidgets;
     for (String x in showWidgetsNames) {
-      if (x == "Deactivated") break;
+      if (x == "Deactivated:") break;
       if (widgets.containsKey(x)) {
         showWidgets.add(widgets[x]!);
       }
@@ -70,8 +62,8 @@ class TopBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
-                    const Expanded(
-                      flex: 7,
+                    const SizedBox(
+                      width: 70,
                       child: BarWithButtons(
                         withScroll: false,
                         children: <Widget>[
@@ -82,14 +74,22 @@ class TopBar extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Expanded(
-                      flex: 8,
-                      child: BarWithButtons(
-                        children: showWidgets,
+                    if (showWidgets.isNotEmpty)
+                      Flexible(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
+                          child: BarWithButtons(
+                            children: showWidgets,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
+                        child: const PinnedApps(),
                       ),
                     ),
-                    const SizedBox(width: 2),
-                    const Expanded(flex: 8, child: PinnedApps()),
                   ],
                 ),
               ),
