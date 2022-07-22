@@ -52,6 +52,8 @@ class Settings {
 
   bool showWeather = true;
 
+  bool showPowerShell = true;
+
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
 
@@ -95,6 +97,8 @@ class Boxes {
   Boxes();
   static Future<void> registerBoxes() async {
     pref = await SharedPreferences.getInstance();
+    // await pref.remove("powerShellScripts");
+    // pref = await SharedPreferences.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
       await pref.setBool("runOnStartup", true);
@@ -103,6 +107,7 @@ class Boxes {
       await pref.setBool("showMediaControlForApp", true);
       await pref.setBool("showTrayBar", true);
       await pref.setBool("showWeather", true);
+      await pref.setBool("showPowerShell", true);
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setString("language", Platform.localeName.substring(0, 2));
       await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
@@ -121,6 +126,7 @@ class Boxes {
       ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? true
       ..showTrayBar = pref.getBool("showTrayBar") ?? false
       ..showWeather = pref.getBool("showWeather") ?? false
+      ..showPowerShell = pref.getBool("showPowerShell") ?? false
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
     //? Pinned Apps
@@ -130,11 +136,12 @@ class Boxes {
       if (taskManagerPath != "") pinnedApps2.add(taskManagerPath);
       await pref.setStringList("pinnedApps", pinnedApps2);
     }
-    if (pref.getStringList("powerShellScripts") == null) {
+
+    if (pref.getString("powerShellScripts") == null) {
       final List<String> powerShellScripts = <String>[
         PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson()
       ];
-      await pref.setStringList("powerShellScripts", powerShellScripts);
+      await pref.setString("powerShellScripts", jsonEncode(powerShellScripts));
     }
     //? Taskbar
     if (kReleaseMode) {
@@ -179,22 +186,30 @@ class Boxes {
   PowerShellScript(name: "Clear Temp", command: "E:\\Playground\\Scripts\\tempRemove.ps1", showTerminal: false, disabled: true).toJson(),
   */
   List<PowerShellScript> getPowerShellScripts() {
-    final List<String> scriptsString = pref.getStringList("powerShellScripts") ?? <String>[];
-
+    final String scriptsString = pref.getString("powerShellScripts") ?? "";
     if (scriptsString.isEmpty) return <PowerShellScript>[];
+    final List<dynamic> list = jsonDecode(scriptsString);
     final List<PowerShellScript> scripts = <PowerShellScript>[];
-    for (String script in scriptsString) {
+    for (String script in list) {
       scripts.add(PowerShellScript.fromJson(script));
     }
     return scripts;
   }
 
   static Future<void> updateSettings(String key, dynamic value) async {
-    if (value is bool) await pref.setBool(key, value);
-    if (value is int) await pref.setInt(key, value);
-    if (value is String) await pref.setString(key, value);
-    if (value is List<String>) await pref.setStringList(key, value);
-    if (value is Map<dynamic, dynamic>) await pref.setString(key, jsonEncode(value));
+    if (value is bool) {
+      await pref.setBool(key, value);
+    } else if (value is int) {
+      await pref.setInt(key, value);
+    } else if (value is String) {
+      await pref.setString(key, value);
+    } else if (value is List<String>) {
+      await pref.setStringList(key, value);
+    } else if (value is Map) {
+      await pref.setString(key, jsonEncode(value));
+    } else {
+      print("No asociated type $value");
+    }
 
     pref = await SharedPreferences.getInstance();
   }

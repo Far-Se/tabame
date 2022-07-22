@@ -8,14 +8,14 @@ import 'utils.dart';
 import 'win32/win32.dart';
 
 class TrayBarInfo extends TrayInfo {
-  int executionType = 0;
+  bool clickOpensExe = false;
   String processPath = "";
   String processExe = "";
   int brightness = 0;
   bool isPinned = false;
   Uint8List iconData = Uint8List.fromList(<int>[0]);
   TrayBarInfo({
-    required this.executionType,
+    required this.clickOpensExe,
     required this.processPath,
     required this.processExe,
   }) : super();
@@ -24,17 +24,17 @@ class TrayBarInfo extends TrayInfo {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is TrayBarInfo && other.executionType == executionType && other.processPath == processPath && other.processExe == processExe;
+    return other is TrayBarInfo && other.clickOpensExe == clickOpensExe && other.processPath == processPath && other.processExe == processExe;
   }
 
   @override
   int get hashCode {
-    return executionType.hashCode ^ processPath.hashCode ^ processExe.hashCode;
+    return clickOpensExe.hashCode ^ processPath.hashCode ^ processExe.hashCode;
   }
 
   @override
   String toString() {
-    return 'TrayBarInfo(executionType: $executionType, processPath: $processPath, processExe: $processExe, brightness: $brightness)';
+    return 'TrayBarInfo(executionType: $clickOpensExe, processPath: $processPath, processExe: $processExe, brightness: $brightness)';
   }
 }
 
@@ -46,6 +46,7 @@ class Tray {
   static Future<bool> fetchTray({bool sort = true}) async {
     final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
     final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
+    final List<String> action = Boxes.pref.getStringList("actionTray") ?? <String>[];
     final List<TrayInfo> winTray = await enumTrayIcons();
     Map<int, int> oldIconHandles = <int, int>{};
     for (TrayBarInfo element in trayList) {
@@ -57,7 +58,7 @@ class Tray {
       // print(processPath);
       String exe = Win32.getExe(processPath.path);
       // print(element.processID);
-      final TrayBarInfo trayInfo = TrayBarInfo(executionType: 1, processPath: processPath.path, processExe: exe);
+      final TrayBarInfo trayInfo = TrayBarInfo(clickOpensExe: false, processPath: processPath.path, processExe: exe);
       // print(trayInfo);
       trayInfo
         ..hIcon = element.hIcon
@@ -65,12 +66,13 @@ class Tray {
         ..uCallbackMessage = element.uCallbackMessage
         ..hWnd = element.hWnd
         ..processID = element.processID
-        ..isVisible = element.isVisible
+        ..isVisible = true //element.isVisible
         ..toolTip = element.toolTip;
 
+      if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
       if (pinned.contains(exe)) trayInfo.isPinned = true;
       if (hidden.contains(exe)) trayInfo.isVisible = false;
-      if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
+      if (action.contains(exe)) trayInfo.clickOpensExe = true;
 
       if (__trayIconCache.containsKey(element.hWnd)) {
         if (__trayIconHandleCache[element.hWnd] != element.hIcon) {

@@ -12,6 +12,7 @@ class BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Globals.heights.traybar = 30;
+    final bool showPowerShell = globalSettings.showPowerShell && Boxes().getPowerShellScripts().isNotEmpty;
     return Container(
       width: 280,
       height: 30,
@@ -30,11 +31,10 @@ class BottomBar extends StatelessWidget {
               children: <Widget>[
                 const SizedBox(width: 100, child: TimeWeatherWidget()),
                 if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
-                if (Boxes().getPowerShellScripts().isNotEmpty) const Expanded(flex: 3, child: PowershellList()),
-                if (Boxes().getPowerShellScripts().isNotEmpty) const SizedBox(width: 5),
+                if (showPowerShell) const Expanded(flex: 3, child: PowershellList()),
+                if (showPowerShell) const SizedBox(width: 5),
                 ConstrainedBox(
-                    constraints:
-                        BoxConstraints(maxWidth: 200 - (Boxes().getPowerShellScripts().isNotEmpty ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
+                    constraints: BoxConstraints(maxWidth: 180 - (showPowerShell ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
                     child: const TrayBar()),
               ],
             ),

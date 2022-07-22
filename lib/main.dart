@@ -49,8 +49,9 @@ final Color kLightTint = Color(0xff4DCF72);
 final Color kLightText = Color.fromRGBO(169, 69, 138, 1);
 
 // final Color kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
-final Color kDarkBackground = Color.fromRGBO(59, 65, 77, 1);
+final Color kDarkBackground = Color(0xFF3B414D);
 final Color kDarkTint = Color.fromRGBO(250, 249, 248, 1);
+final Color kDarkAccent = Color.fromARGB(220, 255, 220, 170);
 final Color kDarkText = Color.fromRGBO(250, 249, 248, 1);
 
 final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
@@ -85,9 +86,9 @@ class _TabameState extends State<Tabame> {
           dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kLightBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
           cardColor: kLightBackground,
           errorColor: kLightTint,
-          iconTheme: Theme.of(context).iconTheme.copyWith(color: kLightText),
-          textTheme: Theme.of(context).textTheme.apply(bodyColor: kLightText, displayColor: kLightText, decorationColor: kLightText),
-          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
+          iconTheme: ThemeData.light().iconTheme.copyWith(color: kLightText),
+          textTheme: ThemeData.light().textTheme.apply(bodyColor: kLightText, displayColor: kLightText, decorationColor: kLightText),
+          tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
                 verticalOffset: 10,
                 padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 height: 0,
@@ -99,12 +100,15 @@ class _TabameState extends State<Tabame> {
         darkTheme: ThemeData.dark().copyWith(
           splashColor: Color.fromARGB(40, 0, 0, 0),
           backgroundColor: kDarkBackground,
-          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
+          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground),
           cardColor: kDarkBackground,
           errorColor: kDarkTint,
-          iconTheme: Theme.of(context).iconTheme.copyWith(color: kDarkText),
-          textTheme: Theme.of(context).textTheme.apply(bodyColor: kDarkText, displayColor: kDarkText, decorationColor: kDarkText),
-          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
+          iconTheme: ThemeData.dark().iconTheme.copyWith(color: kDarkText),
+          textTheme: ThemeData.dark().textTheme.apply(bodyColor: kDarkText, displayColor: kDarkText, decorationColor: kDarkText),
+          toggleableActiveColor: kDarkAccent,
+          checkboxTheme: ThemeData.dark().checkboxTheme.copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(kDarkBackground)),
+          focusColor: Colors.red,
+          tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
                 verticalOffset: 10,
                 padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 height: 0,
@@ -113,6 +117,10 @@ class _TabameState extends State<Tabame> {
                 decoration: BoxDecoration(color: kDarkBackground),
                 preferBelow: false,
                 // decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+              ),
+          colorScheme: ThemeData.dark().colorScheme.copyWith(
+                primary: kDarkAccent,
+                secondary: kDarkAccent,
               ),
         ),
         themeMode: mode ? ThemeMode.dark : ThemeMode.light,

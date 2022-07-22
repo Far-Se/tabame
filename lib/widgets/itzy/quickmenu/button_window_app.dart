@@ -1,14 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'dart:ffi';
-import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
 
-import '../../../models/win32/imports.dart';
 import '../../../models/win32/win32.dart';
 
 class WindowsAppButton extends StatelessWidget {
@@ -49,26 +44,7 @@ class WindowsAppButton extends StatelessWidget {
               WinUtils.open(path);
             },
             onDoubleTap: () async {
-              final Set<int> startWindows = enumWindows().toSet();
-              WinUtils.open(path);
-              int ticker = 0;
-              Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
-                ticker++;
-                if (ticker > 10) {
-                  timer.cancel();
-                  return;
-                }
-                final Set<int> endWindows = enumWindows().toSet();
-                final List<int> newWnds = List<int>.from(endWindows.difference(startWindows));
-                final List<int> windows = newWnds.where(((int hWnd) => (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "") ? true : false)).toList();
-                if (windows.isEmpty) return;
-                final int hwnd = windows[0];
-                final Pointer<RECT> lpRect = calloc<RECT>();
-                GetWindowRect(Win32.hWnd, lpRect);
-                free(lpRect);
-                Win32.setCenter(hwnd: hwnd, useMouse: true);
-                timer.cancel();
-              });
+              WinUtils.openAndFocus(path, centered: true);
             },
           );
         },

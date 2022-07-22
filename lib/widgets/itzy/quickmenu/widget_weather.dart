@@ -10,9 +10,11 @@ Future<String> fetchWeather() async {
   final http.Response response =
       await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}"));
   if (response.statusCode == 200) {
+    // ignore: unnecessary_type_check
+
     return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
   }
-  return "";
+  return "-";
 }
 
 class WeatherWidget extends StatefulWidget {

@@ -231,20 +231,23 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                                       setState(() {});
                                     },
                                   ),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () async {
-                                      taskbarRewrites.removeAt(index);
-                                      reWriteRegexController.removeAt(index);
-                                      Map<String, String> reWrites = <String, String>{};
-                                      for (int i = 0; i < taskbarRewrites.length; i++) {
-                                        reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
-                                      }
-                                      await Boxes.updateSettings("taskBarRewrites", reWrites);
-                                      WindowWatcher.taskBarRewrites = reWrites;
-                                      if (!mounted) return;
-                                      setState(() {});
-                                    },
+                                  trailing: Padding(
+                                    padding: const EdgeInsets.only(right: 10),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () async {
+                                        taskbarRewrites.removeAt(index);
+                                        reWriteRegexController.removeAt(index);
+                                        Map<String, String> reWrites = <String, String>{};
+                                        for (int i = 0; i < taskbarRewrites.length; i++) {
+                                          reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
+                                        }
+                                        await Boxes.updateSettings("taskBarRewrites", reWrites);
+                                        WindowWatcher.taskBarRewrites = reWrites;
+                                        if (!mounted) return;
+                                        setState(() {});
+                                      },
+                                    ),
                                   ),
                                 ),
                                 if (index < taskbarRewrites.length - 1)
