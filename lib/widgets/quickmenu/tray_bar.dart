@@ -26,7 +26,6 @@ class TrayBarState extends State<TrayBar> {
   List<TrayBarInfo> tray = <TrayBarInfo>[];
   List<Uint8List> iconData = <Uint8List>[];
   bool fetching = false;
-  int _hoverID = -1;
   void fetchTray() async {
     fetching = true;
     await Tray.fetchTray();
@@ -88,14 +87,6 @@ class TrayBarState extends State<TrayBar> {
             child: Row(children: <Widget>[
               for (final TrayBarInfo info in tray)
                 Listener(
-                  onPointerHover: (PointerHoverEvent event) {
-                    if (_hoverID != info.hWnd) {
-                      print(event);
-                      _hoverID = info.hWnd;
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_NCMOUSEMOVE);
-                    }
-                  },
                   onPointerDown: (PointerDownEvent event) async {
                     if (event.kind == PointerDeviceKind.mouse) {
                       if (event.buttons == kSecondaryMouseButton) {

@@ -8,7 +8,6 @@ import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import '../../models/utils.dart';
-import '../../models/win32/imports.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
@@ -153,7 +152,7 @@ class TaskBarState extends State<TaskBar> {
                                   : Border(top: BorderSide(width: 1, color: Theme.of(context).dividerColor))),
                           child: InkWell(
                             onTap: () {},
-                            // hoverColor: Colors.black12.withOpacity(0.15),
+                            hoverColor: Colors.transparent,
                             child: GestureDetector(
                               onTap: () {
                                 if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {

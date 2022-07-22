@@ -285,7 +285,7 @@ class InterfaceState extends State<Interface> {
                                     itemCount: pages.length,
                                     itemBuilder: (BuildContext context, int index) {
                                       if (index < pagesWidget.length) {
-                                        return pagesWidget[index];
+                                        return SingleChildScrollView(controller: ScrollController(), child: pagesWidget[index]);
                                       } else {
                                         return Container(
                                           child: const Center(child: Text("NOT IMPLEMENTED")),

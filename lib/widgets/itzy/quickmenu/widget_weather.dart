@@ -7,14 +7,13 @@ import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 
 Future<String> fetchWeather() async {
-  final http.Response response = await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=%c+%t"));
+  final http.Response response =
+      await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}"));
   if (response.statusCode == 200) {
     return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
   }
   return "";
 }
-
-Future<String> _fetchWeather = fetchWeather();
 
 class WeatherWidget extends StatefulWidget {
   const WeatherWidget({Key? key}) : super(key: key);
@@ -30,7 +29,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     super.initState();
     refreshWeather = Timer.periodic(const Duration(minutes: 30), (Timer timer) {
       if (!mounted) return;
-      _fetchWeather = fetchWeather();
       setState(() {});
     });
   }
@@ -47,13 +45,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       width: 30,
       height: double.infinity,
       child: FutureBuilder<String>(
-        future: _fetchWeather,
-        initialData: globalSettings.weather,
+        future: fetchWeather(),
+        initialData: globalSettings.weatherTemperature,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.hasData) {
-              globalSettings.weather = snapshot.data as String;
-              Boxes.updateSettings("weather", snapshot.data as String);
+              globalSettings.weatherTemperature = snapshot.data as String;
+              Boxes.updateSettings("weather", globalSettings.weather);
             }
           }
           return Theme(

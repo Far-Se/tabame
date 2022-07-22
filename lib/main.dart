@@ -79,7 +79,7 @@ class _TabameState extends State<Tabame> {
         scrollBehavior: MyCustomScrollBehavior(),
         debugShowCheckedModeBanner: false,
         title: 'Tabame - Taskbar Menu',
-        theme: ThemeData(
+        theme: ThemeData.light().copyWith(
           splashColor: Color.fromARGB(40, 0, 0, 0),
           backgroundColor: kLightBackground,
           dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kLightBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
@@ -93,10 +93,10 @@ class _TabameState extends State<Tabame> {
                 height: 0,
                 margin: EdgeInsets.all(0),
                 textStyle: TextStyle(color: kLightText, fontSize: 12, height: 0),
-                decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+                decoration: BoxDecoration(color: kLightBackground),
               ),
         ),
-        darkTheme: ThemeData(
+        darkTheme: ThemeData.dark().copyWith(
           splashColor: Color.fromARGB(40, 0, 0, 0),
           backgroundColor: kDarkBackground,
           dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
@@ -110,7 +110,9 @@ class _TabameState extends State<Tabame> {
                 height: 0,
                 margin: EdgeInsets.all(0),
                 textStyle: TextStyle(color: kDarkText, fontSize: 12, height: 0),
-                decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
+                decoration: BoxDecoration(color: kDarkBackground),
+                preferBelow: false,
+                // decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
               ),
         ),
         themeMode: mode ? ThemeMode.dark : ThemeMode.light,

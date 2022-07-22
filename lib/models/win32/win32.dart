@@ -388,7 +388,6 @@ class WinUtils {
         }
       }
     } else {
-      print("no hwnd");
       // WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
       // WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
       // keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), KEYEVENTF_EXTENDEDKEY, 0);

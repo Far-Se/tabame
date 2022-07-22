@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
@@ -40,14 +39,27 @@ enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
 
 enum VolumeOSDStyle { normal, media, visible, thin }
 
-@HiveType(typeId: 0)
 class Settings {
   bool runOnStartup = true;
   bool autoHideTaskbar = true;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   String language = 'en';
-  String weather = '10 C';
-  String weatherCity = 'Iasi';
+  List<String> weather = <String>['10 C', "berlin, Germany", "m", "%c+%t"]; //u for US
+
+  bool showMediaControlForApp = true;
+
+  set weatherTemperature(String temp) => weather[0] = temp;
+  String get weatherTemperature => weather[0];
+
+  set weatherCity(String temp) => weather[1] = temp;
+  String get weatherCity => weather[1];
+
+  set weatherUnit(String temp) => weather[2] = temp;
+  String get weatherUnit => weather[2];
+
+  set weatherFormat(String temp) => weather[3] = temp;
+  String get weatherFormat => weather[3];
+
   bool showQuickMenuAtTaskbarLevel = true;
   VolumeOSDStyle volumeOSD = VolumeOSDStyle.normal;
 
@@ -64,7 +76,7 @@ Future<void> registerAll() async {
 
   // ? Main Handle
   Monitor.fetchMonitor();
-  monitorChecker = Timer.periodic(const Duration(seconds: 5), (Timer timer) => Monitor.fetchMonitor());
+  monitorChecker = Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitor());
   await Boxes.registerBoxes();
 }
 
@@ -84,10 +96,10 @@ class Boxes {
       await pref.setBool("runOnStartup", true);
       await pref.setBool("autoHideTaskbar", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
+      await pref.setBool("showMediaControlForApp", true);
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
-      await pref.setString("language", "en");
-      await pref.setString("weather", "10 C");
-      await pref.setString("weatherCity", "berlin, germany");
+      await pref.setString("language", Platform.localeName.substring(0, 2));
+      await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
       await pref.setBool("showSystemUsage", false);
       await pref.setInt("volumeOSD", VolumeOSDStyle.normal.index);
       await setStartOnSystemStartup(true);
@@ -96,11 +108,11 @@ class Boxes {
       ..runOnStartup = pref.getBool("runOnStartup") ?? true
       ..autoHideTaskbar = pref.getBool("autoHideTaskbar") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
-      ..language = pref.getString("language") ?? "en"
-      ..weather = pref.getString("weather") ?? "10 C"
-      ..weatherCity = pref.getString("weatherCity") ?? "berlin"
+      ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
+      ..weather = pref.getStringList("weather") ?? <String>["10 C", "berlin, germany", "m", "%c+%t"]
       ..volumeOSD = VolumeOSDStyle.values[pref.getInt("volumeOSD") ?? 0]
       ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
+      ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? true
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
     //? Pinned Apps
@@ -122,6 +134,7 @@ class Boxes {
         WinUtils.toggleTaskbar(visible: true);
       }
     }
+
     //? Volume
     globalSettings.volumeOSD = VolumeOSDStyle.media;
     if (globalSettings.volumeOSD != VolumeOSDStyle.normal) {
@@ -131,9 +144,26 @@ class Boxes {
     mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
   }
 
-  List<String> getPinnedApps() {
-    return pref.getStringList("pinnedApps") ?? <String>[];
+  List<String> get pinnedApps => pref.getStringList("pinnedApps") ?? <String>[];
+  Map<String, String> get taskBarRewrites {
+    final String rewrites = pref.getString("taskBarRewrites") ?? "";
+    if (rewrites == "") return <String, String>{"DevTools.*?\\.(.*?)\\..*?\$": "⚠DevTools: \$1 "};
+    final Map<String, String> rewritesMap = Map<String, String>.from(json.decode(rewrites));
+    return rewritesMap;
   }
+
+  List<String> get topBarWidgets =>
+      pref.getStringList("topBarWidgets") ??
+      <String>[
+        "TaskManagerButton",
+        "VirtualDesktopButton",
+        "ToggleTaskbarButton",
+        "PinWindowButton",
+        "MicMuteButton",
+        "AlwaysAwakeButton",
+        "ChangeThemeButton",
+        "Deactivated:",
+      ];
 
   /*
   PowerShellScript(name: "Open AI", command: "Import-Module \"E:\\Playground\\Scripts\\openai.ps1\"", showTerminal: true).toJson(),
@@ -142,11 +172,7 @@ class Boxes {
   */
   List<PowerShellScript> getPowerShellScripts() {
     final List<String> scriptsString = pref.getStringList("powerShellScripts") ?? <String>[];
-    scriptsString.addAll([
-      PowerShellScript(name: "Open AI", command: "Import-Module \"E:\\Playground\\Scripts\\openai.ps1\"", showTerminal: true).toJson(),
-      PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson(),
-      PowerShellScript(name: "Clear Temp", command: "E:\\Playground\\Scripts\\tempRemove.ps1", showTerminal: false, disabled: true).toJson(),
-    ]);
+
     if (scriptsString.isEmpty) return <PowerShellScript>[];
     final List<PowerShellScript> scripts = <PowerShellScript>[];
     for (String script in scriptsString) {

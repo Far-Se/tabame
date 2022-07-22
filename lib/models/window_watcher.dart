@@ -21,6 +21,7 @@ class WindowWatcher {
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
   static Map<int, int> iconsHandles = <int, int>{};
   static Map<String, Window> specialList = <String, Window>{};
+  static final Map<String, String> taskBarRewrites = Boxes().taskBarRewrites;
   static int _activeWinHandle = 0;
   static get active {
     if (list.length > _activeWinHandle) {
@@ -53,12 +54,26 @@ class WindowWatcher {
       if (newList.last.process.exe == "Spotify.exe") specialList["Spotify"] = newList.last;
     }
 
-    for (Window element in newList) {
-      if (element.process.path == "" && (element.process.exe == "AccessBlocked.exe" || element.process.exe == "")) {
-        element.process.exe = await getHwndName(element.hWnd);
+    for (Window window in newList) {
+      if (window.process.path == "" && (window.process.exe == "AccessBlocked.exe" || window.process.exe == "")) {
+        window.process.exe = await getHwndName(window.hWnd);
+      }
+      for (MapEntry<String, String> rewrite in taskBarRewrites.entries) {
+        final RegExp re = RegExp(rewrite.key);
+        if (re.hasMatch(window.title)) {
+          window.title = window.title.replaceAllMapped(re, (Match match) {
+            String replaced = rewrite.value;
+            for (int x = 0; x < match.groupCount; x++) {
+              replaced = replaced.replaceAll("\$${x + 1}", match.group(x + 1)!);
+            }
+            return replaced;
+          });
+        }
+        if (window.title.contains(rewrite.key)) {
+          window.title = window.title.replaceAll(rewrite.key, rewrite.value);
+        }
       }
     }
-
     final int activeWindow = GetForegroundWindow();
     _activeWinHandle = newList.indexWhere((Window element) => element.hWnd == activeWindow);
     list = <Window>[...newList];

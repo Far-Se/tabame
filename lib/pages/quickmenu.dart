@@ -37,6 +37,7 @@ Future<int> quickMenuWindowSetup() async {
 
 class QuickMenuState extends State<QuickMenu> {
   double lastHeight = 0;
+  Timer? changeHeightTimer;
   @override
   void initState() {
     super.initState();
@@ -44,7 +45,7 @@ class QuickMenuState extends State<QuickMenu> {
     Globals.quickMenuFullyInitiated = false;
     //!RELEASE MODE
     if (kReleaseMode) {
-      Timer.periodic(const Duration(seconds: 1), (Timer t) async {
+      changeHeightTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) async {
         if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive) return;
         final double newHeight = Globals.heights.allSummed + 80;
         if (lastHeight != newHeight) {
@@ -61,6 +62,7 @@ class QuickMenuState extends State<QuickMenu> {
   @override
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
+    if (kReleaseMode) changeHeightTimer?.cancel();
     super.dispose();
   }
 
