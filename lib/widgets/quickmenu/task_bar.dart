@@ -38,6 +38,8 @@ class TaskBarState extends State<TaskBar> {
   bool fetching = false;
   late Timer mainTimer;
 
+  List<String> wasPausedByButton = <String>[];
+
   Future<void> changeHeight() async {
     if (Globals.changingPages == true) return;
     double currentHeight = (windows.length * oneColumnHeight).clamp(100, 400) + 5;
@@ -125,7 +127,9 @@ class TaskBarState extends State<TaskBar> {
               itemCount: windows.length,
               itemBuilder: (BuildContext context, int index) {
                 final Window window = windows.elementAt(index);
-                double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe)) ? 75 : (Caches.audioMixerExes.contains(window.process.exe) ? 50 : 25);
+                double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe))
+                    ? 75
+                    : ((Caches.audioMixerExes.contains(window.process.exe) || wasPausedByButton.contains(window.process.exe)) ? 50 : 25);
                 if (!globalSettings.showMediaControlForApp) hoverButtonsWidth = 25;
                 return SizedBox(
                   width: 300,
@@ -263,10 +267,7 @@ class TaskBarState extends State<TaskBar> {
                                           overflow: TextOverflow.fade,
                                           maxLines: 1,
                                           softWrap: false,
-                                          style: const TextStyle(
-                                              // fontSize: 13,
-                                              // height: 1.2,
-                                              ),
+                                          style: TextStyle(fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400),
                                         ),
                                       ),
                                     ),
@@ -316,12 +317,15 @@ class TaskBarState extends State<TaskBar> {
 
                                     //2 Play Button
 
-                                    if (Caches.audioMixerExes.contains(window.process.exe) &&
-                                        !Boxes.mediaControls.contains(window.process.exe) &&
-                                        globalSettings.showMediaControlForApp)
+                                    if (globalSettings.showMediaControlForApp &&
+                                        (wasPausedByButton.contains(window.process.exe) ||
+                                            (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))))
                                       InkWell(
                                         hoverColor: Colors.black12.withOpacity(0.25),
                                         onTap: () {
+                                          if (!wasPausedByButton.contains(window.process.exe)) {
+                                            wasPausedByButton.add(window.process.exe);
+                                          }
                                           WindowWatcher.mediaControl(index);
                                         },
                                         child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),

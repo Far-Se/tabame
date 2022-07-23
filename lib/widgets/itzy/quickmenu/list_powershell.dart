@@ -33,8 +33,7 @@ class PowershellListState extends State<PowershellList> {
             Container(
               constraints: const BoxConstraints(maxWidth: 20, minWidth: 20, minHeight: 20),
               margin: const EdgeInsets.only(right: 2),
-              decoration:
-                  BoxDecoration(shape: BoxShape.circle, color: Color(darkerColor(Theme.of(context).backgroundColor.value, darkenBy: 0x30) as int).withOpacity(0.3)),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black12),
               child: Tooltip(
                 message: item.name,
                 child: InkWell(

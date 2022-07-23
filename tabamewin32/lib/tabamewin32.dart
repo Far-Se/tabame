@@ -355,14 +355,24 @@ Future<String> convertLinkToPath(String lnkPath) async {
   return result;
 }
 
-Future<String> setStartOnSystemStartup(bool enabled, {String? exePath}) async {
+Future<void> setStartOnSystemStartup(bool enabled, {String? exePath}) async {
   exePath ??= Platform.resolvedExecutable;
   final Map<String, dynamic> arguments = <String, dynamic>{
     'exePath': exePath,
     'enabled': enabled,
   };
-  final String result = await audioMethodChannel.invokeMethod<String>('setStartOnSystemStartup', arguments) ?? "";
-  return result;
+  await audioMethodChannel.invokeMethod('setStartOnSystemStartup', arguments);
+  return;
+}
+
+Future<void> setStartOnStartupAsAdmin(bool enabled, {String? exePath}) async {
+  exePath ??= Platform.resolvedExecutable;
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'exePath': exePath,
+    'enabled': enabled,
+  };
+  await audioMethodChannel.invokeMethod<int>('setStartOnStartupAsAdmin', arguments) ?? 0;
+  return;
 }
 
 Future<List<dynamic>> getSystemUsage() async {

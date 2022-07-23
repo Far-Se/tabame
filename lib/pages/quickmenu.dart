@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import 'package:window_manager/window_manager.dart';
+import '../models/utils.dart';
 import '../models/win32/win32.dart';
 import '../models/globals.dart';
 import '../widgets/quickmenu/bottom_bar.dart';
@@ -92,14 +93,14 @@ class QuickMenuState extends State<QuickMenu> {
               child: Padding(
                 padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
                 child: Container(
-                  color: Colors.black,
+                  color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
                   child: Container(
                     decoration: BoxDecoration(
                         color: Theme.of(context).backgroundColor,
                         gradient: LinearGradient(
                           colors: <Color>[
                             Theme.of(context).backgroundColor,
-                            Theme.of(context).backgroundColor.withAlpha(200),
+                            Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
                             Theme.of(context).backgroundColor,
                           ],
                           stops: <double>[0, 0.4, 1],
