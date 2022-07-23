@@ -36,9 +36,11 @@ class WindowWatcher {
   static Future<bool> fetchWindows() async {
     if (fetching) return false;
     fetching = true;
+
     final List<int> winHWNDS = enumWindows();
     final List<int> allHWNDs = <int>[];
     if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
+
     for (int hWnd in winHWNDS) {
       if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "" && Win32.getTitle(hWnd) != "Tabame") {
         allHWNDs.add(hWnd);
@@ -46,7 +48,6 @@ class WindowWatcher {
     }
 
     final List<Window> newList = <Window>[];
-    // specialList.clear();
 
     for (int element in allHWNDs) {
       newList.add(Window(element));
@@ -74,32 +75,35 @@ class WindowWatcher {
         }
       }
     }
+
     final int activeWindow = GetForegroundWindow();
     _activeWinHandle = newList.indexWhere((Window element) => element.hWnd == activeWindow);
     list = <Window>[...newList];
+
     if (_activeWinHandle > -1) {
       Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
     }
+
     await handleIcons();
     orderBy(globalSettings.taskBarAppsStyle);
+
     return true;
   }
 
   static Future<bool> handleIcons() async {
-    //Delete closed windows
     if (list.length != icons.length) {
       icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
       iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
     }
 
     for (Window win in list) {
-      //APPX
+      //?APPX
       if (icons.containsKey(win.hWnd) && win.isAppx) continue;
       if (win.isAppx) {
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
         continue;
       }
-      //EXE
+      //?EXE
       bool fetchingIcon = false;
       if (!iconsHandles.containsKey(win.hWnd)) {
         fetchingIcon = true;
@@ -156,17 +160,15 @@ class WindowWatcher {
       Audio.enumAudioMixer().then((List<ProcessVolume>? e) async {
         List<ProcessVolume> elements = e as List<ProcessVolume>;
         final double volume = elements.firstWhere((ProcessVolume element) => element.processId == spotifyPID).maxVolume;
-        print(volume);
         await Audio.setAudioMixerVolume(spotifyPID, 0.1);
 
-        Future<void>.delayed(const Duration(milliseconds: 100), () async {
-          SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-
+        SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
+        Future<void>.delayed(const Duration(milliseconds: 200), () async {
           if (button == AppCommand.mediaPlayPause) {
-            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaPause); // ? it was mediaPlayPause
+            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaStop);
           } else {
             SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
-            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaPause);
+            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaStop);
           }
 
           Future<void>.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotifyPID, volume));

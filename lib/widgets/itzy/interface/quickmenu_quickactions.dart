@@ -19,6 +19,8 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "MicMuteButton": Icons.mic,
     "AlwaysAwakeButton": Icons.running_with_errors,
     "ChangeThemeButton": Icons.theater_comedy_sharp,
+    "HideDesktopFilesButton": Icons.hide_image,
+    "ToggleHiddenFilesButton": Icons.folder_off,
     "Deactivated:": Icons.do_disturb,
   };
   @override
@@ -38,7 +40,6 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
             if (topBarItems[index] == "Deactivated:") {
               return ListTile(
                 leading: Icon(icons[topBarItems[index]], size: 17),
-                // tileColor: Colors.black,
                 key: ValueKey<int>(index),
                 title: Text(
                   topBarItems[index].toUperCaseAll(),

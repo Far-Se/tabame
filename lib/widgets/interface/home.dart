@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -101,8 +102,8 @@ class HomeState extends State<Home> {
                                               splashColor: Theme.of(context).colorScheme.secondary,
                                               hoverColor: Theme.of(context).colorScheme.secondary,
                                               onTap: () {
-                                                WinUtils.run(WinUtils.getStartupShortcut());
-                                                Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
+                                                WinUtils.run(Platform.resolvedExecutable);
+                                                Future<void>.delayed(const Duration(milliseconds: 800), () => exit(0));
                                               },
                                               child: const Icon(Icons.replay_outlined),
                                             ),
@@ -218,91 +219,105 @@ class HomeState extends State<Home> {
                             minHeight: constraints.minHeight,
                             minWidth: constraints.minWidth,
                           ),
-                          child: Column(children: <Widget>[
-                            RadioTheme(
-                              data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.max,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  ListTile(title: Text("Theme Info", style: Theme.of(context).textTheme.bodyMedium)),
-                                  RadioListTile<ThemeType>(
-                                    title: const Text("System Theme"),
-                                    value: ThemeType.system,
-                                    groupValue: globalSettings.themeType,
-                                    onChanged: (ThemeType? value) => setThemeType(value),
-                                  ),
-                                  RadioListTile<ThemeType>(
-                                    title: const Text("Light Theme"),
-                                    value: ThemeType.light,
-                                    groupValue: globalSettings.themeType,
-                                    onChanged: (ThemeType? value) => setThemeType(value),
-                                  ),
-                                  RadioListTile<ThemeType>(
-                                    title: const Text("Dark Theme"),
-                                    value: ThemeType.dark,
-                                    groupValue: globalSettings.themeType,
-                                    onChanged: (ThemeType? value) => setThemeType(value),
-                                  ),
-                                  RadioListTile<ThemeType>(
-                                    title: const Text('Schedule Dark'),
-                                    value: ThemeType.schedule,
-                                    groupValue: globalSettings.themeType,
-                                    onChanged: (ThemeType? value) => setThemeType(value),
-                                  ),
-                                  if (globalSettings.themeType == ThemeType.schedule)
-                                    Row(
-                                      children: <Widget>[
-                                        const SizedBox(width: 20),
-                                        const SizedBox(width: 40, child: Text("From ")),
-                                        InkWell(
-                                          onTap: () async {
-                                            final int hour = (globalSettings.themeScheduleMin ~/ 60);
-                                            final int minute = (globalSettings.themeScheduleMin % 60);
-                                            final TimeOfDay? timePicker = await showTimePicker(
-                                              context: context,
-                                              initialTime: TimeOfDay(hour: hour, minute: minute),
-                                              initialEntryMode: TimePickerEntryMode.dial,
-                                              builder: (BuildContext context, Widget? child) {
-                                                return MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
-                                              },
-                                            );
-                                            if (timePicker == null) return;
-                                            globalSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
-                                            await Boxes.updateSettings("themeScheduleMin", globalSettings.themeScheduleMin);
-                                            themeChangeNotifier.value = !themeChangeNotifier.value;
-                                            setState(() {});
-                                          },
-                                          child: Text(globalSettings.themeScheduleMinFormat),
-                                        ),
-                                        const SizedBox(width: 30, child: Text(" To")),
-                                        InkWell(
-                                          onTap: () async {
-                                            final int hour = (globalSettings.themeScheduleMax ~/ 60);
-                                            final int minute = (globalSettings.themeScheduleMax % 60);
-                                            final TimeOfDay? timePicker = await showTimePicker(
-                                              context: context,
-                                              initialTime: TimeOfDay(hour: hour, minute: minute),
-                                              initialEntryMode: TimePickerEntryMode.dial,
-                                              builder: (BuildContext context, Widget? child) {
-                                                return MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
-                                              },
-                                            );
-                                            if (timePicker == null) return;
-                                            globalSettings.themeScheduleMax = (timePicker.hour) * 60 + (timePicker.minute);
-                                            await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
-                                            themeChangeNotifier.value = !themeChangeNotifier.value;
-                                            setState(() {});
-                                          },
-                                          child: Text(globalSettings.themeScheduleMaxFormat),
-                                        ),
-                                      ],
+                          child: Column(
+                            children: <Widget>[
+                              RadioTheme(
+                                data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    ListTile(title: Text("Theme Info", style: Theme.of(context).textTheme.bodyMedium)),
+                                    RadioListTile<ThemeType>(
+                                      title: const Text("System Theme"),
+                                      value: ThemeType.system,
+                                      groupValue: globalSettings.themeType,
+                                      onChanged: (ThemeType? value) => setThemeType(value),
                                     ),
-                                ],
+                                    RadioListTile<ThemeType>(
+                                      title: const Text("Light Theme"),
+                                      value: ThemeType.light,
+                                      groupValue: globalSettings.themeType,
+                                      onChanged: (ThemeType? value) => setThemeType(value),
+                                    ),
+                                    RadioListTile<ThemeType>(
+                                      title: const Text("Dark Theme"),
+                                      value: ThemeType.dark,
+                                      groupValue: globalSettings.themeType,
+                                      onChanged: (ThemeType? value) => setThemeType(value),
+                                    ),
+                                    RadioListTile<ThemeType>(
+                                      title: const Text('Schedule Dark'),
+                                      value: ThemeType.schedule,
+                                      groupValue: globalSettings.themeType,
+                                      onChanged: (ThemeType? value) => setThemeType(value),
+                                    ),
+                                    if (globalSettings.themeType == ThemeType.schedule)
+                                      Row(
+                                        children: <Widget>[
+                                          const SizedBox(width: 20),
+                                          const SizedBox(width: 40, child: Text("From ")),
+                                          InkWell(
+                                            onTap: () async {
+                                              final int hour = (globalSettings.themeScheduleMin ~/ 60);
+                                              final int minute = (globalSettings.themeScheduleMin % 60);
+                                              final TimeOfDay? timePicker = await showTimePicker(
+                                                context: context,
+                                                initialTime: TimeOfDay(hour: hour, minute: minute),
+                                                initialEntryMode: TimePickerEntryMode.dial,
+                                                builder: (BuildContext context, Widget? child) {
+                                                  return MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
+                                                },
+                                              );
+                                              if (timePicker == null) return;
+                                              globalSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
+                                              await Boxes.updateSettings("themeScheduleMin", globalSettings.themeScheduleMin);
+                                              themeChangeNotifier.value = !themeChangeNotifier.value;
+                                              setState(() {});
+                                            },
+                                            child: Text(globalSettings.themeScheduleMinFormat),
+                                          ),
+                                          const SizedBox(width: 30, child: Text(" To")),
+                                          InkWell(
+                                            onTap: () async {
+                                              final int hour = (globalSettings.themeScheduleMax ~/ 60);
+                                              final int minute = (globalSettings.themeScheduleMax % 60);
+                                              final TimeOfDay? timePicker = await showTimePicker(
+                                                context: context,
+                                                initialTime: TimeOfDay(hour: hour, minute: minute),
+                                                initialEntryMode: TimePickerEntryMode.dial,
+                                                builder: (BuildContext context, Widget? child) {
+                                                  return MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
+                                                },
+                                              );
+                                              if (timePicker == null) return;
+                                              globalSettings.themeScheduleMax = (timePicker.hour) * 60 + (timePicker.minute);
+                                              await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
+                                              themeChangeNotifier.value = !themeChangeNotifier.value;
+                                              setState(() {});
+                                            },
+                                            child: Text(globalSettings.themeScheduleMaxFormat),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ]),
+                              ListTile(title: Text("Post Styling", style: Theme.of(context).textTheme.bodyMedium)),
+                              CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                title: const Text("Put Pinned Apps and TrayBar in one row at the bottom"),
+                                value: globalSettings.quickMenuPinnedWithTrayAtBottom,
+                                onChanged: (bool? newValue) async {
+                                  globalSettings.quickMenuPinnedWithTrayAtBottom = newValue ?? false;
+                                  Boxes.updateSettings("quickMenuPinnedWithTrayAtBottom", globalSettings.quickMenuPinnedWithTrayAtBottom);
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     ],

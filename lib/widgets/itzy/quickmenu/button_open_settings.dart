@@ -20,21 +20,10 @@ class OpenSettingsButton extends StatelessWidget {
             Icons.settings,
           ),
           onPressed: () {
-            // final NavigatorState navOfContext = Navigator.of(context);
             final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
             Globals.changingPages = true;
             //ignore: invalid_use_of_protected_member
-            x?.setState(() {
-              // navOfContext.pushAndRemoveUntil(
-              //   PageRouteBuilder<Interface>(
-              //     maintainState: false,
-              //     pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const Interface(),
-              //     transitionDuration: Duration.zero,
-              //     reverseTransitionDuration: Duration.zero,
-              //   ),
-              //   (Route<dynamic> route) => false,
-              // );
-            });
+            x?.setState(() {});
             mainPageViewController.jumpToPage(Pages.interface.index);
             Globals.changingPages = true;
             PaintingBinding.instance.imageCache.clear();

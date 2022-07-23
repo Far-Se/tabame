@@ -30,6 +30,17 @@ class ThemeSetupState extends State<ThemeSetup> {
 
   ThemeColors savedLightTheme = globalSettings.lightTheme;
   ThemeColors savedDarkTheme = globalSettings.darkTheme;
+
+  List<Map<ColorSwatch<Object>, String>> predefinedColorsLight = <Map<ColorSwatch<Object>, String>>[
+    getPredefinedColorSet(lightThemeOptions, 0),
+    getPredefinedColorSet(lightThemeOptions, 1),
+    getPredefinedColorSet(lightThemeOptions, 2),
+  ];
+  List<Map<ColorSwatch<Object>, String>> predefinedColorsDark = <Map<ColorSwatch<Object>, String>>[
+    getPredefinedColorSet(darkThemeOptions, 0),
+    getPredefinedColorSet(darkThemeOptions, 1),
+    getPredefinedColorSet(darkThemeOptions, 2),
+  ];
   @override
   void initState() {
     super.initState();
@@ -52,105 +63,94 @@ class ThemeSetupState extends State<ThemeSetup> {
       Padding(
         padding: const EdgeInsets.all(10),
         child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: constraints.maxHeight,
-              maxWidth: constraints.maxWidth,
-              minHeight: constraints.minHeight,
-              minWidth: constraints.minWidth,
-            ),
-            child: Material(
-              type: MaterialType.transparency,
-              child: ListTileTheme(
-                data: Theme.of(context).listTileTheme.copyWith(
-                      dense: true,
-                      style: ListTileStyle.drawer,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                      minVerticalPadding: 0,
-                      visualDensity: VisualDensity.compact,
-                      horizontalTitleGap: 0,
-                    ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // if (globalSettings.themeTypeMode == ThemeType.dark)
-                    ThemeSetupWidget(
-                      title: "Dark Theme",
-                      constraints: constraints,
-                      savedColors: savedDarkTheme,
-                      currentColors: globalSettings.darkTheme,
-                      onSaved: () async {
-                        await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
-                        savedLightTheme = globalSettings.lightTheme;
-                        savedDarkTheme = globalSettings.darkTheme;
-                        setState(() {});
-                      },
-                      onGradiendChanged: (double e) {
-                        globalSettings.darkTheme.gradientAlpha = e.toInt();
-                        // setState(() {});
-                      },
-                      quickMenuBoldChanged: (bool e) {
-                        globalSettings.darkTheme.quickMenuBoldFont = e;
-                        // setState(() {});
-                      },
-                      onColorChanged: (Color color, int i) {
-                        if (i == 0) {
-                          globalSettings.darkTheme.background = color.value;
-                        } else if (i == 1) {
-                          globalSettings.darkTheme.textColor = color.value;
-                        } else if (i == 2) {
-                          globalSettings.darkTheme.accentColor = color.value;
-                        }
-                        themeChangeNotifier.value = !themeChangeNotifier.value;
-                      },
-                      predefinedColors: <Map<ColorSwatch<Object>, String>>[
-                        getPredefinedColorSet(darkThemeOptions, 0),
-                        getPredefinedColorSet(darkThemeOptions, 1),
-                        getPredefinedColorSet(darkThemeOptions, 2),
-                      ],
-                    ),
-                    // Expanded(flex: 2, child: Container()),
-                    // if (globalSettings.themeTypeMode == ThemeType.light)
-                    ThemeSetupWidget(
-                      title: "Light Theme",
-                      constraints: constraints,
-                      savedColors: savedLightTheme,
-                      currentColors: globalSettings.lightTheme,
-                      onSaved: () async {
-                        await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
-                        setState(() {});
-                      },
-                      onGradiendChanged: (double e) {
-                        globalSettings.lightTheme.gradientAlpha = e.toInt();
-                        // setState(() {});
-                      },
-                      quickMenuBoldChanged: (bool e) {
-                        globalSettings.lightTheme.quickMenuBoldFont = e;
-                        // setState(() {});
-                      },
-                      onColorChanged: (Color color, int i) {
-                        if (i == 0) {
-                          globalSettings.lightTheme.background = color.value;
-                        } else if (i == 1) {
-                          globalSettings.lightTheme.textColor = color.value;
-                        } else if (i == 2) {
-                          globalSettings.lightTheme.accentColor = color.value;
-                        }
-                        themeChangeNotifier.value = !themeChangeNotifier.value;
-                      },
-                      predefinedColors: <Map<ColorSwatch<Object>, String>>[
-                        getPredefinedColorSet(lightThemeOptions, 0),
-                        getPredefinedColorSet(lightThemeOptions, 1),
-                        getPredefinedColorSet(lightThemeOptions, 2),
-                      ],
-                    )
-                  ],
+          builder: (BuildContext context, BoxConstraints constraints) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight,
+                maxWidth: constraints.maxWidth,
+                minHeight: constraints.minHeight,
+                minWidth: constraints.minWidth,
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                child: ListTileTheme(
+                  data: Theme.of(context).listTileTheme.copyWith(
+                        dense: true,
+                        style: ListTileStyle.drawer,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                        minVerticalPadding: 0,
+                        visualDensity: VisualDensity.compact,
+                        horizontalTitleGap: 0,
+                      ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (globalSettings.themeTypeMode == ThemeType.dark)
+                        ThemeSetupWidget(
+                          title: "Dark Theme",
+                          constraints: constraints,
+                          savedColors: savedDarkTheme,
+                          currentColors: globalSettings.darkTheme,
+                          onSaved: () async {
+                            await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
+                            savedLightTheme = globalSettings.lightTheme;
+                            savedDarkTheme = globalSettings.darkTheme;
+                            setState(() {});
+                          },
+                          onGradiendChanged: (double e) {
+                            globalSettings.darkTheme.gradientAlpha = e.toInt();
+                          },
+                          quickMenuBoldChanged: (bool e) {
+                            globalSettings.darkTheme.quickMenuBoldFont = e;
+                          },
+                          onColorChanged: (Color color, int i) {
+                            if (i == 0) {
+                              globalSettings.darkTheme.background = color.value;
+                            } else if (i == 1) {
+                              globalSettings.darkTheme.textColor = color.value;
+                            } else if (i == 2) {
+                              globalSettings.darkTheme.accentColor = color.value;
+                            }
+                            themeChangeNotifier.value = !themeChangeNotifier.value;
+                          },
+                          predefinedColors: predefinedColorsDark,
+                        ),
+                      if (globalSettings.themeTypeMode == ThemeType.light)
+                        ThemeSetupWidget(
+                          title: "Light Theme",
+                          constraints: constraints,
+                          savedColors: savedLightTheme,
+                          currentColors: globalSettings.lightTheme,
+                          onSaved: () async {
+                            await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
+                            setState(() {});
+                          },
+                          onGradiendChanged: (double e) {
+                            globalSettings.lightTheme.gradientAlpha = e.toInt();
+                          },
+                          quickMenuBoldChanged: (bool e) {
+                            globalSettings.lightTheme.quickMenuBoldFont = e;
+                          },
+                          onColorChanged: (Color color, int i) {
+                            if (i == 0) {
+                              globalSettings.lightTheme.background = color.value;
+                            } else if (i == 1) {
+                              globalSettings.lightTheme.textColor = color.value;
+                            } else if (i == 2) {
+                              globalSettings.lightTheme.accentColor = color.value;
+                            }
+                            themeChangeNotifier.value = !themeChangeNotifier.value;
+                          },
+                          predefinedColors: predefinedColorsLight,
+                        )
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     ]);
@@ -204,22 +204,23 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             children: <Widget>[
               Tooltip(
                 message: "Save ${widget.title}",
-                preferBelow: true,
+                preferBelow: false,
                 verticalOffset: 30,
                 decoration: BoxDecoration(
                   border: Border.all(width: 1, color: Colors.black26),
                   color: Theme.of(context).backgroundColor,
                 ),
                 child: ListTile(
-                  leading: const SizedBox(width: 10),
+                  leading: const Icon(Icons.save_outlined),
                   dense: false,
                   onTap: () => widget.onSaved(),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   title: Text("${widget.title}", style: Theme.of(context).textTheme.titleLarge),
+                  subtitle: const Text("Press here to save changes"),
                   trailing: const Icon(Icons.save_outlined),
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 10),
               SliderTheme(
                 data: Theme.of(context).sliderTheme.copyWith(
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),

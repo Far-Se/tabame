@@ -55,18 +55,16 @@ class Tray {
     trayList.clear();
     for (TrayInfo element in winTray) {
       HwndInfo processPath = HwndPath.getFullPath(GetAncestor(element.hWnd, 2));
-      // print(processPath);
       String exe = Win32.getExe(processPath.path);
-      // print(element.processID);
       final TrayBarInfo trayInfo = TrayBarInfo(clickOpensExe: false, processPath: processPath.path, processExe: exe);
-      // print(trayInfo);
+
       trayInfo
         ..hIcon = element.hIcon
         ..uID = element.uID
         ..uCallbackMessage = element.uCallbackMessage
         ..hWnd = element.hWnd
         ..processID = element.processID
-        ..isVisible = true //element.isVisible
+        ..isVisible = true // < element.isVisible
         ..toolTip = element.toolTip;
 
       if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
@@ -92,7 +90,7 @@ class Tray {
       trayList.add(trayInfo);
     }
     __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);
-    // order trayList by pinned and visible
+
     if (!sort) return true;
     trayList.sort((TrayBarInfo a, TrayBarInfo b) {
       if (a.isPinned && !b.isPinned) return -1;

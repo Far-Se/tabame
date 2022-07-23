@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -18,7 +19,11 @@ Future<String> fetchWeather() async {
 }
 
 class WeatherWidget extends StatefulWidget {
-  const WeatherWidget({Key? key}) : super(key: key);
+  final double width;
+  const WeatherWidget({
+    Key? key,
+    this.width = 30,
+  }) : super(key: key);
 
   @override
   State<WeatherWidget> createState() => _WeatherWidgetState();
@@ -45,8 +50,8 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   Widget build(BuildContext context) {
     if (!globalSettings.showWeather) return const SizedBox();
     return Container(
-      width: 30,
-      height: double.infinity,
+      width: widget.width,
+      // height: double.infinity,
       child: FutureBuilder<String>(
         future: fetchWeather(),
         initialData: globalSettings.weatherTemperature,

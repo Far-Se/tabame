@@ -80,8 +80,8 @@ class TrayBarState extends State<TrayBar> {
             return const LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: <Color>[Color.fromARGB(255, 0, 0, 0), Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-              stops: <double>[0.0, 0.05, 0.93, 1.0],
+              colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+              stops: <double>[0.0, 0.93, 1.0],
             ).createShader(rect);
           },
           blendMode: BlendMode.dstOut,

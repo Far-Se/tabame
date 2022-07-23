@@ -15,7 +15,7 @@ class WindowsAppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double size = Theme.of(context).iconTheme.size ?? 12;
+    final double size = Theme.of(context).iconTheme.size ?? 15;
     if (!File(path).existsSync()) return const SizedBox();
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     return SizedBox(
@@ -23,7 +23,6 @@ class WindowsAppButton extends StatelessWidget {
       height: double.maxFinite,
       child: FutureBuilder<Uint8List?>(
         future: getExecutableIcon(path),
-        // future: nativeIconToBytes(path),
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           return InkWell(
             child: Padding(
@@ -41,9 +40,6 @@ class WindowsAppButton extends StatelessWidget {
                   : Icon(Icons.circle_outlined, size: size),
             ),
             onTap: () {
-              WinUtils.open(path);
-            },
-            onDoubleTap: () async {
               WinUtils.openAndFocus(path, centered: true);
             },
           );

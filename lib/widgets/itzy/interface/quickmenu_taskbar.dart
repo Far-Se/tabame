@@ -180,8 +180,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                     ),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 250, minHeight: 100),
-                      child: //generate a listview with taskBarRewrites
-                          FocusTraversalGroup(
+                      child: FocusTraversalGroup(
                         policy: OrderedTraversalPolicy(),
                         child: ListView.builder(
                           itemCount: taskbarRewrites.length,

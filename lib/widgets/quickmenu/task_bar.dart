@@ -62,12 +62,6 @@ class TaskBarState extends State<TaskBar> {
   Future<void> fetchWindows() async {
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!fetching && await WindowWatcher.fetchWindows()) {
-      // if (listEquals(WindowWatcher.list, windows)) {
-      //   await audioHandle();
-      //   await changeHeight();
-      //   if (mounted) setState(() => fetching = false);
-      //   return;
-      // }
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
       await audioHandle();
@@ -104,6 +98,7 @@ class TaskBarState extends State<TaskBar> {
   bool inside = false;
   @override
   Widget build(BuildContext context) {
+    final Color hoverColor = globalSettings.themeTypeMode == ThemeType.dark ? Colors.white12.withOpacity(0.15) : Colors.black12.withOpacity(0.15);
     double dragMovement = 0.0;
     return Container(
       color: Colors.transparent,
@@ -131,6 +126,7 @@ class TaskBarState extends State<TaskBar> {
                     ? 75
                     : ((Caches.audioMixerExes.contains(window.process.exe) || wasPausedByButton.contains(window.process.exe)) ? 50 : 25);
                 if (!globalSettings.showMediaControlForApp) hoverButtonsWidth = 25;
+
                 return SizedBox(
                   width: 300,
                   child: MouseRegion(
@@ -151,7 +147,7 @@ class TaskBarState extends State<TaskBar> {
                         Container(
                           margin: !(index > 0 && window.monitor != windows[index - 1].monitor) ? null : const EdgeInsets.only(top: 2),
                           decoration: BoxDecoration(
-                              color: _hoverElement == index ? Colors.black12.withOpacity(0.15) : Colors.transparent,
+                              color: _hoverElement == index ? (hoverColor) : Colors.transparent,
                               border: !(index > 0 && window.monitor != windows[index - 1].monitor)
                                   ? null
                                   : Border(top: BorderSide(width: 1, color: Theme.of(context).dividerColor))),
@@ -287,8 +283,7 @@ class TaskBarState extends State<TaskBar> {
                             bottom: 0,
                             width: hoverButtonsWidth,
                             child: Container(
-                              color: Colors.black12.withOpacity(0.15),
-                              // width: hoverButtonsWidth,
+                              color: hoverColor,
                               constraints: BoxConstraints(minWidth: hoverButtonsWidth, maxWidth: hoverButtonsWidth, minHeight: oneColumnHeight),
                               child: Material(
                                 type: MaterialType.transparency,
@@ -299,14 +294,14 @@ class TaskBarState extends State<TaskBar> {
                                       Wrap(
                                         children: <Widget>[
                                           InkWell(
-                                            hoverColor: Colors.black12.withOpacity(0.25),
+                                            hoverColor: hoverColor,
                                             onTap: () {
                                               WindowWatcher.mediaControl(index);
                                             },
                                             child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),
                                           ),
                                           InkWell(
-                                            hoverColor: Colors.black12.withOpacity(0.25),
+                                            hoverColor: hoverColor,
                                             onTap: () {
                                               WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack);
                                             },
@@ -321,7 +316,7 @@ class TaskBarState extends State<TaskBar> {
                                         (wasPausedByButton.contains(window.process.exe) ||
                                             (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))))
                                       InkWell(
-                                        hoverColor: Colors.black12.withOpacity(0.25),
+                                        hoverColor: hoverColor,
                                         onTap: () {
                                           if (!wasPausedByButton.contains(window.process.exe)) {
                                             wasPausedByButton.add(window.process.exe);
@@ -333,7 +328,7 @@ class TaskBarState extends State<TaskBar> {
 
                                     //2 Close Button
                                     InkWell(
-                                      hoverColor: Colors.black12.withOpacity(0.25),
+                                      hoverColor: hoverColor,
                                       onTap: () async {
                                         if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
                                           WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
