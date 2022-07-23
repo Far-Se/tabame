@@ -19,6 +19,7 @@ import '../keys.dart';
 import '../utils.dart';
 import 'imports.dart';
 import 'mixed.dart';
+import 'registry.dart';
 
 class Win32 {
   static void activateWindow(int hWnd, {bool forced = false}) {
@@ -58,9 +59,6 @@ class Win32 {
   static void closeWindow(int hWnd, {bool forced = false}) {
     PostMessage(hWnd, WM_CLOSE, 0, 0);
     if (forced) {
-      // final Pointer<Uint32> pId = calloc<Uint32>();
-      // GetWindowThreadProcessId(hWnd, pId);
-      // free(pId);
       PostMessage(hWnd, WM_CLOSE, 0, 0);
       PostMessage(hWnd, WM_DESTROY, 0, 0);
       PostMessage(hWnd, WM_NCDESTROY, 0, 0);
@@ -82,7 +80,6 @@ class Win32 {
   //might be useless
   static void forceCloseWindowbyPath(String path) {
     path = path.replaceFirst(Win32.getExe(path), '');
-    print(path);
     final List<int> windows = enumWindows();
     for (int hwnd in windows) {
       String hwndPath = HwndPath.getFullPathString(hwnd);
@@ -182,10 +179,6 @@ class Win32 {
     bool visible = true;
     final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
     if ((exstyle & WS_EX_TOOLWINDOW) != 0) visible = false;
-    // final winInfo = calloc<WINDOWINFO>();
-    // GetWindowInfo(hWnd, winInfo);
-    // if ((winInfo.ref.dwExStyle & WS_EX_APPWINDOW) != 0) visible = false;
-    // free(winInfo);
     return visible;
   }
 
@@ -432,12 +425,6 @@ class WinUtils {
         }
       }
     } else {
-      // WinKeys.single(VK.VOLUME_UP, KeySentMode.normal);
-      // WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
-      // keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), KEYEVENTF_EXTENDEDKEY, 0);
-      // keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), KEYEVENTF_KEYUP, 0);
-
-      // keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_DOWN, 0), KEYEVENTF_EXTENDEDKEY, 0);
       keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
       keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
     }
@@ -487,6 +474,18 @@ class WinUtils {
     }
     free(ppszPath);
     free(appsFolder);
+    return path;
+  }
+
+  static String getKnownFolderCLSID(int FOLDERID) {
+    final LPWSTR startMenuPath = wsalloc(MAX_PATH);
+    String path = "";
+    // final int hr = SHGetKnownFolderPath(NULL, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final int hr = SHGetFolderPath(NULL, FOLDERID, NULL, 0, startMenuPath);
+    if (!FAILED(hr)) {
+      path = startMenuPath.toDartString();
+    }
+    free(startMenuPath);
     return path;
   }
 
@@ -562,7 +561,7 @@ class WinUtils {
   }
 
   static void run(String link) {
-    ShellExecute(NULL, TEXT("run"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
+    ShellExecute(NULL, TEXT("runas"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
   }
 
   static void sendCommand({int command = AppCommand.appCommand}) {
@@ -660,6 +659,41 @@ class WinUtils {
       Win32.setCenter(hwnd: hwnd, useMouse: true);
       timer.cancel();
     });
+  }
+
+  static void toggleDesktopFiles({bool? visible}) {
+    final String desktop = WinUtils.getKnownFolderCLSID(CSIDL_DESKTOP);
+    final List<String> files = Directory(desktop).listSync().map((io.FileSystemEntity event) => event.path).toList();
+    for (String file in files.reversed) {
+      if (file == "desktop.ini") continue;
+      final int attributes = GetFileAttributes(TEXT(file));
+      if (visible == null) {
+        if ((attributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
+          visible = true;
+        } else {
+          visible = false;
+        }
+      }
+      if (!visible && (attributes & FILE_ATTRIBUTE_HIDDEN) == 0) {
+        SetFileAttributes(TEXT(file), attributes | FILE_ATTRIBUTE_HIDDEN);
+      }
+      if (visible && (attributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
+        SetFileAttributes(TEXT(file), attributes & ~FILE_ATTRIBUTE_HIDDEN);
+      }
+    }
+  }
+
+  static void toggleHiddenFiles({bool? visible}) {
+    final RegistryKey key =
+        Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', desiredAccessRights: AccessRights.allAccess);
+    final int hidden = key.getValueAsInt('Hidden') ?? 1;
+    print(hidden == 2 ? "Visible" : "hidden");
+    if (hidden == 2) {
+      key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 1));
+    } else {
+      key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 2));
+    }
+    Future<void>.delayed(const Duration(milliseconds: 500), () => SendNotifyMessage(HWND_BROADCAST, 0x111, 41504, NULL));
   }
 }
 
@@ -807,13 +841,9 @@ class HwndInfo {
 
 final Map<int, HwndInfo> __cacheHwnds = <int, HwndInfo>{};
 
-//create a singletonclass with a function
-
 class HwndPath {
-  // HwndPath();
-  // static bool isAppx = false;
   static String GetAppxInstallLocation(int hWnd) {
-    //Ger Process Handle
+    //Get Process Handle
     int process;
     final Pointer<Uint32> ppID = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, ppID);
@@ -966,8 +996,6 @@ class HwndPath {
   static HwndInfo getFullPath(int hWnd) {
     String exePath = "";
     if (__cacheHwnds.containsKey(hWnd)) {
-      // exePath = __cacheHwnds[hWnd]![0]!;
-      // isAppx = __cacheHwnds[hWnd]![1]!;
       if (!__cacheHwnds[hWnd]!.isAppx) {
         return HwndInfo(isAppx: __cacheHwnds[hWnd]!.isAppx, path: __cacheHwnds[hWnd]!.path);
       }
@@ -983,7 +1011,6 @@ class HwndPath {
         exePath = "${WinUtils.getProgramFilesFolder()}\\WindowsApps\\$appx";
       }
     }
-    // __cacheHwnds[hWnd] = <dynamic>[exePath, isAppx];
     return HwndInfo(isAppx: isAppx, path: exePath);
   }
 

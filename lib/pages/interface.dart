@@ -35,11 +35,9 @@ Future<int> interfaceWindowSetup() async {
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
   await WindowManager.instance.setMinimumSize(const Size(700, 400));
   await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
-  // await WindowManager.instance.setSize(Size(monitor.width / 2, monitor.height / 1.7));
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  // await WindowManager.instance.setAspectRatio(1.3);
   await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.7));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
@@ -58,7 +56,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Trktivity', icon: Icons.celebration),
     PageClass(title: 'Tasks', icon: Icons.task_alt),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high),
-    PageClass(title: 'Settings', icon: Icons.settings),
+    PageClass(title: 'Info', icon: Icons.info),
   ];
   final List<Widget> pagesWidget = <Widget>[
     const Home(),
@@ -91,7 +89,6 @@ class InterfaceState extends State<Interface> {
         return Padding(
           padding: const EdgeInsets.all(3) - const EdgeInsets.only(top: 3),
           child: DragToResizeArea(
-            // color: Colors.black,
             child: DecoratedBox(
               decoration: const BoxDecoration(
                 color: Colors.transparent,
@@ -108,7 +105,6 @@ class InterfaceState extends State<Interface> {
                         preferredSize: const Size(30, 30),
                         child: Container(
                           height: 30,
-                          // color: Theme.of(context).backgroundColor,
                           padding: const EdgeInsets.only(left: 5),
                           decoration: BoxDecoration(
                             boxShadow: <BoxShadow>[
@@ -128,7 +124,6 @@ class InterfaceState extends State<Interface> {
                             children: <Widget>[
                               Flexible(
                                 fit: FlexFit.loose,
-                                // flex: 13,
                                 child: InkWell(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -148,9 +143,7 @@ class InterfaceState extends State<Interface> {
                                           }
                                         },
                                         child: Row(
-                                          // alignment: WrapAlignment.center,
                                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                                          // textBaseline: TextBaseline.alphabetic,
                                           children: <Widget>[
                                             const Image(image: AssetImage("resources/logo_light.png"), width: 15),
                                             const SizedBox(width: 5),
@@ -182,17 +175,6 @@ class InterfaceState extends State<Interface> {
                                           Globals.changingPages = true;
                                           setState(() {});
                                           mainPageViewController.jumpToPage(Pages.quickmenu.index);
-
-                                          // final NavigatorState noc = Navigator.of(context);
-                                          // noc.pushAndRemoveUntil(
-                                          //   PageRouteBuilder<QuickMenu>(
-                                          //     maintainState: false,
-                                          //     pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
-                                          //     transitionDuration: Duration.zero,
-                                          //     reverseTransitionDuration: Duration.zero,
-                                          //   ),
-                                          //   (Route<dynamic> route) => false,
-                                          // );
                                         },
                                         child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                       ),
@@ -244,7 +226,6 @@ class InterfaceState extends State<Interface> {
                                               physics: const ClampingScrollPhysics(),
                                               itemBuilder: (BuildContext context, int index) {
                                                 final PageClass pageItem = pages[index];
-                                                // print(pageItem);
                                                 return InkWell(
                                                   onTap: () {
                                                     page.jumpToPage(index);
@@ -272,9 +253,7 @@ class InterfaceState extends State<Interface> {
                                         SizedBox(
                                           height: 200,
                                           child: Wrap(
-                                            children: <Widget>[
-                                              // const Text("pis pe mata"),
-                                            ],
+                                            children: <Widget>[],
                                           ),
                                         )
                                       ],

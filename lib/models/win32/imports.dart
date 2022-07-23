@@ -52,6 +52,12 @@ final int Function(Pointer<Utf16> applicationUserModelId, Pointer<Uint32> packag
         int Function(Pointer<Utf16> applicationUserModelId, Pointer<Uint32> packageFamilyNameLength, Pointer<Utf16> packageFamilyName,
             Pointer<Uint32> packageRelativeApplicationIdLength, Pointer<Utf16> packageRelativeApplicationId)>('ParseApplicationUserModelId');
 
+int SetFileAttributes(Pointer<Utf16> lpFileName, int dwFileAttributes) => _SetFileAttributes(lpFileName, dwFileAttributes);
+
+final int Function(Pointer<Utf16> lpFileName, int dwFileAttributes) _SetFileAttributes =
+    _kernel32.lookupFunction<Int32 Function(Pointer<Utf16> lpFileName, Uint32 dwFileAttributes), int Function(Pointer<Utf16> lpFileName, int dwFileAttributes)>(
+        'SetFileAttributesW');
+
 /// [GDI]
 
 final DynamicLibrary _gdi32 = DynamicLibrary.open('gdi32.dll');

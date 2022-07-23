@@ -44,7 +44,6 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                 trailing: IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: () async {
-                    // FilePickerResult? result = await FilePicker.platform.pickFiles();
                     final OpenFilePicker file = OpenFilePicker()
                       ..filterSpecification = <String, String>{'All Files': '*.*', 'Executable (*.exe;*.ps1;*.sh;*.bat)': '*.exe;*.ps1;*.sh;*.bat'}
                       ..defaultFilterIndex = 0

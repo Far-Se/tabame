@@ -24,7 +24,6 @@ Future<void> main() async {
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
     alwaysOnTop: true,
-    // minimumSize: Size(300, 150),
     title: "Tabame",
   );
   windowManager.setMinimizable(false);
@@ -78,7 +77,6 @@ class _TabameState extends State<Tabame> {
             splashColor: Color.fromARGB(225, 0, 0, 0),
             backgroundColor: Color(globalSettings.lightTheme.background),
             dialogBackgroundColor: Color(globalSettings.lightTheme.background),
-            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), Color(globalSettings.lightTheme.background)),
             cardColor: Color(globalSettings.lightTheme.background),
             errorColor: Color(globalSettings.lightTheme.accentColor),
             iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
@@ -108,14 +106,14 @@ class _TabameState extends State<Tabame> {
             splashColor: Color.fromARGB(225, 0, 0, 0),
             backgroundColor: Color(globalSettings.darkTheme.background),
             dialogBackgroundColor: Color(globalSettings.darkTheme.background),
-            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), Color(globalSettings.darkTheme.background)),
             cardColor: Color(globalSettings.darkTheme.background),
             errorColor: Color(globalSettings.darkTheme.accentColor),
             iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
             textTheme: ThemeData.dark().textTheme.apply(
-                bodyColor: Color(globalSettings.darkTheme.textColor),
-                displayColor: Color(globalSettings.darkTheme.textColor),
-                decorationColor: Color(globalSettings.darkTheme.textColor)),
+                  bodyColor: Color(globalSettings.darkTheme.textColor),
+                  displayColor: Color(globalSettings.darkTheme.textColor),
+                  decorationColor: Color(globalSettings.darkTheme.textColor),
+                ),
             toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
             checkboxTheme: ThemeData.dark()
                 .checkboxTheme

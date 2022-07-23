@@ -233,10 +233,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                                             children: <Widget>[
                                                               const Tooltip(message: "Pin", child: Icon(Icons.push_pin, size: 13)),
                                                               const Tooltip(message: "Hide", child: Icon(Icons.visibility_off, size: 13)),
-                                                              // const Tooltip(message: "Normal", child: Icon(Icons.reorder, size: 13)),
                                                             ],
                                                             onPressed: (int index) async {
-                                                              // isSelected[index] = !isSelected[index];
                                                               final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
                                                               final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
                                                               if (index == 0 && !pinned.contains(item.processExe)) {
@@ -264,7 +262,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                                                   message: "Left opens .exe\nRight sends close message", child: Icon(Icons.open_in_new, size: 13)),
                                                             ],
                                                             onPressed: (int index) async {
-                                                              // isSelected[index] = !isSelected[index];
                                                               final List<String> action = Boxes.pref.getStringList("actionTray") ?? <String>[];
                                                               if (index == 1 && !action.contains(item.processExe)) {
                                                                 action.add(item.processExe);
@@ -334,7 +331,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                 powerShellNameController.add(TextEditingController(text: "Name"));
                                 await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
                                 setState(() {});
-                                // FilePickerResult? result = await FilePicker.platform.pickFiles();
                               },
                             )
                           : null,
@@ -350,7 +346,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                           clipBehavior: Clip.hardEdge,
                           shrinkWrap: true,
                           itemBuilder: (BuildContext context, int index) {
-                            // final PowerShellScript script = powerShellScripts[index];
                             return Column(
                               children: <Widget>[
                                 Row(
@@ -395,7 +390,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                     ),
                                     Expanded(
                                       child: Wrap(
-                                        // mainAxisAlignment: MainAxisAlignment.start,
                                         children: <Widget>[
                                           TextField(
                                             decoration: const InputDecoration(

@@ -9,6 +9,7 @@ import '../models/utils.dart';
 import '../models/win32/win32.dart';
 import '../models/globals.dart';
 import '../widgets/quickmenu/bottom_bar.dart';
+import '../widgets/quickmenu/list_pinned_tray.dart';
 import '../widgets/quickmenu/task_bar.dart';
 import '../widgets/quickmenu/top_bar.dart';
 
@@ -118,6 +119,7 @@ class QuickMenuState extends State<QuickMenu> {
                         const TopBar(),
                         const TaskBar(),
                         const Divider(thickness: 1, height: 1),
+                        if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
                         const BottomBar(),
                       ],
                     ),

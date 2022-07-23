@@ -5,15 +5,17 @@ import '../../models/utils.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
+import '../itzy/quickmenu/button_hide_desktop_files.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_media_control.dart';
 import '../itzy/quickmenu/button_mic_mute.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
 import '../itzy/quickmenu/button_pin_window.dart';
+import '../itzy/quickmenu/button_task_manager.dart';
+import '../itzy/quickmenu/button_toggle_hidden_files.dart';
 import '../itzy/quickmenu/list_pinned_apps.dart';
 import '../itzy/quickmenu/button_simulate_key.dart';
 import '../containers/bar_with_buttons.dart';
-import '../itzy/quickmenu/button_task_manager.dart';
 import '../itzy/quickmenu/button_toggle_taskbar.dart';
 import '../itzy/quickmenu/button_virtual_desktop.dart';
 
@@ -28,7 +30,9 @@ class TopBar extends StatelessWidget {
       "PinWindowButton": const PinWindowButton(),
       "MicMuteButton": const MicMuteButton(),
       "AlwaysAwakeButton": const AlwaysAwakeButton(),
-      "ChangeThemeButton": const ChangeThemeButton()
+      "ChangeThemeButton": const ChangeThemeButton(),
+      "HideDesktopFilesButton": const HideDesktopFilesButton(),
+      "ToggleHiddenFilesButton": const ToggleHiddenFilesButton()
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
@@ -84,12 +88,13 @@ class TopBar extends StatelessWidget {
                         ),
                       ),
                     const SizedBox(width: 2),
-                    Flexible(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
-                        child: const PinnedApps(),
+                    if (!globalSettings.quickMenuPinnedWithTrayAtBottom)
+                      Flexible(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
+                          child: const PinnedApps(),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

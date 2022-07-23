@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
 import '../itzy/quickmenu/list_powershell.dart';
+import '../itzy/quickmenu/widget_time.dart';
 import '../itzy/quickmenu/widget_time_weather.dart';
 import '../itzy/quickmenu/widget_usage.dart';
+import '../itzy/quickmenu/widget_weather.dart';
 import 'tray_bar.dart';
 
 class BottomBar extends StatelessWidget {
@@ -13,9 +15,32 @@ class BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Globals.heights.traybar = 30;
     final bool showPowerShell = globalSettings.showPowerShell && Boxes().getPowerShellScripts().isNotEmpty;
+    if (!showPowerShell &&
+        !globalSettings.showSystemUsage &&
+        ((globalSettings.showTrayBar && globalSettings.quickMenuPinnedWithTrayAtBottom) || !globalSettings.showTrayBar)) {
+      if (!globalSettings.showWeather) {
+        return const TimeWidget(inline: true);
+      } else {
+        return LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
+              constraints:
+                  BoxConstraints(minWidth: constraints.minWidth, minHeight: constraints.minHeight, maxWidth: constraints.maxWidth, maxHeight: constraints.maxHeight),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                verticalDirection: VerticalDirection.down,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Expanded(child: TimeWidget(inline: true)),
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: WeatherWidget(width: 80)),
+                ],
+              )),
+        );
+      }
+    }
     return Container(
       width: 280,
-      height: 30,
+      height: 31,
       child: DecoratedBox(
         decoration: const BoxDecoration(color: Colors.transparent),
         child: Material(
@@ -30,12 +55,13 @@ class BottomBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 const SizedBox(width: 100, child: TimeWeatherWidget()),
-                if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()), //! System Info
+                if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()),
                 if (showPowerShell) const Expanded(flex: 3, child: PowershellList()),
                 if (showPowerShell) const SizedBox(width: 5),
-                ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 180 - (showPowerShell ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
-                    child: const TrayBar()),
+                if (!globalSettings.quickMenuPinnedWithTrayAtBottom)
+                  ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: 180 - (showPowerShell ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
+                      child: const TrayBar()),
               ],
             ),
           ),

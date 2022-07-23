@@ -69,6 +69,8 @@ class Settings {
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
 
   ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 200, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
+
+  bool quickMenuPinnedWithTrayAtBottom = false;
   String get themeScheduleMinFormat {
     final int hour = (themeScheduleMin ~/ 60);
     final int minute = (themeScheduleMin % 60);
@@ -262,6 +264,7 @@ class Boxes {
       ..showWeather = pref.getBool("showWeather") ?? false
       ..showPowerShell = pref.getBool("showPowerShell") ?? false
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? false
+      ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? false
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
     final String? lightTheme = pref.getString("lightTheme");
@@ -311,18 +314,30 @@ class Boxes {
     return rewritesMap;
   }
 
-  List<String> get topBarWidgets =>
-      pref.getStringList("topBarWidgets") ??
-      <String>[
-        "TaskManagerButton",
-        "VirtualDesktopButton",
-        "ToggleTaskbarButton",
-        "PinWindowButton",
-        "MicMuteButton",
-        "AlwaysAwakeButton",
-        "ChangeThemeButton",
-        "Deactivated:",
-      ];
+  List<String> get topBarWidgets {
+    List<String> defaultWidgets = <String>[
+      "TaskManagerButton",
+      "VirtualDesktopButton",
+      "ToggleTaskbarButton",
+      "PinWindowButton",
+      "MicMuteButton",
+      "AlwaysAwakeButton",
+      "ChangeThemeButton",
+      "HideDesktopFilesButton",
+      "ToggleHiddenFilesButton",
+    ];
+    defaultWidgets.add("Deactivated:");
+    final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
+    if (topBarWidgets.length != defaultWidgets.length) {
+      final Iterable<String> newItems = defaultWidgets.where((String widget) => !topBarWidgets.contains(widget));
+      final int disabledIndex = topBarWidgets.indexWhere((String element) => element == "Deactivated:");
+      topBarWidgets.insertAll(disabledIndex, newItems);
+      pref.setStringList("topBarWidgets", topBarWidgets);
+    }
+    // pref.setStringList("topBarWidgets", defaultWidgets);
+
+    return topBarWidgets;
+  }
 
   List<PowerShellScript> getPowerShellScripts() {
     final String scriptsString = pref.getString("powerShellScripts") ?? "";
