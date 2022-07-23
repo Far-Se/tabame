@@ -356,6 +356,7 @@ class Win32 {
     final Pointer<SIZE> windowSize = calloc<SIZE>();
     windowSize.ref.cx = 300;
     windowSize.ref.cy = Globals.heights.allSummed.toInt();
+    if (globalSettings.showQuickMenuAtTaskbarLevel == false) windowSize.ref.cy += 30;
     if (windowSize.ref.cy == 0) windowSize.ref.cy = 300;
 
     CalculatePopupWindowPosition(anchorPoint, windowSize, flags, nullptr, popupWindowPosition);
@@ -507,17 +508,23 @@ class WinUtils {
   }
 
   static bool checkIfRegisterAsStartup() {
+    final String filePath = getStartupShortcut();
+    if (filePath == "") return false;
+    final io.File file = io.File(filePath);
+    return file.existsSync();
+  }
+
+  static String getStartupShortcut() {
     final LPWSTR startMenuPath = wsalloc(MAX_PATH);
     int result = SHGetFolderPath(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
     if (result != S_OK) {
       free(startMenuPath);
-      return false;
+      return "";
     }
     final String path = startMenuPath.toDartString();
     free(startMenuPath);
     final String filePath = "$path\\Startup\\tabame.lnk";
-    final io.File file = io.File(filePath);
-    return file.existsSync();
+    return filePath;
   }
 
   static Future<List<String>> getTaskbarPinnedAppsPowerShell() async {

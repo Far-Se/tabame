@@ -11,6 +11,7 @@ import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/quickmenu.dart';
+import '../widgets/interface/theme_setup.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -48,8 +49,8 @@ class InterfaceState extends State<Interface> {
   int currentPage = 0;
   PageController page = PageController();
   final List<PageClass> pages = <PageClass>[
-    // PageClass(title: "Home", icon: Icons.home, page: Container(height: 20)),
     PageClass(title: 'Home', icon: Icons.home),
+    PageClass(title: 'Theme Setup', icon: Icons.theater_comedy),
     PageClass(title: 'QuickMenu', icon: Icons.menu_outlined),
     PageClass(title: 'Run Window', icon: Icons.drag_handle),
     PageClass(title: 'Remap Keys', icon: Icons.keyboard),
@@ -61,6 +62,7 @@ class InterfaceState extends State<Interface> {
   ];
   final List<Widget> pagesWidget = <Widget>[
     const Home(),
+    const ThemeSetup(),
     const QuickmenuSettings(),
   ];
   final Future<int> interfaceWindow = interfaceWindowSetup();
@@ -104,108 +106,103 @@ class InterfaceState extends State<Interface> {
                       backgroundColor: Colors.transparent,
                       appBar: PreferredSize(
                         preferredSize: const Size(30, 30),
-                        child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onPanStart: (DragStartDetails details) {
-                              windowManager.startDragging();
-                            },
-                            onDoubleTap: () async {
-                              bool isMaximized = await windowManager.isMaximized();
-                              if (!isMaximized) {
-                                windowManager.maximize();
-                              } else {
-                                windowManager.unmaximize();
-                              }
-                            },
-                            child: Container(
-                              height: 30,
-                              // color: Theme.of(context).backgroundColor,
-                              padding: const EdgeInsets.only(left: 5),
-                              decoration: BoxDecoration(
-                                boxShadow: <BoxShadow>[
-                                  const BoxShadow(
-                                    color: Colors.black,
-                                    offset: Offset(0, 0),
-                                    blurRadius: 0.1,
-                                    blurStyle: BlurStyle.outer,
-                                    spreadRadius: 0.5,
-                                  )
-                                ],
-                                color: Theme.of(context).backgroundColor,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                mainAxisSize: MainAxisSize.max,
-                                children: <Widget>[
-                                  Flexible(
-                                    fit: FlexFit.loose,
-                                    // flex: 13,
-                                    child: InkWell(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                                        child: Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: GestureDetector(
-                                            behavior: HitTestBehavior.translucent,
-                                            onPanStart: (DragStartDetails details) {
-                                              windowManager.startDragging();
-                                            },
-                                            child: Row(
-                                              // alignment: WrapAlignment.center,
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                              // textBaseline: TextBaseline.alphabetic,
-                                              children: <Widget>[
-                                                const Image(image: AssetImage("resources/logo_light.png"), width: 15),
-                                                const SizedBox(width: 5),
-                                                const Text("Tabame", style: TextStyle(fontSize: 20)),
-                                              ],
-                                            ),
-                                          ),
+                        child: Container(
+                          height: 30,
+                          // color: Theme.of(context).backgroundColor,
+                          padding: const EdgeInsets.only(left: 5),
+                          decoration: BoxDecoration(
+                            boxShadow: <BoxShadow>[
+                              const BoxShadow(
+                                color: Colors.black,
+                                offset: Offset(0, 0),
+                                blurRadius: 0.1,
+                                blurStyle: BlurStyle.outer,
+                                spreadRadius: 0.5,
+                              )
+                            ],
+                            color: Theme.of(context).backgroundColor,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.max,
+                            children: <Widget>[
+                              Flexible(
+                                fit: FlexFit.loose,
+                                // flex: 13,
+                                child: InkWell(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onPanStart: (DragStartDetails details) {
+                                          windowManager.startDragging();
+                                        },
+                                        onDoubleTap: () async {
+                                          bool isMaximized = await windowManager.isMaximized();
+                                          if (!isMaximized) {
+                                            windowManager.maximize();
+                                          } else {
+                                            windowManager.unmaximize();
+                                          }
+                                        },
+                                        child: Row(
+                                          // alignment: WrapAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          // textBaseline: TextBaseline.alphabetic,
+                                          children: <Widget>[
+                                            const Image(image: AssetImage("resources/logo_light.png"), width: 15),
+                                            const SizedBox(width: 5),
+                                            const Text("Tabame", style: TextStyle(fontSize: 20)),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
-                                  SizedBox(
-                                    width: 50,
-                                    child: Wrap(
-                                      children: <Widget>[
-                                        SizedBox(
-                                          width: 25,
-                                          child: InkWell(
-                                            onTap: () {
-                                              WindowManager.instance.minimize();
-                                            },
-                                            child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.minimize, size: 15)),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: 25,
-                                          child: InkWell(
-                                            onTap: () async {
-                                              Globals.changingPages = true;
-                                              setState(() {});
-                                              mainPageViewController.jumpToPage(Pages.quickmenu.index);
-
-                                              // final NavigatorState noc = Navigator.of(context);
-                                              // noc.pushAndRemoveUntil(
-                                              //   PageRouteBuilder<QuickMenu>(
-                                              //     maintainState: false,
-                                              //     pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
-                                              //     transitionDuration: Duration.zero,
-                                              //     reverseTransitionDuration: Duration.zero,
-                                              //   ),
-                                              //   (Route<dynamic> route) => false,
-                                              // );
-                                            },
-                                            child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            )),
+                              SizedBox(
+                                width: 50,
+                                child: Wrap(
+                                  children: <Widget>[
+                                    SizedBox(
+                                      width: 25,
+                                      child: InkWell(
+                                        onTap: () {
+                                          WindowManager.instance.minimize();
+                                        },
+                                        child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.minimize, size: 15)),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 25,
+                                      child: InkWell(
+                                        onTap: () async {
+                                          Globals.changingPages = true;
+                                          setState(() {});
+                                          mainPageViewController.jumpToPage(Pages.quickmenu.index);
+
+                                          // final NavigatorState noc = Navigator.of(context);
+                                          // noc.pushAndRemoveUntil(
+                                          //   PageRouteBuilder<QuickMenu>(
+                                          //     maintainState: false,
+                                          //     pageBuilder: (BuildContext context, Animation<double> a1, Animation<double> a2) => const QuickMenu(),
+                                          //     transitionDuration: Duration.zero,
+                                          //     reverseTransitionDuration: Duration.zero,
+                                          //   ),
+                                          //   (Route<dynamic> route) => false,
+                                          // );
+                                        },
+                                        child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       //1 Body
                       body: LayoutBuilder(

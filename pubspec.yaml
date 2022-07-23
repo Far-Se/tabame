@@ -14,6 +14,7 @@ dependencies:
   equatable: ^2.0.3
   ffi: ^2.0.0
   filepicker_windows: ^2.0.2
+  flex_color_picker: ^2.5.0
   flutter:
     sdk: flutter
   http: ^0.13.4

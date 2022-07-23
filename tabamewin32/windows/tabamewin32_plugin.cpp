@@ -112,14 +112,135 @@ void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
     }
     CoUninitialize();
 }
+int SetStartOnStartupAsAdmin(bool enabled, std::string exePath)
+{
+
+    HRESULT result;
+    IShellLink *link;
+    IPersistFile *file;
+
+    result = CoInitialize(NULL);
+    result = CoCreateInstance(CLSID_ShellLink,
+                              NULL,
+                              CLSCTX_INPROC_SERVER,
+                              IID_IShellLink,
+                              (void **)&link);
+    if (result != S_OK)
+    {
+        CoUninitialize();
+        return -1;
+    }
+
+    // Retreive the IPersistFile
+    result = link->QueryInterface(IID_IPersistFile, (void **)&file);
+    if (result != S_OK)
+    {
+        link->Release();
+        CoUninitialize();
+        return -2;
+    }
+
+    WCHAR startMenuPath[MAX_PATH];
+    result = SHGetFolderPathW(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
+    std::string exe = exePath.substr(exePath.find_last_of("\\") + 1);
+    std::wstring wExe = Encoding::Utf8ToWide(exe);
+    wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
+    std::wstring wStartMenuPath = std::wstring(startMenuPath);
+    wStartMenuPath.append(L"\\Startup\\");
+    wStartMenuPath.append(wExe);
+
+    // Load the link data from the file
+    result = file->Load(wStartMenuPath.c_str(), STGM_READ);
+    if (result != S_OK)
+    {
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return -3;
+    }
+
+    IShellLinkDataList *pdl;
+
+    result = link->QueryInterface(IID_IShellLinkDataList, (void **)&pdl);
+    if (result != S_OK)
+    {
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return -4;
+    }
+
+    DWORD dwFlags = 0;
+
+    result = pdl->GetFlags(&dwFlags);
+    if (result != S_OK)
+    {
+        pdl->Release();
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return -5;
+    }
+    if ((SLDF_RUNAS_USER & dwFlags) != SLDF_RUNAS_USER && enabled)
+    {
+        result = pdl->SetFlags(SLDF_RUNAS_USER | dwFlags);
+        if (result != S_OK)
+        {
+            pdl->Release();
+            file->Release();
+            link->Release();
+            CoUninitialize();
+            return -6;
+        }
+    }
+    else if ((SLDF_RUNAS_USER & dwFlags) == SLDF_RUNAS_USER && !enabled)
+    {
+        result = pdl->SetFlags(dwFlags & ~SLDF_RUNAS_USER);
+        if (result != S_OK)
+        {
+            pdl->Release();
+            file->Release();
+            link->Release();
+            CoUninitialize();
+            return -7;
+        }
+    }
+    else
+    {
+        pdl->Release();
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return 0;
+    }
+
+    result = file->Save(NULL, true);
+    if (result != S_OK)
+    {
+        pdl->Release();
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return -8;
+    }
+    result = file->SaveCompleted(NULL);
+    if (result != S_OK)
+    {
+        pdl->Release();
+        file->Release();
+        link->Release();
+        CoUninitialize();
+        return -9;
+    }
+
+    pdl->Release();
+    file->Release();
+    link->Release();
+    CoUninitialize();
+    return ERROR_SUCCESS;
+}
 int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
 {
-    // if (::CoInitializeEx(0, COINIT_MULTITHREADED) != S_OK)
-    // {
-    //     std::cout << "CoInitializeEx error" << std::endl;
-    //     return 1;
-    // }
-
     HRESULT rc;
 
     IShellLink *iShellLink;
@@ -890,6 +1011,15 @@ namespace tabamewin32
 
             SetStartOnSystemStartup(enabled, exePath);
             result->Success(flutter::EncodableValue(""));
+        }
+        else if (method_name.compare("setStartOnStartupAsAdmin") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+
+            int output = SetStartOnStartupAsAdmin(enabled, exePath);
+            result->Success(flutter::EncodableValue(output));
         }
         else if (method_name.compare("getSystemUsage") == 0)
         {

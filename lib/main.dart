@@ -41,20 +41,7 @@ Future<void> main() async {
   runApp(const Tabame());
 }
 
-final Color kInitialColor = Color.fromRGBO(59, 65, 77, 1);
-final Color kTintColor = Color(0xFF373C47);
-
-final Color kLightBackground = Color(0xffFFFFFF);
-final Color kLightTint = Color(0xff4DCF72);
-final Color kLightText = Color.fromRGBO(169, 69, 138, 1);
-
-// final Color kDarkBackground = Color.fromRGBO(55, 47, 98, 1);
-final Color kDarkBackground = Color(0xFF3B414D);
-final Color kDarkTint = Color.fromRGBO(250, 249, 248, 1);
-final Color kDarkAccent = Color.fromARGB(220, 255, 220, 170);
-final Color kDarkText = Color.fromRGBO(250, 249, 248, 1);
-
-final ValueNotifier<bool> darkThemeNotifier = ValueNotifier<bool>(true);
+final ValueNotifier<bool> themeChangeNotifier = ValueNotifier<bool>(false);
 PageController mainPageViewController = PageController();
 
 class Tabame extends StatefulWidget {
@@ -67,78 +54,105 @@ class Tabame extends StatefulWidget {
 class _TabameState extends State<Tabame> {
   @override
   void dispose() {
-    // mainPageViewController.dispose();
-    darkThemeNotifier.dispose();
+    themeChangeNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-      valueListenable: darkThemeNotifier,
-      builder: (_, bool mode, __) => MaterialApp(
-        scrollBehavior: MyCustomScrollBehavior(),
-        debugShowCheckedModeBanner: false,
-        title: 'Tabame - Taskbar Menu',
-        theme: ThemeData.light().copyWith(
-          splashColor: Color.fromARGB(40, 0, 0, 0),
-          backgroundColor: kLightBackground,
-          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kLightBackground), // Color(darkerColor(kBackground.value, darkenBy: 0x44) as int),
-          cardColor: kLightBackground,
-          errorColor: kLightTint,
-          iconTheme: ThemeData.light().iconTheme.copyWith(color: kLightText),
-          textTheme: ThemeData.light().textTheme.apply(bodyColor: kLightText, displayColor: kLightText, decorationColor: kLightText),
-          tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
-                verticalOffset: 10,
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                height: 0,
-                margin: EdgeInsets.all(0),
-                textStyle: TextStyle(color: kLightText, fontSize: 12, height: 0),
-                decoration: BoxDecoration(color: kLightBackground),
-              ),
-        ),
-        darkTheme: ThemeData.dark().copyWith(
-          splashColor: Color.fromARGB(225, 0, 0, 0),
-          backgroundColor: kDarkBackground,
-          dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), kDarkBackground),
-          cardColor: kDarkBackground,
-          errorColor: kDarkTint,
-          iconTheme: ThemeData.dark().iconTheme.copyWith(color: kDarkText),
-          textTheme: ThemeData.dark().textTheme.apply(bodyColor: kDarkText, displayColor: kDarkText, decorationColor: kDarkText),
-          toggleableActiveColor: kDarkAccent,
-          checkboxTheme: ThemeData.dark().checkboxTheme.copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(kDarkBackground)),
-          focusColor: Colors.red,
-          tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
-                verticalOffset: 10,
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                height: 0,
-                margin: EdgeInsets.all(0),
-                textStyle: TextStyle(color: kDarkText, fontSize: 12, height: 0),
-                decoration: BoxDecoration(color: kDarkBackground),
-                preferBelow: false,
-                // decoration: BoxDecoration(color: Theme.of(context).backgroundColor),
-              ),
-          colorScheme: ThemeData.dark().colorScheme.copyWith(
-                primary: kDarkAccent,
-                secondary: kDarkAccent,
-              ),
-        ),
-        themeMode: mode ? ThemeMode.dark : ThemeMode.light,
-        // home: QuickMenu()
-        home: PageView.builder(
-          controller: mainPageViewController,
-          allowImplicitScrolling: false,
-          physics: const NeverScrollableScrollPhysics(),
-          itemBuilder: (BuildContext context, int index) {
-            if (index == Pages.quickmenu.index) {
+      valueListenable: themeChangeNotifier,
+      builder: (_, bool refreshed, __) {
+        ThemeMode scheduled = ThemeMode.system;
+        ThemeType themeType = globalSettings.themeType;
+        if (themeType.index == 3) {
+          scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+        }
+        ThemeMode themeMode = <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
+
+        return MaterialApp(
+          scrollBehavior: MyCustomScrollBehavior(),
+          debugShowCheckedModeBanner: false,
+          title: 'Tabame - Taskbar Menu',
+          theme: ThemeData.light().copyWith(
+            splashColor: Color.fromARGB(225, 0, 0, 0),
+            backgroundColor: Color(globalSettings.lightTheme.background),
+            dialogBackgroundColor: Color(globalSettings.lightTheme.background),
+            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), Color(globalSettings.lightTheme.background)),
+            cardColor: Color(globalSettings.lightTheme.background),
+            errorColor: Color(globalSettings.lightTheme.accentColor),
+            iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
+            textTheme: ThemeData.light().textTheme.apply(
+                bodyColor: Color(globalSettings.lightTheme.textColor),
+                displayColor: Color(globalSettings.lightTheme.textColor),
+                decorationColor: Color(globalSettings.lightTheme.textColor)),
+            toggleableActiveColor: Color(globalSettings.lightTheme.accentColor),
+            checkboxTheme: ThemeData.light()
+                .checkboxTheme
+                .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.lightTheme.background))),
+            tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
+                  verticalOffset: 10,
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  height: 0,
+                  margin: EdgeInsets.all(0),
+                  textStyle: TextStyle(color: Color(globalSettings.lightTheme.textColor), fontSize: 12, height: 0),
+                  decoration: BoxDecoration(color: Color(globalSettings.lightTheme.background)),
+                  preferBelow: false,
+                ),
+            colorScheme: ThemeData.light().colorScheme.copyWith(
+                  primary: Color(globalSettings.lightTheme.accentColor),
+                  secondary: Color(globalSettings.lightTheme.accentColor),
+                ),
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            splashColor: Color.fromARGB(225, 0, 0, 0),
+            backgroundColor: Color(globalSettings.darkTheme.background),
+            dialogBackgroundColor: Color(globalSettings.darkTheme.background),
+            dividerColor: Color.alphaBlend(Colors.black.withOpacity(0.2), Color(globalSettings.darkTheme.background)),
+            cardColor: Color(globalSettings.darkTheme.background),
+            errorColor: Color(globalSettings.darkTheme.accentColor),
+            iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
+            textTheme: ThemeData.dark().textTheme.apply(
+                bodyColor: Color(globalSettings.darkTheme.textColor),
+                displayColor: Color(globalSettings.darkTheme.textColor),
+                decorationColor: Color(globalSettings.darkTheme.textColor)),
+            toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
+            checkboxTheme: ThemeData.dark()
+                .checkboxTheme
+                .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.darkTheme.background))),
+            tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
+                  verticalOffset: 10,
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  height: 0,
+                  margin: EdgeInsets.all(0),
+                  textStyle: TextStyle(color: Color(globalSettings.darkTheme.textColor), fontSize: 12, height: 0),
+                  decoration: BoxDecoration(color: Color(globalSettings.darkTheme.background)),
+                  preferBelow: false,
+                ),
+            colorScheme: ThemeData.dark().colorScheme.copyWith(
+                  primary: Color(globalSettings.darkTheme.accentColor),
+                  secondary: Color(globalSettings.darkTheme.accentColor),
+                  background: Colors.red,
+                  tertiary: Colors.red,
+                ),
+          ),
+          themeMode: themeMode,
+          // home: QuickMenu()
+          home: PageView.builder(
+            controller: mainPageViewController,
+            allowImplicitScrolling: false,
+            physics: const NeverScrollableScrollPhysics(),
+            itemBuilder: (BuildContext context, int index) {
+              if (index == Pages.quickmenu.index) {
+                return const QuickMenu();
+              } else if (index == Pages.interface.index) {
+                return const Interface();
+              }
               return const QuickMenu();
-            } else if (index == Pages.interface.index) {
-              return const Interface();
-            }
-            return const QuickMenu();
-          },
-        ),
-      ),
+            },
+          ),
+        );
+      },
     );
   }
 }

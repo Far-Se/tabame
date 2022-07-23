@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../main.dart';
+import '../../../models/utils.dart';
 
 class ChangeThemeButton extends StatelessWidget {
   const ChangeThemeButton({
@@ -14,7 +15,9 @@ class ChangeThemeButton extends StatelessWidget {
       height: double.maxFinite,
       child: InkWell(
         onTap: () {
-          darkThemeNotifier.value = !darkThemeNotifier.value;
+          if (globalSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark) globalSettings.themeType = ThemeType.dark;
+          globalSettings.themeType = globalSettings.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
+          themeChangeNotifier.value = !themeChangeNotifier.value;
         },
         child: const Tooltip(message: "Change Theme", child: Icon(Icons.theater_comedy_sharp)),
       ),

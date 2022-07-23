@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
@@ -13,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../main.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
@@ -28,6 +30,9 @@ extension StringExtension on String {
 
   String toUperCaseAll() => toUpperCase();
   String toUpperCaseEach() => split(" ").map((String str) => str.toUpperCaseFirst()).join(" ");
+  String numberFormat({int minNr = 10}) {
+    return (int.parse(this) / minNr).toDouble().toString().replaceAll('.', '');
+  }
 }
 
 num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
@@ -39,10 +44,12 @@ enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
 
 enum VolumeOSDStyle { normal, media, visible, thin }
 
+enum ThemeType { system, light, dark, schedule }
+
 class Settings {
   bool hideTaskbarOnStartup = true;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
-  String language = 'en';
+  String language = Platform.localeName.substring(0, 2);
   List<String> weather = <String>['10 C', "berlin, Germany", "m", "%c+%t"]; //u for US
 
   bool showMediaControlForApp = true;
@@ -52,6 +59,27 @@ class Settings {
   bool showWeather = true;
 
   bool showPowerShell = true;
+
+  bool runAsAdministrator = false;
+
+  bool showSystemUsage = false;
+  int themeScheduleMin = 0;
+  int themeScheduleMax = 0;
+
+  ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
+
+  ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 200, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
+  String get themeScheduleMinFormat {
+    final int hour = (themeScheduleMin ~/ 60);
+    final int minute = (themeScheduleMin % 60);
+    return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}";
+  }
+
+  String get themeScheduleMaxFormat {
+    final int hour = (themeScheduleMax ~/ 60);
+    final int minute = (themeScheduleMax % 60);
+    return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}";
+  }
 
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
@@ -68,10 +96,112 @@ class Settings {
   bool showQuickMenuAtTaskbarLevel = true;
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
 
-  bool showSystemUsage = false;
+  ThemeType themeType = ThemeType.system;
+  ThemeType get themeTypeMode {
+    if (themeType == ThemeType.system) {
+      if (MediaQueryData.fromWindow(WidgetsBinding.instance.window).platformBrightness == Brightness.dark) return ThemeType.dark;
+      return ThemeType.light;
+    } else if (themeType == ThemeType.schedule) {
+      final int minTime = globalSettings.themeScheduleMin;
+      final int maxTime = globalSettings.themeScheduleMax;
+      final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
+      ThemeType scheduled;
+      if (minTime < maxTime) {
+        scheduled = (now > minTime && now < maxTime) ? ThemeType.dark : ThemeType.light;
+      } else {
+        scheduled = (now > minTime || now < maxTime) ? ThemeType.dark : ThemeType.light;
+      }
+      return scheduled;
+    }
+    return themeType;
+  }
+
+  ThemeColors get themeColors {
+    final ThemeType x = themeTypeMode;
+    if (x == ThemeType.dark) return darkTheme;
+    return lightTheme;
+  }
+
+  ThemeColors get theme => themeColors;
 }
 
 Settings globalSettings = Settings();
+
+class ThemeColors {
+  int background;
+  int gradientAlpha;
+  int textColor;
+  int accentColor;
+  bool quickMenuBoldFont;
+  ThemeColors({
+    required this.background,
+    required this.gradientAlpha,
+    required this.textColor,
+    required this.accentColor,
+    required this.quickMenuBoldFont,
+  });
+
+  ThemeColors copyWith({
+    int? background,
+    int? gradientAlpha,
+    int? textColor,
+    int? accentColor,
+    bool? quickMenuBoldFont,
+  }) {
+    return ThemeColors(
+      background: background ?? this.background,
+      gradientAlpha: gradientAlpha ?? this.gradientAlpha,
+      textColor: textColor ?? this.textColor,
+      accentColor: accentColor ?? this.accentColor,
+      quickMenuBoldFont: quickMenuBoldFont ?? this.quickMenuBoldFont,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'background': background,
+      'gradientAlpha': gradientAlpha,
+      'textColor': textColor,
+      'accentColor': accentColor,
+      'quickMenuBoldFont': quickMenuBoldFont,
+    };
+  }
+
+  factory ThemeColors.fromMap(Map<String, dynamic> map) {
+    return ThemeColors(
+      background: map['background'] as int,
+      gradientAlpha: map['gradientAlpha'] as int,
+      textColor: map['textColor'] as int,
+      accentColor: map['accentColor'] as int,
+      quickMenuBoldFont: map['quickMenuBoldFont'] ?? false,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ThemeColors.fromJson(String source) => ThemeColors.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, quickMenuBoldFont: $quickMenuBoldFont)';
+  }
+
+  @override
+  bool operator ==(covariant ThemeColors other) {
+    if (identical(this, other)) return true;
+
+    return other.background == background &&
+        other.gradientAlpha == gradientAlpha &&
+        other.textColor == textColor &&
+        other.accentColor == accentColor &&
+        other.quickMenuBoldFont == quickMenuBoldFont;
+  }
+
+  @override
+  int get hashCode {
+    return background.hashCode ^ gradientAlpha.hashCode ^ textColor.hashCode ^ accentColor.hashCode ^ quickMenuBoldFont.hashCode;
+  }
+}
 
 late Timer monitorChecker;
 Future<void> registerAll() async {
@@ -90,32 +220,39 @@ unregisterAll() {
 }
 
 class Boxes {
-  // static List<String> pinnedApps = <String>[];
   static late SharedPreferences pref;
   static List<String> mediaControls = <String>[];
   Boxes();
   static Future<void> registerBoxes() async {
     pref = await SharedPreferences.getInstance();
-    // await pref.remove("powerShellScripts");
-    // pref = await SharedPreferences.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
+      await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
+      await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
+
+      await pref.setInt("themeType", ThemeType.system.index);
+      await pref.setString("lightTheme", globalSettings.lightTheme.toJson());
+      await pref.setString("darkTheme", globalSettings.darkTheme.toJson());
+
+      await pref.setString("language", Platform.localeName.substring(0, 2));
+      await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
       await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
       await pref.setBool("showTrayBar", true);
       await pref.setBool("showWeather", true);
       await pref.setBool("showPowerShell", true);
-      await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
-      await pref.setString("language", Platform.localeName.substring(0, 2));
-      await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
       await pref.setBool("showSystemUsage", false);
-      await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
+      await pref.setBool("runAsAdministrator", false);
       await setStartOnSystemStartup(true);
+      pref = await SharedPreferences.getInstance();
     }
     globalSettings
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
+      ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]
+      ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? 0
+      ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? 0
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
       ..weather = pref.getStringList("weather") ?? <String>["10 C", "berlin, germany", "m", "%c+%t"]
       ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
@@ -124,8 +261,18 @@ class Boxes {
       ..showTrayBar = pref.getBool("showTrayBar") ?? false
       ..showWeather = pref.getBool("showWeather") ?? false
       ..showPowerShell = pref.getBool("showPowerShell") ?? false
+      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? false
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
+    final String? lightTheme = pref.getString("lightTheme");
+    final String? darkTheme = pref.getString("darkTheme");
+    if (lightTheme == null || darkTheme == null) {
+      pref.setString("lightTheme", globalSettings.lightTheme.toJson());
+      pref.setString("darkTheme", globalSettings.darkTheme.toJson());
+    }
+    if (lightTheme != null) globalSettings.lightTheme = ThemeColors.fromJson(lightTheme);
+    if (darkTheme != null) globalSettings.darkTheme = ThemeColors.fromJson(darkTheme);
+    themeChangeNotifier.value = !themeChangeNotifier.value;
     //? Pinned Apps
     if (pref.getStringList("pinnedApps") == null) {
       final List<String> pinnedApps2 = await WinUtils.getTaskbarPinnedApps();
@@ -177,11 +324,6 @@ class Boxes {
         "Deactivated:",
       ];
 
-  /*
-  PowerShellScript(name: "Open AI", command: "Import-Module \"E:\\Playground\\Scripts\\openai.ps1\"", showTerminal: true).toJson(),
-  PowerShellScript(name: "Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson(),
-  PowerShellScript(name: "Clear Temp", command: "E:\\Playground\\Scripts\\tempRemove.ps1", showTerminal: false, disabled: true).toJson(),
-  */
   List<PowerShellScript> getPowerShellScripts() {
     final String scriptsString = pref.getString("powerShellScripts") ?? "";
     if (scriptsString.isEmpty) return <PowerShellScript>[];
