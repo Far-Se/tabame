@@ -687,7 +687,6 @@ class WinUtils {
     final RegistryKey key =
         Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', desiredAccessRights: AccessRights.allAccess);
     final int hidden = key.getValueAsInt('Hidden') ?? 1;
-    print(hidden == 2 ? "Visible" : "hidden");
     if (hidden == 2) {
       key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 1));
     } else {

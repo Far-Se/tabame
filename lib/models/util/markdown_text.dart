@@ -40,14 +40,7 @@ A Folder utility that helps you to manage your folders and files.
 - The user may rename folders and files. Regex and list access are granted in order to change, for example, from a number month to the name of the month.
 - The user can search for text within files, specifying options such as the filename and which files or folders to ignore.
 - You can change the size of images or the file format.
-
----
-### ![wizardly]() Tasks
-
-This is a utility that allows you to create tasks such as reminders and Page Watchers.
-
-- Reminders can be customised by day and time.
-- With Page Watchers you can watch if a whole web page changes or only a specific text. It's good when you make a forum post on some random site, if a blog has new posts or other uses you might find.
+- You can count lines of code in a folder. You can set which files to include or exclude and also exclude lines that contain specific regex or non alphabet characters.
 
 
 ''';
@@ -90,4 +83,13 @@ const String markdownHomeRight = '''
   - Keyboard strokes per minute [Writing]
   - Keyboard writes each 10 seconds per minute [Debugging]
   - Mouse movement each 3 seconds per minute [Testing/Research]
+
+---
+### ![tasks]() Tasks
+
+This is a utility that allows you to create tasks such as reminders and Page Watchers.
+
+- Reminders can be customised by day and time.
+- With Page Watchers you can watch if a whole web page changes or only a specific text. It's good when you make a forum post on some random site, if a blog has new posts or other uses you might find.
+
 ''';
