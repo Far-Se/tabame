@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/utils.dart';
+import '../../../pages/interface.dart';
 
 class QuickmenuTopbar extends StatefulWidget {
   const QuickmenuTopbar({Key? key}) : super(key: key);
@@ -33,30 +35,59 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         minVerticalPadding: 0,
         minLeadingWidth: 10,
-        child: ReorderableListView.builder(
-          header: ListTile(title: Text("QuickActions Order", style: Theme.of(context).textTheme.headline6)),
-          scrollController: ScrollController(),
-          itemBuilder: (BuildContext context, int index) {
-            if (topBarItems[index] == "Deactivated:") {
-              return ListTile(
-                leading: Icon(icons[topBarItems[index]], size: 17),
-                key: ValueKey<int>(index),
-                title: Text(
-                  topBarItems[index].toUperCaseAll(),
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        child: Column(
+          children: [
+            ListTile(title: Text("QuickActions Order", style: Theme.of(context).textTheme.headline6)),
+            Flexible(
+              fit: FlexFit.loose,
+              child: MouseRegion(
+                onEnter: (PointerEnterEvent e) {
+                  mainScrollEnabled = false;
+                  context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
+                },
+                onExit: (PointerExitEvent e) {
+                  mainScrollEnabled = true;
+                  context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
+                },
+                child: SingleChildScrollView(
+                  controller: ScrollController(),
+                  child: ReorderableListView.builder(
+                    shrinkWrap: true,
+                    dragStartBehavior: DragStartBehavior.down,
+                    physics: const BouncingScrollPhysics(),
+                    scrollController: ScrollController(),
+                    itemBuilder: (BuildContext context, int index) {
+                      if (topBarItems[index] == "Deactivated:") {
+                        return ListTile(
+                          leading: Icon(icons[topBarItems[index]], size: 17),
+                          key: ValueKey<int>(index),
+                          title: Text(
+                            topBarItems[index].toUperCaseAll(),
+                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      }
+                      return ListTile(
+                        leading: Icon(icons[topBarItems[index]], size: 17),
+                        key: ValueKey<int>(index),
+                        title: Text(
+                          topBarItems[index].replaceAllMapped(RegExp(r'([A-Z])', caseSensitive: true), (Match match) => ' ${match[0]}'),
+                        ),
+                      );
+                    },
+                    itemCount: topBarItems.length,
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      final String item = topBarItems.removeAt(oldIndex);
+                      topBarItems.insert(newIndex, item);
+                      setState(() {});
+                      Boxes.updateSettings("topBarWidgets", topBarItems);
+                    },
+                  ),
                 ),
-              );
-            }
-            return ListTile(leading: Icon(icons[topBarItems[index]], size: 17), key: ValueKey<int>(index), title: Text(topBarItems[index]));
-          },
-          itemCount: topBarItems.length,
-          onReorder: (int oldIndex, int newIndex) {
-            if (oldIndex < newIndex) newIndex -= 1;
-            final String item = topBarItems.removeAt(oldIndex);
-            topBarItems.insert(newIndex, item);
-            setState(() {});
-            Boxes.updateSettings("topBarWidgets", topBarItems);
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );

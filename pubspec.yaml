@@ -17,6 +17,7 @@ dependencies:
   flex_color_picker: ^2.5.0
   flutter:
     sdk: flutter
+  flutter_markdown: ^0.6.10+3
   http: ^0.13.4
   intl: ^0.17.0
   shared_preferences: ^2.0.15

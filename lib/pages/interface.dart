@@ -7,10 +7,12 @@ import 'package:window_manager/window_manager.dart';
 
 import '../main.dart';
 import '../models/globals.dart';
+import '../models/utils.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/quickmenu.dart';
+import '../widgets/interface/settings.dart';
 import '../widgets/interface/theme_setup.dart';
 
 class Interface extends StatefulWidget {
@@ -23,9 +25,11 @@ class Interface extends StatefulWidget {
 class PageClass {
   String? title;
   IconData? icon;
+  Widget widget;
   PageClass({
     this.title,
     this.icon,
+    required this.widget,
   });
 }
 
@@ -38,30 +42,38 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.7));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.65));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
+}
+
+bool mainScrollEnabled = true;
+
+class NotImplemeneted extends StatelessWidget {
+  const NotImplemeneted({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(child: const Center(child: Text("Not implementedd")));
+  }
 }
 
 class InterfaceState extends State<Interface> {
   int currentPage = 0;
   PageController page = PageController();
   final List<PageClass> pages = <PageClass>[
-    PageClass(title: 'Home', icon: Icons.home),
-    PageClass(title: 'Theme Setup', icon: Icons.theater_comedy),
-    PageClass(title: 'QuickMenu', icon: Icons.menu_outlined),
-    PageClass(title: 'Run Window', icon: Icons.drag_handle),
-    PageClass(title: 'Remap Keys', icon: Icons.keyboard),
-    PageClass(title: 'Views', icon: Icons.view_agenda),
-    PageClass(title: 'Trktivity', icon: Icons.celebration),
-    PageClass(title: 'Tasks', icon: Icons.task_alt),
-    PageClass(title: 'Wizardly', icon: Icons.auto_fix_high),
-    PageClass(title: 'Info', icon: Icons.info),
-  ];
-  final List<Widget> pagesWidget = <Widget>[
-    const Home(),
-    const ThemeSetup(),
-    const QuickmenuSettings(),
+    PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
+    PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
+    PageClass(title: 'Theme Setup', icon: Icons.theater_comedy, widget: const ThemeSetup()),
+    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
+    PageClass(title: 'Run Window', icon: Icons.drag_handle, widget: const NotImplemeneted()),
+    PageClass(title: 'Remap Keys', icon: Icons.keyboard, widget: const NotImplemeneted()),
+    PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
+    PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const NotImplemeneted()),
+    PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
+    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const NotImplemeneted()),
+    PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const NotImplemeneted()),
+    PageClass(title: 'Info', icon: Icons.info, widget: const NotImplemeneted()),
   ];
   final Future<int> interfaceWindow = interfaceWindowSetup();
   @override
@@ -188,7 +200,7 @@ class InterfaceState extends State<Interface> {
                       ),
                       //1 Body
                       body: LayoutBuilder(
-                        builder: (BuildContext context, BoxConstraints constraints) => DecoratedBox(
+                        builder: (BuildContext context, BoxConstraints mainConstraints) => DecoratedBox(
                           decoration: BoxDecoration(
                               color: Theme.of(context).backgroundColor,
                               gradient: LinearGradient(
@@ -231,7 +243,7 @@ class InterfaceState extends State<Interface> {
                                                     page.jumpToPage(index);
                                                   },
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+                                                    padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
                                                     child: Row(
                                                       mainAxisAlignment: MainAxisAlignment.start,
                                                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -273,26 +285,11 @@ class InterfaceState extends State<Interface> {
                                         physics: const NeverScrollableScrollPhysics(),
                                         itemCount: pages.length,
                                         itemBuilder: (BuildContext context, int index) {
-                                          if (index < pagesWidget.length) {
-                                            return SingleChildScrollView(
-                                              controller: ScrollController(),
-                                              child: LayoutBuilder(
-                                                builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
-                                                  constraints: BoxConstraints(
-                                                    maxHeight: constraints.maxHeight,
-                                                    maxWidth: constraints.maxWidth,
-                                                    minHeight: constraints.minHeight,
-                                                    minWidth: constraints.minWidth,
-                                                  ),
-                                                  child: Material(type: MaterialType.transparency, child: pagesWidget[index]),
-                                                ),
-                                              ),
-                                            );
-                                          } else {
-                                            return Container(
-                                              child: const Center(child: Text("NOT IMPLEMENTED")),
-                                            );
-                                          }
+                                          return SingleChildScrollView(
+                                            controller: AdjustableScrollController(30),
+                                            physics: mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                                            child: Material(type: MaterialType.transparency, child: pages[index].widget),
+                                          );
                                         },
                                       ),
                                     ),

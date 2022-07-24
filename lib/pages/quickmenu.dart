@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -91,40 +92,45 @@ class QuickMenuState extends State<QuickMenu> {
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               physics: const NeverScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                child: Container(
-                  color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
-                  child: Container(
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).backgroundColor,
-                        gradient: LinearGradient(
-                          colors: <Color>[
-                            Theme.of(context).backgroundColor,
-                            Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                            Theme.of(context).backgroundColor,
+              child: Stack(
+                children: [
+                  if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                  Padding(
+                    padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                    child: Container(
+                      color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
+                      child: Container(
+                        decoration: BoxDecoration(
+                            color: Theme.of(context).backgroundColor,
+                            gradient: LinearGradient(
+                              colors: <Color>[
+                                Theme.of(context).backgroundColor,
+                                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                Theme.of(context).backgroundColor,
+                              ],
+                              stops: <double>[0, 0.4, 1],
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: <BoxShadow>[
+                              const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+                            ]),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            //3 Items
+                            const TopBar(),
+                            const TaskBar(),
+                            const Divider(thickness: 1, height: 1),
+                            if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
+                            const BottomBar(),
                           ],
-                          stops: <double>[0, 0.4, 1],
-                          end: Alignment.bottomRight,
                         ),
-                        boxShadow: <BoxShadow>[
-                          const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-                        ]),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.max,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        //3 Items
-                        const TopBar(),
-                        const TaskBar(),
-                        const Divider(thickness: 1, height: 1),
-                        if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
-                        const BottomBar(),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),

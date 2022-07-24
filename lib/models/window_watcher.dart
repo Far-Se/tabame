@@ -159,9 +159,12 @@ class WindowWatcher {
     } else {
       Audio.enumAudioMixer().then((List<ProcessVolume>? e) async {
         List<ProcessVolume> elements = e as List<ProcessVolume>;
-        final double volume = elements.firstWhere((ProcessVolume element) => element.processId == spotifyPID).maxVolume;
-        await Audio.setAudioMixerVolume(spotifyPID, 0.1);
+        final ProcessVolume spotifyMixer = elements.firstWhere((ProcessVolume element) => element.processId == spotifyPID, orElse: () => ProcessVolume()..maxVolume = -1);
 
+        final double volume = spotifyMixer.maxVolume;
+        if (spotifyMixer.maxVolume != -1) {
+          await Audio.setAudioMixerVolume(spotifyPID, 0.1);
+        }
         SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
         Future<void>.delayed(const Duration(milliseconds: 200), () async {
           if (button == AppCommand.mediaPlayPause) {
@@ -171,8 +174,9 @@ class WindowWatcher {
             SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaStop);
           }
 
-          Future<void>.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotifyPID, volume));
-
+          if (spotifyMixer.maxVolume != -1) {
+            Future<void>.delayed(const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotifyPID, volume));
+          }
           return;
         });
       });
