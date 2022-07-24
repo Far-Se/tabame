@@ -7,10 +7,12 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -71,6 +73,13 @@ class Settings {
   ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 200, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
 
   bool quickMenuPinnedWithTrayAtBottom = false;
+
+  String currentVersion = "0.5.1";
+
+  String customLogo = "";
+
+  String customSpash = "";
+
   String get themeScheduleMinFormat {
     final int hour = (themeScheduleMin ~/ 60);
     final int minute = (themeScheduleMin % 60);
@@ -142,6 +151,7 @@ class ThemeColors {
     required this.accentColor,
     required this.quickMenuBoldFont,
   });
+// #region (collapsed) [ThemeColors]
 
   ThemeColors copyWith({
     int? background,
@@ -203,6 +213,7 @@ class ThemeColors {
   int get hashCode {
     return background.hashCode ^ gradientAlpha.hashCode ^ textColor.hashCode ^ accentColor.hashCode ^ quickMenuBoldFont.hashCode;
   }
+// #endregion
 }
 
 late Timer monitorChecker;
@@ -237,7 +248,19 @@ class Boxes {
       await pref.setString("darkTheme", globalSettings.darkTheme.toJson());
 
       await pref.setString("language", Platform.localeName.substring(0, 2));
-      await pref.setStringList("weather", <String>["10 C", "berlin, germany", "m", "%c+%t"]);
+      String city = "berlin, germany";
+      // ? Get city from IP
+      final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
+      if (ip.statusCode == 200) {
+        final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> data = json.decode(response.body);
+          if (data.containsKey("city") && data.containsKey("country")) {
+            city = "${data["city"]}, ${data["country"]}";
+          }
+        }
+      }
+      await pref.setStringList("weather", <String>["10 C", city, "m", "%c+%t"]);
       await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
@@ -256,6 +279,8 @@ class Boxes {
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? 0
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? 0
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
+      ..customLogo = pref.getString("customLogo") ?? ""
+      ..customSpash = pref.getString("customSpash") ?? ""
       ..weather = pref.getStringList("weather") ?? <String>["10 C", "berlin, germany", "m", "%c+%t"]
       ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
       ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
@@ -432,5 +457,18 @@ class PowerShellScript {
   @override
   int get hashCode {
     return command.hashCode ^ name.hashCode ^ showTerminal.hashCode ^ disabled.hashCode;
+  }
+}
+
+class AdjustableScrollController extends ScrollController {
+  AdjustableScrollController([int extraScrollSpeed = 40]) {
+    super.addListener(() {
+      ScrollDirection scrollDirection = super.position.userScrollDirection;
+      if (scrollDirection != ScrollDirection.idle) {
+        double scrollEnd = super.offset + (scrollDirection == ScrollDirection.reverse ? extraScrollSpeed : -extraScrollSpeed);
+        scrollEnd = min(super.position.maxScrollExtent, max(super.position.minScrollExtent, scrollEnd));
+        jumpTo(scrollEnd);
+      }
+    });
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/utils.dart';
+
 class BarWithButtons extends StatefulWidget {
   final List<Widget> children;
   final bool withScroll;
@@ -21,13 +23,19 @@ class _BarWithButtonsState extends State<BarWithButtons> {
 
   @override
   Widget build(BuildContext context) {
+    double middleOffset = 0.93;
+    if (widget.children.length < 8 && globalSettings.quickMenuPinnedWithTrayAtBottom) {
+      middleOffset = 0.99;
+    } else if (widget.children.length < 5 && !globalSettings.quickMenuPinnedWithTrayAtBottom) {
+      middleOffset = 0.99;
+    }
     return ShaderMask(
       shaderCallback: (Rect rect) {
-        return const LinearGradient(
+        return LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-          stops: <double>[0.0, 0.93, 1.0],
+          colors: <Color>[Colors.transparent, Colors.transparent, const Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, middleOffset, 1.0],
         ).createShader(rect);
       },
       blendMode: BlendMode.dstOut,

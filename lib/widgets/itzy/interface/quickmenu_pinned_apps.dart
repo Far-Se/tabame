@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
+import '../../../pages/interface.dart';
 
 class QuickmenuPinnedApps extends StatefulWidget {
   const QuickmenuPinnedApps({Key? key}) : super(key: key);
@@ -35,68 +36,90 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
         if (!snapshot.hasData) return const SizedBox();
         return ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 200, minHeight: 100),
-          child: ReorderableListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            dragStartBehavior: DragStartBehavior.down,
-            header: Center(
-              child: ListTile(
-                title: Text("Pinned Files", style: Theme.of(context).textTheme.headline6),
-                trailing: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () async {
-                    final OpenFilePicker file = OpenFilePicker()
-                      ..filterSpecification = <String, String>{'All Files': '*.*', 'Executable (*.exe;*.ps1;*.sh;*.bat)': '*.exe;*.ps1;*.sh;*.bat'}
-                      ..defaultFilterIndex = 0
-                      ..defaultExtension = 'exe'
-                      ..title = 'Select any file';
+          child: Column(
+            children: <Widget>[
+              Center(
+                child: ListTile(
+                  title: Text("Pinned Files", style: Theme.of(context).textTheme.headline6),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () async {
+                      final OpenFilePicker file = OpenFilePicker()
+                        ..filterSpecification = <String, String>{'All Files': '*.*', 'Executable (*.exe;*.ps1;*.sh;*.bat)': '*.exe;*.ps1;*.sh;*.bat'}
+                        ..defaultFilterIndex = 0
+                        ..defaultExtension = 'exe'
+                        ..title = 'Select any file';
 
-                    final File? result = file.getFile();
-                    if (result != null) {
-                      if (Win32.getExe(result.path).contains(".dll")) return;
-                      pinnedApps.add(result.path);
-                      pinnedAppsIcons[Win32.getExe(result.path)] = (await getExecutableIcon(result.path))!;
-                      await Boxes.updateSettings("pinnedApps", pinnedApps);
-                      if (!mounted) return;
-                      setState(() {});
-                    }
-                  },
+                      final File? result = file.getFile();
+                      if (result != null) {
+                        if (Win32.getExe(result.path).contains(".dll")) return;
+                        pinnedApps.add(result.path);
+                        pinnedAppsIcons[Win32.getExe(result.path)] = (await getExecutableIcon(result.path))!;
+                        await Boxes.updateSettings("pinnedApps", pinnedApps);
+                        if (!mounted) return;
+                        setState(() {});
+                      }
+                    },
+                  ),
                 ),
               ),
-            ),
-            scrollController: ScrollController(),
-            itemBuilder: (BuildContext context, int index) {
-              return ListTile(
-                minLeadingWidth: 10,
-                dense: true,
-                style: ListTileStyle.drawer,
-                minVerticalPadding: 0,
-                contentPadding: const EdgeInsets.fromLTRB(20, 0, 30, 0),
-                //
-                key: ValueKey<int>(index),
-                title: Text(Win32.getExe(pinnedApps[index])),
-                leading: Image.memory(pinnedAppsIcons[Win32.getExe(pinnedApps[index])]!, width: 20),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: "Remove",
-                  onPressed: () async {
-                    pinnedApps.removeAt(index);
-                    await Boxes.updateSettings("pinnedApps", pinnedApps);
-                    // pinnedAppsIcons.remove(index);
-                    if (!mounted) return;
-                    setState(() {});
+              Flexible(
+                fit: FlexFit.loose,
+                child: MouseRegion(
+                  onEnter: (PointerEnterEvent e) {
+                    mainScrollEnabled = false;
+                    context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
                   },
-                ),
-              );
-            },
-            itemCount: pinnedApps.length,
-            onReorder: (int oldIndex, int newIndex) {
-              if (oldIndex < newIndex) newIndex -= 1;
-              final String item = pinnedApps.removeAt(oldIndex);
-              pinnedApps.insert(newIndex, item);
+                  onExit: (PointerExitEvent e) {
+                    mainScrollEnabled = true;
+                    context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
+                  },
+                  child: SingleChildScrollView(
+                    controller: ScrollController(),
+                    child: ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shrinkWrap: true,
+                      dragStartBehavior: DragStartBehavior.down,
+                      physics: const BouncingScrollPhysics(),
+                      scrollController: ScrollController(),
+                      itemBuilder: (BuildContext context, int index) {
+                        return ListTile(
+                          minLeadingWidth: 10,
+                          dense: true,
+                          style: ListTileStyle.drawer,
+                          minVerticalPadding: 0,
+                          contentPadding: const EdgeInsets.fromLTRB(20, 0, 30, 0),
+                          //
+                          key: ValueKey<int>(index),
+                          title: Text(Win32.getExe(pinnedApps[index])),
+                          leading: Image.memory(pinnedAppsIcons[Win32.getExe(pinnedApps[index])]!, width: 20),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            tooltip: "Remove",
+                            onPressed: () async {
+                              pinnedApps.removeAt(index);
+                              await Boxes.updateSettings("pinnedApps", pinnedApps);
+                              // pinnedAppsIcons.remove(index);
+                              if (!mounted) return;
+                              setState(() {});
+                            },
+                          ),
+                        );
+                      },
+                      itemCount: pinnedApps.length,
+                      onReorder: (int oldIndex, int newIndex) {
+                        if (oldIndex < newIndex) newIndex -= 1;
+                        final String item = pinnedApps.removeAt(oldIndex);
+                        pinnedApps.insert(newIndex, item);
 
-              setState(() {});
-              Boxes.updateSettings("pinnedApps", pinnedApps);
-            },
+                        setState(() {});
+                        Boxes.updateSettings("pinnedApps", pinnedApps);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },

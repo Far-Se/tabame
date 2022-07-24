@@ -1,4 +1,4 @@
-final List<List<int>> lightThemeOptions = <List<int>>[
+const List<List<int>> lightThemeOptions = <List<int>>[
   //fav
   <int>[0xffD5E0FB, 0xff3A404A, 0xff446EE9],
   //
@@ -105,7 +105,7 @@ final List<List<int>> lightThemeOptions = <List<int>>[
   <int>[0xfffaddaf, 0xff63747e, 0xff43a19c],
 ];
 
-final List<List<int>> darkThemeOptions = <List<int>>[
+const List<List<int>> darkThemeOptions = <List<int>>[
   //fav theme
   <int>[0xFF3B414D, 0xFFFAF9F8, 0xDCFFDCAA],
   //Collectec From internet
