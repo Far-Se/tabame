@@ -165,7 +165,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                 setState(() {});
                                                 Navigator.of(context).pop();
                                               },
-                                              child: const Text("Delete"),
+                                              child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
                                             ),
                                             ElevatedButton(
                                               onPressed: () async {
@@ -175,7 +175,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                 setState(() {});
                                                 Navigator.of(context).pop();
                                               },
-                                              child: const Text("Save"),
+                                              child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
                                             ),
                                           ],
                                         );
@@ -344,7 +344,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
-                                                child: const Text("Delete"),
+                                                child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
@@ -355,7 +355,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
-                                                child: const Text("Save"),
+                                                child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
                                               ),
                                             ],
                                           );
