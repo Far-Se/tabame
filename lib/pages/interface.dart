@@ -11,6 +11,7 @@ import '../models/utils.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
+import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu.dart';
 import '../widgets/interface/settings.dart';
 import '../widgets/interface/theme_setup.dart';
@@ -48,6 +49,7 @@ Future<int> interfaceWindowSetup() async {
 }
 
 bool mainScrollEnabled = true;
+BoxConstraints? interfaceConstraints;
 
 class NotImplemeneted extends StatelessWidget {
   const NotImplemeneted({Key? key}) : super(key: key);
@@ -64,12 +66,12 @@ class InterfaceState extends State<Interface> {
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
-    PageClass(title: 'Theme Setup', icon: Icons.theater_comedy, widget: const ThemeSetup()),
+    PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
     PageClass(title: 'Run Window', icon: Icons.drag_handle, widget: const NotImplemeneted()),
     PageClass(title: 'Remap Keys', icon: Icons.keyboard, widget: const NotImplemeneted()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
-    PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const NotImplemeneted()),
+    PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const NotImplemeneted()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const NotImplemeneted()),
@@ -200,106 +202,109 @@ class InterfaceState extends State<Interface> {
                       ),
                       //1 Body
                       body: LayoutBuilder(
-                        builder: (BuildContext context, BoxConstraints mainConstraints) => DecoratedBox(
-                          decoration: BoxDecoration(
-                              color: Theme.of(context).backgroundColor,
-                              gradient: LinearGradient(
-                                colors: <Color>[Theme.of(context).backgroundColor, Theme.of(context).backgroundColor.withAlpha(180), Theme.of(context).backgroundColor],
-                                stops: <double>[0, 0.4, 1],
-                                end: Alignment.bottomRight,
-                              )),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 1080),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: <Widget>[
-                                //1 Sidebar
-                                //#h green
-                                Material(
-                                  type: MaterialType.transparency,
-                                  child: Container(
-                                    width: 150,
-                                    height: double.infinity,
-                                    color: Colors.black12.withOpacity(0.1),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      mainAxisSize: MainAxisSize.max,
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: <Widget>[
-                                        const SizedBox(height: 10),
-                                        Flexible(
-                                          fit: FlexFit.tight,
-                                          child: SingleChildScrollView(
-                                            scrollDirection: Axis.vertical,
-                                            child: ListView.builder(
+                        builder: (BuildContext context, BoxConstraints mainConstraints) {
+                          interfaceConstraints = mainConstraints;
+                          return DecoratedBox(
+                            decoration: BoxDecoration(
+                                color: Theme.of(context).backgroundColor,
+                                gradient: LinearGradient(
+                                  colors: <Color>[Theme.of(context).backgroundColor, Theme.of(context).backgroundColor.withAlpha(180), Theme.of(context).backgroundColor],
+                                  stops: <double>[0, 0.4, 1],
+                                  end: Alignment.bottomRight,
+                                )),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 1080),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: <Widget>[
+                                  //1 Sidebar
+                                  //#h green
+                                  Material(
+                                    type: MaterialType.transparency,
+                                    child: Container(
+                                      width: 150,
+                                      height: double.infinity,
+                                      color: Colors.black12.withOpacity(0.1),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisSize: MainAxisSize.max,
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          const SizedBox(height: 10),
+                                          Flexible(
+                                            fit: FlexFit.tight,
+                                            child: SingleChildScrollView(
                                               scrollDirection: Axis.vertical,
-                                              itemCount: pages.length,
-                                              shrinkWrap: true,
-                                              physics: const ClampingScrollPhysics(),
-                                              itemBuilder: (BuildContext context, int index) {
-                                                final PageClass pageItem = pages[index];
-                                                return InkWell(
-                                                  onTap: () {
-                                                    page.jumpToPage(index);
-                                                  },
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.start,
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: <Widget>[
-                                                        const SizedBox(width: 5),
-                                                        Icon(pageItem.icon),
-                                                        const SizedBox(width: 5),
-                                                        Text(pageItem.title!),
-                                                      ],
+                                              child: ListView.builder(
+                                                scrollDirection: Axis.vertical,
+                                                itemCount: pages.length,
+                                                shrinkWrap: true,
+                                                physics: const ClampingScrollPhysics(),
+                                                itemBuilder: (BuildContext context, int index) {
+                                                  final PageClass pageItem = pages[index];
+                                                  return InkWell(
+                                                    onTap: () {
+                                                      page.jumpToPage(index);
+                                                    },
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.start,
+                                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: <Widget>[
+                                                          const SizedBox(width: 5),
+                                                          Icon(pageItem.icon),
+                                                          const SizedBox(width: 5),
+                                                          Text(pageItem.title!),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ),
-                                                );
-                                              },
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        //2 Donation Box
-                                        SizedBox(
-                                          height: 200,
-                                          child: Wrap(
-                                            children: <Widget>[],
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                //#e
-                                //1 Pages
-                                //#h white
-                                Expanded(
-                                  child: ClipRect(
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                                      child: PageView.builder(
-                                        controller: page,
-                                        allowImplicitScrolling: false,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        itemCount: pages.length,
-                                        itemBuilder: (BuildContext context, int index) {
-                                          return SingleChildScrollView(
-                                            controller: AdjustableScrollController(30),
-                                            physics: mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
-                                            child: Material(type: MaterialType.transparency, child: pages[index].widget),
-                                          );
-                                        },
+                                          //2 Donation Box
+                                          SizedBox(
+                                            height: 200,
+                                            child: Wrap(
+                                              children: <Widget>[],
+                                            ),
+                                          )
+                                        ],
                                       ),
                                     ),
                                   ),
-                                ),
-                                //#e
-                              ],
+                                  //#e
+                                  //1 Pages
+                                  //#h white
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                                        child: PageView.builder(
+                                          controller: page,
+                                          allowImplicitScrolling: false,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          itemCount: pages.length,
+                                          itemBuilder: (BuildContext context, int index) {
+                                            return SingleChildScrollView(
+                                              controller: AdjustableScrollController(30),
+                                              physics: mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                                              child: Material(type: MaterialType.transparency, child: pages[index].widget),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  //#e
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),

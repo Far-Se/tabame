@@ -81,7 +81,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                       final String item = topBarItems.removeAt(oldIndex);
                       topBarItems.insert(newIndex, item);
                       setState(() {});
-                      Boxes.updateSettings("topBarWidgets", topBarItems);
+                      // Boxes.updateSettings("topBarWidgets", topBarItems);
                     },
                   ),
                 ),

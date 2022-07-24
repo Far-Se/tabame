@@ -28,7 +28,7 @@ class _HomeState extends State<Home> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         ListTile(
-          leading: const Tooltip(message: "Check for update", child: Icon(Icons.refresh)),
+          leading: Container(height: double.infinity, child: const Tooltip(message: "Check for update", child: Icon(Icons.refresh))),
           title: Text("Current Version: v${globalSettings.currentVersion}"),
           subtitle: Text("$updateResponse"),
           onTap: () {
@@ -85,6 +85,7 @@ class _HomeState extends State<Home> {
                         "remap": Icons.keyboard,
                         "projects": Icons.folder_copy,
                         "trktivty": Icons.celebration,
+                        "tasks": Icons.task_alt,
                       };
                       if (icons.containsKey(str2)) return Icon(icons[str2]);
                       return const Icon(Icons.home);

@@ -59,101 +59,72 @@ class ThemeSetupState extends State<ThemeSetup> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: <Widget>[
-      Padding(
-        padding: const EdgeInsets.all(10),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: constraints.maxHeight,
-                maxWidth: constraints.maxWidth,
-                minHeight: constraints.minHeight,
-                minWidth: constraints.minWidth,
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTileTheme(
+          data: Theme.of(context).listTileTheme.copyWith(
+                dense: true,
+                style: ListTileStyle.drawer,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                minVerticalPadding: 0,
+                visualDensity: VisualDensity.compact,
+                horizontalTitleGap: 0,
               ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: ListTileTheme(
-                  data: Theme.of(context).listTileTheme.copyWith(
-                        dense: true,
-                        style: ListTileStyle.drawer,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                        minVerticalPadding: 0,
-                        visualDensity: VisualDensity.compact,
-                        horizontalTitleGap: 0,
-                      ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (globalSettings.themeTypeMode == ThemeType.dark)
-                        ThemeSetupWidget(
-                          title: "Dark Theme",
-                          constraints: constraints,
-                          savedColors: savedDarkTheme,
-                          currentColors: globalSettings.darkTheme,
-                          onSaved: () async {
-                            await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
-                            savedLightTheme = globalSettings.lightTheme;
-                            savedDarkTheme = globalSettings.darkTheme;
-                            setState(() {});
-                          },
-                          onGradiendChanged: (double e) {
-                            globalSettings.darkTheme.gradientAlpha = e.toInt();
-                          },
-                          quickMenuBoldChanged: (bool e) {
-                            globalSettings.darkTheme.quickMenuBoldFont = e;
-                          },
-                          onColorChanged: (Color color, int i) {
-                            if (i == 0) {
-                              globalSettings.darkTheme.background = color.value;
-                            } else if (i == 1) {
-                              globalSettings.darkTheme.textColor = color.value;
-                            } else if (i == 2) {
-                              globalSettings.darkTheme.accentColor = color.value;
-                            }
-                            themeChangeNotifier.value = !themeChangeNotifier.value;
-                          },
-                          predefinedColors: predefinedColorsDark,
-                        ),
-                      if (globalSettings.themeTypeMode == ThemeType.light)
-                        ThemeSetupWidget(
-                          title: "Light Theme",
-                          constraints: constraints,
-                          savedColors: savedLightTheme,
-                          currentColors: globalSettings.lightTheme,
-                          onSaved: () async {
-                            await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
-                            setState(() {});
-                          },
-                          onGradiendChanged: (double e) {
-                            globalSettings.lightTheme.gradientAlpha = e.toInt();
-                          },
-                          quickMenuBoldChanged: (bool e) {
-                            globalSettings.lightTheme.quickMenuBoldFont = e;
-                          },
-                          onColorChanged: (Color color, int i) {
-                            if (i == 0) {
-                              globalSettings.lightTheme.background = color.value;
-                            } else if (i == 1) {
-                              globalSettings.lightTheme.textColor = color.value;
-                            } else if (i == 2) {
-                              globalSettings.lightTheme.accentColor = color.value;
-                            }
-                            themeChangeNotifier.value = !themeChangeNotifier.value;
-                          },
-                          predefinedColors: predefinedColorsLight,
-                        )
-                    ],
-                  ),
+          child: globalSettings.themeTypeMode == ThemeType.dark
+              ? ThemeSetupWidget(
+                  title: "Dark Theme",
+                  constraints: const BoxConstraints(),
+                  savedColors: savedDarkTheme,
+                  currentColors: globalSettings.darkTheme,
+                  onSaved: () async {
+                    await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
+                    savedLightTheme = globalSettings.lightTheme;
+                    savedDarkTheme = globalSettings.darkTheme;
+                    setState(() {});
+                  },
+                  onGradiendChanged: (double e) {
+                    globalSettings.darkTheme.gradientAlpha = e.toInt();
+                  },
+                  quickMenuBoldChanged: (bool e) {
+                    globalSettings.darkTheme.quickMenuBoldFont = e;
+                  },
+                  onColorChanged: (Color color, int i) {
+                    if (i == 0) globalSettings.darkTheme.background = color.value;
+                    if (i == 1) globalSettings.darkTheme.textColor = color.value;
+                    if (i == 2) globalSettings.darkTheme.accentColor = color.value;
+
+                    themeChangeNotifier.value = !themeChangeNotifier.value;
+                  },
+                  predefinedColors: predefinedColorsDark,
+                )
+              : ThemeSetupWidget(
+                  title: "Light Theme",
+                  constraints: const BoxConstraints(),
+                  savedColors: savedLightTheme,
+                  currentColors: globalSettings.lightTheme,
+                  onSaved: () async {
+                    await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
+                    setState(() {});
+                  },
+                  onGradiendChanged: (double e) {
+                    globalSettings.lightTheme.gradientAlpha = e.toInt();
+                  },
+                  quickMenuBoldChanged: (bool e) {
+                    globalSettings.lightTheme.quickMenuBoldFont = e;
+                  },
+                  onColorChanged: (Color color, int i) {
+                    if (i == 0) globalSettings.lightTheme.background = color.value;
+                    if (i == 1) globalSettings.lightTheme.textColor = color.value;
+                    if (i == 2) globalSettings.lightTheme.accentColor = color.value;
+                    themeChangeNotifier.value = !themeChangeNotifier.value;
+                  },
+                  predefinedColors: predefinedColorsLight,
                 ),
-              ),
-            );
-          },
         ),
       ),
-    ]);
+    );
   }
 }
 
@@ -187,102 +158,96 @@ class ThemeSetupWidget extends StatefulWidget {
 class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      flex: 2,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-            maxHeight: widget.constraints.maxHeight,
-            maxWidth: widget.constraints.maxWidth,
-            minHeight: widget.constraints.minHeight,
-            minWidth: widget.constraints.minWidth),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Tooltip(
-                message: "Save ${widget.title}",
-                preferBelow: false,
-                verticalOffset: 30,
-                decoration: BoxDecoration(
-                  border: Border.all(width: 1, color: Colors.black26),
-                  color: Theme.of(context).backgroundColor,
-                ),
-                child: ListTile(
-                  leading: const Icon(Icons.save_outlined),
-                  dense: false,
-                  onTap: () => widget.onSaved(),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  title: Text("${widget.title}", style: Theme.of(context).textTheme.titleLarge),
-                  subtitle: const Text("Press here to save changes"),
-                  trailing: const Icon(Icons.save_outlined),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SliderTheme(
-                data: Theme.of(context).sliderTheme.copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),
-                      overlayShape: SliderComponentShape.noOverlay,
-                    ),
-                child: Tooltip(
-                  message: "Gradient Opacity in Quickmenu",
-                  preferBelow: true,
-                  child: Slider(
-                    min: 199,
-                    max: 255,
-                    value: widget.currentColors.gradientAlpha.toDouble(),
-                    onChanged: (double e) {
-                      widget.onGradiendChanged(e);
-                      setState(() {});
-                    },
-                  ),
-                ),
-              ),
-              ColorSetup(
-                savedColor: Color(widget.savedColors.background),
-                predefinedColors: widget.predefinedColors[0],
-                currentColor: Color(widget.currentColors.background),
-                colorName: "Background Color",
-                onColorChanged: (Color color) {
-                  widget.onColorChanged(color, 0);
-                  setState(() {});
-                },
-              ),
-              ColorSetup(
-                savedColor: Color(widget.savedColors.textColor),
-                predefinedColors: widget.predefinedColors[1],
-                currentColor: Color(widget.currentColors.textColor),
-                colorName: "Text Color",
-                onColorChanged: (Color color) {
-                  widget.onColorChanged(color, 1);
-                  setState(() {});
-                },
-              ),
-              ColorSetup(
-                savedColor: Color(widget.savedColors.accentColor),
-                predefinedColors: widget.predefinedColors[2],
-                currentColor: Color(widget.currentColors.accentColor),
-                colorName: "Accent Color",
-                onColorChanged: (Color color) {
-                  widget.onColorChanged(color, 2);
-                  setState(() {});
-                },
-              ),
-              CheckboxListTile(
-                value: widget.currentColors.quickMenuBoldFont,
-                controlAffinity: ListTileControlAffinity.leading,
-                onChanged: (bool? e) {
-                  widget.quickMenuBoldChanged(e ?? false);
-                  setState(() {});
-                },
-                title: const Text("Apps in QuickMenu written in Bold"),
-              )
-            ],
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          "You can switch between light theme and dark theme on Settings Tab.",
+          style: TextStyle(
+            fontStyle: FontStyle.italic,
+            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
           ),
         ),
-      ),
+        Tooltip(
+          message: "Save ${widget.title}",
+          preferBelow: false,
+          verticalOffset: 30,
+          decoration: BoxDecoration(
+            border: Border.all(width: 1, color: Colors.black26),
+            color: Theme.of(context).backgroundColor,
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.save_outlined),
+            dense: false,
+            onTap: () => widget.onSaved(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            title: Text("${widget.title}", style: Theme.of(context).textTheme.titleLarge),
+            subtitle: const Text("Press here to save changes"),
+            trailing: const Icon(Icons.save_outlined),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SliderTheme(
+          data: Theme.of(context).sliderTheme.copyWith(
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.0),
+                overlayShape: SliderComponentShape.noOverlay,
+              ),
+          child: Tooltip(
+            message: "Gradient Opacity in Quickmenu",
+            preferBelow: true,
+            child: Slider(
+              min: 199,
+              max: 255,
+              value: widget.currentColors.gradientAlpha.toDouble(),
+              onChanged: (double e) {
+                widget.onGradiendChanged(e);
+                setState(() {});
+              },
+            ),
+          ),
+        ),
+        ColorSetup(
+          savedColor: Color(widget.savedColors.background),
+          predefinedColors: widget.predefinedColors[0],
+          currentColor: Color(widget.currentColors.background),
+          colorName: "Background Color",
+          onColorChanged: (Color color) {
+            widget.onColorChanged(color, 0);
+            setState(() {});
+          },
+        ),
+        ColorSetup(
+          savedColor: Color(widget.savedColors.textColor),
+          predefinedColors: widget.predefinedColors[1],
+          currentColor: Color(widget.currentColors.textColor),
+          colorName: "Text Color",
+          onColorChanged: (Color color) {
+            widget.onColorChanged(color, 1);
+            setState(() {});
+          },
+        ),
+        ColorSetup(
+          savedColor: Color(widget.savedColors.accentColor),
+          predefinedColors: widget.predefinedColors[2],
+          currentColor: Color(widget.currentColors.accentColor),
+          colorName: "Accent Color",
+          onColorChanged: (Color color) {
+            widget.onColorChanged(color, 2);
+            setState(() {});
+          },
+        ),
+        CheckboxListTile(
+          value: widget.currentColors.quickMenuBoldFont,
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged: (bool? e) {
+            widget.quickMenuBoldChanged(e ?? false);
+            setState(() {});
+          },
+          title: const Text("Apps in QuickMenu written in Bold"),
+        )
+      ],
     );
   }
 }

@@ -140,7 +140,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   mainAxisSize: MainAxisSize.max,
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
-                                    ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.bodyMedium)),
+                                    const ListTile(title: Text("Volume OSD Style")),
                                     RadioListTile<VolumeOSDStyle>(
                                       title: const Text('Normal Volume OSD'),
                                       value: VolumeOSDStyle.normal,
@@ -231,7 +231,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   mainAxisSize: MainAxisSize.max,
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
-                                    ListTile(title: Text("Theme Info", style: Theme.of(context).textTheme.bodyMedium)),
+                                    const ListTile(title: Text("Set Theme")),
                                     RadioListTile<ThemeType>(
                                       title: const Text("System Theme"),
                                       value: ThemeType.system,
@@ -307,7 +307,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   ],
                                 ),
                               ),
-                              ListTile(title: Text("Post Styling", style: Theme.of(context).textTheme.bodyMedium)),
+                              const ListTile(title: Text("Post Styling")),
                               CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 title: const Text("Put Pinned Apps and TrayBar in one row at the bottom"),

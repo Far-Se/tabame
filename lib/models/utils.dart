@@ -8,11 +8,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -70,7 +70,7 @@ class Settings {
 
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
 
-  ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 200, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
+  ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
 
   bool quickMenuPinnedWithTrayAtBottom = false;
 
@@ -151,6 +151,7 @@ class ThemeColors {
     required this.accentColor,
     required this.quickMenuBoldFont,
   });
+
 // #region (collapsed) [ThemeColors]
 
   ThemeColors copyWith({
@@ -238,6 +239,8 @@ class Boxes {
   Boxes();
   static Future<void> registerBoxes() async {
     pref = await SharedPreferences.getInstance();
+    // await pref.remove("projects");
+    // pref = await SharedPreferences.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
@@ -375,6 +378,52 @@ class Boxes {
     return scripts;
   }
 
+  List<ProjectGroup> get projects {
+    final String scriptsString = pref.getString("projects") ?? "";
+    if (scriptsString.isEmpty) {
+      final List<ProjectGroup> list = <ProjectGroup>[
+        ProjectGroup(
+          emoji: "🎃",
+          title: "Flutter",
+          projects: <ProjectInfo>[
+            ProjectInfo(emoji: "🎃", title: "Tabame Folder", stringToExecute: "E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "Tabame Vscode", stringToExecute: "vscode E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "File Test", stringToExecute: "E:\\Resources\\Package-List.txt"),
+            ProjectInfo(emoji: "🎃", title: "Tabame", stringToExecute: "E:\\Projects\\tabame"),
+          ],
+        ),
+        ProjectGroup(
+          emoji: "🎃",
+          title: "Cpp",
+          projects: <ProjectInfo>[
+            ProjectInfo(emoji: "🎃", title: "stuff", stringToExecute: "E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "Tabame Vscode", stringToExecute: "vscode E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "whatTest", stringToExecute: "E:\\Resources\\Package-List.txt"),
+            ProjectInfo(emoji: "🎃", title: "Tabame", stringToExecute: "E:\\Projects\\tabame"),
+          ],
+        ),
+        ProjectGroup(
+          emoji: "🎃",
+          title: "Documentation",
+          projects: <ProjectInfo>[
+            ProjectInfo(emoji: "🎃", title: "Tabamasde Folder", stringToExecute: "E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "Txabame Vscode", stringToExecute: "vscode E:\\Projects\\tabame"),
+            ProjectInfo(emoji: "🎃", title: "File Tt", stringToExecute: "E:\\Resources\\Package-List.txt"),
+            ProjectInfo(emoji: "🎃", title: "Tbame", stringToExecute: "E:\\Projects\\tabame"),
+          ],
+        ),
+      ];
+      return list;
+      // return <Projects>[];
+    }
+    final List<dynamic> list = jsonDecode(scriptsString);
+    final List<ProjectGroup> scripts = <ProjectGroup>[];
+    for (String script in list) {
+      scripts.add(ProjectGroup.fromJson(script));
+    }
+    return scripts;
+  }
+
   static Future<void> updateSettings(String key, dynamic value) async {
     if (value is bool) {
       await pref.setBool(key, value);
@@ -392,6 +441,125 @@ class Boxes {
 
     pref = await SharedPreferences.getInstance();
   }
+}
+
+// enum ProjectType { file, folder, command }
+
+class ProjectGroup {
+  String title;
+  String emoji;
+  List<ProjectInfo> projects;
+  ProjectGroup({
+    required this.title,
+    required this.emoji,
+    required this.projects,
+  });
+
+  ProjectGroup copyWith({
+    String? title,
+    String? emoji,
+    List<ProjectInfo>? projects,
+  }) {
+    return ProjectGroup(
+      title: title ?? this.title,
+      emoji: emoji ?? this.emoji,
+      projects: projects ?? this.projects,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'title': title,
+      'emoji': emoji,
+      'projects': projects.map((ProjectInfo x) => x.toMap()).toList(),
+    };
+  }
+
+  factory ProjectGroup.fromMap(Map<String, dynamic> map) {
+    return ProjectGroup(
+      title: map['title'] as String,
+      emoji: map['emoji'] as String,
+      projects: List<ProjectInfo>.from(
+        (map['projects'] as List<dynamic>).map<ProjectInfo>(
+          (dynamic x) => ProjectInfo.fromMap(x as Map<String, dynamic>),
+        ),
+      ),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ProjectGroup.fromJson(String source) => ProjectGroup.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'ProjectGroup(title: $title, emoji: $emoji, projects: $projects)';
+
+  @override
+  bool operator ==(covariant ProjectGroup other) {
+    if (identical(this, other)) return true;
+
+    return other.title == title && other.emoji == emoji && listEquals(other.projects, projects);
+  }
+
+  @override
+  int get hashCode => title.hashCode ^ emoji.hashCode ^ projects.hashCode;
+}
+
+class ProjectInfo {
+  String emoji;
+  String title;
+  // ProjectType type;
+  String stringToExecute;
+  ProjectInfo({
+    required this.emoji,
+    required this.title,
+    required this.stringToExecute,
+  });
+
+  ProjectInfo copyWith({
+    String? emoji,
+    String? title,
+    String? stringToExecute,
+  }) {
+    return ProjectInfo(
+      emoji: emoji ?? this.emoji,
+      title: title ?? this.title,
+      stringToExecute: stringToExecute ?? this.stringToExecute,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'emoji': emoji,
+      'title': title,
+      'stringToExecute': stringToExecute,
+    };
+  }
+
+  factory ProjectInfo.fromMap(Map<String, dynamic> map) {
+    return ProjectInfo(
+      emoji: map['emoji'] as String,
+      title: map['title'] as String,
+      stringToExecute: map['stringToExecute'] as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ProjectInfo.fromJson(String source) => ProjectInfo.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'ProjectInfo(emoji: $emoji, title: $title, stringToExecute: $stringToExecute)';
+
+  @override
+  bool operator ==(covariant ProjectInfo other) {
+    if (identical(this, other)) return true;
+
+    return other.emoji == emoji && other.title == title && other.stringToExecute == stringToExecute;
+  }
+
+  @override
+  int get hashCode => emoji.hashCode ^ title.hashCode ^ stringToExecute.hashCode;
 }
 
 class PowerShellScript {
