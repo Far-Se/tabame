@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/globals.dart';
@@ -98,15 +99,30 @@ class TopBar extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(
-                width: 50,
+              SizedBox(
+                width: kReleaseMode ? 50 : 75,
                 child: Align(
                   child: BarWithButtons(
                     height: 25,
                     withScroll: false,
                     children: <Widget>[
-                      SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop"),
-                      OpenSettingsButton(),
+                      Align(
+                        child: Tooltip(
+                          message: "Testing",
+                          child: InkWell(
+                            onTap: () {
+                              DateTime d = DateTime.now();
+                              int weekDay = d.weekday;
+                              DateTime firstDayOfWeek = d.subtract(Duration(days: weekDay));
+                              print(d.weekday);
+                              print(firstDayOfWeek);
+                            },
+                            child: const Icon(Icons.textsms_outlined),
+                          ),
+                        ),
+                      ),
+                      const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop"),
+                      const OpenSettingsButton(),
                     ],
                   ),
                 ),

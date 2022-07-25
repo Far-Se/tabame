@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../../models/classes/saved_maps.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';

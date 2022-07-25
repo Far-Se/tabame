@@ -30,7 +30,7 @@ class BottomBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 verticalDirection: VerticalDirection.down,
                 mainAxisSize: MainAxisSize.min,
-                children: [
+                children: <Widget>[
                   const Expanded(child: TimeWidget(inline: true)),
                   const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: WeatherWidget(width: 80)),
                 ],

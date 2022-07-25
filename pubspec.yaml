@@ -26,6 +26,7 @@ dependencies:
     path: tabamewin32
   win32: ^2.7.0
   window_manager: ^0.2.5
+  local_notifier: ^0.1.5
 
 dev_dependencies:
   build_runner: ^2.1.11
@@ -42,4 +43,3 @@ flutter:
     # - resources/logo.png
     - resources/logo_light.png
     - resources/wizzard1.png
-#

@@ -9,6 +9,8 @@ class MicMuteButton extends StatefulWidget {
 }
 
 class _MicMuteButtonState extends State<MicMuteButton> {
+  bool switchedDefaultDevice = false;
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
@@ -19,16 +21,28 @@ class _MicMuteButtonState extends State<MicMuteButton> {
         height: double.maxFinite,
         child: Material(
           type: MaterialType.transparency,
-          child: InkWell(
-            onTap: () async {
-              await Audio.setMuteAudioDevice(!(snapshot.data!), AudioDeviceType.input);
+          child: GestureDetector(
+            onSecondaryTap: () async {
+              await Audio.switchDefaultDevice(AudioDeviceType.input);
+              switchedDefaultDevice = true;
               setState(() {});
+              Future<void>.delayed(const Duration(milliseconds: 1000), () {
+                switchedDefaultDevice = false;
+                if (!mounted) return;
+                setState(() {});
+              });
             },
-            child: Tooltip(
-              message: "Toggle Mic Mute",
-              child: Icon(
-                snapshot.data! == true ? Icons.mic_off : Icons.mic,
-                color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
+            child: InkWell(
+              onTap: () async {
+                await Audio.setMuteAudioDevice(!(snapshot.data!), AudioDeviceType.input);
+                setState(() {});
+              },
+              child: Tooltip(
+                message: "Toggle Mic Mute",
+                child: Icon(
+                  switchedDefaultDevice ? Icons.published_with_changes : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
+                  color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
+                ),
               ),
             ),
           ),

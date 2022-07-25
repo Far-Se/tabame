@@ -3,6 +3,7 @@
 // This must be included before many other Windows headers.
 #include <windows.h>
 
+#include <sapi.h>
 #include <ole2.h>
 #include <ShellAPI.h>
 #include <olectl.h>
@@ -44,6 +45,27 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+bool TextToSpeech(LPCWSTR text)
+{
+
+    ISpVoice *pVoice = NULL;
+
+    if (FAILED(::CoInitialize(NULL)))
+        return FALSE;
+
+    HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void **)&pVoice);
+    if (SUCCEEDED(hr))
+    {
+        hr = pVoice->SetVolume(60);
+        hr = pVoice->Speak(text, 0, NULL);
+        pVoice->Release();
+        pVoice = NULL;
+    }
+    else
+        std::cout << "error" << std::endl;
+    ::CoUninitialize();
+    return true;
+}
 void ToggleMonitorWallpaper(bool enabled)
 {
     CoInitialize(NULL);
@@ -1054,6 +1076,18 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(true));
         }
 
+        else if (method_name.compare("textToSpeech") == 0)
+        {
+
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            std::string text = std::get<std::string>(args.at(flutter::EncodableValue("text")));
+            // convert text to wide
+            std::wstring wText = Encoding::Utf8ToWide(text);
+            std::wcout << "Text to speech: " << wText << std::endl;
+            bool out = TextToSpeech(wText.c_str());
+            std::cout << "result: " << out << std::endl;
+            result->Success(flutter::EncodableValue(true));
+        }
         else
         {
             result->NotImplemented();

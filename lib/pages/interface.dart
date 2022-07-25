@@ -14,6 +14,7 @@ import '../widgets/interface/home.dart';
 import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu.dart';
 import '../widgets/interface/settings.dart';
+import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 
 class Interface extends StatefulWidget {
@@ -73,7 +74,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
-    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const NotImplemeneted()),
+    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const Tasks()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const NotImplemeneted()),
     PageClass(title: 'Info', icon: Icons.info, widget: const NotImplemeneted()),
   ];
@@ -242,22 +243,28 @@ class InterfaceState extends State<Interface> {
                                                 physics: const ClampingScrollPhysics(),
                                                 itemBuilder: (BuildContext context, int index) {
                                                   final PageClass pageItem = pages[index];
-                                                  return InkWell(
-                                                    onTap: () {
-                                                      page.jumpToPage(index);
-                                                    },
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.start,
-                                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: <Widget>[
-                                                          const SizedBox(width: 5),
-                                                          Icon(pageItem.icon),
-                                                          const SizedBox(width: 5),
-                                                          Text(pageItem.title!),
-                                                        ],
+                                                  return DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                        color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        currentPage = index;
+                                                        page.jumpToPage(index);
+                                                        setState(() {});
+                                                      },
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: <Widget>[
+                                                            const SizedBox(width: 5),
+                                                            Icon(pageItem.icon),
+                                                            const SizedBox(width: 5),
+                                                            Text(pageItem.title!),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   );

@@ -133,7 +133,7 @@ class AudioBoxState extends State<AudioBox> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(device.name.toUpperCase(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black)),
+          Text(device.name.toUpperCase(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400)),
           Flexible(
             fit: FlexFit.loose,
             //2 Mute Button and Slider
@@ -145,7 +145,6 @@ class AudioBoxState extends State<AudioBox> {
                     child: Icon(
                       deviceVar.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                       size: 14,
-                      color: Colors.black54,
                     ),
                   ),
                   onTap: () {
@@ -193,8 +192,8 @@ class AudioBoxState extends State<AudioBox> {
                     child: Wrap(
                       verticalDirection: VerticalDirection.up,
                       children: <Widget>[
-                        const Icon(Icons.tune, size: 14, color: Colors.black45),
-                        Text("Devices:", style: TextStyle(fontSize: 13, color: Colors.lightBlue.shade600)),
+                        const Icon(Icons.tune, size: 14),
+                        Text("Devices:", style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary)),
                       ],
                     ),
                   ),
@@ -202,7 +201,6 @@ class AudioBoxState extends State<AudioBox> {
                 const Divider(
                   thickness: 1,
                   height: 5,
-                  color: Colors.black12,
                 ),
                 //#h red
                 //3 Devices List
@@ -235,8 +233,7 @@ class AudioBoxState extends State<AudioBox> {
                                         device.name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal, color: Colors.black),
+                                        style: TextStyle(fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal),
                                       ),
                                     ),
                                     if (device.id == deviceVar.defaultDevice.id)
@@ -244,7 +241,7 @@ class AudioBoxState extends State<AudioBox> {
                                         fit: FlexFit.loose,
                                         child: Padding(
                                           padding: EdgeInsets.symmetric(horizontal: 4.0),
-                                          child: Icon(Icons.check, size: 18, color: Colors.black45),
+                                          child: Icon(Icons.check, size: 18),
                                         ),
                                       )
                                   ],
@@ -281,8 +278,20 @@ class AudioBoxState extends State<AudioBox> {
           constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.grey, width: 1),
-            color: Colors.white,
+            // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
+            gradient: LinearGradient(
+              colors: <Color>[
+                Theme.of(context).backgroundColor,
+                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).backgroundColor,
+              ],
+              stops: <double>[0, 0.4, 1],
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: <BoxShadow>[
+              const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+            ],
+            color: Theme.of(context).backgroundColor,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -322,7 +331,6 @@ class AudioBoxState extends State<AudioBox> {
                     const Divider(
                       thickness: 1,
                       height: 5,
-                      color: Colors.black12,
                     ),
                     //1 Mixer
                     (audioMixer.isEmpty)
@@ -338,101 +346,111 @@ class AudioBoxState extends State<AudioBox> {
                                       padding: EdgeInsets.all(2),
                                       child: Text(
                                         "Mixer:",
-                                        style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w400),
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
                                       ),
                                     ),
                                   ),
                                   Container(
                                     constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          //#h white
-                                          for (ProcessVolume mix in audioMixer)
-                                            Flexible(
-                                              fit: FlexFit.loose,
-                                              child: Row(
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                children: <Widget>[
-                                                  Padding(
-                                                    padding: const EdgeInsets.all(5),
-                                                    child: Tooltip(
-                                                      message: audioMixerNames[mix.processId] ?? "",
-                                                      child: audioMixerIcons.containsKey(mix.processId)
-                                                          ? Image.memory(
-                                                              audioMixerIcons[mix.processId]!,
-                                                              width: 18,
-                                                              gaplessPlayback: true,
-                                                            )
-                                                          : const Icon(Icons.audiotrack, size: 18),
-                                                    ),
-                                                  ),
-                                                  Flexible(
-                                                    fit: FlexFit.loose,
-                                                    child: Stack(
-                                                      children: <Widget>[
-                                                        Container(
-                                                          height: 20,
-                                                          child: SliderTheme(
-                                                            data: SliderTheme.of(context).copyWith(
-                                                                thumbShape: const RoundSliderThumbShape(
-                                                                  enabledThumbRadius: 4.0,
-                                                                  elevation: 0,
-                                                                ),
-                                                                overlayShape: SliderComponentShape.noOverlay),
-                                                            child: Slider(
-                                                              value: mix.maxVolume,
-                                                              min: 0,
-                                                              max: 1,
-                                                              divisions: 25,
-                                                              onChanged: (double e) {
-                                                                Audio.setAudioMixerVolume(mix.processId, e);
-                                                                mix.maxVolume = e;
-                                                                setState(() {});
-                                                              },
-                                                            ),
-                                                          ),
+                                    child: ScrollbarTheme(
+                                      data: Theme.of(context).scrollbarTheme.copyWith(
+                                            thumbVisibility: MaterialStateProperty.all<bool>(true),
+                                            trackVisibility: MaterialStateProperty.all<bool>(true),
+                                          ),
+                                      child: SingleChildScrollView(
+                                        controller: ScrollController(),
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(right: 20),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              //#h white
+                                              for (ProcessVolume mix in audioMixer)
+                                                Flexible(
+                                                  fit: FlexFit.loose,
+                                                  child: Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                                    mainAxisAlignment: MainAxisAlignment.start,
+                                                    children: <Widget>[
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(5),
+                                                        child: Tooltip(
+                                                          message: audioMixerNames[mix.processId] ?? "",
+                                                          child: audioMixerIcons.containsKey(mix.processId)
+                                                              ? Image.memory(
+                                                                  audioMixerIcons[mix.processId]!,
+                                                                  width: 18,
+                                                                  gaplessPlayback: true,
+                                                                )
+                                                              : const Icon(Icons.audiotrack, size: 18),
                                                         ),
-                                                        Positioned(
-                                                          top: 6,
-                                                          child: SliderTheme(
-                                                            data: SliderTheme.of(context).copyWith(
-                                                                // activeTrackColor: Colors.white,
-                                                                thumbShape: const RoundSliderThumbShape(
-                                                                  enabledThumbRadius: 4.0,
-                                                                  elevation: 0,
+                                                      ),
+                                                      Flexible(
+                                                        fit: FlexFit.loose,
+                                                        child: Stack(
+                                                          children: <Widget>[
+                                                            Container(
+                                                              height: 20,
+                                                              child: SliderTheme(
+                                                                data: SliderTheme.of(context).copyWith(
+                                                                    thumbShape: const RoundSliderThumbShape(
+                                                                      enabledThumbRadius: 4.0,
+                                                                      elevation: 0,
+                                                                    ),
+                                                                    overlayShape: SliderComponentShape.noOverlay),
+                                                                child: Slider(
+                                                                  value: mix.maxVolume,
+                                                                  min: 0,
+                                                                  max: 1,
+                                                                  divisions: 25,
+                                                                  onChanged: (double e) {
+                                                                    Audio.setAudioMixerVolume(mix.processId, e);
+                                                                    mix.maxVolume = e;
+                                                                    setState(() {});
+                                                                  },
                                                                 ),
-                                                                overlayShape: SliderComponentShape.noOverlay),
-                                                            child: IgnorePointer(
-                                                              child: Slider(
-                                                                value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
-                                                                min: 0,
-                                                                max: 1,
-
-                                                                // divisions: 25,
-                                                                activeColor: Colors.blue.shade800,
-                                                                inactiveColor: Colors.transparent,
-                                                                thumbColor: Colors.transparent,
-                                                                onChanged: (double e) {
-                                                                  Audio.setAudioMixerVolume(mix.processId, e);
-                                                                  mix.maxVolume = e;
-                                                                  setState(() {});
-                                                                },
                                                               ),
                                                             ),
-                                                          ),
+                                                            Positioned(
+                                                              top: 6,
+                                                              child: SliderTheme(
+                                                                data: SliderTheme.of(context).copyWith(
+                                                                    // activeTrackColor: Colors.white,
+                                                                    thumbShape: const RoundSliderThumbShape(
+                                                                      enabledThumbRadius: 4.0,
+                                                                      elevation: 0,
+                                                                    ),
+                                                                    overlayShape: SliderComponentShape.noOverlay),
+                                                                child: IgnorePointer(
+                                                                  child: Slider(
+                                                                    value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
+                                                                    min: 0,
+                                                                    max: 1,
+
+                                                                    // divisions: 25,
+                                                                    activeColor: Colors.blue.shade800,
+                                                                    inactiveColor: Colors.transparent,
+                                                                    thumbColor: Colors.transparent,
+                                                                    onChanged: (double e) {
+                                                                      Audio.setAudioMixerVolume(mix.processId, e);
+                                                                      mix.maxVolume = e;
+                                                                      setState(() {});
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
-                                                      ],
-                                                    ),
+                                                      ),
+                                                      //#e
+                                                    ],
                                                   ),
-                                                  //#e
-                                                ],
-                                              ),
-                                            ),
-                                        ],
+                                                ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   )
