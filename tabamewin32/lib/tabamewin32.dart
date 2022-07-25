@@ -395,3 +395,12 @@ Future<void> setWallpaperColor(int color) async {
   await audioMethodChannel.invokeMethod('setWallpaperColor', arguments);
   return;
 }
+
+/// !Freezes window. don't use
+Future<void> textToSpeech(String text) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'text': text,
+  };
+  await audioMethodChannel.invokeMethod('textToSpeech', arguments);
+  return;
+}

@@ -36,7 +36,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
         minVerticalPadding: 0,
         minLeadingWidth: 10,
         child: Column(
-          children: [
+          children: <Widget>[
             ListTile(title: Text("QuickActions Order", style: Theme.of(context).textTheme.headline6)),
             Flexible(
               fit: FlexFit.loose,
@@ -81,7 +81,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                       final String item = topBarItems.removeAt(oldIndex);
                       topBarItems.insert(newIndex, item);
                       setState(() {});
-                      // Boxes.updateSettings("topBarWidgets", topBarItems);
+                      Boxes.updateSettings("topBarWidgets", topBarItems);
                     },
                   ),
                 ),

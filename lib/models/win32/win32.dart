@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
+import 'package:local_notifier/local_notifier.dart';
 import 'package:win32/win32.dart' hide Size, Point;
 import 'package:window_manager/window_manager.dart';
 
@@ -21,6 +22,7 @@ import 'imports.dart';
 import 'mixed.dart';
 import 'registry.dart';
 
+// vscode-fold=2
 class Win32 {
   static void activateWindow(int hWnd, {bool forced = false}) {
     final Pointer<WINDOWPLACEMENT> place = calloc<WINDOWPLACEMENT>();
@@ -556,8 +558,19 @@ class WinUtils {
     return output;
   }
 
-  static void open(String link) {
-    ShellExecute(NULL, TEXT("open"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
+  static void open(String path, {bool parseParamaters = false}) {
+    if (parseParamaters) {
+      final RegExp reg = RegExp(r"^([a-z0-9-_]+) (.*?)$");
+      if (reg.hasMatch(path)) {
+        final RegExpMatch out = reg.firstMatch(path)!;
+        print(out.group(0)!);
+        ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
+      } else {
+        ShellExecute(NULL, TEXT("open"), TEXT(path), nullptr, nullptr, SW_SHOWNORMAL);
+      }
+    } else {
+      ShellExecute(NULL, TEXT("open"), TEXT(path), nullptr, nullptr, SW_SHOWNORMAL);
+    }
   }
 
   static void run(String link) {
@@ -693,6 +706,58 @@ class WinUtils {
       key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 2));
     }
     Future<void>.delayed(const Duration(milliseconds: 500), () => SendNotifyMessage(HWND_BROADCAST, 0x111, 41504, NULL));
+  }
+
+  static void textToSpeech(String text, {int repeat = 1}) {
+    if (repeat == -1) {
+      final RegExp reg = RegExp(r'x\d+$');
+      final RegExpMatch? match = reg.firstMatch(text);
+      if (match != null) {
+        text = text.substring(0, text.length - match[0]!.length);
+        repeat = int.parse(match[0]!.substring(1));
+      } else {
+        repeat = 1;
+      }
+    }
+    List<String> commands = <String>[
+      "Add-Type -AssemblyName System.speech;",
+      "\$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer;",
+    ];
+    for (int i = 0; i < repeat; i++) {
+      commands.add("\$speak.Speak('${text.replaceAll("'", '"')}');");
+    }
+    WinUtils.runPowerShell(commands);
+  }
+
+  static bool windowsNotificationRegistered = false;
+  static void showWindowsNotification({required String title, required String body, required Null Function() onClick}) async {
+    if (!windowsNotificationRegistered) {
+      windowsNotificationRegistered = true;
+      await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
+      print("registered");
+    }
+    if (globalSettings.usePowerShellAsToastNotification) {
+      final List<String> result = await WinUtils.runPowerShell(<String>[
+        '''\$subject = [Security.SecurityElement]::Escape("${title.replaceAll('"', "'")}");''',
+        '''\$message = [Security.SecurityElement]::Escape("${body.replaceAll('"', "'")}");''',
+        '''[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > \$null;''',
+        '''[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > \$null;''',
+        '''[Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] > \$null;''',
+        '''\$xml = New-Object Windows.Data.Xml.Dom.XmlDocument;''',
+        '''\$template = "<toast><audio silent='false'/><visual><binding template='ToastGeneric'><text id='1'>\$subject</text><text id='2'>\$message</text></binding></visual></toast>";''',
+        '''\$xml.LoadXml(\$template);''',
+        '''\$toast = New-Object Windows.UI.Notifications.ToastNotification \$xml;''',
+        '''[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Tabame").Show(\$toast);''',
+      ]);
+      print(result);
+      return;
+    }
+    LocalNotification notification = LocalNotification(
+      title: title,
+      body: body,
+    );
+    notification.onClick = () => onClick();
+    await notification.show();
   }
 }
 

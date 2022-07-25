@@ -251,7 +251,7 @@ class SettingsPageState extends State<SettingsPage> {
                                       onChanged: (ThemeType? value) => setThemeType(value),
                                     ),
                                     RadioListTile<ThemeType>(
-                                      title: const Text('Schedule Dark'),
+                                      title: const Text('Schedule Light'),
                                       value: ThemeType.schedule,
                                       groupValue: globalSettings.themeType,
                                       onChanged: (ThemeType? value) => setThemeType(value),
@@ -279,7 +279,7 @@ class SettingsPageState extends State<SettingsPage> {
                                               themeChangeNotifier.value = !themeChangeNotifier.value;
                                               setState(() {});
                                             },
-                                            child: Text(globalSettings.themeScheduleMinFormat),
+                                            child: Text(globalSettings.themeScheduleMin.formatTime()),
                                           ),
                                           const SizedBox(width: 30, child: Text(" To")),
                                           InkWell(
@@ -295,12 +295,14 @@ class SettingsPageState extends State<SettingsPage> {
                                                 },
                                               );
                                               if (timePicker == null) return;
-                                              globalSettings.themeScheduleMax = (timePicker.hour) * 60 + (timePicker.minute);
+                                              final int newTime = (timePicker.hour) * 60 + (timePicker.minute);
+                                              if (newTime < globalSettings.themeScheduleMin) return;
+                                              globalSettings.themeScheduleMax = newTime;
                                               await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
                                               themeChangeNotifier.value = !themeChangeNotifier.value;
                                               setState(() {});
                                             },
-                                            child: Text(globalSettings.themeScheduleMaxFormat),
+                                            child: Text(globalSettings.themeScheduleMax.formatTime()),
                                           ),
                                         ],
                                       ),

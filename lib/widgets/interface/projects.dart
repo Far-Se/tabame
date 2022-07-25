@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../models/classes/saved_maps.dart';
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 import '../../pages/interface.dart';
@@ -103,6 +103,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                         child: Container(
                           width: 50,
                           height: double.infinity,
+                          //! Add and edit Project Folder
                           child: Row(children: <Widget>[
                             Expanded(
                               flex: 2,
@@ -131,13 +132,12 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                       border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
                                                     ),
                                                     controller: folderEmojiController,
-                                                    inputFormatters: <TextInputFormatter>[
-                                                      LengthLimitingTextInputFormatter(1),
-                                                    ],
+                                                    // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
                                                     style: const TextStyle(fontSize: 14),
                                                   ),
                                                   const SizedBox(height: 5),
                                                   TextField(
+                                                    autofocus: true,
                                                     decoration: InputDecoration(
                                                       labelText: "Title",
                                                       hintText: "Title",
@@ -169,7 +169,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                             ),
                                             ElevatedButton(
                                               onPressed: () async {
-                                                projects[mainIndex].emoji = folderEmojiController.value.text;
+                                                projects[mainIndex].emoji = folderEmojiController.value.text.truncate(2);
                                                 projects[mainIndex].title = folderTitleController.value.text;
                                                 await Boxes.updateSettings("projects", jsonEncode(projects));
                                                 setState(() {});
@@ -183,7 +183,6 @@ class ProjectsPageState extends State<ProjectsPage> {
                                     ).then((_) {});
                                   }),
                             ),
-                            // ! ADD NEW PROJECT
                             Expanded(
                               flex: 2,
                               child: InkWell(
@@ -229,7 +228,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                 leading: Text(projectItem.emoji),
                                 title: Text(projectItem.title),
                                 onTap: () {
-                                  WinUtils.open(projectItem.stringToExecute);
+                                  WinUtils.open(projectItem.stringToExecute, parseParamaters: true);
                                   setState(() {});
                                 },
                                 trailing: Container(
@@ -261,13 +260,12 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                         border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
                                                       ),
                                                       controller: projectEmojiController,
-                                                      inputFormatters: <TextInputFormatter>[
-                                                        LengthLimitingTextInputFormatter(1),
-                                                      ],
+                                                      // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
                                                       style: const TextStyle(fontSize: 14),
                                                     ),
                                                     const SizedBox(height: 5),
                                                     TextField(
+                                                      autofocus: true,
                                                       decoration: InputDecoration(
                                                         labelText: "Title",
                                                         hintText: "Title",
@@ -328,7 +326,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                       ],
                                                     ),
                                                     const SizedBox(height: 10),
-                                                    Text("You can Write:\n - a Folder Path or file to open\n - a command like vscode C:\\somepath\\\n - a link",
+                                                    Text("You can Write:\n - a Folder Path or file to open\n - a command like code C:\\somepath\\\n - a link",
                                                         style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 12))
                                                   ],
                                                 )),
@@ -348,7 +346,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  projects[mainIndex].projects[index].emoji = projectEmojiController.value.text;
+                                                  projects[mainIndex].projects[index].emoji = projectEmojiController.value.text.truncate(2);
                                                   projects[mainIndex].projects[index].title = projectTitleController.value.text;
                                                   projects[mainIndex].projects[index].stringToExecute = projectPathController.value.text;
                                                   await Boxes.updateSettings("projects", jsonEncode(projects));

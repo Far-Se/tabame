@@ -4,6 +4,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
+import '../../../models/classes/saved_maps.dart';
 import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 import '../../containers/bar_with_buttons.dart';
@@ -37,20 +38,21 @@ class PowershellListState extends State<PowershellList> {
               child: Tooltip(
                 message: item.name,
                 child: InkWell(
-                    child: Center(
-                      child: Text(
-                        item.name.substring(0, 1),
-                        style: const TextStyle(fontSize: 12, height: 1),
-                      ),
+                  child: Center(
+                    child: Text(
+                      item.name.substring(0, 1),
+                      style: const TextStyle(fontSize: 12, height: 1),
                     ),
-                    onTap: () async {
-                      if (!item.showTerminal) {
-                        WinUtils.runPowerShell(<String>[item.command]);
-                      } else {
-                        ShellExecute(Win32.hWnd, TEXT("open"), TEXT('powershell'), TEXT('-NoExit -executionpolicy bypass -command "${item.command}"'),
-                            Pointer<Utf16>.fromAddress(0), SW_SHOWNORMAL);
-                      }
-                    }),
+                  ),
+                  onTap: () async {
+                    if (!item.showTerminal) {
+                      WinUtils.runPowerShell(<String>[item.command]);
+                    } else {
+                      ShellExecute(Win32.hWnd, TEXT("open"), TEXT('powershell'), TEXT('-NoExit -executionpolicy bypass -command "${item.command}"'),
+                          Pointer<Utf16>.fromAddress(0), SW_SHOWNORMAL);
+                    }
+                  },
+                ),
               ),
             )
         ],

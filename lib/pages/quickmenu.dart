@@ -78,7 +78,7 @@ class QuickMenuState extends State<QuickMenu> {
       builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
         if (!snapshot.hasData) return const SizedBox(width: 10);
         return FutureBuilder<int>(
-          future: Future<int>.delayed(const Duration(seconds: 2), () => 1),
+          future: Future<int>.delayed(const Duration(seconds: 1), () => 1),
           builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
             if (!snapshot.hasData) return const SizedBox(width: 10);
             return Scaffold(
@@ -96,7 +96,7 @@ class QuickMenuState extends State<QuickMenu> {
                   scrollDirection: Axis.vertical,
                   physics: const NeverScrollableScrollPhysics(),
                   child: Stack(
-                    children: [
+                    children: <Widget>[
                       if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
                       Padding(
                         padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
