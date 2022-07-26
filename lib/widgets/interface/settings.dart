@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../main.dart';
+import '../../models/classes/boxes.dart';
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 

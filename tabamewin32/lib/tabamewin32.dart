@@ -355,11 +355,13 @@ Future<String> convertLinkToPath(String lnkPath) async {
   return result;
 }
 
-Future<void> setStartOnSystemStartup(bool enabled, {String? exePath}) async {
+Future<void> setStartOnSystemStartup(bool enabled, {String? exePath, int showCmd = 1, String args = ""}) async {
   exePath ??= Platform.resolvedExecutable;
   final Map<String, dynamic> arguments = <String, dynamic>{
     'exePath': exePath,
     'enabled': enabled,
+    'showCmd': showCmd,
+    'args': "-strudel",
   };
   await audioMethodChannel.invokeMethod('setStartOnSystemStartup', arguments);
   return;
@@ -396,11 +398,7 @@ Future<void> setWallpaperColor(int color) async {
   return;
 }
 
-/// !Freezes window. don't use
-Future<void> textToSpeech(String text) async {
-  final Map<String, dynamic> arguments = <String, dynamic>{
-    'text': text,
-  };
-  await audioMethodChannel.invokeMethod('textToSpeech', arguments);
-  return;
+Future<String> pickFolder() async {
+  final String result = await audioMethodChannel.invokeMethod<String>('browseFolder') ?? "";
+  return result;
 }

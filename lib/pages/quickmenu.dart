@@ -46,7 +46,7 @@ class QuickMenuState extends State<QuickMenu> {
     Globals.changingPages = false;
     Globals.quickMenuFullyInitiated = false;
     //!RELEASE MODE
-    if (kReleaseMode) {
+    if (!kDebugMode) {
       changeHeightTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) async {
         if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive) return;
         final double newHeight = Globals.heights.allSummed + 80;
@@ -64,7 +64,7 @@ class QuickMenuState extends State<QuickMenu> {
   @override
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
-    if (kReleaseMode) changeHeightTimer?.cancel();
+    if (!kDebugMode) changeHeightTimer?.cancel();
     super.dispose();
   }
 

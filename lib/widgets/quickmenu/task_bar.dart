@@ -7,6 +7,7 @@ import 'package:contextual_menu/contextual_menu.dart';
 import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
+import '../../models/classes/boxes.dart';
 import '../../models/utils.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';

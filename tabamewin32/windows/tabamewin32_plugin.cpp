@@ -3,7 +3,6 @@
 // This must be included before many other Windows headers.
 #include <windows.h>
 
-#include <sapi.h>
 #include <ole2.h>
 #include <ShellAPI.h>
 #include <olectl.h>
@@ -45,27 +44,40 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
-bool TextToSpeech(LPCWSTR text)
+static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
+{
+    return 0;
+}
+std::string BrowseFolder()
 {
 
-    ISpVoice *pVoice = NULL;
+    BROWSEINFO bi = {0};
+    bi.lpszTitle = _T("Browse for folder...");
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    bi.lpfn = BrowseCallbackProc;
+    // bi.lParam = (LPARAM)wpath.c_str();
 
-    if (FAILED(::CoInitialize(NULL)))
-        return FALSE;
+    LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
 
-    HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void **)&pVoice);
-    if (SUCCEEDED(hr))
+    if (pidl != 0)
     {
-        hr = pVoice->SetVolume(60);
-        hr = pVoice->Speak(text, 0, NULL);
-        pVoice->Release();
-        pVoice = NULL;
+        TCHAR path[MAX_PATH];
+        SHGetPathFromIDList(pidl, path);
+
+        // free memory used
+        IMalloc *imalloc = 0;
+        if (SUCCEEDED(SHGetMalloc(&imalloc)))
+        {
+            imalloc->Free(pidl);
+            imalloc->Release();
+        }
+
+        return Encoding::WideToUtf8(path);
     }
-    else
-        std::cout << "error" << std::endl;
-    ::CoUninitialize();
-    return true;
+
+    return "";
 }
+
 void ToggleMonitorWallpaper(bool enabled)
 {
     CoInitialize(NULL);
@@ -88,17 +100,16 @@ void SetWallpaperColor(int color)
     }
     CoUninitialize();
 }
-void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
+void SetStartOnSystemStartup(bool fAutoStart, std::string exePath, int ShowCmd, std::string args)
 {
-
     WCHAR startMenuPath[MAX_PATH];
-    HRESULT result = SHGetFolderPathW(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
+    HRESULT result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startMenuPath);
     std::string exe = exePath.substr(exePath.find_last_of("\\") + 1);
     std::wstring wExe = Encoding::Utf8ToWide(exe);
     wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
 
     std::wstring wStartMenuPath = std::wstring(startMenuPath);
-    wStartMenuPath.append(L"\\Startup\\");
+    wStartMenuPath.append(L"\\");
     wStartMenuPath.append(wExe);
     if (!fAutoStart)
     {
@@ -118,10 +129,16 @@ void SetStartOnSystemStartup(bool fAutoStart, std::string exePath)
         {
             TCHAR pszExePath[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, exePath.c_str(), -1, pszExePath, MAX_PATH);
+
             psl->SetPath(pszExePath);
             PathRemoveFileSpec(pszExePath);
             psl->SetWorkingDirectory(pszExePath);
-            psl->SetShowCmd(SW_SHOWMINNOACTIVE);
+            psl->SetShowCmd(ShowCmd);
+            if (!args.empty())
+            {
+                std::wstring wArgs = Encoding::Utf8ToWide(args);
+                psl->SetArguments(wArgs.c_str());
+            }
             IPersistFile *ppf = NULL;
             hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf));
             if (SUCCEEDED(hres))
@@ -163,12 +180,12 @@ int SetStartOnStartupAsAdmin(bool enabled, std::string exePath)
     }
 
     WCHAR startMenuPath[MAX_PATH];
-    result = SHGetFolderPathW(NULL, CSIDL_PROGRAMS, NULL, 0, startMenuPath);
+    result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startMenuPath);
     std::string exe = exePath.substr(exePath.find_last_of("\\") + 1);
     std::wstring wExe = Encoding::Utf8ToWide(exe);
     wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
     std::wstring wStartMenuPath = std::wstring(startMenuPath);
-    wStartMenuPath.append(L"\\Startup\\");
+    wStartMenuPath.append(L"\\");
     wStartMenuPath.append(wExe);
 
     // Load the link data from the file
@@ -1028,10 +1045,14 @@ namespace tabamewin32
         else if (method_name.compare("setStartOnSystemStartup") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+
             std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
             bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+            int ShowCmd = std::get<int>(args.at(flutter::EncodableValue("showCmd")));
+            std::string startArgs = std::get<std::string>(args.at(flutter::EncodableValue("args")));
 
-            SetStartOnSystemStartup(enabled, exePath);
+            SetStartOnSystemStartup(enabled, exePath, ShowCmd, startArgs);
+
             result->Success(flutter::EncodableValue(""));
         }
         else if (method_name.compare("setStartOnStartupAsAdmin") == 0)
@@ -1068,25 +1089,16 @@ namespace tabamewin32
         }
         else if (method_name.compare("setWallpaperColor") == 0)
         {
-
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int color = std::get<int>(args.at(flutter::EncodableValue("color")));
 
             SetWallpaperColor(color);
             result->Success(flutter::EncodableValue(true));
         }
-
-        else if (method_name.compare("textToSpeech") == 0)
+        else if (method_name.compare("browseFolder") == 0)
         {
-
-            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
-            std::string text = std::get<std::string>(args.at(flutter::EncodableValue("text")));
-            // convert text to wide
-            std::wstring wText = Encoding::Utf8ToWide(text);
-            std::wcout << "Text to speech: " << wText << std::endl;
-            bool out = TextToSpeech(wText.c_str());
-            std::cout << "result: " << out << std::endl;
-            result->Success(flutter::EncodableValue(true));
+            std::string out = BrowseFolder();
+            result->Success(flutter::EncodableValue(out));
         }
         else
         {

@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../main.dart';
+import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/util/theme_colors.dart';
 import '../../models/utils.dart';
@@ -380,8 +381,8 @@ class CustomColorPicker extends StatelessWidget {
         pickersEnabled: <ColorPickerType, bool>{
           ColorPickerType.custom: true,
           ColorPickerType.wheel: true,
-          ColorPickerType.primary: false,
-          ColorPickerType.accent: false,
+          ColorPickerType.primary: true,
+          ColorPickerType.accent: true,
         },
         color: startColor,
         onColorChanged: onColorChanged,

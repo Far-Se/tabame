@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../models/classes/boxes.dart';
 import '../../models/utils.dart';
 import '../itzy/interface/tasks_page_watchers.dart';
 import '../itzy/interface/tasks_reminders.dart';
 import '../widgets/info_text.dart';
 
-class Tasks extends StatefulWidget {
-  const Tasks({Key? key}) : super(key: key);
+class TasksPage extends StatefulWidget {
+  const TasksPage({Key? key}) : super(key: key);
 
   @override
-  TasksState createState() => TasksState();
+  TasksPageState createState() => TasksPageState();
 }
 
-class TasksState extends State<Tasks> {
+class TasksPageState extends State<TasksPage> {
   @override
   Widget build(BuildContext context) {
     return Column(

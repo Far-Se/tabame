@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/utils.dart';
@@ -15,7 +16,7 @@ class QuickmenuBottomBar extends StatefulWidget {
 }
 
 class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
-  List<PowerShellScript> powerShellScripts = Boxes().getPowerShellScripts();
+  List<PowerShellScript> powerShellScripts = Boxes().powerShellScripts;
   final List<TextEditingController> powerShellNameController = <TextEditingController>[];
   @override
   void initState() {

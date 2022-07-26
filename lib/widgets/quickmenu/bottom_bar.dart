@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
 import '../itzy/quickmenu/list_powershell.dart';
@@ -14,7 +15,7 @@ class BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Globals.heights.traybar = 30;
-    final bool showPowerShell = globalSettings.showPowerShell && Boxes().getPowerShellScripts().isNotEmpty;
+    final bool showPowerShell = globalSettings.showPowerShell && Boxes().powerShellScripts.isNotEmpty;
     if (!showPowerShell &&
         !globalSettings.showSystemUsage &&
         ((globalSettings.showTrayBar && globalSettings.quickMenuPinnedWithTrayAtBottom) || !globalSettings.showTrayBar)) {

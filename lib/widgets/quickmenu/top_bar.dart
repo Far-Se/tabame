@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
@@ -100,27 +103,24 @@ class TopBar extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: kReleaseMode ? 50 : 75,
+                width: !kDebugMode ? 50 : 75,
                 child: Align(
                   child: BarWithButtons(
                     height: 25,
                     withScroll: false,
                     children: <Widget>[
-                      Align(
-                        child: Tooltip(
-                          message: "Testing",
-                          child: InkWell(
-                            onTap: () {
-                              DateTime d = DateTime.now();
-                              int weekDay = d.weekday;
-                              DateTime firstDayOfWeek = d.subtract(Duration(days: weekDay));
-                              print(d.weekday);
-                              print(firstDayOfWeek);
-                            },
-                            child: const Icon(Icons.textsms_outlined),
+                      if (kDebugMode)
+                        Align(
+                          child: Tooltip(
+                            message: "Testing",
+                            child: InkWell(
+                              onTap: () async {
+                                print(Directory(r"E:\shakal").parent.parent.parent.path);
+                              },
+                              child: const Icon(Icons.textsms_outlined),
+                            ),
                           ),
                         ),
-                      ),
                       const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop"),
                       const OpenSettingsButton(),
                     ],

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
-import 'utils.dart';
+import 'classes/boxes.dart';
 import 'win32/win32.dart';
 
 class TrayBarInfo extends TrayInfo {

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/utils.dart';
 import '../../../models/window_watcher.dart';
 
