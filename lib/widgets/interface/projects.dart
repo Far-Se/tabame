@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
-import '../../pages/interface.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({Key? key}) : super(key: key);
@@ -67,7 +68,7 @@ class ProjectsPageState extends State<ProjectsPage> {
             },
           ),
           ConstrainedBox(
-            constraints: interfaceConstraints!,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
             child: ReorderableListView.builder(
               shrinkWrap: true,
               dragStartBehavior: DragStartBehavior.down,
@@ -294,33 +295,58 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                             style: const TextStyle(fontSize: 14),
                                                           ),
                                                         ),
-                                                        Container(
+                                                        SizedBox(
                                                           width: 30,
                                                           height: 50,
-                                                          child: Tooltip(
-                                                            message: "Pick a file path\nDelete filename if you want the path.",
-                                                            child: InkWell(
-                                                              onTap: () async {
-                                                                final OpenFilePicker file = OpenFilePicker()
-                                                                  ..filterSpecification = <String, String>{
-                                                                    'All Files': '*.*',
-                                                                  }
-                                                                  ..defaultFilterIndex = 0
-                                                                  ..defaultExtension = 'exe'
-                                                                  ..title = 'Select any file';
+                                                          child: Column(
+                                                            children: <Widget>[
+                                                              Container(
+                                                                width: 30,
+                                                                height: 25,
+                                                                child: Tooltip(
+                                                                  message: "Pick a file.",
+                                                                  child: InkWell(
+                                                                    onTap: () async {
+                                                                      final OpenFilePicker file = OpenFilePicker()
+                                                                        ..filterSpecification = <String, String>{
+                                                                          'All Files': '*.*',
+                                                                        }
+                                                                        ..defaultFilterIndex = 0
+                                                                        ..defaultExtension = 'exe'
+                                                                        ..title = 'Select any file';
 
-                                                                final File? result = file.getFile();
-                                                                if (result != null) {
-                                                                  if (!mounted) return;
-                                                                  projectItem.stringToExecute = result.path;
-                                                                  projectPathController.value = TextEditingValue(text: result.path);
-
-                                                                  print("xx");
-                                                                  setState(() {});
-                                                                }
-                                                              },
-                                                              child: Container(height: double.infinity, child: const Icon(Icons.folder_copy, size: 20)),
-                                                            ),
+                                                                      final File? result = file.getFile();
+                                                                      if (result != null) {
+                                                                        if (!mounted) return;
+                                                                        projectItem.stringToExecute = result.path;
+                                                                        projectPathController.value = TextEditingValue(text: result.path);
+                                                                        setState(() {});
+                                                                      }
+                                                                    },
+                                                                    child: Container(height: double.infinity, child: const Icon(Icons.file_open, size: 20)),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                width: 30,
+                                                                height: 25,
+                                                                child: Tooltip(
+                                                                  message: "Pick a folder.",
+                                                                  preferBelow: true,
+                                                                  child: InkWell(
+                                                                    onTap: () async {
+                                                                      final String result = await pickFolder();
+                                                                      if (result == "") return;
+                                                                      if (!mounted) return;
+                                                                      projectItem.stringToExecute = result;
+                                                                      projectPathController.value = TextEditingValue(text: result);
+                                                                      setState(() {});
+                                                                    },
+                                                                    child: Container(height: double.infinity, child: const Icon(Icons.folder_copy, size: 20)),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
                                                       ],

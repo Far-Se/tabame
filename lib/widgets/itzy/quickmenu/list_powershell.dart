@@ -4,8 +4,10 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
+// ignore: unused_import
+
+import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
-import '../../../models/utils.dart';
 import '../../../models/win32/win32.dart';
 import '../../containers/bar_with_buttons.dart';
 
@@ -17,7 +19,7 @@ class PowershellList extends StatefulWidget {
 }
 
 class PowershellListState extends State<PowershellList> {
-  final List<PowerShellScript> scripts = Boxes().getPowerShellScripts().where((PowerShellScript element) => !element.disabled).toList();
+  final List<PowerShellScript> scripts = Boxes().powerShellScripts.where((PowerShellScript element) => !element.disabled).toList();
   @override
   void initState() {
     super.initState();
@@ -40,7 +42,7 @@ class PowershellListState extends State<PowershellList> {
                 child: InkWell(
                   child: Center(
                     child: Text(
-                      item.name.substring(0, 1),
+                      item.name.characters.first,
                       style: const TextStyle(fontSize: 12, height: 1),
                     ),
                   ),

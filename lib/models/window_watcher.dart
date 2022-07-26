@@ -9,6 +9,7 @@ import 'package:win32/win32.dart' hide Size;
 
 import 'package:tabamewin32/tabamewin32.dart';
 
+import 'classes/boxes.dart';
 import 'globals.dart';
 import 'utils.dart';
 import 'win32/imports.dart';

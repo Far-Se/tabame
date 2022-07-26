@@ -1,7 +1,9 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
+import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -16,6 +18,7 @@ import '../widgets/interface/quickmenu.dart';
 import '../widgets/interface/settings.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
+import '../widgets/interface/wizardly.dart';
 
 class Interface extends StatefulWidget {
   const Interface({Key? key}) : super(key: key);
@@ -74,10 +77,11 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
-    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const Tasks()),
-    PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const NotImplemeneted()),
+    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
+    PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
     PageClass(title: 'Info', icon: Icons.info, widget: const NotImplemeneted()),
   ];
+  final List<String> disableScroll = <String>["Wizardly"];
   final Future<int> interfaceWindow = interfaceWindowSetup();
   @override
   void initState() {
@@ -183,13 +187,24 @@ class InterfaceState extends State<Interface> {
                                         child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.minimize, size: 15)),
                                       ),
                                     ),
+                                    //! go to quickmenu
                                     SizedBox(
                                       width: 25,
                                       child: InkWell(
                                         onTap: () async {
                                           Globals.changingPages = true;
                                           setState(() {});
-                                          mainPageViewController.jumpToPage(Pages.quickmenu.index);
+                                          if (kReleaseMode) {
+                                            if (WinUtils.isAdministrator()) {
+                                              WinUtils.run(Platform.resolvedExecutable);
+                                              Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
+                                            } else {
+                                              WinUtils.open(Platform.resolvedExecutable);
+                                              Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
+                                            }
+                                          } else {
+                                            mainPageViewController.jumpToPage(Pages.quickmenu.index);
+                                          }
                                         },
                                         child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                       ),
@@ -298,7 +313,9 @@ class InterfaceState extends State<Interface> {
                                           itemBuilder: (BuildContext context, int index) {
                                             return SingleChildScrollView(
                                               controller: AdjustableScrollController(30),
-                                              physics: mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                                              physics: disableScroll.contains(pages[index].title)
+                                                  ? const NeverScrollableScrollPhysics()
+                                                  : (mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics()),
                                               child: Material(type: MaterialType.transparency, child: pages[index].widget),
                                             );
                                           },

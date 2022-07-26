@@ -558,7 +558,7 @@ class WinUtils {
     return output;
   }
 
-  static void open(String path, {bool parseParamaters = false}) {
+  static void open(String path, {String? arguments, bool parseParamaters = false}) {
     if (parseParamaters) {
       final RegExp reg = RegExp(r"^([a-z0-9-_]+) (.*?)$");
       if (reg.hasMatch(path)) {
@@ -566,15 +566,15 @@ class WinUtils {
         print(out.group(0)!);
         ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
       } else {
-        ShellExecute(NULL, TEXT("open"), TEXT(path), nullptr, nullptr, SW_SHOWNORMAL);
+        ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
       }
     } else {
-      ShellExecute(NULL, TEXT("open"), TEXT(path), nullptr, nullptr, SW_SHOWNORMAL);
+      ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
     }
   }
 
-  static void run(String link) {
-    ShellExecute(NULL, TEXT("runas"), TEXT(link), nullptr, nullptr, SW_SHOWNORMAL);
+  static void run(String link, {String? arguments}) {
+    ShellExecute(NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
   }
 
   static void sendCommand({int command = AppCommand.appCommand}) {
@@ -696,7 +696,7 @@ class WinUtils {
     }
   }
 
-  static void toggleHiddenFiles({bool? visible}) {
+  static Future<void> toggleHiddenFiles({bool? visible}) async {
     final RegistryKey key =
         Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', desiredAccessRights: AccessRights.allAccess);
     final int hidden = key.getValueAsInt('Hidden') ?? 1;
@@ -705,7 +705,8 @@ class WinUtils {
     } else {
       key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 2));
     }
-    Future<void>.delayed(const Duration(milliseconds: 500), () => SendNotifyMessage(HWND_BROADCAST, 0x111, 41504, NULL));
+    await Future<void>.delayed(const Duration(milliseconds: 500), () => SendNotifyMessage(HWND_BROADCAST, 0x111, 41504, NULL));
+    return;
   }
 
   static void textToSpeech(String text, {int repeat = 1}) {
@@ -758,6 +759,37 @@ class WinUtils {
     );
     notification.onClick = () => onClick();
     await notification.show();
+  }
+
+  static Future<String> folderPicker() async {
+    return await pickFolder();
+  }
+
+  static startOnStartup({String? exeFilePath, String? arguments}) {
+    // ! doenst work
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    final Pointer<Pointer<COMObject>> ppsi = calloc<Pointer<COMObject>>();
+    final Pointer<COMObject> ppfi = calloc<COMObject>();
+
+    exeFilePath ??= Platform.resolvedExecutable;
+    final String directory = Directory(exeFilePath).parent.path;
+    final IShellLink shell = IShellLink(ppsi.cast());
+
+    shell.SetPath(TEXT(exeFilePath));
+    shell.SetWorkingDirectory(TEXT(directory));
+    shell.SetShowCmd(SW_SHOWNORMAL);
+
+    if (arguments != null) shell.SetArguments(TEXT(arguments));
+
+    final IPersistFile file = IPersistFile(shell.toInterface(IID_IPersistFile));
+    final String startUpPath = getKnownFolderCLSID(CSIDL_STARTUP);
+    final String exeName = File(exeFilePath).uri.pathSegments.last.replaceFirst(".exe", ".lnk");
+    file.Save(TEXT("$startUpPath\\$exeName"), TRUE);
+    file.Release();
+    shell.Release();
+    CoUninitialize();
+    free(ppsi);
+    free(ppfi);
   }
 }
 

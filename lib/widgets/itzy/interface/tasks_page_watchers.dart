@@ -3,17 +3,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
-import '../../../models/utils.dart';
 
 class TasksPageWatchers extends StatefulWidget {
   const TasksPageWatchers({Key? key}) : super(key: key);
 
   @override
-  _TasksPageWatchersState createState() => _TasksPageWatchersState();
+  TasksPageWatchersState createState() => TasksPageWatchersState();
 }
 
-class _TasksPageWatchersState extends State<TasksPageWatchers> {
+class TasksPageWatchersState extends State<TasksPageWatchers> {
+  final Tasks tasks = Tasks();
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -56,7 +57,7 @@ class _TasksPageWatchersState extends State<TasksPageWatchers> {
                               pageWatcher.enabled = value ?? false;
                               print(pageWatcher.enabled);
                               if (pageWatcher.enabled) {
-                                Boxes().startPageWatchers(specificIndex: index);
+                                tasks.startPageWatchers(specificIndex: index);
                               } else {
                                 pageWatcher.timer?.cancel();
                               }
@@ -114,12 +115,12 @@ class _TasksPageWatchersState extends State<TasksPageWatchers> {
                                   pageWatcher.url = urlTextController.value.text;
                                   pageWatcher.regex = regexTextController.value.text;
                                   pageWatcher.checkPeriod = int.parse(secondsTextController.value.text);
-                                  pageWatcher.lastMatch = await Boxes().pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
+                                  pageWatcher.lastMatch = await tasks.pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
 
                                   await Boxes.updateSettings("pageWatchers", jsonEncode(Boxes.pageWatchers));
                                   if (pageWatcher.enabled) {
                                     pageWatcher.timer?.cancel();
-                                    Boxes().startPageWatchers(specificIndex: index);
+                                    tasks.startPageWatchers(specificIndex: index);
                                   }
                                   if (mounted) if (mounted) setState(() {});
                                 },
@@ -141,12 +142,12 @@ class _TasksPageWatchersState extends State<TasksPageWatchers> {
                                   pageWatcher.url = urlTextController.value.text;
                                   pageWatcher.regex = regexTextController.value.text;
                                   pageWatcher.checkPeriod = int.parse(secondsTextController.value.text);
-                                  pageWatcher.lastMatch = await Boxes().pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
+                                  pageWatcher.lastMatch = await tasks.pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
 
                                   await Boxes.updateSettings("pageWatchers", jsonEncode(Boxes.pageWatchers));
                                   if (pageWatcher.enabled) {
                                     pageWatcher.timer?.cancel();
-                                    Boxes().startPageWatchers(specificIndex: index);
+                                    tasks.startPageWatchers(specificIndex: index);
                                   }
                                   if (mounted) if (mounted) setState(() {});
                                 },
@@ -174,12 +175,12 @@ class _TasksPageWatchersState extends State<TasksPageWatchers> {
                                 pageWatcher.url = urlTextController.value.text;
                                 pageWatcher.regex = regexTextController.value.text;
                                 pageWatcher.checkPeriod = int.parse(secondsTextController.value.text);
-                                pageWatcher.lastMatch = await Boxes().pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
+                                pageWatcher.lastMatch = await tasks.pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
 
                                 await Boxes.updateSettings("pageWatchers", jsonEncode(Boxes.pageWatchers));
                                 if (pageWatcher.enabled) {
                                   pageWatcher.timer?.cancel();
-                                  Boxes().startPageWatchers(specificIndex: index);
+                                  tasks.startPageWatchers(specificIndex: index);
                                 }
                                 if (mounted) if (mounted) setState(() {});
                               },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/keys.dart';
-import '../../../models/utils.dart';
 import '../../containers/bar_with_buttons.dart';
 import 'button_window_app.dart';
 

@@ -5,7 +5,7 @@ import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import '../../../models/utils.dart';
+import '../../../models/classes/boxes.dart';
 import '../../../models/win32/win32.dart';
 import '../../../pages/interface.dart';
 
