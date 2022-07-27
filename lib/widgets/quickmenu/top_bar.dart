@@ -103,7 +103,7 @@ class TopBar extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: !kDebugMode ? 50 : 75,
+                width: !kDebugMode ? 50 : 65,
                 child: Align(
                   child: BarWithButtons(
                     height: 25,
@@ -115,13 +115,14 @@ class TopBar extends StatelessWidget {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
-                                print(Directory(r"E:\shakal").parent.parent.parent.path);
+                                final List<FileSystemEntity> out = Directory(r"C:\").listSync(recursive: false, followLinks: false);
+                                print(out.where((FileSystemEntity element) => element.path.contains('.')));
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),
                           ),
                         ),
-                      const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop"),
+                      const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop", iconSize: 20),
                       const OpenSettingsButton(),
                     ],
                   ),

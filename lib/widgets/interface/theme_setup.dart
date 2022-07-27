@@ -434,28 +434,33 @@ class ListColors extends StatelessWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 controller: colorScrollController,
-                child: ColorPicker(
-                  columnSpacing: 15,
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  heading: null,
-                  copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-                    copyFormat: ColorPickerCopyFormat.hexRRGGBB,
-                    pasteButton: false,
-                    editFieldCopyButton: false,
-                  ),
-                  pickersEnabled: <ColorPickerType, bool>{
-                    ColorPickerType.custom: true,
-                    ColorPickerType.primary: false,
-                    ColorPickerType.accent: false,
-                  },
-                  customColorSwatchesAndNames: colorsNameMap,
-                  color: Color(globalSettings.darkTheme.textColor),
-                  enableShadesSelection: false,
-                  onColorChanged: (Color color) => onColorChanged(color),
-                  width: 20,
-                  height: 20,
-                  borderRadius: 22,
-                  subheading: Text('Select color shade', style: Theme.of(context).textTheme.subtitle1),
+                child: Row(
+                  children: [
+                    ColorPicker(
+                      columnSpacing: 15,
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      heading: null,
+                      copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+                        copyFormat: ColorPickerCopyFormat.hexRRGGBB,
+                        pasteButton: false,
+                        editFieldCopyButton: false,
+                      ),
+                      pickersEnabled: <ColorPickerType, bool>{
+                        ColorPickerType.custom: true,
+                        ColorPickerType.primary: false,
+                        ColorPickerType.accent: false,
+                      },
+                      customColorSwatchesAndNames: colorsNameMap,
+                      color: Color(globalSettings.darkTheme.textColor),
+                      enableShadesSelection: false,
+                      onColorChanged: (Color color) => onColorChanged(color),
+                      width: 20,
+                      height: 20,
+                      borderRadius: 22,
+                      subheading: Text('Select color shade', style: Theme.of(context).textTheme.subtitle1),
+                    ),
+                    const SizedBox(width: 50)
+                  ],
                 ),
               ),
             ),

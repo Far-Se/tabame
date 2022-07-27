@@ -73,7 +73,7 @@ class ProjectsPageState extends State<ProjectsPage> {
               shrinkWrap: true,
               dragStartBehavior: DragStartBehavior.down,
               itemCount: projects.length,
-              physics: const BouncingScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(),
               scrollController: ScrollController(),
               itemBuilder: (BuildContext context, int mainIndex) {
                 final ProjectGroup project = projects[mainIndex];
@@ -220,7 +220,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                             shrinkWrap: true,
                             dragStartBehavior: DragStartBehavior.down,
                             itemCount: projects[mainIndex].projects.length,
-                            physics: const BouncingScrollPhysics(),
+                            physics: const AlwaysScrollableScrollPhysics(),
                             scrollController: ScrollController(),
                             itemBuilder: (BuildContext context, int index) {
                               final ProjectInfo projectItem = projects[mainIndex].projects[index];

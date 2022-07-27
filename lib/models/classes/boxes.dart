@@ -53,6 +53,15 @@ class Boxes {
       await pref.setBool("showPowerShell", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("runAsAdministrator", false);
+      final Reminder demoReminder = Reminder(
+          enabled: false,
+          interval: <int>[540, 1200],
+          message: "Strech",
+          repetitive: true,
+          time: 60,
+          voiceNotification: true,
+          weekDays: <bool>[true, true, true, true, true, false, false]);
+      await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
       await setStartOnSystemStartup(true);
       pref = await SharedPreferences.getInstance();
     }
@@ -132,7 +141,6 @@ class Boxes {
     } else {
       throw ("No asociated type $value");
     }
-
     pref = await SharedPreferences.getInstance();
   }
 

@@ -80,7 +80,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       shrinkWrap: true,
                       dragStartBehavior: DragStartBehavior.down,
-                      physics: const BouncingScrollPhysics(),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       scrollController: ScrollController(),
                       itemBuilder: (BuildContext context, int index) {
                         return ListTile(

@@ -55,7 +55,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                   child: ReorderableListView.builder(
                     shrinkWrap: true,
                     dragStartBehavior: DragStartBehavior.down,
-                    physics: const BouncingScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     scrollController: ScrollController(),
                     itemBuilder: (BuildContext context, int index) {
                       if (topBarItems[index] == "Deactivated:") {
