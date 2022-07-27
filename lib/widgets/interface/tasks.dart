@@ -56,7 +56,7 @@ class TasksPageState extends State<TasksPage> {
             setState(() {});
           },
           title: const Text('Use PowerShell as toast notification'),
-          subtitle: const InfoText('It is possible that Native Toast Notification will not popup sometimes. If you miss some, toggle this.'),
+          subtitle: const InfoText('If you do not receive notifications, enable this.'),
         ),
       ],
     );

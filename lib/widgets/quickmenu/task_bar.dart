@@ -38,7 +38,7 @@ class TaskBarState extends State<TaskBar> {
   int _hoverElement = -1;
   bool fetching = false;
   late Timer mainTimer;
-
+  double lastQuickMenuHeight = 0;
   List<String> wasPausedByButton = <String>[];
 
   Future<void> changeHeight() async {
@@ -69,6 +69,14 @@ class TaskBarState extends State<TaskBar> {
       await changeHeight();
 
       if (mounted) {
+        // SchedulerBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+        //   final double height = Globals.quickMenu.currentContext?.size?.height ?? 0;
+        //   if (height > 200 && lastQuickMenuHeight != height) {
+        //     lastQuickMenuHeight = height;
+        //     await windowManager.setSize(Size(300, lastQuickMenuHeight + 100));
+        //   }
+        // });
+
         setState(() {
           fetching = false;
           Globals.quickMenuFullyInitiated = true;

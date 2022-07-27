@@ -101,6 +101,7 @@ class QuickMenuState extends State<QuickMenu> {
                       Padding(
                         padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
                         child: Container(
+                          key: Globals.quickMenu,
                           color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
                           child: Container(
                             decoration: BoxDecoration(

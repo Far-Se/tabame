@@ -1,8 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../../models/utils.dart';
-
 class BarWithButtons extends StatefulWidget {
   final List<Widget> children;
   final bool withScroll;
@@ -24,11 +22,11 @@ class _BarWithButtonsState extends State<BarWithButtons> {
   @override
   Widget build(BuildContext context) {
     double middleOffset = 0.93;
-    if (widget.children.length < 8 && globalSettings.quickMenuPinnedWithTrayAtBottom) {
-      middleOffset = 0.99;
-    } else if (widget.children.length < 5 && !globalSettings.quickMenuPinnedWithTrayAtBottom) {
-      middleOffset = 0.99;
-    }
+    // if (widget.children.length < 8 && globalSettings.quickMenuPinnedWithTrayAtBottom) {
+    //   middleOffset = 0.99;
+    // } else if (widget.children.length < 5 && !globalSettings.quickMenuPinnedWithTrayAtBottom) {
+    //   middleOffset = 0.99;
+    // }
     return ShaderMask(
       shaderCallback: (Rect rect) {
         return LinearGradient(
@@ -42,7 +40,7 @@ class _BarWithButtonsState extends State<BarWithButtons> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         controller: _buttonBarScrollController,
-        physics: widget.withScroll ? const NeverScrollableScrollPhysics() : null,
+        physics: !widget.withScroll ? const NeverScrollableScrollPhysics() : null,
         child: !widget.withScroll
             ? ListChildren(children: widget.children)
             : Listener(
@@ -79,16 +77,19 @@ class ListChildren extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         verticalDirection: VerticalDirection.down,
-        children: List<Widget>.generate(
-          children.length,
-          (int index) {
-            return Flexible(
-              flex: 1,
-              fit: FlexFit.loose,
-              child: children[index],
-            );
-          },
-        ),
+        children: [
+          ...List<Widget>.generate(
+            children.length,
+            (int index) {
+              return Flexible(
+                flex: 1,
+                fit: FlexFit.loose,
+                child: children[index],
+              );
+            },
+          ),
+          const SizedBox(width: 10)
+        ],
       ),
     );
   }

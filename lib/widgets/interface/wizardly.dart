@@ -3,7 +3,9 @@ import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/utils.dart';
+import '../wizardly/file_name_widget.dart';
 import '../wizardly/file_size_widget.dart';
+import '../wizardly/search_text_widget.dart';
 
 class Wizardly extends StatefulWidget {
   const Wizardly({Key? key}) : super(key: key);
@@ -24,8 +26,6 @@ class WizardPage {
 }
 
 class WizardlyState extends State<Wizardly> {
-  final PageController pageViewController = PageController();
-
   @override
   void initState() {
     super.initState();
@@ -34,14 +34,13 @@ class WizardlyState extends State<Wizardly> {
   @override
   void dispose() {
     super.dispose();
-    pageViewController.dispose();
   }
 
   final List<WizardPage> pages = <WizardPage>[
     WizardPage(title: "Folder Size", widget: const FileSizeWidget()),
-    WizardPage(title: "File Name", widget: Container()),
+    WizardPage(title: "File Name", widget: const FileNameWidget()),
     WizardPage(title: "Image Work", widget: Container()),
-    WizardPage(title: "Find Text", widget: Container()),
+    WizardPage(title: "Find Text", widget: const SearchTextWidget()),
     WizardPage(title: "CLOC", widget: Container()),
   ];
   int currentPage = 0;
@@ -49,31 +48,30 @@ class WizardlyState extends State<Wizardly> {
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: Maa.start,
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.all(1),
-          child: AnimatedButtonBar(
-            foregroundColor: Color(globalSettings.theme.accentColor),
-            radius: 8.0,
-            padding: const EdgeInsets.all(16.0),
-            invertedSelection: true,
-            children: <ButtonBarEntry>[
-              for (int i = 0; i < pages.length; i++)
-                ButtonBarEntry(
-                    onTap: () {
-                      currentPage = i;
-                      setState(() {});
-                      pageViewController.jumpToPage(i);
-                    },
-                    child: Text(pages[i].title)),
-            ],
+        SizedBox(
+          height: 80,
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: AnimatedButtonBar(
+              foregroundColor: Color(globalSettings.theme.accentColor),
+              radius: 8.0,
+              padding: const EdgeInsets.all(16.0),
+              invertedSelection: true,
+              children: <ButtonBarEntry>[
+                for (int i = 0; i < pages.length; i++)
+                  ButtonBarEntry(
+                      onTap: () {
+                        currentPage = i;
+                        setState(() {});
+                      },
+                      child: Text(pages[i].title)),
+              ],
+            ),
           ),
         ),
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height - 150),
-          child: currentPage < pages.length ? pages[currentPage].widget : Container(),
-        ),
+        currentPage < pages.length ? pages[currentPage].widget : Container(),
       ],
     );
   }

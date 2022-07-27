@@ -90,7 +90,7 @@ class SettingsPageState extends State<SettingsPage> {
                                 CheckboxListTile(
                                   controlAffinity: ListTileControlAffinity.leading,
                                   title: const Text("Run as Administrator"),
-                                  subtitle: const Text("Some apps require Admin Privileges to close or to control the TrayIcon"),
+                                  subtitle: const Text("Some apps require Admin Privileges to close or focus or to control the TrayIcon"),
                                   contentPadding: const EdgeInsets.all(10) - const EdgeInsets.only(right: 20),
                                   secondary: !globalSettings.runAsAdministrator
                                       ? null

@@ -10,6 +10,7 @@ import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
+// vscode-fold=2
 class FileSizeWidget extends StatefulWidget {
   const FileSizeWidget({Key? key}) : super(key: key);
 
@@ -56,151 +57,205 @@ class DirectoryScan {
     unfoldedDirectories = <String>[];
     main = DirectoryInfo(path: "", size: 0);
   }
+
+  static void deleteDir(String deletedDir, [int? size]) {
+    Directory dirPath = Directory(deletedDir);
+    int removeSize = 0;
+    if (size == null) {
+      final DirectoryInfo dir = DirectoryScan.dirs[DirectoryScan.names[deletedDir]!];
+
+      removeSize = dir.size;
+      dir.deleted = true;
+    } else {
+      removeSize = size;
+    }
+    DirectoryScan.main.size -= removeSize;
+    int ticks = 0;
+    do {
+      ticks++;
+      if (ticks > 1000) break;
+
+      if (DirectoryScan.names.containsKey(dirPath.path)) {
+        DirectoryScan.dirs[DirectoryScan.names[dirPath.path]!].size -= removeSize;
+      }
+      if (dirPath.path == DirectoryScan.main.path) break;
+      dirPath = dirPath.parent;
+    } while (true);
+  }
 }
 
 bool percentageOfMainFolder = false;
 bool deleteWithoutConfirmation = false;
-ValueNotifier<bool>? recalculate;
+ValueNotifier<bool>? redrawWidget;
+
+const bool actuallyDeleteFiles = true; //!change if testing.
 
 class FileSizeWidgetState extends State<FileSizeWidget> {
-  String currentFolder = r"E:\Playground\CPP";
+  String currentFolder = "";
 
   String processedFiles = "";
 
   bool finishedProcessing = false;
-  Timer? timerCheckHeight;
   double lastHeight = 0;
 
   @override
   void initState() {
-    recalculate = ValueNotifier<bool>(false);
+    redrawWidget = ValueNotifier<bool>(false);
     super.initState();
-    timerCheckHeight = Timer.periodic(const Duration(milliseconds: 10), (Timer timer) {
-      double newheight = MediaQuery.of(context).size.height;
-      if (newheight != lastHeight) {
-        lastHeight = newheight;
-        if (mounted) setState(() {});
-      }
-    });
   }
 
   @override
   void dispose() {
     super.dispose();
-    recalculate?.dispose();
-    timerCheckHeight?.cancel();
+    // redrawWidget?.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        mainAxisAlignment: Maa.start,
-        // crossAxisAlignment: Caa.start,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: Maa.start,
-            children: <Widget>[
-              const SizedBox(width: 20),
-              Flexible(
-                flex: 5,
-                fit: FlexFit.tight,
-                child: ListTile(
-                  onTap: () async {
-                    processedFiles = "";
-                    DirectoryScan.clear();
-                    finishedProcessing = false;
-                    if (mounted) setState(() {});
-                    WinUtils.toggleHiddenFiles(visible: true);
-                    currentFolder = await WinUtils.folderPicker();
-                    WinUtils.toggleHiddenFiles(visible: false);
-                    if (mounted) setState(() {});
-                  },
-                  leading: const Icon(Icons.folder_copy_sharp),
-                  title: const Text("Pick a folder"),
-                  subtitle: currentFolder.isEmpty ? const Text("-") : InfoText(currentFolder.truncate(50, suffix: "...")),
-                ),
-              ),
-              Flexible(
-                fit: FlexFit.loose,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    finishedProcessing = false;
-                    setState(() {});
-                    if (currentFolder.isEmpty) return;
-                    //!HERE
-                    final Map<String, int> allDirs = await listDirectoriesSizes(currentFolder, (int total) {
-                      processedFiles = "Processed $total files ...";
-                      if (mounted) setState(() {});
-                    });
-                    processedFiles = "Formating Directories ...";
-                    if (mounted) setState(() {});
-                    if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.dirs.clear();
-                    if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.names.clear();
-                    if (DirectoryScan.unfoldedDirectories.isNotEmpty) DirectoryScan.unfoldedDirectories.clear();
+    return Column(
+      mainAxisAlignment: Maa.start,
+      crossAxisAlignment: Caa.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: Maa.start,
+          children: <Widget>[
+            const SizedBox(width: 20),
+            Flexible(
+              flex: 5,
+              fit: FlexFit.tight,
+              child: ListTile(
+                onTap: () async {
+                  processedFiles = "";
+                  DirectoryScan.clear();
+                  finishedProcessing = false;
+                  if (mounted) setState(() {});
+                  WinUtils.toggleHiddenFiles(visible: true);
+                  currentFolder = await WinUtils.folderPicker();
+                  WinUtils.toggleHiddenFiles(visible: false);
 
-                    for (MapEntry<String, int> dir in allDirs.entries) {
-                      DirectoryScan.dirs.add(DirectoryInfo(path: dir.key, size: dir.value));
-                    }
-                    DirectoryScan.dirs.sort((DirectoryInfo a, DirectoryInfo b) => b.size.compareTo(a.size));
-                    int index = 0;
-                    for (DirectoryInfo item in DirectoryScan.dirs) {
-                      DirectoryScan.names[item.path] = index;
-                      index++;
-                    }
+                  if (currentFolder.contains(RegExp(r'^[A-Z]:\\$'))) {
+                    currentFolder = "";
 
-                    DirectoryScan.main = DirectoryScan.dirs[DirectoryScan.names[currentFolder]!];
-                    finishedProcessing = true;
-                    processedFiles = " ${DirectoryScan.dirs.length} directories in total of  ${getFileSize(DirectoryScan.main.size, 1)}!";
-                    if (mounted) setState(() {});
-                  },
-                  child: Text("Run", style: TextStyle(color: Color(globalSettings.theme.background))),
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: CheckboxListTile(
-                    value: percentageOfMainFolder,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: const Text("Show Percentage of Main Folder"),
-                    onChanged: (bool? newValue) {
-                      percentageOfMainFolder = newValue ?? false;
-                      setState(() {});
-                    }),
-              ),
-              Expanded(
-                child: CheckboxListTile(
-                    value: deleteWithoutConfirmation,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: const Text("Delete without confirmation"),
-                    onChanged: (bool? newValue) {
-                      deleteWithoutConfirmation = newValue ?? false;
-                      setState(() {});
-                    }),
-              ),
-            ],
-          ),
-          if (processedFiles.isNotEmpty) ListTile(title: Text(processedFiles)),
-          if (finishedProcessing)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Container(
-                height: lastHeight - 400,
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: recalculate!,
-                  builder: (BuildContext context, Object? snapshot, Widget? e) {
-                    return SingleChildScrollView(
-                        controller: AdjustableScrollController(), child: FolderInfo(key: UniqueKey(), directory: currentFolder, parentSize: DirectoryScan.main.size));
-                  },
-                ),
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          content: Container(height: 100, child: const Text("Can't process Drive, only folders!")),
+                          actions: <Widget>[
+                            ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(), child: Text("Ok", style: TextStyle(color: Color(globalSettings.theme.background)))),
+                          ],
+                        );
+                      },
+                    ).then((_) {});
+                    return;
+                  }
+                  if (mounted) setState(() {});
+                },
+                leading: const Icon(Icons.folder_copy_sharp),
+                title: const Text("Pick a folder"),
+                subtitle: currentFolder.isEmpty ? const InfoText("Only folders, can not process Drives") : InfoText(currentFolder.truncate(50, suffix: "...")),
               ),
             ),
-        ],
-      ),
+            Flexible(
+              fit: FlexFit.loose,
+              child: ElevatedButton(
+                onPressed: () async {
+                  finishedProcessing = false;
+                  setState(() {});
+                  if (currentFolder.isEmpty) return;
+                  if (!Directory(currentFolder).existsSync()) return;
+                  //!HERE
+                  final Map<String, int> allDirs = await listDirectoriesSizes(currentFolder, (int total) {
+                    processedFiles = "Processed $total files ...";
+                    if (mounted) setState(() {});
+                  });
+                  processedFiles = "Formating Directories ...";
+                  if (mounted) setState(() {});
+                  if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.dirs.clear();
+                  if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.names.clear();
+                  if (DirectoryScan.unfoldedDirectories.isNotEmpty) DirectoryScan.unfoldedDirectories.clear();
+                  int totalSize = 0;
+
+                  for (MapEntry<String, int> dir in allDirs.entries) {
+                    DirectoryScan.dirs.add(DirectoryInfo(path: dir.key, size: dir.value));
+                    totalSize += dir.value;
+                  }
+                  DirectoryScan.dirs.sort((DirectoryInfo a, DirectoryInfo b) => b.size.compareTo(a.size));
+                  int index = 0;
+                  for (DirectoryInfo item in DirectoryScan.dirs) {
+                    DirectoryScan.names[item.path] = index;
+                    index++;
+                  }
+                  DirectoryScan.main = DirectoryScan.dirs.first;
+                  if (!DirectoryScan.names.containsKey(currentFolder)) {
+                    DirectoryScan.dirs.add(DirectoryScan.main);
+                  }
+                  //   DirectoryScan.main = DirectoryScan.dirs[DirectoryScan.names[currentFolder]!];
+                  // } else {
+                  // }
+                  finishedProcessing = true;
+                  processedFiles = " ${DirectoryScan.dirs.length} directories in total of  ${getFileSize(DirectoryScan.main.size, 1)}!";
+                  if (mounted) setState(() {});
+                },
+                child: Text("Run", style: TextStyle(color: Color(globalSettings.theme.background))),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: CheckboxListTile(
+                  dense: true,
+                  value: percentageOfMainFolder,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text("Show Percentage of Main Folder"),
+                  onChanged: (bool? newValue) {
+                    percentageOfMainFolder = newValue ?? false;
+                    setState(() {});
+                  }),
+            ),
+            Expanded(
+              child: CheckboxListTile(
+                  dense: true,
+                  value: deleteWithoutConfirmation,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text("Delete without confirmation"),
+                  onChanged: (bool? newValue) {
+                    deleteWithoutConfirmation = newValue ?? false;
+                    setState(() {});
+                  }),
+            ),
+          ],
+        ),
+        if (processedFiles.isNotEmpty) ListTile(title: Text(processedFiles)),
+        if (finishedProcessing)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: redrawWidget!,
+              builder: (BuildContext context, Object? snapshot, Widget? e) {
+                return Column(
+                  children: [
+                    InkWell(
+                      onTap: () {},
+                      child: Row(
+                        children: <Widget>[
+                          const SizedBox(width: 50, child: Icon(Icons.folder, size: 15)),
+                          SizedBox(width: 70, child: Text(getFileSize(DirectoryScan.main.size, 1))),
+                          const PercentageBar(percent: 100, barWidth: 50),
+                          Expanded(child: MouseScrollWidget(child: Text(DirectoryScan.main.path))),
+                        ],
+                      ),
+                    ),
+                    FolderInfo(directory: currentFolder, parentSize: DirectoryScan.main.size),
+                  ],
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }
@@ -227,7 +282,9 @@ class _FolderInfoState extends State<FolderInfo> {
 
   @override
   Widget build(BuildContext context) {
-    final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(widget.directory);
+    String parentDirectory = widget.directory;
+    if (parentDirectory.endsWith("\\")) parentDirectory = parentDirectory.substring(0, parentDirectory.length - 1);
+    final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(parentDirectory);
 
     List<DirectoryInfo> dirs = <DirectoryInfo>[];
 
@@ -270,35 +327,24 @@ class _FolderInfoState extends State<FolderInfo> {
                       children: <Widget>[
                         Row(
                           children: <Widget>[
-                            SizedBox(width: barWidth, child: Icon(!DirectoryScan.unfoldedDirectories.contains(dir.path) ? Icons.expand_more : Icons.expand_less)),
+                            SizedBox(
+                                width: barWidth,
+                                child: !DirectoryScan.unfoldedDirectories.contains(dir.path)
+                                    ? Icon(Icons.expand_more, color: Colors.grey.shade700)
+                                    : const Icon(Icons.expand_less)),
                             SizedBox(width: 70, child: Text(getFileSize(dir.size, 1))),
                             PercentageBar(percent: percent, barWidth: barWidth),
-                            Expanded(child: MouseScrollWidget(child: Text(dir.path.replaceFirst("${widget.directory}\\", '')))),
+                            Expanded(child: MouseScrollWidget(child: Text(dir.path.replaceFirst("$parentDirectory\\", '')))),
                             InkWell(onTap: () => WinUtils.open(dir.path), child: const SizedBox(width: 25, child: Icon(Icons.folder))),
                             SizedBox(
                               width: 25,
                               child: InkWell(
                                   onTap: () {
                                     if (deleteWithoutConfirmation) {
-                                      final int dirSize = dir.size;
-                                      File(dir.path).deleteSync(recursive: true); //! delete file
-                                      dir.deleted = true;
-                                      Directory dirPath = Directory(dir.path);
-                                      int ticks = 0;
-                                      do {
-                                        ticks++;
-                                        if (ticks > 1000) {
-                                          break;
-                                        }
-                                        if (DirectoryScan.names.containsKey(dirPath.path)) {
-                                          DirectoryScan.dirs[DirectoryScan.names[dirPath.path]!].size -= dirSize;
-                                        } else {}
-                                        if (dirPath.path == DirectoryScan.main.path) break;
-                                        dirPath = dirPath.parent;
-                                      } while (true);
-                                      recalculate!.value = !recalculate!.value;
+                                      if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
+                                      DirectoryScan.deleteDir(dir.path);
+                                      redrawWidget!.value = !redrawWidget!.value;
                                     } else {
-                                      final int dirSize = dir.size;
                                       showDialog(
                                         context: context,
                                         builder: (BuildContext context) {
@@ -311,24 +357,10 @@ class _FolderInfoState extends State<FolderInfo> {
                                               ElevatedButton(
                                                   style: ElevatedButton.styleFrom(primary: Colors.red),
                                                   onPressed: () {
-                                                    File(dir.path).deleteSync(recursive: true); //! delete file
-                                                    dir.deleted = true;
-                                                    Directory dirPath = Directory(dir.path);
-                                                    int ticks = 0;
-                                                    do {
-                                                      ticks++;
-                                                      if (ticks > 1000) {
-                                                        break;
-                                                      }
-                                                      if (DirectoryScan.names.containsKey(dirPath.path)) {
-                                                        DirectoryScan.dirs[DirectoryScan.names[dirPath.path]!].size -= dirSize;
-                                                      }
-                                                      if (dirPath.path == DirectoryScan.main.path) break;
-                                                      dirPath = dirPath.parent;
-                                                    } while (true);
+                                                    if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
+                                                    DirectoryScan.deleteDir(dir.path);
                                                     Navigator.of(context).pop();
-                                                    recalculate!.value = !recalculate!.value;
-                                                    // setState(() {});
+                                                    redrawWidget!.value = !redrawWidget!.value;
                                                   },
                                                   child: const Text("Delete")),
                                             ],
@@ -353,7 +385,7 @@ class _FolderInfoState extends State<FolderInfo> {
       );
 
       if (DirectoryScan.unfoldedDirectories.contains(dir.path)) {
-        rows.add(Padding(padding: const EdgeInsets.only(left: 5.0), child: FolderInfo(key: UniqueKey(), directory: dir.path, parentSize: dir.size)));
+        rows.add(Padding(padding: const EdgeInsets.only(left: 5.0), child: FolderInfo(directory: dir.path, parentSize: dir.size)));
       }
     }
     int filesSize = DirectoryScan.dirs[DirectoryScan.names[widget.directory]!].size - totalFolderSize;
@@ -368,7 +400,7 @@ class _FolderInfoState extends State<FolderInfo> {
         const Expanded(child: Text("Files")),
       ]),
       FutureBuilder<Map<String, int>>(
-          future: listFilesSizes(widget.directory),
+          future: listFilesSizes(parentDirectory),
           builder: (_, AsyncSnapshot<Map<String, int>> snapshot) {
             if (!snapshot.hasData) return Container();
             if (snapshot.data!.isEmpty) return Container();
@@ -376,8 +408,11 @@ class _FolderInfoState extends State<FolderInfo> {
             final List<Widget> filesWidget = <Widget>[];
             final Map<String, int> data = snapshot.data!;
 
-            for (MapEntry<String, int> file in data.entries) {
-              final double percent = ((file.value / widget.parentSize) * 100);
+            final List<MapEntry<String, int>> dataEntries = data.entries.toList();
+            dataEntries.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
+
+            for (MapEntry<String, int> file in dataEntries) {
+              final double percent = ((file.value / (!percentageOfMainFolder ? widget.parentSize : DirectoryScan.main.size)) * 100);
 
               filesWidget.add(InkWell(
                 onTap: () {},
@@ -385,29 +420,16 @@ class _FolderInfoState extends State<FolderInfo> {
                   const SizedBox(width: barWidth, child: Icon(Icons.description, size: 15)),
                   SizedBox(width: 70, child: Text(getFileSize(file.value, 1))),
                   PercentageBar(percent: percent, barWidth: barWidth),
-                  Expanded(child: MouseScrollWidget(child: Text(file.key.replaceFirst("${widget.directory}\\", "")))),
+                  Expanded(child: MouseScrollWidget(child: Text(file.key.replaceFirst("$parentDirectory\\", "")))),
                   SizedBox(
                     width: 25,
                     child: InkWell(
                         onTap: () {
                           if (deleteWithoutConfirmation) {
-                            final int dirSize = file.value;
-                            File(file.key).deleteSync(); //! delete file
-                            Directory dirPath = Directory(file.key);
-                            int ticks = 0;
-                            do {
-                              ticks++;
-                              if (ticks > 1000) break;
-
-                              if (DirectoryScan.names.containsKey(dirPath.path)) {
-                                DirectoryScan.dirs[DirectoryScan.names[dirPath.path]!].size -= dirSize;
-                              }
-                              if (dirPath.path == DirectoryScan.main.path) break;
-                              dirPath = dirPath.parent;
-                            } while (true);
-                            recalculate!.value = !recalculate!.value;
+                            if (actuallyDeleteFiles) File(file.key).deleteSync(); //! delete File
+                            DirectoryScan.deleteDir(file.key, file.value);
+                            redrawWidget!.value = !redrawWidget!.value;
                           } else {
-                            final int dirSize = file.value;
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
@@ -420,21 +442,10 @@ class _FolderInfoState extends State<FolderInfo> {
                                     ElevatedButton(
                                         style: ElevatedButton.styleFrom(primary: Colors.red),
                                         onPressed: () {
-                                          File(file.key).deleteSync(); //! delete file
-                                          Directory dirPath = Directory(file.key);
-                                          int ticks = 0;
-                                          do {
-                                            ticks++;
-                                            if (ticks > 1000) break;
-
-                                            if (DirectoryScan.names.containsKey(dirPath.path)) {
-                                              DirectoryScan.dirs[DirectoryScan.names[dirPath.path]!].size -= dirSize;
-                                            }
-                                            if (dirPath.path == DirectoryScan.main.path) break;
-                                            dirPath = dirPath.parent;
-                                          } while (true);
+                                          if (actuallyDeleteFiles) File(file.key).deleteSync(); //! delete file
+                                          DirectoryScan.deleteDir(file.key, file.value);
                                           Navigator.of(context).pop();
-                                          recalculate!.value = !recalculate!.value;
+                                          redrawWidget!.value = !redrawWidget!.value;
                                         },
                                         child: const Text("Delete")),
                                   ],
@@ -469,9 +480,9 @@ class PercentageBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double percent2 = percent;
-    if (percent2.isNaN) percent2 = 0;
+    if (percent2.isNaN || percent2.isNegative) percent2 = 0;
     double bar = percent / (100 / barWidth);
-    if (bar.isNaN) bar = 0;
+    if (bar.isNaN || bar.isNegative) bar = 0;
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: Tooltip(
@@ -494,42 +505,39 @@ Future<Map<String, int>> listDirectoriesSizes(String dirPath, Function(int) ping
   int fileNum = 0;
 
   dirPath.replaceAll('/', '\\');
-  if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
+  // if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
   Directory dir = Directory(dirPath);
   final Map<String, int> totalFiles = <String, int>{};
 
-  if (dir.existsSync()) {
-    Stream<FileSystemEntity> stream =
-        dir.list(recursive: true, followLinks: false).handleError((dynamic e) => print('Ignoring error: $e'), test: (dynamic e) => e is FileSystemException);
-    await for (FileSystemEntity entity in stream) {
-      if (entity is File) {
-        fileNum++;
-        if (fileNum % 1000 == 0) ping(fileNum);
-        final int fileSize = entity.lengthSync();
-        int ticks = 0;
-        Directory currentPath = entity.parent;
-        do {
-          ticks++;
-          if (ticks > 100) break;
+  if (!dir.existsSync()) return <String, int>{"Empty": 0};
+  Stream<FileSystemEntity> stream =
+      dir.list(recursive: true, followLinks: false).handleError((dynamic e) => print('Ignoring error: $e'), test: (dynamic e) => e is FileSystemException);
+  totalFiles[dirPath] = 0;
+  await for (FileSystemEntity entity in stream) {
+    if (entity is File) {
+      fileNum++;
+      if (fileNum % 1000 == 0) ping(fileNum);
+      final int fileSize = entity.lengthSync();
+      int ticks = 0;
+      Directory currentPath = entity.parent;
+      do {
+        ticks++;
+        if (ticks > 100) break;
 
-          totalFiles[currentPath.path] = (totalFiles[currentPath.path] ?? 0) + fileSize;
-          if (currentPath.path == dirPath) break;
-          currentPath = currentPath.parent;
-        } while (true);
-      }
+        totalFiles[currentPath.path] = (totalFiles[currentPath.path] ?? 0) + fileSize;
+        if (currentPath.path == dirPath) break;
+        currentPath = currentPath.parent;
+      } while (true);
     }
+    // if (fileNum > 50000) break;
   }
 
-  if (totalFiles.isEmpty) {
-    totalFiles["Empty"] = 0;
-    return totalFiles;
-  }
   return totalFiles;
 }
 
 Future<Map<String, int>> listFilesSizes(String dirPath) async {
   dirPath.replaceAll('/', '\\');
-  if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
+  // if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
   Directory dir = Directory(dirPath);
   final Map<String, int> totalFiles = <String, int>{};
 

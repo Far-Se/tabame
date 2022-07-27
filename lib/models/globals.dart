@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/material.dart';
+
 class Heights {
   double taskbar = 0;
   double traybar = 0;
@@ -29,6 +31,7 @@ class Globals {
   static bool audioBoxVisible = false;
 
   static bool taskbarVisible = true;
+  static GlobalKey quickMenu = GlobalKey();
 
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;

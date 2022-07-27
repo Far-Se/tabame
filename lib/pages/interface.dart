@@ -43,7 +43,7 @@ Future<int> interfaceWindowSetup() async {
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
   await WindowManager.instance.setMinimumSize(const Size(700, 400));
-  await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
+  // await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
@@ -105,9 +105,10 @@ class InterfaceState extends State<Interface> {
       future: interfaceWindow,
       builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
         if (!snapshot.hasData) return const SizedBox(width: 10);
-        return Padding(
-          padding: const EdgeInsets.all(3) - const EdgeInsets.only(top: 3),
-          child: DragToResizeArea(
+        return DragToResizeArea(
+          // resizeEdgeSize: 5,
+          child: Padding(
+            padding: const EdgeInsets.all(3) - const EdgeInsets.only(top: 3),
             child: DecoratedBox(
               decoration: const BoxDecoration(
                 color: Colors.transparent,
@@ -232,6 +233,7 @@ class InterfaceState extends State<Interface> {
                               constraints: const BoxConstraints(maxHeight: 1080),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: Caa.stretch,
                                 children: <Widget>[
                                   //1 Sidebar
                                   //#h green
@@ -264,7 +266,7 @@ class InterfaceState extends State<Interface> {
                                                     child: InkWell(
                                                       onTap: () {
                                                         currentPage = index;
-                                                        page.jumpToPage(index);
+                                                        // page.jumpToPage(index);
                                                         setState(() {});
                                                       },
                                                       child: Padding(
@@ -305,20 +307,10 @@ class InterfaceState extends State<Interface> {
                                     child: ClipRect(
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                                        child: PageView.builder(
-                                          controller: page,
-                                          allowImplicitScrolling: false,
-                                          physics: const NeverScrollableScrollPhysics(),
-                                          itemCount: pages.length,
-                                          itemBuilder: (BuildContext context, int index) {
-                                            return SingleChildScrollView(
-                                              controller: AdjustableScrollController(30),
-                                              physics: disableScroll.contains(pages[index].title)
-                                                  ? const NeverScrollableScrollPhysics()
-                                                  : (mainScrollEnabled ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics()),
-                                              child: Material(type: MaterialType.transparency, child: pages[index].widget),
-                                            );
-                                          },
+                                        child: SingleChildScrollView(
+                                          controller: AdjustableScrollController(30),
+                                          physics: mainScrollEnabled ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
+                                          child: Material(type: MaterialType.transparency, child: pages[currentPage].widget),
                                         ),
                                       ),
                                     ),
