@@ -1,5 +1,5 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/gestures/events.dart';
 
 class MouseScrollWidget extends StatefulWidget {
   final Widget child;
@@ -7,10 +7,10 @@ class MouseScrollWidget extends StatefulWidget {
   const MouseScrollWidget({Key? key, required this.child, this.scrollDirection = Axis.horizontal}) : super(key: key);
 
   @override
-  _MouseScrollWidgetState createState() => _MouseScrollWidgetState();
+  MouseScrollWidgetState createState() => MouseScrollWidgetState();
 }
 
-class _MouseScrollWidgetState extends State<MouseScrollWidget> {
+class MouseScrollWidgetState extends State<MouseScrollWidget> {
   ScrollController controller = ScrollController();
   @override
   Widget build(BuildContext context) {

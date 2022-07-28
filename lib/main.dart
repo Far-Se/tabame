@@ -11,21 +11,37 @@ import 'models/win32/win32.dart';
 import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
+  if (arguments.length == 1 && arguments[0].contains('-wizardly')) {
+    arguments = <String>['"${arguments[0].replaceAll(' -wizardly', '')}\\', '-wizardly'];
+  }
+  globalSettings.args = arguments;
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
   await registerAll();
 
   /// ? Window
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(300, 520),
-    center: false,
-    backgroundColor: Colors.transparent,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    title: "Tabame",
-  );
+  late WindowOptions windowOptions;
+  if (globalSettings.args.contains("-wizardly")) {
+    windowOptions = const WindowOptions(
+      size: Size(700, 400),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      alwaysOnTop: false,
+      title: "Tabame - Wizardly",
+    );
+  } else {
+    windowOptions = const WindowOptions(
+      size: Size(300, 520),
+      center: false,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      title: "Tabame",
+    );
+  }
   windowManager.setMinimizable(false);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
@@ -130,8 +146,7 @@ class _TabameState extends State<Tabame> {
             colorScheme: ThemeData.dark().colorScheme.copyWith(
                   primary: Color(globalSettings.darkTheme.accentColor),
                   secondary: Color(globalSettings.darkTheme.accentColor),
-                  background: Colors.red,
-                  tertiary: Colors.red,
+                  tertiary: Color(globalSettings.darkTheme.textColor),
                 ),
           ),
           themeMode: themeMode,
@@ -141,6 +156,15 @@ class _TabameState extends State<Tabame> {
             allowImplicitScrolling: false,
             physics: const NeverScrollableScrollPhysics(),
             itemBuilder: (BuildContext context, int index) {
+              if (globalSettings.args.contains("-wizardly")) {
+                return FutureBuilder<int>(
+                  future: Future<int>.delayed(Duration(milliseconds: 300), () => 1),
+                  builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
+                    if (!snapshot.hasData) return Container();
+                    return const Interface();
+                  },
+                );
+              }
               if (index == Pages.quickmenu.index) {
                 return const QuickMenu();
               } else if (index == Pages.interface.index) {

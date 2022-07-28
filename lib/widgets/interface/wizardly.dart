@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/utils.dart';
 import '../wizardly/file_name_widget.dart';
 import '../wizardly/file_size_widget.dart';
+import '../wizardly/project_overview.dart';
 import '../wizardly/search_text_widget.dart';
 
 class Wizardly extends StatefulWidget {
@@ -19,9 +20,11 @@ enum Wizards { folder, name, image, find, cloc }
 class WizardPage {
   String title;
   Widget widget;
+  String? tooltip;
   WizardPage({
     required this.title,
     required this.widget,
+    this.tooltip = "",
   });
 }
 
@@ -37,11 +40,11 @@ class WizardlyState extends State<Wizardly> {
   }
 
   final List<WizardPage> pages = <WizardPage>[
-    WizardPage(title: "Folder Size", widget: const FileSizeWidget()),
-    WizardPage(title: "File Name", widget: const FileNameWidget()),
-    WizardPage(title: "Image Work", widget: Container()),
-    WizardPage(title: "Find Text", widget: const SearchTextWidget()),
-    WizardPage(title: "CLOC", widget: Container()),
+    WizardPage(title: "Folder Size Scan", widget: const FileSizeWidget(), tooltip: "See how big folders and subfolder are"),
+    WizardPage(title: "Rename Files", widget: const FileNameWidget(), tooltip: "Rename files in bulk"),
+    // WizardPage(title: "Image Work", widget: Container()),
+    WizardPage(title: "Find Text in Folder", widget: const SearchTextWidget(), tooltip: "Find Text in folders"),
+    WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nFiew project breakdown"),
   ];
   int currentPage = 0;
   @override

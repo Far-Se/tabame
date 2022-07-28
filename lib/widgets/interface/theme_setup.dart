@@ -435,7 +435,7 @@ class ListColors extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 controller: colorScrollController,
                 child: Row(
-                  children: [
+                  children: <Widget>[
                     ColorPicker(
                       columnSpacing: 15,
                       padding: const EdgeInsets.symmetric(horizontal: 0),

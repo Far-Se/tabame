@@ -56,7 +56,11 @@ class _HomeState extends State<Home> {
                     data: markdownHomeLeft,
                     imageBuilder: (Uri uri, String? str1, String? str2) {
                       if (uri.path != "") {
-                        return Image.asset(uri.path, width: 20);
+                        if (uri.path == "logo") {
+                          return Image.asset(globalSettings.logo, width: 20);
+                        } else {
+                          return Image.asset(uri.path, width: 20);
+                        }
                       }
                       final Map<String, IconData> icons = <String, IconData>{
                         "quickMenu": Icons.apps,

@@ -77,7 +77,7 @@ class ListChildren extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         verticalDirection: VerticalDirection.down,
-        children: [
+        children: <Widget>[
           ...List<Widget>.generate(
             children.length,
             (int index) {

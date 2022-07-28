@@ -20,6 +20,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class SettingsPageState extends State<SettingsPage> {
+  final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
+
   @override
   Widget build(BuildContext context) {
     final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
@@ -348,7 +350,7 @@ class SettingsPageState extends State<SettingsPage> {
                                 },
                                 secondary: Padding(
                                   padding: const EdgeInsets.all(5),
-                                  child: globalSettings.customLogo == "" ? Image.asset("resources/logo_light.png") : Image.file(File(globalSettings.customLogo)),
+                                  child: globalSettings.customLogo == "" ? Image.asset(globalSettings.logo) : Image.file(File(globalSettings.customLogo)),
                                 ),
                               ),
                               CheckboxListTile(
@@ -379,6 +381,17 @@ class SettingsPageState extends State<SettingsPage> {
                                   padding: const EdgeInsets.all(5),
                                   child: globalSettings.customSpash == "" ? null : Image.file(File(globalSettings.customSpash)),
                                 ),
+                              ),
+                              const Divider(height: 10, thickness: 2),
+                              CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                title: const Text("Add Wizardly in Folder Context Menu"),
+                                value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
+                                onChanged: (bool? newValue) async {
+                                  wizardlyContextMenu.toggleWizardlyToContextMenu();
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
                               ),
                             ],
                           ),

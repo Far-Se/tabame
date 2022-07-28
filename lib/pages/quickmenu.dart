@@ -73,6 +73,72 @@ class QuickMenuState extends State<QuickMenu> {
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
     }
+    if (kReleaseMode) {
+      return FutureBuilder<int>(
+        future: quickMenuWindow,
+        builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
+          if (!snapshot.hasData) return const SizedBox(width: 10);
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            body: MouseRegion(
+              onEnter: (PointerEnterEvent event) async {
+                if (!await WindowManager.instance.isFocused()) {}
+                await WindowManager.instance.focus();
+                Globals.isWindowActive = true;
+                Win32.activateWindow(Win32.hWnd);
+                setState(() {});
+              },
+              onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Stack(
+                  children: <Widget>[
+                    if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                    Padding(
+                      padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                      child: Container(
+                        key: Globals.quickMenu,
+                        color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: Theme.of(context).backgroundColor,
+                              gradient: LinearGradient(
+                                colors: <Color>[
+                                  Theme.of(context).backgroundColor,
+                                  Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                  Theme.of(context).backgroundColor,
+                                ],
+                                stops: <double>[0, 0.4, 1],
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: <BoxShadow>[
+                                const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+                              ]),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              //3 Items
+                              const TopBar(),
+                              const TaskBar(),
+                              const Divider(thickness: 1, height: 1),
+                              if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
+                              const BottomBar(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
     return FutureBuilder<int>(
       future: quickMenuWindow,
       builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {

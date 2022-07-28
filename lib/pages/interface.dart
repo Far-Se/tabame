@@ -1,9 +1,11 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -66,6 +68,7 @@ class NotImplemeneted extends StatelessWidget {
 
 class InterfaceState extends State<Interface> {
   int currentPage = 0;
+  final ScrollController mainScrollControl = ScrollController();
   PageController page = PageController();
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
@@ -85,6 +88,9 @@ class InterfaceState extends State<Interface> {
   final Future<int> interfaceWindow = interfaceWindowSetup();
   @override
   void initState() {
+    if (globalSettings.args.contains("-wizardly")) {
+      currentPage = 10;
+    }
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
     super.initState();
@@ -93,6 +99,7 @@ class InterfaceState extends State<Interface> {
   @override
   void dispose() {
     page.dispose();
+    mainScrollControl.dispose();
     super.dispose();
   }
 
@@ -165,7 +172,7 @@ class InterfaceState extends State<Interface> {
                                         child: Row(
                                           crossAxisAlignment: CrossAxisAlignment.stretch,
                                           children: <Widget>[
-                                            const Image(image: AssetImage("resources/logo_light.png"), width: 15),
+                                            Image(image: AssetImage(globalSettings.logo), width: 15),
                                             const SizedBox(width: 5),
                                             const Text("Tabame", style: TextStyle(fontSize: 20)),
                                           ],
@@ -196,6 +203,9 @@ class InterfaceState extends State<Interface> {
                                           Globals.changingPages = true;
                                           setState(() {});
                                           if (kReleaseMode) {
+                                            if (globalSettings.args.contains('-wizardly')) {
+                                              exit(0);
+                                            }
                                             if (WinUtils.isAdministrator()) {
                                               WinUtils.run(Platform.resolvedExecutable);
                                               Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
@@ -307,10 +317,20 @@ class InterfaceState extends State<Interface> {
                                     child: ClipRect(
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                                        child: SingleChildScrollView(
-                                          controller: AdjustableScrollController(30),
-                                          physics: mainScrollEnabled ? const AlwaysScrollableScrollPhysics() : const NeverScrollableScrollPhysics(),
-                                          child: Material(type: MaterialType.transparency, child: pages[currentPage].widget),
+                                        child: Listener(
+                                          onPointerSignal: (PointerSignalEvent ps) {
+                                            if (!mainScrollEnabled) return;
+                                            if (ps is PointerScrollEvent) {
+                                              double scrollEnd = mainScrollControl.offset + (ps.scrollDelta.dy > 0 ? 30 : -30);
+                                              scrollEnd = min(mainScrollControl.position.maxScrollExtent, max(mainScrollControl.position.minScrollExtent, scrollEnd));
+                                              mainScrollControl.jumpTo(scrollEnd);
+                                            }
+                                          },
+                                          child: SingleChildScrollView(
+                                            controller: mainScrollControl,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            child: Material(type: MaterialType.transparency, child: pages[currentPage].widget),
+                                          ),
                                         ),
                                       ),
                                     ),

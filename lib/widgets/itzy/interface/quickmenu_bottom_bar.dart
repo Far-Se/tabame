@@ -18,6 +18,10 @@ class QuickmenuBottomBar extends StatefulWidget {
 class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
   List<PowerShellScript> powerShellScripts = Boxes().powerShellScripts;
   final List<TextEditingController> powerShellNameController = <TextEditingController>[];
+
+  String _cityCountryText = "";
+
+  String _weatherFormat = "";
   @override
   void initState() {
     super.initState();
@@ -120,20 +124,32 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                     ListTile(
                                       title: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                                        child: TextField(
-                                          decoration: const InputDecoration(
-                                              labelText: "City and Country", hintText: "City and Country", border: InputBorder.none, isDense: false),
-                                          controller: TextEditingController(text: globalSettings.weatherCity.toUpperCaseEach()),
-                                          toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
-                                          style: const TextStyle(fontSize: 14),
-                                          enableInteractiveSelection: true,
-                                          onSubmitted: (String e) {
-                                            if (e == "") return;
-                                            globalSettings.weatherCity = e;
-                                            Boxes.updateSettings("weather", globalSettings.weather);
-                                            if (!mounted) return;
-                                            setState(() {});
+                                        child: Focus(
+                                          onFocusChange: (bool f) {
+                                            if (f == false) {
+                                              if (_cityCountryText == "") return;
+                                              globalSettings.weatherCity = _cityCountryText;
+                                              Boxes.updateSettings("weather", globalSettings.weather);
+                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
+                                              if (mounted) setState(() {});
+                                            }
                                           },
+                                          child: TextField(
+                                            decoration: const InputDecoration(
+                                                labelText: "City and Country", hintText: "City and Country", border: InputBorder.none, isDense: false),
+                                            controller: TextEditingController(text: globalSettings.weatherCity.toUpperCaseEach()),
+                                            toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
+                                            style: const TextStyle(fontSize: 14),
+                                            enableInteractiveSelection: true,
+                                            onChanged: (String e) => _cityCountryText = e,
+                                            onSubmitted: (String e) {
+                                              if (e == "") return;
+                                              globalSettings.weatherCity = e;
+                                              Boxes.updateSettings("weather", globalSettings.weather);
+                                              if (!mounted) return;
+                                              setState(() {});
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -147,20 +163,33 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                       ),
                                       title: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                                        child: TextField(
-                                          decoration:
-                                              const InputDecoration(labelText: "Weather Format", hintText: "Weather Format", border: InputBorder.none, isDense: false),
-                                          controller: TextEditingController(text: globalSettings.weatherFormat),
-                                          toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
-                                          style: const TextStyle(fontSize: 14),
-                                          enableInteractiveSelection: true,
-                                          onSubmitted: (String e) {
-                                            if (e == "") return;
-                                            globalSettings.weatherFormat = e;
-                                            Boxes.updateSettings("weather", globalSettings.weather);
-                                            if (!mounted) return;
-                                            setState(() {});
+                                        child: Focus(
+                                          onFocusChange: (bool f) {
+                                            if (f == false) {
+                                              if (_weatherFormat == "") return;
+                                              globalSettings.weatherFormat = _weatherFormat;
+                                              Boxes.updateSettings("weather", globalSettings.weather);
+                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
+                                              if (!mounted) return;
+                                              setState(() {});
+                                            }
                                           },
+                                          child: TextField(
+                                            decoration:
+                                                const InputDecoration(labelText: "Weather Format", hintText: "Weather Format", border: InputBorder.none, isDense: false),
+                                            controller: TextEditingController(text: globalSettings.weatherFormat),
+                                            toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
+                                            style: const TextStyle(fontSize: 14),
+                                            enableInteractiveSelection: true,
+                                            onChanged: (String e) => _weatherFormat = e,
+                                            onSubmitted: (String e) {
+                                              if (e == "") return;
+                                              globalSettings.weatherFormat = e;
+                                              Boxes.updateSettings("weather", globalSettings.weather);
+                                              if (!mounted) return;
+                                              setState(() {});
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),

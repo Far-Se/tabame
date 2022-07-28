@@ -20,7 +20,7 @@ class LogoDragButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5),
           child: Align(
               alignment: Alignment.centerLeft,
-              child: globalSettings.customLogo == "" ? Image.asset("resources/logo_light.png", width: 15) : Image.file(File(globalSettings.customLogo), width: 15)),
+              child: globalSettings.customLogo == "" ? Image.asset(globalSettings.logo, width: 15) : Image.file(File(globalSettings.customLogo), width: 15)),
         ),
       ),
     );
