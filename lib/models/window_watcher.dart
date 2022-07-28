@@ -61,7 +61,8 @@ class WindowWatcher {
         window.process.exe = await getHwndName(window.hWnd);
       }
       for (MapEntry<String, String> rewrite in taskBarRewrites.entries) {
-        final RegExp re = RegExp(rewrite.key);
+        // print(rewrite);
+        final RegExp re = RegExp(rewrite.key, caseSensitive: false);
         if (re.hasMatch(window.title)) {
           window.title = window.title.replaceAllMapped(re, (Match match) {
             String replaced = rewrite.value;

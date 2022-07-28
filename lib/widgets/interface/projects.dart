@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:contextual_menu/contextual_menu.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide MenuItem;
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
@@ -80,133 +81,152 @@ class ProjectsPageState extends State<ProjectsPage> {
                 return Column(
                   key: ValueKey<int>(mainIndex),
                   children: <Widget>[
-                    ListTile(
-                      leading: Text(project.emoji),
-                      title: Text(project.title),
-                      onTap: () {
-                        if (activeProject == mainIndex) {
-                          activeProject = -1;
-                        } else {
-                          activeProject = mainIndex;
-                        }
-                        heights = List<double>.filled(projects.length, 0);
-                        setState(() {});
-                        if (activeProject != -1) {
-                          Future<void>.delayed(const Duration(milliseconds: 100), () {
-                            if (!mounted) return;
-                            heights[mainIndex] = double.infinity;
-                            setState(() {});
-                          });
-                        }
-                      },
-                      trailing: Padding(
-                        padding: const EdgeInsets.only(right: 20),
-                        child: Container(
-                          width: 50,
-                          height: double.infinity,
-                          //! Add and edit Project Folder
-                          child: Row(children: <Widget>[
-                            Expanded(
-                              flex: 2,
-                              child: InkWell(
-                                  child: const Icon(Icons.edit),
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        folderEmojiController.value = TextEditingValue(text: project.emoji);
-                                        folderTitleController.value = TextEditingValue(text: project.title);
+                    GestureDetector(
+                      onSecondaryTap: () {
+                        Menu menu = Menu(
+                          items: <MenuItem>[
+                            MenuItem(
+                                label: 'Delete',
+                                onClick: (_) async {
+                                  projects.removeAt(mainIndex);
+                                  heights = List<double>.filled(projects.length, 0);
+                                  activeProject = -1;
 
-                                        return AlertDialog(
-                                          content: Container(
-                                              width: 300,
-                                              height: 100,
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: <Widget>[
-                                                  TextField(
-                                                    decoration: InputDecoration(
-                                                      labelText: "Emoji ( Press Win + . to toggle Emoji Picker)",
-                                                      hintText: "Emoji ( Press Win + . to toggle Emoji Picker)",
-                                                      isDense: true,
-                                                      border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
-                                                    ),
-                                                    controller: folderEmojiController,
-                                                    // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
-                                                    style: const TextStyle(fontSize: 14),
-                                                  ),
-                                                  const SizedBox(height: 5),
-                                                  TextField(
-                                                    autofocus: true,
-                                                    decoration: InputDecoration(
-                                                      labelText: "Title",
-                                                      hintText: "Title",
-                                                      isDense: true,
-                                                      border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
-                                                    ),
-                                                    controller: folderTitleController,
-                                                    style: const TextStyle(fontSize: 14),
-                                                  ),
-                                                  const SizedBox(height: 10),
-                                                ],
-                                              )),
-                                          actions: <Widget>[
-                                            TextButton(
-                                              onPressed: () => Navigator.of(context).pop(),
-                                              child: const Text("Cancel"),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                projects.removeAt(mainIndex);
-                                                heights = List<double>.filled(projects.length, 0);
-                                                activeProject = -1;
-
-                                                await Boxes.updateSettings("projects", jsonEncode(projects));
-                                                setState(() {});
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                projects[mainIndex].emoji = folderEmojiController.value.text.truncate(2);
-                                                projects[mainIndex].title = folderTitleController.value.text;
-                                                await Boxes.updateSettings("projects", jsonEncode(projects));
-                                                setState(() {});
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ).then((_) {});
-                                  }),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: InkWell(
-                                child: const Icon(Icons.add),
-                                onTap: () async {
-                                  projects[mainIndex].projects.add(ProjectInfo(emoji: "🎀", title: "New Project", stringToExecute: "C:\\"));
                                   await Boxes.updateSettings("projects", jsonEncode(projects));
-                                  if (activeProject != mainIndex) {
-                                    heights = List<double>.filled(projects.length, 0);
-                                    activeProject = mainIndex;
-                                    setState(() {});
-                                    Future<void>.delayed(const Duration(milliseconds: 100), () {
-                                      if (!mounted) return;
-                                      heights[mainIndex] = double.infinity;
-                                      setState(() {});
-                                    });
-                                  } else {
-                                    setState(() {});
-                                  }
-                                },
+                                  setState(() {});
+                                }),
+                          ],
+                        );
+                        popUpContextualMenu(menu, placement: Placement.bottomRight);
+                      },
+                      child: ListTile(
+                        leading: Text(project.emoji),
+                        title: Text(project.title),
+                        onTap: () {
+                          if (activeProject == mainIndex) {
+                            activeProject = -1;
+                          } else {
+                            activeProject = mainIndex;
+                          }
+                          heights = List<double>.filled(projects.length, 0);
+                          setState(() {});
+                          if (activeProject != -1) {
+                            Future<void>.delayed(const Duration(milliseconds: 100), () {
+                              if (!mounted) return;
+                              heights[mainIndex] = double.infinity;
+                              setState(() {});
+                            });
+                          }
+                        },
+                        trailing: Padding(
+                          padding: const EdgeInsets.only(right: 20),
+                          child: Container(
+                            width: 50,
+                            height: double.infinity,
+                            //! Add and edit Project Folder
+                            child: Row(children: <Widget>[
+                              Expanded(
+                                flex: 2,
+                                child: InkWell(
+                                    child: const Icon(Icons.edit),
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          folderEmojiController.value = TextEditingValue(text: project.emoji);
+                                          folderTitleController.value = TextEditingValue(text: project.title);
+
+                                          return AlertDialog(
+                                            content: Container(
+                                                width: 300,
+                                                height: 100,
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: <Widget>[
+                                                    TextField(
+                                                      decoration: InputDecoration(
+                                                        labelText: "Emoji ( Press Win + . to toggle Emoji Picker)",
+                                                        hintText: "Emoji ( Press Win + . to toggle Emoji Picker)",
+                                                        isDense: true,
+                                                        border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                      ),
+                                                      controller: folderEmojiController,
+                                                      // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
+                                                      style: const TextStyle(fontSize: 14),
+                                                    ),
+                                                    const SizedBox(height: 5),
+                                                    TextField(
+                                                      autofocus: true,
+                                                      decoration: InputDecoration(
+                                                        labelText: "Title",
+                                                        hintText: "Title",
+                                                        isDense: true,
+                                                        border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                      ),
+                                                      controller: folderTitleController,
+                                                      style: const TextStyle(fontSize: 14),
+                                                    ),
+                                                    const SizedBox(height: 10),
+                                                  ],
+                                                )),
+                                            actions: <Widget>[
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                child: const Text("Cancel"),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  projects.removeAt(mainIndex);
+                                                  heights = List<double>.filled(projects.length, 0);
+                                                  activeProject = -1;
+
+                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  setState(() {});
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  projects[mainIndex].emoji = folderEmojiController.value.text.truncate(2);
+                                                  projects[mainIndex].title = folderTitleController.value.text;
+                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  setState(() {});
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ).then((_) {});
+                                    }),
                               ),
-                            ),
-                          ]),
+                              Expanded(
+                                flex: 2,
+                                child: InkWell(
+                                  child: const Icon(Icons.add),
+                                  onTap: () async {
+                                    projects[mainIndex].projects.add(ProjectInfo(emoji: "🎀", title: "New Project", stringToExecute: "C:\\"));
+                                    await Boxes.updateSettings("projects", jsonEncode(projects));
+                                    if (activeProject != mainIndex) {
+                                      heights = List<double>.filled(projects.length, 0);
+                                      activeProject = mainIndex;
+                                      setState(() {});
+                                      Future<void>.delayed(const Duration(milliseconds: 100), () {
+                                        if (!mounted) return;
+                                        heights[mainIndex] = double.infinity;
+                                        setState(() {});
+                                      });
+                                    } else {
+                                      setState(() {});
+                                    }
+                                  },
+                                ),
+                              ),
+                            ]),
+                          ),
                         ),
                       ),
                     ),

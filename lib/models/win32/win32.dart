@@ -569,7 +569,7 @@ class WinUtils {
         ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
       }
     } else {
-      ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+      ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, path == "code" ? SW_HIDE : SW_SHOWNORMAL);
     }
   }
 
@@ -790,6 +790,35 @@ class WinUtils {
     CoUninitialize();
     free(ppsi);
     free(ppfi);
+  }
+}
+
+class WizardlyContextMenu {
+  bool isWizardlyInstalledInContextMenu() {
+    final RegistryKey key =
+        Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
+
+    return key.subkeyNames.contains("tabame");
+  }
+
+  void toggleWizardlyToContextMenu() {
+    final RegistryKey key =
+        Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
+
+    final String exe = Platform.resolvedExecutable;
+    if (key.subkeyNames.contains("tabame")) {
+      key.deleteKey(r'tabame\command');
+      key.deleteKey('tabame');
+      return;
+    }
+    final RegistryKey subkey = key.createKey("tabame");
+    subkey.createValue(RegistryValue(r"Icon", RegistryValueType.string, exe));
+    subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
+
+    final RegistryKey command = subkey.createKey("command");
+    command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -wizardly'));
+
+    return;
   }
 }
 

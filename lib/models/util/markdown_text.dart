@@ -1,5 +1,5 @@
 const String markdownHomeLeft = '''
-## ![tabame](resources/logo_light.png) Welcome to Tabame
+## ![tabame](logo) Welcome to Tabame
   
 The primary purpose of this app is to provide users with a quick and easy way to navigate and access the information they need.
 

@@ -15,19 +15,24 @@ class QuickmenuTaskbar extends StatefulWidget {
 
 class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
   List<MapEntry<String, String>> taskbarRewrites = Boxes().taskBarRewrites.entries.toList();
-  final List<TextEditingController> reWriteRegexController = <TextEditingController>[];
+  final List<TextEditingController> reWriteSearchController = <TextEditingController>[];
+  final List<TextEditingController> reWriteReplaceController = <TextEditingController>[];
   @override
   void initState() {
     super.initState();
     taskbarRewrites = Boxes().taskBarRewrites.entries.toList();
     for (MapEntry<String, String> item in taskbarRewrites) {
-      reWriteRegexController.add(TextEditingController(text: item.key));
+      reWriteSearchController.add(TextEditingController(text: item.key));
+      reWriteReplaceController.add(TextEditingController(text: item.value));
     }
   }
 
   @override
   void dispose() {
-    for (TextEditingController item in reWriteRegexController) {
+    for (TextEditingController item in reWriteSearchController) {
+      item.dispose();
+    }
+    for (TextEditingController item in reWriteReplaceController) {
       item.dispose();
     }
     super.dispose();
@@ -85,7 +90,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                       ListTile(
                         title: TextField(
                           decoration: const InputDecoration(
-                            labelText: "Predefined apps (press Enter to save)",
+                            labelText: "Predefined Media apps (press Enter to save)",
                             hintText: "Predefined apps",
                             border: InputBorder.none,
                             isDense: false,
@@ -114,6 +119,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                               }
                               Boxes.updateSettings("mediaControls", Boxes.mediaControls);
                             }
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
                             if (!mounted) return;
                             setState(() {});
                           },
@@ -133,7 +139,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                             groupValue: globalSettings.taskBarAppsStyle,
                             onChanged: (TaskBarAppsStyle? value) {
                               globalSettings.taskBarAppsStyle = value ?? TaskBarAppsStyle.activeMonitorFirst;
-                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle);
+                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
                               setState(() {});
                             },
                           ),
@@ -143,7 +149,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                             groupValue: globalSettings.taskBarAppsStyle,
                             onChanged: (TaskBarAppsStyle? value) {
                               globalSettings.taskBarAppsStyle = value ?? TaskBarAppsStyle.activeMonitorFirst;
-                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle);
+                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
                               setState(() {});
                             },
                           ),
@@ -153,7 +159,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                             groupValue: globalSettings.taskBarAppsStyle,
                             onChanged: (TaskBarAppsStyle? value) {
                               globalSettings.taskBarAppsStyle = value ?? TaskBarAppsStyle.activeMonitorFirst;
-                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle);
+                              Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
                               setState(() {});
                             },
                           ),
@@ -173,7 +179,8 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                       trailing: IconButton(
                         onPressed: () {
                           taskbarRewrites.insert(0, const MapEntry<String, String>("find", "replace"));
-                          reWriteRegexController.insert(0, TextEditingController(text: "find"));
+                          reWriteSearchController.insert(0, TextEditingController(text: "find"));
+                          reWriteReplaceController.insert(0, TextEditingController(text: "replace"));
                           setState(() {});
                         },
                         icon: const Icon(Icons.add),
@@ -183,83 +190,120 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                       constraints: const BoxConstraints(maxHeight: 250, minHeight: 100),
                       child: FocusTraversalGroup(
                         policy: OrderedTraversalPolicy(),
-                        child: ListView.builder(
+                        child: ListView.separated(
                           itemCount: taskbarRewrites.length,
                           controller: ScrollController(),
                           itemBuilder: (BuildContext context, int index) {
-                            String value = taskbarRewrites.elementAt(index).value;
-                            return Column(
+                            return Row(
+                              mainAxisAlignment: Maa.start,
+                              crossAxisAlignment: Caa.start,
                               children: <Widget>[
-                                ListTile(
-                                  dense: true,
-                                  style: ListTileStyle.drawer,
-                                  contentPadding: const EdgeInsets.only(left: 10),
-                                  minVerticalPadding: 0,
-                                  visualDensity: VisualDensity.compact,
-                                  horizontalTitleGap: 0,
-                                  title: TextField(
-                                    decoration: const InputDecoration(
-                                      labelText: "Search for (regex aware)",
-                                      hintText: "Search for (regex aware)",
-                                      isDense: true,
-                                      border: InputBorder.none,
-                                    ),
-                                    controller: reWriteRegexController[index],
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  subtitle: TextField(
-                                    decoration: const InputDecoration(
-                                      labelText: "Replace with (press Enter here to save)",
-                                      hintText: "Replace with:",
-                                      contentPadding: EdgeInsets.zero,
-                                      isDense: true,
-                                      border: InputBorder.none,
-                                    ),
-                                    controller: TextEditingController(text: value),
-                                    scrollPadding: EdgeInsets.zero,
-                                    style: const TextStyle(fontSize: 14),
-                                    onSubmitted: (String e) async {
-                                      if (e == "") e = " ";
-                                      taskbarRewrites[index] = MapEntry<String, String>(reWriteRegexController[index].value.text.toString(), e);
-                                      Map<String, String> reWrites = <String, String>{};
-                                      for (int i = 0; i < taskbarRewrites.length; i++) {
-                                        reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
-                                      }
-                                      await Boxes.updateSettings("taskBarRewrites", jsonEncode(reWrites));
-                                      WindowWatcher.taskBarRewrites = reWrites;
-                                      if (!mounted) return;
-                                      setState(() {});
-                                    },
-                                  ),
-                                  trailing: Padding(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () async {
-                                        taskbarRewrites.removeAt(index);
-                                        reWriteRegexController.removeAt(index);
-                                        Map<String, String> reWrites = <String, String>{};
-                                        for (int i = 0; i < taskbarRewrites.length; i++) {
-                                          reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
-                                        }
-                                        await Boxes.updateSettings("taskBarRewrites", reWrites);
-                                        WindowWatcher.taskBarRewrites = reWrites;
-                                        if (!mounted) return;
-                                        setState(() {});
-                                      },
-                                    ),
+                                Expanded(
+                                  child: Column(
+                                    children: <Widget>[
+                                      TextField(
+                                        decoration: const InputDecoration(
+                                          labelText: "Search for (regex aware)",
+                                          hintText: "Search for (regex aware)",
+                                          isDense: true,
+                                          border: InputBorder.none,
+                                        ),
+                                        controller: reWriteSearchController[index],
+                                        style: const TextStyle(fontSize: 14),
+                                        onSubmitted: (String e) async {
+                                          bool saved = await saveTaskBarRewrite(index);
+                                          if (!saved) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                content: const Text("Error: Regex Failed or search empty!"),
+                                                duration: const Duration(seconds: 2),
+                                                backgroundColor: Colors.red.shade200));
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
+                                          }
+                                          if (mounted) setState(() {});
+                                        },
+                                      ),
+                                      TextField(
+                                        decoration: const InputDecoration(
+                                          labelText: "Replace with",
+                                          hintText: "Replace with:",
+                                          contentPadding: EdgeInsets.zero,
+                                          isDense: true,
+                                          border: InputBorder.none,
+                                        ),
+                                        controller: reWriteReplaceController[index],
+                                        scrollPadding: EdgeInsets.zero,
+                                        style: const TextStyle(fontSize: 14),
+                                        onSubmitted: (String e) async {
+                                          bool saved = await saveTaskBarRewrite(index);
+                                          if (!saved) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                content: const Text("Error: Regex Failed or search empty!"),
+                                                duration: const Duration(seconds: 2),
+                                                backgroundColor: Colors.red.shade200));
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
+                                          }
+                                          if (mounted) setState(() {});
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                if (index < taskbarRewrites.length - 1)
-                                  const Divider(
-                                    thickness: 2,
-                                    height: 20,
-                                    indent: 10,
-                                    endIndent: 10,
-                                    color: Colors.transparent,
+                                SizedBox(
+                                  width: 20,
+                                  height: 70,
+                                  child: Column(
+                                    mainAxisAlignment: Maa.spaceEvenly,
+                                    children: <Widget>[
+                                      InkWell(
+                                        child: const Icon(Icons.save, size: 22),
+                                        onTap: () async {
+                                          bool saved = await saveTaskBarRewrite(index);
+                                          if (!saved) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                content: const Text("Error: Regex Failed or search empty!"),
+                                                duration: const Duration(seconds: 2),
+                                                backgroundColor: Colors.red.shade200));
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
+                                          }
+                                          if (mounted) setState(() {});
+                                        },
+                                      ),
+                                      InkWell(
+                                        child: const Icon(Icons.delete, size: 22),
+                                        onTap: () async {
+                                          taskbarRewrites.removeAt(index);
+                                          reWriteSearchController.removeAt(index);
+                                          reWriteReplaceController.removeAt(index);
+                                          Map<String, String> reWrites = <String, String>{};
+                                          for (int i = 0; i < taskbarRewrites.length; i++) {
+                                            reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
+                                          }
+                                          await Boxes.updateSettings("taskBarRewrites", reWrites);
+                                          WindowWatcher.taskBarRewrites = reWrites;
+                                          if (!mounted) return;
+                                          setState(() {});
+                                        },
+                                      )
+                                    ],
                                   ),
+                                ),
+                                const SizedBox(width: 20)
                               ],
                             );
+                          },
+                          separatorBuilder: (BuildContext context, int index) {
+                            if (index < taskbarRewrites.length - 1) {
+                              return const Divider(
+                                thickness: 2,
+                                height: 20,
+                                indent: 10,
+                                endIndent: 30,
+                              );
+                            }
+                            return const SizedBox();
                           },
                         ),
                       ),
@@ -272,5 +316,26 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
         ],
       ),
     );
+  }
+
+  Future<bool> saveTaskBarRewrite(int index) async {
+    if (taskbarRewrites[index].key.isEmpty) false;
+    try {
+      RegExp(reWriteSearchController[index].text, caseSensitive: false).hasMatch("ciulama");
+    } catch (_) {
+      return false;
+    }
+    if (reWriteReplaceController[index].text.isNotEmpty) {
+      taskbarRewrites[index] = MapEntry<String, String>(reWriteSearchController[index].text, reWriteReplaceController[index].text);
+    } else {
+      taskbarRewrites[index] = MapEntry<String, String>(reWriteSearchController[index].text, " ");
+    }
+    Map<String, String> reWrites = <String, String>{};
+    for (int i = 0; i < taskbarRewrites.length; i++) {
+      reWrites[taskbarRewrites.elementAt(i).key] = taskbarRewrites.elementAt(i).value;
+    }
+    await Boxes.updateSettings("taskBarRewrites", jsonEncode(reWrites));
+    WindowWatcher.taskBarRewrites = reWrites;
+    return true;
   }
 }

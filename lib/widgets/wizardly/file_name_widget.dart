@@ -37,6 +37,9 @@ class FileNameWidgetState extends State<FileNameWidget> {
   void initState() {
     super.initState();
 
+    if (globalSettings.args.contains("-wizardly")) {
+      currentFolder = globalSettings.args[0].replaceAll('"', '');
+    }
     redrawWidget = ValueNotifier<bool>(false);
   }
 
@@ -59,11 +62,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   filesHaveBeenLoaded = false;
                   if (mounted) setState(() {});
 
-                  final DirectoryPicker dirPicker = DirectoryPicker()
-                    ..filterSpecification = <String, String>{'All Files': '*.*'}
-                    ..defaultFilterIndex = 0
-                    ..defaultExtension = 'exe'
-                    ..title = 'Select any folder';
+                  final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
                   final Directory? dir = dirPicker.getDirectory();
                   if (dir == null) return;
                   currentFolder = dir.path;

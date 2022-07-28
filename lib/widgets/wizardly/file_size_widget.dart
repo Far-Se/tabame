@@ -9,6 +9,7 @@ import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
+import '../widgets/percentage_bar.dart';
 
 // vscode-fold=2
 class FileSizeWidget extends StatefulWidget {
@@ -101,6 +102,10 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
   @override
   void initState() {
     redrawWidget = ValueNotifier<bool>(false);
+
+    if (globalSettings.args.contains("-wizardly")) {
+      currentFolder = globalSettings.args[0].replaceAll('"', '');
+    }
     super.initState();
   }
 
@@ -175,11 +180,9 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                   if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.dirs.clear();
                   if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.names.clear();
                   if (DirectoryScan.unfoldedDirectories.isNotEmpty) DirectoryScan.unfoldedDirectories.clear();
-                  int totalSize = 0;
 
                   for (MapEntry<String, int> dir in allDirs.entries) {
                     DirectoryScan.dirs.add(DirectoryInfo(path: dir.key, size: dir.value));
-                    totalSize += dir.value;
                   }
                   DirectoryScan.dirs.sort((DirectoryInfo a, DirectoryInfo b) => b.size.compareTo(a.size));
                   int index = 0;
@@ -191,9 +194,6 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                   if (!DirectoryScan.names.containsKey(currentFolder)) {
                     DirectoryScan.dirs.add(DirectoryScan.main);
                   }
-                  //   DirectoryScan.main = DirectoryScan.dirs[DirectoryScan.names[currentFolder]!];
-                  // } else {
-                  // }
                   finishedProcessing = true;
                   processedFiles = " ${DirectoryScan.dirs.length} directories in total of  ${getFileSize(DirectoryScan.main.size, 1)}!";
                   if (mounted) setState(() {});
@@ -237,7 +237,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
               valueListenable: redrawWidget!,
               builder: (BuildContext context, Object? snapshot, Widget? e) {
                 return Column(
-                  children: [
+                  children: <Widget>[
                     InkWell(
                       onTap: () {},
                       child: Row(
@@ -303,83 +303,73 @@ class _FolderInfoState extends State<FolderInfo> {
       final double percent = ((dir.size / (!percentageOfMainFolder ? widget.parentSize : DirectoryScan.main.size)) * 100);
 
       rows.add(
-        Column(
-          mainAxisAlignment: Maa.center,
+        Row(
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 2,
-                  child: InkWell(
-                    onTap: () {
-                      if (DirectoryScan.unfoldedDirectories.contains(dir.path)) {
-                        for (String i in <String>[...DirectoryScan.unfoldedDirectories]) {
-                          if (i.contains(dir.path)) {
-                            DirectoryScan.unfoldedDirectories.remove(i);
-                          }
-                        }
-                      } else {
-                        DirectoryScan.unfoldedDirectories.add(dir.path);
+            Expanded(
+              flex: 2,
+              child: InkWell(
+                onTap: () {
+                  if (DirectoryScan.unfoldedDirectories.contains(dir.path)) {
+                    for (String i in <String>[...DirectoryScan.unfoldedDirectories]) {
+                      if (i.contains(dir.path)) {
+                        DirectoryScan.unfoldedDirectories.remove(i);
                       }
-                      setState(() {});
-                    },
-                    child: Column(
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            SizedBox(
-                                width: barWidth,
-                                child: !DirectoryScan.unfoldedDirectories.contains(dir.path)
-                                    ? Icon(Icons.expand_more, color: Colors.grey.shade700)
-                                    : const Icon(Icons.expand_less)),
-                            SizedBox(width: 70, child: Text(getFileSize(dir.size, 1))),
-                            PercentageBar(percent: percent, barWidth: barWidth),
-                            Expanded(child: MouseScrollWidget(child: Text(dir.path.replaceFirst("$parentDirectory\\", '')))),
-                            InkWell(onTap: () => WinUtils.open(dir.path), child: const SizedBox(width: 25, child: Icon(Icons.folder))),
-                            SizedBox(
-                              width: 25,
-                              child: InkWell(
-                                  onTap: () {
-                                    if (deleteWithoutConfirmation) {
-                                      if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
-                                      DirectoryScan.deleteDir(dir.path);
-                                      redrawWidget!.value = !redrawWidget!.value;
-                                    } else {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            content: Container(height: 100, child: Text("Are you sure you want to delete:\n ${dir.path}")),
-                                            actions: <Widget>[
-                                              ElevatedButton(
-                                                  onPressed: () => Navigator.of(context).pop(),
-                                                  child: Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background)))),
-                                              ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(primary: Colors.red),
-                                                  onPressed: () {
-                                                    if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
-                                                    DirectoryScan.deleteDir(dir.path);
-                                                    Navigator.of(context).pop();
-                                                    redrawWidget!.value = !redrawWidget!.value;
-                                                  },
-                                                  child: const Text("Delete")),
-                                            ],
-                                          );
-                                        },
-                                      ).then((_) {});
-                                    }
-                                  },
-                                  child: const Icon(Icons.delete)),
-                            ),
-                            const SizedBox(width: 10),
-                          ],
-                        ),
-                      ],
+                    }
+                  } else {
+                    DirectoryScan.unfoldedDirectories.add(dir.path);
+                  }
+                  setState(() {});
+                },
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(
+                        width: barWidth,
+                        child:
+                            !DirectoryScan.unfoldedDirectories.contains(dir.path) ? Icon(Icons.expand_more, color: Colors.grey.shade700) : const Icon(Icons.expand_less)),
+                    SizedBox(width: 70, child: Text(getFileSize(dir.size, 1))),
+                    PercentageBar(percent: percent, barWidth: barWidth),
+                    Expanded(child: MouseScrollWidget(child: Text(dir.path.replaceFirst("$parentDirectory\\", '')))),
+                    InkWell(onTap: () => WinUtils.open(dir.path), child: const SizedBox(width: 25, child: Icon(Icons.folder))),
+                    SizedBox(
+                      width: 25,
+                      child: InkWell(
+                          onTap: () {
+                            if (deleteWithoutConfirmation) {
+                              if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
+                              DirectoryScan.deleteDir(dir.path);
+                              redrawWidget!.value = !redrawWidget!.value;
+                            } else {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    content: Container(height: 100, child: Text("Are you sure you want to delete:\n ${dir.path}")),
+                                    actions: <Widget>[
+                                      ElevatedButton(
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background)))),
+                                      ElevatedButton(
+                                          style: ElevatedButton.styleFrom(primary: Colors.red),
+                                          onPressed: () {
+                                            if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
+                                            DirectoryScan.deleteDir(dir.path);
+                                            Navigator.of(context).pop();
+                                            redrawWidget!.value = !redrawWidget!.value;
+                                          },
+                                          child: const Text("Delete")),
+                                    ],
+                                  );
+                                },
+                              ).then((_) {});
+                            }
+                          },
+                          child: const Icon(Icons.delete)),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                  ],
                 ),
-              ],
-            )
+              ),
+            ),
           ],
         ),
       );
@@ -464,40 +454,6 @@ class _FolderInfoState extends State<FolderInfo> {
           }),
       const Divider(height: 5, thickness: 2),
     ]);
-  }
-}
-
-class PercentageBar extends StatelessWidget {
-  const PercentageBar({
-    Key? key,
-    required this.percent,
-    required this.barWidth,
-  }) : super(key: key);
-
-  final double percent;
-  final double barWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    double percent2 = percent;
-    if (percent2.isNaN || percent2.isNegative) percent2 = 0;
-    double bar = percent / (100 / barWidth);
-    if (bar.isNaN || bar.isNegative) bar = 0;
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: Tooltip(
-        message: "${percent2.toStringAsFixed(2)}%",
-        child: SizedBox(
-            width: barWidth,
-            height: 10,
-            child: Stack(
-              children: <Widget>[
-                Container(width: barWidth, height: 30, color: Color(globalSettings.theme.textColor).withOpacity(0.2)),
-                Positioned(top: 0, left: 0, child: Container(width: bar, height: 30, color: Color(globalSettings.theme.accentColor))),
-              ],
-            )),
-      ),
-    );
   }
 }
 

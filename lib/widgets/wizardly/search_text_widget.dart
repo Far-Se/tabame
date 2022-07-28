@@ -8,8 +8,9 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/utils.dart';
 import '../../models/win32/win32.dart';
-import '../widgets/popup_dialog.dart';
+import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
+import '../widgets/popup_dialog.dart';
 import '../widgets/text_box.dart';
 
 class SearchTextWidget extends StatefulWidget {
@@ -20,32 +21,32 @@ class SearchTextWidget extends StatefulWidget {
 }
 
 class SearchTextWidgetState extends State<SearchTextWidget> {
-  String currentFolder = r"E:\Projects\tabame\lib\";
   List<String> loadedFiles = <String>[];
   String infoText = "";
 
-  int hoveredIndex = -1;
-
-  String searchIncluded = "";
-  String searchExcluded = r"node_modules;^.[a-z]";
-
-  bool searchRecursively = true;
-  bool searchUseRegex = false;
+  int searchState = 0;
   String searchFor = "";
+  String searchFolder = "";
+  String searchIncluded = "";
+  String searchExcluded = "";
+  bool searchFinished = false;
+  bool searchUseRegex = false;
+  bool searchRecursively = true;
+  String markdownOccurances = "";
   bool searchRegexNewLine = false;
   bool searchCaseSensitive = false;
   bool searchMatchWholeWordOnly = false;
-  final List<Occurance> allOccurances = <Occurance>[];
-  String markdownOccurances = "";
 
-  bool searchFinished = false;
+  bool openInCode = false;
 
   @override
   void initState() {
-    final String? savedExcluded = Boxes.pref.getString("searchExcluded");
-    if (savedExcluded != null) searchExcluded = savedExcluded;
-    final String? savedIncluded = Boxes.pref.getString("searchIncluded");
-    if (savedIncluded != null) searchIncluded = savedIncluded;
+    searchIncluded = Boxes.pref.getString("searchIncluded") ?? "";
+    searchExcluded = Boxes.pref.getString("searchExcluded") ?? "^.[a-z];node_modules;build";
+    openInCode = Boxes.pref.getBool("searchUseVSCode") ?? false;
+    if (globalSettings.args.contains("-wizardly")) {
+      searchFolder = globalSettings.args[0].replaceAll('"', '');
+    }
     super.initState();
   }
 
@@ -65,34 +66,34 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                 searchFinished = false;
                 if (mounted) setState(() {});
 
-                final DirectoryPicker dirPicker = DirectoryPicker()
-                  ..filterSpecification = <String, String>{'All Files': '*.*'}
-                  ..defaultFilterIndex = 0
-                  ..defaultExtension = 'exe'
-                  ..title = 'Select any folder';
+                final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
                 final Directory? dir = dirPicker.getDirectory();
                 if (dir == null) return;
-                currentFolder = dir.path;
+                searchFolder = dir.path;
 
                 if (mounted) setState(() {});
               },
               leading: const Icon(Icons.folder_copy_sharp),
               title: const Text("Pick a folder"),
-              subtitle: currentFolder.isEmpty ? const InfoText("-") : InfoText(currentFolder.truncate(50, suffix: "...")),
+              subtitle: searchFolder.isEmpty ? const InfoText("-") : InfoText(searchFolder.truncate(50, suffix: "...")),
             ),
           ),
           Flexible(
             fit: FlexFit.loose,
             child: ElevatedButton(
               onPressed: () async {
+                if (searchState == 1) {
+                  searchState = 2;
+                  return;
+                }
                 if (searchFor.isEmpty) {
                   popupDialog(context, "First Specify what text you are looking for");
                   return;
                 }
-                if (!Directory(currentFolder).existsSync()) return;
+                if (!Directory(searchFolder).existsSync()) return;
                 loadedFiles.clear();
 
-                Stream<FileSystemEntity> stream = Directory(currentFolder)
+                Stream<FileSystemEntity> stream = Directory(searchFolder)
                     .list(recursive: searchRecursively, followLinks: false)
                     .handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
                 await for (FileSystemEntity entity in stream) {
@@ -109,18 +110,17 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                     return;
                   }
                 }
-                startSearch((PingInfo total) {
+                searchState = 1;
+                await startSearch((PingInfo total) {
                   if (mounted && total.totalFiles % 7 == 0) {
                     setState(() {
-                      infoText = "Processed ${total.totalFiles} files and found ${allOccurances.length} matches";
+                      infoText = "Processed ${total.totalFiles} files and found ${total.totalFound} matches";
                     });
                   }
-                }).then((_) {
-                  searchFinished = true;
-                  if (mounted) setState(() {});
                 });
+                if (mounted) setState(() {});
               },
-              child: Text("Search", style: TextStyle(color: Color(globalSettings.theme.background))),
+              child: Text(searchState == 0 ? "Search" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
             ),
           ),
         ],
@@ -128,12 +128,21 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       Row(
         children: <Widget>[
           Expanded(
-            child: CheckboxListTile(
-                value: searchRecursively,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: false,
-                title: const Text("Recursive"),
-                onChanged: (bool? newValue) => setState(() => searchRecursively = newValue ?? false)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Column(
+                children: <Widget>[
+                  CheckBoxWidget(value: searchRecursively, text: "Recursive", onTap: (bool? newValue) => setState(() => searchRecursively = newValue ?? false)),
+                  CheckBoxWidget(
+                      value: openInCode,
+                      text: "Open in VSCode",
+                      onTap: (bool? newValue) => setState(() {
+                            Boxes.updateSettings("searchUseVSCode", newValue ?? false);
+                            openInCode = newValue ?? false;
+                          })),
+                ],
+              ),
+            ),
           ),
           Expanded(
             child: TextInput(
@@ -195,50 +204,53 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       const Divider(thickness: 1, height: 5),
       if (searchFinished)
         Markdown(
-          // controller: controller,
           selectable: true,
           controller: ScrollController(),
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-
+          styleSheet: MarkdownStyleSheet(
+              codeblockDecoration: BoxDecoration(color: Theme.of(context).colorScheme.tertiary.withOpacity(0.1)),
+              code: const TextStyle(backgroundColor: Colors.transparent)),
           data: markdownOccurances == "" ? "No Occurances have been found!" : markdownOccurances,
-          imageBuilder: (Uri uri, String? str1, String? str2) {
-            final Map<String, IconData> icons = <String, IconData>{
-              "tips": Icons.tips_and_updates,
-              "remap": Icons.keyboard,
-              "projects": Icons.folder_copy,
-              "trktivty": Icons.celebration,
-              "tasks": Icons.task_alt,
-            };
-            if (icons.containsKey(str2)) return Icon(icons[str2]);
-            return const Icon(Icons.home);
-          },
           onTapLink: (String str1, String? str2, String str3) {
-            WinUtils.open(str1);
+            if (openInCode) {
+              WinUtils.open("code", arguments: '--goto "$str1:$str3"');
+            } else {
+              WinUtils.open(str1);
+            }
           },
         ),
     ]);
   }
 
   Future<void> startSearch(Function(PingInfo) ping) async {
+    searchFinished = false;
     final List<String> included = searchIncluded.isNotEmpty ? searchIncluded.split(';') : <String>[];
     final List<String> excluded = searchExcluded.isNotEmpty ? searchExcluded.split(';') : <String>[];
     int totalProcessed = 0;
+    int totalFound = 0;
     for (String file in loadedFiles) {
+      if (searchState == 2) {
+        searchState = 0;
+        infoText = "";
+        if (mounted) setState(() {});
+        return;
+      }
       final String fileDirectory = Directory(file).parent.path;
       final String fileName = file.replaceAll("$fileDirectory\\", "");
       if (fileName.indexOf('.') < 1) continue;
       bool skip = false;
       for (String exclude in excluded) {
         if (exclude == "") continue;
-        bool fromBegnning = false;
-
         if (exclude[0] == '^') {
-          fromBegnning = true;
           exclude = exclude.substring(1);
+          if (file.contains(RegExp(r"\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
+        } else if (exclude[0] == "/" || exclude[0] == "\\") {
+          exclude = exclude.substring(1);
+          if (file.replaceFirst(searchFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
+        } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
+          skip = true;
         }
-        // ignore: prefer_interpolation_to_compose_strings
-        if (fileDirectory.contains(RegExp((fromBegnning ? "\\" : r"[^\\]") + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
       }
       if (skip) continue;
       if (included.isNotEmpty) {
@@ -255,17 +267,20 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       if (occurances.isNotEmpty) {
         for (Occurance occurance in occurances) {
           markdownOccurances += '''
-${occurance.line}:${occurance.col} -> [${occurance.file}](${occurance.file}) :
+${occurance.line}:${occurance.col} -> [${occurance.file.replaceAll(r"\.", r"\\.")}](${occurance.file} "${occurance.line}:${occurance.col}") :
 ```
 ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
 ```
 ''';
         }
+        totalFound += occurances.length;
       }
-      allOccurances.addAll(occurances);
       totalProcessed++;
-      ping(PingInfo(totalFiles: totalProcessed));
+      ping(PingInfo(totalFiles: totalProcessed, totalFound: totalFound));
     }
+    searchFinished = true;
+
+    searchState = 0;
   }
 
   Future<List<Occurance>> searchInFileRegex(String fileName) async {
@@ -283,7 +298,7 @@ ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
       final int line = lines.length;
       final int col = lines.last.length + 1;
       final List<String> nextLines = fileString.substring(match.start, match.start + 500).split('\n');
-      output.add(Occurance(file: fileName, col: col, line: line, lines: [
+      output.add(Occurance(file: fileName, col: col, line: line, lines: <String>[
         lines.length == 1 ? "" : lines[lines.length - 2],
         lines.last + nextLines.first,
         nextLines.length == 1 ? "" : nextLines[1],
@@ -301,7 +316,7 @@ ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
 
     // ignore: always_specify_types
     final Future<List<String>> futureLines = file.readAsLines().catchError((e) => <String>[""]);
-    int i = 0;
+    int i = 1;
     final List<String> fileLines = await futureLines;
     for (String line in fileLines) {
       final String originalLine = line;
@@ -333,7 +348,11 @@ ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
 
 class PingInfo {
   int totalFiles;
-  PingInfo({required this.totalFiles});
+  int totalFound;
+  PingInfo({
+    required this.totalFiles,
+    required this.totalFound,
+  });
 }
 
 class Occurance {
@@ -351,47 +370,5 @@ class Occurance {
   @override
   String toString() {
     return 'Occurance(file: $file, line: $line, col: $col, lines: $lines)';
-  }
-}
-
-class CheckBoxWidget extends StatefulWidget {
-  final Function(bool) onTap;
-  final bool value;
-  final String text;
-  const CheckBoxWidget({
-    Key? key,
-    required this.onTap,
-    required this.value,
-    required this.text,
-  }) : super(key: key);
-
-  @override
-  CheckBoxWidgetState createState() => CheckBoxWidgetState();
-}
-
-class CheckBoxWidgetState extends State<CheckBoxWidget> {
-  bool checked = false;
-  @override
-  void initState() {
-    checked = widget.value;
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        checked = !checked;
-        widget.onTap(checked);
-      },
-      child: Row(
-        mainAxisAlignment: Maa.start,
-        crossAxisAlignment: Caa.center,
-        children: <Widget>[
-          SizedBox(width: 25, child: Icon(checked ? Icons.check_box : Icons.check_box_outline_blank, size: 18)),
-          Expanded(child: Text(widget.text, style: const TextStyle(fontSize: 15))),
-        ],
-      ),
-    );
   }
 }

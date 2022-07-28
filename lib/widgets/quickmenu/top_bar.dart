@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/utils.dart';
+import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -115,8 +114,7 @@ class TopBar extends StatelessWidget {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
-                                final List<FileSystemEntity> out = Directory(r"C:\").listSync(recursive: false, followLinks: false);
-                                print(out.where((FileSystemEntity element) => element.path.contains('.')));
+                                WizardlyContextMenu().toggleWizardlyToContextMenu();
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

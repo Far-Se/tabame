@@ -49,8 +49,8 @@ extension StringExtension on String {
   }
 }
 
-num darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
-  final num darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
+int darkerColor(int color, {int darkenBy = 0x10, int floor = 0x0}) {
+  final int darkerHex = (max((color >> 16) - darkenBy, floor) << 16) + (max(((color & 0xff00) >> 8) - darkenBy, floor) << 8) + max(((color & 0xff) - darkenBy), floor);
   return darkerHex;
 }
 
@@ -67,16 +67,15 @@ class AdjustableScrollController extends ScrollController {
   }
 }
 
-// #region (collapsed) enum
 enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
 
 enum VolumeOSDStyle { normal, media, visible, thin }
 
 enum ThemeType { system, light, dark, schedule }
 
-// #endregion
-
 class Settings {
+  List<String> args = <String>[];
+
   bool showTrayBar = true;
   bool showWeather = true;
   bool showPowerShell = true;
@@ -126,6 +125,8 @@ class Settings {
     }
     return themeType;
   }
+
+  String get logo => themeTypeMode == ThemeType.dark ? "resources/logo_light.png" : "resources/logo_dark.png";
 }
 
 Settings globalSettings = Settings();
@@ -135,9 +136,10 @@ Future<void> registerAll() async {
   Intl.systemLocale = await findSystemLocale();
   await initializeDateFormatting(locale);
 
-  // ? Main Handle
+  // ? Monitor Handle
   Monitor.fetchMonitor();
   Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitor());
+  //register
   await Boxes.registerBoxes();
   Future<void>.delayed(const Duration(seconds: 2), () async {
     if (!WinUtils.windowsNotificationRegistered) {
