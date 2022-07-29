@@ -8,7 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/classes/boxes.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
 import '../widgets/text_box.dart';
@@ -236,7 +236,7 @@ Summing **${project.totalChars.decimal}** characters! If you wrote a book with 2
                       itemBuilder: (BuildContext context, int index) {
                         return InkWell(
                           onTap: () {},
-                          child: Text("${project.programmingLanguages[index][0]}: ${project.programmingLanguages[index][1]}"),
+                          child: Text("${project.programmingLanguages[index][0]}: ${int.parse(project.programmingLanguages[index][1]).decimal}"),
                         );
                       }),
                 )
@@ -502,7 +502,7 @@ Summing **${project.totalChars.decimal}** characters! If you wrote a book with 2
 }
 
 extension DecimalFormat on int {
-  get decimal => NumberFormat.decimalPattern().format(this);
+  String get decimal => NumberFormat.decimalPattern().format(this);
 }
 
 class TotalCode {

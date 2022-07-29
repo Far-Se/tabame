@@ -5,8 +5,8 @@ class TextInput extends StatefulWidget {
   final String labelText;
   final String? hintText;
   final String? value;
-  final Function(String) onChanged;
-  final Function(String)? onUpdated;
+  final Function(String val) onChanged;
+  final Function(String val)? onUpdated;
   const TextInput({
     Key? key,
     required this.labelText,

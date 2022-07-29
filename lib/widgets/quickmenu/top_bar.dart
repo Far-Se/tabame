@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
-import '../../models/utils.dart';
-import '../../models/win32/win32.dart';
+import '../../models/settings.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -114,7 +113,8 @@ class TopBar extends StatelessWidget {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
-                                WizardlyContextMenu().toggleWizardlyToContextMenu();
+                                // WinUtils.runAsAdministrator();
+                                // WizardlyContextMenu().toggleWizardlyToContextMenu();
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:math';
+
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,7 @@ import '../../main.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/util/theme_colors.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 
 class ThemeSetup extends StatefulWidget {
   const ThemeSetup({Key? key}) : super(key: key);
@@ -16,19 +18,21 @@ class ThemeSetup extends StatefulWidget {
   ThemeSetupState createState() => ThemeSetupState();
 }
 
-Map<ColorSwatch<Object>, String> getPredefinedColorSet(List<List<int>> predefined, int offset) {
+Map<ColorSwatch<Object>, String> getPredefinedColorSet(List<List<int>> predefined, int offset, {int maximum = 60}) {
   final Map<ColorSwatch<Object>, String> output = <ColorSwatch<Object>, String>{};
   final List<int> colorSet = predefined.map((List<int> e) => e[offset]).toSet().toList();
   int i = 0;
   for (int element in colorSet) {
     i++;
     output[ColorTools.createPrimarySwatch(Color(element))] = "Variant #$i";
+    if (i == maximum) break;
   }
   return output;
 }
 
 class ThemeSetupState extends State<ThemeSetup> {
   final ScrollController colorScrollController = ScrollController();
+  final ScrollController mainScrollControl = ScrollController();
 
   ThemeColors savedLightTheme = globalSettings.lightTheme;
   ThemeColors savedDarkTheme = globalSettings.darkTheme;
@@ -61,69 +65,82 @@ class ThemeSetupState extends State<ThemeSetup> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Material(
-        type: MaterialType.transparency,
-        child: ListTileTheme(
-          data: Theme.of(context).listTileTheme.copyWith(
-                dense: true,
-                style: ListTileStyle.drawer,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                minVerticalPadding: 0,
-                visualDensity: VisualDensity.compact,
-                horizontalTitleGap: 0,
-              ),
-          child: globalSettings.themeTypeMode == ThemeType.dark
-              ? ThemeSetupWidget(
-                  title: "Dark Theme",
-                  constraints: const BoxConstraints(),
-                  savedColors: savedDarkTheme,
-                  currentColors: globalSettings.darkTheme,
-                  onSaved: () async {
-                    await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
-                    savedLightTheme = globalSettings.lightTheme;
-                    savedDarkTheme = globalSettings.darkTheme;
-                    setState(() {});
-                  },
-                  onGradiendChanged: (double e) {
-                    globalSettings.darkTheme.gradientAlpha = e.toInt();
-                  },
-                  quickMenuBoldChanged: (bool e) {
-                    globalSettings.darkTheme.quickMenuBoldFont = e;
-                  },
-                  onColorChanged: (Color color, int i) {
-                    if (i == 0) globalSettings.darkTheme.background = color.value;
-                    if (i == 1) globalSettings.darkTheme.textColor = color.value;
-                    if (i == 2) globalSettings.darkTheme.accentColor = color.value;
+    return Listener(
+      onPointerSignal: (PointerSignalEvent ps) {
+        if (ps is PointerScrollEvent) {
+          double scrollEnd = mainScrollControl.offset + (ps.scrollDelta.dy > 0 ? 30 : -30);
+          scrollEnd = min(mainScrollControl.position.maxScrollExtent, max(mainScrollControl.position.minScrollExtent, scrollEnd));
+          mainScrollControl.jumpTo(scrollEnd);
+        }
+      },
+      child: SingleChildScrollView(
+        controller: mainScrollControl,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListTileTheme(
+              data: Theme.of(context).listTileTheme.copyWith(
+                    dense: true,
+                    style: ListTileStyle.drawer,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    minVerticalPadding: 0,
+                    visualDensity: VisualDensity.compact,
+                    horizontalTitleGap: 0,
+                  ),
+              child: globalSettings.themeTypeMode == ThemeType.dark
+                  ? ThemeSetupWidget(
+                      title: "Dark Theme",
+                      constraints: const BoxConstraints(),
+                      savedColors: savedDarkTheme,
+                      currentColors: globalSettings.darkTheme,
+                      onSaved: () async {
+                        await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
+                        savedLightTheme = globalSettings.lightTheme;
+                        savedDarkTheme = globalSettings.darkTheme;
+                        setState(() {});
+                      },
+                      onGradiendChanged: (double e) {
+                        globalSettings.darkTheme.gradientAlpha = e.toInt();
+                      },
+                      quickMenuBoldChanged: (bool e) {
+                        globalSettings.darkTheme.quickMenuBoldFont = e;
+                      },
+                      onColorChanged: (Color color, int i) {
+                        if (i == 0) globalSettings.darkTheme.background = color.value;
+                        if (i == 1) globalSettings.darkTheme.textColor = color.value;
+                        if (i == 2) globalSettings.darkTheme.accentColor = color.value;
 
-                    themeChangeNotifier.value = !themeChangeNotifier.value;
-                  },
-                  predefinedColors: predefinedColorsDark,
-                )
-              : ThemeSetupWidget(
-                  title: "Light Theme",
-                  constraints: const BoxConstraints(),
-                  savedColors: savedLightTheme,
-                  currentColors: globalSettings.lightTheme,
-                  onSaved: () async {
-                    await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
-                    setState(() {});
-                  },
-                  onGradiendChanged: (double e) {
-                    globalSettings.lightTheme.gradientAlpha = e.toInt();
-                  },
-                  quickMenuBoldChanged: (bool e) {
-                    globalSettings.lightTheme.quickMenuBoldFont = e;
-                  },
-                  onColorChanged: (Color color, int i) {
-                    if (i == 0) globalSettings.lightTheme.background = color.value;
-                    if (i == 1) globalSettings.lightTheme.textColor = color.value;
-                    if (i == 2) globalSettings.lightTheme.accentColor = color.value;
-                    themeChangeNotifier.value = !themeChangeNotifier.value;
-                  },
-                  predefinedColors: predefinedColorsLight,
-                ),
+                        themeChangeNotifier.value = !themeChangeNotifier.value;
+                      },
+                      predefinedColors: predefinedColorsDark,
+                    )
+                  : ThemeSetupWidget(
+                      title: "Light Theme",
+                      constraints: const BoxConstraints(),
+                      savedColors: savedLightTheme,
+                      currentColors: globalSettings.lightTheme,
+                      onSaved: () async {
+                        await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
+                        setState(() {});
+                      },
+                      onGradiendChanged: (double e) {
+                        globalSettings.lightTheme.gradientAlpha = e.toInt();
+                      },
+                      quickMenuBoldChanged: (bool e) {
+                        globalSettings.lightTheme.quickMenuBoldFont = e;
+                      },
+                      onColorChanged: (Color color, int i) {
+                        if (i == 0) globalSettings.lightTheme.background = color.value;
+                        if (i == 1) globalSettings.lightTheme.textColor = color.value;
+                        if (i == 2) globalSettings.lightTheme.accentColor = color.value;
+                        themeChangeNotifier.value = !themeChangeNotifier.value;
+                      },
+                      predefinedColors: predefinedColorsLight,
+                    ),
+            ),
+          ),
         ),
       ),
     );
@@ -240,16 +257,35 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             setState(() {});
           },
         ),
-        CheckboxListTile(
-          value: widget.currentColors.quickMenuBoldFont,
-          controlAffinity: ListTileControlAffinity.leading,
-          onChanged: (bool? e) {
-            widget.quickMenuBoldChanged(e ?? false);
-            setState(() {});
-          },
-          title: const Text("Apps in QuickMenu written in Bold"),
-        )
+        AppsWrittenInbold(widget: widget)
       ],
+    );
+  }
+}
+
+class AppsWrittenInbold extends StatefulWidget {
+  const AppsWrittenInbold({
+    Key? key,
+    required this.widget,
+  }) : super(key: key);
+
+  final ThemeSetupWidget widget;
+
+  @override
+  State<AppsWrittenInbold> createState() => _AppsWrittenInboldState();
+}
+
+class _AppsWrittenInboldState extends State<AppsWrittenInbold> {
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      value: widget.widget.currentColors.quickMenuBoldFont,
+      controlAffinity: ListTileControlAffinity.leading,
+      onChanged: (bool? e) {
+        widget.widget.quickMenuBoldChanged(e ?? false);
+        setState(() {});
+      },
+      title: const Text("Apps in QuickMenu written in Bold"),
     );
   }
 }

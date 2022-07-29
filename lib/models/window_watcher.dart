@@ -11,7 +11,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import 'classes/boxes.dart';
 import 'globals.dart';
-import 'utils.dart';
+import 'settings.dart';
 import 'win32/imports.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';

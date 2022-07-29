@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import '../utils.dart';
+import '../settings.dart';
 
 abstract class SavedMap {
   const SavedMap();

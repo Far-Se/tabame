@@ -9,7 +9,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
 class ProjectsPage extends StatefulWidget {

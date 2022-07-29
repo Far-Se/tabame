@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../models/util/markdown_text.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);

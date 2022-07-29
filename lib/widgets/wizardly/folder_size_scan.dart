@@ -5,7 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
@@ -166,6 +166,23 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
               fit: FlexFit.loose,
               child: ElevatedButton(
                 onPressed: () async {
+                  if (currentFolder.contains(RegExp(r'^[A-Z]:\\$'))) {
+                    currentFolder = "";
+
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          content: Container(height: 100, child: const Text("Can't process Drive, only folders!")),
+                          actions: <Widget>[
+                            ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(), child: Text("Ok", style: TextStyle(color: Color(globalSettings.theme.background)))),
+                          ],
+                        );
+                      },
+                    ).then((_) {});
+                    return;
+                  }
                   finishedProcessing = false;
                   setState(() {});
                   if (currentFolder.isEmpty) return;

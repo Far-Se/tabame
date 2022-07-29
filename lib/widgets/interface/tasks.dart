@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../itzy/interface/tasks_page_watchers.dart';
 import '../itzy/interface/tasks_reminders.dart';
 import '../widgets/info_text.dart';

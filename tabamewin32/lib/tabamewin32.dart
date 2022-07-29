@@ -361,7 +361,7 @@ Future<void> setStartOnSystemStartup(bool enabled, {String? exePath, int showCmd
     'exePath': exePath,
     'enabled': enabled,
     'showCmd': showCmd,
-    'args': "-strudel",
+    'args': args,
   };
   await audioMethodChannel.invokeMethod('setStartOnSystemStartup', arguments);
   return;

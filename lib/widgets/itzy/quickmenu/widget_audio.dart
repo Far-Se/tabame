@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/globals.dart';
-import '../../../models/utils.dart';
+import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
 class AudioBox extends StatefulWidget {

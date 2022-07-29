@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../pages/interface.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
@@ -86,6 +86,32 @@ class FileNameWidgetState extends State<FileNameWidget> {
                       .handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
                   await for (FileSystemEntity entity in stream) {
                     loadedFiles.add(entity.path);
+                  }
+                  if (loadedFiles.length > 500) {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          content: Container(
+                              height: 50,
+                              child: Center(
+                                  child: Text("Too many files, maximum 500 is recomended and you are trying to load ${loadedFiles.length}!",
+                                      style: const TextStyle(fontSize: 20)))),
+                          actions: <Widget>[
+                            ElevatedButton(
+                                onPressed: () {
+                                  filesHaveBeenLoaded = true;
+                                  if (mounted) setState(() {});
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text("Process", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                            ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                          ],
+                        );
+                      },
+                    ).then((_) {});
+                    return;
                   }
                   filesHaveBeenLoaded = true;
                   if (mounted) setState(() {});
@@ -250,6 +276,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
             ],
           );
         }),
+
         if (filesHaveBeenLoaded)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -267,28 +294,31 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   },
                 ),
                 const Divider(height: 5, thickness: 1),
-                ...List<Widget>.generate(loadedFiles.length, (int index) {
-                  final String file = loadedFiles[index].replaceFirst("${Directory(loadedFiles[index]).parent.path}\\", "");
-                  final String fullPathFile = loadedFiles[index];
-                  String newFile = getNewFileName(file);
-                  return ListTileFile(
-                    checkbox: !excludedFiles.contains(fullPathFile),
-                    oldName: file,
-                    newName: newFile,
-                    onCheckPressed: (bool val) {
-                      if (val == false) {
-                        excludedFiles.add(fullPathFile);
-                      } else {
-                        excludedFiles.remove(fullPathFile);
-                      }
-                      setState(() {});
-                    },
-                    onRenamePressed: () {
-                      renameFile(fullPathFile, newFile);
-                      setState(() {});
-                    },
-                  );
-                })
+                ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: loadedFiles.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final String file = loadedFiles[index].replaceFirst("${Directory(loadedFiles[index]).parent.path}\\", "");
+                      final String fullPathFile = loadedFiles[index];
+                      String newFile = getNewFileName(file);
+                      return ListTileFile(
+                        checkbox: !excludedFiles.contains(fullPathFile),
+                        oldName: file,
+                        newName: newFile,
+                        onCheckPressed: (bool val) {
+                          if (val == false) {
+                            excludedFiles.add(fullPathFile);
+                          } else {
+                            excludedFiles.remove(fullPathFile);
+                          }
+                          setState(() {});
+                        },
+                        onRenamePressed: () {
+                          renameFile(fullPathFile, newFile);
+                          setState(() {});
+                        },
+                      );
+                    })
               ],
             ),
           ),

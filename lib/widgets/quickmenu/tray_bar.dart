@@ -9,7 +9,7 @@ import 'package:win32/win32.dart' hide Rect;
 
 import '../../models/globals.dart';
 import '../../models/tray_watcher.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
 class TrayBar extends StatefulWidget {

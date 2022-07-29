@@ -1,19 +1,11 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
-import '../wizardly/rename_files.dart';
-import '../wizardly/folder_size_scan.dart';
-import '../wizardly/project_overview.dart';
-import '../wizardly/find_text.dart';
-
-class Wizardly extends StatefulWidget {
-  const Wizardly({Key? key}) : super(key: key);
-
-  @override
-  WizardlyState createState() => WizardlyState();
-}
+import '../widgets/info_text.dart';
+import 'interface_converters.dart';
+import 'interface_processors.dart';
+import 'interface_utility.dart';
 
 class WizardPage {
   String title;
@@ -26,7 +18,14 @@ class WizardPage {
   });
 }
 
-class WizardlyState extends State<Wizardly> {
+class InterfaceGeneral extends StatefulWidget {
+  const InterfaceGeneral({Key? key}) : super(key: key);
+
+  @override
+  InterfaceGeneralState createState() => InterfaceGeneralState();
+}
+
+class InterfaceGeneralState extends State<InterfaceGeneral> {
   @override
   void initState() {
     super.initState();
@@ -38,10 +37,9 @@ class WizardlyState extends State<Wizardly> {
   }
 
   final List<WizardPage> pages = <WizardPage>[
-    WizardPage(title: "Find Text in Folder", widget: const SearchTextWidget(), tooltip: "Find Text in folders"),
-    WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nFiew project breakdown"),
-    WizardPage(title: "Rename Files", widget: const FileNameWidget(), tooltip: "Rename files in bulk"),
-    WizardPage(title: "Folder Size Scan", widget: const FileSizeWidget(), tooltip: "See how big folders and subfolder are"),
+    WizardPage(title: "Converters", widget: const InterfaceRunConverter(), tooltip: "Calculator, Currency, Color"),
+    WizardPage(title: "Processors", widget: const InterfaceRunProcessors(), tooltip: "Regex, Lorem, Json, Encoders"),
+    WizardPage(title: "Utility", widget: const InterfaceRunUtility(), tooltip: "Shortcuts, Timer"),
     // WizardPage(title: "Image Work", widget: Container()),
   ];
   int currentPage = 0;
@@ -51,12 +49,13 @@ class WizardlyState extends State<Wizardly> {
       mainAxisAlignment: Maa.start,
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
+        const InfoText("On triggers, last one is always regex aware!"),
         SizedBox(
           height: 80,
           child: Padding(
             padding: const EdgeInsets.all(1),
             child: AnimatedButtonBar(
-              foregroundColor: Color(globalSettings.theme.accentColor),
+              foregroundColor: Theme.of(context).colorScheme.primary,
               radius: 8.0,
               padding: const EdgeInsets.all(16.0),
               invertedSelection: true,
@@ -68,6 +67,7 @@ class WizardlyState extends State<Wizardly> {
           ),
         ),
         currentPage < pages.length ? pages[currentPage].widget : Container(),
+        const SizedBox(height: 20)
       ],
     );
   }
