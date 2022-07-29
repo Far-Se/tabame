@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../itzy/quickmenu/list_powershell.dart';
 import '../itzy/quickmenu/widget_time.dart';
 import '../itzy/quickmenu/widget_time_weather.dart';

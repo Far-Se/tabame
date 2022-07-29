@@ -9,7 +9,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../main.dart';
 import '../../models/classes/boxes.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -118,7 +118,13 @@ class SettingsPageState extends State<SettingsPage> {
                                   value: globalSettings.runAsAdministrator,
                                   onChanged: (bool? newValue) async {
                                     newValue ??= false;
-                                    await setStartOnStartupAsAdmin(newValue);
+                                    // await setStartOnStartupAsAdmin(newValue);
+                                    await setStartOnSystemStartup(false);
+                                    if (newValue == true) {
+                                      await setStartOnSystemStartup(true, args: "-strudel");
+                                    } else {
+                                      await setStartOnSystemStartup(true);
+                                    }
                                     globalSettings.runAsAdministrator = newValue;
                                     await Boxes.updateSettings("runAsAdministrator", newValue);
                                     if (!mounted) return;

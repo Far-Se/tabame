@@ -6,7 +6,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart' hide Size;
 
-import '../utils.dart';
+import '../settings.dart';
 import 'imports.dart';
 import 'win32.dart';
 

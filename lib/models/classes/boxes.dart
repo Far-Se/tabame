@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../main.dart';
-import '../utils.dart';
+import '../settings.dart';
 import 'saved_maps.dart';
 import 'package:http/http.dart' as http;
 
@@ -68,9 +68,9 @@ class Boxes {
     globalSettings
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
-      ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? 0
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? 0
+      ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0] // * always after schedule
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
       ..customLogo = pref.getString("customLogo") ?? ""
       ..customSpash = pref.getString("customSpash") ?? ""
@@ -86,6 +86,7 @@ class Boxes {
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? false
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
 
+    // ? Theme
     final String? lightTheme = pref.getString("lightTheme");
     final String? darkTheme = pref.getString("darkTheme");
     if (lightTheme == null || darkTheme == null) {
@@ -160,6 +161,47 @@ class Boxes {
     if (rewrites == "") return <String, String>{"DevTools.*?\\.(.*?)\\..*?\$": "⚠DevTools: \$1 "};
     final Map<String, String> rewritesMap = Map<String, String>.from(json.decode(rewrites));
     return rewritesMap;
+  }
+
+  List<List<String>> _runShortcuts = <List<String>>[];
+  set runShortcuts(List<List<String>> items) {
+    _runShortcuts = items;
+    updateSettings("runShortcuts", jsonEncode(items));
+  }
+
+  List<List<String>> get runShortcuts {
+    if (_runShortcuts.isNotEmpty) return _runShortcuts;
+    final String prefString = pref.getString("runShortcuts") ?? "";
+    if (prefString.isEmpty) return _runShortcuts;
+    final List<dynamic> runShortcuts = jsonDecode(pref.getString("runShortcuts")!);
+    _runShortcuts.clear();
+    for (List<dynamic> x in runShortcuts) {
+      _runShortcuts.add(<String>[x[0], x[1]]);
+    }
+    return _runShortcuts;
+  }
+
+  List<List<String>> _runKeys = <List<String>>[];
+  set runKeys(List<List<String>> items) {
+    _runKeys = items;
+    updateSettings("runKeys", jsonEncode(items));
+  }
+
+  List<List<String>> get runKeys {
+    if (_runKeys.isNotEmpty) return _runKeys;
+    final String prefString = pref.getString("runKeys") ?? "";
+    if (prefString.isEmpty) {
+      return <List<String>>[
+        <String>["m", "{MEDIA_NEXT_TRACK}"],
+        <String>["p", "{MEDIA_PREVIOUS_TRACK}"]
+      ];
+    }
+    final List<dynamic> runKeys = jsonDecode(pref.getString("runKeys")!);
+    _runKeys.clear();
+    for (List<dynamic> x in runKeys) {
+      _runKeys.add(<String>[x[0], x[1]]);
+    }
+    return _runKeys;
   }
 
   List<String> get topBarWidgets {

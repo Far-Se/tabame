@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import 'package:window_manager/window_manager.dart';
-import '../models/utils.dart';
+import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/globals.dart';
 import '../widgets/quickmenu/bottom_bar.dart';

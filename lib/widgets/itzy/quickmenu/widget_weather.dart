@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/utils.dart';
+import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
 Future<String> fetchWeather() async {

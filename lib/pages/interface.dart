@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
 import 'dart:io';
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -11,23 +10,17 @@ import 'package:window_manager/window_manager.dart';
 
 import '../main.dart';
 import '../models/globals.dart';
-import '../models/utils.dart';
+import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu.dart';
+import '../widgets/interface/run_settings.dart';
 import '../widgets/interface/settings.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/wizardly.dart';
-
-class Interface extends StatefulWidget {
-  const Interface({Key? key}) : super(key: key);
-
-  @override
-  InterfaceState createState() => InterfaceState();
-}
 
 class PageClass {
   String? title;
@@ -66,16 +59,21 @@ class NotImplemeneted extends StatelessWidget {
   }
 }
 
+class Interface extends StatefulWidget {
+  const Interface({Key? key}) : super(key: key);
+  @override
+  InterfaceState createState() => InterfaceState();
+}
+
 class InterfaceState extends State<Interface> {
   int currentPage = 0;
-  final ScrollController mainScrollControl = ScrollController();
   PageController page = PageController();
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
-    PageClass(title: 'Run Window', icon: Icons.drag_handle, widget: const NotImplemeneted()),
+    PageClass(title: 'Run Window', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Remap Keys', icon: Icons.keyboard, widget: const NotImplemeneted()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
@@ -99,7 +97,6 @@ class InterfaceState extends State<Interface> {
   @override
   void dispose() {
     page.dispose();
-    mainScrollControl.dispose();
     super.dispose();
   }
 
@@ -273,24 +270,26 @@ class InterfaceState extends State<Interface> {
                                                   return DecoratedBox(
                                                     decoration: BoxDecoration(
                                                         color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
-                                                    child: InkWell(
+                                                    child: GestureDetector(
                                                       onTap: () {
                                                         currentPage = index;
-                                                        // page.jumpToPage(index);
-                                                        setState(() {});
+                                                        if (mounted) setState(() {});
                                                       },
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                        child: Row(
-                                                          mainAxisAlignment: MainAxisAlignment.start,
-                                                          crossAxisAlignment: CrossAxisAlignment.center,
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: <Widget>[
-                                                            const SizedBox(width: 5),
-                                                            Icon(pageItem.icon),
-                                                            const SizedBox(width: 5),
-                                                            Text(pageItem.title!),
-                                                          ],
+                                                      child: MouseRegion(
+                                                        cursor: SystemMouseCursors.click,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                          child: Row(
+                                                            mainAxisAlignment: MainAxisAlignment.start,
+                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: <Widget>[
+                                                              const SizedBox(width: 5),
+                                                              Icon(pageItem.icon),
+                                                              const SizedBox(width: 5),
+                                                              Text(pageItem.title!),
+                                                            ],
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -318,17 +317,15 @@ class InterfaceState extends State<Interface> {
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
                                         child: Listener(
-                                          onPointerSignal: (PointerSignalEvent ps) {
-                                            if (!mainScrollEnabled) return;
-                                            if (ps is PointerScrollEvent) {
-                                              double scrollEnd = mainScrollControl.offset + (ps.scrollDelta.dy > 0 ? 30 : -30);
-                                              scrollEnd = min(mainScrollControl.position.maxScrollExtent, max(mainScrollControl.position.minScrollExtent, scrollEnd));
-                                              mainScrollControl.jumpTo(scrollEnd);
+                                          onPointerSignal: (PointerSignalEvent pointerSignal) {
+                                            if (pointerSignal is PointerScrollEvent) {
+                                              if (pointerSignal.scrollDelta.dy < 0) {
+                                              } else {}
                                             }
                                           },
                                           child: SingleChildScrollView(
-                                            controller: mainScrollControl,
-                                            physics: const NeverScrollableScrollPhysics(),
+                                            controller: AdjustableScrollController(40),
+                                            physics: mainScrollEnabled ? const BouncingScrollPhysics(parent: PageScrollPhysics()) : const NeverScrollableScrollPhysics(),
                                             child: Material(type: MaterialType.transparency, child: pages[currentPage].widget),
                                           ),
                                         ),

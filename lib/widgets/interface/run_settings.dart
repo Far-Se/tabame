@@ -1,18 +1,15 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
-import '../wizardly/rename_files.dart';
-import '../wizardly/folder_size_scan.dart';
-import '../wizardly/project_overview.dart';
-import '../wizardly/find_text.dart';
+import '../run/interface_api_setup.dart';
+import '../run/interface_general.dart';
 
-class Wizardly extends StatefulWidget {
-  const Wizardly({Key? key}) : super(key: key);
+class RunSettings extends StatefulWidget {
+  const RunSettings({Key? key}) : super(key: key);
 
   @override
-  WizardlyState createState() => WizardlyState();
+  RunSettingsState createState() => RunSettingsState();
 }
 
 class WizardPage {
@@ -26,7 +23,7 @@ class WizardPage {
   });
 }
 
-class WizardlyState extends State<Wizardly> {
+class RunSettingsState extends State<RunSettings> {
   @override
   void initState() {
     super.initState();
@@ -38,10 +35,8 @@ class WizardlyState extends State<Wizardly> {
   }
 
   final List<WizardPage> pages = <WizardPage>[
-    WizardPage(title: "Find Text in Folder", widget: const SearchTextWidget(), tooltip: "Find Text in folders"),
-    WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nFiew project breakdown"),
-    WizardPage(title: "Rename Files", widget: const FileNameWidget(), tooltip: "Rename files in bulk"),
-    WizardPage(title: "Folder Size Scan", widget: const FileSizeWidget(), tooltip: "See how big folders and subfolder are"),
+    WizardPage(title: "General", widget: const InterfaceGeneral(), tooltip: "General Settings"),
+    WizardPage(title: "API Setup", widget: InterfaceApiSetup(), tooltip: "Set up API"),
     // WizardPage(title: "Image Work", widget: Container()),
   ];
   int currentPage = 0;

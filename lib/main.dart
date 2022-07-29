@@ -1,21 +1,28 @@
 // ignore_for_file: unnecessary_import, prefer_const_constructors
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'models/globals.dart';
-import 'models/utils.dart';
+import 'models/settings.dart';
 import 'models/win32/win32.dart';
 import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
 Future<void> main(List<String> arguments) async {
-  if (arguments.length == 1 && arguments[0].contains('-wizardly')) {
-    arguments = <String>['"${arguments[0].replaceAll(' -wizardly', '')}\\', '-wizardly'];
+  List<String> auxArgs = <String>[...arguments];
+  if (auxArgs.length == 1 && auxArgs[0].contains('-wizardly')) {
+    auxArgs = <String>['"${auxArgs[0].replaceAll(' -wizardly', '')}\\', '-wizardly'];
   }
-  globalSettings.args = arguments;
+
+  // auxArgs.add("-strudel");
+  globalSettings.args = <String>[...auxArgs];
+  // WinUtils.msgBox(globalSettings.args.join(' '), "");
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
@@ -52,7 +59,11 @@ Future<void> main(List<String> arguments) async {
   });
 
   await setWindowAsTransparent();
-
+  if (globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && globalSettings.args.join(' ').contains('-strudel')) {
+    globalSettings.args.remove('-strudel');
+    WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
+    Timer(const Duration(seconds: 5), () => exit(0));
+  }
   runApp(const Tabame());
 }
 

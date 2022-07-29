@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../models/classes/boxes.dart';
-import '../../models/utils.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';

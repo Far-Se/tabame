@@ -17,7 +17,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../globals.dart';
 import '../keys.dart';
-import '../utils.dart';
+import '../settings.dart';
 import 'imports.dart';
 import 'mixed.dart';
 import 'registry.dart';
@@ -790,6 +790,10 @@ class WinUtils {
     CoUninitialize();
     free(ppsi);
     free(ppfi);
+  }
+
+  static msgBox(String text, String title) {
+    MessageBox(0, TEXT(text), TEXT(title), 0);
   }
 }
 

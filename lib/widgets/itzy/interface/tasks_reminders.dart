@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
-import '../../../models/utils.dart';
+import '../../../models/settings.dart';
 import '../../widgets/info_text.dart';
 
 class TasksReminders extends StatefulWidget {
