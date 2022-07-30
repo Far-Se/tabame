@@ -43,7 +43,7 @@ class WindowWatcher {
     if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
 
     for (int hWnd in winHWNDS) {
-      if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd) != "" && Win32.getTitle(hWnd) != "Tabame") {
+      if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd).isNotEmpty && !<String>["Tabame", "PopupHost"].contains(Win32.getTitle(hWnd))) {
         allHWNDs.add(hWnd);
       }
     }

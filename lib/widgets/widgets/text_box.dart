@@ -7,6 +7,7 @@ class TextInput extends StatefulWidget {
   final String? value;
   final Function(String val) onChanged;
   final Function(String val)? onUpdated;
+  final bool multiline;
   const TextInput({
     Key? key,
     required this.labelText,
@@ -14,6 +15,7 @@ class TextInput extends StatefulWidget {
     this.value,
     required this.onChanged,
     this.onUpdated,
+    this.multiline = false,
   }) : super(key: key);
 
   @override
@@ -49,6 +51,7 @@ class TextInputState extends State<TextInput> {
         }
       },
       child: TextField(
+        maxLines: widget.multiline ? null : 1,
         decoration: InputDecoration(
           labelText: widget.labelText,
           hintText: widget.hintText ?? widget.labelText,

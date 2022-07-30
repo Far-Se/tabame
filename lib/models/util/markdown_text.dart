@@ -18,9 +18,9 @@ The primary purpose of QuickMenu is to minimize distractions by hiding the taskb
 Quick Actions is a set of predefined tools that give you access to useful functions, such as switching audio output, changing volume or music track, switch Desktop, pin Window and many other.
 
 ---
-### ![runWindow]() RunWindow
+### ![runWindow]() QuickRun
 
-Run Window has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Converto, Set Countdown, access API, calculate/convert units and timezones and many other.
+QuickRun has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Converto, Set Countdown, calculate/convert units and timezones and many other.
 
 You can also access your projects and create new Tasks.
 
@@ -75,7 +75,7 @@ const String markdownHomeRight = '''
 
 ---
 ### ![projects]() Projects
-  You can save folders and files to your projects and access them from Run Window. This comes in handy when you want to open an older project or specific file but don't know the path.
+  You can save folders and files to your projects and access them from QuickRun. This comes in handy when you want to open an older project or specific file but don't know the path.
 
 ---
 ### ![trktivty]() Trktivty

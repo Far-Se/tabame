@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../main.dart';
 import '../settings.dart';
+import 'save_settings.dart';
 import 'saved_maps.dart';
 import 'package:http/http.dart' as http;
 
@@ -14,14 +13,19 @@ import '../win32/win32.dart';
 
 class Boxes {
 // vscode-fold=2
-  static late SharedPreferences pref;
+  static late SaveSettings pref;
   static List<String> mediaControls = <String>[];
 
   Boxes();
-  static Future<void> registerBoxes() async {
-    pref = await SharedPreferences.getInstance();
+  static Future<void> registerBoxes({bool reload = false}) async {
+    if (reload) {
+      await pref.reload();
+    } else {
+      pref = await SaveSettings.getInstance();
+    }
+
     // await pref.remove("projects");
-    // pref = await SharedPreferences.getInstance();
+    // pref = await SaveSettings.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
@@ -63,7 +67,7 @@ class Boxes {
           weekDays: <bool>[true, true, true, true, true, false, false]);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
       await setStartOnSystemStartup(true);
-      pref = await SharedPreferences.getInstance();
+      pref = await SaveSettings.getInstance();
     }
     globalSettings
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
@@ -96,6 +100,7 @@ class Boxes {
     if (lightTheme != null) globalSettings.lightTheme = ThemeColors.fromJson(lightTheme);
     if (darkTheme != null) globalSettings.darkTheme = ThemeColors.fromJson(darkTheme);
     themeChangeNotifier.value = !themeChangeNotifier.value;
+
     //? Pinned Apps
     if (pref.getStringList("pinnedApps") == null) {
       final List<String> pinnedApps2 = await WinUtils.getTaskbarPinnedApps();
@@ -104,28 +109,35 @@ class Boxes {
       await pref.setStringList("pinnedApps", pinnedApps2);
     }
 
+    //?PowerShell
     if (pref.getString("powerShellScripts") == null) {
       final List<String> powerShellScripts = <String>[
         PowerShellScript(name: "🏠Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson()
       ];
       await pref.setString("powerShellScripts", jsonEncode(powerShellScripts));
     }
+
+    //? Media Controls
+    mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
+
+    //! Startup
     //? Taskbar
-    if (!kDebugMode) {
+    //if (kReleaseMode) {
+    if (globalSettings.args.isEmpty) {
       if (globalSettings.hideTaskbarOnStartup) {
         WinUtils.toggleTaskbar(visible: false);
       }
-    }
 
-    //? Volume
-    globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
-    if (globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
-      WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
+      //? Volume
+      globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
+      if (globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+        WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
+      }
     }
-    //? Media Controls
-    mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
-    if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
-    if (reminders.where((Reminder element) => element.enabled).isNotEmpty) Tasks().startReminders();
+    if (globalSettings.args.isEmpty || globalSettings.args.contains("-restarted")) {
+      if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
+      if (reminders.where((Reminder element) => element.enabled).isNotEmpty) Tasks().startReminders();
+    }
   }
 
   static Future<void> updateSettings(String key, dynamic value) async {
@@ -142,7 +154,7 @@ class Boxes {
     } else {
       throw ("No asociated type $value");
     }
-    pref = await SharedPreferences.getInstance();
+    pref = await SaveSettings.getInstance();
   }
 
   static List<T> getSavedMap<T>(T Function(String json) fromJson, String key) {
@@ -238,6 +250,37 @@ class Boxes {
   static List<Reminder> _reminders = <Reminder>[];
   static set reminders(List<Reminder> list) => _reminders = list;
   static List<Reminder> get reminders => _reminders.isEmpty ? _reminders = getSavedMap<Reminder>(Reminder.fromJson, "reminders") : _reminders;
+
+  static List<RunAPI> _runApi = <RunAPI>[];
+  static set runApi(List<RunAPI> list) => _runApi = list;
+  static List<RunAPI> get runApi => _runApi.isEmpty ? _runApi = getSavedMap<RunAPI>(RunAPI.fromJson, "runApi") : _runApi;
+
+  void watchForSettingsChange() {
+    globalSettings.previewTheme = true;
+    String savedFileText = File(Boxes.pref.fileName).readAsStringSync();
+    bool updating = false;
+    Timer.periodic(const Duration(milliseconds: 100), (Timer timer) async {
+      if (updating) return;
+      final String x = File(Boxes.pref.fileName).readAsStringSync();
+      if (savedFileText != x) {
+        updating = true;
+        savedFileText = x;
+        await Boxes.registerBoxes(reload: true);
+        updating = false;
+        final String prevThemeLight = Boxes.pref.getString("previewThemeLight") ?? "";
+        if (prevThemeLight.isNotEmpty) {
+          globalSettings.lightTheme = ThemeColors.fromJson(prevThemeLight);
+          File(r"E:\l.txt").writeAsString("changed prev theme for light", mode: FileMode.append);
+        }
+        final String prevThemeDark = Boxes.pref.getString("previewThemeDark") ?? "";
+        if (prevThemeDark.isNotEmpty) {
+          globalSettings.darkTheme = ThemeColors.fromJson(prevThemeDark);
+          File(r"E:\l.txt").writeAsString("changed prev theme for dark", mode: FileMode.append);
+        }
+        globalSettings.settingsChanged = !globalSettings.settingsChanged;
+      }
+    });
+  }
 }
 
 class Tasks {

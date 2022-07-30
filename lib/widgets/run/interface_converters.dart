@@ -22,6 +22,7 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
         Expanded(
           child: Column(
             children: <Widget>[
+              const Divider(height: 10, thickness: 1),
               RunShortCutInfo(
                   onChanged: (String newStr) {
                     globalSettings.run.calculator = newStr;
@@ -54,6 +55,7 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
         Expanded(
           child: Column(
             children: <Widget>[
+              const Divider(height: 10, thickness: 1),
               RunShortCutInfo(
                 onChanged: (String newStr) {
                   globalSettings.run.color = newStr;

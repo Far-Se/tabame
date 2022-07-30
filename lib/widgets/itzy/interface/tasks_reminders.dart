@@ -208,7 +208,7 @@ class TasksRemindersState extends State<TasksReminders> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: <Widget>[
-                                const Text("Start the reminder at"),
+                                const Text("Starts at"),
                                 InkWell(
                                   child: Text(" ✏${reminder.interval[0].formatTime()} ", style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 16)),
                                   onTap: () async {
@@ -231,7 +231,7 @@ class TasksRemindersState extends State<TasksReminders> {
                                     if (mounted) setState(() {});
                                   },
                                 ),
-                                const Text("and end it at"),
+                                const Text("and it ends at"),
                                 InkWell(
                                   child: Text(" ✏${reminder.interval[1].formatTime()} ", style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 16)),
                                   onTap: () async {
