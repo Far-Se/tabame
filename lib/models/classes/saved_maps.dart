@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../settings.dart';
+import 'boxes.dart';
 
 abstract class SavedMap {
   const SavedMap();
@@ -453,4 +455,270 @@ class ThemeColors {
     return background.hashCode ^ gradientAlpha.hashCode ^ textColor.hashCode ^ accentColor.hashCode ^ quickMenuBoldFont.hashCode;
   }
 // #endregion
+}
+
+class ApiRequest {
+  String url;
+  List<String> headers;
+  List<String> data;
+  String toMatch;
+  List<String> matched = <String>[""];
+  String result = "";
+  bool parseAsJson = true;
+  ApiRequest({
+    required this.url,
+    required this.headers,
+    required this.data,
+    required this.toMatch,
+    this.parseAsJson = true,
+  });
+
+  ApiRequest copyWith({
+    String? url,
+    List<String>? headers,
+    List<String>? data,
+    String? toMatch,
+    bool? parseAsJson,
+  }) {
+    return ApiRequest(
+      url: url ?? this.url,
+      headers: headers ?? this.headers,
+      data: data ?? this.data,
+      toMatch: toMatch ?? this.toMatch,
+      parseAsJson: parseAsJson ?? this.parseAsJson,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'url': url,
+      'headers': headers,
+      'data': data,
+      'toMatch': toMatch,
+      'parseAsJson': parseAsJson,
+    };
+  }
+
+  factory ApiRequest.fromMap(Map<String, dynamic> map) {
+    return ApiRequest(
+      url: (map['url'] ?? '') as String,
+      headers: List<String>.from(map['headers'] ?? const <String>[]),
+      data: List<String>.from(map['data'] ?? const <String>[]),
+      toMatch: (map['toMatch'] ?? '') as String,
+      parseAsJson: (map['parseAsJson'] ?? false) as bool,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ApiRequest.fromJson(String source) => ApiRequest.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'ApiRequest(url: $url, headers: $headers, data: $data, toMatch: $toMatch, matched: $matched, result: $result, parseAsJson: $parseAsJson)';
+  }
+
+  @override
+  bool operator ==(covariant ApiRequest other) {
+    if (identical(this, other)) return true;
+
+    return other.url == url &&
+        listEquals(other.headers, headers) &&
+        listEquals(other.data, data) &&
+        other.toMatch == toMatch &&
+        listEquals(other.matched, matched) &&
+        other.result == result &&
+        other.parseAsJson == parseAsJson;
+  }
+
+  @override
+  int get hashCode {
+    return url.hashCode ^ headers.hashCode ^ data.hashCode ^ toMatch.hashCode ^ matched.hashCode ^ result.hashCode ^ parseAsJson.hashCode;
+  }
+}
+
+class ApiQuery {
+  String name;
+  List<ApiRequest> requests;
+  ApiQuery({
+    required this.name,
+    required this.requests,
+  });
+
+  ApiQuery copyWith({
+    String? name,
+    List<ApiRequest>? requests,
+  }) {
+    return ApiQuery(
+      name: name ?? this.name,
+      requests: requests ?? this.requests,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'requests': requests.map((ApiRequest x) => x.toMap()).toList(),
+    };
+  }
+
+  factory ApiQuery.fromMap(Map<String, dynamic> map) {
+    return ApiQuery(
+      name: (map['name'] ?? '') as String,
+      requests: List<ApiRequest>.from(
+        (map['requests'] as List<dynamic>).map<ApiRequest>(
+          (dynamic x) => ApiRequest.fromMap(x as Map<String, dynamic>),
+        ),
+      ),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory ApiQuery.fromJson(String source) => ApiQuery.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'ApiQuery(name: $name, requests: $requests)';
+
+  @override
+  bool operator ==(covariant ApiQuery other) {
+    if (identical(this, other)) return true;
+
+    return other.name == name && listEquals(other.requests, requests);
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ requests.hashCode;
+}
+
+class RunAPI {
+  String name;
+  ApiRequest token = ApiRequest(url: "", headers: <String>[""], data: <String>[""], toMatch: "");
+  int refreshTokenAfterMinutes = 1 * 60 * 24;
+  List<ApiQuery> queries = <ApiQuery>[];
+  Map<String, String> variables = <String, String>{};
+  RunAPI({
+    required this.name,
+    ApiRequest? token,
+    this.refreshTokenAfterMinutes = 1 * 60 * 24,
+    this.queries = const <ApiQuery>[],
+    this.variables = const <String, String>{},
+  }) {
+    if (token != null) this.token = token;
+  }
+
+  RunAPI copyWith({
+    String? name,
+    ApiRequest? token,
+    int? refreshTokenAfterMinutes,
+    List<ApiQuery>? queries,
+  }) {
+    return RunAPI(
+      name: name ?? this.name,
+      token: token ?? this.token,
+      refreshTokenAfterMinutes: refreshTokenAfterMinutes ?? this.refreshTokenAfterMinutes,
+      queries: queries ?? this.queries,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'token': token.toMap(),
+      'refreshTokenAfterMinutes': refreshTokenAfterMinutes,
+      'queries': queries.map((ApiQuery x) => x.toMap()).toList(),
+      'variables': variables,
+    };
+  }
+
+  factory RunAPI.fromMap(Map<String, dynamic> map) {
+    return RunAPI(
+      name: (map['name'] ?? '') as String,
+      token: ApiRequest.fromMap(map['token'] as Map<String, dynamic>),
+      refreshTokenAfterMinutes: (map['refreshTokenAfterMinutes'] ?? 0) as int,
+      variables: map['variables'] ?? <String, String>{},
+      queries: List<ApiQuery>.from(
+        (map['queries'] as List<dynamic>).map<ApiQuery>(
+          (dynamic x) => ApiQuery.fromMap(x as Map<String, dynamic>),
+        ),
+      ),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory RunAPI.fromJson(String source) => RunAPI.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'RunAPIBearer(name: $name, token: $token, refreshTokenAfterMinutes: $refreshTokenAfterMinutes, queries: $queries)';
+  }
+
+  @override
+  bool operator ==(covariant RunAPI other) {
+    if (identical(this, other)) return true;
+
+    return other.name == name && other.token == token && other.refreshTokenAfterMinutes == refreshTokenAfterMinutes && listEquals(other.queries, queries);
+  }
+
+  @override
+  int get hashCode {
+    return name.hashCode ^ token.hashCode ^ refreshTokenAfterMinutes.hashCode ^ queries.hashCode;
+  }
+}
+
+class RunCommands {
+  String calculator = r"c ;^[0-9]+ ?[+\-*\\%]";
+  String color = r"col ;^(#|0x|rgb)";
+  String currency = r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
+  String shortcut = r"s ;";
+  String regex = r"rgx ;^/";
+  String lorem = r"lorem ;->";
+  String encoders = r"enc ;^([\!|\@]|\[[$@])";
+  String setvar = r"v ;^\$";
+  String json = r"json";
+  String timer = r"t ;~";
+  String keys = r"k ;`";
+  String timezones = r"t";
+
+  List<String> get list => <String>[calculator, color, currency, shortcut, regex, lorem, encoders, setvar, json, timezones];
+  Future<void> save() async {
+    await Boxes.updateSettings("runCommands", jsonEncode(toMap()));
+    return;
+  }
+
+  Future<void> fetch() async {
+    final Map<String, String> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "[]");
+    if (output.isEmpty) return;
+    calculator = output["calculator"] ?? r"c ;^[0-9]+ ?[+\-*\\%]";
+    color = output["color"] ?? r"col ;^(#|0x|rgb)";
+    currency = output["currency"] ?? r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
+    shortcut = output["shortcut"] ?? r"s ;";
+    regex = output["regex"] ?? r"rgx ;^/";
+    lorem = output["lorem"] ?? r"lorem ;->";
+    encoders = output["encoders"] ?? r"enc ;^([\!|\@]|\[[$@])";
+    setvar = output["setvar"] ?? r"v ;^\$";
+    json = output["json"] ?? r"json";
+    timer = output["timer"] ?? r"t ;~";
+    keys = output["keys"] ?? r"k ;`";
+    timezones = output["timezones"] ?? r"t";
+  }
+  // String
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      "calculator": calculator,
+      "color": color,
+      "currency": currency,
+      "shortcut": shortcut,
+      "regex": regex,
+      "lorem": lorem,
+      "encoders": encoders,
+      "setvar": setvar,
+      "json": json,
+      "timer": timer,
+      "keys": keys,
+      "timezones": timezones,
+    };
+  }
 }

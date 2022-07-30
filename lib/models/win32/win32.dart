@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:win32/win32.dart' hide Size, Point;
 import 'package:window_manager/window_manager.dart';
@@ -194,6 +195,10 @@ class Win32 {
 
   static bool isWindowOnDesktop(int hWnd) {
     return IsWindowVisible(hWnd) != 0 && isWindowPresent(hWnd) && !isWindowCloaked(hWnd);
+  }
+
+  static findWindow(String title) {
+    return FindWindow(nullptr, TEXT(title));
   }
 
   static String getClass(int hWnd) {
@@ -795,6 +800,26 @@ class WinUtils {
   static msgBox(String text, String title) {
     MessageBox(0, TEXT(text), TEXT(title), 0);
   }
+
+  static startTabame({bool closeCurrent = false, String? arguments}) {
+    if (WinUtils.isAdministrator()) {
+      WinUtils.run(Platform.resolvedExecutable, arguments: arguments);
+    } else {
+      WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
+    }
+    if (closeCurrent) {
+      Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
+    }
+  }
+
+  static reloadTabameQuickMenu() {
+    if (!kReleaseMode) return;
+    final int win = FindWindow(nullptr, TEXT("Tabame"));
+    if (win != 0) {
+      Win32.closeWindow(win);
+    }
+    startTabame(closeCurrent: false, arguments: "-restarted");
+  }
 }
 
 class WizardlyContextMenu {
@@ -820,7 +845,7 @@ class WizardlyContextMenu {
     subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
 
     final RegistryKey command = subkey.createKey("command");
-    command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -wizardly'));
+    command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
 
     return;
   }

@@ -109,7 +109,9 @@ class SettingsPageState extends State<SettingsPage> {
                                                   hoverColor: Theme.of(context).colorScheme.secondary,
                                                   onTap: () {
                                                     WinUtils.run(Platform.resolvedExecutable);
-                                                    Future<void>.delayed(const Duration(milliseconds: 800), () => exit(0));
+                                                    int hWnd = Win32.findWindow("Tabame");
+                                                    if (hWnd != 0) Win32.closeWindow(hWnd);
+                                                    Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
                                                   },
                                                   child: const Icon(Icons.replay_outlined),
                                                 ),

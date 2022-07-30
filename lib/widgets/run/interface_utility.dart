@@ -62,6 +62,7 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
       ),
       Expanded(
           child: Column(children: <Widget>[
+        const Divider(height: 10, thickness: 1),
         RunShortCutInfo(
             value: globalSettings.run.keys,
             onChanged: (String newStr) {

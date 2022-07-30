@@ -2,15 +2,10 @@ import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
-import '../run/interface_api_setup.dart';
-import '../run/interface_general.dart';
-
-class RunSettings extends StatefulWidget {
-  const RunSettings({Key? key}) : super(key: key);
-
-  @override
-  RunSettingsState createState() => RunSettingsState();
-}
+import '../run/interface_converters.dart';
+import '../run/interface_processors.dart';
+import '../run/interface_utility.dart';
+import '../widgets/info_text.dart';
 
 class WizardPage {
   String title;
@@ -21,6 +16,13 @@ class WizardPage {
     required this.widget,
     this.tooltip = "",
   });
+}
+
+class RunSettings extends StatefulWidget {
+  const RunSettings({Key? key}) : super(key: key);
+
+  @override
+  RunSettingsState createState() => RunSettingsState();
 }
 
 class RunSettingsState extends State<RunSettings> {
@@ -35,8 +37,9 @@ class RunSettingsState extends State<RunSettings> {
   }
 
   final List<WizardPage> pages = <WizardPage>[
-    WizardPage(title: "General", widget: const InterfaceGeneral(), tooltip: "General Settings"),
-    WizardPage(title: "API Setup", widget: InterfaceApiSetup(), tooltip: "Set up API"),
+    WizardPage(title: "Converters", widget: const InterfaceRunConverter(), tooltip: "Calculator, Currency, Color"),
+    WizardPage(title: "Processors", widget: const InterfaceRunProcessors(), tooltip: "Regex, Lorem, Json, Encoders"),
+    WizardPage(title: "Utility", widget: const InterfaceRunUtility(), tooltip: "Shortcuts, Timer"),
     // WizardPage(title: "Image Work", widget: Container()),
   ];
   int currentPage = 0;
@@ -51,7 +54,7 @@ class RunSettingsState extends State<RunSettings> {
           child: Padding(
             padding: const EdgeInsets.all(1),
             child: AnimatedButtonBar(
-              foregroundColor: Color(globalSettings.theme.accentColor),
+              foregroundColor: Theme.of(context).colorScheme.primary,
               radius: 8.0,
               padding: const EdgeInsets.all(16.0),
               invertedSelection: true,
@@ -62,7 +65,9 @@ class RunSettingsState extends State<RunSettings> {
             ),
           ),
         ),
+        const InfoText("On triggers, last one is always regex aware!"),
         currentPage < pages.length ? pages[currentPage].widget : Container(),
+        const SizedBox(height: 20)
       ],
     );
   }

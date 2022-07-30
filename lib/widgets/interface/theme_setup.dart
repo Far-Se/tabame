@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -10,6 +11,7 @@ import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/util/theme_colors.dart';
 import '../../models/settings.dart';
+import '../widgets/info_text.dart';
 
 class ThemeSetup extends StatefulWidget {
   const ThemeSetup({Key? key}) : super(key: key);
@@ -97,22 +99,24 @@ class ThemeSetupState extends State<ThemeSetup> {
                       currentColors: globalSettings.darkTheme,
                       onSaved: () async {
                         await Boxes.updateSettings("darkTheme", globalSettings.darkTheme.toJson());
-                        savedLightTheme = globalSettings.lightTheme;
                         savedDarkTheme = globalSettings.darkTheme;
+                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
                         globalSettings.darkTheme.gradientAlpha = e.toInt();
+                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.darkTheme.quickMenuBoldFont = e;
+                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
                       },
                       onColorChanged: (Color color, int i) {
                         if (i == 0) globalSettings.darkTheme.background = color.value;
                         if (i == 1) globalSettings.darkTheme.textColor = color.value;
                         if (i == 2) globalSettings.darkTheme.accentColor = color.value;
-
                         themeChangeNotifier.value = !themeChangeNotifier.value;
+                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
                       },
                       predefinedColors: predefinedColorsDark,
                     )
@@ -123,19 +127,24 @@ class ThemeSetupState extends State<ThemeSetup> {
                       currentColors: globalSettings.lightTheme,
                       onSaved: () async {
                         await Boxes.updateSettings("lightTheme", globalSettings.lightTheme.toJson());
+                        savedLightTheme = globalSettings.lightTheme;
+                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
                         globalSettings.lightTheme.gradientAlpha = e.toInt();
+                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.lightTheme.quickMenuBoldFont = e;
+                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                       },
                       onColorChanged: (Color color, int i) {
                         if (i == 0) globalSettings.lightTheme.background = color.value;
                         if (i == 1) globalSettings.lightTheme.textColor = color.value;
                         if (i == 2) globalSettings.lightTheme.accentColor = color.value;
                         themeChangeNotifier.value = !themeChangeNotifier.value;
+                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                       },
                       predefinedColors: predefinedColorsLight,
                     ),
@@ -207,6 +216,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             trailing: const Icon(Icons.save_outlined),
           ),
         ),
+        const InfoText("Do not forget to save the theme!"),
         const SizedBox(height: 10),
         SliderTheme(
           data: Theme.of(context).sliderTheme.copyWith(

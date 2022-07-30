@@ -14,10 +14,11 @@ import 'models/win32/win32.dart';
 import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
+final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments) async {
   List<String> auxArgs = <String>[...arguments];
-  if (auxArgs.length == 1 && auxArgs[0].contains('-wizardly')) {
-    auxArgs = <String>['"${auxArgs[0].replaceAll(' -wizardly', '')}\\', '-wizardly'];
+  if (auxArgs.length == 1 && auxArgs[0].contains('-interface')) {
+    auxArgs = <String>['"${auxArgs[0].replaceAll(' -interface', '')}\\', '-interface'];
   }
 
   // auxArgs.add("-strudel");
@@ -30,14 +31,14 @@ Future<void> main(List<String> arguments) async {
 
   /// ? Window
   late WindowOptions windowOptions;
-  if (globalSettings.args.contains("-wizardly")) {
-    windowOptions = const WindowOptions(
+  if (globalSettings.args.contains("-interface")) {
+    windowOptions = WindowOptions(
       size: Size(700, 400),
-      center: true,
+      center: false,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       alwaysOnTop: false,
-      title: "Tabame - Wizardly",
+      title: globalSettings.args.contains("-wizardly") ? "Tabame - Wizardly" : "Tabame - Interface",
     );
   } else {
     windowOptions = const WindowOptions(
@@ -55,7 +56,8 @@ Future<void> main(List<String> arguments) async {
     await windowManager.focus();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
-    Win32.fetchMainWindowHandle();
+    await Win32.fetchMainWindowHandle();
+    fullLoaded.value = true;
   });
 
   await setWindowAsTransparent();
@@ -87,106 +89,113 @@ class _TabameState extends State<Tabame> {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-      valueListenable: themeChangeNotifier,
-      builder: (_, bool refreshed, __) {
-        ThemeMode scheduled = ThemeMode.system;
-        ThemeType themeType = globalSettings.themeType;
-        if (themeType.index == 3) {
-          scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
-        }
-        ThemeMode themeMode = <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
+        valueListenable: fullLoaded,
+        builder: (BuildContext context, bool value, __) {
+          if (value == false) return Container();
+          return ValueListenableBuilder<bool>(
+            valueListenable: themeChangeNotifier,
+            builder: (_, bool refreshed, __) {
+              ThemeMode scheduled = ThemeMode.system;
+              ThemeType themeType = globalSettings.themeType;
+              if (themeType.index == 3) {
+                scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+              }
+              ThemeMode themeMode = <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
 
-        return MaterialApp(
-          scrollBehavior: MyCustomScrollBehavior(),
-          debugShowCheckedModeBanner: false,
-          title: 'Tabame - Taskbar Menu',
-          theme: ThemeData.light().copyWith(
-            splashColor: Color.fromARGB(225, 0, 0, 0),
-            backgroundColor: Color(globalSettings.lightTheme.background),
-            dialogBackgroundColor: Color(globalSettings.lightTheme.background),
-            cardColor: Color(globalSettings.lightTheme.background),
-            errorColor: Color(globalSettings.lightTheme.accentColor),
-            iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
-            textTheme: ThemeData.light().textTheme.apply(
-                bodyColor: Color(globalSettings.lightTheme.textColor),
-                displayColor: Color(globalSettings.lightTheme.textColor),
-                decorationColor: Color(globalSettings.lightTheme.textColor)),
-            toggleableActiveColor: Color(globalSettings.lightTheme.accentColor),
-            checkboxTheme: ThemeData.light()
-                .checkboxTheme
-                .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.lightTheme.background))),
-            tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
-                  verticalOffset: 10,
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  height: 0,
-                  margin: EdgeInsets.all(0),
-                  textStyle: TextStyle(color: Color(globalSettings.lightTheme.textColor), fontSize: 12, height: 0),
-                  decoration: BoxDecoration(color: Color(globalSettings.lightTheme.background)),
-                  preferBelow: false,
+              return MaterialApp(
+                scrollBehavior: MyCustomScrollBehavior(),
+                debugShowCheckedModeBanner: false,
+                title: 'Tabame - Taskbar Menu',
+                theme: ThemeData.light().copyWith(
+                  splashColor: Color.fromARGB(225, 0, 0, 0),
+                  backgroundColor: Color(globalSettings.lightTheme.background),
+                  dialogBackgroundColor: Color(globalSettings.lightTheme.background),
+                  cardColor: Color(globalSettings.lightTheme.background),
+                  errorColor: Color(globalSettings.lightTheme.accentColor),
+                  iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
+                  textTheme: ThemeData.light().textTheme.apply(
+                      bodyColor: Color(globalSettings.lightTheme.textColor),
+                      displayColor: Color(globalSettings.lightTheme.textColor),
+                      decorationColor: Color(globalSettings.lightTheme.textColor)),
+                  toggleableActiveColor: Color(globalSettings.lightTheme.accentColor),
+                  checkboxTheme: ThemeData.light()
+                      .checkboxTheme
+                      .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.lightTheme.background))),
+                  tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
+                        verticalOffset: 10,
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        height: 0,
+                        margin: EdgeInsets.all(0),
+                        textStyle: TextStyle(color: Color(globalSettings.lightTheme.textColor), fontSize: 12, height: 0),
+                        decoration: BoxDecoration(color: Color(globalSettings.lightTheme.background)),
+                        preferBelow: false,
+                      ),
+                  colorScheme: ThemeData.light().colorScheme.copyWith(
+                        primary: Color(globalSettings.lightTheme.accentColor),
+                        secondary: Color(globalSettings.lightTheme.accentColor),
+                      ),
                 ),
-            colorScheme: ThemeData.light().colorScheme.copyWith(
-                  primary: Color(globalSettings.lightTheme.accentColor),
-                  secondary: Color(globalSettings.lightTheme.accentColor),
+                darkTheme: ThemeData.dark().copyWith(
+                  splashColor: Color.fromARGB(225, 0, 0, 0),
+                  backgroundColor: Color(globalSettings.darkTheme.background),
+                  dialogBackgroundColor: Color(globalSettings.darkTheme.background),
+                  cardColor: Color(globalSettings.darkTheme.background),
+                  errorColor: Color(globalSettings.darkTheme.accentColor),
+                  iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
+                  textTheme: ThemeData.dark().textTheme.apply(
+                        bodyColor: Color(globalSettings.darkTheme.textColor),
+                        displayColor: Color(globalSettings.darkTheme.textColor),
+                        decorationColor: Color(globalSettings.darkTheme.textColor),
+                      ),
+                  toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
+                  checkboxTheme: ThemeData.dark()
+                      .checkboxTheme
+                      .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.darkTheme.background))),
+                  tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
+                        verticalOffset: 10,
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        height: 0,
+                        margin: EdgeInsets.all(0),
+                        textStyle: TextStyle(color: Color(globalSettings.darkTheme.textColor), fontSize: 12, height: 0),
+                        decoration: BoxDecoration(color: Color(globalSettings.darkTheme.background)),
+                        preferBelow: false,
+                      ),
+                  colorScheme: ThemeData.dark().colorScheme.copyWith(
+                        primary: Color(globalSettings.darkTheme.accentColor),
+                        secondary: Color(globalSettings.darkTheme.accentColor),
+                        tertiary: Color(globalSettings.darkTheme.textColor),
+                      ),
                 ),
-          ),
-          darkTheme: ThemeData.dark().copyWith(
-            splashColor: Color.fromARGB(225, 0, 0, 0),
-            backgroundColor: Color(globalSettings.darkTheme.background),
-            dialogBackgroundColor: Color(globalSettings.darkTheme.background),
-            cardColor: Color(globalSettings.darkTheme.background),
-            errorColor: Color(globalSettings.darkTheme.accentColor),
-            iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
-            textTheme: ThemeData.dark().textTheme.apply(
-                  bodyColor: Color(globalSettings.darkTheme.textColor),
-                  displayColor: Color(globalSettings.darkTheme.textColor),
-                  decorationColor: Color(globalSettings.darkTheme.textColor),
-                ),
-            toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
-            checkboxTheme: ThemeData.dark()
-                .checkboxTheme
-                .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.darkTheme.background))),
-            tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
-                  verticalOffset: 10,
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  height: 0,
-                  margin: EdgeInsets.all(0),
-                  textStyle: TextStyle(color: Color(globalSettings.darkTheme.textColor), fontSize: 12, height: 0),
-                  decoration: BoxDecoration(color: Color(globalSettings.darkTheme.background)),
-                  preferBelow: false,
-                ),
-            colorScheme: ThemeData.dark().colorScheme.copyWith(
-                  primary: Color(globalSettings.darkTheme.accentColor),
-                  secondary: Color(globalSettings.darkTheme.accentColor),
-                  tertiary: Color(globalSettings.darkTheme.textColor),
-                ),
-          ),
-          themeMode: themeMode,
-          // home: QuickMenu()
-          home: PageView.builder(
-            controller: mainPageViewController,
-            allowImplicitScrolling: false,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (BuildContext context, int index) {
-              if (globalSettings.args.contains("-wizardly")) {
-                return FutureBuilder<int>(
-                  future: Future<int>.delayed(Duration(milliseconds: 300), () => 1),
-                  builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
-                    if (!snapshot.hasData) return Container();
-                    return const Interface();
+                themeMode: themeMode,
+                // home: QuickMenu()
+                home: PageView.builder(
+                  controller: mainPageViewController,
+                  allowImplicitScrolling: false,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemBuilder: (BuildContext context, int index) {
+                    if (globalSettings.args.contains("-interface")) {
+                      return const Interface();
+
+                      // return FutureBuilder<int>(
+                      //   future: Future<int>.delayed(Duration(milliseconds: 300), () => 1),
+                      //   builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
+                      //     if (!snapshot.hasData) return Container();
+                      //     return const Interface();
+                      //   },
+                      // );
+                    }
+                    if (index == Pages.quickmenu.index) {
+                      return const QuickMenu();
+                    } else if (index == Pages.interface.index) {
+                      return const Interface();
+                    }
+                    return const QuickMenu();
                   },
-                );
-              }
-              if (index == Pages.quickmenu.index) {
-                return const QuickMenu();
-              } else if (index == Pages.interface.index) {
-                return const Interface();
-              }
-              return const QuickMenu();
+                ),
+              );
             },
-          ),
-        );
-      },
-    );
+          );
+        });
   }
 }
 

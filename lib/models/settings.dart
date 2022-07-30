@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 // vscode-fold=2
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -40,7 +39,9 @@ class Settings {
 
   List<String> weather = <String>['10 C', "berlin, Germany", "m", "%c+%t"];
 
-  RunCommands run = RunCommands(); //u for US
+  RunCommands run = RunCommands();
+
+  bool previewTheme = false;
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;
@@ -60,6 +61,7 @@ class Settings {
     setScheduleThemeChange();
   }
 
+  bool settingsChanged = false;
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
   ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
@@ -89,62 +91,6 @@ class Settings {
     } else {
       themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {});
     }
-  }
-}
-
-class RunCommands {
-  String calculator = r"c ;^[0-9]+ ?[+\-*\\%]";
-  String color = r"col ;^(#|0x|rgb)";
-  String currency = r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
-  String shortcut = r"s ;";
-  String regex = r"rgx ;^/";
-  String lorem = r"lorem ;->";
-  String encoders = r"enc ;^([\!|\@]|\[[$@])";
-  String setvar = r"v ;^\$";
-  String json = r"json";
-  String timer = r"t ;~";
-  String keys = r"k ;`";
-  String timezones = r"t";
-
-  List<String> get list => <String>[calculator, color, currency, shortcut, regex, lorem, encoders, setvar, json, timezones];
-  Future<void> save() async {
-    await Boxes.updateSettings("runCommands", jsonEncode(toMap()));
-    return;
-  }
-
-  Future<void> fetch() async {
-    final Map<String, String> output = jsonDecode(Boxes.pref.getString("runCommands2") ?? "[]");
-    if (output.isEmpty) return;
-    calculator = output["calculator"] ?? r"c ;^[0-9]+ ?[+\-*\\%]";
-    color = output["color"] ?? r"col ;^(#|0x|rgb)";
-    currency = output["currency"] ?? r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
-    shortcut = output["shortcut"] ?? r"s ;";
-    regex = output["regex"] ?? r"rgx ;^/";
-    lorem = output["lorem"] ?? r"lorem ;->";
-    encoders = output["encoders"] ?? r"enc ;^([\!|\@]|\[[$@])";
-    setvar = output["setvar"] ?? r"v ;^\$";
-    json = output["json"] ?? r"json";
-    timer = output["timer"] ?? r"t ;~";
-    keys = output["keys"] ?? r"k ;`";
-    timezones = output["timezones"] ?? r"t";
-  }
-  // String
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      "calculator": calculator,
-      "color": color,
-      "currency": currency,
-      "shortcut": shortcut,
-      "regex": regex,
-      "lorem": lorem,
-      "encoders": encoders,
-      "setvar": setvar,
-      "json": json,
-      "timer": timer,
-      "keys": keys,
-      "timezones": timezones,
-    };
   }
 }
 
@@ -201,6 +147,16 @@ extension StringExtension on String {
   String toUpperCaseEach() => split(" ").map((String str) => str.toUpperCaseFirst()).join(" ");
   String numberFormat({int minNr = 10}) {
     return (int.parse(this) / minNr).toDouble().toString().replaceAll('.', '');
+  }
+}
+
+extension Toggle<T> on List<T> {
+  toggle(T value) {
+    if (contains(value)) {
+      remove(value);
+    } else {
+      add(value);
+    }
   }
 }
 

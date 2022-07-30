@@ -55,7 +55,7 @@ class InterfaceRunProcessorsState extends State<InterfaceRunProcessors> {
                   setState(() {});
                 },
                 title: "Encoders",
-                link: "https://multiencoder.net/",
+                link: "https://multiencoder.com/",
                 tooltip: "For more encoders",
                 info: "Default is enc. You can use ! to encode and @ to decode, you can serialize them in [].\n Encoders are: url,base,rot13,hex,bin,ascii,@html",
                 example: <String>["!base test", "@url %20", "[@base,@rot13,!url] Z25vbnpy"]),

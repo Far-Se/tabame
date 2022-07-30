@@ -9,15 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../main.dart';
+import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/projects.dart';
-import '../widgets/interface/quickmenu.dart';
-import '../widgets/interface/run_settings.dart';
-import '../widgets/interface/settings.dart';
+import '../widgets/interface/quickmenu_settings.dart';
+import '../widgets/interface/quickrun_settings.dart';
+import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/wizardly.dart';
@@ -34,6 +35,7 @@ class PageClass {
 }
 
 Future<int> interfaceWindowSetup() async {
+  Monitor.fetchMonitor();
   Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
@@ -73,7 +75,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
-    PageClass(title: 'Run Window', icon: Icons.drag_handle, widget: const RunSettings()),
+    PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Remap Keys', icon: Icons.keyboard, widget: const NotImplemeneted()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
@@ -200,15 +202,11 @@ class InterfaceState extends State<Interface> {
                                           Globals.changingPages = true;
                                           setState(() {});
                                           if (kReleaseMode) {
-                                            if (globalSettings.args.contains('-wizardly')) {
+                                            if (globalSettings.args.contains('-interface')) {
+                                              await Boxes.pref.remove("previewThemeLight");
+                                              await Boxes.pref.remove("previewThemeDark");
+                                              WinUtils.reloadTabameQuickMenu();
                                               exit(0);
-                                            }
-                                            if (WinUtils.isAdministrator()) {
-                                              WinUtils.run(Platform.resolvedExecutable);
-                                              Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
-                                            } else {
-                                              WinUtils.open(Platform.resolvedExecutable);
-                                              Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
                                             }
                                           } else {
                                             mainPageViewController.jumpToPage(Pages.quickmenu.index);
@@ -244,71 +242,72 @@ class InterfaceState extends State<Interface> {
                                 children: <Widget>[
                                   //1 Sidebar
                                   //#h green
-                                  Material(
-                                    type: MaterialType.transparency,
-                                    child: Container(
-                                      width: 150,
-                                      height: double.infinity,
-                                      color: Colors.black12.withOpacity(0.1),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        mainAxisSize: MainAxisSize.max,
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: <Widget>[
-                                          const SizedBox(height: 10),
-                                          Flexible(
-                                            fit: FlexFit.tight,
-                                            child: SingleChildScrollView(
-                                              scrollDirection: Axis.vertical,
-                                              child: ListView.builder(
+                                  if (!globalSettings.args.contains("-wizardly"))
+                                    Material(
+                                      type: MaterialType.transparency,
+                                      child: Container(
+                                        width: 150,
+                                        height: double.infinity,
+                                        color: Colors.black12.withOpacity(0.1),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisSize: MainAxisSize.max,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: <Widget>[
+                                            const SizedBox(height: 10),
+                                            Flexible(
+                                              fit: FlexFit.tight,
+                                              child: SingleChildScrollView(
                                                 scrollDirection: Axis.vertical,
-                                                itemCount: pages.length,
-                                                shrinkWrap: true,
-                                                physics: const ClampingScrollPhysics(),
-                                                itemBuilder: (BuildContext context, int index) {
-                                                  final PageClass pageItem = pages[index];
-                                                  return DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                        color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
-                                                    child: GestureDetector(
-                                                      onTap: () {
-                                                        currentPage = index;
-                                                        if (mounted) setState(() {});
-                                                      },
-                                                      child: MouseRegion(
-                                                        cursor: SystemMouseCursors.click,
-                                                        child: Padding(
-                                                          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                          child: Row(
-                                                            mainAxisAlignment: MainAxisAlignment.start,
-                                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: <Widget>[
-                                                              const SizedBox(width: 5),
-                                                              Icon(pageItem.icon),
-                                                              const SizedBox(width: 5),
-                                                              Text(pageItem.title!),
-                                                            ],
+                                                child: ListView.builder(
+                                                  scrollDirection: Axis.vertical,
+                                                  itemCount: pages.length,
+                                                  shrinkWrap: true,
+                                                  physics: const ClampingScrollPhysics(),
+                                                  itemBuilder: (BuildContext context, int index) {
+                                                    final PageClass pageItem = pages[index];
+                                                    return DecoratedBox(
+                                                      decoration: BoxDecoration(
+                                                          color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          currentPage = index;
+                                                          if (mounted) setState(() {});
+                                                        },
+                                                        child: MouseRegion(
+                                                          cursor: SystemMouseCursors.click,
+                                                          child: Padding(
+                                                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                            child: Row(
+                                                              mainAxisAlignment: MainAxisAlignment.start,
+                                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: <Widget>[
+                                                                const SizedBox(width: 5),
+                                                                Icon(pageItem.icon),
+                                                                const SizedBox(width: 5),
+                                                                Text(pageItem.title!),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  );
-                                                },
+                                                    );
+                                                  },
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          //2 Donation Box
-                                          SizedBox(
-                                            height: 200,
-                                            child: Wrap(
-                                              children: <Widget>[],
-                                            ),
-                                          )
-                                        ],
+                                            //2 Donation Box
+                                            SizedBox(
+                                              height: 200,
+                                              child: Wrap(
+                                                children: <Widget>[],
+                                              ),
+                                            )
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
                                   //#e
                                   //1 Pages
                                   //#h white

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../main.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
@@ -112,10 +115,7 @@ class TopBar extends StatelessWidget {
                           child: Tooltip(
                             message: "Testing",
                             child: InkWell(
-                              onTap: () async {
-                                // WinUtils.runAsAdministrator();
-                                // WizardlyContextMenu().toggleWizardlyToContextMenu();
-                              },
+                              onTap: () async {},
                               child: const Icon(Icons.textsms_outlined),
                             ),
                           ),
