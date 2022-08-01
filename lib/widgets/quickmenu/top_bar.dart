@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';

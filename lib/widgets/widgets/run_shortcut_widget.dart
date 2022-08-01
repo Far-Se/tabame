@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/win32/win32.dart';
 import 'info_widget.dart';
-import 'text_box.dart';
+import 'text_input.dart';
 
 class RunShortCutInfo extends StatelessWidget {
   final Function(String newVal) onChanged;
@@ -40,24 +40,23 @@ class RunShortCutInfo extends StatelessWidget {
                 value: value,
                 labelText: "Shortcuts",
                 onChanged: (String newVal) {
-                  if (newVal.isEmpty) return false;
+                  if (newVal.isEmpty) return;
                   final List<String> listTriggers = newVal.split(';');
                   if (listTriggers.length > 1) {
                     bool worked = true;
                     try {
                       RegExp(listTriggers.last, caseSensitive: false).hasMatch("Ciulama");
                     } catch (e) {
-                      print(e);
                       worked = false;
                       ScaffoldMessenger.of(context)
                           .showSnackBar(SnackBar(content: Text("Error: Regex Failed!\n$e"), duration: const Duration(seconds: 4), backgroundColor: Colors.red.shade600));
                     }
-                    if (!worked) return false;
+                    if (!worked) return;
                   }
                   onChanged(newVal);
                 },
               ),
-              leading: InfoWidget(tooltip, onTap: () => WinUtils.open(link)),
+              leading: InfoWidget(tooltip, onTap: () => link.isEmpty ? null : WinUtils.open(link)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -78,9 +77,13 @@ class RunShortCutInfo extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                                 color: Theme.of(context).colorScheme.primary,
                               ),
-                              child: Text(
-                                example[index],
-                                style: TextStyle(color: Theme.of(context).backgroundColor, fontSize: 12, height: 1.00001),
+                              child: TextSelectionTheme(
+                                data: Theme.of(context).textSelectionTheme.copyWith(selectionColor: Colors.red),
+                                child: SelectableText(
+                                  example[index],
+                                  toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                                  style: TextStyle(color: Theme.of(context).backgroundColor, fontSize: 12, height: 1.00001),
+                                ),
                               )))),
                 ],
               ),

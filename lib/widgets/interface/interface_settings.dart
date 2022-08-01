@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../../models/classes/boxes.dart';
@@ -401,6 +403,16 @@ class SettingsPageState extends State<SettingsPage> {
                                   setState(() {});
                                 },
                               ),
+                              const Divider(height: 10, thickness: 2),
+                              Markdown(
+                                  shrinkWrap: true,
+                                  data: '''
+To Export settings, open [this](this) folder and copy the file. To import, exit Tabame and paste in that folder your saved settings.
+''',
+                                  onTapLink: (String s, String? s2, String s3) {
+                                    final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);
+                                    WinUtils.open("$path\\Tabame\\");
+                                  }),
                             ],
                           ),
                         ),

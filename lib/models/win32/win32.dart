@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
+import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'dart:io';
 import 'dart:typed_data';
@@ -568,7 +569,6 @@ class WinUtils {
       final RegExp reg = RegExp(r"^([a-z0-9-_]+) (.*?)$");
       if (reg.hasMatch(path)) {
         final RegExpMatch out = reg.firstMatch(path)!;
-        print(out.group(0)!);
         ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
       } else {
         ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
@@ -714,7 +714,7 @@ class WinUtils {
     return;
   }
 
-  static void textToSpeech(String text, {int repeat = 1}) {
+  static void textToSpeech(String text, {int repeat = 1, int volume = 100}) {
     if (repeat == -1) {
       final RegExp reg = RegExp(r'x\d+$');
       final RegExpMatch? match = reg.firstMatch(text);
@@ -728,6 +728,7 @@ class WinUtils {
     List<String> commands = <String>[
       "Add-Type -AssemblyName System.speech;",
       "\$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer;",
+      "\$speak.Volume = $volume;"
     ];
     for (int i = 0; i < repeat; i++) {
       commands.add("\$speak.Speak('${text.replaceAll("'", '"')}');");
@@ -740,7 +741,6 @@ class WinUtils {
     if (!windowsNotificationRegistered) {
       windowsNotificationRegistered = true;
       await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
-      print("registered");
     }
     if (globalSettings.usePowerShellAsToastNotification) {
       final List<String> result = await WinUtils.runPowerShell(<String>[
@@ -755,7 +755,6 @@ class WinUtils {
         '''\$toast = New-Object Windows.UI.Notifications.ToastNotification \$xml;''',
         '''[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Tabame").Show(\$toast);''',
       ]);
-      print(result);
       return;
     }
     LocalNotification notification = LocalNotification(
@@ -812,13 +811,31 @@ class WinUtils {
     }
   }
 
-  static reloadTabameQuickMenu() {
-    if (!kReleaseMode) return;
+  static closeMainTabame() {
     final int win = FindWindow(nullptr, TEXT("Tabame"));
     if (win != 0) {
       Win32.closeWindow(win);
     }
+  }
+
+  static reloadTabameQuickMenu() {
+    if (!kReleaseMode) return;
+    closeMainTabame();
     startTabame(closeCurrent: false, arguments: "-restarted");
+  }
+
+  static Future<String> getCountryCityFromIP(String defaultResult) async {
+    final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
+    if (ip.statusCode == 200) {
+      final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data.containsKey("city") && data.containsKey("country")) {
+          return "${data["city"]}, ${data["country"]}";
+        }
+      }
+    }
+    return defaultResult;
   }
 }
 

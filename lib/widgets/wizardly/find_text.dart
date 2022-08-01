@@ -11,7 +11,7 @@ import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
 import '../widgets/popup_dialog.dart';
-import '../widgets/text_box.dart';
+import '../widgets/text_input.dart';
 
 class SearchTextWidget extends StatefulWidget {
   const SearchTextWidget({Key? key}) : super(key: key);
@@ -42,7 +42,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
   @override
   void initState() {
     searchIncluded = Boxes.pref.getString("searchIncluded") ?? "";
-    searchExcluded = Boxes.pref.getString("searchExcluded") ?? "^.[a-z];node_modules;build";
+    searchExcluded = Boxes.pref.getString("searchExcluded") ?? r"^\.[a-z];node_modules;build";
     openInCode = Boxes.pref.getBool("searchUseVSCode") ?? false;
     if (globalSettings.args.contains("-wizardly")) {
       searchFolder = globalSettings.args[0].replaceAll('"', '');
@@ -56,7 +56,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       Row(
         mainAxisAlignment: Maa.start,
         children: <Widget>[
-          const SizedBox(width: 20),
+          const SizedBox(width: 10),
           Flexible(
             flex: 5,
             fit: FlexFit.tight,
@@ -81,45 +81,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           Flexible(
             fit: FlexFit.loose,
             child: ElevatedButton(
-              onPressed: () async {
-                if (searchState == 1) {
-                  searchState = 2;
-                  return;
-                }
-                if (searchFor.isEmpty) {
-                  popupDialog(context, "First Specify what text you are looking for");
-                  return;
-                }
-                if (!Directory(searchFolder).existsSync()) return;
-                loadedFiles.clear();
-
-                Stream<FileSystemEntity> stream = Directory(searchFolder)
-                    .list(recursive: searchRecursively, followLinks: false)
-                    .handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
-                await for (FileSystemEntity entity in stream) {
-                  loadedFiles.add(entity.path);
-                }
-                markdownOccurances = "";
-
-                if (mounted) setState(() {});
-                if (searchUseRegex) {
-                  try {
-                    RegExp(searchFor);
-                  } catch (e) {
-                    popupDialog(context, "Regex Failed!");
-                    return;
-                  }
-                }
-                searchState = 1;
-                await startSearch((PingInfo total) {
-                  if (mounted && total.totalFiles % 7 == 0) {
-                    setState(() {
-                      infoText = "Processed ${total.totalFiles} files and found ${total.totalFound} matches";
-                    });
-                  }
-                });
-                if (mounted) setState(() {});
-              },
+              onPressed: () async => initiateSearch(),
               child: Text(searchState == 0 ? "Search" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
             ),
           ),
@@ -151,17 +113,18 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                 value: searchIncluded,
                 onChanged: (String e) {
                   Boxes.updateSettings("searchIncluded", e);
-                  return searchIncluded = e;
+                  searchIncluded = e;
                 }),
           ),
           Expanded(
             child: TextInput(
-                labelText: "Ignore these files/folders",
-                value: searchExcluded,
-                onChanged: (String e) {
-                  Boxes.updateSettings("searchExcluded", e);
-                  return searchExcluded = e;
-                }),
+              labelText: "Ignore these files/folders",
+              value: searchExcluded,
+              onChanged: (String e) {
+                Boxes.updateSettings("searchExcluded", e);
+                searchExcluded = e;
+              },
+            ),
           )
         ],
       ),
@@ -177,6 +140,10 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                 labelText: "Search for:",
                 onChanged: (String e) {
                   searchFor = e;
+                },
+                onSubmitted: (String e) {
+                  searchFor = e;
+                  initiateSearch();
                 },
               ),
             ),
@@ -229,6 +196,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
     final List<String> excluded = searchExcluded.isNotEmpty ? searchExcluded.split(';') : <String>[];
     int totalProcessed = 0;
     int totalFound = 0;
+    print(searchState);
     for (String file in loadedFiles) {
       if (searchState == 2) {
         searchState = 0;
@@ -238,7 +206,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       }
       final String fileDirectory = Directory(file).parent.path;
       final String fileName = file.replaceAll("$fileDirectory\\", "");
-      if (fileName.indexOf('.') < 1) continue;
+      if (!fileName.contains('.')) continue;
       bool skip = false;
       for (String exclude in excluded) {
         if (exclude == "") continue;
@@ -343,6 +311,45 @@ ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
       i++;
     }
     return output;
+  }
+
+  Future<void> initiateSearch() async {
+    if (searchState == 1) {
+      searchState = 2;
+      return;
+    }
+    if (searchFor.isEmpty) {
+      popupDialog(context, "First Specify what text you are looking for");
+      return;
+    }
+    if (!Directory(searchFolder).existsSync()) return;
+    loadedFiles.clear();
+
+    Stream<FileSystemEntity> stream =
+        Directory(searchFolder).list(recursive: searchRecursively, followLinks: false).handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
+    await for (FileSystemEntity entity in stream) {
+      loadedFiles.add(entity.path);
+    }
+    markdownOccurances = "";
+
+    if (mounted) setState(() {});
+    if (searchUseRegex) {
+      try {
+        RegExp(searchFor);
+      } catch (e) {
+        popupDialog(context, "Regex Failed!");
+        return;
+      }
+    }
+    searchState = 1;
+    await startSearch((PingInfo total) {
+      if (mounted && total.totalFiles % 7 == 0) {
+        setState(() {
+          infoText = "Processed ${total.totalFiles} files and found ${total.totalFound} matches";
+        });
+      }
+    });
+    if (mounted) setState(() {});
   }
 }
 

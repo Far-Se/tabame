@@ -130,7 +130,6 @@ class SavedStore {
     if (_cachedPreferences != null) {
       return _cachedPreferences!;
     }
-    print("new fetched");
     Map<String, Object> preferences = <String, Object>{};
     final File? localDataFile = await _getLocalDataFile();
     if (localDataFile != null && localDataFile.existsSync()) {
@@ -150,7 +149,6 @@ class SavedStore {
     try {
       final File? localDataFile = await _getLocalDataFile();
       if (localDataFile == null) {
-        print('Unable to determine where to write preferences.');
         return false;
       }
       if (!localDataFile.existsSync()) {
@@ -159,7 +157,6 @@ class SavedStore {
       final String stringMap = json.encode(preferences);
       localDataFile.writeAsStringSync(stringMap);
     } catch (e) {
-      print('Error saving preferences to disk: $e');
       return false;
     }
     return true;

@@ -11,7 +11,7 @@ import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/popup_dialog.dart';
-import '../widgets/text_box.dart';
+import '../widgets/text_input.dart';
 
 class InterfaceApiSetup extends StatefulWidget {
   const InterfaceApiSetup({Key? key}) : super(key: key);

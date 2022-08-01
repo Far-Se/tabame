@@ -10,7 +10,7 @@ import '../../models/settings.dart';
 import '../../pages/interface.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
-import '../widgets/text_box.dart';
+import '../widgets/text_input.dart';
 
 class FileNameWidget extends StatefulWidget {
   const FileNameWidget({Key? key}) : super(key: key);
@@ -33,6 +33,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
   List<String> excludedFiles = <String>[];
 
   int hoveredIndex = -1;
+
+  int totalMatched = 0;
   @override
   void initState() {
     super.initState();
@@ -52,7 +54,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
         Row(
           mainAxisAlignment: Maa.start,
           children: <Widget>[
-            const SizedBox(width: 20),
+            const SizedBox(width: 10),
             Flexible(
               flex: 5,
               fit: FlexFit.tight,
@@ -87,7 +89,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   await for (FileSystemEntity entity in stream) {
                     loadedFiles.add(entity.path);
                   }
-                  if (loadedFiles.length > 500) {
+                  if (loadedFiles.length > 1000) {
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
@@ -95,7 +97,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                           content: Container(
                               height: 50,
                               child: Center(
-                                  child: Text("Too many files, maximum 500 is recomended and you are trying to load ${loadedFiles.length}!",
+                                  child: Text("Too many files, maximum 1000 is recommended and you are trying to load ${loadedFiles.length}!",
                                       style: const TextStyle(fontSize: 20)))),
                           actions: <Widget>[
                             ElevatedButton(
@@ -114,6 +116,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                     return;
                   }
                   filesHaveBeenLoaded = true;
+                  totalMatched = 0;
                   if (mounted) setState(() {});
                 },
                 child: Text("Get Files", style: TextStyle(color: Color(globalSettings.theme.background))),
@@ -281,6 +284,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Divider(height: 5, thickness: 1),
                 ListTile(
@@ -295,30 +300,44 @@ class FileNameWidgetState extends State<FileNameWidget> {
                 ),
                 const Divider(height: 5, thickness: 1),
                 ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: loadedFiles.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String file = loadedFiles[index].replaceFirst("${Directory(loadedFiles[index]).parent.path}\\", "");
-                      final String fullPathFile = loadedFiles[index];
-                      String newFile = getNewFileName(file);
-                      return ListTileFile(
-                        checkbox: !excludedFiles.contains(fullPathFile),
-                        oldName: file,
-                        newName: newFile,
-                        onCheckPressed: (bool val) {
-                          if (val == false) {
-                            excludedFiles.add(fullPathFile);
-                          } else {
-                            excludedFiles.remove(fullPathFile);
-                          }
-                          setState(() {});
-                        },
-                        onRenamePressed: () {
-                          renameFile(fullPathFile, newFile);
-                          setState(() {});
-                        },
-                      );
-                    })
+                  shrinkWrap: true,
+                  reverse: true,
+                  itemCount: loadedFiles.length + 1,
+                  prototypeItem: ListTileFile(
+                    checkbox: false,
+                    newName: '',
+                    oldName: '',
+                    onCheckPressed: (bool bool) {},
+                    onRenamePressed: () {},
+                  ),
+                  itemBuilder: (BuildContext context, int index) {
+                    if (index == 0) totalMatched = 0;
+                    if (index == loadedFiles.length) {
+                      return Align(alignment: Alignment.centerLeft, child: InfoText("  Total Matched matches: $totalMatched/${loadedFiles.length}"));
+                    }
+                    final String loadedFile = loadedFiles[loadedFiles.length - 1 - index];
+                    final String file = loadedFile.replaceFirst("${Directory(loadedFile).parent.path}\\", "");
+                    final String fullPathFile = loadedFile;
+                    String newFile = getNewFileName(file);
+                    return ListTileFile(
+                      checkbox: !excludedFiles.contains(fullPathFile),
+                      oldName: file,
+                      newName: newFile,
+                      onCheckPressed: (bool val) {
+                        if (val == false) {
+                          excludedFiles.add(fullPathFile);
+                        } else {
+                          excludedFiles.remove(fullPathFile);
+                        }
+                        setState(() {});
+                      },
+                      onRenamePressed: () {
+                        renameFile(fullPathFile, newFile);
+                        setState(() {});
+                      },
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -328,8 +347,6 @@ class FileNameWidgetState extends State<FileNameWidget> {
   }
 
   void renameFile(String fullPathFile, String newName) {
-    print(newName);
-    print(fullPathFile);
     final String path = Directory(fullPathFile).parent.path;
     final File file = File(fullPathFile);
     if (file.existsSync()) file.renameSync("$path\\$newName");
@@ -340,9 +357,11 @@ class FileNameWidgetState extends State<FileNameWidget> {
     String newFile = file;
     int fIndex = 0;
     for (Filter filter in filters) {
+      if (filter.search.isEmpty) continue;
       try {
         final RegExp regex = RegExp(filter.search);
         if (regex.hasMatch(newFile)) {
+          totalMatched++;
           newFile = newFile.replaceAllMapped(regex, (Match match) {
             String newString = "";
             if (filter.listReplace) {
@@ -363,21 +382,9 @@ class FileNameWidgetState extends State<FileNameWidget> {
             return newString;
           });
         }
-        if (filtersError.contains(fIndex)) {
-          filtersError.remove(fIndex);
-          // FocusNode? focusNode = FocusScope.of(context).focusedChild;
-          WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => setState(() {
-                // FocusScope.of(context).requestFocus(focusNode);
-              }));
-        }
+        if (filtersError.contains(fIndex)) filtersError.remove(fIndex);
       } catch (e) {
-        if (!filtersError.contains(fIndex)) {
-          filtersError.add(fIndex);
-          // FocusNode? focusNode = FocusScope.of(context).focusedChild;
-          WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => setState(() {
-                // FocusScope.of(context).requestFocus(focusNode);
-              }));
-        }
+        if (!filtersError.contains(fIndex)) filtersError.add(fIndex);
       }
 
       fIndex++;

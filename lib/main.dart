@@ -16,10 +16,16 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments) async {
-  List<String> auxArgs = <String>[...arguments];
-  if (auxArgs.length == 1 && auxArgs[0].contains('-interface')) {
-    auxArgs = <String>['"${auxArgs[0].replaceAll(' -interface', '')}\\', '-interface'];
-  }
+  String argString = arguments.join(" ");
+  if (argString.indexOf('"') > 0 && argString.contains('"')) argString = '"$argString';
+  List<String> auxArgs = argString.split(' ');
+
+  // if (auxArgs.length == 1 && auxArgs[0].contains('-interface')) {
+  //   auxArgs = <String>[
+  //     '"${auxArgs[0].replaceAll(' -interface', '')}"',
+  //     '-interface',
+  //   ];
+  // }
 
   // auxArgs.add("-strudel");
   globalSettings.args = <String>[...auxArgs];
@@ -64,7 +70,7 @@ Future<void> main(List<String> arguments) async {
   if (globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && globalSettings.args.join(' ').contains('-strudel')) {
     globalSettings.args.remove('-strudel');
     WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
-    Timer(const Duration(seconds: 5), () => exit(0));
+    Timer(const Duration(seconds: 1), () => exit(0));
   }
   runApp(const Tabame());
 }

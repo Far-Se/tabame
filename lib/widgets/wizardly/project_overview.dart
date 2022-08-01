@@ -11,7 +11,7 @@ import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
-import '../widgets/text_box.dart';
+import '../widgets/text_input.dart';
 
 class ProjectOverviewWidget extends StatefulWidget {
   const ProjectOverviewWidget({Key? key}) : super(key: key);
@@ -81,7 +81,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       Row(
         mainAxisAlignment: Maa.start,
         children: <Widget>[
-          const SizedBox(width: 20),
+          const SizedBox(width: 10),
           Flexible(
             flex: 4,
             fit: FlexFit.tight,

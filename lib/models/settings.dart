@@ -42,6 +42,10 @@ class Settings {
   RunCommands run = RunCommands();
 
   bool previewTheme = false;
+
+  int quickRunState = 0;
+
+  String quickRunText = "";
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;
@@ -87,9 +91,13 @@ class Settings {
     if (themeType != ThemeType.schedule) return;
     final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
     if (now.isBetween(themeScheduleMin, themeScheduleMax)) {
-      themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {});
+      themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {
+        if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
+      });
     } else {
-      themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {});
+      themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {
+        if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
+      });
     }
   }
 }
@@ -147,6 +155,11 @@ extension StringExtension on String {
   String toUpperCaseEach() => split(" ").map((String str) => str.toUpperCaseFirst()).join(" ");
   String numberFormat({int minNr = 10}) {
     return (int.parse(this) / minNr).toDouble().toString().replaceAll('.', '');
+  }
+
+  String removeCharAtTheEnd(String char) {
+    if (lastIndexOf(char) == char.length - 1) return substring(0, length - 1);
+    return this;
   }
 }
 
