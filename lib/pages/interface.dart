@@ -44,7 +44,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.65));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.63));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }
@@ -82,10 +82,11 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
-    PageClass(title: 'Info', icon: Icons.info, widget: const NotImplemeneted()),
   ];
   final List<String> disableScroll = <String>["Wizardly"];
   final Future<int> interfaceWindow = interfaceWindowSetup();
+
+  int hoveredPage = -1;
   @override
   void initState() {
     if (globalSettings.args.contains("-wizardly")) {
@@ -199,16 +200,18 @@ class InterfaceState extends State<Interface> {
                                       width: 25,
                                       child: InkWell(
                                         onTap: () async {
-                                          Globals.changingPages = true;
-                                          setState(() {});
                                           if (kReleaseMode) {
-                                            if (globalSettings.args.contains('-interface')) {
+                                            if (globalSettings.args.contains('-wizardly')) {
+                                              exit(0);
+                                            } else if (globalSettings.args.contains('-interface')) {
                                               await Boxes.pref.remove("previewThemeLight");
                                               await Boxes.pref.remove("previewThemeDark");
                                               WinUtils.reloadTabameQuickMenu();
                                               exit(0);
                                             }
                                           } else {
+                                            Globals.changingPages = true;
+                                            setState(() {});
                                             mainPageViewController.jumpToPage(Pages.quickmenu.index);
                                           }
                                         },
@@ -259,6 +262,7 @@ class InterfaceState extends State<Interface> {
                                               fit: FlexFit.tight,
                                               child: SingleChildScrollView(
                                                 scrollDirection: Axis.vertical,
+                                                controller: ScrollController(),
                                                 child: ListView.builder(
                                                   scrollDirection: Axis.vertical,
                                                   itemCount: pages.length,
@@ -269,31 +273,78 @@ class InterfaceState extends State<Interface> {
                                                     return DecoratedBox(
                                                       decoration: BoxDecoration(
                                                           color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
-                                                      child: GestureDetector(
+                                                      child: InkWell(
+                                                        radius: 0,
                                                         onTap: () {
-                                                          currentPage = index;
-                                                          if (mounted) setState(() {});
+                                                          setState(() => currentPage = index);
                                                         },
-                                                        child: MouseRegion(
-                                                          cursor: SystemMouseCursors.click,
-                                                          child: Padding(
-                                                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.start,
-                                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: <Widget>[
-                                                                const SizedBox(width: 5),
-                                                                Icon(pageItem.icon),
-                                                                const SizedBox(width: 5),
-                                                                Text(pageItem.title!),
-                                                              ],
-                                                            ),
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                          child: Row(
+                                                            mainAxisAlignment: MainAxisAlignment.start,
+                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: <Widget>[
+                                                              const SizedBox(width: 5),
+                                                              Icon(pageItem.icon),
+                                                              const SizedBox(width: 5),
+                                                              Text(pageItem.title!),
+                                                            ],
                                                           ),
                                                         ),
                                                       ),
                                                     );
                                                   },
+                                                ),
+                                              ),
+                                            ),
+                                            //2 Exit
+                                            const Divider(height: 5, thickness: 1),
+                                            DecoratedBox(
+                                              decoration:
+                                                  BoxDecoration(color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
+                                              child: MouseRegion(
+                                                onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
+                                                onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
+                                                cursor: SystemMouseCursors.click,
+                                                child: InkWell(
+                                                  radius: 0,
+                                                  onTap: () => setState(() {
+                                                    showDialog(
+                                                        context: context,
+                                                        builder: (BuildContext context) => AlertDialog(
+                                                              content: Container(
+                                                                  height: 50,
+                                                                  child: const Center(
+                                                                      child: Text("This will close the whole app, not just Interface, continue?",
+                                                                          style: TextStyle(fontSize: 20)))),
+                                                              actions: <Widget>[
+                                                                ElevatedButton(
+                                                                    onPressed: () {
+                                                                      WinUtils.closeMainTabame();
+                                                                      exit(0);
+                                                                    },
+                                                                    child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                                ElevatedButton(
+                                                                    onPressed: () => Navigator.of(context).pop(),
+                                                                    child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                              ],
+                                                            ));
+                                                  }),
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.start,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: <Widget>[
+                                                        const SizedBox(width: 5),
+                                                        const Icon(Icons.exit_to_app),
+                                                        const SizedBox(width: 5),
+                                                        const Text("Exit"),
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),

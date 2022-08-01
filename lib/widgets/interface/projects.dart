@@ -5,12 +5,12 @@ import 'package:contextual_menu/contextual_menu.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide MenuItem;
-import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import '../widgets/info_text.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({Key? key}) : super(key: key);
@@ -53,6 +53,7 @@ class ProjectsPageState extends State<ProjectsPage> {
       data: Theme.of(context).listTileTheme.copyWith(horizontalTitleGap: 10),
       child: Column(
         children: <Widget>[
+          const InfoText("To open a project, open QuickRun and type p then the name of the project"),
           ListTile(
             title: const Text("Projects", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             leading: Container(
@@ -355,7 +356,11 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                                   preferBelow: true,
                                                                   child: InkWell(
                                                                     onTap: () async {
-                                                                      final String result = await pickFolder();
+                                                                      // final String result = await pickFolder();
+                                                                      final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
+                                                                      final Directory? dir = dirPicker.getDirectory();
+                                                                      if (dir == null) return;
+                                                                      String result = dir.path;
                                                                       if (result == "") return;
                                                                       if (!mounted) return;
                                                                       projectItem.stringToExecute = result;

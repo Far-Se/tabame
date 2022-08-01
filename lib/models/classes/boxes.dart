@@ -36,18 +36,8 @@ class Boxes {
       await pref.setString("darkTheme", globalSettings.darkTheme.toJson());
 
       await pref.setString("language", Platform.localeName.substring(0, 2));
-      String city = "berlin, germany";
-      // ? Get city from IP
-      final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
-      if (ip.statusCode == 200) {
-        final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> data = json.decode(response.body);
-          if (data.containsKey("city") && data.containsKey("country")) {
-            city = "${data["city"]}, ${data["country"]}";
-          }
-        }
-      }
+
+      String city = await WinUtils.getCountryCityFromIP("berlin, germany");
       await pref.setStringList("weather", <String>["10 C", city, "m", "%c+%t"]);
       await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
@@ -60,11 +50,12 @@ class Boxes {
       final Reminder demoReminder = Reminder(
           enabled: false,
           interval: <int>[540, 1200],
-          message: "Strech",
+          message: "Stretch",
           repetitive: true,
           time: 60,
           voiceNotification: true,
-          weekDays: <bool>[true, true, true, true, true, false, false]);
+          weekDays: <bool>[true, true, true, true, true, false, false],
+          voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
       await setStartOnSystemStartup(true);
       pref = await SaveSettings.getInstance();
@@ -72,8 +63,8 @@ class Boxes {
     globalSettings
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
-      ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? 0
-      ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? 0
+      ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? globalSettings.themeScheduleMin
+      ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? globalSettings.themeScheduleMax
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0] // * always after schedule
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
       ..customLogo = pref.getString("customLogo") ?? ""
@@ -119,7 +110,8 @@ class Boxes {
 
     //? Media Controls
     mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
-
+    //? Run Shortcuts
+    globalSettings.run.fetch();
     //! Startup
     //? Taskbar
     //if (kReleaseMode) {
@@ -170,11 +162,12 @@ class Boxes {
 
   Map<String, String> get taskBarRewrites {
     final String rewrites = pref.getString("taskBarRewrites") ?? "";
-    if (rewrites == "") return <String, String>{"DevTools.*?\\.(.*?)\\..*?\$": "⚠DevTools: \$1 "};
+    if (rewrites == "") return <String, String>{r"DevTools.*?([^\s\/]+\.\w+)\/.*?$": r"⚠ DevTools: $1 "};
     final Map<String, String> rewritesMap = Map<String, String>.from(json.decode(rewrites));
     return rewritesMap;
   }
 
+  //?run shortcuts
   List<List<String>> _runShortcuts = <List<String>>[];
   set runShortcuts(List<List<String>> items) {
     _runShortcuts = items;
@@ -193,6 +186,26 @@ class Boxes {
     return _runShortcuts;
   }
 
+  //?run shortcuts
+  List<List<String>> _runMemos = <List<String>>[];
+  set runMemos(List<List<String>> items) {
+    _runMemos = items;
+    updateSettings("runMemos", jsonEncode(items));
+  }
+
+  List<List<String>> get runMemos {
+    if (_runMemos.isNotEmpty) return _runMemos;
+    final String prefString = pref.getString("runMemos") ?? "";
+    if (prefString.isEmpty) return _runMemos;
+    final List<dynamic> runMemos = jsonDecode(pref.getString("runMemos")!);
+    _runMemos.clear();
+    for (List<dynamic> x in runMemos) {
+      _runMemos.add(<String>[x[0], x[1]]);
+    }
+    return _runMemos;
+  }
+
+  // ? run keys
   List<List<String>> _runKeys = <List<String>>[];
   set runKeys(List<List<String>> items) {
     _runKeys = items;
@@ -270,17 +283,41 @@ class Boxes {
         final String prevThemeLight = Boxes.pref.getString("previewThemeLight") ?? "";
         if (prevThemeLight.isNotEmpty) {
           globalSettings.lightTheme = ThemeColors.fromJson(prevThemeLight);
-          File(r"E:\l.txt").writeAsString("changed prev theme for light", mode: FileMode.append);
         }
         final String prevThemeDark = Boxes.pref.getString("previewThemeDark") ?? "";
         if (prevThemeDark.isNotEmpty) {
           globalSettings.darkTheme = ThemeColors.fromJson(prevThemeDark);
-          File(r"E:\l.txt").writeAsString("changed prev theme for dark", mode: FileMode.append);
         }
         globalSettings.settingsChanged = !globalSettings.settingsChanged;
       }
     });
   }
+
+  static final List<QuickTimer> quickTimers = <QuickTimer>[];
+  void addQuickTimer(String name, int minutes, int type) {
+    final QuickTimer quick = QuickTimer();
+    quick.name = name;
+    quick.timer = Timer(Duration(minutes: minutes), () {
+      if (type == 0) {
+        WinUtils.textToSpeech(name, repeat: -1);
+      } else if (type == 1) {
+        WinUtils.msgBox(name, "Tabame Quick Timer");
+      } else if (type == 2) {
+        WinUtils.showWindowsNotification(
+          title: "Tabame Quick Timer",
+          body: "Timer Expired: $name",
+          onClick: () {},
+        );
+      }
+      quickTimers.remove(quick);
+    });
+    quickTimers.add(quick);
+  }
+}
+
+class QuickTimer {
+  String name = "";
+  Timer? timer;
 }
 
 class Tasks {
@@ -334,10 +371,12 @@ class Tasks {
     final http.Response response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final RegExp exp = RegExp(regex);
-      if (!exp.hasMatch(response.body)) return "";
+      if (!exp.hasMatch(response.body)) return "No match";
 
       final RegExpMatch match = exp.firstMatch(response.body)!;
       return match.group(0)!;
+    } else {
+      print("status code ${response.statusCode}");
     }
     return "";
   }
@@ -386,9 +425,9 @@ class Tasks {
   void reminderPeriodic(Reminder reminder) {
     if (!reminder.enabled) return;
     final int now = DateTime.now().hour * 60 + DateTime.now().minute;
-    if (now.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday]) {
+    if (now.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday - 1]) {
       if (reminder.voiceNotification) {
-        WinUtils.textToSpeech('${reminder.message}', repeat: -1);
+        WinUtils.textToSpeech('${reminder.message}', repeat: -1, volume: reminder.voiceVolume);
       } else {
         WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: ${reminder.message}", onClick: () {});
       }
@@ -398,10 +437,12 @@ class Tasks {
 
   reminderDaily(Reminder reminder) {
     if (!reminder.enabled) return;
-    if (reminder.voiceNotification) {
-      WinUtils.textToSpeech('${reminder.message}', repeat: -1);
-    } else {
-      WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: ${reminder.message}", onClick: () {});
+    if (reminder.weekDays[DateTime.now().weekday - 1]) {
+      if (reminder.voiceNotification) {
+        WinUtils.textToSpeech('${reminder.message}', repeat: -1, volume: reminder.voiceVolume);
+      } else {
+        WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: ${reminder.message}", onClick: () {});
+      }
     }
     reminder.timer = Timer(const Duration(days: 1), () => reminderDaily(reminder));
   }

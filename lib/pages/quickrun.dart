@@ -1,0 +1,1090 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:math_parser/math_parser.dart';
+import 'package:units_converter/units_converter.dart';
+import 'package:window_manager/window_manager.dart';
+
+import 'package:http/http.dart' as http;
+import '../models/classes/boxes.dart';
+import '../models/classes/saved_maps.dart';
+import '../models/keys.dart';
+import '../models/settings.dart';
+import '../models/win32/mixed.dart';
+import '../models/win32/win32.dart';
+
+class QuickRun extends StatefulWidget {
+  const QuickRun({Key? key}) : super(key: key);
+
+  @override
+  QuickRunState createState() => QuickRunState();
+}
+
+class Shortcuts {
+  String name;
+  List<String> shortcuts;
+  String regex;
+  Shortcuts({
+    required this.name,
+    required this.shortcuts,
+    required this.regex,
+  });
+
+  @override
+  String toString() => 'Shortcuts(name: $name, shortcuts: $shortcuts, regex: $regex)';
+}
+
+class QuickRunState extends State<QuickRun> {
+  final Parsers parser = Parsers();
+  ParserResult result = ParserResult();
+  FocusNode textFocusNode = FocusNode();
+  FocusNode keyboardFocusNode = FocusNode();
+  TextEditingController textController = TextEditingController();
+
+  List<Shortcuts> shortcuts = <Shortcuts>[];
+  String currentRun = "";
+
+  @override
+  void initState() {
+    super.initState();
+    final Map<String, String> map = globalSettings.run.toMap();
+    for (MapEntry<String, String> x in map.entries) {
+      final List<String> split = x.value.removeCharAtTheEnd(';').split(';');
+      List<String> scuts = <String>[];
+      String regex = "";
+      // continue;
+      if (split.length > 1 && !split.last.endsWith(' ')) {
+        regex = split.last;
+        split.removeLast();
+      }
+      scuts.addAll(split);
+
+      shortcuts.add(Shortcuts(name: x.key, shortcuts: scuts, regex: regex));
+    }
+    textController.text = globalSettings.quickRunText;
+    globalSettings.quickRunState = 2;
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(textFocusNode));
+  }
+
+  @override
+  void dispose() {
+    textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+        child: Material(
+      type: MaterialType.transparency,
+      child: RawKeyboardListener(
+        focusNode: keyboardFocusNode,
+        onKey: (RawKeyEvent keyEvent) {
+          PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
+          if (currentKey == PhysicalKeyboardKey.arrowDown) {
+            FocusScope.of(context).requestFocus(keyboardFocusNode);
+          } else if (currentKey == PhysicalKeyboardKey.arrowUp) {
+            FocusScope.of(context).requestFocus(textFocusNode);
+          }
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(
+                  width: 25,
+                  height: 35,
+                  child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onPanStart: (DragStartDetails details) {
+                        windowManager.startDragging();
+                      },
+                      child: const Icon(Icons.drag_indicator_sharp)),
+                ),
+                Expanded(
+                  child: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                    ),
+                    focusNode: textFocusNode,
+                    controller: textController,
+                    onSubmitted: (String input) {
+                      if (currentRun == "regex") {
+                        textController.text = globalSettings.run.regex.split(';')[0];
+                        regainFocus();
+                      } else if (currentRun == "shortcut") {
+                        if (input.contains(" add ") && parser.shortcutInput.isNotEmpty) {
+                          parser.runShortcuts.add(<String>[
+                            parser.shortcutInput.substring(0, parser.shortcutInput.indexOf(" ")),
+                            parser.shortcutInput.substring(parser.shortcutInput.indexOf(" ") + 1),
+                          ]);
+                          Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
+                          result.error = "Added ${parser.shortcutInput}";
+                          parser.shortcutInput = "";
+                        } else if (input.contains(" remove ") && parser.shortcutInput.isNotEmpty) {
+                          for (List<String> x in parser.runShortcuts) {
+                            if (x[0] == parser.shortcutInput) {
+                              parser.runShortcuts.remove(x);
+                              break;
+                            }
+                          }
+                          Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
+                          result.error = "Removed ${parser.shortcutInput}";
+                          parser.shortcutInput = "";
+                        } else {
+                          if (result.results.isNotEmpty) {
+                            WinUtils.open(RegExp(r'^.*?:(.*?)$').firstMatch(result.results[0])![1]!);
+                          }
+                        }
+                        regainFocus();
+                      } else if (currentRun == "memo") {
+                        if (input.contains(" add ") && parser.memoInput.isNotEmpty) {
+                          parser.runMemos.add(<String>[
+                            parser.memoInput.substring(0, parser.memoInput.indexOf(" ")),
+                            parser.memoInput.substring(parser.memoInput.indexOf(" ") + 1),
+                          ]);
+                          Boxes().runMemos = <List<String>>[...parser.runMemos];
+                          result.error = "Added ${parser.memoInput}";
+                          parser.memoInput = "";
+                          setState(() {});
+                        } else if (input.contains(" remove ") && parser.memoInput.isNotEmpty) {
+                          for (List<String> x in parser.runMemos) {
+                            if (x[0] == parser.memoInput) {
+                              parser.runMemos.remove(x);
+                              break;
+                            }
+                          }
+                          Boxes().runMemos = <List<String>>[...parser.runMemos];
+                          result.error = "Removed ${parser.memoInput}";
+                          parser.memoInput = "";
+                        }
+                        regainFocus();
+                      } else if (currentRun == "timer") {
+                        if (input.contains(" remove ")) {
+                          bool removed = false;
+                          int index = 0;
+                          for (QuickTimer quick in Boxes.quickTimers) {
+                            if (quick.name == parser.timerInfo[0]) {
+                              removed = true;
+                              quick.timer?.cancel();
+                              Boxes.quickTimers.removeAt(index);
+                              break;
+                            }
+                            index++;
+                          }
+                          if (removed) {
+                            result.results = <String>["Removed reminder ${parser.timerInfo[0]}"];
+                            parser.timerInfo = <dynamic>[];
+                            regainFocus();
+                          }
+                          return;
+                        }
+
+                        if (parser.timerInfo.isEmpty) return;
+                        Boxes().addQuickTimer(parser.timerInfo[0], parser.timerInfo[1], parser.timerInfo[2]);
+                        result.results = <String>[
+                          "${<String>["Audio", "Message", "Notification"][parser.timerInfo[2]]} Reminder ${parser.timerInfo[1]} minutes: ${parser.timerInfo[0]}"
+                        ];
+                        parser.timerInfo = <dynamic>[];
+                        regainFocus();
+                      } else if (currentRun == "setvar") {
+                        print("servar");
+                        if (parser.varInfo.isEmpty) return;
+
+                        final String varName = parser.varInfo.substring(0, parser.varInfo.indexOf(" "));
+                        final String varValue = parser.varInfo.substring(parser.varInfo.indexOf(" ") + 1);
+                        print("$varName => $varValue");
+                        Boxes.pref.setString("k_$varName", varValue).then((_) {
+                          result.results = <String>["Saved $varName as $varValue"];
+                          regainFocus();
+                        });
+                      } else if (currentRun == "keys") {
+                        if (parser.keysToSent.isEmpty) return;
+                        WinKeys.send(parser.keysToSent);
+                        regainFocus();
+                      }
+                    },
+                    onChanged: (String input) async {
+                      if (input.isEmpty) return;
+                      String command = "";
+                      List<String> x = getCommandFromString(input);
+                      if (x.isEmpty) {
+                        result = ParserResult();
+                        for (Shortcuts x in shortcuts) {
+                          result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
+                        }
+                        // result.results
+                        setState(() {});
+                        return;
+                      }
+                      command = x[0];
+                      if (x.length == 2) input = input.replaceFirst(x[1], "");
+                      if (currentRun != command) {
+                        currentRun = command;
+                        print(currentRun);
+                      }
+                      final Map<String, Function(String)> functions = <String, Function(String)>{
+                        "calculator": parser.calculator,
+                        "unit": parser.unit,
+                        "color": parser.color,
+                        "currency": parser.currency,
+                        "timezones": parser.timezones,
+                        "regex": parser.regex,
+                        "lorem": parser.loremIpsum,
+                        "encoders": parser.encoders,
+                        "shortcut": parser.shortcuts,
+                        "memo": parser.memos,
+                        "projects": parser.projects,
+                        "timer": parser.timer,
+                        "setvar": parser.setVar,
+                        "keys": parser.sendKeys,
+                      };
+                      if (functions.containsKey(currentRun)) {
+                        result = await functions[currentRun]!(input.toLowerCase());
+                      } else {
+                        result = ParserResult();
+                      }
+                      setState(() {});
+                    },
+                  ),
+                )
+              ],
+            ),
+            if (result.results.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                // constraints: BoxConstraints.loose(const Size(280, 200)),
+                child: SingleChildScrollView(
+                  // scrollDirection: Axis.vertical,
+                  controller: ScrollController(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      ...List<Widget>.generate(
+                        result.results.length,
+                        (int index) {
+                          String item = result.results[index];
+                          if (item.startsWith("custom:")) {
+                            item = item.replaceFirst("custom:", "");
+                            if (item.startsWith("color:")) {
+                              item = item.replaceFirst("color:", "");
+                              final Color color = Color(int.parse(item));
+                              return Row(
+                                children: <Widget>[
+                                  Expanded(
+                                      child: DecoratedBox(
+                                    decoration: BoxDecoration(color: color),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                      child: Text("  "),
+                                    ),
+                                  )),
+                                ],
+                              );
+                            }
+                            return Container();
+                          }
+                          return InkWell(
+                            onTap: () {},
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                    child: DecoratedBox(
+                                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1))),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                    child: Text(item),
+                                  ),
+                                )),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (result.error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Text(result.error)),
+            // const SizedBox(height: 5),
+          ],
+        ),
+      ),
+    ));
+  }
+
+  List<String> getCommandFromString(String input) {
+    for (Shortcuts scuts in shortcuts) {
+      for (String scut in scuts.shortcuts) {
+        if (input.startsWith(scut)) {
+          return <String>[scuts.name, scut];
+        }
+      }
+    }
+    for (Shortcuts scuts in shortcuts) {
+      if (scuts.regex.isEmpty) continue;
+      if (RegExp(scuts.regex, caseSensitive: false).hasMatch(input)) {
+        return <String>[scuts.name];
+      }
+    }
+    return <String>[];
+  }
+
+  void regainFocus() {
+    textController.selection = TextSelection.fromPosition(TextPosition(offset: textController.text.length));
+    setState(() {});
+    FocusScope.of(context).requestFocus(textFocusNode);
+  }
+}
+
+class ParserResult {
+  List<String> results = <String>[];
+  String error = "";
+}
+
+class Parsers {
+  Future<ParserResult> calculator(String input) async {
+    input = input.replaceAll('%', "/100");
+    final ParserResult result = ParserResult();
+    final List<String> math = input.split('|');
+    final Map<String, num> mathVars = <String, num>{"x": 0, "y": 0, "z": 0, "a": 0, "b": 0, "c": 0, "d": 0, "e": 0, "f": 0};
+    for (int i = 0; i < math.length; i++) {
+      if (math[i].isEmpty) continue;
+      num x = 0;
+      try {
+        x = MathNodeExpression.fromString(math[i], variableNames: <String>{"x", "y", "z", "a", "b", "c", "d", "e", "f"}).calc(MathVariableValues(mathVars));
+      } catch (e) {
+        result.error = e.toString();
+      }
+      mathVars[mathVars.keys.elementAt(i)] = x;
+      result.results.add("${mathVars.keys.elementAt(i)} = $x");
+    }
+    return result;
+  }
+
+  T? getUnitType<T>(String from, List<Unit> units, Iterable<T> names) {
+    T? matched;
+    for (Unit e in units) {
+      if (from == e.symbol) {
+        return (e.name as T);
+      }
+    }
+    if (matched == null) {
+      for (T type in names) {
+        if (type.toString().split(".").last == from) {
+          return type;
+        }
+      }
+    }
+    return null;
+  }
+
+  final NumberFormat format = NumberFormat("#,##0.00", "en_US");
+
+  Future<ParserResult> unit(String input) async {
+    Map<String, String> convertFormats = <String, String>{
+      "Type a number to see results:": "",
+      "ex: 1 power": "",
+      "length": "m",
+      "mass": "g",
+      "temperature": "°F",
+      "volume": "l",
+      "speed": "m/s",
+      "digital": "b",
+      "area": "acres",
+      "energy": "J",
+      "force": "N",
+      "fuel": "km/l",
+      "power": "W",
+      "pressure": "Pa",
+      "shoe": "ukIndiaChild",
+      "time": "s",
+      "torque": "N·m",
+    };
+    final ParserResult result = ParserResult();
+    final RegExp reg = RegExp(r'^([\d\.]+) ([\w\\/]+)');
+    if (!reg.hasMatch(input)) {
+      result.results.addAll(convertFormats.keys);
+      return result..error = "Format: NUMBER unit to unit";
+    }
+    final RegExpMatch matches = reg.firstMatch(input)!;
+    final double number = double.parse(matches[1]!);
+    String from = matches[2]!;
+    String to = "";
+    if (from == "f") from = "fahrenheit";
+    if (from == "c") from = "celsius";
+    if (input.contains(' to ')) {
+      to = input.replaceFirst("${matches[0]!} to ", "");
+      to = to.trim();
+    }
+    if (convertFormats.keys.contains(from)) from = convertFormats[from]!;
+
+    if (true) {
+      final Length length = Length();
+      final LENGTH? matched = getUnitType<LENGTH>(from, length.getAll(), LENGTH.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as LENGTH).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final LENGTH? matchedTo = getUnitType<LENGTH>(to, length.getAll(), LENGTH.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Area length = Area();
+      final AREA? matched = getUnitType<AREA>(from, length.getAll(), AREA.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as AREA).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final AREA? matchedTo = getUnitType<AREA>(to, length.getAll(), AREA.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final DigitalData length = DigitalData();
+      final DIGITAL_DATA? matched = getUnitType<DIGITAL_DATA>(from, length.getAll(), DIGITAL_DATA.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as DIGITAL_DATA).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final DIGITAL_DATA? matchedTo = getUnitType<DIGITAL_DATA>(to, length.getAll(), DIGITAL_DATA.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Energy length = Energy();
+      final ENERGY? matched = getUnitType<ENERGY>(from, length.getAll(), ENERGY.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as ENERGY).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final ENERGY? matchedTo = getUnitType<ENERGY>(to, length.getAll(), ENERGY.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Force length = Force();
+      final FORCE? matched = getUnitType<FORCE>(from, length.getAll(), FORCE.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as FORCE).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final FORCE? matchedTo = getUnitType<FORCE>(to, length.getAll(), FORCE.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final FuelConsumption length = FuelConsumption();
+      final FUEL_CONSUMPTION? matched = getUnitType<FUEL_CONSUMPTION>(from, length.getAll(), FUEL_CONSUMPTION.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as FUEL_CONSUMPTION).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final FUEL_CONSUMPTION? matchedTo = getUnitType<FUEL_CONSUMPTION>(to, length.getAll(), FUEL_CONSUMPTION.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Mass length = Mass();
+      final MASS? matched = getUnitType<MASS>(from, length.getAll(), MASS.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as MASS).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final MASS? matchedTo = getUnitType<MASS>(to, length.getAll(), MASS.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Power length = Power();
+      final POWER? matched = getUnitType<POWER>(from, length.getAll(), POWER.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as POWER).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final POWER? matchedTo = getUnitType<POWER>(to, length.getAll(), POWER.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Pressure length = Pressure();
+      final PRESSURE? matched = getUnitType<PRESSURE>(from, length.getAll(), PRESSURE.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as PRESSURE).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final PRESSURE? matchedTo = getUnitType<PRESSURE>(to, length.getAll(), PRESSURE.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final ShoeSize length = ShoeSize();
+      final SHOE_SIZE? matched = getUnitType<SHOE_SIZE>(from, length.getAll(), SHOE_SIZE.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as SHOE_SIZE).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final SHOE_SIZE? matchedTo = getUnitType<SHOE_SIZE>(to, length.getAll(), SHOE_SIZE.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Speed length = Speed();
+      final SPEED? matched = getUnitType<SPEED>(from, length.getAll(), SPEED.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as SPEED).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final SPEED? matchedTo = getUnitType<SPEED>(to, length.getAll(), SPEED.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Temperature length = Temperature();
+      final TEMPERATURE? matched = getUnitType<TEMPERATURE>(from, length.getAll(), TEMPERATURE.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as TEMPERATURE).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final TEMPERATURE? matchedTo = getUnitType<TEMPERATURE>(to, length.getAll(), TEMPERATURE.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Time length = Time();
+      final TIME? matched = getUnitType<TIME>(from, length.getAll(), TIME.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as TIME).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final TIME? matchedTo = getUnitType<TIME>(to, length.getAll(), TIME.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Torque length = Torque();
+      final TORQUE? matched = getUnitType<TORQUE>(from, length.getAll(), TORQUE.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as TORQUE).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final TORQUE? matchedTo = getUnitType<TORQUE>(to, length.getAll(), TORQUE.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+    if (true) {
+      final Volume length = Volume();
+      final VOLUME? matched = getUnitType<VOLUME>(from, length.getAll(), VOLUME.values);
+      if (matched != null) {
+        if (to == "") {
+          length.convert(matched, number);
+          final List<Unit> x = length.getAll();
+          for (Unit i in x) {
+            result.results.add("${format.format(i.value)} ${(i.name as VOLUME).name} (${i.symbol})");
+          }
+          return result;
+        }
+        final VOLUME? matchedTo = getUnitType<VOLUME>(to, length.getAll(), VOLUME.values);
+        if (matchedTo != null) {
+          return result..results.add("${format.format(number.convertFromTo(matched, matchedTo) ?? 0)} ${matchedTo.name} (${length.getUnit(matchedTo).symbol})");
+        }
+      }
+    }
+
+    return result;
+  }
+
+  Future<ParserResult> color(String input) async {
+    final ParserResult result = ParserResult();
+    late Color color;
+    if (input.startsWith("#") || input.startsWith("0x")) {
+      input = input.replaceAll("#", "").replaceAll("0x", "");
+      if (input.isEmpty) return result;
+      if (input.length > 8) return result;
+      if (input.length == 8) {
+        input = input.substring(input.length - 2) + input.substring(0, input.length - 2);
+        color = Color(int.parse('0x$input'));
+      }
+      if (input.length == 3) {
+        color = Color(int.parse('0xFF$input$input'));
+      } else {
+        while (input.length < 6) {
+          input += "F";
+        }
+        try {
+          color = Color(int.parse('0xFF$input'));
+        } catch (__) {
+          return result;
+        }
+      }
+    } else if (input.startsWith("rgb") && RegExp(r'^rgba?\(([0-9 ]+),([0-9 ]+),([0-9 ]+)(?:,([0-9 ]+))?\)').hasMatch(input)) {
+      final RegExpMatch col = RegExp(r'^rgba?\(([0-9 ]+),([0-9 ]+),([0-9 ]+)(?:,([0-9 ]+))?\)').firstMatch(input)!;
+      color = Color.fromARGB(int.parse(col[4] ?? "255"), int.parse(col[1]!), int.parse(col[2]!), int.parse(col[3]!));
+    } else if (input.startsWith("cmyk") && RegExp(r'^cmyk?\(([0-9 ]+),([0-9 ]+),([0-9 ]+),([0-9 ]+)\)').hasMatch(input)) {
+      final RegExpMatch cmyk = RegExp(r'^cmyk?\(([0-9 ]+),([0-9 ]+),([0-9 ]+),([0-9 ]+)\)').firstMatch(input)!;
+      final double r = (255 * (1 - int.parse(cmyk[1]!) / 100) * (1 - int.parse(cmyk[4]!) / 100));
+      final double g = (255 * (1 - int.parse(cmyk[2]!) / 100) * (1 - int.parse(cmyk[4]!) / 100));
+      final double b = (255 * (1 - int.parse(cmyk[3]!) / 100) * (1 - int.parse(cmyk[4]!) / 100));
+      color = Color.fromARGB(255, (r).round(), (g).round(), (b).round());
+    } else {
+      return result..results.addAll(<String>["#ffffff", "rgba(255,255,255,255)", "cmyk(0,0,0)"]);
+    }
+
+    result.results.add("#${color.value.toRadixString(16)}");
+    result.results.add("0x${color.value.toRadixString(16)}");
+    result.results.add("rgba(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})");
+    result.results.add("argb(${color.alpha}, ${color.red}, ${color.green}, ${color.blue})");
+    final HSLColor hslColor = HSLColor.fromColor(color);
+    result.results.add("hsl(${hslColor.hue.toStringAsFixed(1)}, ${(hslColor.saturation * 100).toStringAsFixed(1)}%, ${(hslColor.lightness * 100).toStringAsFixed(1)}%)");
+    result.results.add(
+        "hsla(${hslColor.hue.toStringAsFixed(1)}, ${(hslColor.saturation * 100).toStringAsFixed(1)}%, ${(hslColor.lightness * 100).toStringAsFixed(1)}%, ${hslColor.alpha})");
+    final HSVColor hsvColor = HSVColor.fromColor(color);
+    result.results.add("hsv(${hsvColor.hue.toStringAsFixed(1)}, ${(hsvColor.saturation * 100).toStringAsFixed(1)}%, ${(hsvColor.value * 100).toStringAsFixed(1)}%)");
+
+    if (color.red == 0 && color.green == 0 && color.blue == 0) {
+    } else {
+      final double r = 1 - (color.red / 255);
+      final double g = 1 - (color.green / 255);
+      final double b = 1 - (color.blue / 255);
+      final num k = min(r, min(g, b));
+      final num c = ((r - k) / (1 - k) * 100).round();
+      final num m = ((g - k) / (1 - k) * 100).round();
+      final num y = ((b - k) / (1 - k) * 100).round();
+      result.results.add("cmyk($c, $m, $y, ${(k * 100).round()})");
+    }
+    result.results.add("custom:color:0x${color.value.toRadixString(16)}");
+    return result;
+  }
+
+  Future<ParserResult> currency(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) {
+      return result..results.addAll(<String>["Format: NUMBER CODE to CODE", "Example: 100 USD to EUR", "github.com/fawazahmed0/currency-api/"]);
+    }
+    input = input.replaceAll(r"$", " USD ").replaceAll(RegExp(r' +'), ' ');
+    double amount = 0;
+    String from = "";
+    String to = "";
+    final RegExpMatch? reg = RegExp(r'([\d\.\,]+\d) (\w{3,4}) to (\w{3,4})').firstMatch(input);
+    if (reg != null) {
+      String amountReg = reg[1]!;
+      amountReg = amountReg.replaceFirstMapped(RegExp(r',(\d{2})$'), (Match match) => "p${match[1]}");
+      amountReg = amountReg.replaceFirstMapped(RegExp(r'\.(\d{2})$'), (Match match) => "p${match[1]}");
+      amountReg = amountReg.replaceAll(',', '').replaceAll('.', '').replaceAll('p', '.');
+      amount = double.parse(amountReg);
+      from = reg[2]!;
+      to = reg[3]!;
+    } else {
+      final RegExpMatch? reg = RegExp(r'(\w{3,4}) ([\d\.\,]+) to (\w{3,4})').firstMatch(input);
+      if (reg != null) {
+        amount = double.parse(reg[2]!);
+        from = reg[1]!;
+        to = reg[3]!;
+      } else {
+        return result..results.addAll(<String>["Format: NUMBER CODE to CODE", "Example: 100 USD to EUR", "github.com/fawazahmed0/currency-api/"]);
+      }
+    }
+    final String url = "https://raw.githubusercontent.com/fawazahmed0/currency-api/1/latest/currencies/$from/$to.min.json";
+    final http.Response response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      if (json.containsKey(to)) {
+        final double rate = double.parse(json[to].toString());
+        print(json[to]);
+        result.results.add("${format.format(rate * amount)} ${to.toUpperCase()}");
+        result.results.add("1 $from = $rate $to".toUpperCase());
+      } else {
+        result.error = "Could not find currency in result..";
+      }
+    } else {
+      print("status code ${response.statusCode}");
+      return result..error = "Could not find the currencies";
+    }
+    return result;
+  }
+
+  final TimeZones timeZone = TimeZones();
+  Future<ParserResult> timezones(String input) async {
+    // input = input.trim();
+    final ParserResult result = ParserResult();
+    DateTime dateTime = DateTime.now().toUtc();
+
+    int jan = DateTime(dateTime.year, 0, 1).timeZoneOffset.inMinutes;
+    int jul = DateTime(dateTime.year, 6, 1).timeZoneOffset.inMinutes;
+    bool dst = max(jan, jul) != dateTime.timeZoneOffset.inMinutes;
+    final List<List<String>> timeZones = timeZone.getTime(input);
+    if (timeZones.isNotEmpty) {
+      for (List<String> zone in timeZones) {
+        final List<String> offset = zone.removeAt(0).split(':');
+        final String type = offset[0][0];
+        final int hours = int.parse(offset[0].substring(1));
+        final int minutes = int.parse(offset[1]);
+        final int offsetTime = hours * 60 + minutes;
+        if (type == "+") {
+          dateTime = dateTime.add(Duration(minutes: offsetTime));
+        } else {
+          dateTime = dateTime.subtract(Duration(minutes: offsetTime));
+        }
+        late DateTime dstTime;
+        dstTime = dateTime.add(const Duration(hours: 1));
+        if (dst) {
+          result.results.add("${DateFormat('hh:mm dd MMM').format(dstTime)} (without DST: ${DateFormat('hh:mm').format(dateTime)})\n${zone.join(', ')}");
+        } else {
+          result.results.add("${DateFormat('hh:mm dd MMM').format(dateTime)} (with DST: ${DateFormat('hh:mm').format(dstTime)})\n${zone.join(', ')}");
+        }
+      }
+    }
+    return result;
+  }
+
+  String regexText = "";
+  Future<ParserResult> regex(String input) async {
+    final ParserResult result = ParserResult()..error = regexText;
+    if (regexText.isEmpty) regexText = Boxes.pref.getString("regexTest") ?? "test";
+    if (input.startsWith("text ")) {
+      regexText = input.replaceFirst("text ", "");
+
+      if (regexText.isEmpty) return result;
+      Boxes.updateSettings("regexTest", regexText);
+    } else {
+      if (input.isEmpty) return result;
+      try {
+        final Iterable<RegExpMatch> matches = RegExp(input, caseSensitive: false).allMatches(regexText);
+        for (RegExpMatch match in matches) {
+          result.results.add(match[0]!);
+          for (int m = 1; m < match.groupCount + 1; m++) {
+            result.results.add(match[m]!);
+          }
+        }
+      } catch (e) {
+        result.results.add(e.toString());
+      }
+    }
+    // result.results.add(regexText);
+    return result;
+  }
+
+  String fullLorem = "";
+  Future<ParserResult> loremIpsum(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) return result..error = "Format [nr or pharagraphs]\n[short, medium, long, verylong]\nOpt:[headers, plaintext, decorate, prude]";
+    final RegExpMatch? reg = RegExp(r'^(\d+) (short|medium|long|verylong) ?((headers|plaintext|decorate|prude)|$)').firstMatch(input);
+    if (reg != null) {
+      final int nr = int.parse(reg[1]!);
+      final String type = reg[2]!;
+      String opt = "";
+      if (reg.groupCount == 4) {
+        if (reg[3]!.length > 1) {
+          opt = reg[3]!;
+        }
+      }
+
+      final String url = "https://loripsum.net/api/$nr/$type/$opt";
+      final http.Response response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        fullLorem = response.body;
+        result.results.addAll(<String>["Generated $nr $type $opt", "Copied to Clipboard!"]);
+      } else {
+        result.error = "Status code ${response.statusCode}";
+      }
+    } else {
+      result.error = "Format [nr or pharagraphs]\n[short, medium, long, verylong]\nOpt:[headers,plaintext,decorate]";
+    }
+    return result;
+  }
+
+  Future<ParserResult> encoders(String input) async {
+    final ParserResult result = ParserResult();
+    return result;
+  }
+
+  final List<List<String>> runShortcuts = Boxes().runShortcuts;
+  String shortcutInput = "";
+  Future<ParserResult> shortcuts(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) {
+      for (List<String> x in runShortcuts) {
+        result.results.add("${x[0]}: ${x[1].truncate(20, suffix: '...')}");
+      }
+      return result;
+    }
+    if (input.startsWith("add ")) {
+      input = input.replaceFirst("add ", "");
+      final List<String> split = input.split(" ");
+      if (split.length == 1) return result..error = "Format: name link/file";
+      if (split[0].isEmpty || split[1].isEmpty) return result..error = "Format: name link/file";
+
+      bool found = false;
+      for (List<String> x in runShortcuts) {
+        if (x[0] == split[0]) found = true;
+      }
+      print(input);
+      if (!found) {
+        shortcutInput = input;
+      } else {
+        shortcutInput = "";
+        return result..error = "Already saved!";
+      }
+      result.error = "Press Enter to save";
+    }
+    if (input.startsWith("remove ")) {
+      input = input.replaceFirst("remove ", "");
+      if (input.isEmpty) return result..error = "Format: remove name";
+      bool found = false;
+      for (List<String> x in runShortcuts) {
+        if (x[0] == input) found = true;
+      }
+      if (found) {
+        shortcutInput = input;
+      } else {
+        return result..error = "Not found";
+      }
+      result.error = "Press Enter to delete";
+    } else {
+      for (List<String> x in runShortcuts) {
+        if (x[0].contains(input)) result.results.add("${x[0]}:${x[1]}");
+      }
+    }
+    return result;
+  }
+
+  final List<List<String>> runMemos = Boxes().runMemos;
+  String memoInput = "";
+  Future<ParserResult> memos(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) {
+      for (List<String> x in runMemos) {
+        result.results.add("${x[0]}: ${x[1].truncate(20, suffix: '...')}");
+      }
+      return result;
+    }
+    if (input.startsWith("add ")) {
+      input = input.replaceFirst("add ", "");
+      final List<String> split = input.split(" ");
+      if (split.length == 1) return result..error = "Format: name memo";
+      if (split[0].isEmpty || split[1].isEmpty) return result..error = "Format: name memo";
+
+      bool found = false;
+      for (List<String> x in runMemos) {
+        if (x[0] == split[0]) found = true;
+      }
+      if (!found) {
+        memoInput = input;
+      } else {
+        memoInput = "";
+        return result..error = "Already saved!";
+      }
+      result.error = "Press Enter to save";
+    }
+    if (input.startsWith("remove ")) {
+      input = input.replaceFirst("remove ", "");
+      if (input.isEmpty) return result..error = "Format: remove name";
+      bool found = false;
+      for (List<String> x in runMemos) {
+        if (x[0] == input) found = true;
+      }
+      if (found) {
+        memoInput = input;
+      } else {
+        return result..error = "Not found";
+      }
+      result.error = "Press Enter to delete";
+    } else {
+      for (List<String> x in runMemos) {
+        if (x[0].contains(input)) result.results.add("${x[0]}:${x[1]}");
+      }
+    }
+    return result;
+  }
+
+  final List<ProjectGroup> savedProjects = Boxes().projects;
+  Future<ParserResult> projects(String input) async {
+    final ParserResult result = ParserResult();
+    for (ProjectGroup projectGroup in savedProjects) {
+      for (ProjectInfo project in projectGroup.projects) {
+        if (project.title.contains(input)) {
+          result.results.add("${project.emoji} ${project.title} ${projectGroup.title.truncate(10, suffix: "...")}");
+        }
+      }
+    }
+    return result;
+  }
+
+  List<dynamic> timerInfo = <dynamic>[];
+  Future<ParserResult> timer(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) {
+      print("input empty");
+      result.results.addAll(<String>["Format: t [minutes] message", "Format: t [minutes] [a,n,m]:message"]);
+      for (QuickTimer quick in Boxes.quickTimers) {
+        result.results.add(quick.name);
+      }
+      return result;
+    }
+    if (input.startsWith("remove ")) {
+      input = input.replaceFirst("remove ", "");
+      if (input.isEmpty) return result;
+      for (QuickTimer quick in Boxes.quickTimers) {
+        if (quick.name.contains(input)) {
+          result.results.add(quick.name);
+        }
+      }
+      timerInfo = <String>[input];
+      if (result.results.isEmpty) result.error = "No Timer Found!";
+      return result;
+    }
+    final RegExpMatch? timeMessage = RegExp(r'^(\d+) (.*?)$').firstMatch(input);
+    if (timeMessage == null) return result..results.addAll(<String>["Format: t [minutes] message", "Format: t [minutes] [a,n,m]:message"]);
+    final int minutes = int.parse(timeMessage[1]!);
+    input = timeMessage[2]!;
+    final RegExpMatch? regExp = RegExp(r'^(\w):').firstMatch(input);
+    int type = 0;
+    if (regExp != null) {
+      input = input.replaceFirst(regExp[0]!, "");
+      if (regExp[1]! == "m") type = 1;
+      if (regExp[1]! == "n") type = 2;
+    }
+    timerInfo = <dynamic>[input, minutes, type];
+    result.results.add("Set Reminder $input in $minutes minutes");
+    return result;
+  }
+
+  String varInfo = "";
+  Future<ParserResult> setVar(String input) async {
+    final ParserResult result = ParserResult();
+    if (input.isEmpty) result.error = "Format: varname value";
+    final Set<String> keys = Boxes.pref.getKeys();
+    for (String key in keys) {
+      if (key.startsWith("k_$input")) result.results.add("$key: ${Boxes.pref.getString("$key")}");
+    }
+    varInfo = input;
+    return result;
+  }
+
+  List<List<String>> runKeys = Boxes().runKeys;
+  String keysToSent = "";
+  Future<ParserResult> sendKeys(String input) async {
+    final ParserResult result = ParserResult();
+    bool setted = false;
+    for (List<String> key in runKeys) {
+      if (key[0].contains(input)) {
+        if (!setted) keysToSent = key[1];
+
+        setted = true;
+        result.results.add("${key[0]}: ${key[1]}");
+      }
+    }
+    return result;
+  }
+}

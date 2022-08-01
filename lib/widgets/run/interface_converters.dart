@@ -31,10 +31,21 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
                   },
                   title: "Calculator",
                   value: globalSettings.run.calculator,
-                  link: "https://mathjs.org/docs/expressions/syntax.html",
-                  tooltip: "It uses mathjs.org",
-                  info:
-                      "Default shortcut is c , or number and a mathematical symbol. It uses mathjs.org to process query.\nClick on Info Button to see all formats. It can convert units too!",
+                  link: "https://pub.dev/packages/math_parser", // "https://mathjs.org/docs/expressions/syntax.html",
+                  tooltip: "Calculator",
+                  info: "Default shortcut is c . You can divide multiple math equations with | and use x,y,z,a,b,c as variables. It supports complex equations ",
+                  example: <String>["66*20/12", "c 10 inch to cm", "c 2+3*sqrt(4)"]),
+              RunShortCutInfo(
+                  onChanged: (String newStr) {
+                    globalSettings.run.unit = newStr;
+                    globalSettings.run.save();
+                    setState(() {});
+                  },
+                  title: "Unit converter",
+                  value: globalSettings.run.unit,
+                  link: "",
+                  tooltip: "Unit Converter",
+                  info: "Default is u . Supports area, length, mass, pressure, temperature, time, volume ",
                   example: <String>["66*20/12", "c 10 inch to cm", "c 2+3*sqrt(4)"]),
               RunShortCutInfo(
                 onChanged: (String newStr) {
@@ -71,18 +82,16 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
               ),
               RunShortCutInfo(
                 onChanged: (String newStr) {
-                  globalSettings.run.color = newStr;
+                  globalSettings.run.timezones = newStr;
                   globalSettings.run.save();
                   setState(() {});
                 },
                 title: "Time zones",
-                value: globalSettings.run.color,
-                link: "https://www.google.com/search?q=color+picker+online",
+                value: globalSettings.run.timezones,
+                link: "",
                 tooltip: "Time Zone Converter",
-                info: "Default is t and it converts to your local time.",
-                example: <String>[
-                  "t 10 pm EEST",
-                ],
+                info: "Default is t and it converts to your local time. You can specify country name to display their time",
+                example: <String>["t 10 pm EEST", "t italy", "t 10 pm to Germany", "t 10 pm EEST to Germany", "t germany to japan"],
               ),
             ],
           ),
@@ -97,7 +106,6 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
       RegExp(regex, caseSensitive: false).hasMatch("Ciulama");
     } catch (e) {
       worked = false;
-      print(e);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: Regex Failed!\n$e"), duration: const Duration(seconds: 4), backgroundColor: Colors.red.shade600));
     }

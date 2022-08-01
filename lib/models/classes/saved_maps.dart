@@ -19,6 +19,7 @@ class Reminder extends SavedMap {
   List<int> interval;
   String message;
   bool voiceNotification;
+  int voiceVolume;
   Timer? timer;
   Reminder({
     required this.enabled,
@@ -28,6 +29,7 @@ class Reminder extends SavedMap {
     required this.interval,
     required this.message,
     required this.voiceNotification,
+    required this.voiceVolume,
   });
   String get timeFormat {
     final int hour = (time ~/ 60);
@@ -43,6 +45,7 @@ class Reminder extends SavedMap {
     List<int>? interval,
     String? message,
     bool? voiceNotification,
+    int? voiceVolume,
   }) {
     return Reminder(
       enabled: enabled ?? this.enabled,
@@ -52,6 +55,7 @@ class Reminder extends SavedMap {
       interval: interval ?? this.interval,
       message: message ?? this.message,
       voiceNotification: voiceNotification ?? this.voiceNotification,
+      voiceVolume: voiceVolume ?? this.voiceVolume,
     );
   }
 
@@ -64,6 +68,7 @@ class Reminder extends SavedMap {
       'interval': interval,
       'message': message,
       'voiceNotification': voiceNotification,
+      'voiceVolume': voiceVolume,
     };
   }
 
@@ -76,6 +81,7 @@ class Reminder extends SavedMap {
       interval: List<int>.from(map['interval'] ?? const <int>[]),
       message: (map['message'] ?? '') as String,
       voiceNotification: (map['voiceNotification'] ?? false) as bool,
+      voiceVolume: (map['voiceVolume'] ?? 100) as int,
     );
   }
 
@@ -85,7 +91,7 @@ class Reminder extends SavedMap {
 
   @override
   String toString() {
-    return 'Reminder(enabled: $enabled, weekDays: $weekDays, time: $time, repetitive: $repetitive, interval: $interval, message: $message, voiceNotification: $voiceNotification)';
+    return 'Reminder(enabled: $enabled, weekDays: $weekDays, time: $time, repetitive: $repetitive, interval: $interval, message: $message, voiceNotification: $voiceNotification, voiceVolume: $voiceVolume)';
   }
 
   @override
@@ -98,12 +104,20 @@ class Reminder extends SavedMap {
         other.repetitive == repetitive &&
         listEquals(other.interval, interval) &&
         other.message == message &&
-        other.voiceNotification == voiceNotification;
+        other.voiceNotification == voiceNotification &&
+        other.voiceVolume == voiceVolume;
   }
 
   @override
   int get hashCode {
-    return enabled.hashCode ^ weekDays.hashCode ^ time.hashCode ^ repetitive.hashCode ^ interval.hashCode ^ message.hashCode ^ voiceNotification.hashCode;
+    return enabled.hashCode ^
+        weekDays.hashCode ^
+        time.hashCode ^
+        repetitive.hashCode ^
+        interval.hashCode ^
+        message.hashCode ^
+        voiceNotification.hashCode ^
+        voiceVolume.hashCode;
   }
 }
 
@@ -668,45 +682,48 @@ class RunAPI {
 }
 
 class RunCommands {
-  String calculator = r"c ;^[0-9]+ ?[+\-*\\%]";
+  String calculator = r"c ;^[0-9\.\,]+ ?[+\-*\\%]";
   String color = r"col ;^(#|0x|rgb)";
   String currency = r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
   String shortcut = r"s ;";
+  String memo = r"m ;";
   String regex = r"rgx ;^/";
-  String lorem = r"lorem ;->";
+  String lorem = r"lorem ;^\>";
   String encoders = r"enc ;^([\!|\@]|\[[$@])";
   String setvar = r"v ;^\$";
-  String json = r"json";
+  String projects = r"p ";
   String timer = r"t ;~";
   String keys = r"k ;`";
-  String timezones = r"t";
+  String timezones = r"tz ";
+  String unit = r"u ";
 
-  List<String> get list => <String>[calculator, color, currency, shortcut, regex, lorem, encoders, setvar, json, timezones];
   Future<void> save() async {
     await Boxes.updateSettings("runCommands", jsonEncode(toMap()));
     return;
   }
 
   Future<void> fetch() async {
-    final Map<String, String> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "[]");
+    final Map<String, dynamic> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "[]");
     if (output.isEmpty) return;
-    calculator = output["calculator"] ?? r"c ;^[0-9]+ ?[+\-*\\%]";
-    color = output["color"] ?? r"col ;^(#|0x|rgb)";
-    currency = output["currency"] ?? r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
-    shortcut = output["shortcut"] ?? r"s ;";
-    regex = output["regex"] ?? r"rgx ;^/";
-    lorem = output["lorem"] ?? r"lorem ;->";
-    encoders = output["encoders"] ?? r"enc ;^([\!|\@]|\[[$@])";
-    setvar = output["setvar"] ?? r"v ;^\$";
-    json = output["json"] ?? r"json";
-    timer = output["timer"] ?? r"t ;~";
-    keys = output["keys"] ?? r"k ;`";
-    timezones = output["timezones"] ?? r"t";
+    calculator = output["calculator"] ?? calculator;
+    color = output["color"] ?? color;
+    currency = output["currency"] ?? currency;
+    shortcut = output["shortcut"] ?? shortcut;
+    regex = output["regex"] ?? regex;
+    lorem = output["lorem"] ?? lorem;
+    encoders = output["encoders"] ?? encoders;
+    setvar = output["setvar"] ?? setvar;
+    projects = output["projects"] ?? projects;
+    timer = output["timer"] ?? timer;
+    keys = output["keys"] ?? keys;
+    timezones = output["timezones"] ?? timezones;
+    memo = output["memo"] ?? memo;
+    unit = output["unit"] ?? unit;
   }
   // String
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
+  Map<String, String> toMap() {
+    return <String, String>{
       "calculator": calculator,
       "color": color,
       "currency": currency,
@@ -715,10 +732,12 @@ class RunCommands {
       "lorem": lorem,
       "encoders": encoders,
       "setvar": setvar,
-      "json": json,
+      "projects": projects,
       "timer": timer,
       "keys": keys,
       "timezones": timezones,
+      "memo": memo,
+      "unit": unit,
     };
   }
 }

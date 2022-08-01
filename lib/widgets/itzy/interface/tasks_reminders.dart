@@ -36,6 +36,7 @@ class TasksRemindersState extends State<TasksReminders> {
                 interval: <int>[8 * 60, 20 * 60],
                 message: "Reminder",
                 voiceNotification: false,
+                voiceVolume: 100,
               ),
             );
             await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
@@ -63,8 +64,7 @@ class TasksRemindersState extends State<TasksReminders> {
                         onChanged: (bool? value) async {
                           reminder.enabled = value ?? false;
                           Boxes.reminders = Boxes.reminders;
-                          await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                          Tasks().startReminders();
+                          await updateReminders();
                           if (mounted) setState(() {});
                         },
                         value: reminder.enabled,
@@ -76,8 +76,7 @@ class TasksRemindersState extends State<TasksReminders> {
                         onFocusChange: (bool value) async {
                           if (value == false) {
                             reminder.message = messageTextController.text;
-                            await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                            Tasks().startReminders();
+                            await updateReminders();
                           }
                         },
                         child: TextField(
@@ -90,8 +89,7 @@ class TasksRemindersState extends State<TasksReminders> {
                           ),
                           onSubmitted: (String value) async {
                             reminder.message = value;
-                            await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                            Tasks().startReminders();
+                            await updateReminders();
                             if (mounted) setState(() {});
                           },
                         ),
@@ -100,8 +98,7 @@ class TasksRemindersState extends State<TasksReminders> {
                     IconButton(
                         onPressed: () async {
                           Boxes.reminders.removeAt(index);
-                          await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                          Tasks().startReminders();
+                          await updateReminders();
                           if (mounted) setState(() {});
                         },
                         icon: const Icon(Icons.delete))
@@ -123,8 +120,7 @@ class TasksRemindersState extends State<TasksReminders> {
                                     child: Icon(reminder.voiceNotification ? Icons.record_voice_over : Icons.notification_important, size: 16),
                                     onTap: () async {
                                       reminder.voiceNotification = !reminder.voiceNotification;
-                                      await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                                      Tasks().startReminders();
+                                      await updateReminders();
                                       if (mounted) setState(() {});
                                     }),
                               ),
@@ -147,8 +143,7 @@ class TasksRemindersState extends State<TasksReminders> {
                                   ],
                                   onPressed: (int index) async {
                                     reminder.weekDays[index] = !reminder.weekDays[index];
-                                    await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                                    Tasks().startReminders();
+                                    await updateReminders();
                                     if (mounted) setState(() {});
                                   },
                                   isSelected: reminder.weekDays,
@@ -158,6 +153,28 @@ class TasksRemindersState extends State<TasksReminders> {
                           ],
                         ),
                       ),
+                      if (reminder.voiceNotification)
+                        Tooltip(
+                          message: "Volume",
+                          preferBelow: false,
+                          verticalOffset: 10,
+                          child: Focus(
+                              child: SliderTheme(
+                            data: Theme.of(context).sliderTheme.copyWith(
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.0),
+                                  overlayShape: SliderComponentShape.noOverlay,
+                                ),
+                            child: Slider(
+                              min: 0,
+                              max: 100,
+                              value: reminder.voiceVolume.toDouble(),
+                              onChanged: (double v) => setState(() => reminder.voiceVolume = v.round()),
+                              onChangeEnd: (double v) async {
+                                await updateReminders();
+                              },
+                            ),
+                          )),
+                        ),
                       CheckboxListTile(
                         value: reminder.repetitive,
                         controlAffinity: ListTileControlAffinity.leading,
@@ -169,8 +186,7 @@ class TasksRemindersState extends State<TasksReminders> {
                           } else {
                             reminder.time = 12 * 60;
                           }
-                          await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                          Tasks().startReminders();
+                          await updateReminders();
                           if (mounted) setState(() {});
                         },
                         title: const Text("Repetitive"),
@@ -189,8 +205,7 @@ class TasksRemindersState extends State<TasksReminders> {
                           );
                           if (timePicker == null) return;
                           reminder.time = (timePicker.hour) * 60 + (timePicker.minute);
-                          await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                          Tasks().startReminders();
+                          await updateReminders();
                           if (mounted) setState(() {});
                         },
                         title: Text(reminder.repetitive ? "Reminder each ${reminder.time} minute${reminder.time == 1 ? "" : "s"}" : "Reminder at ${reminder.timeFormat}"),
@@ -226,8 +241,7 @@ class TasksRemindersState extends State<TasksReminders> {
                                     int timeinMinutes = (timePicker.hour) * 60 + (timePicker.minute);
                                     if (timeinMinutes + reminder.time > reminder.interval[1]) reminder.interval[1] = timeinMinutes + reminder.time;
                                     reminder.interval[0] = timeinMinutes;
-                                    await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                                    Tasks().startReminders();
+                                    await updateReminders();
                                     if (mounted) setState(() {});
                                   },
                                 ),
@@ -249,8 +263,7 @@ class TasksRemindersState extends State<TasksReminders> {
                                     int timeinMinutes = (timePicker.hour) * 60 + (timePicker.minute);
                                     if (reminder.interval[0] >= timeinMinutes - reminder.time) return;
                                     reminder.interval[1] = timeinMinutes;
-                                    await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
-                                    Tasks().startReminders();
+                                    await updateReminders();
                                     if (mounted) setState(() {});
                                   },
                                 ),
@@ -267,5 +280,10 @@ class TasksRemindersState extends State<TasksReminders> {
         ),
       ],
     );
+  }
+
+  Future<void> updateReminders() async {
+    await Boxes.updateSettings("reminders", jsonEncode(Boxes.reminders));
+    Tasks().startReminders();
   }
 }

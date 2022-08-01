@@ -124,7 +124,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
         Row(
           mainAxisAlignment: Maa.start,
           children: <Widget>[
-            const SizedBox(width: 20),
+            const SizedBox(width: 10),
             Flexible(
               flex: 5,
               fit: FlexFit.tight,
@@ -207,12 +207,16 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                     DirectoryScan.names[item.path] = index;
                     index++;
                   }
-                  DirectoryScan.main = DirectoryScan.dirs.first;
+                  DirectoryScan.main
+                    ..size = DirectoryScan.dirs.first.size
+                    ..path = DirectoryScan.dirs.first.path
+                    ..deleted = DirectoryScan.dirs.first.deleted;
+
                   if (!DirectoryScan.names.containsKey(currentFolder)) {
                     DirectoryScan.dirs.add(DirectoryScan.main);
                   }
                   finishedProcessing = true;
-                  processedFiles = " ${DirectoryScan.dirs.length} directories in total of  ${getFileSize(DirectoryScan.main.size, 1)}!";
+                  processedFiles = " ${DirectoryScan.dirs.length} directories with a total of ${getFileSize(DirectoryScan.main.size, 1)}!";
                   if (mounted) setState(() {});
                 },
                 child: Text("Run", style: TextStyle(color: Color(globalSettings.theme.background))),

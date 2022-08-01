@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
+import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
@@ -57,6 +59,7 @@ class QuickMenuState extends State<QuickMenu> {
         }
       });
     }
+    // WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(focusNode));
   }
 
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
@@ -78,64 +81,8 @@ class QuickMenuState extends State<QuickMenu> {
         future: quickMenuWindow,
         builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
           if (!snapshot.hasData) return const SizedBox(width: 10);
-          return Scaffold(
-            backgroundColor: Colors.transparent,
-            body: MouseRegion(
-              onEnter: (PointerEnterEvent event) async {
-                if (!await WindowManager.instance.isFocused()) {}
-                await WindowManager.instance.focus();
-                Globals.isWindowActive = true;
-                Win32.activateWindow(Win32.hWnd);
-                setState(() {});
-              },
-              onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                physics: const NeverScrollableScrollPhysics(),
-                child: Stack(
-                  children: <Widget>[
-                    if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
-                    Padding(
-                      padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                      child: Container(
-                        key: Globals.quickMenu,
-                        color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: Theme.of(context).backgroundColor,
-                              gradient: LinearGradient(
-                                colors: <Color>[
-                                  Theme.of(context).backgroundColor,
-                                  Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                                  Theme.of(context).backgroundColor,
-                                ],
-                                stops: <double>[0, 0.4, 1],
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: <BoxShadow>[
-                                const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-                              ]),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              //3 Items
-                              const TopBar(),
-                              const TaskBar(),
-                              const Divider(thickness: 1, height: 1),
-                              if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
-                              const BottomBar(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+
+          return mainWidget(context);
         },
       );
     }
@@ -147,44 +94,70 @@ class QuickMenuState extends State<QuickMenu> {
           future: Future<int>.delayed(const Duration(seconds: 1), () => 1),
           builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
             if (!snapshot.hasData) return const SizedBox(width: 10);
-            return Scaffold(
-              backgroundColor: Colors.transparent,
-              body: MouseRegion(
-                onEnter: (PointerEnterEvent event) async {
-                  if (!await WindowManager.instance.isFocused()) {}
-                  await WindowManager.instance.focus();
-                  Globals.isWindowActive = true;
-                  Win32.activateWindow(Win32.hWnd);
-                  setState(() {});
-                },
-                onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Stack(
-                    children: <Widget>[
-                      if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
-                      Padding(
-                        padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                        child: Container(
-                          key: Globals.quickMenu,
-                          color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Theme.of(context).backgroundColor,
-                                gradient: LinearGradient(
-                                  colors: <Color>[
-                                    Theme.of(context).backgroundColor,
-                                    Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                                    Theme.of(context).backgroundColor,
-                                  ],
-                                  stops: <double>[0, 0.4, 1],
-                                  end: Alignment.bottomRight,
-                                ),
-                                boxShadow: <BoxShadow>[
-                                  const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-                                ]),
-                            child: Column(
+            return mainWidget(context);
+          },
+        );
+      },
+    );
+  }
+
+  final FocusNode focusNode = FocusNode();
+  RawKeyboardListener mainWidget(BuildContext context) {
+    return RawKeyboardListener(
+      focusNode: focusNode,
+      autofocus: true,
+      onKey: (RawKeyEvent keyEvent) {
+        PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
+        if (currentKey == PhysicalKeyboardKey.escape) {
+          globalSettings.quickRunState = 0;
+          globalSettings.quickRunText = "";
+          setState(() {});
+        } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 200)) {
+          globalSettings.quickRunState = 1;
+          globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
+          setState(() {});
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: MouseRegion(
+          onEnter: (PointerEnterEvent event) async {
+            if (!await WindowManager.instance.isFocused()) {}
+            await WindowManager.instance.focus();
+            Globals.isWindowActive = true;
+            Win32.activateWindow(Win32.hWnd);
+            setState(() {});
+          },
+          onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Stack(
+              children: <Widget>[
+                if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                Padding(
+                  padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                  child: Container(
+                    key: Globals.quickMenu,
+                    color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
+                    child: Container(
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).backgroundColor,
+                          gradient: LinearGradient(
+                            colors: <Color>[
+                              Theme.of(context).backgroundColor,
+                              Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
+                              Theme.of(context).backgroundColor,
+                            ],
+                            stops: <double>[0, 0.4, 1],
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: <BoxShadow>[
+                            const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+                          ]),
+                      child: globalSettings.quickRunState != 0
+                          ? const QuickRun()
+                          : Column(
                               mainAxisAlignment: MainAxisAlignment.start,
                               mainAxisSize: MainAxisSize.max,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -197,17 +170,14 @@ class QuickMenuState extends State<QuickMenu> {
                                 const BottomBar(),
                               ],
                             ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

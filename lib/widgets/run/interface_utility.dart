@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../widgets/run_shortcut_widget.dart';
-import '../widgets/text_box.dart';
+import '../widgets/text_input.dart';
 
 class InterfaceRunUtility extends StatefulWidget {
   const InterfaceRunUtility({Key? key}) : super(key: key);
@@ -22,6 +22,18 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
         child: Column(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
           const Divider(height: 10, thickness: 1),
           RunShortCutInfo(
+              value: globalSettings.run.projects,
+              onChanged: (String newStr) {
+                globalSettings.run.projects = newStr;
+                globalSettings.run.save();
+                setState(() {});
+              },
+              title: "Projects",
+              link: "",
+              tooltip: "Quick Open a project",
+              info: "Open a project. You can add projects from Project tab on sidebar.",
+              example: <String>["p tabame"]),
+          RunShortCutInfo(
               value: globalSettings.run.timer,
               onChanged: (String newStr) {
                 globalSettings.run.timer = newStr;
@@ -32,8 +44,8 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
               link: "",
               tooltip: "Sets Timer",
               info:
-                  "Sets a timer in minutes. Parameters: t [minutes] message. you can `t remove message`.\nAlso you can set which type of notification to receive:\na:Audio(default), m:MessageBox, n:Notification",
-              example: <String>["t 5 tea", "t 10 n shower", "t remove shower"]),
+                  "Sets a timer in minutes. Parameters: t [minutes] message. you can `t remove message`.\nAlso you can set which type of notification to receive:\na:a for Audio(default), m:MessageBox, n:Notification",
+              example: <String>["t 5 a:tea", "t 10 n:shower", "t remove shower", "t 1 m:call somebody", "t 2 reminder"]),
           RunShortCutInfo(
               value: globalSettings.run.setvar,
               onChanged: (String newStr) {
@@ -46,18 +58,6 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
               tooltip: "Sets Unique Var",
               info: "Sets a unique var, this can be used with Remap keys.",
               example: <String>["v vscode false", r"$vscode false"]),
-          RunShortCutInfo(
-              value: globalSettings.run.json,
-              onChanged: (String newStr) {
-                globalSettings.run.json = newStr;
-                globalSettings.run.save();
-                setState(() {});
-              },
-              title: "Json Viewer",
-              link: "",
-              tooltip: "View Json",
-              info: "You do not need to paste the code in input, it will be automatically fetched from clipboard when you type the shortcut.",
-              example: <String>["json"]),
         ]),
       ),
       Expanded(

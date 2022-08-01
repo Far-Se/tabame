@@ -5,8 +5,9 @@ class TextInput extends StatefulWidget {
   final String labelText;
   final String? hintText;
   final String? value;
-  final Function(String val) onChanged;
-  final Function(String val)? onUpdated;
+  final void Function(String val) onChanged;
+  final void Function(String val)? onSubmitted;
+  final void Function(String val)? onUpdated;
   final bool multiline;
   const TextInput({
     Key? key,
@@ -14,6 +15,7 @@ class TextInput extends StatefulWidget {
     this.hintText,
     this.value,
     required this.onChanged,
+    this.onSubmitted,
     this.onUpdated,
     this.multiline = false,
   }) : super(key: key);
@@ -69,6 +71,7 @@ class TextInputState extends State<TextInput> {
         enableInteractiveSelection: true,
         onSubmitted: (String e) {
           widget.onChanged(e);
+          widget.onSubmitted == null ? null : widget.onSubmitted!(e);
           sent = true;
         },
         onChanged: (String e) => widget.onUpdated == null ? null : widget.onUpdated!(e),
