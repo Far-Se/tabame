@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'hotkeys.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../main.dart';
 import '../settings.dart';
@@ -115,7 +116,7 @@ class Boxes {
     //! Startup
     //? Taskbar
     //if (kReleaseMode) {
-    if (globalSettings.args.isEmpty) {
+    if (globalSettings.page == TPage.quickmenu) {
       if (globalSettings.hideTaskbarOnStartup) {
         WinUtils.toggleTaskbar(visible: false);
       }
@@ -126,7 +127,7 @@ class Boxes {
         WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
       }
     }
-    if (globalSettings.args.isEmpty || globalSettings.args.contains("-restarted")) {
+    if (globalSettings.page == TPage.quickmenu) {
       if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
       if (reminders.where((Reminder element) => element.enabled).isNotEmpty) Tasks().startReminders();
     }
@@ -196,7 +197,11 @@ class Boxes {
   List<List<String>> get runMemos {
     if (_runMemos.isNotEmpty) return _runMemos;
     final String prefString = pref.getString("runMemos") ?? "";
-    if (prefString.isEmpty) return _runMemos;
+    if (prefString.isEmpty) {
+      return <List<String>>[
+        <String>["g", "https://github.com/search?q={params}"]
+      ];
+    }
     final List<dynamic> runMemos = jsonDecode(pref.getString("runMemos")!);
     _runMemos.clear();
     for (List<dynamic> x in runMemos) {
@@ -218,7 +223,7 @@ class Boxes {
     if (prefString.isEmpty) {
       return <List<String>>[
         <String>["m", "{MEDIA_NEXT_TRACK}"],
-        <String>["p", "{MEDIA_PREVIOUS_TRACK}"]
+        <String>["p", "{MEDIA_PREV_TRACK}"]
       ];
     }
     final List<dynamic> runKeys = jsonDecode(pref.getString("runKeys")!);
@@ -263,6 +268,10 @@ class Boxes {
   static List<Reminder> _reminders = <Reminder>[];
   static set reminders(List<Reminder> list) => _reminders = list;
   static List<Reminder> get reminders => _reminders.isEmpty ? _reminders = getSavedMap<Reminder>(Reminder.fromJson, "reminders") : _reminders;
+
+  static List<Hotkeys> _remap = <Hotkeys>[];
+  static set remap(List<Hotkeys> list) => _remap = list;
+  static List<Hotkeys> get remap => _remap.isEmpty ? _remap = getSavedMap<Hotkeys>(Hotkeys.fromJson, "remap") : _remap;
 
   static List<RunAPI> _runApi = <RunAPI>[];
   static set runApi(List<RunAPI> list) => _runApi = list;
@@ -375,10 +384,8 @@ class Tasks {
 
       final RegExpMatch match = exp.firstMatch(response.body)!;
       return match.group(0)!;
-    } else {
-      print("status code ${response.statusCode}");
     }
-    return "";
+    return "Fetch Failed";
   }
 
   void startReminders() {

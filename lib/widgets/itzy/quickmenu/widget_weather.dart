@@ -9,12 +9,24 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
 Future<String> fetchWeather() async {
-  final http.Response response =
-      await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}"));
-  if (response.statusCode == 200) {
-    return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
+  bool failed = false;
+  // final http.Response response =
+  // await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}"));
+  try {
+    final Future<http.Response> responseA =
+        http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}")).catchError((_) {
+      failed = true;
+    });
+
+    final http.Response response = await responseA;
+    if (failed) return "";
+    if (response.statusCode == 200) {
+      return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
+    }
+  } catch (_) {
+    return "";
   }
-  return "-";
+  return "";
 }
 
 class WeatherWidget extends StatefulWidget {
@@ -50,6 +62,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     if (!globalSettings.showWeather) return const SizedBox();
     return Container(
       width: widget.width,
+      height: 30,
       // height: double.infinity,
       child: FutureBuilder<String>(
         future: fetchWeather(),
@@ -57,8 +70,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.hasData) {
-              globalSettings.weatherTemperature = snapshot.data as String;
-              Boxes.updateSettings("weather", globalSettings.weather);
+              if ((snapshot.data as String).isNotEmpty) {
+                globalSettings.weatherTemperature = snapshot.data as String;
+                Boxes.updateSettings("weather", globalSettings.weather);
+              }
             }
           }
           return Theme(
@@ -74,6 +89,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                   child: Text(
                     snapshot.data as String,
                     textAlign: TextAlign.center,
+                    maxLines: 1,
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w100,

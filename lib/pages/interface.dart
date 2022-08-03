@@ -19,6 +19,7 @@ import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu_settings.dart';
 import '../widgets/interface/quickrun_settings.dart';
 import '../widgets/interface/interface_settings.dart';
+import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/wizardly.dart';
@@ -44,7 +45,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.63));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.615));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }
@@ -76,7 +77,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
     PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
-    PageClass(title: 'Remap Keys', icon: Icons.keyboard, widget: const NotImplemeneted()),
+    PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
@@ -245,120 +246,120 @@ class InterfaceState extends State<Interface> {
                                 children: <Widget>[
                                   //1 Sidebar
                                   //#h green
-                                  if (!globalSettings.args.contains("-wizardly"))
-                                    Material(
-                                      type: MaterialType.transparency,
-                                      child: Container(
-                                        width: 150,
-                                        height: double.infinity,
-                                        color: Colors.black12.withOpacity(0.1),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          mainAxisSize: MainAxisSize.max,
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                                          children: <Widget>[
-                                            const SizedBox(height: 10),
-                                            Flexible(
-                                              fit: FlexFit.tight,
-                                              child: SingleChildScrollView(
+                                  // if (!globalSettings.args.contains("-wizardly")) //2 commented this
+                                  Material(
+                                    type: MaterialType.transparency,
+                                    child: Container(
+                                      width: 150,
+                                      height: double.infinity,
+                                      color: Colors.black12.withOpacity(0.1),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisSize: MainAxisSize.max,
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          const SizedBox(height: 10),
+                                          Flexible(
+                                            fit: FlexFit.tight,
+                                            child: SingleChildScrollView(
+                                              scrollDirection: Axis.vertical,
+                                              controller: ScrollController(),
+                                              child: ListView.builder(
                                                 scrollDirection: Axis.vertical,
-                                                controller: ScrollController(),
-                                                child: ListView.builder(
-                                                  scrollDirection: Axis.vertical,
-                                                  itemCount: pages.length,
-                                                  shrinkWrap: true,
-                                                  physics: const ClampingScrollPhysics(),
-                                                  itemBuilder: (BuildContext context, int index) {
-                                                    final PageClass pageItem = pages[index];
-                                                    return DecoratedBox(
-                                                      decoration: BoxDecoration(
-                                                          color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
-                                                      child: InkWell(
-                                                        radius: 0,
-                                                        onTap: () {
-                                                          setState(() => currentPage = index);
-                                                        },
-                                                        child: Padding(
-                                                          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                          child: Row(
-                                                            mainAxisAlignment: MainAxisAlignment.start,
-                                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: <Widget>[
-                                                              const SizedBox(width: 5),
-                                                              Icon(pageItem.icon),
-                                                              const SizedBox(width: 5),
-                                                              Text(pageItem.title!),
-                                                            ],
-                                                          ),
+                                                itemCount: pages.length,
+                                                shrinkWrap: true,
+                                                physics: const ClampingScrollPhysics(),
+                                                itemBuilder: (BuildContext context, int index) {
+                                                  final PageClass pageItem = pages[index];
+                                                  return DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                        color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
+                                                    child: InkWell(
+                                                      radius: 0,
+                                                      onTap: () {
+                                                        setState(() => currentPage = index);
+                                                      },
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: <Widget>[
+                                                            const SizedBox(width: 5),
+                                                            Icon(pageItem.icon),
+                                                            const SizedBox(width: 5),
+                                                            Text(pageItem.title!),
+                                                          ],
                                                         ),
                                                       ),
-                                                    );
-                                                  },
-                                                ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             ),
-                                            //2 Exit
-                                            const Divider(height: 5, thickness: 1),
-                                            DecoratedBox(
-                                              decoration:
-                                                  BoxDecoration(color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
-                                              child: MouseRegion(
-                                                onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
-                                                onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
-                                                cursor: SystemMouseCursors.click,
-                                                child: InkWell(
-                                                  radius: 0,
-                                                  onTap: () => setState(() {
-                                                    showDialog(
-                                                        context: context,
-                                                        builder: (BuildContext context) => AlertDialog(
-                                                              content: Container(
-                                                                  height: 50,
-                                                                  child: const Center(
-                                                                      child: Text("This will close the whole app, not just Interface, continue?",
-                                                                          style: TextStyle(fontSize: 20)))),
-                                                              actions: <Widget>[
-                                                                ElevatedButton(
-                                                                    onPressed: () {
-                                                                      WinUtils.closeMainTabame();
-                                                                      exit(0);
-                                                                    },
-                                                                    child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
-                                                                ElevatedButton(
-                                                                    onPressed: () => Navigator.of(context).pop(),
-                                                                    child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
-                                                              ],
-                                                            ));
-                                                  }),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.start,
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: <Widget>[
-                                                        const SizedBox(width: 5),
-                                                        const Icon(Icons.exit_to_app),
-                                                        const SizedBox(width: 5),
-                                                        const Text("Exit"),
-                                                      ],
-                                                    ),
+                                          ),
+                                          //2 Exit
+                                          const Divider(height: 5, thickness: 1),
+                                          DecoratedBox(
+                                            decoration:
+                                                BoxDecoration(color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
+                                            child: MouseRegion(
+                                              onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
+                                              onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
+                                              cursor: SystemMouseCursors.click,
+                                              child: InkWell(
+                                                radius: 0,
+                                                onTap: () => setState(() {
+                                                  showDialog(
+                                                      context: context,
+                                                      builder: (BuildContext context) => AlertDialog(
+                                                            content: Container(
+                                                                height: 50,
+                                                                child: const Center(
+                                                                    child: Text("This will close the whole app, not just Interface, continue?",
+                                                                        style: TextStyle(fontSize: 20)))),
+                                                            actions: <Widget>[
+                                                              ElevatedButton(
+                                                                  onPressed: () {
+                                                                    WinUtils.closeMainTabame();
+                                                                    exit(0);
+                                                                  },
+                                                                  child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                              ElevatedButton(
+                                                                  onPressed: () => Navigator.of(context).pop(),
+                                                                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                            ],
+                                                          ));
+                                                }),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.start,
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: <Widget>[
+                                                      const SizedBox(width: 5),
+                                                      const Icon(Icons.exit_to_app),
+                                                      const SizedBox(width: 5),
+                                                      const Text("Exit"),
+                                                    ],
                                                   ),
                                                 ),
                                               ),
                                             ),
-                                            //2 Donation Box
-                                            SizedBox(
-                                              height: 200,
-                                              child: Wrap(
-                                                children: <Widget>[],
-                                              ),
-                                            )
-                                          ],
-                                        ),
+                                          ),
+                                          //2 Donation Box
+                                          SizedBox(
+                                            height: 200,
+                                            child: Wrap(
+                                              children: <Widget>[],
+                                            ),
+                                          )
+                                        ],
                                       ),
                                     ),
+                                  ),
                                   //#e
                                   //1 Pages
                                   //#h white

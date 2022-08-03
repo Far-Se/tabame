@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/keys.dart';
+import '../../../models/settings.dart';
 
-class TimeWidget extends StatelessWidget {
+class TimeWidget extends StatefulWidget {
   final bool? inline;
   const TimeWidget({
     Key? key,
@@ -14,8 +15,23 @@ class TimeWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<TimeWidget> createState() => _TimeWidgetState();
+}
+
+class _TimeWidgetState extends State<TimeWidget> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bool inline2 = inline ?? false;
+    final bool inline2 = widget.inline ?? false;
     return StreamBuilder<Map<String, String>>(
       initialData: <String, String>{
         "time": DateFormat('hh:mm:ss').format(DateTime.now()),
@@ -34,7 +50,9 @@ class TimeWidget extends StatelessWidget {
         if (inline2) {
           return InkWell(
             onTap: () {
+              globalSettings.noopKeyListener = true;
               WinKeys.send("{#LWIN}C");
+              Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
@@ -52,7 +70,9 @@ class TimeWidget extends StatelessWidget {
           width: 60,
           child: InkWell(
             onTap: () {
+              globalSettings.noopKeyListener = true;
               WinKeys.send("{#LWIN}C");
+              Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
             },
             child: Align(
               alignment: Alignment.centerRight,

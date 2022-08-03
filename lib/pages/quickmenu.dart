@@ -27,7 +27,7 @@ Future<int> quickMenuWindowSetup() async {
 
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    await WindowManager.instance.setSize(const Size(300, 520));
+    await WindowManager.instance.setSize(const Size(300, 350));
     await WindowManager.instance.setSkipTaskbar(true);
     await WindowManager.instance.setResizable(false);
     await WindowManager.instance.setAlwaysOnTop(true);
@@ -50,7 +50,7 @@ class QuickMenuState extends State<QuickMenu> {
     //!RELEASE MODE
     if (!kDebugMode) {
       changeHeightTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) async {
-        if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive) return;
+        if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive || globalSettings.quickRunState != 0) return;
         final double newHeight = Globals.heights.allSummed + 80;
         if (lastHeight != newHeight) {
           if (!mounted) return;
@@ -64,10 +64,12 @@ class QuickMenuState extends State<QuickMenu> {
 
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
 
+  final FocusNode focusNode = FocusNode();
   @override
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     if (!kDebugMode) changeHeightTimer?.cancel();
+    focusNode.dispose();
     super.dispose();
   }
 
@@ -81,7 +83,6 @@ class QuickMenuState extends State<QuickMenu> {
         future: quickMenuWindow,
         builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
           if (!snapshot.hasData) return const SizedBox(width: 10);
-
           return mainWidget(context);
         },
       );
@@ -101,18 +102,21 @@ class QuickMenuState extends State<QuickMenu> {
     );
   }
 
-  final FocusNode focusNode = FocusNode();
   RawKeyboardListener mainWidget(BuildContext context) {
     return RawKeyboardListener(
       focusNode: focusNode,
       autofocus: true,
-      onKey: (RawKeyEvent keyEvent) {
+      onKey: (RawKeyEvent keyEvent) async {
+        if (globalSettings.noopKeyListener) return;
         PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
         if (currentKey == PhysicalKeyboardKey.escape) {
           globalSettings.quickRunState = 0;
           globalSettings.quickRunText = "";
           setState(() {});
         } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 200)) {
+          if (lastHeight < 330) {
+            await windowManager.setSize(const Size(300, 330));
+          }
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
           setState(() {});

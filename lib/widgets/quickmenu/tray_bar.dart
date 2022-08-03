@@ -147,7 +147,12 @@ class TrayBarState extends State<TrayBar> {
                             // message: info.toolTip.length > 1 ? info.toolTip : "",
                             height: 0,
                             preferBelow: false,
-                            child: Image.memory(info.iconData, fit: BoxFit.scaleDown, gaplessPlayback: true)),
+                            child: Image.memory(
+                              info.iconData,
+                              fit: BoxFit.scaleDown,
+                              gaplessPlayback: true,
+                              width: 16,
+                            )),
                       ),
                     ),
                   ),

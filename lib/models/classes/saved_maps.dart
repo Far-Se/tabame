@@ -684,7 +684,7 @@ class RunAPI {
 class RunCommands {
   String calculator = r"c ;^[0-9\.\,]+ ?[+\-*\\%]";
   String color = r"col ;^(#|0x|rgb)";
-  String currency = r"cur ;\$;\d+ \w{3,4} to \w{3,4}";
+  String currency = r"cur ;\d+ \w{3,4} to \w{3,4}";
   String shortcut = r"s ;";
   String memo = r"m ;";
   String regex = r"rgx ;^/";

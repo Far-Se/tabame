@@ -61,14 +61,13 @@ class TasksPageWatchersState extends State<TasksPageWatchers> {
                               child: Checkbox(
                                 value: pageWatcher.enabled,
                                 onChanged: (bool? value) async {
-                                  await savePage(pageWatcher, urlTextController, regexTextController, secondsTextController, index);
-
                                   pageWatcher.enabled = value ?? false;
                                   if (pageWatcher.enabled) {
                                     tasks.startPageWatchers(specificIndex: index);
                                   } else {
                                     pageWatcher.timer?.cancel();
                                   }
+                                  await savePage(pageWatcher, urlTextController, regexTextController, secondsTextController, index);
                                   if (mounted) setState(() {});
                                 },
                               ),
@@ -195,7 +194,6 @@ class TasksPageWatchersState extends State<TasksPageWatchers> {
     pageWatcher.regex = regexTextController.value.text;
     pageWatcher.checkPeriod = int.parse(secondsTextController.value.text);
     pageWatcher.lastMatch = await tasks.pageWatcherGetValue(pageWatcher.url, pageWatcher.regex);
-    print(pageWatcher.lastMatch);
 
     await Boxes.updateSettings("pageWatchers", jsonEncode(Boxes.pageWatchers));
     if (pageWatcher.enabled) {

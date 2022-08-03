@@ -16,20 +16,17 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments) async {
-  String argString = arguments.join(" ");
-  if (argString.indexOf('"') > 0 && argString.contains('"')) argString = '"$argString';
-  List<String> auxArgs = argString.split(' ');
-
-  // if (auxArgs.length == 1 && auxArgs[0].contains('-interface')) {
-  //   auxArgs = <String>[
-  //     '"${auxArgs[0].replaceAll(' -interface', '')}"',
-  //     '-interface',
-  //   ];
-  // }
-
-  // auxArgs.add("-strudel");
-  globalSettings.args = <String>[...auxArgs];
-  // WinUtils.msgBox(globalSettings.args.join(' '), "");
+  if (arguments.isNotEmpty) {
+    String argString = arguments.join(" ");
+    if (argString.indexOf('"') > 0 && argString.contains('"')) argString = '"$argString';
+    List<String> auxArgs = argString.split(' ');
+    globalSettings.args = <String>[...auxArgs];
+    if (argString.contains("interface")) {
+      globalSettings.page = TPage.interface;
+    } else if (argString.contains("views")) {
+      globalSettings.page = TPage.views;
+    }
+  }
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
@@ -90,6 +87,19 @@ class _TabameState extends State<Tabame> {
   void dispose() {
     themeChangeNotifier.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    ThemeType theme = globalSettings.themeTypeMode;
+    Timer.periodic(Duration(minutes: 1), (Timer timer) {
+      if (theme != globalSettings.themeTypeMode) {
+        theme = globalSettings.themeTypeMode;
+        themeChangeNotifier.value = !themeChangeNotifier.value;
+        if (mounted) setState(() {});
+      }
+    });
+    super.initState();
   }
 
   @override

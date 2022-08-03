@@ -3,7 +3,6 @@ import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
-import '../widgets/info_text.dart';
 import '../wizardly/rename_files.dart';
 import '../wizardly/folder_size_scan.dart';
 import '../wizardly/project_overview.dart';
@@ -52,7 +51,7 @@ class WizardlyState extends State<Wizardly> {
       mainAxisAlignment: Maa.start,
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
-        ...List<Widget>.generate(globalSettings.args.length, (int index) => InfoText(globalSettings.args[index])),
+        // ...List<Widget>.generate(globalSettings.args.length, (int index) => InfoText(globalSettings.args[index])),
         SizedBox(
           height: 80,
           child: Padding(
