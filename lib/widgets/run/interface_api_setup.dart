@@ -125,7 +125,7 @@ class InterfaceApiSetupState extends State<InterfaceApiSetup> {
                                         children: <Widget>[
                                           TextInput(key: UniqueKey(), value: api.name, labelText: "Api Name", onChanged: (String val) => setState(() => api.name = val)),
                                           CheckBoxWidget(
-                                              onTap: (bool val) => setState(() => api.refreshTokenAfterMinutes = val == true ? 2 * 60 * 24 : 0),
+                                              onChanged: (bool val) => setState(() => api.refreshTokenAfterMinutes = val == true ? 2 * 60 * 24 : 0),
                                               value: api.refreshTokenAfterMinutes > 0,
                                               text: "Uses Bearer Token"),
                                           if (api.refreshTokenAfterMinutes > 0)
@@ -268,7 +268,7 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              CheckBoxWidget(onTap: (bool checked) => setState(() => widget.api.parseAsJson = checked), value: widget.api.parseAsJson, text: "Parse as Json"),
+              CheckBoxWidget(onChanged: (bool checked) => setState(() => widget.api.parseAsJson = checked), value: widget.api.parseAsJson, text: "Parse as Json"),
               if (widget.api.parseAsJson) const Text("To match sub tree items, use ->. To match  multiple items, use [item,item]"),
               if (widget.api.parseAsJson)
                 const Text("Example: body->results->[]->[views,revenue]")
@@ -300,15 +300,12 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
                   for (String header in widget.api.headers) {
                     final List<String> keyval = header.split(':');
                     if (keyval.length != 2) continue;
-                    print(keyval);
                     String val = keyval[1].trim();
                     for (MapEntry<String, String> map in widget.variables.entries) {
                       val = val.replaceAll("{${map.key}}", map.value);
                     }
                     headers[keyval[0]] = val;
                   }
-                  print(headers);
-                  print(data);
 
                   http
                       .post(
@@ -329,7 +326,6 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
                       widget.api.result = response.body;
                       if (mounted) setState(() {});
                     }
-                    print(response.body);
                     return null;
                   }).catchError((dynamic onError) {
                     if (mounted) popupDialog(context, "Fetch failed $onError");

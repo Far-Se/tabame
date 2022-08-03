@@ -58,7 +58,7 @@ class InterfaceRunProcessorsState extends State<InterfaceRunProcessors> {
                 title: "Encoders",
                 link: "https://multiencoder.com/",
                 tooltip: "For more encoders",
-                info: "Default is enc. You can use ! to encode and @ to decode, you can serialize them in [].\n Encoders are: url,base,rot13,hex,bin,ascii,@html",
+                info: "Default is enc. You can use ! to encode and @ to decode, you can serialize them in [].\n Encoders are: url,base,rot13,ascii,",
                 example: <String>["!base test", "@url %20", "[@base,@rot13,!url] Z25vbnpy"]),
           ]),
         ),
@@ -66,7 +66,7 @@ class InterfaceRunProcessorsState extends State<InterfaceRunProcessors> {
             child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: <Widget>[
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -94,11 +94,11 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Column(
                 children: <Widget>[
-                  CheckBoxWidget(value: searchRecursively, text: "Recursive", onTap: (bool? newValue) => setState(() => searchRecursively = newValue ?? false)),
+                  CheckBoxWidget(value: searchRecursively, text: "Recursive", onChanged: (bool? newValue) => setState(() => searchRecursively = newValue ?? false)),
                   CheckBoxWidget(
                       value: openInCode,
                       text: "Open in VSCode",
-                      onTap: (bool? newValue) => setState(() {
+                      onChanged: (bool? newValue) => setState(() {
                             Boxes.updateSettings("searchUseVSCode", newValue ?? false);
                             openInCode = newValue ?? false;
                           })),
@@ -151,19 +151,20 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           Expanded(
             child: Column(children: <Widget>[
               const SizedBox(height: 5),
-              CheckBoxWidget(text: "Case Sensitive", value: searchCaseSensitive, onTap: (bool value) => setState(() => searchCaseSensitive = !searchCaseSensitive)),
+              CheckBoxWidget(text: "Case Sensitive", value: searchCaseSensitive, onChanged: (bool value) => setState(() => searchCaseSensitive = !searchCaseSensitive)),
               CheckBoxWidget(
                   text: "Match whole text only",
                   value: searchMatchWholeWordOnly,
-                  onTap: (bool value) => setState(() => searchMatchWholeWordOnly = !searchMatchWholeWordOnly)),
+                  onChanged: (bool value) => setState(() => searchMatchWholeWordOnly = !searchMatchWholeWordOnly)),
             ]),
           ),
           Expanded(
             child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
               const SizedBox(height: 5),
-              CheckBoxWidget(text: "Use Regex", value: searchUseRegex, onTap: (bool value) => setState(() => searchUseRegex = !searchUseRegex)),
+              CheckBoxWidget(text: "Use Regex", value: searchUseRegex, onChanged: (bool value) => setState(() => searchUseRegex = !searchUseRegex)),
               if (searchUseRegex)
-                CheckBoxWidget(text: ". Matches new Line", value: searchRegexNewLine, onTap: (bool value) => setState(() => searchRegexNewLine = !searchRegexNewLine)),
+                CheckBoxWidget(
+                    text: ". Matches new Line", value: searchRegexNewLine, onChanged: (bool value) => setState(() => searchRegexNewLine = !searchRegexNewLine)),
             ]),
           )
         ],
@@ -196,7 +197,6 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
     final List<String> excluded = searchExcluded.isNotEmpty ? searchExcluded.split(';') : <String>[];
     int totalProcessed = 0;
     int totalFound = 0;
-    print(searchState);
     for (String file in loadedFiles) {
       if (searchState == 2) {
         searchState = 0;
@@ -218,6 +218,10 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           if (file.replaceFirst(searchFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
         } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
           skip = true;
+        } else {
+          if (RegExp(exclude, caseSensitive: false).hasMatch(file)) {
+            skip = true;
+          }
         }
       }
       if (skip) continue;

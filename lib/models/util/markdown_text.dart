@@ -68,7 +68,7 @@ const String markdownHomeRight = '''
   - The Windows Shortcut is **Win+Alt+{Number}**
 
 ---
-### ![remap]() Remap Keys
+### ![remap]() Hotkeys
   You can set custom actions to be performed based on the executable you are hovering, the region on the screen, or in the app, and mouse movement.
 
   Actions can be other hotkeys, send key sequences or run executable.

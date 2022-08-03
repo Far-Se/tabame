@@ -48,11 +48,14 @@ class Project {
 }
 
 class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
+  Map<String, Color> extColors = <String, Color>{};
   List<String> loadedFiles = <String>[];
   String infoText = "";
 
+  final List<int> extensionColors = <int>[0xff34B7FD, 0xffCB4802, 0xffFFA700, 0xffC3732A, 0xffA4DDED, 0xff922724, 0xff43B3AE, 0xffA020F0];
+
   Project project = Project();
-  String projectFolder = r"E\Projects\tabame";
+  String projectFolder = r"";
   String projectIncluded = "";
   String projectExcluded = "";
   bool searchFinished = false;
@@ -67,7 +70,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   void initState() {
     projectFolder = Boxes.pref.getString("projectOverviewFolder") ?? "";
     projectIncluded = Boxes.pref.getString("projectOverviewIncluded") ?? "";
-    projectExcluded = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;";
+    projectExcluded = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$";
 
     if (globalSettings.args.contains("-wizardly")) {
       projectFolder = globalSettings.args[0].replaceAll('"', '');
@@ -77,247 +80,279 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.stretch, children: <Widget>[
-      Row(
-        mainAxisAlignment: Maa.start,
-        children: <Widget>[
-          const SizedBox(width: 10),
-          Flexible(
-            flex: 4,
-            fit: FlexFit.tight,
-            child: ListTile(
-              onTap: () async {
-                infoText = "";
-                stateFileProcessing = 0;
-                projectAnalyzed = false;
-                project = Project();
-
-                if (mounted) setState(() {});
-
-                final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
-                final Directory? dir = dirPicker.getDirectory();
-                if (dir == null) return;
-                loadedFiles.clear();
-                projectFolder = dir.path;
-                Boxes.updateSettings("projectOverviewFolder", projectFolder);
-
-                if (!Directory(projectFolder).existsSync()) return;
-                if (mounted) setState(() {});
-              },
-              leading: const Icon(Icons.folder_copy_sharp),
-              title: const Text("Pick a folder"),
-              subtitle: projectFolder.isEmpty ? const InfoText("-") : InfoText(projectFolder.truncate(50, suffix: "...")),
-            ),
-          ),
-          Flexible(
-            fit: FlexFit.loose,
-            child: ElevatedButton(
-              onPressed: () async {
-                if (stateFileProcessing == 1) {
-                  stateFileProcessing = 2;
-                  return;
-                }
-                stateFileProcessing = 1;
-                setState(() {});
-                if (loadedFiles.isEmpty) loadedFiles = await loadFiles();
-                projectAnalyzed = false;
-                getCode();
-                setState(() {});
-              },
-              child: Text(stateFileProcessing == 0 ? "Generate" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
-            ),
-          ),
-        ],
-      ),
-      Padding(
-        padding: const EdgeInsets.only(left: 5),
-        child: Row(
+    return Column(
+      mainAxisAlignment: Maa.start,
+      crossAxisAlignment: Caa.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: Maa.start,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              child: Column(
-                children: <Widget>[],
+            const SizedBox(width: 10),
+            Flexible(
+              flex: 4,
+              fit: FlexFit.tight,
+              child: ListTile(
+                onTap: () async {
+                  infoText = "";
+                  stateFileProcessing = 0;
+                  projectAnalyzed = false;
+                  project = Project();
+
+                  if (mounted) setState(() {});
+
+                  final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
+                  final Directory? dir = dirPicker.getDirectory();
+                  if (dir == null) return;
+                  loadedFiles.clear();
+                  projectFolder = dir.path;
+                  Boxes.updateSettings("projectOverviewFolder", projectFolder);
+
+                  if (!Directory(projectFolder).existsSync()) return;
+                  if (mounted) setState(() {});
+                },
+                leading: const Icon(Icons.folder_copy_sharp),
+                title: const Text("Pick a folder"),
+                subtitle: projectFolder.isEmpty ? const InfoText("-") : InfoText(projectFolder.truncate(50, suffix: "...")),
               ),
             ),
-            Expanded(
-              flex: 3,
-              child: TextInput(
-                  key: UniqueKey(),
-                  hintText: "Separated by ';' ex: cpp;dart;js",
-                  labelText: "Include files with extension",
-                  value: projectIncluded,
-                  onChanged: (String e) {
-                    if (stateFileProcessing != 0) return;
-                    Boxes.updateSettings("projectOverviewIncluded", e);
-                    loadedFiles.clear();
-                    projectIncluded = e;
-                    setState(() {});
-                  }),
+            Flexible(
+              fit: FlexFit.loose,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (stateFileProcessing == 1) {
+                    stateFileProcessing = 2;
+                    return;
+                  }
+                  stateFileProcessing = 1;
+                  setState(() {});
+                  if (loadedFiles.isEmpty) loadedFiles = await loadFiles();
+                  projectAnalyzed = false;
+                  getCode();
+                  setState(() {});
+                },
+                child: Text(stateFileProcessing == 0 ? "Generate" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
+              ),
             ),
-            Expanded(
-              flex: 3,
-              child: TextInput(
-                  key: UniqueKey(),
-                  labelText: "Ignore these files/folders",
-                  value: projectExcluded,
-                  onChanged: (String e) {
-                    if (stateFileProcessing != 0) return;
-                    Boxes.updateSettings("projectOverviewExcluded", e);
-                    loadedFiles.clear();
-                    projectExcluded = e;
-                    setState(() {});
-                  }),
-            )
           ],
         ),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: SizedBox(
-          width: 130,
-          child: CheckBoxWidget(
-            value: projectUseGitIgnore,
-            onTap: (bool e) async {
-              projectUseGitIgnore = e;
-              loadedFiles.clear();
-              if (mounted) setState(() {});
-            },
-            text: 'Use .gitignore',
+        Padding(
+          padding: const EdgeInsets.only(left: 5),
+          child: Row(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Column(
+                  children: <Widget>[],
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: TextInput(
+                    key: UniqueKey(),
+                    hintText: "Separated by ';' ex: cpp;dart;js",
+                    labelText: "Include files with extension",
+                    value: projectIncluded,
+                    onChanged: (String e) {
+                      if (stateFileProcessing != 0) return;
+                      Boxes.updateSettings("projectOverviewIncluded", e);
+                      loadedFiles.clear();
+                      projectIncluded = e;
+                      setState(() {});
+                    }),
+              ),
+              Expanded(
+                flex: 3,
+                child: TextInput(
+                    key: UniqueKey(),
+                    labelText: "Ignore these files/folders",
+                    value: projectExcluded,
+                    onChanged: (String e) {
+                      if (stateFileProcessing != 0) return;
+                      Boxes.updateSettings("projectOverviewExcluded", e);
+                      loadedFiles.clear();
+                      projectExcluded = e;
+                      setState(() {});
+                    }),
+              )
+            ],
           ),
         ),
-      ),
-      if (projectAnalyzed && project.totalLines <= 1) const Center(child: Text("No files found!")),
-      if (projectAnalyzed && project.totalLines > 1)
-        ...List<Widget>.from(<Widget>[
-          Markdown(
-            selectable: true,
-            controller: ScrollController(),
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            data: '''
+        Padding(
+          padding: const EdgeInsets.only(left: 20.0),
+          child: SizedBox(
+            width: 130,
+            child: CheckBoxWidget(
+              value: projectUseGitIgnore,
+              onChanged: (bool e) async {
+                projectUseGitIgnore = e;
+                loadedFiles.clear();
+                if (mounted) setState(() {});
+              },
+              text: 'Use .gitignore',
+            ),
+          ),
+        ),
+        if (projectAnalyzed && project.totalLines <= 1) const Center(child: Text("No files found!")),
+        if (projectAnalyzed && project.totalLines > 1)
+          ...List<Widget>.from(
+            <Widget>[
+              Markdown(
+                selectable: true,
+                controller: ScrollController(),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                data: '''
 This project has a total of ${project.projectFiles.length} files with a total of **${project.totalLines.decimal} lines**, from which:
 - ${project.totalCode.decimal} are code lines
 - ${project.totalNonCde.decimal} are non code lines `()[]{}` 
 - ${project.totalComments.decimal} are comment lines *
 - ${project.totalEmpty.decimal} are empty
 
-Summing **${project.totalChars.decimal}** characters! If you wrote a book with 250 characters per page, that means **${((project.totalChars / 250).floor()).decimal} pages**!
+Summing **${project.totalChars.decimal}** characters! An average book has 250 characters per page with a total of 400 pages.
+That means this project has **${((project.totalChars / 250).floor()).decimal} pages** divided in **${(project.totalChars / 250 / 400).ceil().decimal} books**!
 ''',
-          ),
-          Container(
-            height: 200,
-            width: 500,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 30,
-
-                      pieTouchData: PieTouchData(enabled: true),
-                      sections: List<PieChartSectionData>.generate(project.programmingLanguages.length, (int index) {
-                        final double percentage = (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100;
-                        return PieChartSectionData(
-                            title: project.programmingLanguages[index][0],
-                            value: percentage,
-                            showTitle: (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100 < 10 ? false : true);
-                      }),
-                      // read about it in the PieChartData section
+              ),
+              Container(
+                height: 200,
+                width: 500,
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 30,
+                          pieTouchData: PieTouchData(enabled: true),
+                          sections: List<PieChartSectionData>.generate(project.programmingLanguages.length, (int index) {
+                            final double percentage = (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100;
+                            return PieChartSectionData(
+                                title: project.programmingLanguages[index][0],
+                                value: percentage,
+                                color: extColors.containsKey(project.programmingLanguages[index][0]) ? extColors[project.programmingLanguages[index][0]] : Colors.grey,
+                                showTitle: (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100 < 10 ? false : true);
+                          }),
+                        ),
+                        swapAnimationDuration: const Duration(milliseconds: 150),
+                        swapAnimationCurve: Curves.linear,
+                      ),
                     ),
-                    swapAnimationDuration: const Duration(milliseconds: 150), // Optional
-                    swapAnimationCurve: Curves.linear, // Optional
-                  ),
+                    Expanded(
+                      child: ListView.builder(
+                          itemCount: project.programmingLanguages.length,
+                          controller: ScrollController(),
+                          itemBuilder: (BuildContext context, int index) {
+                            return InkWell(
+                              onTap: () {},
+                              child: Text("${project.programmingLanguages[index][0]}: ${int.parse(project.programmingLanguages[index][1]).decimal} lines"),
+                            );
+                          }),
+                    )
+                  ],
                 ),
-                Expanded(
-                  child: ListView.builder(
-                      itemCount: project.programmingLanguages.length,
-                      controller: ScrollController(),
-                      itemBuilder: (BuildContext context, int index) {
-                        return InkWell(
-                          onTap: () {},
-                          child: Text("${project.programmingLanguages[index][0]}: ${int.parse(project.programmingLanguages[index][1]).decimal}"),
-                        );
-                      }),
-                )
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: Maa.start,
+                  crossAxisAlignment: Caa.start,
+                  children: <Widget>[
+                    Expanded(
+                      flex: 5,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("File Name")),
+                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500), (int index) {
+                          // file extension =
+                          return InkWell(
+                              onTap: () {},
+                              child: Tooltip(
+                                  message: project.projectFiles[index].path,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: <Widget>[
+                                      Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(top: 2.0),
+                                          child: Container(
+                                            width: 10,
+                                            height: 10,
+                                            color: extColors.containsKey(project.projectFiles[index].ext) ? extColors[project.projectFiles[index].ext] : Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Expanded(
+                                        child: Text(
+                                          project.projectFiles[index].name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          // style: const TextStyle(height: 1.001),
+                                        ),
+                                      ),
+                                    ],
+                                  )));
+                        })
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("Total")),
+                        ...List<Widget>.generate(
+                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.lines.decimal)))
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("Code")),
+                        ...List<Widget>.generate(
+                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.code.decimal)))
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("NonCode")),
+                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
+                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.nonCode.decimal)))
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(
+                            onTap: () {},
+                            child: const Tooltip(
+                                message: "For common programming languages it works,\nbut if you have weird comment sections it might break.", child: Text("Comm*"))),
+                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
+                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.comments.decimal)))
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("Empty")),
+                        ...List<Widget>.generate(
+                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.empty.decimal)))
+                      ]),
+                    ),
+                    SizedBox(
+                      width: 70,
+                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
+                        InkWell(onTap: () {}, child: const Text("Chars")),
+                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
+                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.characters.decimal)))
+                      ]),
+                    ),
+                  ],
+                ),
+              )
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("File Name")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500),
-                      (int index) => InkWell(
-                          onTap: () {},
-                          child: Tooltip(
-                              message: project.projectFiles[index].path,
-                              child: Text(
-                                project.projectFiles[index].name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ))))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("Total")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.lines.decimal)))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("Code")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.code.decimal)))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("NonCode")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.nonCode.decimal)))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(
-                      onTap: () {},
-                      child: const Tooltip(
-                          message: "For common programming languages it works,\nbut if you have weird comment sections it might break.", child: Text("Comm*"))),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.comments.decimal)))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("Empty")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.empty.decimal)))
-                ]),
-              ),
-              SizedBox(
-                width: 70,
-                child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                  InkWell(onTap: () {}, child: const Text("Chars")),
-                  ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.characters.decimal)))
-                ]),
-              ),
-            ]),
-          )
-        ])
-    ]);
+        const SizedBox(height: 20),
+      ],
+    );
   }
 
   Future<void> getCode() async {
@@ -412,6 +447,13 @@ Summing **${project.totalChars.decimal}** characters! If you wrote a book with 2
     project.totalEmpty = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.empty);
     project.totalNonCde = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.nonCode);
     project.totalChars = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.characters);
+
+    int i = 0;
+    for (List<String> x in project.programmingLanguages) {
+      if (i > extensionColors.length) break;
+      extColors[x[0]] = Color(extensionColors[i]);
+      i++;
+    }
     setState(() {});
   }
 
@@ -467,6 +509,9 @@ Summing **${project.totalChars.decimal}** characters! If you wrote a book with 2
     for (String file in allFiles) {
       final String fileDirectory = Directory(file).parent.path;
       final String fileName = file.replaceAll("$fileDirectory\\", "");
+      if (fileName.endsWith(".svg")) continue;
+      if (fileName.endsWith(".lock")) continue;
+      // if (fileName.endsWith(".json")) continue;
       if (fileName.indexOf('.') < 1) continue;
       bool skip = false;
 
@@ -480,6 +525,10 @@ Summing **${project.totalChars.decimal}** characters! If you wrote a book with 2
           if (file.replaceFirst(projectFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
         } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
           skip = true;
+        } else {
+          if (RegExp(exclude, caseSensitive: false).hasMatch(file)) {
+            skip = true;
+          }
         }
       }
       if (skip) continue;

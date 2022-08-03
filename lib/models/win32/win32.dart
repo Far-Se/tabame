@@ -743,7 +743,7 @@ class WinUtils {
       await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
     }
     if (globalSettings.usePowerShellAsToastNotification) {
-      final List<String> result = await WinUtils.runPowerShell(<String>[
+      await WinUtils.runPowerShell(<String>[
         '''\$subject = [Security.SecurityElement]::Escape("${title.replaceAll('"', "'")}");''',
         '''\$message = [Security.SecurityElement]::Escape("${body.replaceAll('"', "'")}");''',
         '''[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > \$null;''',

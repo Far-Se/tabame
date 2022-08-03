@@ -24,11 +24,19 @@ class QuickRun extends StatefulWidget {
   QuickRunState createState() => QuickRunState();
 }
 
-class Shortcuts {
+class NextElement extends Intent {
+  const NextElement();
+}
+
+class PreviousElement extends Intent {
+  const PreviousElement();
+}
+
+class RunShortcuts {
   String name;
   List<String> shortcuts;
   String regex;
-  Shortcuts({
+  RunShortcuts({
     required this.name,
     required this.shortcuts,
     required this.regex,
@@ -45,8 +53,12 @@ class QuickRunState extends State<QuickRun> {
   FocusNode keyboardFocusNode = FocusNode();
   TextEditingController textController = TextEditingController();
 
-  List<Shortcuts> shortcuts = <Shortcuts>[];
+  List<RunShortcuts> shortcuts = <RunShortcuts>[];
   String currentRun = "";
+
+  int activeElement = -1;
+
+  int copied = -1;
 
   @override
   void initState() {
@@ -63,7 +75,7 @@ class QuickRunState extends State<QuickRun> {
       }
       scuts.addAll(split);
 
-      shortcuts.add(Shortcuts(name: x.key, shortcuts: scuts, regex: regex));
+      shortcuts.add(RunShortcuts(name: x.key, shortcuts: scuts, regex: regex));
     }
     textController.text = globalSettings.quickRunText;
     globalSettings.quickRunState = 2;
@@ -73,267 +85,265 @@ class QuickRunState extends State<QuickRun> {
   @override
   void dispose() {
     textController.dispose();
+    textFocusNode.dispose();
+    keyboardFocusNode.dispose();
     super.dispose();
   }
 
+  int _currentFocus = 0;
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
         child: Material(
       type: MaterialType.transparency,
-      child: RawKeyboardListener(
-        focusNode: keyboardFocusNode,
-        onKey: (RawKeyEvent keyEvent) {
-          PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
-          if (currentKey == PhysicalKeyboardKey.arrowDown) {
-            FocusScope.of(context).requestFocus(keyboardFocusNode);
-          } else if (currentKey == PhysicalKeyboardKey.arrowUp) {
-            FocusScope.of(context).requestFocus(textFocusNode);
-          }
+      child: Shortcuts(
+        shortcuts: <ShortcutActivator, Intent>{
+          LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextElement(),
+          LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousElement(),
         },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            NextElement: CallbackAction<NextElement>(
+              onInvoke: (NextElement intent) => setState(() {
+                _currentFocus += 1;
+                if (_currentFocus > result.results.length) {
+                  FocusScope.of(context).requestFocus(textFocusNode);
+                  _currentFocus = -1;
+                } else {
+                  FocusScope.of(context).nextFocus();
+                }
+              }),
+            ),
+            PreviousElement: CallbackAction<PreviousElement>(
+              onInvoke: (PreviousElement intent) => setState(() {
+                _currentFocus -= 1;
+                if (_currentFocus == -1) {
+                  FocusScope.of(context).requestFocus(textFocusNode);
+                  _currentFocus = 0;
+                } else {
+                  FocusScope.of(context).previousFocus();
+                }
+              }),
+            ),
+          },
+          child: Focus(
+            autofocus: true,
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                SizedBox(
-                  width: 25,
-                  height: 35,
-                  child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onPanStart: (DragStartDetails details) {
-                        windowManager.startDragging();
-                      },
-                      child: const Icon(Icons.drag_indicator_sharp)),
-                ),
-                Expanded(
-                  child: TextField(
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 25,
+                      height: 35,
+                      child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onPanStart: (DragStartDetails details) {
+                            windowManager.startDragging();
+                          },
+                          child: const Icon(Icons.drag_indicator_sharp)),
                     ),
-                    focusNode: textFocusNode,
-                    controller: textController,
-                    onSubmitted: (String input) {
-                      if (currentRun == "regex") {
-                        textController.text = globalSettings.run.regex.split(';')[0];
-                        regainFocus();
-                      } else if (currentRun == "shortcut") {
-                        if (input.contains(" add ") && parser.shortcutInput.isNotEmpty) {
-                          parser.runShortcuts.add(<String>[
-                            parser.shortcutInput.substring(0, parser.shortcutInput.indexOf(" ")),
-                            parser.shortcutInput.substring(parser.shortcutInput.indexOf(" ") + 1),
-                          ]);
-                          Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
-                          result.error = "Added ${parser.shortcutInput}";
-                          parser.shortcutInput = "";
-                        } else if (input.contains(" remove ") && parser.shortcutInput.isNotEmpty) {
-                          for (List<String> x in parser.runShortcuts) {
-                            if (x[0] == parser.shortcutInput) {
-                              parser.runShortcuts.remove(x);
-                              break;
+                    Expanded(
+                      child: TextField(
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                        ),
+                        focusNode: textFocusNode,
+                        controller: textController,
+                        onSubmitted: (String input) => onSubmitted(input),
+                        onChanged: (String input) async {
+                          if (input.isEmpty) {
+                            result = ParserResult();
+                            for (RunShortcuts x in shortcuts) {
+                              result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
                             }
+                            setState(() {});
+                            return;
                           }
-                          Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
-                          result.error = "Removed ${parser.shortcutInput}";
-                          parser.shortcutInput = "";
-                        } else {
-                          if (result.results.isNotEmpty) {
-                            WinUtils.open(RegExp(r'^.*?:(.*?)$').firstMatch(result.results[0])![1]!);
+                          String command = "";
+                          List<String> x = getCommandFromString(input);
+                          if (x.isEmpty) {
+                            result = ParserResult();
+                            for (RunShortcuts x in shortcuts) {
+                              result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
+                            }
+                            setState(() {});
+                            return;
                           }
-                        }
-                        regainFocus();
-                      } else if (currentRun == "memo") {
-                        if (input.contains(" add ") && parser.memoInput.isNotEmpty) {
-                          parser.runMemos.add(<String>[
-                            parser.memoInput.substring(0, parser.memoInput.indexOf(" ")),
-                            parser.memoInput.substring(parser.memoInput.indexOf(" ") + 1),
-                          ]);
-                          Boxes().runMemos = <List<String>>[...parser.runMemos];
-                          result.error = "Added ${parser.memoInput}";
-                          parser.memoInput = "";
+                          command = x[0];
+                          if (x.length == 2) input = input.replaceFirst(x[1], "");
+                          if (currentRun != command) {
+                            currentRun = command;
+                          }
+                          final Map<String, Function(String)> functions = <String, Function(String)>{
+                            "calculator": parser.calculator,
+                            "unit": parser.unit,
+                            "color": parser.color,
+                            "currency": parser.currency,
+                            "timezones": parser.timezones,
+                            "regex": parser.regex,
+                            "lorem": parser.loremIpsum,
+                            "encoders": parser.encoders,
+                            "shortcut": parser.shortcuts,
+                            "memo": parser.memos,
+                            "projects": parser.projects,
+                            "timer": parser.timer,
+                            "setvar": parser.setVar,
+                            "keys": parser.sendKeys,
+                          };
+                          if (functions.containsKey(currentRun)) {
+                            result = await functions[currentRun]!(input.toLowerCase());
+                          } else {
+                            result = ParserResult();
+                          }
                           setState(() {});
-                        } else if (input.contains(" remove ") && parser.memoInput.isNotEmpty) {
-                          for (List<String> x in parser.runMemos) {
-                            if (x[0] == parser.memoInput) {
-                              parser.runMemos.remove(x);
-                              break;
-                            }
-                          }
-                          Boxes().runMemos = <List<String>>[...parser.runMemos];
-                          result.error = "Removed ${parser.memoInput}";
-                          parser.memoInput = "";
-                        }
-                        regainFocus();
-                      } else if (currentRun == "timer") {
-                        if (input.contains(" remove ")) {
-                          bool removed = false;
-                          int index = 0;
-                          for (QuickTimer quick in Boxes.quickTimers) {
-                            if (quick.name == parser.timerInfo[0]) {
-                              removed = true;
-                              quick.timer?.cancel();
-                              Boxes.quickTimers.removeAt(index);
-                              break;
-                            }
-                            index++;
-                          }
-                          if (removed) {
-                            result.results = <String>["Removed reminder ${parser.timerInfo[0]}"];
-                            parser.timerInfo = <dynamic>[];
-                            regainFocus();
-                          }
-                          return;
-                        }
-
-                        if (parser.timerInfo.isEmpty) return;
-                        Boxes().addQuickTimer(parser.timerInfo[0], parser.timerInfo[1], parser.timerInfo[2]);
-                        result.results = <String>[
-                          "${<String>["Audio", "Message", "Notification"][parser.timerInfo[2]]} Reminder ${parser.timerInfo[1]} minutes: ${parser.timerInfo[0]}"
-                        ];
-                        parser.timerInfo = <dynamic>[];
-                        regainFocus();
-                      } else if (currentRun == "setvar") {
-                        print("servar");
-                        if (parser.varInfo.isEmpty) return;
-
-                        final String varName = parser.varInfo.substring(0, parser.varInfo.indexOf(" "));
-                        final String varValue = parser.varInfo.substring(parser.varInfo.indexOf(" ") + 1);
-                        print("$varName => $varValue");
-                        Boxes.pref.setString("k_$varName", varValue).then((_) {
-                          result.results = <String>["Saved $varName as $varValue"];
-                          regainFocus();
-                        });
-                      } else if (currentRun == "keys") {
-                        if (parser.keysToSent.isEmpty) return;
-                        WinKeys.send(parser.keysToSent);
-                        regainFocus();
-                      }
-                    },
-                    onChanged: (String input) async {
-                      if (input.isEmpty) return;
-                      String command = "";
-                      List<String> x = getCommandFromString(input);
-                      if (x.isEmpty) {
-                        result = ParserResult();
-                        for (Shortcuts x in shortcuts) {
-                          result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
-                        }
-                        // result.results
-                        setState(() {});
-                        return;
-                      }
-                      command = x[0];
-                      if (x.length == 2) input = input.replaceFirst(x[1], "");
-                      if (currentRun != command) {
-                        currentRun = command;
-                        print(currentRun);
-                      }
-                      final Map<String, Function(String)> functions = <String, Function(String)>{
-                        "calculator": parser.calculator,
-                        "unit": parser.unit,
-                        "color": parser.color,
-                        "currency": parser.currency,
-                        "timezones": parser.timezones,
-                        "regex": parser.regex,
-                        "lorem": parser.loremIpsum,
-                        "encoders": parser.encoders,
-                        "shortcut": parser.shortcuts,
-                        "memo": parser.memos,
-                        "projects": parser.projects,
-                        "timer": parser.timer,
-                        "setvar": parser.setVar,
-                        "keys": parser.sendKeys,
-                      };
-                      if (functions.containsKey(currentRun)) {
-                        result = await functions[currentRun]!(input.toLowerCase());
-                      } else {
-                        result = ParserResult();
-                      }
-                      setState(() {});
-                    },
-                  ),
-                )
-              ],
-            ),
-            if (result.results.isNotEmpty)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 300),
-                // constraints: BoxConstraints.loose(const Size(280, 200)),
-                child: SingleChildScrollView(
-                  // scrollDirection: Axis.vertical,
-                  controller: ScrollController(),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      ...List<Widget>.generate(
-                        result.results.length,
-                        (int index) {
-                          String item = result.results[index];
-                          if (item.startsWith("custom:")) {
-                            item = item.replaceFirst("custom:", "");
-                            if (item.startsWith("color:")) {
-                              item = item.replaceFirst("color:", "");
-                              final Color color = Color(int.parse(item));
-                              return Row(
-                                children: <Widget>[
-                                  Expanded(
-                                      child: DecoratedBox(
-                                    decoration: BoxDecoration(color: color),
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
-                                      child: Text("  "),
-                                    ),
-                                  )),
-                                ],
-                              );
-                            }
-                            return Container();
-                          }
-                          return InkWell(
-                            onTap: () {},
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                    child: DecoratedBox(
-                                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1))),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
-                                    child: Text(item),
-                                  ),
-                                )),
-                              ],
-                            ),
-                          );
                         },
                       ),
-                    ],
-                  ),
+                    )
+                  ],
                 ),
-              ),
-            if (result.error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Text(result.error)),
-            // const SizedBox(height: 5),
-          ],
+                if (result.results.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    // constraints: BoxConstraints.loose(const Size(280, 200)),
+                    child: SingleChildScrollView(
+                      // scrollDirection: Axis.vertical,
+                      controller: ScrollController(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          ...List<Widget>.generate(
+                            result.results.length,
+                            (int index) {
+                              String item = result.results[index];
+                              if (item.startsWith("custom:")) {
+                                item = item.replaceFirst("custom:", "");
+                                if (item.startsWith("color:")) {
+                                  item = item.replaceFirst("color:", "");
+                                  final Color color = Color(int.parse(item));
+                                  return Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                          child: DecoratedBox(
+                                        decoration: BoxDecoration(color: color),
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                          child: Text("  "),
+                                        ),
+                                      )),
+                                    ],
+                                  );
+                                }
+                                return Container();
+                              }
+                              return InkWell(
+                                onTap: () {
+                                  if (result.type == ResultType.copy) {
+                                    if (currentRun == "unit") {
+                                      final RegExpMatch? match = RegExp(r'^([\d,\.]+)').firstMatch(item);
+                                      if (match != null) {
+                                        Clipboard.setData(ClipboardData(text: match[1]!.replaceAll(',', '.')));
+                                      } else {
+                                        Clipboard.setData(ClipboardData(text: item));
+                                      }
+                                    } else {
+                                      Clipboard.setData(ClipboardData(text: result.actions.containsKey(item) ? result.actions[item] : item));
+                                    }
+                                    setState(() => copied = index);
+                                    Future<void>.delayed(const Duration(seconds: 1), () {
+                                      if (mounted) setState(() => copied = -1);
+                                    });
+                                  } else if (result.type == ResultType.open) {
+                                    WinUtils.open(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                  } else if (result.type == ResultType.send) {
+                                    WinKeys.send(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                  }
+                                  WidgetsBinding.instance.addPostFrameCallback((_) => regainFocus());
+                                },
+                                onFocusChange: (bool f) {
+                                  if (f) {
+                                    activeElement = index;
+                                  } else {
+                                    activeElement = -1;
+                                  }
+                                },
+                                onHover: (bool f) {
+                                  if (f) {
+                                    activeElement = index;
+                                  } else {
+                                    activeElement = -1;
+                                  }
+                                  setState(() {});
+                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1))),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                          child: Stack(
+                                            children: <Widget>[
+                                              Text(item),
+                                              Positioned(
+                                                right: 0,
+                                                top: 2.5,
+                                                child: SizedBox(
+                                                  width: 15,
+                                                  child: activeElement == index
+                                                      ? Icon(
+                                                          result.type == ResultType.copy
+                                                              ? Icons.copy
+                                                              : result.type == ResultType.open
+                                                                  ? Icons.open_in_browser
+                                                                  : Icons.extension,
+                                                          size: 15,
+                                                          color: copied == index ? Colors.cyan : Theme.of(context).iconTheme.color)
+                                                      : null,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (result.error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Text(result.error)),
+                // const SizedBox(height: 5),
+              ],
+            ),
+          ),
         ),
       ),
     ));
   }
 
   List<String> getCommandFromString(String input) {
-    for (Shortcuts scuts in shortcuts) {
+    for (RunShortcuts scuts in shortcuts) {
       for (String scut in scuts.shortcuts) {
         if (input.startsWith(scut)) {
           return <String>[scuts.name, scut];
         }
       }
     }
-    for (Shortcuts scuts in shortcuts) {
+    for (RunShortcuts scuts in shortcuts) {
       if (scuts.regex.isEmpty) continue;
       if (RegExp(scuts.regex, caseSensitive: false).hasMatch(input)) {
         return <String>[scuts.name];
@@ -347,10 +357,114 @@ class QuickRunState extends State<QuickRun> {
     setState(() {});
     FocusScope.of(context).requestFocus(textFocusNode);
   }
+
+  void onSubmitted(String input) {
+    if (currentRun == "regex") {
+      textController.text = globalSettings.run.regex.split(';')[0];
+      regainFocus();
+    } else if (currentRun == "shortcut") {
+      if (input.contains(" add ") && parser.shortcutInput.isNotEmpty) {
+        parser.runShortcuts.add(<String>[
+          parser.shortcutInput.substring(0, parser.shortcutInput.indexOf(" ")),
+          parser.shortcutInput.substring(parser.shortcutInput.indexOf(" ") + 1),
+        ]);
+        Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
+        result.error = "Added ${parser.shortcutInput}";
+        parser.shortcutInput = "";
+      } else if (input.contains(" remove ") && parser.shortcutInput.isNotEmpty) {
+        for (List<String> x in parser.runShortcuts) {
+          if (x[0] == parser.shortcutInput) {
+            parser.runShortcuts.remove(x);
+            break;
+          }
+        }
+        Boxes().runShortcuts = <List<String>>[...parser.runShortcuts];
+        result.error = "Removed ${parser.shortcutInput}";
+        parser.shortcutInput = "";
+      } else {
+        if (result.results.isNotEmpty) {
+          WinUtils.open(RegExp(r'^.*?:(.*?)$').firstMatch(result.results[0])![1]!);
+        }
+      }
+      regainFocus();
+    } else if (currentRun == "memo") {
+      if (input.contains(" add ") && parser.memoInput.isNotEmpty) {
+        parser.runMemos.add(<String>[
+          parser.memoInput.substring(0, parser.memoInput.indexOf(" ")),
+          parser.memoInput.substring(parser.memoInput.indexOf(" ") + 1),
+        ]);
+        Boxes().runMemos = <List<String>>[...parser.runMemos];
+        result.error = "Added ${parser.memoInput}";
+        parser.memoInput = "";
+        setState(() {});
+      } else if (input.contains(" remove ") && parser.memoInput.isNotEmpty) {
+        for (List<String> x in parser.runMemos) {
+          if (x[0] == parser.memoInput) {
+            parser.runMemos.remove(x);
+            break;
+          }
+        }
+        Boxes().runMemos = <List<String>>[...parser.runMemos];
+        result.error = "Removed ${parser.memoInput}";
+        parser.memoInput = "";
+      }
+      regainFocus();
+    } else if (currentRun == "timer") {
+      if (input.contains(" remove ")) {
+        bool removed = false;
+        int index = 0;
+        for (QuickTimer quick in Boxes.quickTimers) {
+          if (quick.name == parser.timerInfo[0]) {
+            removed = true;
+            quick.timer?.cancel();
+            Boxes.quickTimers.removeAt(index);
+            break;
+          }
+          index++;
+        }
+        if (removed) {
+          result.results = <String>["Removed reminder ${parser.timerInfo[0]}"];
+          parser.timerInfo = <dynamic>[];
+          regainFocus();
+        }
+        return;
+      }
+
+      if (parser.timerInfo.isEmpty) return;
+      Boxes().addQuickTimer(parser.timerInfo[0], parser.timerInfo[1], parser.timerInfo[2]);
+      result.results = <String>[
+        "${<String>["Audio", "Message", "Notification"][parser.timerInfo[2]]} Reminder ${parser.timerInfo[1]} minutes: ${parser.timerInfo[0]}"
+      ];
+      parser.timerInfo = <dynamic>[];
+      regainFocus();
+    } else if (currentRun == "setvar") {
+      if (parser.varInfo.isEmpty) return;
+
+      final String varName = parser.varInfo.substring(0, parser.varInfo.indexOf(" "));
+      final String varValue = parser.varInfo.substring(parser.varInfo.indexOf(" ") + 1);
+      Boxes.pref.setString("k_$varName", varValue).then((_) {
+        result.results = <String>["Saved $varName as $varValue"];
+        regainFocus();
+      });
+    } else if (currentRun == "keys") {
+      if (parser.keysToSent.isEmpty) return;
+      WinKeys.send(parser.keysToSent);
+      regainFocus();
+    } else if (currentRun == "projects") {
+      if (result.actions.isEmpty) return;
+      print(result.actions.values.elementAt(0));
+      WinUtils.open(result.actions.values.elementAt(0));
+      regainFocus();
+    }
+  }
 }
+
+enum ResultType { copy, open, send, none }
 
 class ParserResult {
   List<String> results = <String>[];
+  Map<String, String> actions = <String, String>{};
+  ResultType type = ResultType.copy;
   String error = "";
 }
 
@@ -377,13 +491,13 @@ class Parsers {
   T? getUnitType<T>(String from, List<Unit> units, Iterable<T> names) {
     T? matched;
     for (Unit e in units) {
-      if (from == e.symbol) {
+      if (from == e.symbol?.toLowerCase()) {
         return (e.name as T);
       }
     }
     if (matched == null) {
       for (T type in names) {
-        if (type.toString().split(".").last == from) {
+        if (type.toString().toLowerCase().split(".").last == from) {
           return type;
         }
       }
@@ -772,7 +886,7 @@ class Parsers {
     if (input.isEmpty) {
       return result..results.addAll(<String>["Format: NUMBER CODE to CODE", "Example: 100 USD to EUR", "github.com/fawazahmed0/currency-api/"]);
     }
-    input = input.replaceAll(r"$", " USD ").replaceAll(RegExp(r' +'), ' ');
+    input = input.replaceAll("\$", " USD ").replaceAll(RegExp(r' +'), ' ').toLowerCase();
     double amount = 0;
     String from = "";
     String to = "";
@@ -801,14 +915,12 @@ class Parsers {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (json.containsKey(to)) {
         final double rate = double.parse(json[to].toString());
-        print(json[to]);
         result.results.add("${format.format(rate * amount)} ${to.toUpperCase()}");
         result.results.add("1 $from = $rate $to".toUpperCase());
       } else {
         result.error = "Could not find currency in result..";
       }
     } else {
-      print("status code ${response.statusCode}");
       return result..error = "Could not find the currencies";
     }
     return result;
@@ -851,6 +963,7 @@ class Parsers {
   String regexText = "";
   Future<ParserResult> regex(String input) async {
     final ParserResult result = ParserResult()..error = regexText;
+    result.type = ResultType.copy;
     if (regexText.isEmpty) regexText = Boxes.pref.getString("regexTest") ?? "test";
     if (input.startsWith("text ")) {
       regexText = input.replaceFirst("text ", "");
@@ -875,9 +988,9 @@ class Parsers {
     return result;
   }
 
-  String fullLorem = "";
   Future<ParserResult> loremIpsum(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.none;
     if (input.isEmpty) return result..error = "Format [nr or pharagraphs]\n[short, medium, long, verylong]\nOpt:[headers, plaintext, decorate, prude]";
     final RegExpMatch? reg = RegExp(r'^(\d+) (short|medium|long|verylong) ?((headers|plaintext|decorate|prude)|$)').firstMatch(input);
     if (reg != null) {
@@ -893,7 +1006,7 @@ class Parsers {
       final String url = "https://loripsum.net/api/$nr/$type/$opt";
       final http.Response response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        fullLorem = response.body;
+        Clipboard.setData(ClipboardData(text: response.body));
         result.results.addAll(<String>["Generated $nr $type $opt", "Copied to Clipboard!"]);
       } else {
         result.error = "Status code ${response.statusCode}";
@@ -904,8 +1017,67 @@ class Parsers {
     return result;
   }
 
+  //!reee
   Future<ParserResult> encoders(String input) async {
     final ParserResult result = ParserResult();
+    // url, base, rot13, hex, bin , ascii, html;
+    if (input.isEmpty) return result..error = "! to encode; @ to decode\nConversions:  [url, base, rot13, ascii]";
+    RegExpMatch? reg = RegExp(r'\[([a-z1-9!@, ]+)\] (.*?)$').firstMatch(input);
+    if (reg == null) {
+      reg = RegExp(r'([a-z1-9!@]+) (.*?)$').firstMatch(input);
+      if (reg == null) return result..error = "Unknown Format";
+    }
+    final List<String> conversions = reg[1]!.replaceAll(' ', '').split(',');
+    String toConvert = reg[2]!;
+    for (String conversion in conversions) {
+      if (conversion.isEmpty) return result;
+      bool encode = true;
+      if (<String>['!', '@'].contains(conversion[0])) {
+        encode = conversion[0] == '!' ? true : false;
+        conversion = conversion.substring(1);
+      }
+      if (!<String>["url", "base", "rot13", "ascii"].contains(conversion)) return result..error = "Unknown $conversion";
+      if (conversion == "url") {
+        if (encode) {
+          toConvert = Uri.encodeQueryComponent(toConvert);
+        } else {
+          toConvert = Uri.decodeQueryComponent(toConvert);
+        }
+      } else if (conversion == "base") {
+        Codec<String, String> stringToBase64 = utf8.fuse(base64Url);
+        if (encode) {
+          toConvert = stringToBase64.encode(toConvert);
+        } else {
+          // final String str = base64.normalize(toConvert);
+          // toConvert = stringToBase64.decode(str);
+          result.error = "Base64 decode doens't work...";
+        }
+      } else if (conversion == "rot13") {
+        const String a = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const String b = "nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM";
+        if (encode) {
+          toConvert = toConvert.replaceAllMapped(RegExp('[a-zA-Z]'), (Match match) => b[a.indexOf(match[0]!)]);
+        } else {
+          toConvert = toConvert.replaceAllMapped(RegExp('[a-zA-Z]'), (Match match) => a[b.indexOf(match[0]!)]);
+        }
+      } else if (conversion == "ascii") {
+        const AsciiCodec ascii = AsciiCodec(allowInvalid: true);
+        if (encode) {
+          toConvert = ascii.encode(toConvert).join(' ');
+        } else {
+          List<int> split = <int>[];
+          final List<String> split2 = toConvert.split(" ");
+          if (split2.isEmpty) continue;
+          for (String i in split2) {
+            if (i.isEmpty) continue;
+            split.add(int.parse(i));
+          }
+          toConvert = ascii.decode(split, allowInvalid: true).toString();
+        }
+      }
+    }
+    result.results.add(toConvert);
+    // result.error = "";
     return result;
   }
 
@@ -913,6 +1085,7 @@ class Parsers {
   String shortcutInput = "";
   Future<ParserResult> shortcuts(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.open;
     if (input.isEmpty) {
       for (List<String> x in runShortcuts) {
         result.results.add("${x[0]}: ${x[1].truncate(20, suffix: '...')}");
@@ -929,7 +1102,6 @@ class Parsers {
       for (List<String> x in runShortcuts) {
         if (x[0] == split[0]) found = true;
       }
-      print(input);
       if (!found) {
         shortcutInput = input;
       } else {
@@ -952,8 +1124,17 @@ class Parsers {
       }
       result.error = "Press Enter to delete";
     } else {
+      final List<String> text = input.splitFirst(" ");
       for (List<String> x in runShortcuts) {
-        if (x[0].contains(input)) result.results.add("${x[0]}:${x[1]}");
+        if (x[0].contains(text[0])) {
+          String url = x[1];
+          if (text.length == 2) {
+            print(Uri.encodeQueryComponent(text[1]));
+            url = url.replaceAll("{params}", Uri.encodeQueryComponent(text[1]));
+          }
+          result.results.add("${x[0]}:$url");
+          result.actions["${x[0]}:$url"] = url;
+        }
       }
     }
     return result;
@@ -963,6 +1144,7 @@ class Parsers {
   String memoInput = "";
   Future<ParserResult> memos(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.copy;
     if (input.isEmpty) {
       for (List<String> x in runMemos) {
         result.results.add("${x[0]}: ${x[1].truncate(20, suffix: '...')}");
@@ -1002,7 +1184,10 @@ class Parsers {
       result.error = "Press Enter to delete";
     } else {
       for (List<String> x in runMemos) {
-        if (x[0].contains(input)) result.results.add("${x[0]}:${x[1]}");
+        if (x[0].contains(input)) {
+          result.results.add("${x[0]}:${x[1]}");
+          result.actions["${x[0]}:${x[1]}"] = x[1];
+        }
       }
     }
     return result;
@@ -1011,10 +1196,12 @@ class Parsers {
   final List<ProjectGroup> savedProjects = Boxes().projects;
   Future<ParserResult> projects(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.open;
     for (ProjectGroup projectGroup in savedProjects) {
       for (ProjectInfo project in projectGroup.projects) {
-        if (project.title.contains(input)) {
-          result.results.add("${project.emoji} ${project.title} ${projectGroup.title.truncate(10, suffix: "...")}");
+        if (project.title.toLowerCase().contains(input)) {
+          result.results.add("${project.emoji} ${project.title} - ${projectGroup.title.truncate(20, suffix: "...")}");
+          result.actions["${project.emoji} ${project.title} - ${projectGroup.title.truncate(20, suffix: "...")}"] = "${project.stringToExecute}";
         }
       }
     }
@@ -1024,8 +1211,8 @@ class Parsers {
   List<dynamic> timerInfo = <dynamic>[];
   Future<ParserResult> timer(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.none;
     if (input.isEmpty) {
-      print("input empty");
       result.results.addAll(<String>["Format: t [minutes] message", "Format: t [minutes] [a,n,m]:message"]);
       for (QuickTimer quick in Boxes.quickTimers) {
         result.results.add(quick.name);
@@ -1063,6 +1250,7 @@ class Parsers {
   String varInfo = "";
   Future<ParserResult> setVar(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.none;
     if (input.isEmpty) result.error = "Format: varname value";
     final Set<String> keys = Boxes.pref.getKeys();
     for (String key in keys) {
@@ -1076,6 +1264,7 @@ class Parsers {
   String keysToSent = "";
   Future<ParserResult> sendKeys(String input) async {
     final ParserResult result = ParserResult();
+    result.type = ResultType.send;
     bool setted = false;
     for (List<String> key in runKeys) {
       if (key[0].contains(input)) {
@@ -1083,6 +1272,7 @@ class Parsers {
 
         setted = true;
         result.results.add("${key[0]}: ${key[1]}");
+        result.actions["${key[0]}: ${key[1]}"] = key[1];
       }
     }
     return result;

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
@@ -135,7 +136,12 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                   finishedProcessing = false;
                   if (mounted) setState(() {});
                   WinUtils.toggleHiddenFiles(visible: true);
-                  currentFolder = await WinUtils.folderPicker();
+                  // currentFolder = await WinUtils.folderPicker();
+
+                  final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
+                  final Directory? dir = dirPicker.getDirectory();
+                  if (dir == null) return;
+                  currentFolder = dir.path;
                   WinUtils.toggleHiddenFiles(visible: false);
 
                   if (currentFolder.contains(RegExp(r'^[A-Z]:\\$'))) {
@@ -421,6 +427,7 @@ class _FolderInfoState extends State<FolderInfo> {
 
             final List<MapEntry<String, int>> dataEntries = data.entries.toList();
             dataEntries.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
+            if (dataEntries.length > 100) dataEntries.removeRange(100, dataEntries.length);
 
             for (MapEntry<String, int> file in dataEntries) {
               final double percent = ((file.value / (!percentageOfMainFolder ? widget.parentSize : DirectoryScan.main.size)) * 100);

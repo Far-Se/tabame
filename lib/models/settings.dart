@@ -16,8 +16,15 @@ import 'classes/saved_maps.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
+enum TPage {
+  quickmenu,
+  interface,
+  views,
+}
+
 class Settings {
   List<String> args = <String>[];
+  TPage page = TPage.quickmenu;
 
   bool showTrayBar = true;
   bool showWeather = true;
@@ -46,6 +53,8 @@ class Settings {
   int quickRunState = 0;
 
   String quickRunText = "";
+
+  bool noopKeyListener = false;
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;
@@ -58,12 +67,12 @@ class Settings {
   int themeScheduleMin = 8 * 60;
   int themeScheduleMax = 20 * 60;
   ThemeColors get theme => themeColors;
-  ThemeType _themeType = ThemeType.system;
-  ThemeType get themeType => _themeType;
-  set themeType(ThemeType t) {
-    _themeType = t;
-    setScheduleThemeChange();
-  }
+  ThemeType themeType = ThemeType.system;
+  // ThemeType get themeType => _themeType;
+  // set themeType(ThemeType t) {
+  //   _themeType = t;
+  //   // setScheduleThemeChange();
+  // }
 
   bool settingsChanged = false;
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
@@ -92,11 +101,11 @@ class Settings {
     final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
     if (now.isBetween(themeScheduleMin, themeScheduleMax)) {
       themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {
-        if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
+        // if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true); /// !pizdishenia masiiii
       });
     } else {
       themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {
-        if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
+        // if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
       });
     }
   }
@@ -160,6 +169,11 @@ extension StringExtension on String {
   String removeCharAtTheEnd(String char) {
     if (lastIndexOf(char) == char.length - 1) return substring(0, length - 1);
     return this;
+  }
+
+  List<String> splitFirst(String char) {
+    if (!contains(char)) return <String>[this];
+    return <String>[substring(0, indexOf(char)), substring(indexOf(char) + char.length)];
   }
 }
 
