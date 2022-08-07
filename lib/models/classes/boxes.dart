@@ -454,3 +454,42 @@ class Tasks {
     reminder.timer = Timer(const Duration(days: 1), () => reminderDaily(reminder));
   }
 }
+
+class WinHotkeys {
+  static Future<void> update() async {
+    List<Map<String, dynamic>> allHotkeys = <Map<String, dynamic>>[];
+    final List<Hotkeys> bindHotkeys = <Hotkeys>[...Boxes.remap];
+    // order bindHotkeys by boundToRegion
+    for (Hotkeys hotkeys in bindHotkeys) {
+      // order hotkeys by boundToRegion
+      hotkeys.keymaps.sort((KeyMap a, KeyMap b) {
+        int pos = 0;
+        if (a.boundToRegion == true) pos -= 1;
+        return pos == 0 ? 1 : pos;
+      });
+
+      for (KeyMap hotkey in hotkeys.keymaps) {
+        if (!hotkey.enabled) continue;
+        allHotkeys.add(<String, dynamic>{
+          "name": hotkey.name,
+          "hotkey": hotkeys.hotkey.toUpperCase(),
+          "modifisers": hotkeys.modifiers.isNotEmpty ? hotkeys.modifiers.join('+').toUpperCase() : "noModifiers",
+          "listenToMovement": hotkeys.keymaps.any((KeyMap e) => e.triggerType == TriggerType.movement && e.triggerInfo[2] == -1),
+          "matchWindowBy": hotkey.windowsInfo[0] == "any" ? "" : hotkey.windowsInfo[0],
+          "matchWindowText": hotkey.windowsInfo[1],
+          "activateWindowUnderCursor": hotkey.windowUnderMouse,
+          "noopScreenBusy": hotkeys.noopScreenBusy,
+          "prohibitedWindows": hotkeys.prohibited.join(";"),
+          "regionasPercentage": hotkey.region.asPercentage,
+          "regionOnScreen": hotkey.regionOnScreen, //-!hotkey.windowUnderMouse, // hotkey.windowsInfo[0] == "any" ? true : false, // hotkey.regionOnScreen,
+          "regionX1": hotkey.region.x1,
+          "regionX2": hotkey.region.x2,
+          "regionY1": hotkey.region.y1,
+          "regionY2": hotkey.region.y2,
+          "anchorType": !hotkey.boundToRegion ? 0 : hotkey.region.anchorType.index + 1,
+        });
+      }
+    }
+    NativeHotkey.run(allHotkeys);
+  }
+}

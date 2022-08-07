@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
+import 'package:tabamewin32/tabamewin32.dart';
+import '../models/classes/boxes.dart';
+import '../models/classes/hotkeys.dart';
 import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/settings.dart';
@@ -39,12 +43,15 @@ Future<int> quickMenuWindowSetup() async {
   return 1;
 }
 
-class QuickMenuState extends State<QuickMenu> {
+class QuickMenuState extends State<QuickMenu> with TabameListener {
   double lastHeight = 0;
   Timer? changeHeightTimer;
   @override
   void initState() {
     super.initState();
+    NativeHotkey.unHook();
+    NativeHotkey.addListener(this);
+    WinHotkeys.update();
     Globals.changingPages = false;
     Globals.quickMenuFullyInitiated = false;
     //!RELEASE MODE
@@ -62,6 +69,135 @@ class QuickMenuState extends State<QuickMenu> {
     // WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(focusNode));
   }
 
+  Point<int> mouseSteps = const Point<int>(0, 0);
+  int startMouseDir = 0;
+  Map<String, int> hotkeyDoublePress = <String, int>{};
+  Map<String, int> hotkeyMovement = <String, int>{};
+  @override
+  void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
+    final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey).toList()];
+    if (hk.isEmpty) return;
+    final Hotkeys hotkey = hk[0];
+    // if (hotkey.noopScreenBusy) {
+    //   final ScreenState state = WinUtils.checkUserScreenState();
+    //   if (state == ScreenState.runningD3dFullScreen) return;
+    // }
+    if (hotkeyInfo.action == "pressed") {
+      print("Hotkey ${hotkeyInfo.hotkey} pressed!");
+      if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
+        Win32.activeWindowUnderCursor();
+      }
+      if (hotkey.hasMouseMovementTriggers) {
+        mouseSteps = hotkeyInfo.mouse.start;
+      }
+    }
+    if (hotkeyInfo.action == "moved") {
+      if (hotkey.hasMouseMovementTriggers && startMouseDir == 0) {
+        Point<int> diffAux = hotkeyInfo.mouse.end - mouseSteps;
+        Point<int> diff = Point<int>(diffAux.x.abs(), diffAux.y.abs());
+        if (diff.x + diff.y > 40) startMouseDir = diff.x > diff.y ? 1 : 2;
+      }
+
+      if (startMouseDir != 0) {
+        final List<KeyMap> list = hotkey.getHotkeysWithMovementTriggers;
+        if (list.isNotEmpty) {
+          for (KeyMap key in list) {
+            if (!key.isMouseInRegion) continue;
+            Point<int> diffAux = hotkeyInfo.mouse.end - mouseSteps;
+            if ((startMouseDir == 1 && key.triggerInfo[0] == 0 && diffAux.x < 0 && diffAux.x.abs() > key.triggerInfo[1]) ||
+                ((startMouseDir == 1 && key.triggerInfo[0] == 1 && diffAux.x > 0 && diffAux.x.abs() > key.triggerInfo[1])) ||
+                ((startMouseDir == 2 && key.triggerInfo[0] == 2 && diffAux.y < 0 && diffAux.y.abs() > key.triggerInfo[1])) ||
+                ((startMouseDir == 2 && key.triggerInfo[0] == 3 && diffAux.y > 0 && diffAux.y.abs() > key.triggerInfo[1]))) {
+              mouseSteps = hotkeyInfo.mouse.end;
+              hotkeyMovement[hotkeyInfo.hotkey] = 1;
+              key.applyActions();
+            }
+          }
+        }
+      }
+    }
+
+    if (hotkeyInfo.action == "released") {
+      if (hotkeyMovement.containsKey(hotkeyInfo.hotkey)) {
+        hotkeyMovement.remove(hotkeyInfo.hotkey);
+        return;
+      }
+      print("Hotkey ${hotkeyInfo.hotkey} released!");
+      startMouseDir = 0;
+      final List<KeyMap> mouseDir = hotkey.getHotkeysWithMovement;
+      mouseDir.sort((KeyMap a, KeyMap b) => a.boundToRegion
+          ? -1
+          : b.boundToRegion
+              ? -1
+              : 1);
+      // ? Direction
+      if (mouseDir.isNotEmpty) {
+        final Point<int> diff = hotkeyInfo.mouse.diff;
+        final int diffX = diff.x.abs();
+        final int diffY = diff.y.abs();
+        for (KeyMap key in mouseDir) {
+          if (!key.isMouseInRegion) continue;
+          // left right up down
+          if ((key.triggerInfo[0] == 0 && diff.x < 0 && diffX.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2])) ||
+              ((key.triggerInfo[0] == 1 && diff.x > 0 && diffX.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
+              ((key.triggerInfo[0] == 2 && diff.y < 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
+              ((key.triggerInfo[0] == 3 && diff.y > 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2])))) {
+            print("Hotkey ${hotkeyInfo.hotkey} Direction ${key.name}!");
+            key.applyActions();
+            return;
+          }
+        }
+      }
+      // ? Duration
+      List<KeyMap> keys = hotkey.getDurationKeys;
+      mouseDir.sort((KeyMap a, KeyMap b) => a.boundToRegion
+          ? -1
+          : b.boundToRegion
+              ? -1
+              : 1);
+      if (keys.isNotEmpty) {
+        final int diff = hotkeyInfo.time.duration;
+        for (KeyMap key in keys) {
+          if (!key.isMouseInRegion) continue;
+          if (diff.isBetweenEqual(key.triggerInfo[0], key.triggerInfo[1])) {
+            print("Hotkey ${hotkeyInfo.hotkey} Duration ${key.name}!");
+            key.applyActions();
+            return;
+          }
+        }
+      }
+      // ?Region
+      keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.press).toList();
+      for (KeyMap key in keys) {
+        if (key.isMouseInRegion) {
+          print("Hotkey ${hotkeyInfo.hotkey} Region ${key.name}!");
+          key.applyActions();
+          return;
+        }
+      }
+      keys = hotkey.getDoublePress;
+      if (hotkeyDoublePress.containsKey(hotkey.hotkey)) {
+        for (KeyMap key in keys) {
+          if (!key.isMouseInRegion) continue;
+          if (hotkeyInfo.time.end - hotkeyDoublePress[hotkey.hotkey]! < 200) {
+            print("Hotkey ${hotkeyInfo.hotkey} DoublePress ${key.name}!");
+            key.applyActions();
+            hotkeyDoublePress.remove(hotkey.hotkey);
+            return;
+          }
+          hotkeyDoublePress.remove(hotkey.hotkey);
+        }
+      }
+      keys = hotkey.getPress;
+      for (KeyMap key in keys) {
+        if (!key.isMouseInRegion) continue;
+        if (hotkey.hasDoublePress) hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
+        print("Hotkey ${hotkeyInfo.hotkey} Press ${key.name}!");
+        key.applyActions();
+      }
+    }
+  }
+
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
 
   final FocusNode focusNode = FocusNode();
@@ -69,6 +205,7 @@ class QuickMenuState extends State<QuickMenu> {
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     if (!kDebugMode) changeHeightTimer?.cancel();
+    NativeHotkey.removeListener(this);
     focusNode.dispose();
     super.dispose();
   }

@@ -4,14 +4,17 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:win32/win32.dart' hide Point;
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
+import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
 
 class HotkeysInterface extends StatefulWidget {
@@ -64,12 +67,12 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
               keymaps: <KeyMap>[
                 KeyMap(
                   name: "new",
-                  enabled: false,
+                  enabled: true,
                   boundToRegion: false,
                   region: Region(),
                   triggerType: TriggerType.press,
                   windowsInfo: <String>[],
-                  windowUnderMouse: false,
+                  windowUnderMouse: true,
                   triggerInfo: <int>[],
                   actions: <KeyAction>[],
                   variableCheck: <String>[],
@@ -78,6 +81,20 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
             ));
             Boxes.updateSettings("remap", jsonEncode(remap));
             setState(() {});
+            showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    content: Container(
+                      width: 400,
+                      height: 400,
+                      child: SingleChildScrollView(
+                        controller: ScrollController(),
+                        child: HotKeySettings(hotkeyIndex: remap.length - 1, refresh: () => setState(() {})),
+                      ),
+                    ),
+                  );
+                });
           },
           title: Text("Remap", style: Theme.of(context).textTheme.headline4),
           leading: Container(height: double.infinity, child: const Icon(Icons.add, size: 30)),
@@ -108,7 +125,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                                         height: 400,
                                         child: SingleChildScrollView(
                                           controller: ScrollController(),
-                                          child: HotKeySettings(hotkeyIndex: index),
+                                          child: HotKeySettings(hotkeyIndex: index, refresh: () => setState(() {})),
                                         ),
                                       ),
                                     );
@@ -162,38 +179,90 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   },
                 ),
 
-                //! here
+                //2 List actions
                 if (unfolded.contains(index))
-                  ...List<Widget>.generate(
-                    keymap.keymaps.length,
-                    (int index) {
-                      return ListTile(
-                        title: Text(keymap.keymaps[index].name),
-                        leading: const Icon(Icons.edit),
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                scrollable: false,
-                                content: Container(
-                                  height: 600,
-                                  width: 800,
-                                  child: SingleChildScrollView(
-                                    controller: ScrollController(),
-                                    child: HotKeyAction(
-                                      hotkey: keymap.keymaps[index].copyWith(),
-                                      onSaved: (KeyMap hotkey) {
-                                        keymap.keymaps[index] = hotkey;
-                                      },
+                  ReorderableListView.builder(
+                    shrinkWrap: true,
+                    dragStartBehavior: DragStartBehavior.down,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    scrollController: ScrollController(),
+                    itemCount: keymap.keymaps.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final KeyMap keyInfo = keymap.keymaps[index];
+                      return Padding(
+                        key: ValueKey<int>(index),
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: ListTile(
+                          dense: true,
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: <Widget>[
+                              Expanded(child: keyInfo.enabled ? Text(keyInfo.name) : InfoText(keyInfo.name)),
+                              Expanded(
+                                  child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  if (HotKeyInfo.triggerTypeIcons.containsKey(keyInfo.triggerType))
+                                    IconInfo(name: keyInfo.triggerType.name.splitAndUpcase, icon: HotKeyInfo.triggerTypeIcons[keyInfo.triggerType]!),
+                                  keyInfo.windowsInfo[0] != "any" ? const IconInfo(name: "Window Match", icon: Icons.pageview) : const SizedBox(),
+                                  keyInfo.boundToRegion ? const IconInfo(name: "Bound to region", icon: Icons.location_on) : const SizedBox(),
+                                  keyInfo.regionOnScreen ? const IconInfo(name: "Screen Region", icon: Icons.crop_free) : const SizedBox(),
+                                  ...List<Widget>.generate(keyInfo.actions.length, (int i) {
+                                    if (HotKeyInfo.actionTypeIcons.containsKey(keyInfo.actions[i].type)) {
+                                      return IconInfo(name: keyInfo.actions[i].type.name.splitAndUpcase, icon: HotKeyInfo.actionTypeIcons[keyInfo.actions[i].type]!);
+                                    }
+                                    return Container();
+                                  })
+                                ],
+                              ))
+                            ],
+                          ),
+                          leading: const Icon(Icons.edit, size: 16),
+                          minLeadingWidth: 20,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  scrollable: false,
+                                  content: Container(
+                                    height: 600,
+                                    width: 800,
+                                    child: SingleChildScrollView(
+                                      controller: ScrollController(),
+                                      child: HotKeyAction(
+                                        hotkey: keymap.keymaps[index].copyWith(),
+                                        onSaved: (KeyMap hotkey) {
+                                          keymap.keymaps[index] = hotkey.copyWith();
+                                          Boxes.updateSettings("remap", jsonEncode(remap));
+                                          setState(() {});
+                                        },
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
+                                );
+                              },
+                            );
+                          },
+                          trailing: InkWell(
+                            onTap: () {
+                              keymap.keymaps.removeAt(index);
+                              Boxes.updateSettings("remap", jsonEncode(remap));
+                              setState(() {});
                             },
-                          );
-                        },
+                            child: Container(width: 40, height: double.infinity, child: const Icon(Icons.delete)),
+                          ),
+                        ),
                       );
+                    },
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      final KeyMap item = keymap.keymaps.removeAt(oldIndex);
+                      keymap.keymaps.insert(newIndex, item);
+                      Boxes.updateSettings("remap", jsonEncode(remap));
+                      setState(() {});
                     },
                   ),
                 if (unfolded.contains(index)) const Divider(height: 10, thickness: 1)
@@ -208,10 +277,12 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
 
 class HotKeySettings extends StatefulWidget {
   final int hotkeyIndex;
+  final void Function() refresh;
 
   const HotKeySettings({
     Key? key,
     required this.hotkeyIndex,
+    required this.refresh,
   }) : super(key: key);
   @override
   HotKeySettingsState createState() => HotKeySettingsState();
@@ -248,40 +319,63 @@ class HotKeySettingsState extends State<HotKeySettings> {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Align(
-          alignment: Alignment.topRight,
-          child: InkWell(
-            onTap: () {},
-            child: const Icon(Icons.save),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Align(
+              alignment: Alignment.topLeft,
+              child: InkWell(
+                onTap: () {
+                  remap.removeAt(widget.hotkeyIndex);
+                  Boxes.updateSettings("remap", jsonEncode(remap));
+                  Navigator.of(context).pop();
+                  widget.refresh();
+                },
+                child: const Icon(Icons.delete),
+              ),
+            ),
+            Align(
+              alignment: Alignment.topRight,
+              child: InkWell(
+                onTap: () {
+                  Boxes.updateSettings("remap", jsonEncode(remap));
+                  Navigator.of(context).pop();
+                  widget.refresh();
+                },
+                child: const Icon(Icons.save),
+              ),
+            ),
+          ],
         ),
+        const Divider(height: 20, thickness: 1),
         ListTile(
           title: Focus(
             focusNode: focusNode,
             onKey: (FocusNode e, RawKeyEvent k) {
-              if (k.data.logicalKey.keyId < 256) {
+              if (1 + 1 == 2) {
                 List<String> modifier = <String>[];
                 if (k.isControlPressed) modifier.add("CTRL");
                 if (k.isAltPressed) modifier.add("ALT");
                 if (k.isShiftPressed) modifier.add("SHIFT");
                 if (k.isMetaPressed) modifier.add("WIN");
-                if (modifier.isNotEmpty) {
-                  final String newKey = String.fromCharCode(k.data.logicalKey.keyId);
-                  final List<String> x = remap.map((Hotkeys e) => e.hotkey).toList();
-                  if (x.contains("${modifier.join('+')}+$newKey")) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text("Shortcut ${modifier.join('+')}+$newKey already exists! "), duration: const Duration(seconds: 2)));
-                    return KeyEventResult.handled;
-                  }
-                  if (hotkey.key == "MouseButton4") mouseButtons.add("MouseButton4");
-                  if (hotkey.key == "MouseButton5") mouseButtons.add("MouseButton5");
-                  hotkey.modifiers = modifier;
-                  hotkey.key = newKey;
-
-                  FocusScope.of(context).unfocus();
-                  listeningToHotkey = false;
-                  setState(() {});
+                if (k.data.modifiersPressed.isEmpty) return KeyEventResult.handled;
+                if (k.data.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
+                // final String newKey = String.fromCharCode(k.data.logicalKey.keyId);
+                final String newKey = k.data.logicalKey.keyLabel;
+                final List<String> x = remap.map((Hotkeys e) => e.hotkey).toList();
+                if (x.contains("${modifier.join('+')}+$newKey")) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text("Shortcut ${modifier.join('+')}+$newKey already exists! "), duration: const Duration(seconds: 2)));
+                  return KeyEventResult.handled;
                 }
+                if (hotkey.key == "MouseButton4") mouseButtons.add("MouseButton4");
+                if (hotkey.key == "MouseButton5") mouseButtons.add("MouseButton5");
+                hotkey.modifiers = modifier;
+                hotkey.key = newKey;
+
+                FocusScope.of(context).unfocus();
+                listeningToHotkey = false;
+                setState(() {});
               }
               return KeyEventResult.handled;
             },
@@ -324,9 +418,9 @@ class HotKeySettingsState extends State<HotKeySettings> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           text: "Do not execute when the screen is busy, like playing videogames",
         ),
-        TextField(
-          controller: TextEditingController(text: hotkey.prohibited.join(';')),
-          decoration: const InputDecoration(labelText: "Do not execute when:"),
+        TextInput(
+          value: hotkey.prohibited.join(';'),
+          labelText: "Do not execute when active window contains:",
           onChanged: (String e) => setState(() => hotkey.prohibited = e.split(';').toList()),
         ),
         const SizedBox(height: 20),
@@ -379,7 +473,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
       if (!tracking) return;
       final Pointer<POINT> lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
-      mousePos = "X: ${lpPoint.ref.x} Y:${lpPoint.ref.y}";
+      mousePos = "X: ${lpPoint.ref.x} Y: ${lpPoint.ref.y}";
       int hWnd = WindowFromPoint(lpPoint.ref);
       hWnd = GetAncestor(hWnd, 2);
       if (hWnd > 0) {
@@ -401,31 +495,18 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
         if (anchor == AnchorType.topLeft) {
           x = xLeft;
           y = yTop;
-        } else if (anchor == AnchorType.topCenter) {
-          x = xLeft - width ~/ 2;
-          y = yTop;
         } else if (anchor == AnchorType.topRight) {
           x = xRight;
           y = yTop;
-        } else if (anchor == AnchorType.centerLeft) {
-          x = xLeft;
-          y = yTop - height ~/ 2;
-        } else if (anchor == AnchorType.center) {
-          x = xLeft - width ~/ 2;
-          y = yTop - height ~/ 2;
-        } else if (anchor == AnchorType.centerRight) {
-          x = xRight;
-          y = yTop - height ~/ 2;
         } else if (anchor == AnchorType.bottomLeft) {
           x = xLeft;
-          y = yBottom;
-        } else if (anchor == AnchorType.bottomCenter) {
-          x = xLeft - width ~/ 2;
           y = yBottom;
         } else if (anchor == AnchorType.bottomRight) {
           x = xRight;
           y = yBottom;
         }
+        x = x.abs();
+        y = y.abs();
         mouseAnchor = "X:$x Y:$y";
         final int percentageX = ((x / width) * 100).floor();
         final int percentageY = ((y / height) * 100).floor();
@@ -474,9 +555,6 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
                           message: AnchorType.topLeft.name.toString(),
                           child: Checkbox(value: anchor == AnchorType.topLeft, onChanged: (bool? e) => onAnchorChanged(AnchorType.topLeft))),
                       Tooltip(
-                          message: AnchorType.topCenter.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.topCenter, onChanged: (bool? e) => onAnchorChanged(AnchorType.topCenter))),
-                      Tooltip(
                           message: AnchorType.topRight.name.toString(),
                           child: Checkbox(value: anchor == AnchorType.topRight, onChanged: (bool? e) => onAnchorChanged(AnchorType.topRight))),
                     ],
@@ -486,26 +564,8 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Tooltip(
-                          message: AnchorType.centerLeft.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.centerLeft, onChanged: (bool? e) => onAnchorChanged(AnchorType.centerLeft))),
-                      Tooltip(
-                          message: AnchorType.center.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.center, onChanged: (bool? e) => onAnchorChanged(AnchorType.center))),
-                      Tooltip(
-                          message: AnchorType.centerRight.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.centerRight, onChanged: (bool? e) => onAnchorChanged(AnchorType.centerRight))),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Tooltip(
                           message: AnchorType.bottomLeft.name.toString(),
                           child: Checkbox(value: anchor == AnchorType.bottomLeft, onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomLeft))),
-                      Tooltip(
-                          message: AnchorType.bottomCenter.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.bottomCenter, onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomCenter))),
                       Tooltip(
                           message: AnchorType.bottomRight.name.toString(),
                           child: Checkbox(value: anchor == AnchorType.bottomRight, onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomRight))),
@@ -540,12 +600,19 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
           shrinkWrap: true,
           selectable: true,
           data: '''
-Info about sendKeys:
+## Limit to a window:
+You can limit to a specific window if you change "Any Window" to a filter you want. The match is regex aware.
 
-You can send multiple hotkeys or keystrokes.
-Use # to hold a key and ^ to release.
-All Special keys need to be put between {}.
-To release all previous keys use {|}.
+## Info About Region:
+You can can execute this hotkey if the mouse is in a specific rectangle, either in an window or on Screen.
+You can anchor the points to a position of specific screen,
+ for example if you want to execute this only if the mouse is in bottomCorner, 
+ you set Anchor Point to BottomRight, then make an rectacle startX,startY:endX,endY as big as you want.
+
+## Info about sendKeys:
+
+You can send multiple hotkeys or keystrokes.Use # to hold a key and ^ to release.
+All Special keys need to be put between {}.To release all previous keys use {|}.
 
 ```{#CTRL}{#SHIFT}{ESCAPE}{|}{#SHIFT}{TAB}{^SHIFT}{RIGHT}```
 
@@ -602,15 +669,16 @@ class HotKeyActionState extends State<HotKeyAction> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                CheckBoxWidget(
-                  onChanged: (bool e) => setState(() => widget.hotkey.enabled != widget.hotkey.enabled),
+                CheckboxListTile(
+                  onChanged: (bool? e) => setState(() => widget.hotkey.enabled = !widget.hotkey.enabled),
                   value: widget.hotkey.enabled,
-                  text: "Enabled",
-                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
+                  title: const Text("Enabled"),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  // padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
                 ),
                 TextInput(labelText: "Name", value: widget.hotkey.name, onChanged: (String e) => setState(() => widget.hotkey.name = e)),
                 CheckBoxWidget(
-                  onChanged: (bool e) => setState(() => widget.hotkey.windowUnderMouse != widget.hotkey.windowUnderMouse),
+                  onChanged: (bool e) => setState(() => widget.hotkey.windowUnderMouse = !widget.hotkey.windowUnderMouse),
                   value: widget.hotkey.windowUnderMouse,
                   text: "Activate window under mouse",
                   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
@@ -638,6 +706,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           CheckBoxWidget(
+                              key: UniqueKey(),
                               padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
                               onChanged: (bool e) => setState(() => widget.hotkey.boundToRegion = !widget.hotkey.boundToRegion),
                               value: widget.hotkey.boundToRegion,
@@ -682,14 +751,14 @@ class HotKeyActionState extends State<HotKeyAction> {
                                 Expanded(
                                   child: TextInput(
                                       key: UniqueKey(),
-                                      labelText: "min X",
+                                      labelText: "start X",
                                       value: widget.hotkey.region.x1.toString(),
                                       onChanged: (String e) => e.isEmpty ? null : setState(() => widget.hotkey.region.x1 = int.tryParse(e) ?? 0)),
                                 ),
                                 Expanded(
                                   child: TextInput(
                                       key: UniqueKey(),
-                                      labelText: "min Y",
+                                      labelText: "start Y",
                                       value: widget.hotkey.region.y1.toString(),
                                       onChanged: (String e) => e.isEmpty ? null : setState(() => widget.hotkey.region.y1 = int.tryParse(e) ?? 0)),
                                 ),
@@ -702,14 +771,14 @@ class HotKeyActionState extends State<HotKeyAction> {
                                 Expanded(
                                   child: TextInput(
                                       key: UniqueKey(),
-                                      labelText: "max X",
+                                      labelText: "end X",
                                       value: widget.hotkey.region.x2.toString(),
                                       onChanged: (String e) => e.isEmpty ? null : setState(() => widget.hotkey.region.x2 = int.tryParse(e) ?? 0)),
                                 ),
                                 Expanded(
                                   child: TextInput(
                                       key: UniqueKey(),
-                                      labelText: "max Y",
+                                      labelText: "end Y",
                                       value: widget.hotkey.region.y2.toString(),
                                       onChanged: (String e) => e.isEmpty ? null : setState(() => widget.hotkey.region.y2 = int.tryParse(e) ?? 0)),
                                 ),
@@ -737,10 +806,16 @@ class HotKeyActionState extends State<HotKeyAction> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Expanded(
-                        child: TextInput(labelText: "Min (miliseconds)", onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[0] = int.tryParse(e) ?? 0)),
+                        child: TextInput(
+                            labelText: "Min (miliseconds)",
+                            value: widget.hotkey.triggerInfo[0].toString(),
+                            onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[0] = int.tryParse(e) ?? 0)),
                       ),
                       Expanded(
-                        child: TextInput(labelText: "Max (miliseconds)", onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
+                        child: TextInput(
+                            labelText: "Max (miliseconds)",
+                            value: widget.hotkey.triggerInfo[1].toString(),
+                            onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
                       ),
                     ],
                   ),
@@ -758,16 +833,40 @@ class HotKeyActionState extends State<HotKeyAction> {
                           return DropdownMenuItem<String>(value: value, child: Text(value), alignment: Alignment.center);
                         }).toList(),
                       ),
-                      Row(
+                      Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Expanded(
-                            child: TextInput(labelText: "Min (in pixels)", onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
-                          ),
-                          Expanded(
-                            child: TextInput(labelText: "Max (in pixels)", onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[2] = int.tryParse(e) ?? 0)),
-                          ),
+                          CheckBoxWidget(
+                              onChanged: (bool e) => setState(() => widget.hotkey.triggerInfo[2] = e ? -1 : 0),
+                              value: widget.hotkey.triggerInfo[2] == -1,
+                              text: "Execute while moving"),
+                          widget.hotkey.triggerInfo[2] == -1
+                              ? TextInput(
+                                  value: widget.hotkey.triggerInfo[1].toString(),
+                                  labelText: "Distance in pixels",
+                                  onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0))
+                              : FocusTraversalGroup(
+                                  policy: OrderedTraversalPolicy(),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: TextInput(
+                                            value: widget.hotkey.triggerInfo[1].toString(),
+                                            labelText: "Min (in pixels)",
+                                            onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
+                                      ),
+                                      Expanded(
+                                        child: TextInput(
+                                            value: widget.hotkey.triggerInfo[2].toString(),
+                                            labelText: "Max (in pixels)",
+                                            onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[2] = int.tryParse(e) ?? 0)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                         ],
                       ),
                     ],
@@ -804,7 +903,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                   leading: const Icon(Icons.add),
                   title: Text("Actions", style: Theme.of(context).textTheme.headline6),
                   onTap: () {
-                    widget.hotkey.actions.add(KeyAction(type: ActionType.sendKeys, value: "ALT+SHIFT+F"));
+                    widget.hotkey.actions.add(KeyAction(type: ActionType.hotkey, value: "ALT+SHIFT+F"));
                     setState(() {});
                   },
                 ),
@@ -847,11 +946,11 @@ class HotKeyActionState extends State<HotKeyAction> {
                               } else if (action.type == ActionType.sendKeys) {
                                 action.value = "{#CTRL}A{^CTRL}{DELETE}deleted";
                               } else if (action.type == ActionType.tabameFunction) {
-                                action.value = "0";
+                                action.value = HotKeyInfo.tabameFunctions[0];
                               }
                             }),
                             items: ActionType.values.map<DropdownMenuItem<String>>((ActionType value) {
-                              return DropdownMenuItem<String>(value: value.index.toString(), child: Text(value.name), alignment: Alignment.center);
+                              return DropdownMenuItem<String>(value: value.index.toString(), child: Text(value.name.splitAndUpcase), alignment: Alignment.center);
                             }).toList(),
                           ),
                         ),
@@ -942,7 +1041,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                       );
                     }
                     if (action.type == ActionType.setVar) {
-                      final List<String> varInfo = jsonDecode(action.value);
+                      final List<dynamic> varInfo = jsonDecode(action.value);
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1036,14 +1135,15 @@ class HotKeyActionState extends State<HotKeyAction> {
                           selectAction,
                           DropdownButton<String>(
                             isExpanded: true,
-                            value: HotKeyInfo.tabameFunctions[int.tryParse(action.value) ?? 1],
+                            value: HotKeyInfo.tabameFunctions.contains(action.value) ? action.value : HotKeyInfo.tabameFunctions[0],
                             icon: const Icon(Icons.arrow_downward),
                             onChanged: (String? newValue) {
-                              action.value = HotKeyInfo.tabameFunctions.indexOf(newValue!).toString();
+                              action.value = newValue ?? HotKeyInfo.tabameFunctions[0];
                               setState(() {});
                             },
                             items: HotKeyInfo.tabameFunctions
-                                .map<DropdownMenuItem<String>>((String value) => DropdownMenuItem<String>(value: value, child: Text(value), alignment: Alignment.center))
+                                .map<DropdownMenuItem<String>>(
+                                    (String value) => DropdownMenuItem<String>(value: value, child: Text(value.splitAndUpcase), alignment: Alignment.center))
                                 .toList(),
                           ),
                           const Divider(height: 10, thickness: 2),
@@ -1052,6 +1152,27 @@ class HotKeyActionState extends State<HotKeyAction> {
                     }
                     return selectAction;
                   },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.onSaved(widget.hotkey);
+                    Navigator.of(context).pop();
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        const Icon(Icons.save),
+                        Text(
+                          "Save",
+                          style: TextStyle(color: Theme.of(context).backgroundColor),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1065,15 +1186,21 @@ class HotKeyActionState extends State<HotKeyAction> {
               Align(
                 alignment: Alignment.topRight,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    widget.onSaved(widget.hotkey);
+                    Navigator.of(context).pop();
+                  },
                   child: Container(
                     width: 70,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
+                      children: <Widget>[
                         const Icon(Icons.save),
-                        const Text("Save"),
+                        Text(
+                          "Save",
+                          style: TextStyle(color: Theme.of(context).backgroundColor),
+                        ),
                       ],
                     ),
                   ),
@@ -1089,5 +1216,29 @@ class HotKeyActionState extends State<HotKeyAction> {
         ),
       ],
     );
+  }
+}
+
+class IconInfo extends StatelessWidget {
+  final IconData icon;
+  final String name;
+  final double horizontal;
+  final double vertical;
+  const IconInfo({
+    Key? key,
+    required this.icon,
+    required this.name,
+    this.horizontal = 2,
+    this.vertical = 0,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+        message: name,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
+          child: Icon(icon, size: 16),
+        ));
   }
 }

@@ -23,8 +23,12 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <cctype>
 #include <memory>
 #include <sstream>
+#include <regex>
+#include <chrono>
+#include <map>
 
 // #include <shobjidl.h>
 #include "virtdesktop.cpp"
@@ -33,10 +37,10 @@
 #include "audio.cpp"
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>, std::default_delete<flutter::MethodChannel<flutter::EncodableValue>>> channel = nullptr;
 
-void CALLBACK HandleWinEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD);
-LRESULT CALLBACK HandleMouseHook(int, WPARAM, LPARAM);
-HWINEVENTHOOK g_EventHook = NULL;
-HHOOK g_MouseHook = NULL;
+void CALLBACK mHandleWinEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD);
+LRESULT CALLBACK mHandleMouseHook(int, WPARAM, LPARAM);
+HWINEVENTHOOK gEventHook = NULL;
+HHOOK gMouseHook = NULL;
 int mouseWatchButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 #define EVENTHOOK 1
@@ -44,6 +48,708 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
+///
+LRESULT CALLBACK HandleKeyboardHook(int, WPARAM, LPARAM);
+LRESULT CALLBACK HandleMouseHook(int, WPARAM, LPARAM);
+VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
+HHOOK g_KeyboardHook;
+HHOOK g_MouseHook;
+HWINEVENTHOOK g_EventHook;
+class Hotkey
+{
+public:
+    wstring modifisers = L"";
+    wstring hotkey = L"";
+    bool activateWindowUnderCursor = false;
+    bool listenToMovement = false;
+    bool noopScreenBusy = false;
+    string matchWindowBy = "";
+    wstring matchWindowText = L"";
+    string name = "";
+    vector<string> prohibitedWindows = {};
+    int regionX1 = 0;
+    int regionX2 = 0;
+    int regionY1 = 0;
+    int regionY2 = 0;
+    bool regionAsPercentage = false;
+    bool regionOnScreen = true;
+    int anchorType = 0;
+};
+/// HotKey
+vector<Hotkey> hotkeys;
+int activeHotKey = -1;
+bool hotkeyPressed = false;
+int hotkeyStartTimestamp = 0;
+int hotkeyStartMousePosX = 0;
+int hotkeyStartMousePosY = 0;
+bool hotkeyCorrectName = false;
+//
+/// VIEWS
+HWND foregroundWindow;
+HWND movingWindow;
+bool isViewsEnabled = true;
+int viewsState = 0;
+///
+/// TRCKTIVITY
+bool isTrcktivityEnabled = false;
+// Mouse
+int trkTimestamp = 0;
+int trckMovementX = 0;
+int trckMovementY = 0;
+map<int, int> mouseDirectionData;
+// Keyboard
+int kbdTime = 0;
+int kbdPressCount = 0;
+
+int getTimestamp()
+{
+    return (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+void SetAsActiveHotkey(size_t i, HWND hwnd)
+{
+    activeHotKey = static_cast<int>(i);
+
+    if (hotkeys[activeHotKey].activateWindowUnderCursor)
+    {
+        // SetForegroundWindow(hwnd);
+        // SetFocus(hwnd);
+        // SetActiveWindow(hwnd);
+        // SendMessage(hwnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
+    }
+    hotkeyStartTimestamp = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    POINT hotkeyEndMousePos;
+    GetCursorPos(&hotkeyEndMousePos);
+    hotkeyStartMousePosX = hotkeyEndMousePos.x;
+    hotkeyStartMousePosY = hotkeyEndMousePos.y;
+    hotkeyPressed = true;
+}
+bool checkForPressedHotKey(wstring pressedHotkey)
+{
+    bool foundOne = false;
+    for (std::size_t i = 0, e = hotkeys.size(); i != e; ++i)
+    {
+        Hotkey hotkey = hotkeys[i];
+        if (hotkey.hotkey == pressedHotkey)
+        {
+            HWND hwnd = GetForegroundWindow();
+            hwnd = GetAncestor(hwnd, GA_ROOT);
+            if (hotkey.activateWindowUnderCursor)
+            {
+                POINT p;
+                GetCursorPos(&p);
+                hwnd = WindowFromPoint(p);
+                hwnd = GetAncestor(hwnd, GA_ROOT);
+            }
+            if (hotkey.matchWindowBy.length() > 1)
+            {
+                wchar_t windowInfo[1024] = {};
+                if (hotkey.matchWindowBy == "title")
+                {
+                    GetWindowText(hwnd, windowInfo, 1024);
+                }
+                if (hotkey.matchWindowBy == "exe")
+                {
+                    DWORD ppID;
+                    GetWindowThreadProcessId(hwnd, &ppID);
+
+                    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ppID);
+                    if (hProcess != 0)
+                    {
+                        wchar_t imgName[1024] = {};
+                        DWORD bufSize = MAX_PATH;
+                        if (QueryFullProcessImageName(hProcess, 0, imgName, &bufSize) != 0)
+                        {
+                            GetModuleFileNameEx(hProcess, 0, windowInfo, MAX_PATH);
+                            // extract exe from windowInfo
+                            wchar_t *p = wcsrchr(windowInfo, L'\\');
+                            if (p != NULL)
+                            {
+                                wcscpy_s(windowInfo, p + 1);
+                            }
+                        }
+                    }
+                    CloseHandle(hProcess);
+                }
+                if (hotkey.matchWindowBy == "class")
+                {
+                    GetClassName(hwnd, windowInfo, 1024);
+                }
+                bool output = std::regex_search(windowInfo, std::wregex(hotkey.matchWindowText, std::regex_constants::icase));
+                if (!output)
+                {
+                    continue;
+                }
+                else
+                {
+                    if (hotkey.anchorType == 0)
+                    {
+                        hotkeyCorrectName = true;
+                        SetAsActiveHotkey(i, hwnd);
+                        return true;
+                    }
+                }
+            }
+            if (hotkey.anchorType > 0)
+            {
+                POINT lpPoint;
+                GetCursorPos(&lpPoint);
+                RECT lpRect;
+                if (hotkey.regionOnScreen)
+                {
+                    hwnd = GetDesktopWindow();
+                    GetWindowRect(hwnd, &lpRect);
+                    while (lpPoint.x >= lpRect.right)
+                    {
+                        lpPoint.x = lpPoint.x - lpRect.right;
+                    }
+                    while (lpPoint.y >= lpRect.bottom)
+                    {
+                        lpPoint.y = lpPoint.y - lpRect.right;
+                    }
+                }
+                else
+                {
+                    GetWindowRect(hwnd, &lpRect);
+                }
+
+                int x = 0, y = 0;
+                int yTop = lpPoint.y - lpRect.top;
+                int yBottom = lpPoint.y - lpRect.bottom;
+                int xLeft = lpPoint.x - lpRect.left;
+                int xRight = lpPoint.x - lpRect.right;
+                int width = lpRect.right - lpRect.left;
+                int height = lpRect.bottom - lpRect.top;
+
+                if (hotkey.anchorType == 1)
+                {
+                    x = xLeft;
+                    y = yTop;
+                }
+                else if (hotkey.anchorType == 2)
+                {
+                    x = xRight;
+                    y = yTop;
+                }
+                else if (hotkey.anchorType == 3)
+                {
+                    x = xLeft;
+                    y = yBottom;
+                }
+                else if (hotkey.anchorType == 4)
+                {
+                    x = xRight;
+                    y = yBottom;
+                }
+                x = abs(x);
+                y = abs(y);
+                int percentageX = static_cast<int>((static_cast<double>(x) / width) * 100);
+                int percentageY = static_cast<int>((static_cast<double>(y) / height) * 100);
+                if (hotkey.regionAsPercentage)
+                {
+                    x = percentageX;
+                    y = percentageY;
+                }
+
+                if (x >= hotkey.regionX1 && x <= hotkey.regionX2 && y >= hotkey.regionY1 && y <= hotkey.regionY2)
+                {
+                    hotkeyCorrectName = true;
+                    SetAsActiveHotkey(i, hwnd);
+                    return true;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            SetAsActiveHotkey(i, hwnd);
+            foundOne = true;
+        }
+    }
+    if (foundOne)
+        return true;
+    return false;
+}
+
+void HotKeyEvent(string name, string info)
+{
+    flutter::EncodableMap args = flutter::EncodableMap();
+    args[flutter::EncodableValue("name")] = flutter::EncodableValue(hotkeyCorrectName ? name : "");
+    args[flutter::EncodableValue("hotkey")] = flutter::EncodableValue(Encoding::WideToUtf8(hotkeys[activeHotKey].hotkey));
+    args[flutter::EncodableValue("info")] = flutter::EncodableValue(info);
+    args[flutter::EncodableValue("start")] = flutter::EncodableValue(hotkeyStartTimestamp);
+    args[flutter::EncodableValue("end")] = flutter::EncodableValue((int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    args[flutter::EncodableValue("sX")] = flutter::EncodableValue(hotkeyStartMousePosX);
+    args[flutter::EncodableValue("sY")] = flutter::EncodableValue(hotkeyStartMousePosY);
+    POINT hotkeyEndMousePos;
+    GetCursorPos(&hotkeyEndMousePos);
+    args[flutter::EncodableValue("eX")] = flutter::EncodableValue(hotkeyEndMousePos.x);
+    args[flutter::EncodableValue("eY")] = flutter::EncodableValue(hotkeyEndMousePos.y);
+    channel->InvokeMethod("HotKeyEvent", std::make_unique<flutter::EncodableValue>(args));
+}
+void TrktivityEvent(string action, string info)
+{
+    flutter::EncodableMap args = flutter::EncodableMap();
+    args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
+    args[flutter::EncodableValue("info")] = flutter::EncodableValue(info);
+    channel->InvokeMethod("TrktivityEvent", std::make_unique<flutter::EncodableValue>(args));
+}
+void ViewsEvent(string action, HWND hwnd)
+{
+    flutter::EncodableMap args = flutter::EncodableMap();
+    if (hwnd != NULL)
+    {
+        args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue((int)((DWORD_PTR)hwnd));
+    }
+    else
+    {
+        args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue(-1);
+    }
+    args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
+    channel->InvokeMethod("ViewsEvent", std::make_unique<flutter::EncodableValue>(args));
+}
+void WinEvent(string action, HWND hwnd)
+{
+    flutter::EncodableMap args = flutter::EncodableMap();
+    if (hwnd != NULL)
+    {
+        args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue((int)((DWORD_PTR)hwnd));
+    }
+    else
+    {
+        args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue(-1);
+    }
+    args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
+    channel->InvokeMethod("WinEvent", std::make_unique<flutter::EncodableValue>(args));
+}
+bool isOnProhibitedWindow()
+{
+    HWND hwnd = GetForegroundWindow();
+    hwnd = GetAncestor(hwnd, GA_ROOT);
+    if (hotkeys[activeHotKey].activateWindowUnderCursor)
+    {
+        POINT p;
+        GetCursorPos(&p);
+        hwnd = WindowFromPoint(p);
+        hwnd = GetAncestor(hwnd, GA_ROOT);
+    }
+    for (auto &info : hotkeys[activeHotKey].prohibitedWindows)
+    {
+        std::vector<std::string> data;
+        std::stringstream ss(info);
+        std::string token;
+        while (std::getline(ss, token, ':'))
+        {
+            data.push_back(token);
+        }
+        if (data.size() == 2)
+        {
+
+            wchar_t windowInfo[1024] = {};
+            if (data[0] == "title")
+            {
+                GetWindowText(hwnd, windowInfo, 1024);
+            }
+            if (data[0] == "exe")
+            {
+                DWORD ppID;
+                GetWindowThreadProcessId(hwnd, &ppID);
+
+                HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ppID);
+                if (hProcess != 0)
+                {
+                    wchar_t imgName[1024] = {};
+                    DWORD bufSize = MAX_PATH;
+                    if (QueryFullProcessImageName(hProcess, 0, imgName, &bufSize) != 0)
+                    {
+                        GetModuleFileNameEx(hProcess, 0, windowInfo, MAX_PATH);
+                        wchar_t *p = wcsrchr(windowInfo, L'\\');
+                        if (p != NULL)
+                        {
+                            wcscpy_s(windowInfo, p + 1);
+                        }
+                    }
+                }
+                CloseHandle(hProcess);
+            }
+            if (data[0] == "class")
+            {
+                GetClassName(hwnd, windowInfo, 1024);
+            }
+            std::wstring ws(data[1].begin(), data[1].end());
+            bool output = std::regex_search(windowInfo, std::wregex(ws, std::regex_constants::icase));
+            if (output)
+            {
+                std::wcout << "Found prohibited window: " << windowInfo << std::endl;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+wstring hotkeyName;
+LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    if (nCode < 0)
+        return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
+    KBDLLHOOKSTRUCT keyInfo = *((KBDLLHOOKSTRUCT *)lParam);
+
+    if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !hotkeyPressed)
+    {
+        std::wstring pressedHotkey{};
+        if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+            pressedHotkey.append(L"CTRL+");
+        if (GetAsyncKeyState(VK_MENU) & 0x8000)
+            pressedHotkey.append(L"ALT+");
+        if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+            pressedHotkey.append(L"SHIFT+");
+        if (GetAsyncKeyState(VK_LWIN) & 0x8000)
+            pressedHotkey.append(L"WIN+");
+
+        wchar_t buffer[32] = {};
+        UINT key = (keyInfo.scanCode << 16);
+        GetKeyNameText((LONG)key, buffer, 32);
+
+        std::wstring keyName(buffer);
+        std::transform(keyName.begin(), keyName.end(), keyName.begin(), [](int c) -> char
+                       { return static_cast<char>(::toupper(c)); });
+
+        pressedHotkey.append(keyName);
+        bool result = checkForPressedHotKey(pressedHotkey);
+        if (result)
+        {
+            // !check for Screen Busy
+            if (hotkeys[activeHotKey].noopScreenBusy)
+            {
+                // create varialbe state
+                QUERY_USER_NOTIFICATION_STATE state;
+                SHQueryUserNotificationState(&state);
+                if (state == QUNS_RUNNING_D3D_FULL_SCREEN)
+                {
+                    hotkeyPressed = false;
+                    hotkeyCorrectName = false;
+                    return CallNextHookEx(NULL, nCode, wParam, lParam);
+                }
+                // create variable state
+            }
+            // ! check for prohibited windows
+            if (hotkeys[activeHotKey].prohibitedWindows.size() > 0)
+            {
+                if (isOnProhibitedWindow())
+                {
+                    hotkeyPressed = false;
+                    hotkeyCorrectName = false;
+                    return CallNextHookEx(NULL, nCode, wParam, lParam);
+                }
+            }
+            hotkeyName = pressedHotkey;
+            HotKeyEvent(hotkeys[activeHotKey].name, "pressed");
+            return -1;
+        }
+        else
+        {
+            return CallNextHookEx(NULL, nCode, wParam, lParam);
+        }
+    }
+    else if (wParam == WM_KEYUP)
+    {
+        if (isTrcktivityEnabled)
+        {
+            if (kbdTime == 0)
+                kbdTime = keyInfo.time;
+            if (keyInfo.time - kbdTime < 10000)
+            {
+                kbdPressCount++;
+            }
+            else
+            {
+                // ! Send trk to dart getTimestamp() : kbdPressCount
+                TrktivityEvent("Keys", std::to_string(kbdPressCount));
+                kbdTime = keyInfo.time;
+                kbdPressCount = 0;
+            }
+        }
+        //#h white
+        if (hotkeyPressed)
+        {
+            if (!hotkeys[activeHotKey].listenToMovement)
+            {
+                HotKeyEvent(hotkeys[activeHotKey].name, "released");
+                hotkeyPressed = false;
+                hotkeyCorrectName = false;
+                return CallNextHookEx(NULL, nCode, wParam, lParam);
+            }
+            std::wstring pressedHotkey{};
+            if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+                pressedHotkey.append(L"CTRL+");
+            if (GetAsyncKeyState(VK_MENU) & 0x8000)
+                pressedHotkey.append(L"ALT+");
+            if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                pressedHotkey.append(L"SHIFT+");
+            if (GetAsyncKeyState(VK_LWIN) & 0x8000)
+                pressedHotkey.append(L"WIN+");
+            if (pressedHotkey.length() < 2)
+                return CallNextHookEx(NULL, nCode, wParam, lParam);
+
+            wchar_t buffer[32] = {};
+            UINT key = (keyInfo.scanCode << 16);
+            GetKeyNameText((LONG)key, buffer, 32);
+
+            std::wstring keyName(buffer);
+            std::transform(keyName.begin(), keyName.end(), keyName.begin(), [](int c) -> char
+                           { return static_cast<char>(::toupper(c)); });
+            std::wstring modifisers(pressedHotkey);
+            if (modifisers.length() > 0)
+            {
+                modifisers.erase(modifisers.length() - 1);
+            }
+            pressedHotkey.append(keyName);
+            if (hotkeys[activeHotKey].hotkey == pressedHotkey || hotkeys[activeHotKey].modifisers == modifisers)
+            {
+                HotKeyEvent(hotkeys[activeHotKey].name, "released");
+                hotkeyPressed = false;
+                hotkeyCorrectName = false;
+                // return 1;
+                return CallNextHookEx(NULL, nCode, wParam, lParam);
+            }
+            // ! Send to dart hotkey released;
+            // return 1;
+        }
+        //#e
+    }
+
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+enum mouseButtons
+{
+    BTN_LEFT,
+    BTN_RIGHT,
+    BTN_MIDDLE,
+    BTN_SWUP,
+    BTN_SWDOWN,
+    BTN_XBUTTON1,
+    BTN_XBUTTON2,
+    BTN_NONE
+};
+int htMousePosX;
+int htMousePosY;
+LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    if (nCode != HC_ACTION)
+        return CallNextHookEx(NULL, nCode, wParam, lParam);
+
+    MSLLHOOKSTRUCT *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
+    if (wParam == WM_MOUSEMOVE)
+    {
+        // while pressing
+        if (hotkeyPressed)
+        {
+            POINT lpPoint;
+            GetCursorPos(&lpPoint);
+            if (htMousePosX == 0)
+                htMousePosX = lpPoint.x;
+            if (htMousePosY == 0)
+                htMousePosY = lpPoint.y;
+
+            // Left, Right, Up, Down;
+            int
+                diffX = lpPoint.x - htMousePosX,
+                diffY = lpPoint.y - htMousePosY;
+
+            if (abs(diffX) > 10 || abs(diffY) > 10)
+            {
+                Hotkey hotkey = hotkeys[activeHotKey];
+                // ! send hotkey while pressed method with diff as value aswell, for opposite direction.
+                HotKeyEvent(hotkey.name, "moved");
+                htMousePosX = 0;
+                htMousePosY = 0;
+            }
+        }
+        if (isTrcktivityEnabled)
+        {
+            if (trckMovementX == 0)
+                trckMovementX = info->pt.x;
+            if (trckMovementY == 0)
+                trckMovementY = info->pt.y;
+            if (trkTimestamp == 0)
+                trkTimestamp = info->time;
+
+            trckMovementX = info->pt.x;
+            trckMovementY = info->pt.y;
+            int timeDiff = info->time - trkTimestamp;
+            mouseDirectionData[(int)floor(timeDiff / 3000)] = 1;
+            if (timeDiff > 10000)
+            {
+                trkTimestamp = info->time;
+                /// ! Send trk getTimestamp() : mouseDirectionData.size() to server.
+                TrktivityEvent("Movement", std::to_string(mouseDirectionData.size()));
+                mouseDirectionData.clear();
+            }
+        }
+    }
+
+    char const *up_down[] = {"up", "down"};
+    bool down = false;
+    mouseButtons button = BTN_NONE;
+    switch (wParam)
+    {
+
+    case WM_LBUTTONDOWN:
+        down = true;
+    case WM_LBUTTONUP:
+        button = BTN_LEFT;
+        break;
+
+    case WM_RBUTTONDOWN:
+        down = true;
+    case WM_RBUTTONUP:
+        button = BTN_RIGHT;
+        break;
+
+    case WM_MBUTTONDOWN:
+        down = true;
+    case WM_MBUTTONUP:
+        button = BTN_MIDDLE;
+        break;
+
+    case WM_XBUTTONDOWN:
+        down = true;
+    case WM_XBUTTONUP:
+        button = BTN_XBUTTON1;
+        break;
+
+    case WM_MOUSEWHEEL:
+        down = static_cast<std::make_signed_t<WORD>>(HIWORD(info->mouseData)) < 0;
+        if (!down)
+            button = BTN_SWUP;
+        else
+            button = BTN_SWDOWN;
+        break;
+    }
+    if (isViewsEnabled && button == BTN_RIGHT)
+    {
+        if (viewsState == 1 && !down)
+        {
+            viewsState = 2;
+            // ! Send to dart views open
+            ViewsEvent("open", NULL);
+        }
+        else if (viewsState == 2 && down)
+        {
+            viewsState = 3;
+            // ! Send to dart selecting views
+            ViewsEvent("selecting", NULL);
+        }
+        else if (viewsState == 3 && !down)
+        {
+            viewsState = 2;
+            // ! Send to dart view selected;
+            ViewsEvent("selected", NULL);
+        }
+    }
+    if (isViewsEnabled && (button == BTN_SWUP || button == BTN_SWDOWN))
+    {
+        if (viewsState >= 2)
+        {
+            if (button == BTN_SWUP)
+            {
+                // ! Send to dart views switch up.
+                ViewsEvent("switchup", NULL);
+            }
+            else
+            {
+                // ! Send to dart views switch down.
+                ViewsEvent("switchdown", NULL);
+            }
+        }
+    }
+    if (button != BTN_NONE)
+    {
+        if (button == BTN_XBUTTON1)
+        {
+            if (HIWORD(info->mouseData) == 2)
+                button = BTN_XBUTTON2;
+        }
+        int bID = (int)button;
+        if (bID == 5 || bID == 6)
+        {
+            if (down)
+            {
+                bool result = false;
+                if (bID == 5)
+                    result = checkForPressedHotKey(L"MOUSEBUTTON4");
+                else
+                    result = checkForPressedHotKey(L"MOUSEBUTTON5");
+                if (result)
+                {
+                    if (hotkeys[activeHotKey].prohibitedWindows.size() > 0)
+                    {
+                        if (isOnProhibitedWindow())
+                        {
+                            hotkeyPressed = false;
+                            hotkeyCorrectName = false;
+                            return CallNextHookEx(NULL, nCode, wParam, lParam);
+                        }
+                    }
+                    // ! Send to dart hotkey success
+                    HotKeyEvent(hotkeys[activeHotKey].name, "pressed");
+                    return -1;
+                }
+            }
+            else
+            {
+                if (hotkeyPressed)
+                {
+                    HotKeyEvent(hotkeys[activeHotKey].name, "released");
+                    hotkeyPressed = false;
+                    hotkeyCorrectName = false;
+                    return 1;
+                }
+            }
+        }
+    }
+    // ! Send output
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime)
+{
+    if (dwEvent == EVENT_SYSTEM_FOREGROUND)
+    {
+        // ! Send to server event_foreground hwnd;
+        WinEvent("foreground", hwnd);
+    }
+    if (isTrcktivityEnabled && dwEvent == EVENT_OBJECT_NAMECHANGE)
+    {
+        if (foregroundWindow == hwnd)
+        {
+            // ! Send to server event_namechange hwnd;
+            WinEvent("namechange", hwnd);
+        }
+    }
+    if (isViewsEnabled)
+    {
+        if (dwEvent == EVENT_SYSTEM_MOVESIZESTART)
+        {
+            // ! Send to dart movestart;
+            ViewsEvent("movestart", hwnd);
+            movingWindow = hwnd;
+            viewsState = 1;
+        }
+        else if (dwEvent == EVENT_SYSTEM_MOVESIZEEND)
+        {
+            // ! send to dart moves ended;
+            ViewsEvent("moveend", hwnd);
+            movingWindow = 0;
+            viewsState = 0;
+        }
+    }
+}
+
+///!!
+///!!
+///!!
+///!!
+///!!
+///!!
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
     return 0;
@@ -423,7 +1129,7 @@ void SetHwndSkipTaskbar(HWND hWnd, bool skip)
 }
 //! Hooks
 LRESULT CALLBACK
-HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
+mHandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (nCode != HC_ACTION) // Nothing to do :(
         return CallNextHookEx(NULL, nCode, wParam, lParam);
@@ -493,7 +1199,7 @@ HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
         if (bID < 7 && (mouseWatchButtons[bID] == 1 || mouseControlButtons[bID] == 1))
         {
             flutter::EncodableMap args = flutter::EncodableMap();
-            args[flutter::EncodableValue("hookID")] = flutter::EncodableValue((int)((DWORD_PTR)g_MouseHook)); // DWORD_PTR
+            args[flutter::EncodableValue("hookID")] = flutter::EncodableValue((int)((DWORD_PTR)gMouseHook)); // DWORD_PTR
             args[flutter::EncodableValue("hookType")] = flutter::EncodableValue(MOUSEHOOK);
             args[flutter::EncodableValue("state")] = flutter::EncodableValue(down);
             args[flutter::EncodableValue("button")] = flutter::EncodableValue(bID);
@@ -514,11 +1220,11 @@ HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
     return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-void CALLBACK HandleWinEvent(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime)
+void CALLBACK mHandleWinEvent(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime)
 {
     flutter::EncodableMap args = flutter::EncodableMap();
 
-    args[flutter::EncodableValue("hookID")] = flutter::EncodableValue((int)((DWORD_PTR)g_EventHook)); // DWORD_PTR
+    args[flutter::EncodableValue("hookID")] = flutter::EncodableValue((int)((DWORD_PTR)gEventHook)); // DWORD_PTR
     args[flutter::EncodableValue("hookType")] = flutter::EncodableValue(EVENTHOOK);
     args[flutter::EncodableValue("event")] = flutter::EncodableValue((int)event);
     args[flutter::EncodableValue("hWnd")] = flutter::EncodableValue((int)((DWORD_PTR)hWnd));
@@ -621,10 +1327,17 @@ namespace tabamewin32
 
     Tabamewin32Plugin::~Tabamewin32Plugin()
     {
+        if (gEventHook != NULL)
+            UnhookWinEvent(gEventHook);
+        if (gMouseHook != NULL)
+            UnhookWindowsHookEx(gMouseHook);
+
         if (g_EventHook != NULL)
             UnhookWinEvent(g_EventHook);
         if (g_MouseHook != NULL)
             UnhookWindowsHookEx(g_MouseHook);
+        if (g_KeyboardHook != NULL)
+            UnhookWindowsHookEx(g_KeyboardHook);
     }
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
@@ -871,7 +1584,6 @@ namespace tabamewin32
             {
                 flutter::EncodableMap trayIconMap;
                 trayIconMap[flutter::EncodableValue("toolTip")] = flutter::EncodableValue(Encoding::WideToUtf8(trayIcon.toolTip));
-                // std::cout << Encoding::WideToUtf8(trayIcon.toolTip) << endl;
                 trayIconMap[flutter::EncodableValue("isVisible")] = flutter::EncodableValue((int)trayIcon.isVisible);
                 trayIconMap[flutter::EncodableValue("processID")] = flutter::EncodableValue((int)trayIcon.processID);
                 trayIconMap[flutter::EncodableValue("hWnd")] = flutter::EncodableValue((int)((LONG_PTR)trayIcon.data.hwnd));
@@ -899,26 +1611,26 @@ namespace tabamewin32
             int eventMax = std::get<int>(getArgs.at(flutter::EncodableValue("eventMax")));
             int eventFilters = std::get<int>(getArgs.at(flutter::EncodableValue("eventFilters")));
 
-            g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
+            gMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mHandleMouseHook, GetModuleHandle(NULL), 0);
 
             if (eventMin > 0)
-                g_EventHook = SetWinEventHook(eventMin, eventMax, NULL, HandleWinEvent, 0, 0, eventFilters);
+                gEventHook = SetWinEventHook(eventMin, eventMax, NULL, mHandleWinEvent, 0, 0, eventFilters);
             else
-                g_EventHook = NULL;
+                gEventHook = NULL;
 
             flutter::EncodableMap args = flutter::EncodableMap();
-            args[flutter::EncodableValue("mouseHookID")] = flutter::EncodableValue((int)((LONG_PTR)g_MouseHook)); // DWORD_PTR
-            args[flutter::EncodableValue("eventHookID")] = flutter::EncodableValue((int)((LONG_PTR)g_EventHook)); // DWORD_PTR
+            args[flutter::EncodableValue("mouseHookID")] = flutter::EncodableValue((int)((LONG_PTR)gMouseHook)); // DWORD_PTR
+            args[flutter::EncodableValue("eventHookID")] = flutter::EncodableValue((int)((LONG_PTR)gEventHook)); // DWORD_PTR
             result->Success(flutter::EncodableValue(args));
         }
         else if (method_name.compare("uninstallHooks") == 0)
         {
-            if (g_EventHook != NULL)
-                UnhookWinEvent(g_EventHook);
-            if (g_MouseHook != NULL)
-                UnhookWindowsHookEx(g_MouseHook);
-            g_EventHook = NULL;
-            g_MouseHook = NULL;
+            if (gEventHook != NULL)
+                UnhookWinEvent(gEventHook);
+            if (gMouseHook != NULL)
+                UnhookWindowsHookEx(gMouseHook);
+            gEventHook = NULL;
+            gMouseHook = NULL;
             result->Success(flutter::EncodableValue("Hooks uninstalled"));
         }
         else if (method_name.compare("cleanHooks") == 0)
@@ -1100,6 +1812,104 @@ namespace tabamewin32
             std::string out = BrowseFolder();
             result->Success(flutter::EncodableValue(out));
         }
+        //#h white
+        else if (method_name.compare("hotkeyAdd") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            string key = std::get<std::string>(args.at(flutter::EncodableValue("hotkey")));
+            string modifisers = std::get<std::string>(args.at(flutter::EncodableValue("modifisers")));
+            string matchWindowBy = std::get<std::string>(args.at(flutter::EncodableValue("matchWindowBy")));
+            string matchWindowText = std::get<std::string>(args.at(flutter::EncodableValue("matchWindowText")));
+            string prohibitedWindows = std::get<std::string>(args.at(flutter::EncodableValue("prohibitedWindows")));
+
+            bool activateWindowUnderCursor = std::get<bool>(args.at(flutter::EncodableValue("activateWindowUnderCursor")));
+            bool regionasPercentage = std::get<bool>(args.at(flutter::EncodableValue("regionasPercentage")));
+            bool regionOnScreen = std::get<bool>(args.at(flutter::EncodableValue("regionOnScreen")));
+            bool listenToMovement = std::get<bool>(args.at(flutter::EncodableValue("listenToMovement")));
+            bool noopScreenBusy = std::get<bool>(args.at(flutter::EncodableValue("noopScreenBusy")));
+
+            string name = std::get<std::string>(args.at(flutter::EncodableValue("name")));
+
+            int regionX1 = std::get<int>(args.at(flutter::EncodableValue("regionX1")));
+            int regionX2 = std::get<int>(args.at(flutter::EncodableValue("regionX2")));
+            int regionY1 = std::get<int>(args.at(flutter::EncodableValue("regionY1")));
+            int regionY2 = std::get<int>(args.at(flutter::EncodableValue("regionY2")));
+            int anchorType = std::get<int>(args.at(flutter::EncodableValue("anchorType")));
+            Hotkey hotkey{};
+
+            hotkey.hotkey = Encoding::Utf8ToWide(key);
+            hotkey.modifisers = Encoding::Utf8ToWide(modifisers);
+            hotkey.activateWindowUnderCursor = activateWindowUnderCursor;
+            hotkey.listenToMovement = listenToMovement;
+            hotkey.matchWindowBy = matchWindowBy;
+            hotkey.matchWindowText = Encoding::Utf8ToWide(matchWindowText);
+
+            hotkey.noopScreenBusy = noopScreenBusy;
+            if (prohibitedWindows.length() > 0)
+            {
+                std::vector<std::string> prohibitedWindowsVector;
+                std::stringstream ss(prohibitedWindows);
+                std::string token;
+                while (std::getline(ss, token, ';'))
+                {
+                    prohibitedWindowsVector.push_back(token);
+                }
+                if (prohibitedWindowsVector.size() == 0)
+                {
+                    hotkey.prohibitedWindows.push_back(prohibitedWindows);
+                }
+                else
+                    hotkey.prohibitedWindows = prohibitedWindowsVector;
+            }
+
+            hotkey.name = name;
+
+            hotkey.regionX1 = regionX1;
+            hotkey.regionX2 = regionX2;
+            hotkey.regionY1 = regionY1;
+            hotkey.regionY2 = regionY2;
+
+            hotkey.regionAsPercentage = regionasPercentage;
+            hotkey.regionOnScreen = regionOnScreen;
+            hotkey.anchorType = anchorType;
+
+            hotkeys.push_back(hotkey);
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("hotkeyReset") == 0)
+        {
+            hotkeys.clear();
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("hotkeyUnHook") == 0)
+        {
+            if (g_EventHook != NULL)
+                UnhookWinEvent(g_EventHook);
+            if (g_MouseHook != NULL)
+                UnhookWindowsHookEx(g_MouseHook);
+            if (g_KeyboardHook != NULL)
+                UnhookWindowsHookEx(g_KeyboardHook);
+            g_EventHook = NULL;
+            g_MouseHook = NULL;
+            g_KeyboardHook = NULL;
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("hotkeyHook") == 0)
+        {
+            g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
+            g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
+            g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("trcktivity") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            // bool
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+            isTrcktivityEnabled = enabled;
+            result->Success(flutter::EncodableValue(true));
+        }
+        //#e
         else
         {
             result->NotImplemented();

@@ -111,11 +111,29 @@ class WinKeys {
     return true;
   }
 
+  static const Map<String, int> mouseVK = <String, int>{
+    "VK_LMB": MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP,
+    "VK_RMB": MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP,
+    "VK_MMB": MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP,
+  };
+
   /// Send a single key
   /// [key] is the key to send.
   /// [mode] is the mode to send the key.
   /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
   static bool single(String key, KeySentMode mode) {
+    if (mouseVK.containsKey(key)) {
+      final Pointer<INPUT> input = calloc<INPUT>();
+      input.ref.type = INPUT_MOUSE;
+
+      input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
+      input.ref.mi.mouseData = 0;
+      input.ref.mi.dwExtraInfo = NULL;
+      input.ref.mi.time = 0;
+      SendInput(1, input, sizeOf<INPUT>());
+      free(input);
+      return true;
+    }
     int keyValue = keyMap[key] ?? 0;
     if (keyValue == 0) {
       print("no key $key");

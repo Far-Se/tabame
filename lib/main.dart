@@ -181,6 +181,10 @@ class _TabameState extends State<Tabame> {
                         secondary: Color(globalSettings.darkTheme.accentColor),
                         tertiary: Color(globalSettings.darkTheme.textColor),
                       ),
+                  buttonTheme: ThemeData.dark().buttonTheme.copyWith(
+                        textTheme: ButtonTextTheme.primary,
+                        colorScheme: Theme.of(context).colorScheme.copyWith(primary: Theme.of(context).backgroundColor),
+                      ),
                 ),
                 themeMode: themeMode,
                 // home: QuickMenu()

@@ -1,7 +1,15 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:ffi';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
+
+import '../keys.dart';
+import '../win32/win32.dart';
 
 class Hotkeys {
   String key;
@@ -19,10 +27,22 @@ class Hotkeys {
   });
 
   String get hotkey {
-    if (modifiers.isNotEmpty) return '${modifiers.join('+')}+$key';
-    if (key.isNotEmpty) return key;
+    if (modifiers.isNotEmpty) return '${modifiers.join('+')}+$key'.toUpperCase();
+    if (key.isNotEmpty) return key.toUpperCase();
     return "NoKey";
   }
+
+  bool get hasDuration => keymaps.any((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled);
+  bool get hasDoublePress => keymaps.any((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled);
+  bool get hasMouseMovement => keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.enabled);
+  bool get hasMouseMovementTriggers => keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled);
+
+  List<KeyMap> get getPress => keymaps.where((KeyMap km) => km.triggerType == TriggerType.press && km.enabled).toList();
+  List<KeyMap> get getDurationKeys => keymaps.where((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled).toList();
+  List<KeyMap> get getDoublePress => keymaps.where((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled).toList();
+  List<KeyMap> get getHotkeysWithMovement => keymaps.where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] != -1 && km.enabled).toList();
+  List<KeyMap> get getHotkeysWithMovementTriggers =>
+      keymaps.where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled).toList();
 
   Hotkeys copyWith({
     String? key,
@@ -105,13 +125,86 @@ class KeyMap {
   /// [0] - title, exe, class, [1] - searchFor
   List<String> windowsInfo;
   bool boundToRegion;
+  bool regionOnScreen = false;
   Region region;
   // enum
   TriggerType triggerType;
+  bool get isMouseInRegion {
+    if (!boundToRegion) return true;
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final Pointer<RECT> lpRect = calloc<RECT>();
+    int hwnd = GetForegroundWindow();
+    if (!windowUnderMouse) {
+      hwnd = GetDesktopWindow();
+      GetWindowRect(hwnd, lpRect);
+      while (lpPoint.ref.x >= lpRect.ref.right) {
+        lpPoint.ref.x = lpPoint.ref.x - lpRect.ref.right;
+      }
+      while (lpPoint.ref.y >= lpRect.ref.bottom) {
+        lpPoint.ref.y = lpPoint.ref.y - lpRect.ref.right;
+      }
+    } else {
+      if (windowUnderMouse) {
+        hwnd = WindowFromPoint(lpPoint.ref);
+        hwnd = GetAncestor(hwnd, 2);
+      }
+      GetWindowRect(hwnd, lpRect);
+    }
 
-  /// press: [0] - has double press,
-  /// Movemenet: [0] - direction , [1] - distanceMin, [2] - Distance max
-  /// Duration: [0] - min miliseconds, [1] - max miliseconds
+    int x = 0, y = 0;
+    int yTop = lpPoint.ref.y - lpRect.ref.top;
+    int yBottom = lpPoint.ref.y - lpRect.ref.bottom;
+    int xLeft = lpPoint.ref.x - lpRect.ref.left;
+    int xRight = lpPoint.ref.x - lpRect.ref.right;
+    int width = lpRect.ref.right - lpRect.ref.left;
+    int height = lpRect.ref.bottom - lpRect.ref.top;
+    free(lpRect);
+    free(lpPoint);
+
+    if (region.anchorType == AnchorType.topLeft) {
+      x = xLeft;
+      y = yTop;
+    } else if (region.anchorType == AnchorType.topRight) {
+      x = xRight;
+      y = yTop;
+    } else if (region.anchorType == AnchorType.bottomLeft) {
+      x = xLeft;
+      y = yBottom;
+    } else if (region.anchorType == AnchorType.bottomRight) {
+      x = xRight;
+      y = yBottom;
+    }
+    x = x.abs();
+    y = y.abs();
+    int percentageX = ((x / width) * 100).ceil();
+    int percentageY = ((y / height) * 100).ceil();
+    if (region.asPercentage) {
+      x = percentageX;
+      y = percentageY;
+    }
+
+    if (x >= region.x1 && x <= region.x2 && y >= region.y1 && y <= region.y2) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Press:
+  ///
+  ///  [0] - has double press,
+  ///
+  /// Movement:
+  ///
+  ///  [0] - direction , [1] - distanceMin, [2] - Distance max
+  ///
+  /// MovementSteps:
+  ///
+  ///  [0] - direction, [1] - distance, [2] - hasSteps = -1
+  ///
+  /// Duration:
+  ///
+  ///  [0] - min miliseconds, [1] - max miliseconds
   List<int> triggerInfo;
   List<KeyAction> actions;
   List<String> variableCheck;
@@ -135,6 +228,58 @@ class KeyMap {
       }
     }
     if (variableCheck.length != 2) variableCheck = <String>["", ""];
+    if (boundToRegion && windowsInfo[0] == "any") {
+      regionOnScreen = true;
+    }
+  }
+  void applyActions() {
+    int delayed = 1;
+    if (windowUnderMouse) {
+      print("Activating window under cursor");
+      final Pointer<POINT> lpPoint = calloc<POINT>();
+      GetCursorPos(lpPoint);
+      int hWnd = WindowFromPoint(lpPoint.ref);
+      hWnd = GetAncestor(hWnd, 2);
+      free(lpPoint);
+      if (GetForegroundWindow() != hWnd) {
+        delayed = 150;
+        SetForegroundWindow(hWnd);
+        SetFocus(hWnd);
+        SetActiveWindow(hWnd);
+        SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
+      }
+      // Win32.activeWindowUnderCursor();
+    }
+    Future<void>.delayed(Duration(milliseconds: delayed), () {
+      for (KeyAction action in actions) {
+        if (action.type == ActionType.hotkey) {
+          final List<String> keys = action.value.split('+');
+          String sendKey = "";
+          for (String key in keys) {
+            if (key.length > 1) {
+              sendKey += "{#$key}";
+            } else {
+              sendKey += "$key";
+            }
+          }
+          print(sendKey);
+          WinKeys.send(sendKey);
+
+          //
+        } else if (action.type == ActionType.sendKeys) {
+          WinKeys.send(action.value);
+        } else if (action.type == ActionType.sendClick) {
+          final ClickAction click = ClickAction.fromJson(action.value);
+        } else if (action.type == ActionType.tabameFunction) {
+          if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
+            HotKeyInfo.tabameFunctionsMap[action.value]!();
+          }
+          //
+        } else if (action.type == ActionType.setVar) {
+          //
+        }
+      }
+    });
   }
 
   KeyMap copyWith({
@@ -255,19 +400,37 @@ class HotKeyInfo {
   };
   static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
-  static const List<String> tabameFunctions = <String>[
-    "ToggleTaskbar",
-    "ToggleQuickMenu",
-    "ToggleQuickRun",
-    "OpenAudioSettings",
-    "PlayPauseSpotify",
-    "SwitchDesktop",
-    "SwitchAudioOutput",
-    "SwitchMicrophoneInput",
-    "ToggleMicrophone",
-    "SwitchDesktopToRight",
-    "SwitchDesktopToLeft",
-  ];
+  static Map<String, Function> tabameFunctionsMap = <String, Function>{
+    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
+    "ToggleQuickMenu": () {},
+    "ToggleQuickRun": () {},
+    "ShowLastActiveWindow": () {},
+    "OpenAudioSettings": () {},
+    "PlayPauseSpotify": () {},
+    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
+    "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
+    "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
+    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input),
+    "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
+    "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),
+    "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
+    "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
+  };
+  static List<String> tabameFunctions = tabameFunctionsMap.keys.toList();
+  //keymap.keymaps[index].actions[0].type
+  static const Map<ActionType, IconData> actionTypeIcons = <ActionType, IconData>{
+    ActionType.hotkey: Icons.tag,
+    ActionType.sendClick: Icons.mouse,
+    ActionType.sendKeys: Icons.keyboard,
+    ActionType.setVar: Icons.tune,
+    ActionType.tabameFunction: Icons.functions,
+  };
+  static const Map<TriggerType, IconData> triggerTypeIcons = <TriggerType, IconData>{
+    TriggerType.press: Icons.touch_app,
+    TriggerType.doublePress: Icons.ads_click,
+    TriggerType.duration: Icons.schedule,
+    TriggerType.movement: Icons.gps_fixed,
+  };
 }
 
 class KeyAction {
@@ -397,12 +560,7 @@ class ClickAction {
 enum AnchorType {
   topLeft,
   topRight,
-  topCenter,
-  centerLeft,
-  center,
-  centerRight,
   bottomLeft,
-  bottomCenter,
   bottomRight,
 }
 

@@ -66,6 +66,7 @@ class WinHooks {
   }
 
   Future<void> _methodCallHandler(MethodCall call) async {
+    if (call.method != "onEvent") return;
     if (call.arguments["hookType"] == HookTypes.mouseHook.index && call.arguments["hookID"] != hookMouseID) {
       uninstallSpecificHookID(call.arguments['hookID'] as int, HookTypes.mouseHook);
       return;

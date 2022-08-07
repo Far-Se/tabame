@@ -6,8 +6,8 @@
 
 #include <memory>
 
-extern HHOOK g_MouseHook;
-extern HWINEVENTHOOK g_EventHook;
+extern HHOOK gMouseHook;
+extern HWINEVENTHOOK gEventHook;
 
 namespace tabamewin32
 {

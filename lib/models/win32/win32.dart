@@ -380,6 +380,15 @@ class Win32 {
     }
     SetWindowPos(hWnd, topmostOrNot, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
   }
+
+  static void activeWindowUnderCursor() {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    int hwnd = WindowFromPoint(lpPoint.ref);
+    hwnd = GetAncestor(hwnd, 2);
+    activateWindow(hwnd);
+    free(lpPoint);
+  }
 }
 
 class WinUtils {
@@ -637,6 +646,17 @@ class WinUtils {
     free(lpPoint);
     point = Monitor.adjustPointToDPI(point);
     return point;
+  }
+
+  static List<int> getMousePosXY() {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    Point point = Point(X: 0, Y: 0);
+    point.X = lpPoint.ref.x;
+    point.Y = lpPoint.ref.y;
+    free(lpPoint);
+    point = Monitor.adjustPointToDPI(point);
+    return <int>[point.X, point.Y];
   }
 
   static alwaysAwakeRun(bool state) {

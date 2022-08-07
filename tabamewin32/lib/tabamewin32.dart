@@ -1,9 +1,11 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
-
-import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class AudioDevice {
   String id = "";
@@ -401,4 +403,150 @@ Future<void> setWallpaperColor(int color) async {
 Future<String> pickFolder() async {
   final String result = await audioMethodChannel.invokeMethod<String>('browseFolder') ?? "";
   return result;
+}
+
+Future<void> enableTrcktivity(bool enabled) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'enabled': enabled,
+  };
+  await audioMethodChannel.invokeMethod('trcktivity', arguments);
+}
+
+class MousePos {
+  final Point<int> start;
+  final Point<int> end;
+  Point<int> get diff => end - start;
+  MousePos({
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  String toString() => 'MousePos(start: $start, end: $end)';
+}
+
+class HotkeyTime {
+  final int start;
+  final int end;
+  int get duration => end - start;
+  HotkeyTime({
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  String toString() => 'HotkeyTime(start: $start, end: $end)';
+}
+
+class HotkeyEvent {
+  final MousePos mouse;
+  final HotkeyTime time;
+  final String hotkey;
+  final String action;
+  final String name;
+  HotkeyEvent({
+    required this.mouse,
+    required this.time,
+    required this.hotkey,
+    required this.action,
+    required this.name,
+  });
+
+  @override
+  String toString() {
+    return 'HotkeyEvent(mouse: $mouse, time: $time, hotkey: $hotkey, action: $action, name: $name)';
+  }
+}
+
+abstract class TabameListener {
+  void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
+}
+
+/// ? NativeHotkey
+class NativeHotkey {
+  static final ObserverList<TabameListener> _listeners = ObserverList<TabameListener>();
+  static bool isRegistered = false;
+  static List<TabameListener> get listeners => List<TabameListener>.from(_listeners);
+
+  static bool get hasListeners {
+    return _listeners.isNotEmpty;
+  }
+
+  /// Add EventListener to the list of listeners.
+  static void addListener(TabameListener listener) {
+    _listeners.add(listener);
+  }
+
+  static void removeListener(TabameListener listener) {
+    _listeners.remove(listener);
+  }
+
+  static Future<void> _methodCallHandler(MethodCall call) async {
+    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) return;
+    if (call.method == "HotKeyEvent") {
+      for (final TabameListener listener in listeners) {
+        if (!_listeners.contains(listener)) {
+          print("no listeners");
+          return;
+        }
+        listener.onHotKeyEvent(
+          HotkeyEvent(
+            name: call.arguments["name"],
+            action: call.arguments["info"],
+            hotkey: call.arguments["hotkey"],
+            mouse: MousePos(
+              start: Point<int>(call.arguments["sX"], call.arguments["sY"]),
+              end: Point<int>(call.arguments["eX"], call.arguments["eY"]),
+            ),
+            time: HotkeyTime(
+              start: call.arguments["start"],
+              end: call.arguments["end"],
+            ),
+          ),
+        );
+      }
+    }
+    if (call.method == "TrktivityEvent") {
+      print(call.arguments);
+    }
+    if (call.method == "ViewsEvent") {
+      print(call.arguments);
+    }
+    if (call.method == "WinEvent") {
+      if (call.arguments['action'] == "foreground") {
+        print(call.arguments);
+      }
+    }
+  }
+
+  static register() {
+    audioMethodChannel.setMethodCallHandler(_methodCallHandler);
+  }
+
+  static Future<void> add(Map<String, dynamic> hotkey) async {
+    await audioMethodChannel.invokeMethod('hotkeyAdd', hotkey);
+  }
+
+  static Future<void> reset() async {
+    await audioMethodChannel.invokeMethod('hotkeyReset');
+  }
+
+  static Future<void> hook() async {
+    await audioMethodChannel.invokeMethod('hotkeyHook');
+    isRegistered = true;
+  }
+
+  static Future<void> unHook() async {
+    await audioMethodChannel.invokeMethod('hotkeyUnHook');
+    isRegistered = false;
+  }
+
+  static Future<void> run(List<Map<String, dynamic>> hotkeys) async {
+    if (isRegistered) await unHook();
+    reset();
+    for (Map<String, dynamic> i in hotkeys) {
+      await add(i);
+    }
+    hook();
+  }
 }

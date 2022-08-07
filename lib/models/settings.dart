@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:local_notifier/local_notifier.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
@@ -125,6 +126,8 @@ Future<void> registerAll() async {
   await Boxes.registerBoxes();
   //Schedule Theme
   globalSettings.setScheduleThemeChange();
+  //
+  await NativeHotkey.register();
   //Toast
   Future<void>.delayed(const Duration(seconds: 2), () async {
     if (!WinUtils.windowsNotificationRegistered) {
@@ -174,6 +177,11 @@ extension StringExtension on String {
   List<String> splitFirst(String char) {
     if (!contains(char)) return <String>[this];
     return <String>[substring(0, indexOf(char)), substring(indexOf(char) + char.length)];
+  }
+
+  String get splitAndUpcase {
+    if (isEmpty) return "";
+    return replaceAllMapped(RegExp(r'([A-Z])', caseSensitive: true), (Match match) => ' ${match[0]}').toUpperCaseEach();
   }
 }
 

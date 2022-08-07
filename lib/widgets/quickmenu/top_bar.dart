@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/win32/mixed.dart';
+import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -101,7 +103,7 @@ class TopBar extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: !kDebugMode ? 50 : 65,
+                width: kDebugMode ? 45 + 20 : 45,
                 child: Align(
                   child: BarWithButtons(
                     height: 25,
@@ -112,12 +114,15 @@ class TopBar extends StatelessWidget {
                           child: Tooltip(
                             message: "Testing",
                             child: InkWell(
-                              onTap: () async {},
+                              onTap: () async {
+                                final ScreenState x = WinUtils.checkUserScreenState();
+                                print(x);
+                              },
                               child: const Icon(Icons.textsms_outlined),
                             ),
                           ),
                         ),
-                      const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop", iconSize: 20),
+                      const SimulateKeyButton(icon: Icons.desktop_windows, simulateKeys: "{#WIN}D", tooltip: "Toggle Desktop", iconSize: 16),
                       const OpenSettingsButton(),
                     ],
                   ),
