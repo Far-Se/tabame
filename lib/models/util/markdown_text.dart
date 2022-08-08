@@ -14,6 +14,9 @@ Main reason of QuickMenu is to hide taskbar so you can focus on your work: less 
 
 The primary purpose of QuickMenu is to minimize distractions by hiding the taskbar, reducing badges, flashes, and notifications.
 
+**You can navigate QuickMenu** with Tab and arrows.
+
+
 ##### QuickActions
 Quick Actions is a set of predefined tools that give you access to useful functions, such as switching audio output, changing volume or music track, switch Desktop, pin Window and many other.
 

@@ -23,6 +23,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "AlwaysAwakeButton": Icons.running_with_errors,
     "ChangeThemeButton": Icons.theater_comedy_sharp,
     "HideDesktopFilesButton": Icons.hide_image,
+    "SpotifyButton": Icons.music_note,
     "ToggleHiddenFilesButton": Icons.folder_off,
     "Deactivated:": Icons.do_disturb,
   };

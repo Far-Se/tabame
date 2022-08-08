@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/src/gestures/events.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
+import '../widgets/itzy/quickmenu/widget_audio.dart';
 import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/settings.dart';
@@ -43,21 +45,25 @@ Future<int> quickMenuWindowSetup() async {
   return 1;
 }
 
-class QuickMenuState extends State<QuickMenu> with TabameListener {
+class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTriggers {
   double lastHeight = 0;
   Timer? changeHeightTimer;
+  final Future<int> quickMenuWindow = quickMenuWindowSetup();
+  final FocusNode focusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     NativeHotkey.unHook();
     NativeHotkey.addListener(this);
+    QuickMenuFunctions.addListener(this);
     WinHotkeys.update();
+    if (globalSettings.trktivityEnabled) enableTrcktivity(globalSettings.trktivityEnabled);
     Globals.changingPages = false;
-    Globals.quickMenuFullyInitiated = false;
     //!RELEASE MODE
-    if (!kDebugMode) {
+    if (1 + 1 == 3 && !kDebugMode) {
       changeHeightTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) async {
-        if (Globals.quickMenuFullyInitiated != true || Globals.isWindowActive || globalSettings.quickRunState != 0) return;
+        if (Globals.isWindowActive || globalSettings.quickRunState != 0) return;
         final double newHeight = Globals.heights.allSummed + 80;
         if (lastHeight != newHeight) {
           if (!mounted) return;
@@ -69,12 +75,102 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
     // WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(focusNode));
   }
 
+  @override
+  void dispose() {
+    PaintingBinding.instance.imageCache.clear();
+    if (!kDebugMode) changeHeightTimer?.cancel();
+    NativeHotkey.removeListener(this);
+    QuickMenuFunctions.removeListener(this);
+    focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  void onQuickMenuToggled(bool visible, int type) async {
+    globalSettings.quickRunState = 0;
+    globalSettings.quickRunText = "";
+    if (visible) {
+      FocusScope.of(context).requestFocus(focusNode);
+      if (type == 0) {
+        setState(() {});
+      } else if (type == 1) {
+        if (lastHeight < 330) {
+          Future<void>.delayed(const Duration(seconds: 1), () => windowManager.setSize(const Size(300, 330)));
+        }
+        globalSettings.quickRunState = 1;
+        globalSettings.quickRunText = "";
+      } else if (type == 2) {
+        Globals.audioBoxVisible = true;
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Listener(
+                  onPointerDown: (PointerDownEvent event) {
+                    if (event.kind == PointerDeviceKind.mouse) {
+                      if (event.buttons == kSecondaryMouseButton) {
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: AudioBox(),
+                  ),
+                ),
+              ),
+            );
+          },
+        ).whenComplete(() {
+          Globals.audioBoxVisible = false;
+        });
+      }
+      Future<void>.delayed(const Duration(milliseconds: 300), () async {
+        // await WindowManager.instance.focus();
+        Globals.isWindowActive = true;
+        Win32.activateWindow(Win32.hWnd, forced: true);
+
+        if (mounted) setState(() {});
+      });
+    } else {
+      FocusScope.of(context).unfocus();
+      globalSettings.quickRunState = 0;
+      globalSettings.quickRunText = "";
+      setState(() {});
+      // Future<void>.delayed(const Duration(milliseconds: 300), () async {
+      //   if (QuickMenuFunctions.isQuickMenuVisible) return;
+      //   if (!mounted) return;
+      //   final double newHeight = Globals.heights.allSummed + 80;
+      //   if (lastHeight != newHeight) {
+      //     if (!mounted || QuickMenuFunctions.isQuickMenuVisible) return;
+      //     await windowManager.setSize(Size(300, newHeight));
+      //     lastHeight = newHeight;
+      //   }
+      // });
+    }
+  }
+
+  ///
+  ///! Hotkeys
+  ///
   Point<int> mouseSteps = const Point<int>(0, 0);
   int startMouseDir = 0;
   Map<String, int> hotkeyDoublePress = <String, int>{};
   Map<String, int> hotkeyMovement = <String, int>{};
   @override
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
+    // print(hotkeyInfo);
     final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey).toList()];
     if (hk.isEmpty) return;
     final Hotkeys hotkey = hk[0];
@@ -83,7 +179,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
     //   if (state == ScreenState.runningD3dFullScreen) return;
     // }
     if (hotkeyInfo.action == "pressed") {
-      print("Hotkey ${hotkeyInfo.hotkey} pressed!");
+      // print("Hotkey ${hotkeyInfo.hotkey} pressed!");
       if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
         Win32.activeWindowUnderCursor();
       }
@@ -122,7 +218,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
         hotkeyMovement.remove(hotkeyInfo.hotkey);
         return;
       }
-      print("Hotkey ${hotkeyInfo.hotkey} released!");
+      // print("Hotkey ${hotkeyInfo.hotkey} released!");
       startMouseDir = 0;
       final List<KeyMap> mouseDir = hotkey.getHotkeysWithMovement;
       mouseDir.sort((KeyMap a, KeyMap b) => a.boundToRegion
@@ -142,7 +238,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
               ((key.triggerInfo[0] == 1 && diff.x > 0 && diffX.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
               ((key.triggerInfo[0] == 2 && diff.y < 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
               ((key.triggerInfo[0] == 3 && diff.y > 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2])))) {
-            print("Hotkey ${hotkeyInfo.hotkey} Direction ${key.name}!");
+            // print("Hotkey ${hotkeyInfo.hotkey} Direction ${key.name}!");
             key.applyActions();
             return;
           }
@@ -160,7 +256,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
         for (KeyMap key in keys) {
           if (!key.isMouseInRegion) continue;
           if (diff.isBetweenEqual(key.triggerInfo[0], key.triggerInfo[1])) {
-            print("Hotkey ${hotkeyInfo.hotkey} Duration ${key.name}!");
+            // print("Hotkey ${hotkeyInfo.hotkey} Duration ${key.name}!");
             key.applyActions();
             return;
           }
@@ -170,44 +266,39 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
       keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.press).toList();
       for (KeyMap key in keys) {
         if (key.isMouseInRegion) {
-          print("Hotkey ${hotkeyInfo.hotkey} Region ${key.name}!");
+          // print("Hotkey ${hotkeyInfo.hotkey} Region ${key.name}!");
           key.applyActions();
           return;
         }
       }
-      keys = hotkey.getDoublePress;
       if (hotkeyDoublePress.containsKey(hotkey.hotkey)) {
+        keys = hotkey.getDoublePress;
         for (KeyMap key in keys) {
           if (!key.isMouseInRegion) continue;
-          if (hotkeyInfo.time.end - hotkeyDoublePress[hotkey.hotkey]! < 200) {
-            print("Hotkey ${hotkeyInfo.hotkey} DoublePress ${key.name}!");
+          if (hotkeyInfo.time.end - hotkeyDoublePress[hotkey.hotkey]! < 300) {
+            // print("Hotkey ${hotkeyInfo.hotkey} DoublePress ${key.name}!");
             key.applyActions();
             hotkeyDoublePress.remove(hotkey.hotkey);
             return;
           }
-          hotkeyDoublePress.remove(hotkey.hotkey);
         }
+        hotkeyDoublePress.remove(hotkey.hotkey);
       }
       keys = hotkey.getPress;
       for (KeyMap key in keys) {
         if (!key.isMouseInRegion) continue;
         if (hotkey.hasDoublePress) hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
-        print("Hotkey ${hotkeyInfo.hotkey} Press ${key.name}!");
+        // print("Hotkey ${hotkeyInfo.hotkey} Press ${key.name}!");
         key.applyActions();
       }
     }
   }
 
-  final Future<int> quickMenuWindow = quickMenuWindowSetup();
-
-  final FocusNode focusNode = FocusNode();
   @override
-  void dispose() {
-    PaintingBinding.instance.imageCache.clear();
-    if (!kDebugMode) changeHeightTimer?.cancel();
-    NativeHotkey.removeListener(this);
-    focusNode.dispose();
-    super.dispose();
+  void onForegroundWindowChanged(int hWnd) {
+    if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+    }
   }
 
   @override
@@ -250,7 +341,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
           globalSettings.quickRunState = 0;
           globalSettings.quickRunText = "";
           setState(() {});
-        } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 200)) {
+        } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
           if (lastHeight < 330) {
             await windowManager.setSize(const Size(300, 330));
           }
@@ -259,62 +350,72 @@ class QuickMenuState extends State<QuickMenu> with TabameListener {
           setState(() {});
         }
       },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: MouseRegion(
-          onEnter: (PointerEnterEvent event) async {
-            if (!await WindowManager.instance.isFocused()) {}
-            await WindowManager.instance.focus();
-            Globals.isWindowActive = true;
-            Win32.activateWindow(Win32.hWnd);
-            setState(() {});
-          },
-          onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            physics: const NeverScrollableScrollPhysics(),
-            child: Stack(
-              children: <Widget>[
-                if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
-                Padding(
-                  padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                  child: Container(
-                    key: Globals.quickMenu,
-                    color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
-                    child: Container(
-                      decoration: BoxDecoration(
-                          color: Theme.of(context).backgroundColor,
-                          gradient: LinearGradient(
-                            colors: <Color>[
-                              Theme.of(context).backgroundColor,
-                              Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                              Theme.of(context).backgroundColor,
-                            ],
-                            stops: <double>[0, 0.4, 1],
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: <BoxShadow>[
-                            const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-                          ]),
-                      child: globalSettings.quickRunState != 0
-                          ? const QuickRun()
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.max,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: <Widget>[
-                                //3 Items
-                                const TopBar(),
-                                const TaskBar(),
-                                const Divider(thickness: 1, height: 1),
-                                if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
-                                const BottomBar(),
-                              ],
-                            ),
+      child: GestureDetector(
+        onTap: () {
+          if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
+            QuickMenuFunctions.toggleQuickMenu(visible: false);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: MouseRegion(
+            onEnter: (PointerEnterEvent event) async {
+              if (!await WindowManager.instance.isFocused()) {}
+              await WindowManager.instance.focus();
+              Globals.isWindowActive = true;
+              Win32.activateWindow(Win32.hWnd);
+              setState(() {});
+            },
+            onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Stack(
+                children: <Widget>[
+                  if (globalSettings.customSpash != "") Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                  Padding(
+                    padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        key: Globals.quickMenu,
+                        color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: Theme.of(context).backgroundColor,
+                              gradient: LinearGradient(
+                                colors: <Color>[
+                                  Theme.of(context).backgroundColor,
+                                  Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                  Theme.of(context).backgroundColor,
+                                ],
+                                stops: <double>[0, 0.4, 1],
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: <BoxShadow>[
+                                const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
+                              ]),
+                          child: globalSettings.quickRunState != 0
+                              ? const QuickRun()
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    //3 Items
+                                    const TopBar(),
+                                    const TaskBar(),
+                                    const Divider(thickness: 1, height: 1),
+                                    if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
+                                    const BottomBar(),
+                                  ],
+                                ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

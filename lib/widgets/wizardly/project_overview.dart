@@ -125,7 +125,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                   }
                   stateFileProcessing = 1;
                   setState(() {});
-                  if (loadedFiles.isEmpty) loadedFiles = await loadFiles();
+                  //if (loadedFiles.isEmpty)
+                  loadedFiles = await loadFiles();
                   projectAnalyzed = false;
                   getCode();
                   setState(() {});
@@ -213,7 +214,7 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
 ''',
               ),
               Container(
-                height: 200,
+                height: 150,
                 width: 500,
                 child: Row(
                   children: <Widget>[
@@ -251,103 +252,84 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: Maa.start,
-                  crossAxisAlignment: Caa.start,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Expanded(
-                      flex: 5,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("File Name")),
-                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500), (int index) {
-                          // file extension =
-                          return InkWell(
-                              onTap: () {},
+                    InkWell(
+                      onTap: () {},
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Expanded(child: Text("File")),
+                          const SizedBox(width: 70, child: Text("Lines")),
+                          const SizedBox(width: 70, child: Text("Code")),
+                          const SizedBox(width: 70, child: Text("NonCode")),
+                          const SizedBox(
+                              width: 70,
                               child: Tooltip(
-                                  message: project.projectFiles[index].path,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: <Widget>[
-                                      Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(top: 2.0),
-                                          child: Container(
-                                            width: 10,
-                                            height: 10,
-                                            color: extColors.containsKey(project.projectFiles[index].ext) ? extColors[project.projectFiles[index].ext] : Colors.grey,
+                                  message: "For common programming laguanges it works well\nIf you have bad comment formats it might break.", child: Text("Comm*"))),
+                          const SizedBox(width: 70, child: Text("Empty")),
+                          const SizedBox(width: 70, child: Text("Chars")),
+                        ],
+                      ),
+                    ),
+                    ...List<Widget>.generate(
+                      project.projectFiles.length.clamp(0, 100),
+                      (int index) => InkWell(
+                        onTap: () {},
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Row(
+                                      children: <Widget>[
+                                        Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(top: 2.0),
+                                            child: Container(
+                                              width: 10,
+                                              height: 10,
+                                              color: extColors.containsKey(project.projectFiles[index].ext) ? extColors[project.projectFiles[index].ext] : Colors.grey,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Expanded(
-                                        child: Text(
-                                          project.projectFiles[index].name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          // style: const TextStyle(height: 1.001),
+                                        const SizedBox(width: 5),
+                                        Expanded(
+                                          child: Text(
+                                            project.projectFiles[index].name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            // style: const TextStyle(height: 1.001),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  )));
-                        })
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("Total")),
-                        ...List<Widget>.generate(
-                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.lines.decimal)))
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("Code")),
-                        ...List<Widget>.generate(
-                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.code.decimal)))
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("NonCode")),
-                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
-                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.nonCode.decimal)))
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(
-                            onTap: () {},
-                            child: const Tooltip(
-                                message: "For common programming languages it works,\nbut if you have weird comment sections it might break.", child: Text("Comm*"))),
-                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
-                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.comments.decimal)))
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("Empty")),
-                        ...List<Widget>.generate(
-                            project.projectFiles.length.clamp(0, 500), (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.empty.decimal)))
-                      ]),
-                    ),
-                    SizedBox(
-                      width: 70,
-                      child: Column(mainAxisAlignment: Maa.start, crossAxisAlignment: Caa.start, children: <Widget>[
-                        InkWell(onTap: () {}, child: const Text("Chars")),
-                        ...List<Widget>.generate(project.projectFiles.length.clamp(0, 500),
-                            (int index) => InkWell(onTap: () {}, child: Text(project.projectFiles[index].total.characters.decimal)))
-                      ]),
-                    ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.lines.decimal)),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.code.decimal)),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.nonCode.decimal)),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.comments.decimal)),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.empty.decimal)),
+                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.characters.decimal)),
+                          ],
+                        ),
+                      ),
+                    )
                   ],
                 ),
-              )
+              ),
             ],
           ),
         const SizedBox(height: 20),

@@ -40,6 +40,4 @@ class Globals {
     lastPage = _currentPage;
     _currentPage = page;
   }
-
-  static bool quickMenuFullyInitiated = false;
 }

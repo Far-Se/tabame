@@ -53,7 +53,12 @@ class WindowWatcher {
     for (int element in allHWNDs) {
       newList.add(Window(element));
 
-      if (newList.last.process.exe == "Spotify.exe") specialList["Spotify"] = newList.last;
+      if (newList.last.process.exe == "Spotify.exe") {
+        specialList["Spotify"] = newList.last;
+        if (Boxes.pref.getString("SpotifyLocation") == null) {
+          Boxes.pref.setString("SpotifyLocation", newList.last.process.exePath);
+        }
+      }
     }
 
     for (Window window in newList) {
@@ -137,9 +142,22 @@ class WindowWatcher {
           list.removeWhere((Window element) => element.monitor != monitor);
         }
       }
-    } else if (type == TaskBarAppsStyle.onlyActiveMonitor) {}
+    }
     fetching = false;
     return true;
+  }
+
+  static List<int> getSpotify() {
+    int spotifyHwnd = 0;
+    int spotifyPID = 0;
+    if (specialList.containsKey("Spotify")) {
+      spotifyHwnd = specialList["Spotify"]!.hWnd;
+      spotifyPID = specialList["Spotify"]!.process.pId;
+    } else if (Globals.spotifyTrayHwnd[0] != 0) {
+      spotifyHwnd = Globals.spotifyTrayHwnd[0];
+      spotifyPID = Globals.spotifyTrayHwnd[1];
+    }
+    return <int>[spotifyHwnd, spotifyPID];
   }
 
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
@@ -183,5 +201,53 @@ class WindowWatcher {
       });
     }
     return true;
+  }
+
+  static List<int> hierarchy = <int>[];
+  static void hierarchyAdd(int hWnd) {
+    if (hierarchy.contains(hWnd)) hierarchy.remove(hWnd);
+    hierarchy.insert(0, hWnd);
+    if (hierarchy.length != list.length) {
+      final List<int> listHwnds = list.map((Window e) => e.hWnd).toList();
+      hierarchy.removeWhere((int element) => !listHwnds.contains(element));
+      hierarchy.addAll(listHwnds.where((int element) => !hierarchy.contains(element)).toList());
+    }
+  }
+
+  static void focusSecondWindow() {
+    if (hierarchy.isEmpty) hierarchy = list.map((Window e) => e.hWnd).toList();
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final int monitor = MonitorFromPoint(lpPoint.ref, 0);
+    free(lpPoint);
+    if (Monitor.list.contains(monitor)) {
+      final List<int> hWnds = list.where((Window element) => element.monitor == monitor).map((Window e) => e.hWnd).toList();
+      if (hWnds.length > 1) {
+        bool skippedFirst = false;
+        for (int h in hierarchy) {
+          if (hWnds.contains(h)) {
+            if (!skippedFirst) {
+              skippedFirst = true;
+              continue;
+            }
+            Win32.activateWindow(h);
+            Future<void>.delayed(const Duration(milliseconds: 200), () {
+              if (GetForegroundWindow() != h) {
+                Win32.activateWindow(h);
+              }
+            });
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  static playPauseSpotify() {
+    if (specialList.containsKey("Spotify")) {
+      SendMessage(specialList["Spotify"]!.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+    } else if (Globals.spotifyTrayHwnd[0] != 0) {
+      SendMessage(Globals.spotifyTrayHwnd[0], AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+    }
   }
 }

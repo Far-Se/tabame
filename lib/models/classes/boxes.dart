@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+
 import 'hotkeys.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../main.dart';
@@ -48,6 +51,7 @@ class Boxes {
       await pref.setBool("showPowerShell", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("runAsAdministrator", false);
+      await pref.setBool("hideTabameOnUnfocus", true);
       final Reminder demoReminder = Reminder(
           enabled: false,
           interval: <int>[540, 1200],
@@ -80,7 +84,9 @@ class Boxes {
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? false
       ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? false
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? false
-      ..showSystemUsage = pref.getBool("showSystemUsage") ?? false;
+      ..showSystemUsage = pref.getBool("showSystemUsage") ?? false
+      ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
+      ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? globalSettings.trktivityEnabled;
 
     // ? Theme
     final String? lightTheme = pref.getString("lightTheme");
@@ -242,6 +248,7 @@ class Boxes {
       "PinWindowButton",
       "MicMuteButton",
       "AlwaysAwakeButton",
+      "SpotifyButton",
       "ChangeThemeButton",
       "HideDesktopFilesButton",
       "ToggleHiddenFilesButton",
@@ -491,5 +498,53 @@ class WinHotkeys {
       }
     }
     NativeHotkey.run(allHotkeys);
+  }
+}
+
+abstract class QuickMenuTriggers {
+  void onQuickMenuToggled(bool visible, int type) {}
+}
+
+class QuickMenuFunctions {
+  static bool isQuickMenuVisible = true;
+  static int hidTime = 0;
+
+  static final ObserverList<QuickMenuTriggers> _listeners = ObserverList<QuickMenuTriggers>();
+  static List<QuickMenuTriggers> get listeners => List<QuickMenuTriggers>.from(_listeners);
+
+  static bool get hasListeners {
+    return _listeners.isNotEmpty;
+  }
+
+  /// Add EventListener to the list of listeners.
+  static void addListener(QuickMenuTriggers listener) {
+    _listeners.add(listener);
+  }
+
+  static void removeListener(QuickMenuTriggers listener) {
+    _listeners.remove(listener);
+  }
+
+  static Future<void> toggleQuickMenu({int type = 0, bool? visible, bool center = false}) async {
+    visible ??= !isQuickMenuVisible;
+    if (visible) {
+      if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
+        if (center) {
+          await Win32.setCenter(useMouse: true);
+        } else {
+          await Win32.setMainWindowToMousePos();
+        }
+      } else {
+        visible = false;
+      }
+    } else {
+      Win32.setPosition(const Offset(-99999, -99999));
+      hidTime = DateTime.now().millisecondsSinceEpoch;
+    }
+    isQuickMenuVisible = visible;
+    for (final QuickMenuTriggers listener in listeners) {
+      if (!_listeners.contains(listener)) return;
+      listener.onQuickMenuToggled(visible, type);
+    }
   }
 }

@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -64,9 +65,12 @@ Future<void> main(List<String> arguments) async {
   });
 
   await setWindowAsTransparent();
-  if (globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && globalSettings.args.join(' ').contains('-strudel')) {
+
+  if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
     globalSettings.args.remove('-strudel');
-    WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
+    globalSettings.args.add('-tryadmin');
+    WinUtils.run(Platform.resolvedExecutable, arguments: arguments.join(' '));
+    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
     Timer(const Duration(seconds: 1), () => exit(0));
   }
   runApp(const Tabame());

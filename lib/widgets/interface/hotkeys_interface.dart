@@ -56,6 +56,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        const Center(child: InfoText("Hotkeys will take effect when you close Interface and Tabame will automatically restart.")),
         ListTile(
           onTap: () {
             // if (1 + 1 == 2) return;
@@ -69,12 +70,12 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   name: "new",
                   enabled: true,
                   boundToRegion: false,
+                  windowUnderMouse: false,
                   region: Region(),
-                  triggerType: TriggerType.press,
                   windowsInfo: <String>[],
-                  windowUnderMouse: true,
                   triggerInfo: <int>[],
                   actions: <KeyAction>[],
+                  triggerType: TriggerType.press,
                   variableCheck: <String>[],
                 )
               ],
@@ -96,7 +97,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   );
                 });
           },
-          title: Text("Remap", style: Theme.of(context).textTheme.headline4),
+          title: Text("Hotkeys", style: Theme.of(context).textTheme.headline4),
           leading: Container(height: double.infinity, child: const Icon(Icons.add, size: 30)),
         ),
         ...List<Widget>.generate(
@@ -144,7 +145,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                             onTap: () {
                               keymap.keymaps.add(KeyMap(
                                 enabled: true,
-                                windowUnderMouse: true,
+                                windowUnderMouse: false,
                                 name: "Key Trigger",
                                 windowsInfo: <String>[],
                                 boundToRegion: false,
@@ -938,7 +939,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                             onChanged: (String? newValue) => setState(() {
                               action.type = ActionType.values[int.tryParse(newValue ?? "0") ?? 0];
                               if (action.type == ActionType.sendClick) {
-                                action.value = ClickAction(anchorType: AnchorType.topLeft, currentWindow: true, percentage: true, x: 50, y: 50).toJson();
+                                action.value = ClickAction(anchorType: AnchorType.topLeft, currentWindow: true, x: 50, y: 50).toJson();
                               } else if (action.type == ActionType.setVar) {
                                 action.value = jsonEncode(<String>["var", "value"]);
                               } else if (action.type == ActionType.hotkey) {
@@ -962,7 +963,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                       if (action.value.isNotEmpty) {
                         clickAction = ClickAction.fromJson(action.value);
                       } else {
-                        clickAction = ClickAction(anchorType: AnchorType.topLeft, currentWindow: true, percentage: true, x: 50, y: 50);
+                        clickAction = ClickAction(anchorType: AnchorType.topLeft, currentWindow: true, x: 50, y: 50);
                       }
                       action.value = clickAction.toJson();
                       return Column(
@@ -999,17 +1000,6 @@ class HotKeyActionState extends State<HotKeyAction> {
                                   },
                                 ),
                               ),
-                              Expanded(
-                                child: CheckBoxWidget(
-                                  value: clickAction.percentage,
-                                  text: 'As percentage',
-                                  onChanged: (bool? e) {
-                                    clickAction.percentage = !clickAction.percentage;
-                                    action.value = clickAction.toJson();
-                                    setState(() {});
-                                  },
-                                ),
-                              )
                             ],
                           ),
                           Row(

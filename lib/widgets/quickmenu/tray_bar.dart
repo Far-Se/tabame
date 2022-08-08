@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart' hide Rect;
 
+import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/tray_watcher.dart';
 import '../../models/settings.dart';
@@ -20,7 +21,7 @@ class TrayBar extends StatefulWidget {
   TrayBarState createState() => TrayBarState();
 }
 
-class TrayBarState extends State<TrayBar> {
+class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   final ScrollController _scrollController = ScrollController();
   late Timer mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
@@ -42,13 +43,23 @@ class TrayBarState extends State<TrayBar> {
 
   void init() {
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+    QuickMenuFunctions.addListener(this);
     fetchTray();
     mainTimer = Timer.periodic(const Duration(milliseconds: 600), (Timer timer) async {
+      if (!QuickMenuFunctions.isQuickMenuVisible) return;
       if (Globals.isWindowActive || true) {
         PaintingBinding.instance.imageCache.clear();
         if (!fetching) fetchTray();
       }
     });
+  }
+
+  @override
+  void onQuickMenuToggled(bool visible, int type) {
+    if (type != 0) return;
+    if (visible) {
+      fetchTray();
+    } else {}
   }
 
   @override

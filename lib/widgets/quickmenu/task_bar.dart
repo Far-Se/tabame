@@ -7,6 +7,7 @@ import 'package:contextual_menu/contextual_menu.dart';
 import 'package:flutter/material.dart' hide MenuItem;
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
+import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../../models/win32/window.dart';
@@ -33,7 +34,7 @@ class Caches {
 
 const double oneColumnHeight = 26.4;
 
-class TaskBarState extends State<TaskBar> {
+class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener {
   List<Window> windows = <Window>[];
   int _hoverElement = -1;
   bool fetching = false;
@@ -41,11 +42,24 @@ class TaskBarState extends State<TaskBar> {
   double lastQuickMenuHeight = 0;
   List<String> wasPausedByButton = <String>[];
 
+  bool justToggled = false;
+
   Future<void> changeHeight() async {
     if (Globals.changingPages == true) return;
     double currentHeight = (windows.length * oneColumnHeight).clamp(100, 400) + 5;
     Globals.heights.taskbar = currentHeight;
-    if (currentHeight != Caches.lastHeight) Caches.lastHeight = currentHeight;
+    if (currentHeight != Caches.lastHeight) {
+      if (justToggled && 1 + 1 == 3) {
+        final double newHeight = Globals.heights.allSummed + 80;
+        if (Caches.lastHeight != newHeight) {
+          if (!mounted) return;
+          await windowManager.setSize(Size(300, newHeight));
+          Caches.lastHeight = newHeight;
+        }
+        justToggled = false;
+      }
+      Caches.lastHeight = currentHeight;
+    }
   }
 
   Future<void> audioHandle() async {
@@ -67,32 +81,24 @@ class TaskBarState extends State<TaskBar> {
       fetching = true;
       await audioHandle();
       await changeHeight();
-
-      if (mounted) {
-        // SchedulerBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-        //   final double height = Globals.quickMenu.currentContext?.size?.height ?? 0;
-        //   if (height > 200 && lastQuickMenuHeight != height) {
-        //     lastQuickMenuHeight = height;
-        //     await windowManager.setSize(Size(300, lastQuickMenuHeight + 100));
-        //   }
-        // });
-
-        setState(() {
-          fetching = false;
-          Globals.quickMenuFullyInitiated = true;
-        });
-      }
+      if (mounted) setState(() => fetching = false);
     }
   }
 
   int timerTicks = 0;
+  bool keepFetching = true;
   @override
   void initState() {
     super.initState();
     if (!mounted) return;
+    QuickMenuFunctions.addListener(this);
+    NativeHotkey.addListener(this);
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
-      if (!fetching) fetchWindows();
+      if (!keepFetching) return;
+      if (!fetching) {
+        fetchWindows();
+      }
     });
   }
 
@@ -100,7 +106,32 @@ class TaskBarState extends State<TaskBar> {
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     mainTimer.cancel();
+    QuickMenuFunctions.removeListener(this);
     super.dispose();
+  }
+
+  @override
+  void onQuickMenuToggled(bool visible, int type) async {
+    if (visible) {
+      justToggled = true;
+      keepFetching = true;
+      // WindowWatcher.orderBy(globalSettings.taskBarAppsStyle, list: windows);
+      await fetchWindows();
+    } else {
+      justToggled = false;
+      keepFetching = false;
+    }
+  }
+
+  @override
+  void onForegroundWindowChanged(int hWnd) async {
+    if (!QuickMenuFunctions.isQuickMenuVisible) {
+      hWnd = Win32.parent(hWnd);
+      if (!windows.any((Window element) => element.hWnd == hWnd)) {
+        await fetchWindows();
+      }
+    }
+    WindowWatcher.hierarchyAdd(hWnd);
   }
 
   //3 Initializing
@@ -161,7 +192,22 @@ class TaskBarState extends State<TaskBar> {
                                   ? null
                                   : Border(top: BorderSide(width: 1, color: Theme.of(context).dividerColor))),
                           child: InkWell(
-                            onTap: () {},
+                            onTap: () {
+                              if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                              }
+                              Win32.activateWindow(window.hWnd);
+                              Globals.lastFocusedWinHWND = window.hWnd;
+                            },
+                            onFocusChange: (bool h) {
+                              print(h);
+                              if (h) {
+                                _hoverElement = index;
+                              } else {
+                                // _hoverElement = -1;
+                              }
+                              setState(() {});
+                            },
                             hoverColor: Colors.transparent,
                             child: GestureDetector(
                               onTap: () {

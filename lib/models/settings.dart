@@ -56,6 +56,10 @@ class Settings {
   String quickRunText = "";
 
   bool noopKeyListener = false;
+
+  bool hideTabameOnUnfocus = true;
+
+  bool trktivityEnabled = false;
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;

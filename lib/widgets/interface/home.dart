@@ -88,7 +88,7 @@ class _HomeState extends State<Home> {
                         "tips": Icons.tips_and_updates,
                         "remap": Icons.keyboard,
                         "projects": Icons.folder_copy,
-                        "trktivty": Icons.celebration,
+                        "trktivty": Icons.scatter_plot,
                         "tasks": Icons.task_alt,
                       };
                       if (icons.containsKey(str2)) return Icon(icons[str2]);

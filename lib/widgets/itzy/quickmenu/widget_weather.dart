@@ -49,6 +49,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       if (!mounted) return;
       setState(() {});
     });
+    // Timer.periodic(const Duration(seconds: 1), (Timer t) async {
+    //   final ScreenState out = WinUtils.checkUserScreenState();
+    //   print(out);
+    // });
   }
 
   @override

@@ -389,6 +389,10 @@ class Win32 {
     activateWindow(hwnd);
     free(lpPoint);
   }
+
+  static int parent(int hWnd) {
+    return GetAncestor(hWnd, 2);
+  }
 }
 
 class WinUtils {
@@ -989,6 +993,7 @@ class HProcess {
   int iconHandle = 0;
   String className = "";
   HProcess();
+  String get exePath => "$path$exe";
 
   @override
   String toString() {

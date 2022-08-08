@@ -22,6 +22,7 @@ import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
+import '../widgets/interface/trktivity.dart';
 import '../widgets/interface/wizardly.dart';
 
 class PageClass {
@@ -80,7 +81,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
-    PageClass(title: 'Trktivity', icon: Icons.celebration, widget: const NotImplemeneted()),
+    PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const Trktivity()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
   ];
@@ -267,7 +268,7 @@ class InterfaceState extends State<Interface> {
                                               child: Column(
                                                 mainAxisAlignment: MainAxisAlignment.start,
                                                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                children: [
+                                                children: <Widget>[
                                                   ListView.builder(
                                                     scrollDirection: Axis.vertical,
                                                     itemCount: pages.length,

@@ -87,7 +87,7 @@ bool hotkeyCorrectName = false;
 /// VIEWS
 HWND foregroundWindow;
 HWND movingWindow;
-bool isViewsEnabled = true;
+bool isViewsEnabled = false;
 int viewsState = 0;
 ///
 /// TRCKTIVITY
@@ -379,7 +379,6 @@ bool isOnProhibitedWindow()
             bool output = std::regex_search(windowInfo, std::wregex(ws, std::regex_constants::icase));
             if (output)
             {
-                std::wcout << "Found prohibited window: " << windowInfo << std::endl;
                 return true;
             }
         }
@@ -392,7 +391,6 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
     if (nCode < 0)
         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
     KBDLLHOOKSTRUCT keyInfo = *((KBDLLHOOKSTRUCT *)lParam);
-
     if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !hotkeyPressed)
     {
         std::wstring pressedHotkey{};
@@ -423,7 +421,7 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
                 // create varialbe state
                 QUERY_USER_NOTIFICATION_STATE state;
                 SHQueryUserNotificationState(&state);
-                if (state == QUNS_RUNNING_D3D_FULL_SCREEN)
+                if (state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_BUSY)
                 {
                     hotkeyPressed = false;
                     hotkeyCorrectName = false;
@@ -681,6 +679,19 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
                     result = checkForPressedHotKey(L"MOUSEBUTTON5");
                 if (result)
                 {
+                    if (hotkeys[activeHotKey].noopScreenBusy)
+                    {
+                        // create varialbe state
+                        QUERY_USER_NOTIFICATION_STATE state;
+                        SHQueryUserNotificationState(&state);
+                        if (state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_BUSY)
+                        {
+                            hotkeyPressed = false;
+                            hotkeyCorrectName = false;
+                            return CallNextHookEx(NULL, nCode, wParam, lParam);
+                        }
+                        // create variable state
+                    }
                     if (hotkeys[activeHotKey].prohibitedWindows.size() > 0)
                     {
                         if (isOnProhibitedWindow())
@@ -710,6 +721,7 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
     // ! Send output
     return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
+
 VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime)
 {
     if (dwEvent == EVENT_SYSTEM_FOREGROUND)
@@ -719,7 +731,9 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
     }
     if (isTrcktivityEnabled && dwEvent == EVENT_OBJECT_NAMECHANGE)
     {
-        if (foregroundWindow == hwnd)
+        if ((int)((DWORD_PTR)hwnd) <= 0)
+            return;
+        if (GetForegroundWindow() == hwnd)
         {
             // ! Send to server event_namechange hwnd;
             WinEvent("namechange", hwnd);
@@ -998,7 +1012,6 @@ int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
 
     if (!SUCCEEDED(rc))
     {
-        std::cout << "CoCreateInstance error" << std::endl;
         return 0;
     }
 
@@ -1008,21 +1021,18 @@ int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
 
     if (!SUCCEEDED(rc))
     {
-        std::cout << "QueryInterface(IID_IPersistFile) error" << std::endl;
         return 0;
     }
     // Load the shortcut.
     rc = iPersistFile->Load(path, STGM_READ);
     if (!SUCCEEDED(rc))
     {
-        std::cout << "iPersistFile->Load() error" << std::endl;
         return 0;
     }
     rc = iShellLink->Resolve((HWND)0, 0);
 
     if (!SUCCEEDED(rc))
     {
-        std::cout << "..." << std::endl;
         return 0;
     }
     rc = iShellLink->GetPath(
@@ -1323,6 +1333,13 @@ namespace tabamewin32
 
     Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar)
     {
+
+        if (g_MouseHook != NULL)
+            g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
+        if (g_KeyboardHook != NULL)
+            g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
+        if (g_EventHook != NULL)
+            g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
     }
 
     Tabamewin32Plugin::~Tabamewin32Plugin()
@@ -1750,7 +1767,6 @@ namespace tabamewin32
             }
             else
             {
-                cout << "ResolveIt Failed" << endl;
                 result->Success(flutter::EncodableValue(""));
             }
         }
@@ -1896,9 +1912,12 @@ namespace tabamewin32
         }
         else if (method_name.compare("hotkeyHook") == 0)
         {
-            g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
-            g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
-            g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+            if (g_MouseHook == NULL)
+                g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
+            if (g_KeyboardHook == NULL)
+                g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
+            if (g_EventHook == NULL)
+                g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
             result->Success(flutter::EncodableValue(true));
         }
         else if (method_name.compare("trcktivity") == 0)
@@ -1909,6 +1928,15 @@ namespace tabamewin32
             isTrcktivityEnabled = enabled;
             result->Success(flutter::EncodableValue(true));
         }
+        else if (method_name.compare("views") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            // bool
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+            isViewsEnabled = enabled;
+            result->Success(flutter::EncodableValue(true));
+        }
+
         //#e
         else
         {

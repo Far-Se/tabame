@@ -412,6 +412,13 @@ Future<void> enableTrcktivity(bool enabled) async {
   await audioMethodChannel.invokeMethod('trcktivity', arguments);
 }
 
+Future<void> enableViews(bool enabled) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'enabled': enabled,
+  };
+  await audioMethodChannel.invokeMethod('views', arguments);
+}
+
 class MousePos {
   final Point<int> start;
   final Point<int> end;
@@ -458,8 +465,17 @@ class HotkeyEvent {
   }
 }
 
+enum WinEventType {
+  foreground,
+  nameChange,
+}
+
 abstract class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
+  void onForegroundWindowChanged(int hWnd) {}
+  void onTricktivityEvent(String action, int info) {}
+
+  void onWinEventReceived(int hwnd, WinEventType type) {}
 }
 
 /// ? NativeHotkey
@@ -485,10 +501,8 @@ class NativeHotkey {
     if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) return;
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {
-        if (!_listeners.contains(listener)) {
-          print("no listeners");
-          return;
-        }
+        if (!_listeners.contains(listener)) return;
+
         listener.onHotKeyEvent(
           HotkeyEvent(
             name: call.arguments["name"],
@@ -507,13 +521,28 @@ class NativeHotkey {
       }
     }
     if (call.method == "TrktivityEvent") {
+      for (final TabameListener listener in listeners) {
+        if (!_listeners.contains(listener)) return;
+        listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
+      }
       print(call.arguments);
     }
     if (call.method == "ViewsEvent") {
       print(call.arguments);
     }
     if (call.method == "WinEvent") {
+      // print(call.arguments);
       if (call.arguments['action'] == "foreground") {
+        for (final TabameListener listener in listeners) {
+          if (!_listeners.contains(listener)) return;
+          listener.onForegroundWindowChanged(call.arguments['hwnd']);
+          listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.foreground);
+        }
+      } else if (call.arguments['action'] == "namechange") {
+        for (final TabameListener listener in listeners) {
+          if (!_listeners.contains(listener)) return;
+          listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.nameChange);
+        }
         print(call.arguments);
       }
     }

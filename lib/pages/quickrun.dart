@@ -166,6 +166,7 @@ class QuickRunState extends State<QuickRun> {
                             setState(() {});
                             return;
                           }
+                          input = input.trimLeft();
                           String command = "";
                           List<String> x = getCommandFromString(input);
                           if (x.isEmpty) {

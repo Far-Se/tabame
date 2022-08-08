@@ -1,15 +1,19 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:math';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:win32/win32.dart' hide Point;
+
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
 
 import '../keys.dart';
 import '../win32/win32.dart';
+import '../window_watcher.dart';
+import 'boxes.dart';
 
 class Hotkeys {
   String key;
@@ -131,60 +135,9 @@ class KeyMap {
   TriggerType triggerType;
   bool get isMouseInRegion {
     if (!boundToRegion) return true;
-    final Pointer<POINT> lpPoint = calloc<POINT>();
-    GetCursorPos(lpPoint);
-    final Pointer<RECT> lpRect = calloc<RECT>();
-    int hwnd = GetForegroundWindow();
-    if (!windowUnderMouse) {
-      hwnd = GetDesktopWindow();
-      GetWindowRect(hwnd, lpRect);
-      while (lpPoint.ref.x >= lpRect.ref.right) {
-        lpPoint.ref.x = lpPoint.ref.x - lpRect.ref.right;
-      }
-      while (lpPoint.ref.y >= lpRect.ref.bottom) {
-        lpPoint.ref.y = lpPoint.ref.y - lpRect.ref.right;
-      }
-    } else {
-      if (windowUnderMouse) {
-        hwnd = WindowFromPoint(lpPoint.ref);
-        hwnd = GetAncestor(hwnd, 2);
-      }
-      GetWindowRect(hwnd, lpRect);
-    }
+    final Point<int> point = HotKeyInfo.getMouseBounds(windowUnderMouse, region.anchorType, region.asPercentage);
 
-    int x = 0, y = 0;
-    int yTop = lpPoint.ref.y - lpRect.ref.top;
-    int yBottom = lpPoint.ref.y - lpRect.ref.bottom;
-    int xLeft = lpPoint.ref.x - lpRect.ref.left;
-    int xRight = lpPoint.ref.x - lpRect.ref.right;
-    int width = lpRect.ref.right - lpRect.ref.left;
-    int height = lpRect.ref.bottom - lpRect.ref.top;
-    free(lpRect);
-    free(lpPoint);
-
-    if (region.anchorType == AnchorType.topLeft) {
-      x = xLeft;
-      y = yTop;
-    } else if (region.anchorType == AnchorType.topRight) {
-      x = xRight;
-      y = yTop;
-    } else if (region.anchorType == AnchorType.bottomLeft) {
-      x = xLeft;
-      y = yBottom;
-    } else if (region.anchorType == AnchorType.bottomRight) {
-      x = xRight;
-      y = yBottom;
-    }
-    x = x.abs();
-    y = y.abs();
-    int percentageX = ((x / width) * 100).ceil();
-    int percentageY = ((y / height) * 100).ceil();
-    if (region.asPercentage) {
-      x = percentageX;
-      y = percentageY;
-    }
-
-    if (x >= region.x1 && x <= region.x2 && y >= region.y1 && y <= region.y2) {
+    if (point.x >= region.x1 && point.x <= region.x2 && point.y >= region.y1 && point.y <= region.y2) {
       return true;
     }
     return false;
@@ -233,9 +186,20 @@ class KeyMap {
     }
   }
   void applyActions() {
+    if (variableCheck.isNotEmpty) {
+      if (variableCheck[0].isNotEmpty) {
+        final String xvar = Boxes.pref.getString("k_${variableCheck[0]}") ?? "";
+        if (xvar.isNotEmpty) {
+          if (xvar != variableCheck[1]) {
+            return;
+          }
+        } else {
+          Boxes.pref.setString("k_${variableCheck[0]}", variableCheck[1]);
+        }
+      }
+    }
     int delayed = 1;
     if (windowUnderMouse) {
-      print("Activating window under cursor");
       final Pointer<POINT> lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
       int hWnd = WindowFromPoint(lpPoint.ref);
@@ -262,20 +226,69 @@ class KeyMap {
               sendKey += "$key";
             }
           }
-          print(sendKey);
           WinKeys.send(sendKey);
 
           //
         } else if (action.type == ActionType.sendKeys) {
           WinKeys.send(action.value);
         } else if (action.type == ActionType.sendClick) {
+          int hwnd = GetForegroundWindow();
+          final Pointer<POINT> lpPoint = calloc<POINT>();
+          GetCursorPos(lpPoint);
+          if (windowUnderMouse) {
+            hwnd = WindowFromPoint(lpPoint.ref);
+            hwnd = GetAncestor(hwnd, 2);
+          }
+          final int sX = lpPoint.ref.x;
+          final int sY = lpPoint.ref.y;
+          free(lpPoint);
+          final Pointer<RECT> lpRect = calloc<RECT>();
+          GetWindowRect(hwnd, lpRect);
+
           final ClickAction click = ClickAction.fromJson(action.value);
+          int x = 0;
+          int y = 0;
+          if (click.anchorType == AnchorType.topLeft) {
+            x = lpRect.ref.left + click.x;
+            y = lpRect.ref.top + click.y;
+          } else if (click.anchorType == AnchorType.topRight) {
+            x = lpRect.ref.right - click.x;
+            y = lpRect.ref.top + click.y;
+          } else if (click.anchorType == AnchorType.bottomLeft) {
+            x = lpRect.ref.left + click.x;
+            y = lpRect.ref.bottom - click.y;
+          } else if (click.anchorType == AnchorType.bottomRight) {
+            x = lpRect.ref.right - click.x;
+            y = lpRect.ref.bottom - click.y;
+          }
+          free(lpRect);
+          //
+          SetCursorPos(x, y);
+          Future<void>.delayed(const Duration(milliseconds: 500), () {
+            final Pointer<INPUT> input = calloc<INPUT>();
+            input.ref.type = INPUT_MOUSE;
+            // input.ref.mi.dx = x;
+            // input.ref.mi.dy = y;
+            input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
+            input.ref.mi.mouseData = 0;
+            input.ref.mi.dwExtraInfo = NULL;
+            input.ref.mi.time = 0;
+            SendInput(1, input, sizeOf<INPUT>());
+            SetCursorPos(sX, sY);
+            free(input);
+          });
+          //
         } else if (action.type == ActionType.tabameFunction) {
           if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
+            // print(action.value);
             HotKeyInfo.tabameFunctionsMap[action.value]!();
           }
           //
-        } else if (action.type == ActionType.setVar) {
+        } else if (action.type == ActionType.setVar && action.value.isNotEmpty) {
+          final List<dynamic> split = jsonDecode(action.value);
+          if (split.length == 2) {
+            Boxes.pref.setString("k_${split[0]}", split[1]);
+          }
           //
         }
       }
@@ -402,11 +415,15 @@ class HotKeyInfo {
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
     "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
-    "ToggleQuickMenu": () {},
-    "ToggleQuickRun": () {},
-    "ShowLastActiveWindow": () {},
-    "OpenAudioSettings": () {},
-    "PlayPauseSpotify": () {},
+    "ToggleQuickMenu": () => QuickMenuFunctions.toggleQuickMenu(),
+    "ToggleQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
+    "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
+    "ShowLastActiveWindow": () {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      WindowWatcher.focusSecondWindow();
+    },
+    "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
+    "PlayPauseSpotify": () => WindowWatcher.playPauseSpotify(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
@@ -431,6 +448,64 @@ class HotKeyInfo {
     TriggerType.duration: Icons.schedule,
     TriggerType.movement: Icons.gps_fixed,
   };
+
+  static Point<int> getMouseBounds(bool windowUnderMouse, AnchorType anchorType, bool asPercentage) {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final Pointer<RECT> lpRect = calloc<RECT>();
+    int hwnd = GetForegroundWindow();
+    if (!windowUnderMouse) {
+      hwnd = GetDesktopWindow();
+      GetWindowRect(hwnd, lpRect);
+      while (lpPoint.ref.x >= lpRect.ref.right) {
+        lpPoint.ref.x = lpPoint.ref.x - lpRect.ref.right;
+      }
+      while (lpPoint.ref.y >= lpRect.ref.bottom) {
+        lpPoint.ref.y = lpPoint.ref.y - lpRect.ref.right;
+      }
+    } else {
+      if (windowUnderMouse) {
+        hwnd = WindowFromPoint(lpPoint.ref);
+        hwnd = GetAncestor(hwnd, 2);
+      }
+      GetWindowRect(hwnd, lpRect);
+    }
+    late Point<int> mouse;
+    mouse = Point<int>(lpPoint.ref.x, lpPoint.ref.y);
+    free(lpPoint);
+
+    int x = 0, y = 0;
+    int yTop = mouse.y - lpRect.ref.top;
+    int yBottom = mouse.y - lpRect.ref.bottom;
+    int xLeft = mouse.x - lpRect.ref.left;
+    int xRight = mouse.x - lpRect.ref.right;
+    int width = lpRect.ref.right - lpRect.ref.left;
+    int height = lpRect.ref.bottom - lpRect.ref.top;
+    free(lpRect);
+
+    if (anchorType == AnchorType.topLeft) {
+      x = xLeft;
+      y = yTop;
+    } else if (anchorType == AnchorType.topRight) {
+      x = xRight;
+      y = yTop;
+    } else if (anchorType == AnchorType.bottomLeft) {
+      x = xLeft;
+      y = yBottom;
+    } else if (anchorType == AnchorType.bottomRight) {
+      x = xRight;
+      y = yBottom;
+    }
+    x = x.abs();
+    y = y.abs();
+    int percentageX = ((x / width) * 100).ceil();
+    int percentageY = ((y / height) * 100).ceil();
+    if (asPercentage) {
+      x = percentageX;
+      y = percentageY;
+    }
+    return Point<int>(x, y);
+  }
 }
 
 class KeyAction {
@@ -487,14 +562,12 @@ class KeyAction {
 class ClickAction {
   int x;
   int y;
-  bool percentage;
   bool currentWindow;
   // enum
   AnchorType anchorType;
   ClickAction({
     required this.x,
     required this.y,
-    required this.percentage,
     required this.currentWindow,
     required this.anchorType,
   });
@@ -502,14 +575,12 @@ class ClickAction {
   ClickAction copyWith({
     int? x,
     int? y,
-    bool? percentage,
     bool? currentWindow,
     AnchorType? anchorType,
   }) {
     return ClickAction(
       x: x ?? this.x,
       y: y ?? this.y,
-      percentage: percentage ?? this.percentage,
       currentWindow: currentWindow ?? this.currentWindow,
       anchorType: anchorType ?? this.anchorType,
     );
@@ -519,7 +590,6 @@ class ClickAction {
     return <String, dynamic>{
       'x': x,
       'y': y,
-      'percentage': percentage,
       'currentWindow': currentWindow,
       'anchorType': anchorType.index,
     };
@@ -529,7 +599,6 @@ class ClickAction {
     return ClickAction(
       x: (map['x'] ?? 0) as int,
       y: (map['y'] ?? 0) as int,
-      percentage: (map['percentage'] ?? false) as bool,
       currentWindow: (map['currentWindow'] ?? false) as bool,
       anchorType: AnchorType.values[(map['anchorType'] ?? 0) as int],
     );
@@ -541,19 +610,19 @@ class ClickAction {
 
   @override
   String toString() {
-    return 'ClickAction(x: $x, y: $y, percentage: $percentage, currentWindow: $currentWindow, anchorType: $anchorType)';
+    return 'ClickAction(x: $x, y: $y, currentWindow: $currentWindow, anchorType: $anchorType)';
   }
 
   @override
   bool operator ==(covariant ClickAction other) {
     if (identical(this, other)) return true;
 
-    return other.x == x && other.y == y && other.percentage == percentage && other.currentWindow == currentWindow && other.anchorType == anchorType;
+    return other.x == x && other.y == y && other.currentWindow == currentWindow && other.anchorType == anchorType;
   }
 
   @override
   int get hashCode {
-    return x.hashCode ^ y.hashCode ^ percentage.hashCode ^ currentWindow.hashCode ^ anchorType.hashCode;
+    return x.hashCode ^ y.hashCode ^ currentWindow.hashCode ^ anchorType.hashCode;
   }
 }
 
