@@ -733,12 +733,12 @@ It records keystrokes, mouse movement and active Window.
                           height: 20,
                           child: Stack(
                             children: List<Widget>.generate(
-                              12,
+                              24,
                               (int index) {
-                                final double startpercentage = (((index + 1) * 2) * 60 * 60) / (24 * 60 * 60);
+                                final double startpercentage = (index * 60 * 60) / (24 * 60 * 60);
                                 return Positioned(
                                   left: startpercentage * constraints.maxWidth,
-                                  child: Text("${(index + 1) * 2}\n|"),
+                                  child: Text("$index"),
                                 );
                               },
                             ),

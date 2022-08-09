@@ -385,6 +385,7 @@ class QuickRunState extends State<QuickRun> {
       } else {
         if (result.results.isNotEmpty) {
           WinUtils.open(RegExp(r'^.*?:(.*?)$').firstMatch(result.results[0])![1]!);
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
         }
       }
       regainFocus();
@@ -453,8 +454,9 @@ class QuickRunState extends State<QuickRun> {
       regainFocus();
     } else if (currentRun == "projects") {
       if (result.actions.isEmpty) return;
-      WinUtils.open(result.actions.values.elementAt(0));
       regainFocus();
+      WinUtils.open(result.actions.values.elementAt(0));
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
     }
   }
 }
