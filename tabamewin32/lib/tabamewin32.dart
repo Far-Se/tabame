@@ -449,14 +449,16 @@ class HotkeyEvent {
   final MousePos mouse;
   final HotkeyTime time;
   final String hotkey;
-  final String action;
+  String action;
   final String name;
+  final int vk;
   HotkeyEvent({
     required this.mouse,
     required this.time,
     required this.hotkey,
     required this.action,
     required this.name,
+    this.vk = -1,
   });
 
   @override
@@ -480,34 +482,35 @@ abstract class TabameListener {
 
 /// ? NativeHotkey
 class NativeHotkey {
-  static final ObserverList<TabameListener> _listeners = ObserverList<TabameListener>();
+  static final ObserverList<TabameListener> listenersObv = ObserverList<TabameListener>();
   static bool isRegistered = false;
-  static List<TabameListener> get listeners => List<TabameListener>.from(_listeners);
+  static List<TabameListener> get listeners => List<TabameListener>.from(listenersObv);
 
   static bool get hasListeners {
-    return _listeners.isNotEmpty;
+    return listenersObv.isNotEmpty;
   }
 
   /// Add EventListener to the list of listeners.
   static void addListener(TabameListener listener) {
-    _listeners.add(listener);
+    listenersObv.add(listener);
   }
 
   static void removeListener(TabameListener listener) {
-    _listeners.remove(listener);
+    listenersObv.remove(listener);
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
     if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) return;
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {
-        if (!_listeners.contains(listener)) return;
+        if (!listenersObv.contains(listener)) return;
 
         listener.onHotKeyEvent(
           HotkeyEvent(
             name: call.arguments["name"],
             action: call.arguments["info"],
             hotkey: call.arguments["hotkey"],
+            vk: call.arguments["vk"],
             mouse: MousePos(
               start: Point<int>(call.arguments["sX"], call.arguments["sY"]),
               end: Point<int>(call.arguments["eX"], call.arguments["eY"]),
@@ -522,7 +525,7 @@ class NativeHotkey {
     }
     if (call.method == "TrktivityEvent") {
       for (final TabameListener listener in listeners) {
-        if (!_listeners.contains(listener)) return;
+        if (!listenersObv.contains(listener)) return;
         listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
       }
     }
@@ -531,13 +534,13 @@ class NativeHotkey {
       // print(call.arguments);
       if (call.arguments['action'] == "foreground") {
         for (final TabameListener listener in listeners) {
-          if (!_listeners.contains(listener)) return;
+          if (!listenersObv.contains(listener)) return;
           listener.onForegroundWindowChanged(call.arguments['hwnd']);
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.foreground);
         }
       } else if (call.arguments['action'] == "namechange") {
         for (final TabameListener listener in listeners) {
-          if (!_listeners.contains(listener)) return;
+          if (!listenersObv.contains(listener)) return;
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.nameChange);
         }
       }
@@ -564,6 +567,10 @@ class NativeHotkey {
   static Future<void> unHook() async {
     await audioMethodChannel.invokeMethod('hotkeyUnHook');
     isRegistered = false;
+  }
+
+  static Future<void> free() async {
+    await audioMethodChannel.invokeMethod('freeHotkey');
   }
 
   static Future<void> run(List<Map<String, dynamic>> hotkeys) async {

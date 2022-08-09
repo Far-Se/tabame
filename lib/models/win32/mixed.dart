@@ -85,7 +85,7 @@ class Monitor {
     return monitor;
   }
 
-  static int getMonitorFromPoint(Point point) {
+  static int getMonitorFromPoint(PointXY point) {
     final Pointer<POINT> winPoint = calloc<POINT>()
       ..ref.x = point.X
       ..ref.y = point.Y;
@@ -94,8 +94,8 @@ class Monitor {
     return monitor;
   }
 
-  static Point adjustPointToDPI(Point point) {
-    Point newPoint = Point(X: 0, Y: 0);
+  static PointXY adjustPointToDPI(PointXY point) {
+    PointXY newPoint = PointXY(X: 0, Y: 0);
     final int monitor = getMonitorFromPoint(point);
     final double dpiCoefX = dpi[monitor]![0]! / 96.0;
     final double dpiCoefY = dpi[monitor]![1]! / 96.0;
@@ -106,10 +106,10 @@ class Monitor {
   }
 }
 
-class Point {
+class PointXY {
   int X;
   int Y;
-  Point({
+  PointXY({
     required this.X,
     required this.Y,
   });
@@ -117,11 +117,11 @@ class Point {
   @override
   String toString() => 'Point(X: $X, Y: $Y)';
 
-  Point copyWith({
+  PointXY copyWith({
     int? X,
     int? Y,
   }) {
-    return Point(
+    return PointXY(
       X: X ?? this.X,
       Y: Y ?? this.Y,
     );
@@ -134,8 +134,8 @@ class Point {
     };
   }
 
-  factory Point.fromMap(Map<String, dynamic> map) {
-    return Point(
+  factory PointXY.fromMap(Map<String, dynamic> map) {
+    return PointXY(
       X: map['X'] as int,
       Y: map['Y'] as int,
     );
@@ -143,10 +143,10 @@ class Point {
 
   String toJson() => json.encode(toMap());
 
-  factory Point.fromJson(String source) => Point.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory PointXY.fromJson(String source) => PointXY.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  bool operator ==(covariant Point other) {
+  bool operator ==(covariant PointXY other) {
     if (identical(this, other)) return true;
 
     return other.X == X && other.Y == Y;

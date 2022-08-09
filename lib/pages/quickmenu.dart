@@ -11,6 +11,7 @@ import 'package:flutter/src/gestures/events.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
+import '../models/keys.dart';
 import '../widgets/itzy/quickmenu/widget_audio.dart';
 import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
@@ -158,18 +159,43 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   int startMouseDir = 0;
   Map<String, int> hotkeyDoublePress = <String, int>{};
   Map<String, int> hotkeyMovement = <String, int>{};
+  int currentVK = -1;
   @override
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
-    // print(hotkeyInfo);
     final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey).toList()];
     if (hk.isEmpty) return;
     final Hotkeys hotkey = hk[0];
-    // if (hotkey.noopScreenBusy) {
-    //   final ScreenState state = WinUtils.checkUserScreenState();
-    //   if (state == ScreenState.runningD3dFullScreen) return;
-    // }
+
+    //* Keyboard listen to release
+    if (hotkeyInfo.action == "pressedKbd") {
+      //
+      final int key = keyMap.containsKey("VK_${hotkey.key.toUpperCase()}") ? keyMap["VK_${hotkey.key.toUpperCase()}"]! : -1;
+      if (key == -1) return;
+      currentVK = key;
+
+      if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
+        Win32.activeWindowUnderCursor();
+      }
+      if (hotkey.hasMouseMovementTriggers) {
+        mouseSteps = hotkeyInfo.mouse.start;
+      }
+    }
+    if (hotkeyInfo.action == "releaseKbd") {
+      // NativeHotkey.free();
+      if (hotkeyInfo.vk == currentVK) {
+        currentVK = -1;
+        NativeHotkey.free();
+        hotkeyInfo.action = "released";
+        for (final TabameListener listener in NativeHotkey.listeners) {
+          if (!NativeHotkey.listenersObv.contains(listener)) return;
+          listener.onHotKeyEvent(hotkeyInfo);
+        }
+        return;
+      }
+    }
+
+    ///
     if (hotkeyInfo.action == "pressed") {
-      // print("Hotkey ${hotkeyInfo.hotkey} pressed!");
       if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
         Win32.activeWindowUnderCursor();
       }
@@ -208,7 +234,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         hotkeyMovement.remove(hotkeyInfo.hotkey);
         return;
       }
-      // print("Hotkey ${hotkeyInfo.hotkey} released!");
       startMouseDir = 0;
       final List<KeyMap> mouseDir = hotkey.getHotkeysWithMovement;
       mouseDir.sort((KeyMap a, KeyMap b) => a.boundToRegion
@@ -228,7 +253,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
               ((key.triggerInfo[0] == 1 && diff.x > 0 && diffX.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
               ((key.triggerInfo[0] == 2 && diff.y < 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2]))) ||
               ((key.triggerInfo[0] == 3 && diff.y > 0 && diffY.isBetweenEqual(key.triggerInfo[1], key.triggerInfo[2])))) {
-            // print("Hotkey ${hotkeyInfo.hotkey} Direction ${key.name}!");
             key.applyActions();
             return;
           }
@@ -246,7 +270,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         for (KeyMap key in keys) {
           if (!key.isMouseInRegion) continue;
           if (diff.isBetweenEqual(key.triggerInfo[0], key.triggerInfo[1])) {
-            // print("Hotkey ${hotkeyInfo.hotkey} Duration ${key.name}!");
             key.applyActions();
             return;
           }
@@ -256,7 +279,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.press).toList();
       for (KeyMap key in keys) {
         if (key.isMouseInRegion) {
-          // print("Hotkey ${hotkeyInfo.hotkey} Region ${key.name}!");
           key.applyActions();
           return;
         }
@@ -266,7 +288,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         for (KeyMap key in keys) {
           if (!key.isMouseInRegion) continue;
           if (hotkeyInfo.time.end - hotkeyDoublePress[hotkey.hotkey]! < 300) {
-            // print("Hotkey ${hotkeyInfo.hotkey} DoublePress ${key.name}!");
             key.applyActions();
             hotkeyDoublePress.remove(hotkey.hotkey);
             return;
@@ -278,7 +299,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       for (KeyMap key in keys) {
         if (!key.isMouseInRegion) continue;
         if (hotkey.hasDoublePress) hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
-        // print("Hotkey ${hotkeyInfo.hotkey} Press ${key.name}!");
         key.applyActions();
       }
     }

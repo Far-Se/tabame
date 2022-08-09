@@ -343,7 +343,7 @@ class Win32 {
   }
 
   static Future<void> setMainWindowToMousePos() async {
-    Point mousePos = WinUtils.getMousePos();
+    PointXY mousePos = WinUtils.getMousePos();
     double horizontal = mousePos.X.toDouble() - 10;
     double vertical = mousePos.Y.toDouble() - 30;
 
@@ -645,10 +645,10 @@ class WinUtils {
     WinKeys.send("{#WIN}{#CTRL}{$key}");
   }
 
-  static Point getMousePos() {
+  static PointXY getMousePos() {
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
-    Point point = Point(X: 0, Y: 0);
+    PointXY point = PointXY(X: 0, Y: 0);
     point.X = lpPoint.ref.x;
     point.Y = lpPoint.ref.y;
     free(lpPoint);
@@ -659,7 +659,7 @@ class WinUtils {
   static List<int> getMousePosXY() {
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
-    Point point = Point(X: 0, Y: 0);
+    PointXY point = PointXY(X: 0, Y: 0);
     point.X = lpPoint.ref.x;
     point.Y = lpPoint.ref.y;
     free(lpPoint);
