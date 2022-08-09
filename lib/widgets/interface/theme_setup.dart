@@ -105,7 +105,9 @@ class ThemeSetupState extends State<ThemeSetup> {
                       },
                       onGradiendChanged: (double e) {
                         globalSettings.darkTheme.gradientAlpha = e.toInt();
-                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        if (e % 10 < 1) {
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        }
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.darkTheme.quickMenuBoldFont = e;
@@ -133,7 +135,9 @@ class ThemeSetupState extends State<ThemeSetup> {
                       },
                       onGradiendChanged: (double e) {
                         globalSettings.lightTheme.gradientAlpha = e.toInt();
-                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        if (e % 10 < 1) {
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        }
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.lightTheme.quickMenuBoldFont = e;

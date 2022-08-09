@@ -423,7 +423,7 @@ class HotKeyInfo {
       WindowWatcher.focusSecondWindow();
     },
     "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
-    "PlayPauseSpotify": () => WindowWatcher.playPauseSpotify(),
+    "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),

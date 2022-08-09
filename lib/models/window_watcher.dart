@@ -43,7 +43,7 @@ class WindowWatcher {
     if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
 
     for (int hWnd in winHWNDS) {
-      if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd).isNotEmpty && !<String>["Tabame", "PopupHost"].contains(Win32.getTitle(hWnd))) {
+      if (Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd).isNotEmpty && hWnd != Win32.getMainHandle() && !<String>["PopupHost"].contains(Win32.getTitle(hWnd))) {
         allHWNDs.add(hWnd);
       }
     }
@@ -91,7 +91,7 @@ class WindowWatcher {
     }
 
     await handleIcons();
-    orderBy(globalSettings.taskBarAppsStyle);
+    await orderBy(globalSettings.taskBarAppsStyle);
 
     return true;
   }
@@ -126,7 +126,7 @@ class WindowWatcher {
     return true;
   }
 
-  static bool orderBy(TaskBarAppsStyle type) {
+  static Future<bool> orderBy(TaskBarAppsStyle type) async {
     if (<TaskBarAppsStyle>[TaskBarAppsStyle.activeMonitorFirst, TaskBarAppsStyle.onlyActiveMonitor].contains(type)) {
       final Pointer<POINT> lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
@@ -243,11 +243,10 @@ class WindowWatcher {
     }
   }
 
-  static playPauseSpotify() {
-    if (specialList.containsKey("Spotify")) {
-      SendMessage(specialList["Spotify"]!.hWnd, AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
-    } else if (Globals.spotifyTrayHwnd[0] != 0) {
-      SendMessage(Globals.spotifyTrayHwnd[0], AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+  static triggerSpotify({int button = AppCommand.mediaPlayPause}) {
+    final List<int> sp = getSpotify();
+    if (sp[0] != 0) {
+      SendMessage(sp[0], AppCommand.appCommand, 0, button);
     }
   }
 }

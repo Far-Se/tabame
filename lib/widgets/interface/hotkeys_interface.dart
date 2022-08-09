@@ -182,11 +182,11 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
 
                 //2 List actions
                 if (unfolded.contains(index))
-                  ReorderableListView.builder(
+                  ListView.builder(
                     shrinkWrap: true,
                     dragStartBehavior: DragStartBehavior.down,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    scrollController: ScrollController(),
+                    controller: ScrollController(),
                     itemCount: keymap.keymaps.length,
                     itemBuilder: (BuildContext context, int index) {
                       final KeyMap keyInfo = keymap.keymaps[index];
@@ -257,13 +257,6 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                           ),
                         ),
                       );
-                    },
-                    onReorder: (int oldIndex, int newIndex) {
-                      if (oldIndex < newIndex) newIndex -= 1;
-                      final KeyMap item = keymap.keymaps.removeAt(oldIndex);
-                      keymap.keymaps.insert(newIndex, item);
-                      Boxes.updateSettings("remap", jsonEncode(remap));
-                      setState(() {});
                     },
                   ),
                 if (unfolded.contains(index)) const Divider(height: 10, thickness: 1)

@@ -94,9 +94,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     snapshot.data as String,
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w100,
+                      fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
                       height: 1.3,
                     ),
                   ),

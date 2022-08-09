@@ -59,8 +59,10 @@ class _TimeWidgetState extends State<TimeWidget> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text((snapshot.data as Map<String, String>)["time"] as String, style: const TextStyle(fontSize: 14)),
-                  Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}", style: const TextStyle(fontSize: 14))
+                  Text((snapshot.data as Map<String, String>)["time"] as String,
+                      style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
+                  Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
+                      style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))
                 ],
               ),
             ),
@@ -80,8 +82,14 @@ class _TimeWidgetState extends State<TimeWidget> {
                 constraints: const BoxConstraints(minWidth: 0, maxWidth: 100),
                 child: Column(
                   children: <Widget>[
-                    Flexible(fit: FlexFit.tight, child: Text((snapshot.data as Map<String, String>)["time"] as String, style: const TextStyle(fontSize: 14))),
-                    Flexible(fit: FlexFit.tight, child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}", style: const TextStyle(fontSize: 10)))
+                    Flexible(
+                        fit: FlexFit.tight,
+                        child: Text((snapshot.data as Map<String, String>)["time"] as String,
+                            style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
+                    Flexible(
+                        fit: FlexFit.tight,
+                        child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
+                            style: TextStyle(fontSize: 10, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
                   ],
                 ),
               ),

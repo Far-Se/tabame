@@ -453,7 +453,6 @@ class QuickRunState extends State<QuickRun> {
       regainFocus();
     } else if (currentRun == "projects") {
       if (result.actions.isEmpty) return;
-      print(result.actions.values.elementAt(0));
       WinUtils.open(result.actions.values.elementAt(0));
       regainFocus();
     }
@@ -1130,7 +1129,6 @@ class Parsers {
         if (x[0].contains(text[0])) {
           String url = x[1];
           if (text.length == 2) {
-            print(Uri.encodeQueryComponent(text[1]));
             url = url.replaceAll("{params}", Uri.encodeQueryComponent(text[1]));
           }
           result.results.add("${x[0]}:$url");

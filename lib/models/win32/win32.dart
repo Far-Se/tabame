@@ -510,6 +510,10 @@ class WinUtils {
     return path;
   }
 
+  static String getTabameSettingsFolder() {
+    return "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame";
+  }
+
   static Future<List<String>> getTaskbarPinnedApps() async {
     List<String> output = <String>[];
     String path = getKnownFolder(FOLDERID_UserPinned);

@@ -326,6 +326,18 @@ class SettingsPageState extends State<SettingsPage> {
                               const Divider(height: 10, thickness: 2),
                               CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
+                                title: const Text("Pause Spotify when sound comes from other sources"),
+                                value: globalSettings.pauseSpotifyWhenNewSound,
+                                onChanged: (bool? newValue) async {
+                                  globalSettings.pauseSpotifyWhenNewSound = !globalSettings.pauseSpotifyWhenNewSound;
+                                  Boxes.updateSettings("pauseSpotifyWhenNewSound", globalSettings.pauseSpotifyWhenNewSound);
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
+                              ),
+                              const Divider(height: 10, thickness: 2),
+                              CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
                                 title: const Text("Add Wizardly in Folder Context Menu"),
                                 value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
                                 onChanged: (bool? newValue) async {

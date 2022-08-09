@@ -86,7 +86,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   }
 
   @override
-  void onQuickMenuToggled(bool visible, int type) async {
+  Future<void> onQuickMenuToggled(bool visible, int type) async {
     globalSettings.quickRunState = 0;
     globalSettings.quickRunText = "";
     if (visible) {
@@ -137,7 +137,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         });
       }
       Future<void>.delayed(const Duration(milliseconds: 300), () async {
-        // await WindowManager.instance.focus();
         Globals.isWindowActive = true;
         Win32.activateWindow(Win32.hWnd, forced: true);
 
@@ -148,17 +147,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       globalSettings.quickRunState = 0;
       globalSettings.quickRunText = "";
       setState(() {});
-      // Future<void>.delayed(const Duration(milliseconds: 300), () async {
-      //   if (QuickMenuFunctions.isQuickMenuVisible) return;
-      //   if (!mounted) return;
-      //   final double newHeight = Globals.heights.allSummed + 80;
-      //   if (lastHeight != newHeight) {
-      //     if (!mounted || QuickMenuFunctions.isQuickMenuVisible) return;
-      //     await windowManager.setSize(Size(300, newHeight));
-      //     lastHeight = newHeight;
-      //   }
-      // });
     }
+    return;
   }
 
   ///
@@ -296,8 +286,37 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
 
   @override
   void onForegroundWindowChanged(int hWnd) {
-    if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
+    if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible && globalSettings.quickRunState == 0) {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
+    }
+  }
+
+  final Trktivity trk = Trktivity();
+  @override
+  void onTricktivityEvent(String action, String info) {
+    if (action == "Keys") {
+      trk.add(TrktivityType.keys, info);
+    } else if (action == "Movement") {
+      trk.add(TrktivityType.mouse, info);
+    }
+  }
+
+  String lastTitle = "emptytitlehere";
+  @override
+  void onWinEventReceived(int hWnd, WinEventType type) {
+    if (type == WinEventType.nameChange) {
+      final String title = Win32.getTitle(hWnd);
+      if (title.replaceFirst(lastTitle, "").length < 3 || lastTitle.replaceFirst(title, "").length < 3) {
+        lastTitle = title;
+        return;
+      }
+      lastTitle = title;
+      trk.add(TrktivityType.title, hWnd.toString());
+      //
+    } else if (type == WinEventType.foreground) {
+      // if (lastTitle == Win32.getTitle(hwnd)) return;
+      trk.add(TrktivityType.window, hWnd.toString());
+      //
     }
   }
 

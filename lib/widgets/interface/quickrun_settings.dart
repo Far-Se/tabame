@@ -65,7 +65,7 @@ class RunSettingsState extends State<RunSettings> {
             ),
           ),
         ),
-        const InfoText("You can access QuickRun directly form QuickMenu, just start typing. On triggers, last one is always regex aware!"),
+        const InfoText("You can access QuickRun directly from QuickMenu, just start typing. On triggers, last one is always regex aware!"),
         currentPage < pages.length ? pages[currentPage].widget : Container(),
         const SizedBox(height: 20)
       ],

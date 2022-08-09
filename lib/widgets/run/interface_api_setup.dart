@@ -43,11 +43,7 @@ class InterfaceApiSetupState extends State<InterfaceApiSetup> {
           ],
         ),
       ],
-      variables: <String, String>{
-        "client_id": "9duwo8nlogmbt6siqr6lkypxgyop05",
-        "client_secret": "1483rxcu10mddvkhkyrjsn42uooovx",
-        "token": "9mftqbpdbesyral7u8otvmjljb10i2"
-      },
+      variables: <String, String>{"client_id": "9duwo8nlogmbt6si6lkypxgyop05", "client_secret": "1483rxcu10mddvkhkyrjsnuooovx", "token": "9mftqbpdbesyral7otvmjljb10i2"},
     )
   ];
 

@@ -473,9 +473,9 @@ enum WinEventType {
 abstract class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
   void onForegroundWindowChanged(int hWnd) {}
-  void onTricktivityEvent(String action, int info) {}
+  void onTricktivityEvent(String action, String info) {}
 
-  void onWinEventReceived(int hwnd, WinEventType type) {}
+  void onWinEventReceived(int hWnd, WinEventType type) {}
 }
 
 /// ? NativeHotkey
@@ -525,11 +525,8 @@ class NativeHotkey {
         if (!_listeners.contains(listener)) return;
         listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
       }
-      print(call.arguments);
     }
-    if (call.method == "ViewsEvent") {
-      print(call.arguments);
-    }
+    if (call.method == "ViewsEvent") {}
     if (call.method == "WinEvent") {
       // print(call.arguments);
       if (call.arguments['action'] == "foreground") {
@@ -543,7 +540,6 @@ class NativeHotkey {
           if (!_listeners.contains(listener)) return;
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.nameChange);
         }
-        print(call.arguments);
       }
     }
   }

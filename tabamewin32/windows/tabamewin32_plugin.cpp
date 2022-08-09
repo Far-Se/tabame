@@ -96,7 +96,6 @@ bool isTrcktivityEnabled = false;
 int trkTimestamp = 0;
 int trckMovementX = 0;
 int trckMovementY = 0;
-map<int, int> mouseDirectionData;
 // Keyboard
 int kbdTime = 0;
 int kbdPressCount = 0;
@@ -574,13 +573,10 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
             trckMovementX = info->pt.x;
             trckMovementY = info->pt.y;
             int timeDiff = info->time - trkTimestamp;
-            mouseDirectionData[(int)floor(timeDiff / 3000)] = 1;
-            if (timeDiff > 10000)
+            if (timeDiff > 3000)
             {
                 trkTimestamp = info->time;
-                /// ! Send trk getTimestamp() : mouseDirectionData.size() to server.
-                TrktivityEvent("Movement", std::to_string(mouseDirectionData.size()));
-                mouseDirectionData.clear();
+                TrktivityEvent("Movement", "mouse");
             }
         }
     }

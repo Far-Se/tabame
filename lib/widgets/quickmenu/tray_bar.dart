@@ -55,7 +55,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   }
 
   @override
-  void onQuickMenuToggled(bool visible, int type) {
+  Future<void> onQuickMenuToggled(bool visible, int type) async {
     if (type != 0) return;
     if (visible) {
       fetchTray();

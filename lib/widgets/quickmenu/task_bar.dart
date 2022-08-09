@@ -44,7 +44,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   bool justToggled = false;
 
-  Future<void> changeHeight() async {
+  Future<void> handleHeight() async {
     if (Globals.changingPages == true) return;
     double currentHeight = (windows.length * oneColumnHeight).clamp(100, 400) + 5;
     Globals.heights.taskbar = currentHeight;
@@ -62,39 +62,70 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     }
   }
 
-  Future<void> audioHandle() async {
+  bool spotifyWasPaused = false;
+  int spotifyDelayPlay = 0;
+  Future<void> handleAudio() async {
     final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
     if (audioMixer.isEmpty) return Caches.audioMixer.clear();
     Caches.audioMixer.clear();
-    Caches.audioMixer = audioMixer.where((ProcessVolume element) => element.peakVolume > 0.01).map((ProcessVolume x) => x.processId).toList();
-
+    Caches.audioMixer = audioMixer.where((ProcessVolume element) => element.peakVolume > 0.005).map((ProcessVolume x) => x.processId).toList();
     Caches.audioMixerExes = audioMixer
         .where((ProcessVolume element) => element.peakVolume > 0.01)
         .map((ProcessVolume x) => x.processPath.substring(x.processPath.lastIndexOf('\\') + 1))
         .toList();
+    if (globalSettings.pauseSpotifyWhenNewSound) {
+      // print("checking spotify");
+      if (Caches.audioMixerExes.length > 1 && Caches.audioMixerExes.contains("Spotify.exe")) {
+        WindowWatcher.triggerSpotify(button: AppCommand.mediaPause);
+        spotifyWasPaused = true;
+      } else {
+        if (spotifyWasPaused && Caches.audioMixerExes.isEmpty) {
+          if (spotifyDelayPlay > 2) {
+            WindowWatcher.triggerSpotify(button: AppCommand.mediaPlay);
+            spotifyWasPaused = false;
+            spotifyDelayPlay = 0;
+          } else {
+            spotifyDelayPlay++;
+          }
+        }
+      }
+    }
   }
 
-  Future<void> fetchWindows() async {
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+  Future<void> fetchWindows({bool state = true}) async {
+    // ! commented this, moved on initState;
+    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!fetching && await WindowWatcher.fetchWindows()) {
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
-      await audioHandle();
-      await changeHeight();
-      if (mounted) setState(() => fetching = false);
+      await handleAudio();
+      await handleHeight();
+
+      if (state && mounted) setState(() => fetching = false);
     }
+    return;
   }
 
   int timerTicks = 0;
   bool keepFetching = true;
+  bool audioJumpOneTick = false;
   @override
   void initState() {
     super.initState();
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!mounted) return;
     QuickMenuFunctions.addListener(this);
     NativeHotkey.addListener(this);
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
+      if (globalSettings.pauseSpotifyWhenNewSound && !keepFetching) {
+        if (audioJumpOneTick) {
+          audioJumpOneTick = false;
+        } else {
+          handleAudio();
+          audioJumpOneTick = true;
+        }
+      }
       if (!keepFetching) return;
       if (!fetching) {
         fetchWindows();
@@ -111,26 +142,33 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   @override
-  void onQuickMenuToggled(bool visible, int type) async {
+  Future<void> onQuickMenuToggled(bool visible, int type) async {
     if (visible) {
-      justToggled = true;
       keepFetching = true;
-      // WindowWatcher.orderBy(globalSettings.taskBarAppsStyle, list: windows);
       await fetchWindows();
+      justToggled = true;
     } else {
       justToggled = false;
       keepFetching = false;
+      setState(() {});
+    }
+    return;
+  }
+
+  @override
+  void onWinEventReceived(int hWnd, WinEventType type) async {
+    if (type == WinEventType.foreground) {
+      if (!QuickMenuFunctions.isQuickMenuVisible) {
+        hWnd = Win32.parent(hWnd);
+        if (!windows.any((Window element) => element.hWnd == hWnd)) {
+          Future<void>.delayed(const Duration(milliseconds: 300), () async => await fetchWindows());
+        }
+      }
     }
   }
 
   @override
-  void onForegroundWindowChanged(int hWnd) async {
-    if (!QuickMenuFunctions.isQuickMenuVisible) {
-      hWnd = Win32.parent(hWnd);
-      if (!windows.any((Window element) => element.hWnd == hWnd)) {
-        await fetchWindows();
-      }
-    }
+  void onForegroundWindowChanged(int hWnd) {
     WindowWatcher.hierarchyAdd(hWnd);
   }
 
@@ -200,7 +238,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                               Globals.lastFocusedWinHWND = window.hWnd;
                             },
                             onFocusChange: (bool h) {
-                              print(h);
                               if (h) {
                                 _hoverElement = index;
                               } else {
@@ -391,8 +428,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                         fetching = true;
                                         Win32.closeWindow(window.hWnd);
                                         windows.removeAt(index);
-                                        await audioHandle();
-                                        await changeHeight();
+                                        await handleAudio();
+                                        await handleHeight();
                                         fetchWindows();
                                         setState(() => fetching = false);
                                       },

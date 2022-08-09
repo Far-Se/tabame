@@ -217,6 +217,7 @@ const List<List<int>> lightThemeOptions = <List<int>>[
 
 const List<List<int>> darkThemeOptions = <List<int>>[
   //fav theme
+  <int>[0xFF1E1F28, 0xFFFAF9F8, 0xDCFFDCAA],
   <int>[0xFF3B414D, 0xFFFAF9F8, 0xDCFFDCAA],
   //Collectec From internet
   <int>[0xff0A0A0A, 0xFFFAF9F8, 0xDCFFDCAA],

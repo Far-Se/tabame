@@ -60,6 +60,10 @@ class Settings {
   bool hideTabameOnUnfocus = true;
 
   bool trktivityEnabled = false;
+
+  bool trktivitySaveAllTitles = false;
+
+  bool pauseSpotifyWhenNewSound = false;
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;
@@ -81,7 +85,7 @@ class Settings {
 
   bool settingsChanged = false;
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
-  ThemeColors darkTheme = ThemeColors(background: 0xFF3B414D, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
+  ThemeColors darkTheme = ThemeColors(background: 0xff1E1F28, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
   ThemeType get themeTypeMode {
     if (themeType == ThemeType.system) {

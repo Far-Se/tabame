@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:win32/win32.dart';
-
 import '../win32/win32.dart';
 
 class SaveSettings {
@@ -114,7 +112,7 @@ class SavedStore {
   File? _localDataFilePath;
   String? _fileName;
   String get fileName {
-    _fileName ??= "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame\\saved.json";
+    _fileName ??= "${WinUtils.getTabameSettingsFolder()}\\saved.json";
     return _fileName!;
   }
 
