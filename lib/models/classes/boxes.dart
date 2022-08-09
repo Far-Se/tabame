@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../main.dart';
 import '../keys.dart';
@@ -567,7 +568,9 @@ class WinHotkeys {
         });
       }
     }
-    NativeHotkey.run(allHotkeys);
+    if (kReleaseMode) {
+      NativeHotkey.run(allHotkeys);
+    }
   }
 }
 
@@ -609,6 +612,7 @@ class QuickMenuFunctions {
             await Win32.setCenter(useMouse: true);
           } else {
             await Win32.setMainWindowToMousePos();
+            WindowManager.instance.focus();
           }
         });
       } else {
@@ -622,7 +626,7 @@ class QuickMenuFunctions {
   }
 }
 
-enum TrktivityType { mouse, keys, window, title }
+enum TrktivityType { mouse, keys, window, title, idle }
 
 class TrkFilterInfo {
   String title;
@@ -768,11 +772,14 @@ class Trktivity {
   set filters(List<TrktivityFilter> list) => _filters = list;
   List<TrktivityFilter> get filters => _filters.isEmpty
       ? _filters = Boxes.getSavedMap<TrktivityFilter>(TrktivityFilter.fromJson, "trktivityFilter",
-          def: TrktivityFilter(exe: "code", titleSearch: r"([\w\. ]+\w)[\W ]+([\w ]+) [\W ]+Visual", titleReplace: r"$1 - $2"))
+          def: TrktivityFilter(exe: "code", titleSearch: r"([\w\. ]+\w)[\W ]+([\w ]+) [\W ]+Visual", titleReplace: r"$2 - $1"))
       : _filters;
 
   void add(TrktivityType type, String value) {
-    if (type == TrktivityType.title || type == TrktivityType.window) {
+    if (type == TrktivityType.idle) {
+      final String data = TrktivityData(e: "idle.exe", t: "w", tl: "Idle").toJson();
+      saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "w", d: data));
+    } else if (type == TrktivityType.title || type == TrktivityType.window) {
       final TrkFilterInfo filterInfo = fitlerTitle(int.tryParse(value) ?? 0);
       String title = "";
       if (filterInfo.hasFilters) {

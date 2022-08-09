@@ -155,6 +155,16 @@ extension IntegerExtension on int {
     return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}";
   }
 
+  String formatInt() {
+    final NumberFormat format = NumberFormat("#,##0", "en_US");
+    return format.format(this);
+  }
+
+  String formatDouble() {
+    final NumberFormat format = NumberFormat("#,##0.00", "en_US");
+    return format.format(this);
+  }
+
   bool isBetween(num from, num to) {
     return from < this && this < to;
   }

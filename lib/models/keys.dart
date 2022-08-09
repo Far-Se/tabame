@@ -126,8 +126,20 @@ class WinKeys {
       final Pointer<INPUT> input = calloc<INPUT>();
       input.ref.type = INPUT_MOUSE;
 
-      input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
+      input.ref.mi.dwFlags = (MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
       input.ref.mi.mouseData = 0;
+      input.ref.mi.dwExtraInfo = NULL;
+      input.ref.mi.time = 0;
+      SendInput(1, input, sizeOf<INPUT>());
+      free(input);
+      return true;
+    }
+    if (key == "VK_MSU" || key == "VK_MSD") {
+      final Pointer<INPUT> input = calloc<INPUT>();
+      input.ref.type = INPUT_MOUSE;
+
+      input.ref.mi.dwFlags = MOUSEEVENTF_WHEEL;
+      input.ref.mi.mouseData = key == "VK_MSU" ? 120 : -120;
       input.ref.mi.dwExtraInfo = NULL;
       input.ref.mi.time = 0;
       SendInput(1, input, sizeOf<INPUT>());

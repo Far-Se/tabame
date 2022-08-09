@@ -51,7 +51,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   Timer? changeHeightTimer;
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
   final FocusNode focusNode = FocusNode();
-
+  int trktivityIdleState = 0;
   @override
   void initState() {
     super.initState();
@@ -70,6 +70,16 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           if (!mounted) return;
           await windowManager.setSize(Size(300, newHeight));
           lastHeight = newHeight;
+        }
+      });
+    }
+    if (globalSettings.trktivityEnabled) {
+      Timer.periodic(const Duration(seconds: 15), (Timer timer) {
+        if (trktivityIdleState == 0) {
+          trktivityIdleState = 1;
+        } else if (trktivityIdleState == 1) {
+          trk.add(TrktivityType.idle, "");
+          trktivityIdleState = 2;
         }
       });
     }
@@ -150,6 +160,14 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       setState(() {});
     }
     return;
+  }
+
+  @override
+  void onForegroundWindowChanged(int hWnd) {
+    if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible && globalSettings.quickRunState == 0) {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.toggleQuickMenu(visible: false));
+    }
   }
 
   ///
@@ -298,22 +316,20 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       keys = hotkey.getPress;
       for (KeyMap key in keys) {
         if (!key.isMouseInRegion) continue;
+        if (hotkeyInfo.name.isNotEmpty && key.name != hotkeyInfo.name) continue;
         if (hotkey.hasDoublePress) hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
         key.applyActions();
       }
     }
   }
 
-  @override
-  void onForegroundWindowChanged(int hWnd) {
-    if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible && globalSettings.quickRunState == 0) {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
-    }
-  }
-
   final Trktivity trk = Trktivity();
   @override
   void onTricktivityEvent(String action, String info) {
+    if (trktivityIdleState == 2) {
+      trk.add(lastTrkType, lasthWnd.toString());
+    }
+    trktivityIdleState = 0;
     if (action == "Keys") {
       trk.add(TrktivityType.keys, info);
     } else if (action == "Movement") {
@@ -322,6 +338,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   }
 
   String lastTitle = "emptytitlehere";
+  TrktivityType lastTrkType = TrktivityType.window;
+  int lasthWnd = 0;
   @override
   void onWinEventReceived(int hWnd, WinEventType type) {
     if (type == WinEventType.nameChange) {
@@ -332,11 +350,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       }
       lastTitle = title;
       trk.add(TrktivityType.title, hWnd.toString());
-      //
+      lasthWnd = hWnd;
+      lastTrkType = TrktivityType.title;
     } else if (type == WinEventType.foreground) {
-      // if (lastTitle == Win32.getTitle(hwnd)) return;
       trk.add(TrktivityType.window, hWnd.toString());
-      //
+      lasthWnd = hWnd;
+      lastTrkType = TrktivityType.window;
     }
   }
 

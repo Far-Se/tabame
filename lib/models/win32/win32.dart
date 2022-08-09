@@ -386,7 +386,9 @@ class Win32 {
     GetCursorPos(lpPoint);
     int hwnd = WindowFromPoint(lpPoint.ref);
     hwnd = GetAncestor(hwnd, 2);
-    activateWindow(hwnd);
+    if (GetForegroundWindow() != hwnd) {
+      activateWindow(hwnd);
+    }
     free(lpPoint);
   }
 

@@ -613,6 +613,8 @@ All Special keys need to be put between {}.To release all previous keys use {|}.
 Will open Task Manager And move to Performance Tab.
 
 [Here you can find all special keys name](here)
+
+Aditionally, for mouse use {LMB} {MMB} {RMB} {MSU} {MSD}
 ''',
           onTapLink: (String e, String? e1, String e2) {
             WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/keys.dart#L158");

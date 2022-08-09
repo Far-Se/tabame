@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
@@ -21,20 +22,49 @@ class TrktivityPage extends StatefulWidget {
   TrktivityPageState createState() => TrktivityPageState();
 }
 
+String timeFormat(int time) {
+  int hour = 0;
+  int minute = (time ~/ 60);
+  final int second = (time % 60);
+  if (minute > 60) {
+    hour = (minute ~/ 60);
+    minute = (minute % 60);
+  }
+  return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}:${second.toString().numberFormat()}";
+}
+
 class MTrack {
   int mouse;
   int keyboard;
   int time;
   String get timeFormat {
-    final int minute = (time ~/ 60);
+    int hour = 0;
+    int minute = (time ~/ 60);
     final int second = (time % 60);
-    return "${minute.toString().numberFormat()}:${second.toString().numberFormat()}";
+    if (minute > 60) {
+      hour = (minute ~/ 60);
+      minute = (minute % 60);
+    }
+    return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}:${second.toString().numberFormat()}";
   }
 
   MTrack({required this.mouse, required this.keyboard, this.time = 0});
 
   @override
-  String toString() => 'MTrack(mouse: $mouse, keyboard: $keyboard, time: ${time.formatTime()})\n';
+  String toString() => '\nMTrack(mouse: $mouse, keyboard: $keyboard, time: ${time.formatTime()})';
+}
+
+class TTrack {
+  int from;
+  int to;
+  int get diff => to - from;
+  TTrack({
+    required this.from,
+    required this.to,
+  });
+
+  @override
+  String toString() => '\nTTrack(from: $from, to: $to)';
 }
 
 class TrktivityPageState extends State<TrktivityPage> {
@@ -45,6 +75,9 @@ class TrktivityPageState extends State<TrktivityPage> {
   String endDate = "";
   bool showFilters = false;
   String pickText = "Pick Dates";
+  bool dataAnalyzed = false;
+
+  double uTrackMaxValue = 0.0;
   @override
   void initState() {
     super.initState();
@@ -63,26 +96,65 @@ class TrktivityPageState extends State<TrktivityPage> {
   }
 
   final Map<int, MTrack> uTrack = <int, MTrack>{};
+
   final Map<String, MTrack> wTrack = <String, MTrack>{};
+  Map<String, List<TTrack>> wTimeTrack = <String, List<TTrack>>{};
+  List<MapEntry<String, MTrack>> wTrackList = <MapEntry<String, MTrack>>[];
+  List<MapEntry<String, List<TTrack>>> wTimeTrackList = <MapEntry<String, List<TTrack>>>[];
+
   final Map<String, MTrack> tTrack = <String, MTrack>{};
+  Map<String, List<TTrack>> tTimeTrack = <String, List<TTrack>>{};
+  List<MapEntry<String, MTrack>> tTrackList = <MapEntry<String, MTrack>>[];
+  List<MapEntry<String, List<TTrack>>> tTimeTrackList = <MapEntry<String, List<TTrack>>>[];
+
   void showReport() {
+    dataAnalyzed = false;
     uTrack.clear();
     wTrack.clear();
     tTrack.clear();
     if (startDate.isEmpty && selectedDay.isNotEmpty) {
       parseTrkFile(selectedDay);
-
-      // print(uTrack);
-      // print(wTrack);
-      print(tTrack);
     } else if (startDate.isNotEmpty) {
       final int first = allDates.indexWhere((String element) => element == endDate);
       final int last = allDates.indexWhere((String element) => element == startDate);
-
       if (first > -1 && last > -1) {
-        for (int x = first; x <= last; x++) {}
+        for (int x = first; x <= last; x++) {
+          parseTrkFile(allDates[x]);
+        }
       }
     }
+    uTrackMaxValue = uTrack.values.fold(0, (double previousValue, MTrack element) {
+      final double bigel = (element.keyboard < element.mouse ? element.mouse : element.keyboard).toDouble();
+      return previousValue < bigel ? bigel : previousValue;
+    });
+    wTrackList.clear();
+    wTrackList.addAll(wTrack.entries.toList());
+    wTrackList.sort((MapEntry<String, MTrack> a, MapEntry<String, MTrack> b) => a.value.time > b.value.time ? -1 : 1);
+    wTrackList = wTrackList.take(40).toList();
+
+    tTrackList.clear();
+    tTrackList.addAll(tTrack.entries.toList());
+    tTrackList.sort((MapEntry<String, MTrack> a, MapEntry<String, MTrack> b) => a.value.time > b.value.time ? -1 : 1);
+    tTrackList = tTrackList.take(40).toList();
+
+    wTimeTrackList.clear();
+    wTimeTrackList.addAll(wTimeTrack.entries.toList());
+    wTimeTrackList.sort((MapEntry<String, List<TTrack>> a, MapEntry<String, List<TTrack>> b) =>
+        (a.value.fold(0, (num previousValue, TTrack element) => previousValue + element.diff) >
+                b.value.fold(0, (num previousValue, TTrack element) => previousValue + element.diff))
+            ? -1
+            : 1);
+    wTimeTrackList = wTimeTrackList.take(5).toList();
+
+    tTimeTrackList.clear();
+    tTimeTrackList.addAll(tTimeTrack.entries.toList());
+    tTimeTrackList.sort((MapEntry<String, List<TTrack>> a, MapEntry<String, List<TTrack>> b) =>
+        (a.value.fold(0, (num previousValue, TTrack element) => previousValue + element.diff) >
+                b.value.fold(0, (num previousValue, TTrack element) => previousValue + element.diff))
+            ? -1
+            : 1);
+    tTimeTrackList = tTimeTrackList.take(5).toList();
+    dataAnalyzed = true;
   }
 
   final MTrack _wTrack = MTrack(mouse: 0, keyboard: 0);
@@ -98,7 +170,7 @@ class TrktivityPageState extends State<TrktivityPage> {
     for (String line in lines) {
       final Map<String, dynamic> info = jsonDecode(line);
       final DateTime time = DateTime.fromMillisecondsSinceEpoch(info["ts"]);
-      final int minute = (time.hour * 60) + time.minute;
+      final int minute = (time.hour * 60) + (time.minute < 30 ? 0 : 30);
       if (uTrack.containsKey(minute)) {
         if (info["t"] == "m") uTrack[minute]!.mouse += int.parse(info["d"]);
         if (info["t"] == "k") uTrack[minute]!.keyboard += int.parse(info["d"]);
@@ -125,10 +197,13 @@ class TrktivityPageState extends State<TrktivityPage> {
           }
           if (!wTrack.containsKey(_lastExe)) {
             wTrack[_lastExe] = MTrack(mouse: 0, keyboard: 0);
+            wTimeTrack[_lastExe] = <TTrack>[];
           }
           wTrack[_lastExe]!.keyboard += _wTrack.keyboard;
           wTrack[_lastExe]!.mouse += _wTrack.mouse;
           wTrack[_lastExe]!.time += time.difference(DateTime.fromMillisecondsSinceEpoch(_startWTime)).inSeconds;
+
+          wTimeTrack[_lastExe]!.add(TTrack(from: _startWTime, to: info['ts']));
           _wTrack
             ..keyboard = 0
             ..mouse = 0
@@ -137,6 +212,7 @@ class TrktivityPageState extends State<TrktivityPage> {
           _startWTime = info["ts"];
         }
         if (wInfo["tl"].isNotEmpty) {
+          wInfo["tl"] = wInfo["tl"].trim();
           if (_lastTitle != wInfo["tl"]) {
             if (_lastTitle.isEmpty) {
               _lastTitle = wInfo["tl"];
@@ -144,10 +220,14 @@ class TrktivityPageState extends State<TrktivityPage> {
             }
             if (!tTrack.containsKey(_lastTitle)) {
               tTrack[_lastTitle] = MTrack(mouse: 0, keyboard: 0);
+              tTimeTrack[_lastTitle] = <TTrack>[];
             }
             tTrack[_lastTitle]!.keyboard += _tTrack.keyboard;
             tTrack[_lastTitle]!.mouse += _tTrack.mouse;
             tTrack[_lastTitle]!.time += time.difference(DateTime.fromMillisecondsSinceEpoch(_startTTime)).inSeconds;
+
+            tTimeTrack[_lastTitle]!.add(TTrack(from: _startTTime, to: info['ts']));
+
             _tTrack
               ..keyboard = 0
               ..mouse = 0
@@ -188,7 +268,6 @@ class TrktivityPageState extends State<TrktivityPage> {
     }
     _lastTitle = "";
     _startTTime = 0;
-    print("empty: ${_lastTitle.isEmpty}");
   }
 
   @override
@@ -335,6 +414,8 @@ It records keystrokes, mouse movement and active Window.
                                         (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
                                     .toList(),
                                 onChanged: (String? e) {
+                                  dataAnalyzed = false;
+                                  setState(() {});
                                   selectedDay = e ?? allDates.first;
                                   pickText = "Pick Dates";
                                   startDate = "";
@@ -360,6 +441,8 @@ It records keystrokes, mouse movement and active Window.
                                   firstDate: DateTime.parse(allDates.last),
                                   lastDate: DateTime.parse(allDates.first),
                                 ).then((DateTimeRange? value) {
+                                  dataAnalyzed = false;
+                                  setState(() {});
                                   if (value == null) return;
                                   startDate = DateFormat('yyyy-MM-dd').format(value.start);
                                   endDate = DateFormat('yyyy-MM-dd').format(value.end);
@@ -377,7 +460,386 @@ It records keystrokes, mouse movement and active Window.
                   ),
               ],
             ),
-          )
+          ),
+        if (dataAnalyzed)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  startDate.isEmpty
+                      ? "Stats for ${DateFormat("d MMMM, yyyy").format(DateTime.parse(selectedDay))}"
+                      : "Stats from ${DateFormat("d MMM, yyyy").format(DateTime.parse(startDate))} to ${DateFormat("d MMM, yyyy").format(DateTime.parse(endDate))}"
+                          "",
+                  style: Theme.of(context).textTheme.headline6,
+                ),
+                Text("Total Keys pressed: ${uTrack.values.fold(0, (int previousValue, MTrack element) => element.keyboard + previousValue).formatInt()}"),
+                const SizedBox(height: 20),
+                Container(
+                  height: 220,
+                  child: BarChart(
+                    BarChartData(
+                      maxY: uTrackMaxValue,
+                      barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                        tooltipBgColor: Theme.of(context).backgroundColor,
+                        tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        getTooltipItem: (BarChartGroupData a, int b, BarChartRodData c, int d) {
+                          if (a.barRods.isEmpty) return BarTooltipItem("", Theme.of(context).textTheme.labelMedium!);
+                          final String kb = a.barRods.elementAt(0).rodStackItems.elementAt(0).toY.toInt().formatInt();
+                          final String mouse = a.barRods.elementAt(0).rodStackItems.elementAt(1).toY.toInt().formatInt();
+                          return BarTooltipItem("${a.x.formatTime()}\n$kb keys pressed\n$mouse mouse pings", Theme.of(context).textTheme.button!);
+                        },
+                      )),
+                      barGroups: List<BarChartGroupData>.generate(
+                        48,
+                        (int indx) {
+                          int i = 0;
+                          if (indx % 2 == 0) {
+                            i = indx ~/ 2 * 60;
+                          } else {
+                            i = indx ~/ 2 * 60 + 30;
+                          }
+                          if (uTrack.containsKey(i)) {
+                            return BarChartGroupData(
+                              x: i,
+                              // showingTooltipIndicators: <int>[uTrack[i]!.keyboard, uTrack[i]!.mouse],
+                              barRods: <BarChartRodData>[
+                                BarChartRodData(
+                                    toY: uTrackMaxValue,
+                                    rodStackItems: <BarChartRodStackItem>[
+                                      BarChartRodStackItem(0, uTrack[i]!.keyboard.toDouble(), Colors.red),
+                                      BarChartRodStackItem(0, uTrack[i]!.mouse.toDouble(), Colors.green),
+                                    ],
+                                    color: Colors.transparent),
+                              ],
+                            );
+                          }
+                          return BarChartGroupData(x: i);
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (double value, TitleMeta meta) {
+                              if (value / 60 % 1 == 0) {
+                                return SideTitleWidget(
+                                  axisSide: meta.axisSide,
+                                  space: 16,
+                                  child: Text(
+                                    (value.toInt() ~/ 60).toString(),
+                                    style: const TextStyle(
+                                      color: Color(0xff7589a2),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 0,
+                                child: Container(),
+                              );
+                            },
+                            reservedSize: 42,
+                          ),
+                        ),
+                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text("Focus time", style: Theme.of(context).textTheme.headline6),
+                const SizedBox(height: 10),
+                IntrinsicHeight(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Container(
+                          height: 200,
+                          child: MouseScrollWidget(
+                            scrollDirection: Axis.vertical,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(child: Text("App", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.button)),
+                                  ],
+                                ),
+                                InkWell(
+                                  onTap: () {},
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                      SizedBox(
+                                        width: 80,
+                                        child: Text(
+                                          timeFormat(wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.time)),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.keyboard).formatInt(),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.mouse).formatInt(),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                                ...List<Widget>.generate(
+                                  wTrackList.length,
+                                  (int index) {
+                                    final MapEntry<String, MTrack> track = wTrackList.elementAt(index);
+                                    return InkWell(
+                                      onTap: () {},
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Expanded(child: Text(track.key)),
+                                          SizedBox(width: 80, child: Text(track.value.timeFormat)),
+                                          SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
+                                          SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const VerticalDivider(width: 20, thickness: 1),
+                      Expanded(
+                        child: Container(
+                          height: 200,
+                          child: MouseScrollWidget(
+                            scrollDirection: Axis.vertical,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(child: Text("Title", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.button)),
+                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.button)),
+                                  ],
+                                ),
+                                InkWell(
+                                  onTap: () {},
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                      SizedBox(
+                                        width: 80,
+                                        child: Text(
+                                          timeFormat(tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.time)),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.keyboard).formatInt(),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 60,
+                                        child: Text(
+                                          tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.mouse).formatInt(),
+                                          style: Theme.of(context).textTheme.button,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                                ...List<Widget>.generate(
+                                  tTrackList.length,
+                                  (int index) {
+                                    final MapEntry<String, MTrack> track = tTrackList.elementAt(index);
+                                    return InkWell(
+                                      onTap: () {},
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          Expanded(child: Text(track.key)),
+                                          SizedBox(width: 80, child: Text(track.value.timeFormat)),
+                                          SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
+                                          SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                if (startDate.isEmpty && selectedDay.isNotEmpty && selectedDay.isNotEmpty)
+                  LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Divider(height: 20, thickness: 1),
+                        Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                        const SizedBox(height: 10),
+                        Container(
+                          height: 20,
+                          child: Stack(
+                            children: List<Widget>.generate(
+                              12,
+                              (int index) {
+                                final double startpercentage = (((index + 1) * 2) * 60 * 60) / (24 * 60 * 60);
+                                return Positioned(
+                                  left: startpercentage * constraints.maxWidth,
+                                  child: Text("${(index + 1) * 2}\n|"),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        Container(
+                          height: 220,
+                          child: SingleChildScrollView(
+                            controller: ScrollController(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: List<Widget>.generate(
+                                wTimeTrackList.length,
+                                (int index) => Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(wTimeTrackList[index].key),
+                                    Container(
+                                      height: 20,
+                                      width: constraints.maxWidth,
+                                      child: Stack(
+                                        children: List<Widget>.generate(wTimeTrackList[index].value.length, (int i) {
+                                          final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].from);
+                                          final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].to);
+                                          final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
+                                          final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
+                                          const int secondsInADay = 24 * 60 * 60;
+
+                                          final double startpercentage = startseconds / secondsInADay;
+                                          final double diffPercentage = (endseconds - startseconds) / secondsInADay;
+
+                                          return Positioned(
+                                            left: startpercentage * constraints.maxWidth,
+                                            width: diffPercentage * constraints.maxWidth,
+                                            child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
+                                          );
+                                        }),
+                                      ),
+                                    ),
+                                    const Divider(height: 5, thickness: 1),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                        const SizedBox(height: 10),
+                        Container(
+                          height: 220,
+                          child: SingleChildScrollView(
+                            controller: ScrollController(),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: List<Widget>.generate(
+                                tTimeTrackList.length,
+                                (int index) => Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(tTimeTrackList[index].key),
+                                    Container(
+                                      height: 20,
+                                      width: constraints.maxWidth,
+                                      child: Stack(
+                                        children: List<Widget>.generate(tTimeTrackList[index].value.length, (int i) {
+                                          final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].from);
+                                          final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].to);
+                                          final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
+                                          final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
+                                          const int secondsInADay = 24 * 60 * 60;
+
+                                          final double startpercentage = startseconds / secondsInADay;
+                                          final double diffPercentage = (endseconds - startseconds) / secondsInADay;
+
+                                          return Positioned(
+                                            left: startpercentage * constraints.maxWidth,
+                                            width: diffPercentage * constraints.maxWidth,
+                                            child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
+                                          );
+                                        }),
+                                      ),
+                                    ),
+                                    const Divider(height: 5, thickness: 1),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  })
+              ],
+            ),
+          ),
+        const SizedBox(height: 50)
       ],
     );
   }
