@@ -728,7 +728,7 @@ It records keystrokes, mouse movement and active Window.
                       children: <Widget>[
                         const Divider(height: 20, thickness: 1),
                         Text("Window by title", style: Theme.of(context).textTheme.headline6),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 11),
                         Container(
                           height: 20,
                           child: Stack(
