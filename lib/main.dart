@@ -17,6 +17,11 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments) async {
+  /*
+  E:\Projects\Tabame
+  -interface
+  -wizardly
+  */
   if (arguments.isNotEmpty) {
     String argString = arguments.join(" ");
     if (argString.indexOf('"') > 0 && argString.contains('"')) argString = '"$argString';
@@ -28,6 +33,7 @@ Future<void> main(List<String> arguments) async {
       globalSettings.page = TPage.views;
     }
   }
+  WinUtils.msgBox(arguments.join("\n"), "tite");
 
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -38,12 +44,15 @@ Future<void> main(List<String> arguments) async {
     globalSettings.args.remove('-strudel');
     globalSettings.args.add('-tryadmin');
     WinUtils.run(Platform.resolvedExecutable, arguments: arguments.join(' '));
-    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
-    Timer(const Duration(seconds: 500), () => exit(0));
-    runApp(const EmptyWidget());
+    Timer(const Duration(seconds: 1), () => exit(0));
+    runApp(EmptyWidget());
     return;
+    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
   }
-  await NativeHotkey.register();
+  if (kReleaseMode) {
+    //!hook
+    await NativeHotkey.register();
+  }
 
   /// ? Window
   late WindowOptions windowOptions;
@@ -58,7 +67,7 @@ Future<void> main(List<String> arguments) async {
     );
   } else {
     windowOptions = const WindowOptions(
-      size: Size(300, 520),
+      size: Size(300, 540),
       center: false,
       backgroundColor: Colors.transparent,
       skipTaskbar: true,
@@ -238,6 +247,9 @@ class EmptyWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return MaterialApp(
+      title: 'Tabame aux',
+      home: Text("closing"),
+    );
   }
 }

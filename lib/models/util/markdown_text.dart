@@ -1,3 +1,13 @@
+/*
+
+---
+### ![views]() Views
+
+My attempt to replicate FancyZones from PowerToys. My main issue was the fact that you need to press ALT to select multiple zones, and to switch layouts you need some shortcuts which you will never remember.
+
+I've fixed that by allowing the user to select multiple zones by holding Right Click and switching layout by spinning the wheel so you don't need to move your other hand.
+
+*/
 const String markdownHomeLeft = '''
 ## ![tabame](logo) Welcome to Tabame
   
@@ -26,13 +36,6 @@ Quick Actions is a set of predefined tools that give you access to useful functi
 QuickRun has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Converto, Set Countdown, calculate/convert units and timezones and many other.
 
 You can also access your projects and create new Tasks.
-
----
-### ![views]() Views
-
-My attempt to replicate FancyZones from PowerToys. My main issue was the fact that you need to press ALT to select multiple zones, and to switch layouts you need some shortcuts which you will never remember.
-
-I've fixed that by allowing the user to select multiple zones by holding Right Click and switching layout by spinning the wheel so you don't need to move your other hand.
 
 ---
 ### ![wizardly]() Wizardly

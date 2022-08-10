@@ -34,7 +34,7 @@ Future<int> quickMenuWindowSetup() async {
 
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    await WindowManager.instance.setSize(const Size(300, 350));
+    await WindowManager.instance.setSize(const Size(300, 540));
     await WindowManager.instance.setSkipTaskbar(true);
     await WindowManager.instance.setResizable(false);
     await WindowManager.instance.setAlwaysOnTop(true);
@@ -46,7 +46,7 @@ Future<int> quickMenuWindowSetup() async {
   return 1;
 }
 
-class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTriggers {
+class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTriggers, WindowListener {
   double lastHeight = 0;
   Timer? changeHeightTimer;
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
@@ -58,6 +58,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     NativeHotkey.unHook();
     NativeHotkey.addListener(this);
     QuickMenuFunctions.addListener(this);
+    WindowManager.instance.addListener(this);
     WinHotkeys.update();
     if (globalSettings.trktivityEnabled) enableTrcktivity(globalSettings.trktivityEnabled);
     Globals.changingPages = false;
@@ -105,9 +106,9 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       if (type == 0) {
         setState(() {});
       } else if (type == 1) {
-        if (lastHeight < 330) {
-          Future<void>.delayed(const Duration(seconds: 1), () => windowManager.setSize(const Size(300, 330)));
-        }
+        // if (lastHeight < 330) {
+        //   Future<void>.delayed(const Duration(seconds: 1), () => windowManager.setSize(const Size(300, 330)));
+        // }
         globalSettings.quickRunState = 1;
         globalSettings.quickRunText = "";
       } else if (type == 2) {
@@ -147,12 +148,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           Globals.audioBoxVisible = false;
         });
       }
-      Future<void>.delayed(const Duration(milliseconds: 300), () async {
-        Globals.isWindowActive = true;
-        Win32.activateWindow(Win32.hWnd, forced: true);
-
-        if (mounted) setState(() {});
-      });
     } else {
       FocusScope.of(context).unfocus();
       globalSettings.quickRunState = 0;
@@ -161,6 +156,20 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     }
     return;
   }
+
+  @override
+  Future<void> onQuickMenuShown(int type) async {
+    Win32.activateWindow(Win32.hWnd);
+    // SendMessage(Win32.hWnd, WM_ACTIVATE, 0, 0);
+  }
+
+  @override
+  void onWindowFocus() {
+    setState(() {});
+  }
+
+  @override
+  void onWindowBlur() async {}
 
   @override
   void onForegroundWindowChanged(int hWnd) {
@@ -191,9 +200,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       if (key == -1) return;
       currentVK = key;
 
-      if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
-        Win32.activeWindowUnderCursor();
-      }
       if (hotkey.hasMouseMovementTriggers) {
         mouseSteps = hotkeyInfo.mouse.start;
       }
@@ -214,9 +220,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
 
     ///
     if (hotkeyInfo.action == "pressed") {
-      if (hotkey.keymaps.any((KeyMap element) => element.windowUnderMouse)) {
-        Win32.activeWindowUnderCursor();
-      }
       if (hotkey.hasMouseMovementTriggers) {
         mouseSteps = hotkeyInfo.mouse.start;
       }
@@ -400,9 +403,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           globalSettings.quickRunText = "";
           setState(() {});
         } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
-          if (lastHeight < 330) {
-            await windowManager.setSize(const Size(300, 330));
-          }
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
           setState(() {});
@@ -418,11 +418,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           backgroundColor: Colors.transparent,
           body: MouseRegion(
             onEnter: (PointerEnterEvent event) async {
-              if (!await WindowManager.instance.isFocused()) {}
-              await WindowManager.instance.focus();
+              // if (!await WindowManager.instance.isFocused()) {}
+              // await WindowManager.instance.focus();
               Globals.isWindowActive = true;
-              Win32.activateWindow(Win32.hWnd);
-              setState(() {});
+              // Win32.activateWindow(Win32.hWnd, forced: true);
+              await WindowManager.instance.focus();
+              // setState(() {});
             },
             onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
             child: SingleChildScrollView(

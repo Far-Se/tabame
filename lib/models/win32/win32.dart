@@ -51,9 +51,14 @@ class Win32 {
       UpdateWindow(hWnd);
     }
     SetForegroundWindow(hWnd);
+    if (GetForegroundWindow() != hWnd) {
+      SwitchToThisWindow(hWnd, TRUE);
+      SetForegroundWindow(hWnd);
+    }
     SetFocus(hWnd);
     SetActiveWindow(hWnd);
     SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
+    SendMessage(hWnd, WM_ACTIVATE, 0, 0);
   }
 
   static void forceActivateWindow(int hWnd) {
@@ -228,12 +233,13 @@ class Win32 {
 
   static Future<void> fetchMainWindowHandle() async {
     hWnd = await getFlutterMainWindow();
+    hWnd = GetAncestor(hWnd, 2);
     return;
   }
 
   static getMainHandleByClass() {
     if (hWnd != 0) return hWnd;
-    final int hwnd = FindWindow(TEXT("FLUTTER_RUNNER_WIN32_WINDOW"), nullptr);
+    final int hwnd = FindWindow(TEXT("TABAME_WIN32_WINDOW"), nullptr);
     if (hwnd > 0) {
       hWnd = GetAncestor(hwnd, 2);
     }

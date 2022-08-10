@@ -131,16 +131,23 @@ class TrktivityPageState extends State<TrktivityPage> {
       return previousValue < bigel ? bigel : previousValue;
     });
     wTrackList.clear();
+
     wTrackList.addAll(wTrack.entries.toList());
     wTrackList.sort((MapEntry<String, MTrack> a, MapEntry<String, MTrack> b) => a.value.time > b.value.time ? -1 : 1);
     wTrackList = wTrackList.take(40).toList();
 
     tTrackList.clear();
     tTrackList.addAll(tTrack.entries.toList());
+    if (tTrack.containsKey("Idle")) tTrack.remove("Idle");
     tTrackList.sort((MapEntry<String, MTrack> a, MapEntry<String, MTrack> b) => a.value.time > b.value.time ? -1 : 1);
     tTrackList = tTrackList.take(40).toList();
 
     wTimeTrackList.clear();
+
+    if (wTimeTrack.containsKey("idle.exe")) {
+      wTimeTrack["Idle"] = wTimeTrack["idle.exe"]!;
+      wTimeTrack.remove("idle.exe");
+    }
     wTimeTrackList.addAll(wTimeTrack.entries.toList());
     wTimeTrackList.sort((MapEntry<String, List<TTrack>> a, MapEntry<String, List<TTrack>> b) =>
         (a.value.fold(0, (num previousValue, TTrack element) => previousValue + element.diff) >
@@ -149,6 +156,7 @@ class TrktivityPageState extends State<TrktivityPage> {
             : 1);
     wTimeTrackList = wTimeTrackList.take(5).toList();
 
+    if (tTimeTrack.containsKey("Idle")) tTimeTrack.remove("Idle");
     tTimeTrackList.clear();
     tTimeTrackList.addAll(tTimeTrack.entries.toList());
     tTimeTrackList.sort((MapEntry<String, List<TTrack>> a, MapEntry<String, List<TTrack>> b) =>
@@ -761,7 +769,7 @@ It records keystrokes, mouse movement and active Window.
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           const Divider(height: 20, thickness: 1),
-                          Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                          Text("Timeline by App", style: Theme.of(context).textTheme.headline6),
                           const SizedBox(height: 11),
                           Container(
                             height: 20,
@@ -822,7 +830,7 @@ It records keystrokes, mouse movement and active Window.
                             ),
                           ),
                           const SizedBox(height: 20),
-                          Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                          Text("Timeline by Title", style: Theme.of(context).textTheme.headline6),
                           const SizedBox(height: 10),
                           Container(
                             height: 220,

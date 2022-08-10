@@ -289,7 +289,6 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
 
                   for (MapEntry<String, String> map in widget.variables.entries) {
                     if (map.key.isEmpty) continue;
-                    // print(map.key);
                     data = data.replaceAll("{${map.key}}", map.value);
                   }
 

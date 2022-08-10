@@ -74,7 +74,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         .map((ProcessVolume x) => x.processPath.substring(x.processPath.lastIndexOf('\\') + 1))
         .toList();
     if (globalSettings.pauseSpotifyWhenNewSound) {
-      // print("checking spotify");
       if (Caches.audioMixerExes.length > 1 && Caches.audioMixerExes.contains("Spotify.exe")) {
         WindowWatcher.triggerSpotify(button: AppCommand.mediaPause);
         spotifyWasPaused = true;
@@ -235,6 +234,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                 WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
                               }
                               Win32.activateWindow(window.hWnd);
+                              QuickMenuFunctions.toggleQuickMenu(visible: false);
                               Globals.lastFocusedWinHWND = window.hWnd;
                             },
                             onFocusChange: (bool h) {
@@ -251,6 +251,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                 if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
                                   WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
                                 }
+                                QuickMenuFunctions.toggleQuickMenu(visible: false);
                                 Win32.activateWindow(window.hWnd);
                                 Globals.lastFocusedWinHWND = window.hWnd;
                               },

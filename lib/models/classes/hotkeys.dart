@@ -212,7 +212,6 @@ class KeyMap {
         SetActiveWindow(hWnd);
         SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
       }
-      // Win32.activeWindowUnderCursor();
     }
     Future<void>.delayed(Duration(milliseconds: delayed), () {
       for (KeyAction action in actions) {
@@ -280,7 +279,6 @@ class KeyMap {
           //
         } else if (action.type == ActionType.tabameFunction) {
           if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
-            // print(action.value);
             HotKeyInfo.tabameFunctionsMap[action.value]!();
           }
           //
@@ -414,8 +412,12 @@ class HotKeyInfo {
   static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
-    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
-    "ToggleQuickMenu": () => QuickMenuFunctions.toggleQuickMenu(),
+    "ToggleTaskbar": () {
+      WinUtils.toggleTaskbar();
+    },
+    "ToggleQuickMenu": () {
+      return QuickMenuFunctions.toggleQuickMenu();
+    },
     "ToggleQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
     "ShowLastActiveWindow": () {

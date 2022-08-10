@@ -161,7 +161,7 @@ class QuickRunState extends State<QuickRun> {
                           if (input.isEmpty) {
                             result = ParserResult();
                             for (RunShortcuts x in shortcuts) {
-                              result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
+                              result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
                             }
                             setState(() {});
                             return;
@@ -172,7 +172,7 @@ class QuickRunState extends State<QuickRun> {
                           if (x.isEmpty) {
                             result = ParserResult();
                             for (RunShortcuts x in shortcuts) {
-                              result.results.add("${x.name}: ${x.shortcuts.join(',')} [${x.regex}]");
+                              result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
                             }
                             setState(() {});
                             return;
@@ -186,15 +186,15 @@ class QuickRunState extends State<QuickRun> {
                             "calculator": parser.calculator,
                             "unit": parser.unit,
                             "color": parser.color,
+                            "timer": parser.timer,
                             "currency": parser.currency,
                             "timezones": parser.timezones,
+                            "memo": parser.memos,
+                            "projects": parser.projects,
+                            "shortcut": parser.shortcuts,
                             "regex": parser.regex,
                             "lorem": parser.loremIpsum,
                             "encoders": parser.encoders,
-                            "shortcut": parser.shortcuts,
-                            "memo": parser.memos,
-                            "projects": parser.projects,
-                            "timer": parser.timer,
                             "setvar": parser.setVar,
                             "keys": parser.sendKeys,
                           };
@@ -515,19 +515,19 @@ class Parsers {
       "ex: 1 power": "",
       "length": "m",
       "mass": "g",
-      "temperature": "°F",
+      "temperature": "fahrenheit",
       "volume": "l",
       "speed": "m/s",
       "digital": "b",
       "area": "acres",
-      "energy": "J",
-      "force": "N",
+      "energy": "j",
+      "force": "n",
       "fuel": "km/l",
-      "power": "W",
-      "pressure": "Pa",
-      "shoe": "ukIndiaChild",
+      "power": "watt",
+      "pressure": "pa",
+      "shoe": "ukindiachild",
       "time": "s",
-      "torque": "N·m",
+      "torque": "n·m",
     };
     final ParserResult result = ParserResult();
     final RegExp reg = RegExp(r'^([\d\.]+) ([\w\\/]+)');

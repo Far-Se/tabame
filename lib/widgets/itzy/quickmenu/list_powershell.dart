@@ -47,6 +47,7 @@ class PowershellListState extends State<PowershellList> {
                     ),
                   ),
                   onTap: () async {
+                    QuickMenuFunctions.toggleQuickMenu(visible: false);
                     if (!item.showTerminal) {
                       WinUtils.runPowerShell(<String>[item.command]);
                     } else {

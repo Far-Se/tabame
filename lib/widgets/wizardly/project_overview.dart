@@ -210,7 +210,7 @@ This project has a total of ${project.projectFiles.length} files with a total of
 - ${project.totalEmpty.decimal} are empty
 
 Summing **${project.totalChars.decimal}** characters! An average book has 250 characters per page with a total of 400 pages.
-That means this project has **${((project.totalChars / 250).floor()).decimal} pages** divided in **${(project.totalChars / 250 / 400).ceil().decimal} books**!
+That means this project has **${((project.totalChars / 250).floor()).decimal} pages** divided in **${(project.totalChars / 250 / 400).toStringAsFixed(1)} books**!
 ''',
               ),
               Container(

@@ -531,7 +531,6 @@ class NativeHotkey {
     }
     if (call.method == "ViewsEvent") {}
     if (call.method == "WinEvent") {
-      // print(call.arguments);
       if (call.arguments['action'] == "foreground") {
         for (final TabameListener listener in listeners) {
           if (!listenersObv.contains(listener)) return;

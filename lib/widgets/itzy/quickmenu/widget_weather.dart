@@ -49,10 +49,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       if (!mounted) return;
       setState(() {});
     });
-    // Timer.periodic(const Duration(seconds: 1), (Timer t) async {
-    //   final ScreenState out = WinUtils.checkUserScreenState();
-    //   print(out);
-    // });
   }
 
   @override
@@ -80,25 +76,21 @@ class _WeatherWidgetState extends State<WeatherWidget> {
               }
             }
           }
-          return Theme(
-            data: Theme.of(context)
-                .copyWith(tooltipTheme: Theme.of(context).tooltipTheme.copyWith(preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).backgroundColor))),
-            child: InkWell(
-              onTap: () {
-                WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
-              },
-              child: Tooltip(
-                message: globalSettings.weatherCity.toUpperCaseEach(),
-                child: Align(
-                  child: Text(
-                    snapshot.data as String,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
-                      height: 1.3,
-                    ),
+          return InkWell(
+            onTap: () {
+              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
+            },
+            child: Tooltip(
+              message: globalSettings.weatherCity.toUpperCaseEach(),
+              child: Align(
+                child: Text(
+                  snapshot.data as String,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: globalSettings.quickMenuPinnedWithTrayAtBottom ? 13 : 10,
+                    fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
+                    height: 1.3,
                   ),
                 ),
               ),

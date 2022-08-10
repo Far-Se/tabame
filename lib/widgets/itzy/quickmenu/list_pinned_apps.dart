@@ -19,6 +19,7 @@ class PinnedApps extends StatelessWidget {
           onSecondaryTap: () {
             final int x = pinned.indexWhere((String element) => element == item);
             WinKeys.send("{#WIN}{#ALT}${x + 1}");
+            QuickMenuFunctions.toggleQuickMenu(visible: false);
           },
           child: WindowsAppButton(
             path: item,

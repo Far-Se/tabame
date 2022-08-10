@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/win32/win32.dart';
 
 class WindowsAppButton extends StatelessWidget {
@@ -41,6 +42,7 @@ class WindowsAppButton extends StatelessWidget {
             ),
             onTap: () {
               WinUtils.openAndFocus(path, centered: true);
+              QuickMenuFunctions.toggleQuickMenu(visible: false);
             },
           );
         },

@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../main.dart';
 import '../keys.dart';
@@ -67,7 +66,6 @@ class Boxes {
           voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
       await setStartOnSystemStartup(true);
-      pref = await SaveSettings.getInstance();
     }
     //!fetch
     globalSettings
@@ -93,6 +91,7 @@ class Boxes {
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
       ..pauseSpotifyWhenNewSound = pref.getBool("pauseSpotifyWhenNewSound") ?? globalSettings.pauseSpotifyWhenNewSound
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? globalSettings.trktivityEnabled
+      ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
       ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? globalSettings.trktivitySaveAllTitles;
 
     // ? Trktivity
@@ -568,6 +567,7 @@ class WinHotkeys {
         });
       }
     }
+    //!hook
     if (kReleaseMode) {
       NativeHotkey.run(allHotkeys);
     }
@@ -576,6 +576,7 @@ class WinHotkeys {
 
 abstract class QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, int type) async {}
+  Future<void> onQuickMenuShown(int type) async {}
 }
 
 class QuickMenuFunctions {
@@ -589,7 +590,6 @@ class QuickMenuFunctions {
     return _listeners.isNotEmpty;
   }
 
-  /// Add EventListener to the list of listeners.
   static void addListener(QuickMenuTriggers listener) {
     _listeners.add(listener);
   }
@@ -612,7 +612,10 @@ class QuickMenuFunctions {
             await Win32.setCenter(useMouse: true);
           } else {
             await Win32.setMainWindowToMousePos();
-            WindowManager.instance.focus();
+          }
+          for (final QuickMenuTriggers listener in listeners) {
+            if (!_listeners.contains(listener)) return;
+            await listener.onQuickMenuShown(type);
           }
         });
       } else {

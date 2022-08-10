@@ -47,7 +47,6 @@ class WindowWatcher {
         allHWNDs.add(hWnd);
       }
     }
-
     final List<Window> newList = <Window>[];
 
     for (int element in allHWNDs) {
@@ -215,32 +214,26 @@ class WindowWatcher {
   }
 
   static void focusSecondWindow() {
-    if (hierarchy.isEmpty) hierarchy = list.map((Window e) => e.hWnd).toList();
-    final Pointer<POINT> lpPoint = calloc<POINT>();
-    GetCursorPos(lpPoint);
-    final int monitor = MonitorFromPoint(lpPoint.ref, 0);
-    free(lpPoint);
-    if (Monitor.list.contains(monitor)) {
-      final List<int> hWnds = list.where((Window element) => element.monitor == monitor).map((Window e) => e.hWnd).toList();
-      if (hWnds.length > 1) {
-        bool skippedFirst = false;
-        for (int h in hierarchy) {
-          if (hWnds.contains(h)) {
-            if (!skippedFirst) {
-              skippedFirst = true;
-              continue;
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      if (hierarchy.isEmpty) hierarchy = list.map((Window e) => e.hWnd).toList();
+      final Pointer<POINT> lpPoint = calloc<POINT>();
+      GetCursorPos(lpPoint);
+      final int monitor = MonitorFromPoint(lpPoint.ref, 0);
+      free(lpPoint);
+      if (Monitor.list.contains(monitor)) {
+        final List<int> hWnds = list.where((Window element) => element.monitor == monitor).map((Window e) => e.hWnd).toList();
+        if (hWnds.length > 1) {
+          final int h = hWnds[1];
+          Win32.activateWindow(h);
+          Future<void>.delayed(const Duration(milliseconds: 200), () {
+            if (GetForegroundWindow() != h) {
+              Win32.activateWindow(h);
             }
-            Win32.activateWindow(h);
-            Future<void>.delayed(const Duration(milliseconds: 200), () {
-              if (GetForegroundWindow() != h) {
-                Win32.activateWindow(h);
-              }
-            });
-            return;
-          }
+          });
+          return;
         }
       }
-    }
+    });
   }
 
   static triggerSpotify({int button = AppCommand.mediaPlayPause}) {

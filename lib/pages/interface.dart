@@ -79,7 +79,7 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
     PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
-    PageClass(title: 'Views', icon: Icons.view_agenda, widget: const NotImplemeneted()),
+    // PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),

@@ -26,20 +26,29 @@ class Settings {
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;
 
+  int quickRunState = 0;
   bool showTrayBar = true;
   bool showWeather = true;
+  bool viewsEnabled = false;
+  bool previewTheme = false;
   bool showPowerShell = true;
+  bool noopKeyListener = false;
   bool showSystemUsage = false;
+  bool trktivityEnabled = false;
   bool runAsAdministrator = false;
+  bool hideTabameOnUnfocus = true;
   bool hideTaskbarOnStartup = true;
   bool showMediaControlForApp = true;
-
-  String customLogo = "";
-  String customSpash = "";
-  String currentVersion = "0.5.1";
+  bool trktivitySaveAllTitles = false;
+  bool pauseSpotifyWhenNewSound = false;
   bool showQuickMenuAtTaskbarLevel = true;
   bool quickMenuPinnedWithTrayAtBottom = false;
   bool usePowerShellAsToastNotification = false;
+
+  String customLogo = "";
+  String customSpash = "";
+  String quickRunText = "";
+  String currentVersion = "0.9.0";
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
@@ -48,21 +57,6 @@ class Settings {
 
   RunCommands run = RunCommands();
 
-  bool previewTheme = false;
-
-  int quickRunState = 0;
-
-  String quickRunText = "";
-
-  bool noopKeyListener = false;
-
-  bool hideTabameOnUnfocus = true;
-
-  bool trktivityEnabled = false;
-
-  bool trktivitySaveAllTitles = false;
-
-  bool pauseSpotifyWhenNewSound = false;
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
   set weatherCity(String temp) => weather[1] = temp;
@@ -76,11 +70,6 @@ class Settings {
   int themeScheduleMax = 20 * 60;
   ThemeColors get theme => themeColors;
   ThemeType themeType = ThemeType.system;
-  // ThemeType get themeType => _themeType;
-  // set themeType(ThemeType t) {
-  //   _themeType = t;
-  //   // setScheduleThemeChange();
-  // }
 
   bool settingsChanged = false;
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
@@ -108,13 +97,9 @@ class Settings {
     if (themeType != ThemeType.schedule) return;
     final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
     if (now.isBetween(themeScheduleMin, themeScheduleMax)) {
-      themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {
-        // if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true); /// !pizdishenia masiiii
-      });
+      themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {});
     } else {
-      themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {
-        // if (globalSettings.args.isEmpty) WinUtils.startTabame(closeCurrent: true);
-      });
+      themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {});
     }
   }
 }

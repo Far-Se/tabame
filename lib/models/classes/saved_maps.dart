@@ -684,18 +684,18 @@ class RunAPI {
 class RunCommands {
   String calculator = r"c ;^[0-9\.\,]+ ?[+\-*\\%]";
   String color = r"col ;^(#|0x|rgb)";
+  String unit = r"u ";
   String currency = r"cur ;\d+ \w{3,4} to \w{3,4}";
   String shortcut = r"s ;";
+  String projects = r"p ";
+  String timer = r"t ;~";
   String memo = r"m ;";
   String regex = r"rgx ;^/";
   String lorem = r"lorem ;^\>";
   String encoders = r"enc ;^([\!|\@]|\[[$@])";
   String setvar = r"v ;^\$";
-  String projects = r"p ";
-  String timer = r"t ;~";
   String keys = r"k ;`";
   String timezones = r"tz ";
-  String unit = r"u ";
 
   Future<void> save() async {
     await Boxes.updateSettings("runCommands", jsonEncode(toMap()));
@@ -725,19 +725,19 @@ class RunCommands {
   Map<String, String> toMap() {
     return <String, String>{
       "calculator": calculator,
+      "unit": unit,
       "color": color,
       "currency": currency,
+      "timezones": timezones,
       "shortcut": shortcut,
+      "projects": projects,
+      "timer": timer,
+      "memo": memo,
       "regex": regex,
       "lorem": lorem,
       "encoders": encoders,
       "setvar": setvar,
-      "projects": projects,
-      "timer": timer,
       "keys": keys,
-      "timezones": timezones,
-      "memo": memo,
-      "unit": unit,
     };
   }
 }

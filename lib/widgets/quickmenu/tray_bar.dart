@@ -105,6 +105,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                 for (final TrayBarInfo info in tray)
                   Listener(
                     onPointerDown: (PointerDownEvent event) async {
+                      QuickMenuFunctions.toggleQuickMenu(visible: false);
                       if (event.kind == PointerDeviceKind.mouse) {
                         if (event.buttons == kSecondaryMouseButton) {
                           if (info.clickOpensExe) {
