@@ -2,6 +2,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+// ignore: depend_on_referenced_packages
+import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -23,14 +25,8 @@ class TrktivityPage extends StatefulWidget {
 }
 
 String timeFormat(int time) {
-  int hour = 0;
-  int minute = (time ~/ 60);
-  final int second = (time % 60);
-  if (minute > 60) {
-    hour = (minute ~/ 60);
-    minute = (minute % 60);
-  }
-  return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}:${second.toString().numberFormat()}";
+  final Duration dur = Duration(seconds: time);
+  return "${dur.inHours.toString().numberFormat()}:${dur.inMinutes.remainder(60).toString().numberFormat()}:${dur.inSeconds.remainder(60).toString().numberFormat()}";
 }
 
 class MTrack {
@@ -38,20 +34,24 @@ class MTrack {
   int keyboard;
   int time;
   String get timeFormat {
-    int hour = 0;
-    int minute = (time ~/ 60);
-    final int second = (time % 60);
-    if (minute > 60) {
-      hour = (minute ~/ 60);
-      minute = (minute % 60);
-    }
-    return "${hour.toString().numberFormat()}:${minute.toString().numberFormat()}:${second.toString().numberFormat()}";
+    final Duration dur = Duration(seconds: time);
+    return "${dur.inHours.toString().numberFormat()}:${dur.inMinutes.remainder(60).toString().numberFormat()}:${dur.inSeconds.remainder(60).toString().numberFormat()}";
   }
 
   MTrack({required this.mouse, required this.keyboard, this.time = 0});
 
   @override
   String toString() => '\nMTrack(mouse: $mouse, keyboard: $keyboard, time: ${time.formatTime()})';
+}
+
+class DMTRack extends MTrack {
+  int idleTime;
+  DMTRack({
+    required int mouse,
+    required int keyboard,
+    required int time,
+    required this.idleTime,
+  }) : super(keyboard: keyboard, mouse: mouse, time: time);
 }
 
 class TTrack {
@@ -107,11 +107,14 @@ class TrktivityPageState extends State<TrktivityPage> {
   List<MapEntry<String, MTrack>> tTrackList = <MapEntry<String, MTrack>>[];
   List<MapEntry<String, List<TTrack>>> tTimeTrackList = <MapEntry<String, List<TTrack>>>[];
 
+  Map<String, DMTRack> dailyStats = <String, DMTRack>{};
+
   void showReport() {
     dataAnalyzed = false;
     uTrack.clear();
     wTrack.clear();
     tTrack.clear();
+    dailyStats.clear();
     if (startDate.isEmpty && selectedDay.isNotEmpty) {
       parseTrkFile(selectedDay);
     } else if (startDate.isNotEmpty) {
@@ -167,10 +170,12 @@ class TrktivityPageState extends State<TrktivityPage> {
     final File f = File("${trk.folder}\\$file.json");
     if (!f.existsSync()) return;
     final List<String> lines = f.readAsLinesSync();
+    dailyStats[file] = DMTRack(idleTime: 0, keyboard: 0, mouse: 0, time: 0);
     for (String line in lines) {
       final Map<String, dynamic> info = jsonDecode(line);
       final DateTime time = DateTime.fromMillisecondsSinceEpoch(info["ts"]);
       final int minute = (time.hour * 60) + (time.minute < 30 ? 0 : 30);
+      //? Add Track info to minute which is half an hour.
       if (uTrack.containsKey(minute)) {
         if (info["t"] == "m") uTrack[minute]!.mouse += int.parse(info["d"]);
         if (info["t"] == "k") uTrack[minute]!.keyboard += int.parse(info["d"]);
@@ -180,6 +185,10 @@ class TrktivityPageState extends State<TrktivityPage> {
           keyboard: info["t"] == "k" ? int.parse(info["d"]) : 0,
         );
       }
+      //? Add Track info to dailyStats
+      if (info["t"] == "m") dailyStats[file]!.mouse += int.parse(info["d"]);
+      if (info["t"] == "k") dailyStats[file]!.keyboard += int.parse(info["d"]);
+
       if (info["t"] == "m") {
         _wTrack.mouse += int.parse(info["d"]);
         _tTrack.mouse += int.parse(info["d"]);
@@ -191,10 +200,18 @@ class TrktivityPageState extends State<TrktivityPage> {
       if (info["t"] == "w") {
         final Map<String, dynamic> wInfo = jsonDecode(info["d"]);
         if (_lastExe != wInfo["e"]) {
+          //?
           if (_lastExe.isEmpty) {
             _lastExe = wInfo["e"];
             _startWTime = info["ts"];
           }
+          //? Add dailyStats Time.
+          if (_lastExe == "idle.exe") {
+            dailyStats[file]!.idleTime += time.difference(DateTime.fromMillisecondsSinceEpoch(_startWTime)).inSeconds;
+          } else {
+            dailyStats[file]!.time += time.difference(DateTime.fromMillisecondsSinceEpoch(_startWTime)).inSeconds;
+          }
+          //?
           if (!wTrack.containsKey(_lastExe)) {
             wTrack[_lastExe] = MTrack(mouse: 0, keyboard: 0);
             wTimeTrack[_lastExe] = <TTrack>[];
@@ -211,6 +228,7 @@ class TrktivityPageState extends State<TrktivityPage> {
           _lastExe = wInfo["e"];
           _startWTime = info["ts"];
         }
+
         if (wInfo["tl"].isNotEmpty) {
           wInfo["tl"] = wInfo["tl"].trim();
           if (_lastTitle != wInfo["tl"]) {
@@ -268,6 +286,7 @@ class TrktivityPageState extends State<TrktivityPage> {
     }
     _lastTitle = "";
     _startTTime = 0;
+    wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0));
   }
 
   @override
@@ -593,25 +612,32 @@ It records keystrokes, mouse movement and active Window.
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
-                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                      Expanded(
+                                          child: Text(wTrack.containsKey("idle.exe") ? "Idle: ${wTrack["idle.exe"]!.timeFormat}" : "Total",
+                                              style: Theme.of(context).textTheme.button)),
                                       SizedBox(
                                         width: 80,
                                         child: Text(
-                                          timeFormat(wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.time)),
+                                          timeFormat(
+                                              wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0))),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       ),
                                       SizedBox(
                                         width: 60,
                                         child: Text(
-                                          wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.keyboard).formatInt(),
+                                          wTrackList
+                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.keyboard : 0))
+                                              .formatInt(),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       ),
                                       SizedBox(
                                         width: 60,
                                         child: Text(
-                                          wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.mouse).formatInt(),
+                                          wTrackList
+                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.mouse : 0))
+                                              .formatInt(),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       )
@@ -622,13 +648,14 @@ It records keystrokes, mouse movement and active Window.
                                   wTrackList.length,
                                   (int index) {
                                     final MapEntry<String, MTrack> track = wTrackList.elementAt(index);
+                                    if (track.key == "idle.exe") return Container();
                                     return InkWell(
                                       onTap: () {},
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.start,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          Expanded(child: Text(track.key)),
+                                          Expanded(child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false)),
                                           SizedBox(width: 80, child: Text(track.value.timeFormat)),
                                           SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
                                           SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
@@ -672,21 +699,26 @@ It records keystrokes, mouse movement and active Window.
                                       SizedBox(
                                         width: 80,
                                         child: Text(
-                                          timeFormat(tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.time)),
+                                          timeFormat(
+                                              tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.time : 0))),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       ),
                                       SizedBox(
                                         width: 60,
                                         child: Text(
-                                          tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.keyboard).formatInt(),
+                                          tTrackList
+                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.keyboard : 0))
+                                              .formatInt(),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       ),
                                       SizedBox(
                                         width: 60,
                                         child: Text(
-                                          tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + element.value.mouse).formatInt(),
+                                          tTrackList
+                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.mouse : 0))
+                                              .formatInt(),
                                           style: Theme.of(context).textTheme.button,
                                         ),
                                       )
@@ -697,13 +729,14 @@ It records keystrokes, mouse movement and active Window.
                                   tTrackList.length,
                                   (int index) {
                                     final MapEntry<String, MTrack> track = tTrackList.elementAt(index);
+                                    if (track.key == "Idle") return Container();
                                     return InkWell(
                                       onTap: () {},
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.start,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          Expanded(child: Text(track.key)),
+                                          Expanded(child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false)),
                                           SizedBox(width: 80, child: Text(track.value.timeFormat)),
                                           SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
                                           SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
@@ -720,122 +753,209 @@ It records keystrokes, mouse movement and active Window.
                     ],
                   ),
                 ),
-                if (startDate.isEmpty && selectedDay.isNotEmpty && selectedDay.isNotEmpty)
-                  LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Divider(height: 20, thickness: 1),
-                        Text("Window by title", style: Theme.of(context).textTheme.headline6),
-                        const SizedBox(height: 11),
-                        Container(
-                          height: 20,
-                          child: Stack(
-                            children: List<Widget>.generate(
-                              24,
-                              (int index) {
-                                final double startpercentage = (index * 60 * 60) / (24 * 60 * 60);
-                                return Positioned(
-                                  left: startpercentage * constraints.maxWidth,
-                                  child: Text("$index"),
-                                );
-                              },
+                if (startDate.isEmpty && selectedDay.isNotEmpty)
+                  LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Divider(height: 20, thickness: 1),
+                          Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                          const SizedBox(height: 11),
+                          Container(
+                            height: 20,
+                            child: Stack(
+                              children: List<Widget>.generate(
+                                24,
+                                (int index) {
+                                  final double startpercentage = (index * 60 * 60) / (24 * 60 * 60);
+                                  return Positioned(
+                                    left: startpercentage * constraints.maxWidth,
+                                    child: Text("$index"),
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                        Container(
-                          height: 220,
-                          child: SingleChildScrollView(
-                            controller: ScrollController(),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: List<Widget>.generate(
-                                wTimeTrackList.length,
-                                (int index) => Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(wTimeTrackList[index].key),
-                                    Container(
-                                      height: 20,
-                                      width: constraints.maxWidth,
-                                      child: Stack(
-                                        children: List<Widget>.generate(wTimeTrackList[index].value.length, (int i) {
-                                          final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].from);
-                                          final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].to);
-                                          final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
-                                          final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
-                                          const int secondsInADay = 24 * 60 * 60;
+                          Container(
+                            height: 220,
+                            child: SingleChildScrollView(
+                              controller: ScrollController(),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: List<Widget>.generate(
+                                  wTimeTrackList.length,
+                                  (int index) => Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(wTimeTrackList[index].key),
+                                      Container(
+                                        height: 20,
+                                        width: constraints.maxWidth,
+                                        child: Stack(
+                                          children: List<Widget>.generate(wTimeTrackList[index].value.length, (int i) {
+                                            final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].from);
+                                            final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].to);
+                                            final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
+                                            final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
+                                            const int secondsInADay = 24 * 60 * 60;
 
-                                          final double startpercentage = startseconds / secondsInADay;
-                                          final double diffPercentage = (endseconds - startseconds) / secondsInADay;
+                                            final double startpercentage = startseconds / secondsInADay;
+                                            final double diffPercentage = (endseconds - startseconds) / secondsInADay;
 
-                                          return Positioned(
-                                            left: startpercentage * constraints.maxWidth,
-                                            width: diffPercentage * constraints.maxWidth,
-                                            child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
-                                          );
-                                        }),
+                                            return Positioned(
+                                              left: startpercentage * constraints.maxWidth,
+                                              width: diffPercentage * constraints.maxWidth,
+                                              child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
+                                            );
+                                          }),
+                                        ),
                                       ),
-                                    ),
-                                    const Divider(height: 5, thickness: 1),
-                                  ],
+                                      const Divider(height: 5, thickness: 1),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text("Window by title", style: Theme.of(context).textTheme.headline6),
-                        const SizedBox(height: 10),
-                        Container(
-                          height: 220,
-                          child: SingleChildScrollView(
-                            controller: ScrollController(),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: List<Widget>.generate(
-                                tTimeTrackList.length,
-                                (int index) => Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text(tTimeTrackList[index].key),
-                                    Container(
-                                      height: 20,
-                                      width: constraints.maxWidth,
-                                      child: Stack(
-                                        children: List<Widget>.generate(tTimeTrackList[index].value.length, (int i) {
-                                          final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].from);
-                                          final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].to);
-                                          final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
-                                          final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
-                                          const int secondsInADay = 24 * 60 * 60;
+                          const SizedBox(height: 20),
+                          Text("Window by title", style: Theme.of(context).textTheme.headline6),
+                          const SizedBox(height: 10),
+                          Container(
+                            height: 220,
+                            child: SingleChildScrollView(
+                              controller: ScrollController(),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: List<Widget>.generate(
+                                  tTimeTrackList.length,
+                                  (int index) => Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(tTimeTrackList[index].key),
+                                      Container(
+                                        height: 20,
+                                        width: constraints.maxWidth,
+                                        child: Stack(
+                                          children: List<Widget>.generate(tTimeTrackList[index].value.length, (int i) {
+                                            final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].from);
+                                            final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].to);
+                                            final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
+                                            final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
+                                            const int secondsInADay = 24 * 60 * 60;
 
-                                          final double startpercentage = startseconds / secondsInADay;
-                                          final double diffPercentage = (endseconds - startseconds) / secondsInADay;
+                                            final double startpercentage = startseconds / secondsInADay;
+                                            final double diffPercentage = (endseconds - startseconds) / secondsInADay;
 
-                                          return Positioned(
-                                            left: startpercentage * constraints.maxWidth,
-                                            width: diffPercentage * constraints.maxWidth,
-                                            child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
-                                          );
-                                        }),
+                                            return Positioned(
+                                              left: startpercentage * constraints.maxWidth,
+                                              width: diffPercentage * constraints.maxWidth,
+                                              child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
+                                            );
+                                          }),
+                                        ),
                                       ),
-                                    ),
-                                    const Divider(height: 5, thickness: 1),
-                                  ],
+                                      const Divider(height: 5, thickness: 1),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
+                        ],
+                      );
+                    },
+                  ),
+                if (startDate.isNotEmpty && dailyStats.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const SizedBox(height: 20),
+                            Text("Daily Stats", style: Theme.of(context).textTheme.headline6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Expanded(child: Text("Day")),
+                                const Expanded(child: Text("Active Time")),
+                                const Expanded(child: Text("Idle Time")),
+                                const Expanded(child: Text("Keys Pressed")),
+                                const Expanded(child: Text("Mouse Pings")),
+                              ],
+                            ),
+                            InkWell(
+                              onTap: () {},
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                  Expanded(
+                                      child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
+                                          style: Theme.of(context).textTheme.button)),
+                                  Expanded(
+                                      child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
+                                          style: Theme.of(context).textTheme.button)),
+                                  Expanded(
+                                      child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard).formatInt(),
+                                          style: Theme.of(context).textTheme.button)),
+                                  Expanded(
+                                      child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse).formatInt(),
+                                          style: Theme.of(context).textTheme.button)),
+                                ],
+                              ),
+                            ),
+                            ...List<Widget>.generate(dailyStats.keys.length, (int index) {
+                              return InkWell(
+                                onTap: () {},
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))))),
+                                    Expanded(child: Text(dailyStats.values.elementAt(index).timeFormat)),
+                                    Expanded(child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),
+                                    Expanded(child: Text(dailyStats.values.elementAt(index).keyboard.formatInt())),
+                                    Expanded(child: Text(dailyStats.values.elementAt(index).mouse.formatInt())),
+                                  ],
+                                ),
+                              );
+                            })
+                          ],
                         ),
-                      ],
-                    );
-                  })
+                      ),
+                      Expanded(
+                          flex: 1,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const SizedBox(height: 20),
+                              Text("Daily Average", style: Theme.of(context).textTheme.headline6),
+                              Text("Active hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.time).average.toInt())}",
+                                  style: Theme.of(context).textTheme.titleMedium),
+                              Text("Idle hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.idleTime).average.toInt())}",
+                                  style: Theme.of(context).textTheme.titleMedium),
+                              Text("Key Strokes: ${dailyStats.values.map((DMTRack e) => e.keyboard).average.toInt().formatInt()}",
+                                  style: Theme.of(context).textTheme.titleMedium),
+                              Text("Mouse Pings: ${dailyStats.values.map((DMTRack e) => e.mouse).average.toInt().formatInt()}",
+                                  style: Theme.of(context).textTheme.titleMedium),
+                            ],
+                          ))
+                    ],
+                  )
               ],
             ),
           ),

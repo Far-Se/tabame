@@ -28,10 +28,22 @@ Future<void> main(List<String> arguments) async {
       globalSettings.page = TPage.views;
     }
   }
+
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
   await registerAll();
+
+  if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
+    globalSettings.args.remove('-strudel');
+    globalSettings.args.add('-tryadmin');
+    WinUtils.run(Platform.resolvedExecutable, arguments: arguments.join(' '));
+    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
+    Timer(const Duration(seconds: 500), () => exit(0));
+    runApp(const EmptyWidget());
+    return;
+  }
+  await NativeHotkey.register();
 
   /// ? Window
   late WindowOptions windowOptions;
@@ -66,13 +78,6 @@ Future<void> main(List<String> arguments) async {
 
   await setWindowAsTransparent();
 
-  if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
-    globalSettings.args.remove('-strudel');
-    globalSettings.args.add('-tryadmin');
-    WinUtils.run(Platform.resolvedExecutable, arguments: arguments.join(' '));
-    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
-    Timer(const Duration(seconds: 1), () => exit(0));
-  }
   runApp(const Tabame());
 }
 
@@ -226,4 +231,13 @@ class _TabameState extends State<Tabame> {
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{PointerDeviceKind.touch, PointerDeviceKind.mouse};
+}
+
+class EmptyWidget extends StatelessWidget {
+  const EmptyWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
 }

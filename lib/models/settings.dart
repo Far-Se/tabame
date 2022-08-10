@@ -10,7 +10,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:local_notifier/local_notifier.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
@@ -135,7 +134,7 @@ Future<void> registerAll() async {
   //Schedule Theme
   globalSettings.setScheduleThemeChange();
   //
-  await NativeHotkey.register();
+
   //Toast
   Future<void>.delayed(const Duration(seconds: 2), () async {
     if (!WinUtils.windowsNotificationRegistered) {
