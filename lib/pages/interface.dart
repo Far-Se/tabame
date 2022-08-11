@@ -14,6 +14,8 @@ import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
+import '../widgets/interface/changelog.dart';
+import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu_settings.dart';
@@ -46,7 +48,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.615));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.55));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }
@@ -69,7 +71,7 @@ class Interface extends StatefulWidget {
   InterfaceState createState() => InterfaceState();
 }
 
-class InterfaceState extends State<Interface> {
+class InterfaceState extends State<Interface> with SingleTickerProviderStateMixin {
   int currentPage = 0;
   PageController page = PageController();
   final List<PageClass> pages = <PageClass>[
@@ -84,15 +86,20 @@ class InterfaceState extends State<Interface> {
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
+    PageClass(title: 'Changelog', icon: Icons.newspaper, widget: const Changelog()),
+    PageClass(title: 'FirstRun', icon: Icons.newspaper, widget: const FirstRun()),
   ];
   final List<String> disableScroll = <String>["Wizardly"];
   final Future<int> interfaceWindow = interfaceWindowSetup();
-
   int hoveredPage = -1;
+
+  bool bmaCoffeHovered = false;
+
   @override
   void initState() {
     if (globalSettings.args.contains("-wizardly")) {
-      currentPage = 10;
+      currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
+      if (currentPage == -1) currentPage = 1;
     }
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
@@ -360,8 +367,105 @@ class InterfaceState extends State<Interface> {
                                           //2 Donation Box
                                           SizedBox(
                                             height: 200,
-                                            child: Wrap(
-                                              children: <Widget>[],
+                                            child: Padding(
+                                              padding: const EdgeInsets.fromLTRB(5, 0, 2, 5),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.end,
+                                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                children: <Widget>[
+                                                  const Center(
+                                                      child: Text(
+                                                    "Coded by Far Se",
+                                                    style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500),
+                                                  )),
+                                                  Column(
+                                                    mainAxisAlignment: MainAxisAlignment.start,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: <Widget>[
+                                                      const SizedBox(height: 5),
+                                                      const Padding(
+                                                        padding: EdgeInsets.only(left: 5.0),
+                                                        child: Text(
+                                                          "If you find this app useful consider a donation\nit will be appreciated ☺",
+                                                          style: TextStyle(fontSize: 12),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 10),
+                                                      TextButton(
+                                                        onPressed: () {
+                                                          WinUtils.open("https://www.buymeacoffee.com/far.se");
+                                                        },
+                                                        onHover: (bool value) {},
+                                                        child: MouseRegion(
+                                                          onEnter: (PointerEnterEvent e) => setState(() => bmaCoffeHovered = true),
+                                                          onExit: (PointerExitEvent e) => setState(() => bmaCoffeHovered = false),
+                                                          child: Container(
+                                                            width: double.infinity,
+                                                            height: 26,
+                                                            padding: const EdgeInsets.symmetric(vertical: 5),
+                                                            decoration: BoxDecoration(
+                                                              color: const Color(0xffCE3F00).withOpacity(0.5),
+                                                              borderRadius: BorderRadius.circular(20),
+                                                            ),
+                                                            child: ClipRRect(
+                                                              child: Stack(
+                                                                children: <Widget>[
+                                                                  Center(
+                                                                    child: TweenAnimationBuilder<double>(
+                                                                      duration: const Duration(milliseconds: 400),
+                                                                      tween: Tween<double>(begin: 1.0, end: bmaCoffeHovered ? -30 : 1),
+                                                                      curve: Curves.fastLinearToSlowEaseIn,
+                                                                      builder: (BuildContext context, double value, _) {
+                                                                        return Transform.translate(
+                                                                          offset: Offset(1, value),
+                                                                          child: const Text(
+                                                                            "Buy me a coffee",
+                                                                            style: TextStyle(
+                                                                              color: Colors.white,
+                                                                              height: 1.001,
+                                                                              fontSize: 14,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                  ),
+                                                                  Center(
+                                                                    child: TweenAnimationBuilder<double>(
+                                                                      duration: const Duration(milliseconds: 400),
+                                                                      tween: Tween<double>(begin: 30.0, end: bmaCoffeHovered ? 0 : 30),
+                                                                      curve: Curves.fastLinearToSlowEaseIn,
+                                                                      builder: (BuildContext context, double value, _) {
+                                                                        return Transform.translate(
+                                                                          offset: Offset(1, value),
+                                                                          child: Transform.rotate(
+                                                                            angle: value / 10,
+                                                                            child: const Text(
+                                                                              "☕",
+                                                                              style: TextStyle(
+                                                                                color: Colors.white,
+                                                                                height: 1,
+                                                                                fontSize: 17.5,
+                                                                                fontWeight: FontWeight.bold,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                  )
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 5),
+                                                    ],
+                                                  )
+                                                ],
+                                              ),
                                             ),
                                           )
                                         ],

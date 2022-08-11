@@ -160,6 +160,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   @override
   Future<void> onQuickMenuShown(int type) async {
     Win32.activateWindow(Win32.hWnd);
+    // Win32.focusWindow(Win32.hWnd);
+
     // SendMessage(Win32.hWnd, WM_ACTIVATE, 0, 0);
   }
 
@@ -320,7 +322,10 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       for (KeyMap key in keys) {
         if (!key.isMouseInRegion) continue;
         if (hotkeyInfo.name.isNotEmpty && key.name != hotkeyInfo.name) continue;
-        if (hotkey.hasDoublePress) hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
+        if (hotkey.hasDoublePress) {
+          print("has double press");
+          hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
+        }
         key.applyActions();
       }
     }

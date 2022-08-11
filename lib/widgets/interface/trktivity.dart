@@ -332,12 +332,6 @@ It records keystrokes, mouse movement and active Window.
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  CheckBoxWidget(
-                    onChanged: (bool e) {},
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    value: globalSettings.trktivitySaveAllTitles,
-                    text: "Save all All Window titles",
-                  ),
                   ListTile(
                     onTap: () {
                       setState(() => showFilters = !showFilters);
@@ -346,65 +340,79 @@ It records keystrokes, mouse movement and active Window.
                     leading: Icon(showFilters ? Icons.expand_less : Icons.expand_more),
                   ),
                   if (showFilters)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Column(
                       children: <Widget>[
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              ListTile(
-                                leading: const Icon(Icons.add),
-                                minLeadingWidth: 20,
-                                title: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[const Text("Add Title Filter"), const SizedBox(width: 10), InfoWidget("To remove leave exe empty", onTap: () {})],
-                                ),
-                                onTap: () {
-                                  trk.filters.add(TrktivityFilter(
-                                    exe: "exe",
-                                    titleSearch: r"",
-                                    titleReplace: r"",
-                                  ));
-                                  Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                  setState(() {});
-                                },
-                              ),
-                              SizedBox(
-                                height: 200,
-                                child: MouseScrollWidget(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
+                        CheckBoxWidget(
+                          onChanged: (bool e) {},
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                          value: globalSettings.trktivitySaveAllTitles,
+                          text: "Save all All Window titles",
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  ListTile(
+                                    leading: const Icon(Icons.add),
+                                    minLeadingWidth: 20,
+                                    title: Row(
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: List<Widget>.generate(
-                                        trk.filters.length,
-                                        (int index) => Container(
-                                          width: 200,
-                                          child: TrktivityFilterSet(
-                                            key: UniqueKey(),
-                                            filter: trk.filters[index],
-                                            onSaved: (TrktivityFilter filter) {
-                                              if (filter.exe.isEmpty) {
-                                                trk.filters.removeAt(index);
-                                                Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                                setState(() {});
-                                                return;
-                                              }
-                                              trk.filters[index] = filter;
-                                              Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                              setState(() {});
-                                            },
+                                      children: <Widget>[
+                                        const Text("Add Title Filter"),
+                                        const SizedBox(width: 10),
+                                        InfoWidget("To remove leave exe empty", onTap: () {})
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      trk.filters.add(TrktivityFilter(
+                                        exe: "exe",
+                                        titleSearch: r"",
+                                        titleReplace: r"",
+                                      ));
+                                      Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                      setState(() {});
+                                    },
+                                  ),
+                                  SizedBox(
+                                    height: 200,
+                                    child: MouseScrollWidget(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: List<Widget>.generate(
+                                            trk.filters.length,
+                                            (int index) => Container(
+                                              width: 200,
+                                              child: TrktivityFilterSet(
+                                                key: UniqueKey(),
+                                                filter: trk.filters[index],
+                                                onSaved: (TrktivityFilter filter) {
+                                                  if (filter.exe.isEmpty) {
+                                                    trk.filters.removeAt(index);
+                                                    Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                                    setState(() {});
+                                                    return;
+                                                  }
+                                                  trk.filters[index] = filter;
+                                                  Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                                  setState(() {});
+                                                },
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    )),
+                                        )),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -897,10 +905,10 @@ It records keystrokes, mouse movement and active Window.
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 const Expanded(child: Text("Day")),
-                                const Expanded(child: Text("Active Time")),
-                                const Expanded(child: Text("Idle Time")),
-                                const Expanded(child: Text("Keys Pressed")),
-                                const Expanded(child: Text("Mouse Pings")),
+                                const SizedBox(width: 80, child: Text("Active")),
+                                const SizedBox(width: 80, child: Text("Idle")),
+                                const SizedBox(width: 80, child: Text("Keys")),
+                                const SizedBox(width: 80, child: Text("Mouse")),
                               ],
                             ),
                             InkWell(
@@ -910,16 +918,20 @@ It records keystrokes, mouse movement and active Window.
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
-                                  Expanded(
+                                  SizedBox(
+                                      width: 80,
                                       child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
                                           style: Theme.of(context).textTheme.button)),
-                                  Expanded(
+                                  SizedBox(
+                                      width: 80,
                                       child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
                                           style: Theme.of(context).textTheme.button)),
-                                  Expanded(
+                                  SizedBox(
+                                      width: 80,
                                       child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard).formatInt(),
                                           style: Theme.of(context).textTheme.button)),
-                                  Expanded(
+                                  SizedBox(
+                                      width: 80,
                                       child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse).formatInt(),
                                           style: Theme.of(context).textTheme.button)),
                                 ],
@@ -933,10 +945,10 @@ It records keystrokes, mouse movement and active Window.
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     Expanded(child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))))),
-                                    Expanded(child: Text(dailyStats.values.elementAt(index).timeFormat)),
-                                    Expanded(child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),
-                                    Expanded(child: Text(dailyStats.values.elementAt(index).keyboard.formatInt())),
-                                    Expanded(child: Text(dailyStats.values.elementAt(index).mouse.formatInt())),
+                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).timeFormat)),
+                                    SizedBox(width: 80, child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),
+                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).keyboard.formatInt())),
+                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).mouse.formatInt())),
                                   ],
                                 ),
                               );

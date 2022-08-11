@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../main.dart';
+import '../globals.dart';
 import '../keys.dart';
 import '../settings.dart';
 import '../win32/win32.dart';
@@ -44,8 +45,7 @@ class Boxes {
 
       await pref.setString("language", Platform.localeName.substring(0, 2));
 
-      String city = await WinUtils.getCountryCityFromIP("berlin, germany");
-      await pref.setStringList("weather", <String>["10 C", city, "m", "%c+%t"]);
+      await pref.setStringList("weather", <String>["10 C", "52.52437, 13.41053", "m"]);
       await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
@@ -90,6 +90,7 @@ class Boxes {
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? false
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
       ..pauseSpotifyWhenNewSound = pref.getBool("pauseSpotifyWhenNewSound") ?? globalSettings.pauseSpotifyWhenNewSound
+      ..pauseSpotifyWhenPlaying = pref.getBool("pauseSpotifyWhenPlaying") ?? globalSettings.pauseSpotifyWhenPlaying
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? globalSettings.trktivityEnabled
       ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
       ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? globalSettings.trktivitySaveAllTitles;
@@ -568,7 +569,7 @@ class WinHotkeys {
       }
     }
     //!hook
-    if (kReleaseMode) {
+    if (Globals.hotkeysEnabled || kReleaseMode) {
       NativeHotkey.run(allHotkeys);
     }
   }

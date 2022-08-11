@@ -20,6 +20,8 @@ enum Pages {
 }
 
 class Globals {
+  static bool hotkeysEnabled = false; // debug only
+
   Globals();
   static bool changingPages = false;
   static bool isWindowActive = false;

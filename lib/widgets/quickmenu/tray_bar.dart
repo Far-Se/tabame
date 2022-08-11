@@ -156,7 +156,6 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                         padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
                         child: Tooltip(
                             message: info.processExe,
-                            // message: info.toolTip.length > 1 ? info.toolTip : "",
                             height: 0,
                             preferBelow: false,
                             child: Image.memory(
@@ -164,6 +163,10 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                               fit: BoxFit.scaleDown,
                               gaplessPlayback: true,
                               width: 16,
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                Icons.check_box_outline_blank,
+                                size: 16,
+                              ),
                             )),
                       ),
                     ),

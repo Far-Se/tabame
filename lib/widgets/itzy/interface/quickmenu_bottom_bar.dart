@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
@@ -21,7 +21,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
 
   String _cityCountryText = "";
 
-  String _weatherFormat = "";
+  final TextEditingController cityLatLong = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -37,6 +37,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
       item.dispose();
     }
     super.dispose();
+    cityLatLong.dispose();
   }
 
   @override
@@ -96,8 +97,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                 setState(() {});
                               },
                               secondary: InkWell(
-                                onTap: () => WinUtils.open("https://wttr.in"),
-                                child: Tooltip(message: "It uses wttr.in by chubin", child: Icon(Icons.info_outline, color: Theme.of(context).toggleableActiveColor)),
+                                onTap: () => WinUtils.open("https://open-meteo.com/"),
+                                child: Tooltip(message: "It uses open-meteo.com", child: Icon(Icons.info_outline, color: Theme.of(context).toggleableActiveColor)),
                               ),
                             ),
                             //! Weather.
@@ -126,7 +127,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                           onFocusChange: (bool f) {
                                             if (f == false) {
                                               if (_cityCountryText == "") return;
-                                              globalSettings.weatherCity = _cityCountryText;
+                                              globalSettings.weatherLatLong = _cityCountryText;
                                               Boxes.updateSettings("weather", globalSettings.weather);
                                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
                                               if (mounted) setState(() {});
@@ -134,15 +135,15 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                           },
                                           child: TextField(
                                             decoration: const InputDecoration(
-                                                labelText: "City and Country", hintText: "City and Country", border: InputBorder.none, isDense: false),
-                                            controller: TextEditingController(text: globalSettings.weatherCity.toUpperCaseEach()),
+                                                labelText: "Latitude and longitude", hintText: "Latitude and longitude", border: InputBorder.none, isDense: false),
+                                            controller: TextEditingController(text: globalSettings.weatherLatLong.toUpperCaseEach()),
                                             toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
                                             style: const TextStyle(fontSize: 14),
                                             enableInteractiveSelection: true,
                                             onChanged: (String e) => _cityCountryText = e,
                                             onSubmitted: (String e) {
                                               if (e == "") return;
-                                              globalSettings.weatherCity = e;
+                                              globalSettings.weatherLatLong = e;
                                               Boxes.updateSettings("weather", globalSettings.weather);
                                               if (!mounted) return;
                                               setState(() {});
@@ -151,46 +152,72 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                         ),
                                       ),
                                     ),
-                                    ListTile(
-                                      trailing: InkWell(
-                                        onTap: () {
-                                          WinUtils.open(
-                                              "https://github.com/chubin/wttr.in#:~:text=To%20specify%20your%20own%20custom%20output%20format%2C%20use%20the%20special%20%25%2Dnotation%3A");
-                                        },
-                                        child: Tooltip(message: "See format info", child: Icon(Icons.info_outline, color: Theme.of(context).toggleableActiveColor)),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: <Widget>[
+                                          Expanded(
+                                              flex: 5,
+                                              child: TextField(
+                                                controller: cityLatLong,
+                                                decoration: const InputDecoration(labelText: "City name", isDense: true),
+                                              )),
+                                          Expanded(
+                                              flex: 3,
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                children: <Widget>[
+                                                  OutlinedButton(
+                                                    onPressed: () async {
+                                                      final http.Response response =
+                                                          await http.get(Uri.parse("https://geocoding-api.open-meteo.com/v1/search?name=${cityLatLong.text}"));
+                                                      if (response.statusCode == 200) {
+                                                        print(response.body);
+                                                        final Map<String, dynamic> data = json.decode(response.body);
+                                                        if (data.containsKey("results")) {
+                                                          final Map<String, dynamic> res = data["results"][0];
+                                                          if (res.containsKey("latitude") && res.containsKey("longitude")) {
+                                                            final String e = "${res["latitude"]}, ${res["longitude"]}";
+                                                            globalSettings.weatherLatLong = e;
+                                                            Boxes.updateSettings("weather", globalSettings.weather);
+                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                                content: Text("Data from ${res["name"]}, ${res["country"]}"),
+                                                                duration: const Duration(seconds: 2),
+                                                                backgroundColor: Colors.green.shade200));
+                                                            setState(() {});
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    child: const Text("Get Data"),
+                                                  ),
+                                                  const SizedBox(height: 5),
+                                                  OutlinedButton(
+                                                    onPressed: () async {
+                                                      final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
+                                                      if (ip.statusCode == 200) {
+                                                        final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
+                                                        if (response.statusCode == 200) {
+                                                          final Map<String, dynamic> data = json.decode(response.body);
+                                                          if (data.containsKey("lat") && data.containsKey("lon")) {
+                                                            final String e = "${data["lat"]}, ${data["lon"]}";
+                                                            globalSettings.weatherLatLong = e;
+                                                            Boxes.updateSettings("weather", globalSettings.weather);
+                                                            setState(() {});
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    child: const Text("Get from IP"),
+                                                  )
+                                                ],
+                                              ))
+                                        ],
                                       ),
-                                      title: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                                        child: Focus(
-                                          onFocusChange: (bool f) {
-                                            if (f == false) {
-                                              if (_weatherFormat == "") return;
-                                              globalSettings.weatherFormat = _weatherFormat;
-                                              Boxes.updateSettings("weather", globalSettings.weather);
-                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
-                                              if (!mounted) return;
-                                              setState(() {});
-                                            }
-                                          },
-                                          child: TextField(
-                                            decoration:
-                                                const InputDecoration(labelText: "Weather Format", hintText: "Weather Format", border: InputBorder.none, isDense: false),
-                                            controller: TextEditingController(text: globalSettings.weatherFormat),
-                                            toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
-                                            style: const TextStyle(fontSize: 14),
-                                            enableInteractiveSelection: true,
-                                            onChanged: (String e) => _weatherFormat = e,
-                                            onSubmitted: (String e) {
-                                              if (e == "") return;
-                                              globalSettings.weatherFormat = e;
-                                              Boxes.updateSettings("weather", globalSettings.weather);
-                                              if (!mounted) return;
-                                              setState(() {});
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                    )
                                   ],
                                 ),
                               ),

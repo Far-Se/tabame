@@ -12,11 +12,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  String updateResponse = "Click Here to check for updates";
-  final ScrollController controller = ScrollController();
   @override
   void dispose() {
-    controller.dispose();
     super.dispose();
   }
 
@@ -27,16 +24,6 @@ class _HomeState extends State<Home> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        ListTile(
-          leading: Container(height: double.infinity, child: const Tooltip(message: "Check for update", child: Icon(Icons.refresh))),
-          title: Text("Current Version: v${globalSettings.currentVersion}"),
-          subtitle: Text("$updateResponse"),
-          onTap: () {
-            updateResponse = "Latest version already installed!";
-            setState(() {});
-            //globalSettings.checkForUpdate(context);
-          },
-        ),
         Padding(
           padding: const EdgeInsets.all(10),
           child: Material(

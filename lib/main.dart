@@ -16,7 +16,9 @@ import 'pages/interface.dart';
 import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
-Future<void> main(List<String> arguments) async {
+Future<void> main(List<String> arguments2) async {
+  // List<String> arguments = <String>[r"E:\Projects\Tabame", "-interface", "-wizardly"];
+  List<String> arguments = arguments2;
   /*
   E:\Projects\Tabame
   -interface
@@ -33,7 +35,7 @@ Future<void> main(List<String> arguments) async {
       globalSettings.page = TPage.views;
     }
   }
-  WinUtils.msgBox(arguments.join("\n"), "tite");
+  // WinUtils.msgBox(arguments.join("\n"), "tite");
 
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -43,15 +45,19 @@ Future<void> main(List<String> arguments) async {
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
     globalSettings.args.remove('-strudel');
     globalSettings.args.add('-tryadmin');
-    WinUtils.run(Platform.resolvedExecutable, arguments: arguments.join(' '));
+    WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
     Timer(const Duration(seconds: 1), () => exit(0));
     runApp(EmptyWidget());
     return;
     // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
   }
-  if (kReleaseMode) {
-    //!hook
+  if (Globals.hotkeysEnabled || kReleaseMode) {
     await NativeHotkey.register();
+    //!hook
+    // Timer.periodic(Duration(minutes: 15), (Timer t) async {
+    //   await NativeHotkey.unHook();
+    //   await NativeHotkey.hook();
+    // });
   }
 
   /// ? Window

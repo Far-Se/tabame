@@ -160,6 +160,10 @@ class WindowWatcher {
   }
 
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
+    if (!globalSettings.pauseSpotifyWhenPlaying) {
+      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
+      return true;
+    }
     int spotifyHwnd = 0;
     int spotifyPID = 0;
     if (specialList.containsKey("Spotify")) {

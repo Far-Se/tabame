@@ -23,6 +23,8 @@ class SettingsPage extends StatefulWidget {
 class SettingsPageState extends State<SettingsPage> {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
 
+  String updateResponse = "Check for Updates";
+
   @override
   Widget build(BuildContext context) {
     final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
@@ -72,6 +74,47 @@ class SettingsPageState extends State<SettingsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
+                              const ListTile(title: Text("Version")),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  Expanded(
+                                    flex: 5,
+                                    child: ListTile(
+                                      leading: Container(height: double.infinity, child: const Tooltip(message: "Check for update", child: Icon(Icons.refresh))),
+                                      title: Text("Current Version: v${globalSettings.currentVersion}"),
+                                      subtitle: Text("$updateResponse"),
+                                      onTap: () {
+                                        updateResponse = "Latest version already installed!";
+                                        setState(() {});
+                                        //globalSettings.checkForUpdate(context);
+                                      },
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 4,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        CheckboxListTile(
+                                          controlAffinity: ListTileControlAffinity.leading,
+                                          title: const Text("Auto Update"),
+                                          value: globalSettings.autoUpdate,
+                                          onChanged: (bool? newValue) async => setState(() => globalSettings.autoUpdate = !globalSettings.autoUpdate),
+                                        ),
+                                        /* CheckboxListTile(
+                                          controlAffinity: ListTileControlAffinity.leading,
+                                          title: const Text("Beta Versions"),
+                                          value: globalSettings.betaVersions,
+                                          onChanged: (bool? newValue) async => setState(() => globalSettings.betaVersions = !globalSettings.betaVersions),
+                                        ), */
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const ListTile(title: Text("General Settings")),
                               CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
@@ -331,6 +374,17 @@ class SettingsPageState extends State<SettingsPage> {
                                 onChanged: (bool? newValue) async {
                                   globalSettings.pauseSpotifyWhenNewSound = !globalSettings.pauseSpotifyWhenNewSound;
                                   Boxes.updateSettings("pauseSpotifyWhenNewSound", globalSettings.pauseSpotifyWhenNewSound);
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
+                              ),
+                              CheckboxListTile(
+                                controlAffinity: ListTileControlAffinity.leading,
+                                title: const Text("Pause Spotify when you play a different app."),
+                                value: globalSettings.pauseSpotifyWhenPlaying,
+                                onChanged: (bool? newValue) async {
+                                  globalSettings.pauseSpotifyWhenPlaying = !globalSettings.pauseSpotifyWhenPlaying;
+                                  Boxes.updateSettings("pauseSpotifyWhenPlaying", globalSettings.pauseSpotifyWhenPlaying);
                                   if (!mounted) return;
                                   setState(() {});
                                 },

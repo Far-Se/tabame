@@ -1267,12 +1267,12 @@ namespace tabamewin32
     Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar)
     {
 
-        if (g_MouseHook != NULL)
-            g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
-        if (g_KeyboardHook != NULL)
-            g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
-        if (g_EventHook != NULL)
-            g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+        // if (g_MouseHook != NULL)
+        //     g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
+        // if (g_KeyboardHook != NULL)
+        //     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(NULL), 0);
+        // if (g_EventHook != NULL)
+        //     g_EventHook = SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
     }
 
     Tabamewin32Plugin::~Tabamewin32Plugin()

@@ -213,8 +213,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
         if (exclude[0] == '^') {
           exclude = exclude.substring(1);
           if (file.contains(RegExp(r"\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
-        } else if (exclude[0] == "/" || exclude[0] == "\\") {
-          exclude = exclude.substring(1);
+        } else if (exclude[0] == "/" || exclude[0] == r"\\") {
+          exclude = exclude.substring(exclude[0] == "/" ? 1 : 2);
           if (file.replaceFirst(searchFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
         } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
           skip = true;

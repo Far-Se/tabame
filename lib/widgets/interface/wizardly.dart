@@ -39,7 +39,7 @@ class WizardlyState extends State<Wizardly> {
 
   final List<WizardPage> pages = <WizardPage>[
     WizardPage(title: "Find Text in Folder", widget: const SearchTextWidget(), tooltip: "Find Text in folders"),
-    WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nFiew project breakdown"),
+    WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nView project breakdown"),
     WizardPage(title: "Rename Files", widget: const FileNameWidget(), tooltip: "Rename files in bulk"),
     WizardPage(title: "Folder Size Scan", widget: const FileSizeWidget(), tooltip: "See how big folders and subfolder are"),
     // WizardPage(title: "Image Work", widget: Container()),

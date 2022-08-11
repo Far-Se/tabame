@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -10,18 +11,58 @@ import '../../../models/win32/win32.dart';
 
 Future<String> fetchWeather() async {
   bool failed = false;
-  // final http.Response response =
-  // await http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}"));
+  final List<String> latLong = globalSettings.weatherLatLong.split(',');
+  if (latLong.length < 2) return "Bad Format.";
+
   try {
-    final Future<http.Response> responseA =
-        http.get(Uri.parse("https://wttr.in/${globalSettings.weatherCity}?format=${globalSettings.weatherFormat}&${globalSettings.weatherUnit}")).catchError((_) {
+    final Future<http.Response> responseA = http
+        .get(Uri.parse(
+            "https://api.open-meteo.com/v1/forecast?latitude=${latLong[0].trim()}&longitude=${latLong[1].trim()}&current_weather=true${globalSettings.weatherUnit == "u" ? "&temperature_unit=fahrenheit" : ""}"))
+        .catchError((_) {
       failed = true;
     });
 
     final http.Response response = await responseA;
     if (failed) return "";
     if (response.statusCode == 200) {
-      return response.body.replaceAll(RegExp(r'[\t ]+'), " ");
+      final Map<String, dynamic> data = json.decode(response.body);
+      if (data.containsKey("current_weather")) {
+        final Map<int, String> weatherEmoji = <int, String>{
+          0: "☀",
+          1: "🌤",
+          2: "🌤",
+          3: "🌤",
+          45: "🌥",
+          48: "🌥",
+          51: "🌦",
+          53: "🌦",
+          55: "🌦",
+          56: "☁",
+          57: "☁",
+          61: "🌧",
+          63: "🌧",
+          65: "🌧",
+          66: "🌨",
+          67: "🌨",
+          71: "🌨",
+          73: "🌨",
+          75: "🌨",
+          77: "❄",
+          80: "⛈",
+          81: "⛈",
+          82: "⛈",
+          85: "☃",
+          86: "☃",
+          95: "🌩",
+          96: "🌩",
+          99: "🌩",
+        };
+        String weather = "";
+        if (weatherEmoji.containsKey(data["current_weather"]["weathercode"])) weather = weatherEmoji[data["current_weather"]["weathercode"]].toString();
+        weather += " ";
+        weather += double.parse(data["current_weather"]["temperature"].toString()).toInt().toString();
+        return weather;
+      }
     }
   } catch (_) {
     return "";
@@ -78,20 +119,17 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           }
           return InkWell(
             onTap: () {
-              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherCity}");
+              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherLatLong}");
             },
-            child: Tooltip(
-              message: globalSettings.weatherCity.toUpperCaseEach(),
-              child: Align(
-                child: Text(
-                  snapshot.data as String,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: globalSettings.quickMenuPinnedWithTrayAtBottom ? 13 : 10,
-                    fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
-                    height: 1.3,
-                  ),
+            child: Align(
+              child: Text(
+                snapshot.data as String,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
+                  height: 1.1,
                 ),
               ),
             ),

@@ -27,8 +27,10 @@ class Settings {
   TPage page = TPage.quickmenu;
 
   int quickRunState = 0;
+  bool autoUpdate = false;
   bool showTrayBar = true;
   bool showWeather = true;
+  bool betaVersions = false;
   bool viewsEnabled = false;
   bool previewTheme = false;
   bool showPowerShell = true;
@@ -40,6 +42,7 @@ class Settings {
   bool hideTaskbarOnStartup = true;
   bool showMediaControlForApp = true;
   bool trktivitySaveAllTitles = false;
+  bool pauseSpotifyWhenPlaying = true;
   bool pauseSpotifyWhenNewSound = false;
   bool showQuickMenuAtTaskbarLevel = true;
   bool quickMenuPinnedWithTrayAtBottom = false;
@@ -53,18 +56,16 @@ class Settings {
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
 
-  List<String> weather = <String>['10 C', "berlin, Germany", "m", "%c+%t"];
+  List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
 
   RunCommands run = RunCommands();
 
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
-  set weatherCity(String temp) => weather[1] = temp;
-  String get weatherCity => weather[1];
+  set weatherLatLong(String temp) => weather[1] = temp;
+  String get weatherLatLong => weather[1];
   set weatherUnit(String temp) => weather[2] = temp;
   String get weatherUnit => weather[2]; //m for metric, u for US
-  set weatherFormat(String temp) => weather[3] = temp;
-  String get weatherFormat => weather[3];
 
   int themeScheduleMin = 8 * 60;
   int themeScheduleMax = 20 * 60;

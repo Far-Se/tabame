@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
-import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'dart:io';
 import 'dart:typed_data';
@@ -55,10 +54,10 @@ class Win32 {
       SwitchToThisWindow(hWnd, TRUE);
       SetForegroundWindow(hWnd);
     }
-    SetFocus(hWnd);
-    SetActiveWindow(hWnd);
+    // SetFocus(hWnd);
+    // SetActiveWindow(hWnd);
     SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
-    SendMessage(hWnd, WM_ACTIVATE, 0, 0);
+    // SendMessage(hWnd, WM_ACTIVATE, 0, 0);
   }
 
   static void forceActivateWindow(int hWnd) {
@@ -400,6 +399,11 @@ class Win32 {
 
   static int parent(int hWnd) {
     return GetAncestor(hWnd, 2);
+  }
+
+  static void focusWindow(int hWnd) {
+    SetFocus(hWnd);
+    SetActiveWindow(hWnd);
   }
 }
 
@@ -860,7 +864,7 @@ class WinUtils {
     startTabame(closeCurrent: false, arguments: "-restarted");
   }
 
-  static Future<String> getCountryCityFromIP(String defaultResult) async {
+/*   static Future<String> getCountryCityFromIP(String defaultResult) async {
     final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
     if (ip.statusCode == 200) {
       final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
@@ -872,7 +876,7 @@ class WinUtils {
       }
     }
     return defaultResult;
-  }
+  } */
 }
 
 class WizardlyContextMenu {

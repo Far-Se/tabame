@@ -70,7 +70,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   void initState() {
     projectFolder = Boxes.pref.getString("projectOverviewFolder") ?? "";
     projectIncluded = Boxes.pref.getString("projectOverviewIncluded") ?? "";
-    projectExcluded = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$";
+    projectExcluded = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{4,}$";
 
     if (globalSettings.args.contains("-wizardly")) {
       projectFolder = globalSettings.args[0].replaceAll('"', '');
@@ -103,7 +103,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                   final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
                   final Directory? dir = dirPicker.getDirectory();
                   if (dir == null) return;
-                  loadedFiles.clear();
+                  // loadedFiles.clear();
                   projectFolder = dir.path;
                   Boxes.updateSettings("projectOverviewFolder", projectFolder);
 
@@ -125,8 +125,10 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                   }
                   stateFileProcessing = 1;
                   setState(() {});
-                  //if (loadedFiles.isEmpty)
-                  loadedFiles = await loadFiles();
+                  // if (loadedFiles.isEmpty)
+                  // loadedFiles.clear();
+                  // print(loadedFiles.length);
+                  await loadFiles();
                   projectAnalyzed = false;
                   getCode();
                   setState(() {});
@@ -257,27 +259,61 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    InkWell(
-                      onTap: () {},
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Expanded(child: Text("File")),
-                          const SizedBox(width: 70, child: Text("Lines")),
-                          const SizedBox(width: 70, child: Text("Code")),
-                          const SizedBox(width: 70, child: Text("NonCode")),
-                          const SizedBox(
+                    const SizedBox(height: 20),
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: InfoText("You can sort by column"),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(child: Text(project.projectFiles.length > 150 ? "First 150 files" : "File")),
+                        InkWell(
+                            onTap: () {
+                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.lines > b.total.lines ? -1 : 1);
+                              setState(() {});
+                            },
+                            child: SizedBox(width: 70, child: Text("Lines", style: Theme.of(context).textTheme.button))),
+                        InkWell(
+                            onTap: () {
+                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.code > b.total.code ? -1 : 1);
+                              setState(() {});
+                            },
+                            child: SizedBox(width: 70, child: Text("Code", style: Theme.of(context).textTheme.button))),
+                        InkWell(
+                            onTap: () {
+                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.nonCode > b.total.nonCode ? -1 : 1);
+                              setState(() {});
+                            },
+                            child: SizedBox(width: 70, child: Text("NonCode", style: Theme.of(context).textTheme.button))),
+                        InkWell(
+                          onTap: () {
+                            project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.comments > b.total.comments ? -1 : 1);
+                            setState(() {});
+                          },
+                          child: SizedBox(
                               width: 70,
                               child: Tooltip(
-                                  message: "For common programming laguanges it works well\nIf you have bad comment formats it might break.", child: Text("Comm*"))),
-                          const SizedBox(width: 70, child: Text("Empty")),
-                          const SizedBox(width: 70, child: Text("Chars")),
-                        ],
-                      ),
+                                  message: "For common programming laguanges it works well\nIf you have bad comment formats it might break.",
+                                  child: Text("Comm*", style: Theme.of(context).textTheme.button))),
+                        ),
+                        InkWell(
+                            onTap: () {
+                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.empty > b.total.empty ? -1 : 1);
+                              setState(() {});
+                            },
+                            child: SizedBox(width: 70, child: Text("Empty", style: Theme.of(context).textTheme.button))),
+                        InkWell(
+                            onTap: () {
+                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.characters > b.total.characters ? -1 : 1);
+                              setState(() {});
+                            },
+                            child: SizedBox(width: 70, child: Text("Chars", style: Theme.of(context).textTheme.button))),
+                      ],
                     ),
                     ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 100),
+                      project.projectFiles.length.clamp(0, 150),
                       (int index) => InkWell(
                         onTap: () {},
                         child: Row(
@@ -338,6 +374,7 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
   }
 
   Future<void> getCode() async {
+    project.programmingLanguages.clear();
     project.projectFiles.clear();
     final List<String> auxFiles = <String>[...loadedFiles];
     for (String file in auxFiles) {
@@ -365,8 +402,8 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
       String commentEnd = "*/";
       String comment = "//";
       if (multiLineComment.keys.contains(fileExtension)) {
-        commentStart = multiLineComment[filePath]!.multiCommentStart;
-        commentEnd = multiLineComment[filePath]!.multiCommentEnd;
+        commentStart = multiLineComment[fileExtension]!.multiCommentStart;
+        commentEnd = multiLineComment[fileExtension]!.multiCommentEnd;
       }
 
       if (<String>["py", "ps1", "py", "pyi", "pyc", "pyd", "pyo", "pyw", "pyz", "rb", "ps1", "r"].contains("fileExtension")) comment = "#";
@@ -432,14 +469,14 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
 
     int i = 0;
     for (List<String> x in project.programmingLanguages) {
-      if (i > extensionColors.length) break;
+      if (i >= extensionColors.length) break;
       extColors[x[0]] = Color(extensionColors[i]);
       i++;
     }
     setState(() {});
   }
 
-  Future<List<String>> loadFiles() async {
+  Future<void> loadFiles() async {
     final File gitignoreFile = File("$projectFolder\\.gitignore");
     final List<String> gitIgnore = <String>[];
     if (gitignoreFile.existsSync() && projectUseGitIgnore) {
@@ -471,7 +508,7 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
         }
       }
     }
-    List<String> allFiles = <String>[];
+    final List<String> allFiles = <String>[];
     Stream<FileSystemEntity> stream =
         Directory(projectFolder).list(recursive: true, followLinks: false).handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
     await for (FileSystemEntity entity in stream) {
@@ -487,13 +524,12 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
     }
     final List<String> included = projectIncluded.isNotEmpty ? projectIncluded.split(';') : <String>[];
     final List<String> excluded = projectExcluded.isNotEmpty ? projectExcluded.split(';') : <String>[];
-    final List<String> newFileList = <String>[];
+    loadedFiles.clear();
     for (String file in allFiles) {
       final String fileDirectory = Directory(file).parent.path;
       final String fileName = file.replaceAll("$fileDirectory\\", "");
       if (fileName.endsWith(".svg")) continue;
       if (fileName.endsWith(".lock")) continue;
-      // if (fileName.endsWith(".json")) continue;
       if (fileName.indexOf('.') < 1) continue;
       bool skip = false;
 
@@ -501,15 +537,23 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
         if (exclude == "") continue;
         if (exclude[0] == '^') {
           exclude = exclude.substring(1);
-          if (file.contains(RegExp(r"\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
-        } else if (exclude[0] == "/" || exclude[0] == r"\") {
-          exclude = exclude.substring(1);
-          if (file.replaceFirst(projectFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) skip = true;
+          if (file.contains(RegExp(r"\\" + exclude + r"[^\\]*\\", caseSensitive: false))) {
+            skip = true;
+            break;
+          }
+        } else if (exclude[0] == "/" || exclude[0] == r"\\") {
+          exclude = exclude.substring(exclude[0] == "/" ? 1 : 2);
+          if (file.replaceFirst(projectFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) {
+            skip = true;
+            break;
+          }
         } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
           skip = true;
+          break;
         } else {
           if (RegExp(exclude, caseSensitive: false).hasMatch(file)) {
             skip = true;
+            break;
           }
         }
       }
@@ -526,9 +570,9 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
         if (skip) continue;
       }
 
-      newFileList.add(file);
+      loadedFiles.add(file);
     }
-    return newFileList;
+    // return newFileList;
   }
 }
 

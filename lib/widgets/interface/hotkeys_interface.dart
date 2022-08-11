@@ -182,11 +182,11 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
 
                 //2 List actions
                 if (unfolded.contains(index))
-                  ListView.builder(
+                  ReorderableListView.builder(
                     shrinkWrap: true,
                     dragStartBehavior: DragStartBehavior.down,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    controller: ScrollController(),
+                    scrollController: ScrollController(),
                     itemCount: keymap.keymaps.length,
                     itemBuilder: (BuildContext context, int index) {
                       final KeyMap keyInfo = keymap.keymaps[index];
@@ -257,6 +257,13 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                           ),
                         ),
                       );
+                    },
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      final KeyMap item = keymap.keymaps.removeAt(oldIndex);
+                      keymap.keymaps.insert(newIndex, item);
+                      Boxes.updateSettings("remap", jsonEncode(remap));
+                      setState(() {});
                     },
                   ),
                 if (unfolded.contains(index)) const Divider(height: 10, thickness: 1)
@@ -940,7 +947,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                               } else if (action.type == ActionType.hotkey) {
                                 action.value = "ALT+F";
                               } else if (action.type == ActionType.sendKeys) {
-                                action.value = "{#CTRL}A{^CTRL}{DELETE}deleted";
+                                action.value = "{#CTRL}A{^CTRL}deleted";
                               } else if (action.type == ActionType.tabameFunction) {
                                 action.value = HotKeyInfo.tabameFunctions[0];
                               }
