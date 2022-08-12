@@ -277,7 +277,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
     - hold it to open a new tab
     - press to close hovered tab
 
-## You can change and add new hotkeys or functions after this.
+## You can change and add new hotkeys or functions after this
 """;
 
   final List<String> mouseButtons = <String>["MouseButton4", "MouseButton5"];
