@@ -102,7 +102,10 @@ class SettingsPageState extends State<SettingsPage> {
                                           controlAffinity: ListTileControlAffinity.leading,
                                           title: const Text("Auto Update"),
                                           value: globalSettings.autoUpdate,
-                                          onChanged: (bool? newValue) async => setState(() => globalSettings.autoUpdate = !globalSettings.autoUpdate),
+                                          onChanged: (bool? newValue) async => setState(() {
+                                            globalSettings.autoUpdate = !globalSettings.autoUpdate;
+                                            Boxes.updateSettings("autoUpdate", globalSettings.autoUpdate);
+                                          }),
                                         ),
                                         /* CheckboxListTile(
                                           controlAffinity: ListTileControlAffinity.leading,

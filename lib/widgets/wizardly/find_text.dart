@@ -32,7 +32,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
   bool searchFinished = false;
   bool searchUseRegex = false;
   bool searchRecursively = true;
-  String markdownOccurances = "";
+  String markdownOccurrences = "";
   bool searchRegexNewLine = false;
   bool searchCaseSensitive = false;
   bool searchMatchWholeWordOnly = false;
@@ -179,7 +179,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           styleSheet: MarkdownStyleSheet(
               codeblockDecoration: BoxDecoration(color: Theme.of(context).colorScheme.tertiary.withOpacity(0.1)),
               code: const TextStyle(backgroundColor: Colors.transparent)),
-          data: markdownOccurances == "" ? "No Occurances have been found!" : markdownOccurances,
+          data: markdownOccurrences == "" ? "No Occurances have been found!" : markdownOccurrences,
           onTapLink: (String str1, String? str2, String str3) {
             if (openInCode) {
               WinUtils.open("code", arguments: '--goto "$str1:$str3"');
@@ -237,11 +237,11 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       }
       final List<Occurance> occurances = searchUseRegex ? await searchInFileRegex(file) : await searchInFile(file);
       if (occurances.isNotEmpty) {
-        for (Occurance occurance in occurances) {
-          markdownOccurances += '''
-${occurance.line}:${occurance.col} -> [${occurance.file.replaceAll(r"\.", r"\\.")}](${occurance.file} "${occurance.line}:${occurance.col}") :
+        for (Occurance occurrence in occurances) {
+          markdownOccurrences += '''
+${occurrence.line}:${occurrence.col} -> [${occurrence.file.replaceAll(r"\.", r"\\.")}](${occurrence.file} "${occurrence.line}:${occurrence.col}") :
 ```
-${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
+${occurrence.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
 ```
 ''';
         }
@@ -334,7 +334,7 @@ ${occurance.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
     await for (FileSystemEntity entity in stream) {
       loadedFiles.add(entity.path);
     }
-    markdownOccurances = "";
+    markdownOccurrences = "";
 
     if (mounted) setState(() {});
     if (searchUseRegex) {

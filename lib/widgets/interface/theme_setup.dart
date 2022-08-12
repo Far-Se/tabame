@@ -104,9 +104,11 @@ class ThemeSetupState extends State<ThemeSetup> {
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
-                        globalSettings.darkTheme.gradientAlpha = e.toInt();
-                        if (e % 10 < 1) {
+                        if (e % 10 < 1 || (globalSettings.darkTheme.gradientAlpha - e).abs() > 10) {
+                          globalSettings.darkTheme.gradientAlpha = e.toInt();
                           Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        } else {
+                          globalSettings.darkTheme.gradientAlpha = e.toInt();
                         }
                       },
                       quickMenuBoldChanged: (bool e) {
@@ -134,9 +136,11 @@ class ThemeSetupState extends State<ThemeSetup> {
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
-                        globalSettings.lightTheme.gradientAlpha = e.toInt();
-                        if (e % 10 < 1) {
+                        if (e % 10 < 1 || (globalSettings.lightTheme.gradientAlpha - e).abs() > 10) {
+                          globalSettings.lightTheme.gradientAlpha = e.toInt();
                           Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        } else {
+                          globalSettings.lightTheme.gradientAlpha = e.toInt();
                         }
                       },
                       quickMenuBoldChanged: (bool e) {

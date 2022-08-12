@@ -59,3 +59,4 @@ pubspec.lock
 *Release*
 Tabame.lnk
 ##
+*.pem

@@ -418,7 +418,7 @@ class HotKeyInfo {
     "ToggleQuickMenu": () {
       return QuickMenuFunctions.toggleQuickMenu();
     },
-    "ToggleQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
+    "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
     "ShowLastActiveWindow": () {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
@@ -426,9 +426,9 @@ class HotKeyInfo {
     },
     "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
     "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
-    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
+    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
     "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
     "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),

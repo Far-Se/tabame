@@ -69,31 +69,32 @@ class Boxes {
     }
     //!fetch
     globalSettings
-      ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? false
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
+      ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
+      ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
+      ..weather = pref.getStringList("weather") ?? globalSettings.weather
+      ..autoUpdate = pref.getBool("autoUpdate") ?? globalSettings.autoUpdate
+      ..customLogo = pref.getString("customLogo") ?? globalSettings.customLogo
+      ..showTrayBar = pref.getBool("showTrayBar") ?? globalSettings.showTrayBar
+      ..showWeather = pref.getBool("showWeather") ?? globalSettings.showWeather
+      ..customSpash = pref.getString("customSpash") ?? globalSettings.customSpash
+      ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
+      ..showPowerShell = pref.getBool("showPowerShell") ?? globalSettings.showPowerShell
+      ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? globalSettings.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? globalSettings.themeScheduleMax
-      ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0] // * always after schedule
-      ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
-      ..customLogo = pref.getString("customLogo") ?? ""
-      ..customSpash = pref.getString("customSpash") ?? ""
-      ..weather = pref.getStringList("weather") ?? <String>["10 C", "berlin, germany", "m", "%c+%t"]
-      ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
-      ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? true
-      ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? true
-      ..showTrayBar = pref.getBool("showTrayBar") ?? false
-      ..showWeather = pref.getBool("showWeather") ?? false
-      ..showPowerShell = pref.getBool("showPowerShell") ?? false
-      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? false
-      ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? false
-      ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? false
-      ..showSystemUsage = pref.getBool("showSystemUsage") ?? false
-      ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
-      ..pauseSpotifyWhenNewSound = pref.getBool("pauseSpotifyWhenNewSound") ?? globalSettings.pauseSpotifyWhenNewSound
-      ..pauseSpotifyWhenPlaying = pref.getBool("pauseSpotifyWhenPlaying") ?? globalSettings.pauseSpotifyWhenPlaying
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? globalSettings.trktivityEnabled
-      ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
-      ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? globalSettings.trktivitySaveAllTitles;
+      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? globalSettings.runAsAdministrator
+      ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
+      ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? globalSettings.hideTaskbarOnStartup
+      ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? globalSettings.showMediaControlForApp
+      ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? globalSettings.trktivitySaveAllTitles
+      ..pauseSpotifyWhenPlaying = pref.getBool("pauseSpotifyWhenPlaying") ?? globalSettings.pauseSpotifyWhenPlaying
+      ..pauseSpotifyWhenNewSound = pref.getBool("pauseSpotifyWhenNewSound") ?? globalSettings.pauseSpotifyWhenNewSound
+      ..showQuickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? globalSettings.showQuickMenuAtTaskbarLevel
+      ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? globalSettings.quickMenuPinnedWithTrayAtBottom
+      ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? globalSettings.usePowerShellAsToastNotification
+      ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // * always after schedule
 
     // ? Trktivity
     if (!Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").existsSync()) {
@@ -163,7 +164,7 @@ class Boxes {
     } else if (value is Map) {
       await pref.setString(key, jsonEncode(value));
     } else {
-      throw ("No asociated type $value");
+      throw ("No associated type $value");
     }
     pref = await SaveSettings.getInstance();
   }
@@ -825,7 +826,7 @@ class Trktivity {
     String title = Win32.getTitle(hWnd);
     final String exe = Win32.getExe(Win32.getWindowExePath(hWnd));
     String newtitle = title;
-    bool hasFitlers = false;
+    bool hasFilters = false;
     for (TrktivityFilter filter in filters) {
       if (filter.titleReplace.isEmpty || filter.titleSearch.isEmpty) continue;
       if (!RegExp(filter.exe, caseSensitive: false).hasMatch(exe)) continue;
@@ -836,10 +837,10 @@ class Trktivity {
           newString = newString.replaceAll("\$$i", match[i]!);
         }
         newtitle = newString;
-        hasFitlers = true;
+        hasFilters = true;
         break;
       }
     }
-    return TrkFilterInfo(exe: exe, title: title, result: newtitle, hasFilters: hasFitlers);
+    return TrkFilterInfo(exe: exe, title: title, result: newtitle, hasFilters: hasFilters);
   }
 }

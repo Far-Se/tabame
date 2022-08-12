@@ -295,7 +295,7 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
                           child: SizedBox(
                               width: 70,
                               child: Tooltip(
-                                  message: "For common programming laguanges it works well\nIf you have bad comment formats it might break.",
+                                  message: "For common programming languages it works well\nIf you have bad comment formats it might break.",
                                   child: Text("Comm*", style: Theme.of(context).textTheme.button))),
                         ),
                         InkWell(

@@ -52,6 +52,7 @@ class _HomeState extends State<Home> {
                       final Map<String, IconData> icons = <String, IconData>{
                         "quickMenu": Icons.apps,
                         "runWindow": Icons.drag_handle,
+                        "remap": Icons.keyboard,
                         "views": Icons.view_agenda,
                         "wizardly": Icons.auto_fix_high,
                       };
@@ -73,7 +74,6 @@ class _HomeState extends State<Home> {
                     imageBuilder: (Uri uri, String? str1, String? str2) {
                       final Map<String, IconData> icons = <String, IconData>{
                         "tips": Icons.tips_and_updates,
-                        "remap": Icons.keyboard,
                         "projects": Icons.folder_copy,
                         "trktivty": Icons.scatter_plot,
                         "tasks": Icons.task_alt,

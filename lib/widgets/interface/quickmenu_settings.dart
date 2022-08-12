@@ -56,7 +56,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                     ),
                     CheckboxListTile(
                       controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text("Hide QuickMenu when unfocusing"),
+                      title: const Text("Hide QuickMenu when losing focus"),
                       value: globalSettings.hideTabameOnUnfocus,
                       onChanged: (bool? newValue) async {
                         globalSettings.hideTabameOnUnfocus = newValue ?? false;
@@ -103,7 +103,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                   ),
                   CheckboxListTile(
                     controlAffinity: ListTileControlAffinity.leading,
-                    title: const Text("Add Spash Image above QuickMenu"),
+                    title: const Text("Add Splash Image above QuickMenu"),
                     value: globalSettings.customSpash != "",
                     onChanged: (bool? newValue) async {
                       newValue ??= false;

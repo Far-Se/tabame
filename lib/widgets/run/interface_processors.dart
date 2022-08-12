@@ -46,7 +46,7 @@ class InterfaceRunProcessorsState extends State<InterfaceRunProcessors> {
                 title: "Lorem Ipsum Generator",
                 link: "https://loripsum.net/",
                 tooltip: "It uses loripsum.net.",
-                info: "Default Shortcut is lorem. You can specify number of pharagraphs and the length: short, medium, long, verylong",
+                info: "Default Shortcut is lorem. You can specify number of paragraphs and the length: short, medium, long, verylong",
                 example: <String>["3 short", "3 long headers", "3 short plaintext"]),
             RunShortCutInfo(
                 value: globalSettings.run.encoders,

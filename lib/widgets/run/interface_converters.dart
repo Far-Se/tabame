@@ -34,7 +34,7 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
                   link: "https://pub.dev/packages/math_parser", // "https://mathjs.org/docs/expressions/syntax.html",
                   tooltip: "Calculator",
                   info: "Default shortcut is c . You can divide multiple math equations with | and use x,y,z,a,b,c as variables. It supports complex equations ",
-                  example: <String>["66*20/12", "c 10 inch to cm", "c 2+3*sqrt(4)"]),
+                  example: <String>["66*20/12", "c 75 | x * 20% | x - y | z * 30% | z-a", "c 2+3*sqrt(4)"]),
               RunShortCutInfo(
                   onChanged: (String newStr) {
                     globalSettings.run.unit = newStr;

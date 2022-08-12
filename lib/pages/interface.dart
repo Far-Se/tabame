@@ -101,6 +101,10 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
       if (currentPage == -1) currentPage = 1;
     }
+    if (Boxes.remap.isEmpty) {
+      currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
+      if (currentPage == -1) currentPage = 1;
+    }
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
     super.initState();
@@ -276,38 +280,42 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                 mainAxisAlignment: MainAxisAlignment.start,
                                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                                 children: <Widget>[
-                                                  ListView.builder(
-                                                    scrollDirection: Axis.vertical,
-                                                    itemCount: pages.length,
-                                                    shrinkWrap: true,
-                                                    physics: const ClampingScrollPhysics(),
-                                                    itemBuilder: (BuildContext context, int index) {
-                                                      final PageClass pageItem = pages[index];
-                                                      return DecoratedBox(
-                                                        decoration: BoxDecoration(
-                                                            color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
-                                                        child: InkWell(
-                                                          radius: 0,
-                                                          onTap: () {
-                                                            setState(() => currentPage = index);
-                                                          },
-                                                          child: Padding(
-                                                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.start,
-                                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: <Widget>[
-                                                                const SizedBox(width: 5),
-                                                                Icon(pageItem.icon),
-                                                                const SizedBox(width: 5),
-                                                                Text(pageItem.title!),
-                                                              ],
+                                                  IgnorePointer(
+                                                    ignoring: Boxes.remap.isEmpty,
+                                                    child: ListView.builder(
+                                                      scrollDirection: Axis.vertical,
+                                                      itemCount: pages.length,
+                                                      shrinkWrap: true,
+                                                      physics: const ClampingScrollPhysics(),
+                                                      itemBuilder: (BuildContext context, int index) {
+                                                        final PageClass pageItem = pages[index];
+                                                        if (pageItem.title == "FirstRun") return const SizedBox();
+                                                        return DecoratedBox(
+                                                          decoration: BoxDecoration(
+                                                              color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
+                                                          child: InkWell(
+                                                            radius: 0,
+                                                            onTap: () {
+                                                              setState(() => currentPage = index);
+                                                            },
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                              child: Row(
+                                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: <Widget>[
+                                                                  const SizedBox(width: 5),
+                                                                  Icon(pageItem.icon),
+                                                                  const SizedBox(width: 5),
+                                                                  Text(pageItem.title!),
+                                                                ],
+                                                              ),
                                                             ),
                                                           ),
-                                                        ),
-                                                      );
-                                                    },
+                                                        );
+                                                      },
+                                                    ),
                                                   ),
                                                   //2 Exit
                                                   const Divider(height: 5, thickness: 1),

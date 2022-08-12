@@ -9,7 +9,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
-Future<String> fetchWeather() async {
+Future<String> fetchWeather([bool showUnit = false]) async {
   bool failed = false;
   final List<String> latLong = globalSettings.weatherLatLong.split(',');
   if (latLong.length < 2) return "Bad Format.";
@@ -59,8 +59,8 @@ Future<String> fetchWeather() async {
         };
         String weather = "";
         if (weatherEmoji.containsKey(data["current_weather"]["weathercode"])) weather = weatherEmoji[data["current_weather"]["weathercode"]].toString();
-        weather += " ";
-        weather += double.parse(data["current_weather"]["temperature"].toString()).toInt().toString();
+        weather += " ${double.parse(data["current_weather"]["temperature"].toString()).toInt().toString()}°";
+        if (showUnit) weather += " ${globalSettings.weatherUnit == "u" ? "F" : "C"}";
         return weather;
       }
     }
@@ -72,9 +72,11 @@ Future<String> fetchWeather() async {
 
 class WeatherWidget extends StatefulWidget {
   final double width;
+  final bool showUnit;
   const WeatherWidget({
     Key? key,
     this.width = 30,
+    this.showUnit = false,
   }) : super(key: key);
 
   @override
@@ -106,7 +108,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       height: 30,
       // height: double.infinity,
       child: FutureBuilder<String>(
-        future: fetchWeather(),
+        future: fetchWeather(widget.showUnit),
         initialData: globalSettings.weatherTemperature,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {

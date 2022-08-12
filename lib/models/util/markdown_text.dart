@@ -8,13 +8,13 @@ My attempt to replicate FancyZones from PowerToys. My main issue was the fact th
 I've fixed that by allowing the user to select multiple zones by holding Right Click and switching layout by spinning the wheel so you don't need to move your other hand.
 
 */
-const String markdownHomeLeft = '''
+const String markdownHomeLeft = """
 ## ![tabame](logo) Welcome to Tabame
   
 The primary purpose of this app is to provide users with a quick and easy way to navigate and access the information they need.
 
 ---
-### ![quickMenu]() QuickMenu
+### **![quickMenu]() QuickMenu**
 
 This is a window management tool that helps you organize and keep track of all your open windows in one place. It's great for keeping your desktop tidy and making sure you don't lose any important information.
 
@@ -27,29 +27,34 @@ The primary purpose of QuickMenu is to minimize distractions by hiding the taskb
 **You can navigate QuickMenu** with Tab and arrows.
 
 
-##### QuickActions
+##### **QuickActions**
 Quick Actions is a set of predefined tools that give you access to useful functions, such as switching audio output, changing volume or music track, switch Desktop, pin Window and many other.
 
 ---
-### ![runWindow]() QuickRun
+### **![runWindow]() QuickRun**
 
-QuickRun has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Converto, Set Countdown, calculate/convert units and timezones and many other.
+QuickRun has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Convertor, Set Countdown, calculate/convert units and timezones and many other.
 
 You can also access your projects and create new Tasks.
 
 ---
-### ![wizardly]() Wizardly
+### **![remap]() Hotkeys**
+  You can set custom actions to be performed based on the executable you are hovering, the region on the screen, or in the app, and mouse movement.
+
+  Actions can be other hotkeys, send key sequences or Tabame Functions.
+
+---
+### **![wizardly]() Wizardly**
 
 A Folder utility that helps you to manage your folders and files. 
 
 - This program allows you to scan folders and sort them by size. You can also delete any folders you want.
 - The user may rename folders and files. Regex and list access are granted in order to change, for example, from a number month to the name of the month.
 - The user can search for text within files, specifying options such as the filename and which files or folders to ignore.
-- You can change the size of images or the file format.
 - You can count lines of code in a folder. You can set which files to include or exclude and also exclude lines that contain specific regex or non alphabet characters.
 
 
-''';
+""";
 const String markdownHomeRight = '''
 ## ![tips]() Quick Tips
 
@@ -74,28 +79,21 @@ const String markdownHomeRight = '''
   - The Windows Shortcut is **Win+Alt+{Number}**
 
 ---
-### ![remap]() Hotkeys
-  You can set custom actions to be performed based on the executable you are hovering, the region on the screen, or in the app, and mouse movement.
-
-  Actions can be other hotkeys, send key sequences or run executable.
+### **![trktivty]() Trktivty**
+  With Trktivty you can track key strokes and mouse movements and make daily analysis of your activity.
+  
+  It also tracks active window and you can specify what titles to track, so you can see how much time you spent on apps and projects.
 
 ---
-### ![projects]() Projects
+### **![projects]() Projects**
   You can save folders and files to your projects and access them from QuickRun. This comes in handy when you want to open an older project or specific file but don't know the path.
 
 ---
-### ![trktivty]() Trktivty
-  If you are enabling this, it will track your keystroke and mouse movement and make a hourly and daily graph of your activity.
-  - Keyboard strokes per minute [Writing]
-  - Keyboard writes each 10 seconds per minute [Debugging]
-  - Mouse movement each 3 seconds per minute [Testing/Research]
-
----
-### ![tasks]() Tasks
+### **![tasks]() Tasks**
 
 This is a utility that allows you to create tasks such as reminders and Page Watchers.
 
-- Reminders can be customised by day and time.
+- Reminders can be one per day or repeating between a specified interval. You can set days when it's enabled and type of notification, either voice notification or toast notification.
 - With Page Watchers you can watch if a whole web page changes or only a specific text. It's good when you make a forum post on some random site, if a blog has new posts or other uses you might find.
 
 ''';

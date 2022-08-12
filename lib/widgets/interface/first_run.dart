@@ -1,12 +1,17 @@
 // ignore_for_file: always_specify_types
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../main.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/info_widget.dart';
@@ -21,6 +26,7 @@ class FirstRunState extends State<FirstRun> {
   FocusNode focusNode = FocusNode();
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
   final PageController pageController = PageController();
+  final hokeyObj = <Hotkeys>[];
   List<Map<String, dynamic>> hotkeyMap = <Map<String, dynamic>>[
     {
       "key": "F9",
@@ -278,6 +284,9 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
   @override
   void initState() {
     super.initState();
+    for (var x in hotkeyMap) {
+      hokeyObj.add(Hotkeys.fromMap(x));
+    }
   }
 
   @override
@@ -289,10 +298,10 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
 
   @override
   Widget build(BuildContext context) {
-    final List<Hotkeys> m = Boxes.remap;
+    // final List<Hotkeys> m = Boxes.remap;
     // print(m.first.toJson());
 
-    Clipboard.setData(ClipboardData(text: m.firstWhere((element) => element.key == "A").toJson()));
+    // Clipboard.setData(ClipboardData(text: m.firstWhere((element) => element.key == "A").toJson()));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
@@ -302,7 +311,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
           Text("First Run settings", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2)),
           LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
             return ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth, maxHeight: MediaQuery.of(context).size.height + 50),
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth, maxHeight: 900),
               child: PageView(
                 controller: pageController,
                 allowImplicitScrolling: false,
@@ -322,9 +331,9 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                             if (hotkey.isNotEmpty)
                               InkWell(
                                 onTap: () {
-                                  hotkeyMap.first["key"] = hotkey;
-                                  hotkeyMap.first["modifiers"] = modifiers;
-                                  // Boxes.updateSettings("remap", jsonEncode(hotkeyMap)); //!uncomment this.
+                                  hokeyObj.first.key = hotkey;
+                                  hokeyObj.first.modifiers = modifiers;
+                                  Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
                                 },
                                 child: Container(
@@ -539,15 +548,32 @@ You can search text (regex aware) in files, including or excluding files and fol
 
 You can generate a Project Overview to count lines of code and group them by type.
 
-You can rename files using regex and lists, you can turn **IMG_20220725_121728.jpg** into **25 July 2022** easily.
+You can rename files using regex and lists, you can turn **IMG_20220725_121728.jpg** into **25 July 2022.jpg** easily.
 
 You can also scan folder sizes and delete files that are too big."""),
                           )
                         ],
                       ),
+                      Center(child: Text("Thanks for using Tabame", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2))),
+                      const SizedBox(height: 10),
+                      Center(
+                          child: Text("Tabame has way more customizable features then one listed above.",
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
+                      Center(
+                          child: Text("After restarting I recommend you to open settings and browse through all sidebar tabs",
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
+                      const SizedBox(height: 10),
                       InkWell(
-                        onTap: () {
+                        onTap: () async {
                           //!Save and exit
+                          if (kReleaseMode) {
+                            WinUtils.reloadTabameQuickMenu();
+                            exit(0);
+                          } else {
+                            Globals.changingPages = true;
+                            setState(() {});
+                            mainPageViewController.jumpToPage(Pages.quickmenu.index);
+                          }
                         },
                         child: Container(
                           height: 40,

@@ -419,7 +419,7 @@ It records keystrokes, mouse movement and active Window.
                 ],
               ),
         if (allDates.isEmpty)
-          const Text("There is no file to annalize.")
+          const Text("There is no file to analyze.")
         else
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),

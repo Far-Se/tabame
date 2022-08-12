@@ -703,7 +703,7 @@ class RunCommands {
   }
 
   Future<void> fetch() async {
-    final Map<String, dynamic> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "[]");
+    final Map<String, dynamic> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "{}");
     if (output.isEmpty) return;
     calculator = output["calculator"] ?? calculator;
     color = output["color"] ?? color;

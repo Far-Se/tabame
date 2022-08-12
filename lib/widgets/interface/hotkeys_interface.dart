@@ -810,13 +810,13 @@ class HotKeyActionState extends State<HotKeyAction> {
                     children: <Widget>[
                       Expanded(
                         child: TextInput(
-                            labelText: "Min (miliseconds)",
+                            labelText: "Min (milliseconds)",
                             value: widget.hotkey.triggerInfo[0].toString(),
                             onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[0] = int.tryParse(e) ?? 0)),
                       ),
                       Expanded(
                         child: TextInput(
-                            labelText: "Max (miliseconds)",
+                            labelText: "Max (milliseconds)",
                             value: widget.hotkey.triggerInfo[1].toString(),
                             onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
                       ),

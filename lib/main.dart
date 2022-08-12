@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'models/classes/boxes.dart';
 import 'models/globals.dart';
 import 'models/settings.dart';
 import 'models/win32/win32.dart';
@@ -62,7 +63,8 @@ Future<void> main(List<String> arguments2) async {
 
   /// ? Window
   late WindowOptions windowOptions;
-  if (globalSettings.args.contains("-interface")) {
+  if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    print("nomap");
     windowOptions = WindowOptions(
       size: Size(700, 400),
       center: false,
@@ -211,22 +213,13 @@ class _TabameState extends State<Tabame> {
                       ),
                 ),
                 themeMode: themeMode,
-                // home: QuickMenu()
                 home: PageView.builder(
                   controller: mainPageViewController,
                   allowImplicitScrolling: false,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (BuildContext context, int index) {
-                    if (globalSettings.args.contains("-interface")) {
+                    if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
                       return const Interface();
-
-                      // return FutureBuilder<int>(
-                      //   future: Future<int>.delayed(Duration(milliseconds: 300), () => 1),
-                      //   builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
-                      //     if (!snapshot.hasData) return Container();
-                      //     return const Interface();
-                      //   },
-                      // );
                     }
                     if (index == Pages.quickmenu.index) {
                       return const QuickMenu();

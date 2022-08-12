@@ -68,29 +68,32 @@ class _TimeWidgetState extends State<TimeWidget> {
             ),
           );
         }
-        return Container(
-          width: 60,
-          child: InkWell(
-            onTap: () {
-              globalSettings.noopKeyListener = true;
-              WinKeys.send("{#LWIN}C");
-              Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
-            },
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 0, maxWidth: 100),
-                child: Column(
-                  children: <Widget>[
-                    Flexible(
-                        fit: FlexFit.tight,
-                        child: Text((snapshot.data as Map<String, String>)["time"] as String,
-                            style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
-                    Flexible(
-                        fit: FlexFit.tight,
-                        child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                            style: TextStyle(fontSize: 10, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
-                  ],
+        return Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Container(
+            width: 60,
+            child: InkWell(
+              onTap: () {
+                globalSettings.noopKeyListener = true;
+                WinKeys.send("{#LWIN}C");
+                Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
+              },
+              child: Align(
+                alignment: Alignment.center,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 0, maxWidth: 100),
+                  child: Column(
+                    children: <Widget>[
+                      Flexible(
+                          fit: FlexFit.tight,
+                          child: Text((snapshot.data as Map<String, String>)["time"] as String,
+                              style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
+                      Flexible(
+                          fit: FlexFit.tight,
+                          child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
+                              style: TextStyle(fontSize: 10, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -112,7 +112,7 @@ class SavedStore {
   File? _localDataFilePath;
   String? _fileName;
   String get fileName {
-    _fileName ??= "${WinUtils.getTabameSettingsFolder()}\\saved.json";
+    _fileName ??= "${WinUtils.getTabameSettingsFolder()}\\settings.json";
     return _fileName!;
   }
 
