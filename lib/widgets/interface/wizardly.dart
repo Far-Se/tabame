@@ -1,4 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:math';
+
 import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -27,9 +29,11 @@ class WizardPage {
 }
 
 class WizardlyState extends State<Wizardly> {
+  int wizzardID = 1;
   @override
   void initState() {
     super.initState();
+    wizzardID = Random().nextInt(4) + 1;
   }
 
   @override
@@ -56,15 +60,25 @@ class WizardlyState extends State<Wizardly> {
           height: 80,
           child: Padding(
             padding: const EdgeInsets.all(1),
-            child: AnimatedButtonBar(
-              foregroundColor: Color(globalSettings.theme.accentColor),
-              radius: 8.0,
-              padding: const EdgeInsets.all(16.0),
-              invertedSelection: true,
-              children: List<ButtonBarEntry>.generate(
-                  pages.length,
-                  (int i) => ButtonBarEntry(
-                      onTap: () => setState(() => currentPage = i), child: Tooltip(message: pages[i].tooltip, verticalOffset: 20, child: Text(pages[i].title)))),
+            child: Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 20,
+                  child: Transform.translate(offset: const Offset(10, 0), child: Transform.scale(scale: 4, child: Image.asset("resources/wizzard$wizzardID.png"))),
+                ),
+                Expanded(
+                  child: AnimatedButtonBar(
+                    foregroundColor: Color(globalSettings.theme.accentColor),
+                    radius: 8.0,
+                    padding: const EdgeInsets.all(16.0),
+                    invertedSelection: true,
+                    children: List<ButtonBarEntry>.generate(
+                        pages.length,
+                        (int i) => ButtonBarEntry(
+                            onTap: () => setState(() => currentPage = i), child: Tooltip(message: pages[i].tooltip, verticalOffset: 20, child: Text(pages[i].title)))),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

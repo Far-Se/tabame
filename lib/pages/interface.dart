@@ -75,11 +75,10 @@ class Interface extends StatefulWidget {
 
 class Sponsorship {
   bool enabled = false;
-  String image = "";
   String url = "";
 
   @override
-  String toString() => '\nSponsorship(enabled: $enabled, image: $image, url: $url)';
+  String toString() => '\nSponsorship(enabled: $enabled, url: $url)';
 }
 
 class InterfaceState extends State<Interface> with SingleTickerProviderStateMixin {
@@ -111,6 +110,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
 
   @override
   void initState() {
+    super.initState();
     if (globalSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
     } else if (globalSettings.args.contains("-changelog")) {
@@ -121,8 +121,16 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     if (currentPage == -1) currentPage = 1;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
+    final String? sp = Boxes.pref.getString("sponsorLink");
+    if (sp != null) {
+      sponsor.enabled = true;
+      sponsor.url = sp;
+      if (File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png").existsSync()) {
+        sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
+        sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+      }
+    }
     checkForSponsor();
-    super.initState();
   }
 
   @override
@@ -142,23 +150,27 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       if (!json.containsKey("enabled")) return;
       sponsor
         ..enabled = json["enabled"]
-        ..image = json["image"]
         ..url = json["url"];
       json["name"] ??= "test";
-      if ((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) {
-        print(json);
+      if (!sponsor.enabled) {
+        Boxes.pref.remove("sponsorName");
+        Boxes.pref.remove("sponsorLink");
+        if (mounted) setState(() {});
+        return;
+      }
+      if (((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) || sponsorImageLight == null) {
         Boxes.pref.setString("sponsorName", json["name"]);
+        Boxes.pref.setString("sponsorLink", json["url"]);
         sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
-        final http.Response rsp = await http.get(Uri.parse(json["image"]));
+        final http.Response rsp = await http.get(Uri.parse(json["imageLight"]));
         if (rsp.statusCode == 200) sponsorImageLight!.writeAsBytesSync(rsp.bodyBytes);
 
         sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
-        final http.Response rsp2 = await http.get(Uri.parse(json["image"]));
+        final http.Response rsp2 = await http.get(Uri.parse(json["imageDark"]));
         if (rsp2.statusCode == 200) sponsorImageDark!.writeAsBytesSync(rsp2.bodyBytes);
       }
       if (mounted) setState(() {});
     }
-    print(sponsor);
   }
 
   @override
@@ -437,8 +449,13 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                             onTap: () {
                                                               WinUtils.open(sponsor.url, userpowerShell: true);
                                                             },
-                                                            child:
-                                                                Center(child: sponsorImageLight != null ? Image.file(sponsorImageLight!, height: 90) : const SizedBox())),
+                                                            child: Center(
+                                                                child: sponsorImageLight != null
+                                                                    ? Image.file(
+                                                                        globalSettings.themeType == ThemeType.light ? sponsorImageLight! : sponsorImageDark!,
+                                                                        height: 90,
+                                                                      )
+                                                                    : const SizedBox())),
                                                         const Divider(height: 5, thickness: 1),
                                                       ],
                                                     ),
