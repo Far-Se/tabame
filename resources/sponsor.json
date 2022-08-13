@@ -1,6 +1,7 @@
 {
     "enabled": true,
     "name": "test",
-    "image": "https://raw.githubusercontent.com/Far-Se/tabame/master/resources/wizzard1.png",
+    "imageDark": "https://raw.githubusercontent.com/Far-Se/tabame/master/resources/wizzard1.png",
+    "imageLight": "https://raw.githubusercontent.com/Far-Se/tabame/master/resources/wizzard2.png",
     "url": "https://github.com/Far-Se/tabame/"
 }

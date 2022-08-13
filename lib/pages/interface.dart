@@ -106,7 +106,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   int hoveredPage = -1;
 
   bool bmaCoffeHovered = false;
-  File? _sponsorImage;
+  File? sponsorImageLight;
+  File? sponsorImageDark;
 
   @override
   void initState() {
@@ -131,7 +132,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   }
 
   Future<void> checkForSponsor() async {
-    final http.Response response = await http.get(Uri.parse("https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json"));
+    if (File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png").existsSync()) {
+      sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
+      sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+    }
+    final http.Response response = await http.get(Uri.parse("https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json?e=${DateTime.now().second}"));
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (!json.containsKey("enabled")) return;
@@ -139,19 +144,19 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         ..enabled = json["enabled"]
         ..image = json["image"]
         ..url = json["url"];
+      json["name"] ??= "test";
       if ((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) {
+        print(json);
         Boxes.pref.setString("sponsorName", json["name"]);
-        _sponsorImage = File("${WinUtils.getTabameSettingsFolder()}\\sponsor.png");
+        sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
         final http.Response rsp = await http.get(Uri.parse(json["image"]));
-        if (rsp.statusCode == 200) {
-          _sponsorImage!.writeAsBytesSync(rsp.bodyBytes);
-        } else {
-          sponsor.enabled = false;
-        }
-      } else {
-        _sponsorImage = File("${WinUtils.getTabameSettingsFolder()}\\sponsor.png");
-        if (mounted) setState(() {});
+        if (rsp.statusCode == 200) sponsorImageLight!.writeAsBytesSync(rsp.bodyBytes);
+
+        sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+        final http.Response rsp2 = await http.get(Uri.parse(json["image"]));
+        if (rsp2.statusCode == 200) sponsorImageDark!.writeAsBytesSync(rsp2.bodyBytes);
       }
+      if (mounted) setState(() {});
     }
     print(sponsor);
   }
@@ -432,7 +437,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                             onTap: () {
                                                               WinUtils.open(sponsor.url, userpowerShell: true);
                                                             },
-                                                            child: Center(child: _sponsorImage != null ? Image.file(_sponsorImage!, height: 90) : const SizedBox())),
+                                                            child:
+                                                                Center(child: sponsorImageLight != null ? Image.file(sponsorImageLight!, height: 90) : const SizedBox())),
                                                         const Divider(height: 5, thickness: 1),
                                                       ],
                                                     ),
