@@ -594,7 +594,7 @@ class WinUtils {
   }
 
   static void open(String path, {String? arguments, bool parseParamaters = false, bool userpowerShell = false}) {
-    if (userpowerShell && arguments == null && !parseParamaters && globalSettings.runAsAdministrator) {
+    if (userpowerShell && arguments == null && !parseParamaters && globalSettings.runAsAdministrator && !path.startsWith("http")) {
       WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
       return;
     }

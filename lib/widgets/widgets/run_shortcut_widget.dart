@@ -56,7 +56,7 @@ class RunShortCutInfo extends StatelessWidget {
                   onChanged(newVal);
                 },
               ),
-              leading: InfoWidget(tooltip, onTap: () => link.isEmpty ? null : WinUtils.open(link)),
+              leading: InfoWidget(tooltip, onTap: () => link.isEmpty ? null : WinUtils.open(link, userpowerShell: true)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

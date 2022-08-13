@@ -106,6 +106,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   int hoveredPage = -1;
 
   bool bmaCoffeHovered = false;
+  File? _sponsorImage;
 
   @override
   void initState() {
@@ -138,13 +139,25 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         ..enabled = json["enabled"]
         ..image = json["image"]
         ..url = json["url"];
+      if ((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) {
+        Boxes.pref.setString("sponsorName", json["name"]);
+        _sponsorImage = File("${WinUtils.getTabameSettingsFolder()}\\sponsor.png");
+        final http.Response rsp = await http.get(Uri.parse(json["image"]));
+        if (rsp.statusCode == 200) {
+          _sponsorImage!.writeAsBytesSync(rsp.bodyBytes);
+        } else {
+          sponsor.enabled = false;
+        }
+      } else {
+        _sponsorImage = File("${WinUtils.getTabameSettingsFolder()}\\sponsor.png");
+        if (mounted) setState(() {});
+      }
     }
     print(sponsor);
   }
 
   @override
   Widget build(BuildContext context) {
-    checkForSponsor();
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
     }
@@ -416,11 +429,10 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                         const Center(
                                                             child: Text("Sponsored by:", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
                                                         InkWell(
-                                                          onTap: () {
-                                                            WinUtils.open(sponsor.url, userpowerShell: true);
-                                                          },
-                                                          child: Center(child: Image.network(sponsor.image, height: 90)),
-                                                        ),
+                                                            onTap: () {
+                                                              WinUtils.open(sponsor.url, userpowerShell: true);
+                                                            },
+                                                            child: Center(child: _sponsorImage != null ? Image.file(_sponsorImage!, height: 90) : const SizedBox())),
                                                         const Divider(height: 5, thickness: 1),
                                                       ],
                                                     ),
