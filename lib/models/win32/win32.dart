@@ -593,7 +593,11 @@ class WinUtils {
     return output;
   }
 
-  static void open(String path, {String? arguments, bool parseParamaters = false}) {
+  static void open(String path, {String? arguments, bool parseParamaters = false, bool userpowerShell = false}) {
+    if (userpowerShell && arguments == null && !parseParamaters && globalSettings.runAsAdministrator) {
+      WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
+      return;
+    }
     if (parseParamaters) {
       final RegExp reg = RegExp(r"^([a-z0-9-_]+) (.*?)$");
       if (reg.hasMatch(path)) {
@@ -694,13 +698,13 @@ class WinUtils {
     }
   }
 
-  static void openAndFocus(String path, {bool centered = false}) {
+  static void openAndFocus(String path, {bool centered = false, bool usePowerShell = false}) {
     final Set<int> startWindows = enumWindows().toSet();
-    WinUtils.open(path);
+    WinUtils.open(path, userpowerShell: usePowerShell);
     int ticker = 0;
     Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
       ticker++;
-      if (ticker > 10) {
+      if (ticker > 11) {
         timer.cancel();
         return;
       }
@@ -711,9 +715,6 @@ class WinUtils {
       final int hwnd = windows[0];
       Win32.activateWindow(hwnd);
       if (!centered) return;
-      final Pointer<RECT> lpRect = calloc<RECT>();
-      GetWindowRect(Win32.hWnd, lpRect);
-      free(lpRect);
       Win32.setCenter(hwnd: hwnd, useMouse: true);
       timer.cancel();
     });

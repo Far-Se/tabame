@@ -52,7 +52,7 @@ Future<void> main(List<String> arguments2) async {
     return;
     // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
   }
-  if (Globals.hotkeysEnabled || kReleaseMode) {
+  if (Globals.debugHotkeysEnabled || kReleaseMode) {
     await NativeHotkey.register();
     //!hook
     // Timer.periodic(Duration(minutes: 15), (Timer t) async {

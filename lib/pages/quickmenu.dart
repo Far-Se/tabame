@@ -299,13 +299,34 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         }
       }
       // ?Region
-      keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.press).toList();
-      for (KeyMap key in keys) {
-        if (key.isMouseInRegion) {
-          key.applyActions();
-          return;
+      if (hotkeyDoublePress.containsKey(hotkey.hotkey) && hotkeyInfo.name.isNotEmpty) {
+        keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.doublePress).toList();
+        for (KeyMap key in keys) {
+          if (key.isMouseInRegion) {
+            if (hotkeyInfo.time.end - hotkeyDoublePress[hotkey.hotkey]! < 300) {
+              key.applyActions();
+              hotkeyDoublePress.remove(hotkey.hotkey);
+              return;
+            } else {
+              hotkeyDoublePress.remove(hotkey.hotkey);
+            }
+          }
         }
       }
+      keys = hotkey.keymaps.where((KeyMap element) => element.boundToRegion && element.triggerType == TriggerType.press).toList();
+      if (hotkeyInfo.name.isNotEmpty) {
+        for (KeyMap key in keys) {
+          if (key.isMouseInRegion) {
+            if (hotkey.hasDoublePress) {
+              hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
+            }
+            key.applyActions();
+            return;
+          }
+        }
+      }
+
+      // ?Double press
       if (hotkeyDoublePress.containsKey(hotkey.hotkey)) {
         keys = hotkey.getDoublePress;
         for (KeyMap key in keys) {
@@ -318,12 +339,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         }
         hotkeyDoublePress.remove(hotkey.hotkey);
       }
+      // ?Normal
       keys = hotkey.getPress;
       for (KeyMap key in keys) {
         if (!key.isMouseInRegion) continue;
         if (hotkeyInfo.name.isNotEmpty && key.name != hotkeyInfo.name) continue;
         if (hotkey.hasDoublePress) {
-          print("has double press");
           hotkeyDoublePress[hotkey.hotkey] = hotkeyInfo.time.end;
         }
         key.applyActions();

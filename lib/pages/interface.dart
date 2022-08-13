@@ -99,12 +99,12 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   void initState() {
     if (globalSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
-      if (currentPage == -1) currentPage = 1;
-    }
-    if (Boxes.remap.isEmpty) {
+    } else if (globalSettings.args.contains("-changelog")) {
+      currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
+    } else if (Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
-      if (currentPage == -1) currentPage = 1;
     }
+    if (currentPage == -1) currentPage = 1;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
     super.initState();

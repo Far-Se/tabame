@@ -192,6 +192,7 @@ class ThemeSetupWidget extends StatefulWidget {
 }
 
 class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
+  bool changed = false;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -221,7 +222,12 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             title: Text("${widget.title}", style: Theme.of(context).textTheme.titleLarge),
             subtitle: const Text("Press here to save changes"),
-            trailing: const Icon(Icons.save_outlined),
+            trailing: Transform.scale(
+                scale: changed ? 2 : 1,
+                child: Icon(
+                  Icons.save_outlined,
+                  color: changed ? Colors.red.shade400 : null,
+                )),
           ),
         ),
         const InfoText("Do not forget to save the theme!"),
@@ -239,6 +245,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               max: 255,
               value: widget.currentColors.gradientAlpha.toDouble(),
               onChanged: (double e) {
+                changed = true;
                 widget.onGradiendChanged(e);
                 setState(() {});
               },

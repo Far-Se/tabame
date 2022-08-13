@@ -10,6 +10,7 @@ import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
@@ -83,10 +84,11 @@ class SettingsPageState extends State<SettingsPage> {
                                     flex: 5,
                                     child: ListTile(
                                       leading: Container(height: double.infinity, child: const Tooltip(message: "Check for update", child: Icon(Icons.refresh))),
-                                      title: Text("Current Version: v${globalSettings.currentVersion}"),
+                                      title: Text("Current Version: v${Globals.version}"),
                                       subtitle: Text("$updateResponse"),
                                       onTap: () {
                                         updateResponse = "Latest version already installed!";
+
                                         setState(() {});
                                         //globalSettings.checkForUpdate(context);
                                       },

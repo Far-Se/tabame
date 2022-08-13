@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
@@ -19,7 +20,7 @@ class PinnedApps extends StatelessWidget {
           onSecondaryTap: () {
             final int x = pinned.indexWhere((String element) => element == item);
             WinKeys.send("{#WIN}{#ALT}${x + 1}");
-            QuickMenuFunctions.toggleQuickMenu(visible: false);
+            if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
           },
           child: WindowsAppButton(
             path: item,

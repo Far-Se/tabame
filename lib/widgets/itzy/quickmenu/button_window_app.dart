@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -41,8 +42,8 @@ class WindowsAppButton extends StatelessWidget {
                   : Icon(Icons.circle_outlined, size: size),
             ),
             onTap: () {
-              WinUtils.openAndFocus(path, centered: true);
-              QuickMenuFunctions.toggleQuickMenu(visible: false);
+              WinUtils.openAndFocus(path, centered: true, usePowerShell: true);
+              if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
             },
           );
         },

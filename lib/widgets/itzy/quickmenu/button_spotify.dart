@@ -58,7 +58,7 @@ class _SpotifyButtonState extends State<SpotifyButton> {
               }
             }
             if (!pressed && Boxes.pref.getString("SpotifyLocation") != null) {
-              WinUtils.open(Boxes.pref.getString("SpotifyLocation") ?? "");
+              WinUtils.open(Boxes.pref.getString("SpotifyLocation") ?? "", userpowerShell: true);
             }
           },
           child: const Tooltip(message: "Spotify", child: Icon(Icons.music_note)),

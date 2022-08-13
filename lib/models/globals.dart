@@ -20,7 +20,8 @@ enum Pages {
 }
 
 class Globals {
-  static bool hotkeysEnabled = false; // debug only
+  static bool debugHotkeysEnabled = false;
+  static String version = "1.0";
 
   Globals();
   static bool changingPages = false;

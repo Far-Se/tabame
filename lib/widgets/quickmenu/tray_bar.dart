@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -105,7 +106,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                 for (final TrayBarInfo info in tray)
                   Listener(
                     onPointerDown: (PointerDownEvent event) async {
-                      QuickMenuFunctions.toggleQuickMenu(visible: false);
+                      if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
                       if (event.kind == PointerDeviceKind.mouse) {
                         if (event.buttons == kSecondaryMouseButton) {
                           if (info.clickOpensExe) {
@@ -124,7 +125,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                         } else if (event.buttons == kPrimaryMouseButton) {
                           if (info.clickOpensExe) {
                             if (info.processPath.isNotEmpty) {
-                              WinUtils.open(info.processPath);
+                              WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
                             }
                             return;
                           }

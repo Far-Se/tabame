@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
+import '../../models/settings.dart';
+
 class Changelog extends StatefulWidget {
   const Changelog({Key? key}) : super(key: key);
 
@@ -12,6 +16,15 @@ class _ChangelogState extends State<Changelog> {
   @override
   void reassemble() {
     super.reassemble();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (globalSettings.lastChangelog != Globals.version) {
+      globalSettings.lastChangelog = Globals.version;
+      Boxes.updateSettings("lastChangelog", globalSettings.lastChangelog);
+    }
   }
 
   @override

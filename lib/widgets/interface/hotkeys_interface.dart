@@ -240,6 +240,10 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                                           Boxes.updateSettings("remap", jsonEncode(remap));
                                           setState(() {});
                                         },
+                                        onCloned: () {
+                                          keymap.keymaps.add(keymap.keymaps[index].copyWith(name: "${keymap.keymaps[index].name} Cloned"));
+                                          setState(() {});
+                                        },
                                       ),
                                     ),
                                   ),
@@ -641,7 +645,13 @@ Aditionally, for mouse use {LMB} {MMB} {RMB} {MSU} {MSD}
 class HotKeyAction extends StatefulWidget {
   final KeyMap hotkey;
   final void Function(KeyMap hotkey) onSaved;
-  const HotKeyAction({Key? key, required this.hotkey, required this.onSaved}) : super(key: key);
+  final void Function() onCloned;
+  const HotKeyAction({
+    Key? key,
+    required this.hotkey,
+    required this.onSaved,
+    required this.onCloned,
+  }) : super(key: key);
   @override
   HotKeyActionState createState() => HotKeyActionState();
 }
@@ -1175,28 +1185,48 @@ class HotKeyActionState extends State<HotKeyAction> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Align(
-                alignment: Alignment.topRight,
-                child: ElevatedButton(
-                  onPressed: () {
-                    widget.onSaved(widget.hotkey);
-                    Navigator.of(context).pop();
-                  },
-                  child: Container(
-                    width: 70,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        const Icon(Icons.save),
-                        Text(
-                          "Save",
-                          style: TextStyle(color: Theme.of(context).backgroundColor),
-                        ),
-                      ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  OutlinedButton(
+                    onPressed: () {
+                      widget.onCloned();
+                      Navigator.of(context).pop();
+                    },
+                    child: Container(
+                      width: 70,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          const Icon(Icons.copy_all, size: 15),
+                          const Text(" Clone"),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onSaved(widget.hotkey);
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        width: 70,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            const Icon(Icons.save),
+                            Text(" Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               MouseInfoWidget(
                 onAnchorTypeChanged: (AnchorType anchor) {

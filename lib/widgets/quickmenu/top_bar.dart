@@ -7,6 +7,7 @@ import '../../models/settings.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
+import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_hide_desktop_files.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_media_control.dart';
@@ -46,7 +47,10 @@ class TopBar extends StatelessWidget {
         showWidgets.add(widgets[x]!);
       }
     }
-    Globals.heights.topbar = 25;
+    Globals.heights.topbar = 20;
+    int width = 20 * 2;
+    if (kDebugMode) width += 20;
+    if (globalSettings.lastChangelog != Globals.version) width += 20;
     return Theme(
       data: Theme.of(context).copyWith(
           iconTheme: const IconThemeData(size: 16),
@@ -103,7 +107,7 @@ class TopBar extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: kDebugMode ? 45 + 20 : 45,
+                width: width + 5,
                 child: Align(
                   child: BarWithButtons(
                     height: 25,
@@ -122,6 +126,7 @@ class TopBar extends StatelessWidget {
                           ),
                         ),
                       const ToggleDesktopButton(),
+                      if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
                       const OpenSettingsButton(),
                     ],
                   ),

@@ -79,6 +79,7 @@ class Boxes {
       ..showWeather = pref.getBool("showWeather") ?? globalSettings.showWeather
       ..customSpash = pref.getString("customSpash") ?? globalSettings.customSpash
       ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
+      ..lastChangelog = pref.getString("lastChangelog") ?? globalSettings.lastChangelog
       ..showPowerShell = pref.getBool("showPowerShell") ?? globalSettings.showPowerShell
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? globalSettings.themeScheduleMin
@@ -570,7 +571,7 @@ class WinHotkeys {
       }
     }
     //!hook
-    if (Globals.hotkeysEnabled || kReleaseMode) {
+    if (Globals.debugHotkeysEnabled || kReleaseMode) {
       NativeHotkey.run(allHotkeys);
     }
   }

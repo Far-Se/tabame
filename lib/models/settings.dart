@@ -47,18 +47,14 @@ class Settings {
   bool showQuickMenuAtTaskbarLevel = true;
   bool quickMenuPinnedWithTrayAtBottom = false;
   bool usePowerShellAsToastNotification = false;
-
   String customLogo = "";
   String customSpash = "";
   String quickRunText = "";
-  String currentVersion = "0.9.0";
+  String lastChangelog = "1.0";
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
-
   List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
-
-  RunCommands run = RunCommands();
 
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
@@ -72,6 +68,7 @@ class Settings {
   ThemeColors get theme => themeColors;
   ThemeType themeType = ThemeType.system;
 
+  RunCommands run = RunCommands();
   bool settingsChanged = false;
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
   ThemeColors darkTheme = ThemeColors(background: 0xff1E1F28, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
