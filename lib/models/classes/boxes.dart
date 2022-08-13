@@ -198,7 +198,11 @@ class Boxes {
   List<List<String>> get runShortcuts {
     if (_runShortcuts.isNotEmpty) return _runShortcuts;
     final String prefString = pref.getString("runShortcuts") ?? "";
-    if (prefString.isEmpty) return _runShortcuts;
+    if (prefString.isEmpty) {
+      return <List<String>>[
+        <String>["g", "https://github.com/search?q={params}"]
+      ];
+    }
     final List<dynamic> runShortcuts = jsonDecode(pref.getString("runShortcuts")!);
     _runShortcuts.clear();
     for (List<dynamic> x in runShortcuts) {
@@ -217,11 +221,7 @@ class Boxes {
   List<List<String>> get runMemos {
     if (_runMemos.isNotEmpty) return _runMemos;
     final String prefString = pref.getString("runMemos") ?? "";
-    if (prefString.isEmpty) {
-      return <List<String>>[
-        <String>["g", "https://github.com/search?q={params}"]
-      ];
-    }
+    if (prefString.isEmpty) return _runMemos;
     final List<dynamic> runMemos = jsonDecode(pref.getString("runMemos")!);
     _runMemos.clear();
     for (List<dynamic> x in runMemos) {
