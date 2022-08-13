@@ -1,11 +1,13 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 
 import '../main.dart';
@@ -17,11 +19,11 @@ import '../models/win32/win32.dart';
 import '../widgets/interface/changelog.dart';
 import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
+import '../widgets/interface/hotkeys_interface.dart';
+import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/projects.dart';
 import '../widgets/interface/quickmenu_settings.dart';
 import '../widgets/interface/quickrun_settings.dart';
-import '../widgets/interface/interface_settings.dart';
-import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
@@ -71,9 +73,19 @@ class Interface extends StatefulWidget {
   InterfaceState createState() => InterfaceState();
 }
 
+class Sponsorship {
+  bool enabled = false;
+  String image = "";
+  String url = "";
+
+  @override
+  String toString() => '\nSponsorship(enabled: $enabled, image: $image, url: $url)';
+}
+
 class InterfaceState extends State<Interface> with SingleTickerProviderStateMixin {
   int currentPage = 0;
   PageController page = PageController();
+  final Sponsorship sponsor = Sponsorship();
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
@@ -107,6 +119,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     if (currentPage == -1) currentPage = 1;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     Globals.changingPages = false;
+    checkForSponsor();
     super.initState();
   }
 
@@ -116,8 +129,22 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     super.dispose();
   }
 
+  Future<void> checkForSponsor() async {
+    final http.Response response = await http.get(Uri.parse("https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json"));
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      if (!json.containsKey("enabled")) return;
+      sponsor
+        ..enabled = json["enabled"]
+        ..image = json["image"]
+        ..url = json["url"];
+    }
+    print(sponsor);
+  }
+
   @override
   Widget build(BuildContext context) {
+    checkForSponsor();
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
     }
@@ -374,18 +401,31 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
 
                                           //2 Donation Box
                                           SizedBox(
-                                            height: 200,
+                                            height: 240,
                                             child: Padding(
                                               padding: const EdgeInsets.fromLTRB(5, 0, 2, 5),
                                               child: Column(
                                                 mainAxisAlignment: MainAxisAlignment.end,
                                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                                 children: <Widget>[
+                                                  if (sponsor.enabled)
+                                                    Column(
+                                                      mainAxisAlignment: MainAxisAlignment.start,
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: <Widget>[
+                                                        const Center(
+                                                            child: Text("Sponsored by:", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
+                                                        InkWell(
+                                                          onTap: () {
+                                                            WinUtils.open(sponsor.url, userpowerShell: true);
+                                                          },
+                                                          child: Center(child: Image.network(sponsor.image, height: 90)),
+                                                        ),
+                                                        const Divider(height: 5, thickness: 1),
+                                                      ],
+                                                    ),
                                                   const Center(
-                                                      child: Text(
-                                                    "Coded by Far Se",
-                                                    style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500),
-                                                  )),
+                                                      child: Text("Coded by Far Se", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
                                                   Column(
                                                     mainAxisAlignment: MainAxisAlignment.start,
                                                     crossAxisAlignment: CrossAxisAlignment.start,
