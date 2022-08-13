@@ -882,13 +882,25 @@ class WinUtils {
 
 class WizardlyContextMenu {
   bool isWizardlyInstalledInContextMenu() {
+    final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
+    if (!xxkey.subkeyNames.contains('shell')) {
+      xxkey.createKey("shell");
+    }
+    xxkey.close();
     final RegistryKey key =
         Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
 
-    return key.subkeyNames.contains("tabame");
+    final bool output = key.subkeyNames.contains("tabame");
+    key.close();
+    return output;
   }
 
   void toggleWizardlyToContextMenu() {
+    final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
+    if (!xxkey.subkeyNames.contains('shell')) {
+      xxkey.createKey("shell");
+    }
+    xxkey.close();
     final RegistryKey key =
         Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
 
@@ -905,6 +917,7 @@ class WizardlyContextMenu {
     final RegistryKey command = subkey.createKey("command");
     command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
 
+    key.close();
     return;
   }
 }

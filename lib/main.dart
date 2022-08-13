@@ -18,6 +18,10 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
+  FlutterError.onError = (FlutterErrorDetails details) async {
+    WinUtils.msgBox(details.toString(), "error");
+    File("E:\\terror.txt").writeAsString("${details.exceptionAsString()} ${details.stack.toString()}", mode: FileMode.append);
+  };
   // List<String> arguments = <String>[r"E:\Projects\Tabame", "-interface", "-wizardly"];
   List<String> arguments = arguments2;
   /*

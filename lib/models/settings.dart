@@ -50,7 +50,7 @@ class Settings {
   String customLogo = "";
   String customSpash = "";
   String quickRunText = "";
-  String lastChangelog = "1.0";
+  String lastChangelog = "0.9";
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;

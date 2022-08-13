@@ -87,8 +87,8 @@ class SettingsPageState extends State<SettingsPage> {
                                       title: Text("Current Version: v${Globals.version}"),
                                       subtitle: Text("$updateResponse"),
                                       onTap: () {
-                                        updateResponse = "Latest version already installed!";
-
+                                        WinUtils.open("https://github.com/Far-Se/tabame/releases/");
+                                        // updateResponse = "Latest version already installed!";
                                         setState(() {});
                                         //globalSettings.checkForUpdate(context);
                                       },

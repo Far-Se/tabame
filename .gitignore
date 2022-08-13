@@ -60,3 +60,4 @@ pubspec.lock
 Tabame.lnk
 ##
 *.pem
+/key/

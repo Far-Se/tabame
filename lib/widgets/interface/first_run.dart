@@ -356,7 +356,7 @@ You can also scan folder sizes and delete files that are too big."""),
                           ),
                           child: const Center(
                             child: Text(
-                              "Save and Restart",
+                              "Save and Restart Application",
                               style: TextStyle(
                                 color: Colors.white,
                                 height: 1.001,
