@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -66,7 +65,11 @@ class Boxes {
           weekDays: <bool>[true, true, true, true, true, false, false],
           voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
-      await setStartOnSystemStartup(true);
+      if (kReleaseMode) {
+        await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+      } else {
+        await WinUtils.setStartUpShortcut(true);
+      }
     }
     //!fetch
     globalSettings
@@ -354,11 +357,9 @@ class Boxes {
     if (json.isEmpty) return -1;
     final Map<String, dynamic> lastVersion = json[0];
     if (lastVersion["tag_name"] == "v${Globals.version}") return 0;
-    print("different Version");
     String downloadLink = "";
     for (Map<String, dynamic> x in lastVersion["assets"]) {
       if (!x["name"].endsWith("zip")) continue;
-      print(x["browser_download_url"]);
       if (x.containsKey("browser_download_url")) {
         downloadLink = x["browser_download_url"];
         break;
@@ -367,7 +368,7 @@ class Boxes {
 
     if (downloadLink == "") return -1;
     final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
-    await downloadFile(downloadLink, fileName, () {
+    await WinUtils.downloadFile(downloadLink, fileName, () {
       final String dir = "${Directory.current.path}";
       WinUtils.open(
         'powershell.exe',
@@ -385,30 +386,6 @@ class Boxes {
   }
 
   //
-}
-
-Future<void> downloadFile(String url, String filename, Function callback) async {
-  http.Client httpClient = http.Client();
-  http.Request request = http.Request('GET', Uri.parse(url));
-  Future<http.StreamedResponse> response = httpClient.send(request);
-
-  List<List<int>> chunks = <List<int>>[];
-  response.asStream().listen((http.StreamedResponse r) {
-    r.stream.listen((List<int> chunk) {
-      chunks.add(chunk);
-    }, onDone: () async {
-      File file = File('$filename');
-      final Uint8List bytes = Uint8List(r.contentLength!);
-      int offset = 0;
-      for (List<int> chunk in chunks) {
-        bytes.setRange(offset, offset + chunk.length, chunk);
-        offset += chunk.length;
-      }
-      await file.writeAsBytes(bytes);
-      callback();
-      return;
-    });
-  });
 }
 
 class TrktivityFilter {

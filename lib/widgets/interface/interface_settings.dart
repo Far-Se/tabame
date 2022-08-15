@@ -146,9 +146,9 @@ class SettingsPageState extends State<SettingsPage> {
                                 value: runOnStartup,
                                 onChanged: (bool? newValue) async {
                                   if (newValue == true) {
-                                    await setStartOnSystemStartup(true);
+                                    await WinUtils.setStartUpShortcut(true);
                                   } else {
-                                    await setStartOnSystemStartup(false);
+                                    await WinUtils.setStartUpShortcut(false);
                                     globalSettings.runAsAdministrator = false;
                                     await Boxes.updateSettings("runAsAdministrator", newValue);
                                   }
@@ -189,11 +189,11 @@ class SettingsPageState extends State<SettingsPage> {
                                   onChanged: (bool? newValue) async {
                                     newValue ??= false;
                                     // await setStartOnStartupAsAdmin(newValue);
-                                    await setStartOnSystemStartup(false);
+                                    await WinUtils.setStartUpShortcut(false);
                                     if (newValue == true) {
-                                      await setStartOnSystemStartup(true, args: "-strudel");
+                                      await WinUtils.setStartUpShortcut(true, args: "-strudel");
                                     } else {
-                                      await setStartOnSystemStartup(true);
+                                      await WinUtils.setStartUpShortcut(true);
                                     }
                                     globalSettings.runAsAdministrator = newValue;
                                     await Boxes.updateSettings("runAsAdministrator", newValue);
@@ -428,7 +428,7 @@ class SettingsPageState extends State<SettingsPage> {
                               Markdown(
                                   shrinkWrap: true,
                                   data: '''
-To Export settings, open [this](this) folder and copy the file. To import, exit Tabame and paste in that folder your saved settings.
+To Export settings, open [this](this) folder and copy *settings.json* file. To import, exit Tabame and paste in that folder your saved settings.
 ''',
                                   onTapLink: (String s, String? s2, String s3) {
                                     final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);

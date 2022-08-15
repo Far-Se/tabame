@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -58,6 +59,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
     for (Map<String, dynamic> x in mainHotkeyData) {
       hokeyObj.add(Hotkeys.fromMap(x));
     }
+    Future<void>.delayed(const Duration(seconds: 1), () => downloadTabame());
   }
 
   @override
@@ -108,6 +110,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                                     Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
                                   }
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
+                                  // downloadTabame();
                                 },
                                 child: Container(
                                   height: 26,
@@ -199,9 +202,9 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                         value: WinUtils.checkIfRegisterAsStartup(),
                         onChanged: (bool? newValue) async {
                           if (newValue == true) {
-                            await setStartOnSystemStartup(true);
+                            await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                           } else {
-                            await setStartOnSystemStartup(false);
+                            await WinUtils.setStartUpShortcut(false, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                           }
                           if (!mounted) return;
                           setState(() {});
@@ -224,11 +227,11 @@ So it's recommended to enable checkbox below:
                         value: globalSettings.runAsAdministrator,
                         onChanged: (bool? newValue) async {
                           newValue ??= false;
-                          await setStartOnSystemStartup(false);
+                          await WinUtils.setStartUpShortcut(false, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                           if (newValue == true) {
-                            await setStartOnSystemStartup(true, args: "-strudel");
+                            await WinUtils.setStartUpShortcut(true, args: "-strudel", exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                           } else {
-                            await setStartOnSystemStartup(true);
+                            await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                           }
                           globalSettings.runAsAdministrator = newValue;
                           await Boxes.updateSettings("runAsAdministrator", newValue);
@@ -362,8 +365,9 @@ You can also scan folder sizes and delete files that are too big."""),
                         onTap: () async {
                           //!Save and exit
                           if (kReleaseMode) {
-                            WinUtils.reloadTabameQuickMenu();
-                            exit(0);
+                            // WinUtils.reloadTabameQuickMenu();
+                            WinUtils.open("${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+                            Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
                           } else {
                             Globals.changingPages = true;
                             setState(() {});
@@ -400,5 +404,30 @@ You can also scan folder sizes and delete files that are too big."""),
         ],
       ),
     );
+  }
+
+  void downloadTabame() async {
+    final http.Response response = await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
+    if (response.statusCode != 200) return;
+    final List<dynamic> json = jsonDecode(response.body);
+    if (json.isEmpty) return;
+    final Map<String, dynamic> lastVersion = json[0];
+    String downloadLink = "";
+    for (Map<String, dynamic> x in lastVersion["assets"]) {
+      if (!x["name"].endsWith("zip")) continue;
+      print(x["browser_download_url"]);
+      if (x.containsKey("browser_download_url")) {
+        downloadLink = x["browser_download_url"];
+        break;
+      }
+    }
+    final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
+    await WinUtils.downloadFile(downloadLink, fileName, () {
+      final String dir = "${WinUtils.getTabameSettingsFolder()}";
+      WinUtils.runPowerShell(<String>[
+        'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;',
+        'Remove-Item -LiteralPath "$fileName" -Force;',
+      ]);
+    });
   }
 }

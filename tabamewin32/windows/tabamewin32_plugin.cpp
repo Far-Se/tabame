@@ -896,6 +896,20 @@ void SetStartOnSystemStartup(bool fAutoStart, std::string exePath, int ShowCmd, 
                 hres = ppf->Save(wStartMenuPath.c_str(), TRUE);
                 ppf->Release();
             }
+            // Add it to startmenu.
+            WCHAR startMenuPath2[MAX_PATH];
+            result = SHGetFolderPathW(NULL, CSIDL_COMMON_STARTMENU, NULL, 0, startMenuPath2);
+            std::wstring wStartMenuPath2 = std::wstring(startMenuPath2);
+            wStartMenuPath2.append(L"\\");
+            wStartMenuPath2.append(wExe);
+            psl->SetArguments(L"");
+            IPersistFile *ppf2 = NULL;
+            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf2));
+            if (SUCCEEDED(hres))
+            {
+                hres = ppf2->Save(wStartMenuPath2.c_str(), TRUE);
+                ppf2->Release();
+            }
             psl->Release();
         }
     }

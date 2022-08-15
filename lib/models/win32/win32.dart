@@ -9,6 +9,8 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
+import 'package:http/http.dart' as http;
+
 import 'package:flutter/foundation.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:win32/win32.dart' hide Size, Point;
@@ -539,7 +541,14 @@ class WinUtils {
   }
 
   static String getTabameSettingsFolder() {
-    return "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame";
+    final String folder = "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame";
+    if (!Directory(folder).existsSync()) Directory(folder).createSync();
+    return folder;
+  }
+
+  static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
+    exePath ??= "${WinUtils.getTabameSettingsFolder()}\\tabame.exe";
+    setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
 
   static Future<List<String>> getTaskbarPinnedApps() async {
@@ -936,6 +945,29 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
     }
     return defaultResult;
   } */
+  static Future<void> downloadFile(String url, String filename, Function callback) async {
+    http.Client httpClient = http.Client();
+    http.Request request = http.Request('GET', Uri.parse(url));
+    Future<http.StreamedResponse> response = httpClient.send(request);
+
+    List<List<int>> chunks = <List<int>>[];
+    response.asStream().listen((http.StreamedResponse r) {
+      r.stream.listen((List<int> chunk) {
+        chunks.add(chunk);
+      }, onDone: () async {
+        File file = File('$filename');
+        final Uint8List bytes = Uint8List(r.contentLength!);
+        int offset = 0;
+        for (List<int> chunk in chunks) {
+          bytes.setRange(offset, offset + chunk.length, chunk);
+          offset += chunk.length;
+        }
+        await file.writeAsBytes(bytes);
+        callback();
+        return;
+      });
+    });
+  }
 }
 
 class WizardlyContextMenu {
