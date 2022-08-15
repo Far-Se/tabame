@@ -419,6 +419,14 @@ Future<void> enableViews(bool enabled) async {
   await audioMethodChannel.invokeMethod('views', arguments);
 }
 
+Future<void> nativeShellOpen(String path, {String arguments = ""}) async {
+  final Map<String, dynamic> mArgs = <String, dynamic>{
+    'path': path,
+    'arguments': arguments,
+  };
+  await audioMethodChannel.invokeMethod('shellOpen', mArgs);
+}
+
 class MousePos {
   final Point<int> start;
   final Point<int> end;

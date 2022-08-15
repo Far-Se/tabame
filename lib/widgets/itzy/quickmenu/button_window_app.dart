@@ -43,6 +43,7 @@ class WindowsAppButton extends StatelessWidget {
             ),
             onTap: () {
               WinUtils.openAndFocus(path, centered: true, usePowerShell: true);
+              // WinUtils.shellOpen(path);
               if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
             },
           );

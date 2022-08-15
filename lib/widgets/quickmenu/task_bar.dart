@@ -255,6 +255,14 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                 Win32.activateWindow(window.hWnd);
                                 Globals.lastFocusedWinHWND = window.hWnd;
                               },
+                              onVerticalDragEnd: (DragEndDetails e) {
+                                if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
+                                  WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
+                                }
+                                QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                Win32.activateWindow(window.hWnd);
+                                Globals.lastFocusedWinHWND = window.hWnd;
+                              },
                               onSecondaryTap: () async {
                                 Menu menu = Menu(
                                   items: <MenuItem>[

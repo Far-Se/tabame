@@ -21,6 +21,8 @@ class SearchTextWidget extends StatefulWidget {
 }
 
 class SearchTextWidgetState extends State<SearchTextWidget> {
+  // List<Map<String, List<Occurance>>> allOccurances = <Map<String, List<Occurance>>>[];
+  List<String> filesOccurance = <String>[];
   List<String> loadedFiles = <String>[];
   String infoText = "";
 
@@ -182,7 +184,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           data: markdownOccurrences == "" ? "No Occurances have been found!" : markdownOccurrences,
           onTapLink: (String str1, String? str2, String str3) {
             if (openInCode) {
-              WinUtils.open("code", arguments: '--goto "$str1:$str3"');
+              WinUtils.open("code", arguments: '--goto "${filesOccurance[int.parse(str2!)]}:$str3"');
             } else {
               WinUtils.open(str1);
             }
@@ -236,10 +238,13 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
         if (skip) continue;
       }
       final List<Occurance> occurances = searchUseRegex ? await searchInFileRegex(file) : await searchInFile(file);
+      // allOccurances.add(<String, List<Occurance>>{file: occurances});
       if (occurances.isNotEmpty) {
+        filesOccurance.add(file);
+
         for (Occurance occurrence in occurances) {
           markdownOccurrences += '''
-${occurrence.line}:${occurrence.col} -> [${occurrence.file.replaceAll(r"\.", r"\\.")}](${occurrence.file} "${occurrence.line}:${occurrence.col}") :
+${occurrence.line}:${occurrence.col} -> [$file](${(filesOccurance.length - 1)} "${occurrence.line}:${occurrence.col}") :
 ```
 ${occurrence.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
 ```
@@ -248,6 +253,7 @@ ${occurrence.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
         totalFound += occurances.length;
       }
       totalProcessed++;
+
       ping(PingInfo(totalFiles: totalProcessed, totalFound: totalFound));
     }
     searchFinished = true;
@@ -270,7 +276,7 @@ ${occurrence.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
       final int line = lines.length;
       final int col = lines.last.length + 1;
       final List<String> nextLines = fileString.substring(match.start, match.start + 500).split('\n');
-      output.add(Occurance(file: fileName, col: col, line: line, lines: <String>[
+      output.add(Occurance(col: col, line: line, lines: <String>[
         lines.length == 1 ? "" : lines[lines.length - 2],
         lines.last + nextLines.first,
         nextLines.length == 1 ? "" : nextLines[1],
@@ -307,7 +313,7 @@ ${occurrence.lines.join("\n").replaceAll("```", "\\`\\`\\`")}
           }
         }
         final List<String> lines = <String>[i > 0 ? fileLines[i - 1] : "", originalLine, i < fileLines.length - 1 ? fileLines[i + 1] : ""];
-        output.add(Occurance(line: i, col: index, lines: lines, file: fileName));
+        output.add(Occurance(line: i, col: index, lines: lines));
         index = line.indexOf(searchText, index + 1);
         ticks++;
         if (ticks > 10000) break;
@@ -367,12 +373,10 @@ class PingInfo {
 }
 
 class Occurance {
-  String file;
   int line;
   int col;
   List<String> lines;
   Occurance({
-    required this.file,
     required this.line,
     required this.col,
     required this.lines,
@@ -380,6 +384,6 @@ class Occurance {
 
   @override
   String toString() {
-    return 'Occurance(file: $file, line: $line, col: $col, lines: $lines)';
+    return 'Occurance(file: line: $line, col: $col, lines: $lines)';
   }
 }

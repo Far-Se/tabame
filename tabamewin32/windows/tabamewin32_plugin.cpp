@@ -665,6 +665,7 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
     {
         WinEvent("foreground", hwnd);
     }
+
     if (isTrcktivityEnabled && dwEvent == EVENT_OBJECT_NAMECHANGE)
     {
         if ((int)((DWORD_PTR)hwnd) <= 0)
@@ -690,13 +691,109 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
         }
     }
 }
+//#h red
+///!!
+///!!
+///!!
+///!!
+///!!
+///!!
+//#e
+void FindDesktopFolderView(REFIID riid, void **ppv)
+{
+    CComPtr<IShellWindows> spShellWindows;
+    spShellWindows.CoCreateInstance(CLSID_ShellWindows);
 
-///!!
-///!!
-///!!
-///!!
-///!!
-///!!
+    CComVariant vtLoc(CSIDL_DESKTOP);
+    CComVariant vtEmpty;
+    long lhwnd;
+    CComPtr<IDispatch> spdisp;
+    spShellWindows->FindWindowSW(
+        &vtLoc, &vtEmpty,
+        SWC_DESKTOP, &lhwnd, SWFO_NEEDDISPATCH, &spdisp);
+
+    CComPtr<IShellBrowser> spBrowser;
+    CComQIPtr<IServiceProvider>(spdisp)->QueryService(SID_STopLevelBrowser,
+                                                      IID_PPV_ARGS(&spBrowser));
+
+    CComPtr<IShellView> spView;
+    spBrowser->QueryActiveShellView(&spView);
+
+    spView->QueryInterface(riid, ppv);
+}
+void GetDesktopAutomationObject(REFIID riid, void **ppv)
+{
+    CComPtr<IShellView> spsv;
+    FindDesktopFolderView(IID_PPV_ARGS(&spsv));
+    CComPtr<IDispatch> spdispView;
+    spsv->GetItemObject(SVGIO_BACKGROUND, IID_PPV_ARGS(&spdispView));
+    spdispView->QueryInterface(riid, ppv);
+}
+void ShellExecuteFromExplorer(
+    PCWSTR pszFile,
+    PCWSTR pszParameters = nullptr,
+    PCWSTR pszDirectory = nullptr,
+    PCWSTR pszOperation = nullptr,
+    int nShowCmd = SW_SHOWNORMAL)
+{
+    CComPtr<IShellFolderViewDual> spFolderView;
+    GetDesktopAutomationObject(IID_PPV_ARGS(&spFolderView));
+    CComPtr<IDispatch> spdispShell;
+    spFolderView->get_Application(&spdispShell);
+    CComQIPtr<IShellDispatch2>(spdispShell)
+        ->ShellExecute(CComBSTR(pszFile),
+                       CComVariant(pszParameters ? pszParameters : L""),
+                       CComVariant(pszDirectory ? pszDirectory : L""),
+                       CComVariant(pszOperation ? pszOperation : L""),
+                       CComVariant(nShowCmd));
+}
+void bagmiaspulainmatadeWindowsprost(wstring file)
+{
+
+    HWND hwnd = GetShellWindow();
+
+    DWORD pid;
+    GetWindowThreadProcessId(hwnd, &pid);
+
+    HANDLE process =
+        OpenProcess(PROCESS_CREATE_PROCESS, FALSE, pid);
+
+    SIZE_T size;
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
+    auto p = (PPROC_THREAD_ATTRIBUTE_LIST) new char[size];
+
+    InitializeProcThreadAttributeList(p, 1, 0, &size);
+    UpdateProcThreadAttribute(p, 0,
+                              PROC_THREAD_ATTRIBUTE_PARENT_PROCESS,
+                              &process, sizeof(process),
+                              nullptr, nullptr);
+
+    // wchar_t cmd[] = L"C:\\Users\\Far Se\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe";
+    // loop through each character in file and add it to cmd
+    // create variable cmd with length of file + 1 for null terminator
+    wchar_t *cmd = new wchar_t[file.length() + 1];
+    for (int i = 0; i < file.size(); i++)
+    {
+        cmd[i + 1] = file[i];
+    }
+
+    // convert
+    // const wchar_t *cmd = file.c_str();
+    STARTUPINFOEX siex = {};
+    siex.lpAttributeList = p;
+    siex.StartupInfo.cb = sizeof(siex);
+    PROCESS_INFORMATION pi;
+
+    CreateProcessW(cmd, cmd, nullptr, nullptr, FALSE,
+                   CREATE_NEW_CONSOLE | EXTENDED_STARTUPINFO_PRESENT,
+                   nullptr, nullptr, &siex.StartupInfo, &pi);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    delete[](char *) p;
+    CloseHandle(process);
+}
+
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
     return 0;
@@ -1873,8 +1970,20 @@ namespace tabamewin32
             isViewsEnabled = enabled;
             result->Success(flutter::EncodableValue(true));
         }
-
         //#e
+        else if (method_name.compare("shellOpen") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            string path = std::get<std::string>(args.at(flutter::EncodableValue("path")));
+            // string parameters = std::get<std::string>(args.at(flutter::EncodableValue("parameters")));
+            wstring wpath = Encoding::Utf8ToWide(path);
+            // wstring wparameters = Encoding::Utf8ToWide(parameters);
+            // ShellExecuteFromExplorer(wpath.c_str(), wparameters.c_str());
+            // const wchar_t *wcs = wpath.c_str();
+            bagmiaspulainmatadeWindowsprost(wpath);
+            result->Success(flutter::EncodableValue(true));
+        }
+
         else
         {
             result->NotImplemented();

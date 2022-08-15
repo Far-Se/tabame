@@ -12,6 +12,7 @@ import 'package:win32/win32.dart' hide Point;
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
 import '../../models/settings.dart';
+import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
@@ -99,6 +100,19 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
           },
           title: Text("Hotkeys", style: Theme.of(context).textTheme.headline4),
           leading: Container(height: double.infinity, child: const Icon(Icons.add, size: 30)),
+          trailing: Tooltip(
+            message: "Insert Default hotkey, if you messed it up",
+            preferBelow: false,
+            child: InkWell(
+              onTap: () {
+                remap.add(Hotkeys.fromMap(mainHotkeyData[0])
+                  ..key = "NoKey"
+                  ..modifiers = <String>[]);
+                setState(() {});
+              },
+              child: Container(width: 40, height: double.infinity, child: const Icon(Icons.perm_device_information_outlined)),
+            ),
+          ),
         ),
         ...List<Widget>.generate(
           remap.length,
@@ -802,7 +816,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                       ),
                   ],
                 ),
-                const Divider(height: 5, thickness: 1),
+                const Divider(height: 10, thickness: 1),
                 const Text("Trigger:"),
                 DropdownButton<String>(
                   value: HotKeyInfo.triggers[widget.hotkey.triggerType.index],

@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -142,10 +143,12 @@ class Boxes {
       }
 
       //? Volume
-      globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
+      // globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
+      WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
       if (globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
         WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
       }
+      if (globalSettings.autoUpdate) checkForUpdates();
     }
     if (globalSettings.page == TPage.quickmenu) {
       if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
@@ -304,11 +307,11 @@ class Boxes {
     bool updating = false;
     Timer.periodic(const Duration(milliseconds: 100), (Timer timer) async {
       if (updating) return;
-      final String x = File(Boxes.pref.fileName).readAsStringSync();
-      if (savedFileText != x) {
+      final String newSavedFileText = File(Boxes.pref.fileName).readAsStringSync();
+      if (savedFileText != newSavedFileText) {
         updating = true;
-        savedFileText = x;
-        await Boxes.registerBoxes(reload: true);
+        savedFileText = newSavedFileText;
+        // await Boxes.registerBoxes(reload: true);
         updating = false;
         final String prevThemeLight = Boxes.pref.getString("previewThemeLight") ?? "";
         if (prevThemeLight.isNotEmpty) {
@@ -344,7 +347,68 @@ class Boxes {
     quickTimers.add(quick);
   }
 
+  static Future<int> checkForUpdates() async {
+    final http.Response response = await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
+    if (response.statusCode != 200) return -1;
+    final List<dynamic> json = jsonDecode(response.body);
+    if (json.isEmpty) return -1;
+    final Map<String, dynamic> lastVersion = json[0];
+    if (lastVersion["tag_name"] == "v${Globals.version}") return 0;
+    print("different Version");
+    String downloadLink = "";
+    for (Map<String, dynamic> x in lastVersion["assets"]) {
+      if (!x["name"].endsWith("zip")) continue;
+      print(x["browser_download_url"]);
+      if (x.containsKey("browser_download_url")) {
+        downloadLink = x["browser_download_url"];
+        break;
+      }
+    }
+
+    if (downloadLink == "") return -1;
+    final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
+    await downloadFile(downloadLink, fileName, () {
+      final String dir = "${Directory.current.path}";
+      WinUtils.open(
+        'powershell.exe',
+        arguments: 'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;'
+            'Start-Process "$dir\\tabame.exe";'
+            'Remove-Item -LiteralPath "$fileName" -Force;',
+      );
+      if (kReleaseMode) {
+        WinUtils.closeMainTabame();
+        exit(0);
+      }
+    });
+
+    return 1;
+  }
+
   //
+}
+
+Future<void> downloadFile(String url, String filename, Function callback) async {
+  http.Client httpClient = http.Client();
+  http.Request request = http.Request('GET', Uri.parse(url));
+  Future<http.StreamedResponse> response = httpClient.send(request);
+
+  List<List<int>> chunks = <List<int>>[];
+  response.asStream().listen((http.StreamedResponse r) {
+    r.stream.listen((List<int> chunk) {
+      chunks.add(chunk);
+    }, onDone: () async {
+      File file = File('$filename');
+      final Uint8List bytes = Uint8List(r.contentLength!);
+      int offset = 0;
+      for (List<int> chunk in chunks) {
+        bytes.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
+      }
+      await file.writeAsBytes(bytes);
+      callback();
+      return;
+    });
+  });
 }
 
 class TrktivityFilter {

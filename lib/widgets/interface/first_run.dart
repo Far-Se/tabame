@@ -55,7 +55,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
   @override
   void initState() {
     super.initState();
-    for (Map<String, dynamic> x in hotkeyMap) {
+    for (Map<String, dynamic> x in mainHotkeyData) {
       hokeyObj.add(Hotkeys.fromMap(x));
     }
   }
@@ -79,10 +79,10 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text("First Run settings", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2)),
+          Center(child: Text("First Run settings", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2))),
           LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
             return ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth, maxHeight: 900),
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth, maxHeight: 960),
               child: PageView(
                 controller: pageController,
                 allowImplicitScrolling: false,
@@ -102,9 +102,11 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                             if (hotkey.isNotEmpty)
                               InkWell(
                                 onTap: () {
-                                  hokeyObj.first.key = hotkey;
-                                  hokeyObj.first.modifiers = modifiers;
-                                  Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
+                                  if (kReleaseMode) {
+                                    hokeyObj.first.key = hotkey;
+                                    hokeyObj.first.modifiers = modifiers;
+                                    Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
+                                  }
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
                                 },
                                 child: Container(
@@ -183,11 +185,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                             }),
                           ),
                         const SizedBox(height: 5),
-                        Markdown(
-                          shrinkWrap: true,
-                          selectable: true,
-                          data: data2,
-                        ),
+                        Markdown(shrinkWrap: true, selectable: true, data: data2),
                       ],
                     ),
                   ),
@@ -237,6 +235,32 @@ So it's recommended to enable checkbox below:
                           if (!mounted) return;
                           setState(() {});
                         },
+                      ),
+                      const Divider(height: 20, thickness: 1),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            flex: 2,
+                            child: CheckboxListTile(
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: const Text("Auto Update"),
+                              value: globalSettings.autoUpdate,
+                              onChanged: (bool? newValue) async {
+                                globalSettings.autoUpdate = newValue ?? true;
+                                Boxes.updateSettings("autoUpdate", globalSettings.autoUpdate);
+                                if (!mounted) return;
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          const Expanded(
+                            flex: 4,
+                            child: Padding(
+                              padding: EdgeInsets.all(15.0),
+                              child: Text("Auto update when there is a version so you do not have to manually install it."),
+                            ),
+                          )
+                        ],
                       ),
                       const Divider(height: 20, thickness: 1),
                       Row(
@@ -328,10 +352,10 @@ You can also scan folder sizes and delete files that are too big."""),
                       Center(child: Text("Thanks for using Tabame", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2))),
                       const SizedBox(height: 10),
                       Center(
-                          child: Text("Tabame has way more customizable features then one listed above.",
+                          child: Text("After restarting I recommend to open settings and browse through all sidebar tabs",
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
                       Center(
-                          child: Text("After restarting I recommend you to open settings and browse through all sidebar tabs",
+                          child: Text("Tabame has way more customizable features then one listed above!",
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
                       const SizedBox(height: 10),
                       InkWell(

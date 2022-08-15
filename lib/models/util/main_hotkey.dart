@@ -1,6 +1,6 @@
 // ignore_for_file: always_specify_types
 
-final List<Map<String, dynamic>> hotkeyMap = <Map<String, dynamic>>[
+final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
   {
     "key": "F9",
     "modifiers": ["CTRL", "ALT"],

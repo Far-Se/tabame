@@ -431,7 +431,7 @@ class HotKeyInfo {
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
     "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
-    "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),
+    // "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),
     "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
     "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
   };

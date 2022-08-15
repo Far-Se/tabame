@@ -26,6 +26,9 @@ import 'registry.dart';
 // vscode-fold=2
 class Win32 {
   static void activateWindow(int hWnd, {bool forced = false}) {
+    keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    AttachThreadInput(GetCurrentThreadId(), GetWindowThreadProcessId(hWnd, nullptr), TRUE);
+
     final Pointer<WINDOWPLACEMENT> place = calloc<WINDOWPLACEMENT>();
     GetWindowPlacement(hWnd, place);
 
@@ -54,9 +57,11 @@ class Win32 {
       SwitchToThisWindow(hWnd, TRUE);
       SetForegroundWindow(hWnd);
     }
-    // SetFocus(hWnd);
-    // SetActiveWindow(hWnd);
-    SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
+
+    AttachThreadInput(GetCurrentThreadId(), GetWindowThreadProcessId(hWnd, nullptr), FALSE);
+    keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    // Future<void>.delayed(const Duration(milliseconds: 50), () => keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0));
+    // SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
     // SendMessage(hWnd, WM_ACTIVATE, 0, 0);
   }
 
@@ -371,6 +376,9 @@ class Win32 {
 
     if (globalSettings.showQuickMenuAtTaskbarLevel == true) vertical -= 30;
     await WindowManager.instance.setPosition(Offset(horizontal + 1, vertical));
+    // SetForegroundWindow(hWnd);
+    // WindowManager.instance.blur();
+    WindowManager.instance.focus();
 
     free(anchorPoint);
     free(popupWindowPosition);
@@ -522,6 +530,14 @@ class WinUtils {
     return path;
   }
 
+  static String getTempFolder() {
+    final LPWSTR out = wsalloc(MAX_PATH);
+    GetTempPath(MAX_PATH, out);
+    final String result = out.toDartString();
+    free(out);
+    return result;
+  }
+
   static String getTabameSettingsFolder() {
     return "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame";
   }
@@ -593,9 +609,51 @@ class WinUtils {
     return output;
   }
 
+  static Future<void> shellOpen(String path, {String? arguments}) async {
+    await nativeShellOpen(path, arguments: arguments ?? "");
+  }
+
   static void open(String path, {String? arguments, bool parseParamaters = false, bool userpowerShell = false}) {
     if (userpowerShell && arguments == null && !parseParamaters && globalSettings.runAsAdministrator && !path.startsWith("http")) {
-      WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
+      //! jesus fuckin christ microsoft is dumb as fuck.
+      //! you can gain admin priv with one command, but there is no command to de-elevate yourself or app you are launching.
+      //! only way I've found is to start powershell that starts explorer THAT starts the file.
+      runPowerShell(<String>['explorer.exe "$path"']);
+
+      /*$newProc = new-object System.Diagnostics.ProcessStartInfo "PowerShell"
+# Specify what to run, you need the full path after explorer.exe
+$newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+[System.Diagnostics.Process]::Start($newProc)*/
+      // io.Process.run("explorer.exe", <String>['"$path"']);
+      // io.Process.run("runas", <String>["/trustlevel:0x20000", '"$path"']);
+      // ShellExecute(NULL, TEXT("runas"), TEXT(path), TEXT("/trustlevel:0x20000"), nullptr, SW_SHOWNORMAL);
+
+      // io.Process.run("explorer.exe", <String>['"$path"']);
+
+      // return;
+      // ShellExecute(hwnd, lpOperation, lpFile, lpParameters, lpDirectory, nShowCmd)
+
+      // final io.File vbs = File("${getTabameSettingsFolder()}\\bat.vbs");
+      // if (!vbs.existsSync()) {
+      //   vbs.writeAsStringSync('Set shell = CreateObject("WScript.Shell")\nshell.Run "run_aux.bat"');
+      // }
+      // final io.File bat = File("${getTabameSettingsFolder()}\\vbs.bat");
+      // if (!bat.existsSync()) {
+      //   bat.writeAsStringSync("@echo off\npushd %~dp0\ncscript bat.vbs");
+      // }
+      // final String run = "${getTabameSettingsFolder()}\\run_aux.bat";
+      // File(run).writeAsStringSync('START "" "$path"');
+
+      // io.Process.run("${getTabameSettingsFolder()}\\vbs.bat", <String>[]);
+      // runPowerShell(['-c', '"$path"']);
+      // io.Process.run(
+      //   "powershell",
+      //   <String>['-c "$path"'],
+      //   // includeParentEnvironment: false,
+      //   runInShell: true,
+      // );
+      // msgBox(path, "as powershell");
+      // WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
       return;
     }
     if (parseParamaters) {
@@ -651,11 +709,11 @@ class WinUtils {
     setTaskbarVisibility(Globals.taskbarVisible);
   }
 
-  static void moveDesktop(DesktopDirection direction, {bool classMethod = true}) {
-    if (classMethod) {
-      moveDesktopMethod(direction);
-      return;
-    }
+  static void moveDesktop(DesktopDirection direction, {bool classMethod = false}) {
+    // if (classMethod) {
+    //   moveDesktopMethod(direction);
+    //   return;
+    // }
     String key = "RIGHT";
     if (direction == DesktopDirection.left) key = "LEFT";
     WinKeys.send("{#WIN}{#CTRL}{$key}");

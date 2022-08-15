@@ -18,29 +18,23 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
+  // if (kReleaseMode) {
   FlutterError.onError = (FlutterErrorDetails details) async {
-    WinUtils.msgBox(details.toString(), "error");
-    File("E:\\terror.txt").writeAsString("${details.exceptionAsString()} ${details.stack.toString()}", mode: FileMode.append);
+    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("${details.exceptionAsString()}\n${details.stack.toString()}", mode: FileMode.append);
   };
-  // List<String> arguments = <String>[r"E:\Projects\Tabame", "-interface", "-wizardly"];
+  // }
   List<String> arguments = arguments2;
-  /*
-  E:\Projects\Tabame
-  -interface
-  -wizardly
-  */
+  // WinUtils.msgBox('"${arguments.join('" "')}"', "Args");
   if (arguments.isNotEmpty) {
+    if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
     String argString = arguments.join(" ");
-    if (argString.indexOf('"') > 0 && argString.contains('"')) argString = '"$argString';
-    List<String> auxArgs = argString.split(' ');
-    globalSettings.args = <String>[...auxArgs];
+    globalSettings.args = <String>[...arguments];
     if (argString.contains("interface")) {
       globalSettings.page = TPage.interface;
     } else if (argString.contains("views")) {
       globalSettings.page = TPage.views;
     }
   }
-  // WinUtils.msgBox(arguments.join("\n"), "tite");
 
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
@@ -50,19 +44,15 @@ Future<void> main(List<String> arguments2) async {
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
     globalSettings.args.remove('-strudel');
     globalSettings.args.add('-tryadmin');
-    WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
+    // WinUtils.msgBox('"${globalSettings.args.join('" "')}"', "Args");
+    WinUtils.run(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
     Timer(const Duration(seconds: 1), () => exit(0));
     runApp(EmptyWidget());
     return;
-    // WinUtils.run(Platform.resolvedExecutable, arguments: globalSettings.args.join(' '));
   }
   if (Globals.debugHotkeysEnabled || kReleaseMode) {
     await NativeHotkey.register();
     //!hook
-    // Timer.periodic(Duration(minutes: 15), (Timer t) async {
-    //   await NativeHotkey.unHook();
-    //   await NativeHotkey.hook();
-    // });
   }
 
   /// ? Window

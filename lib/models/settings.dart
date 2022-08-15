@@ -13,6 +13,7 @@ import 'package:local_notifier/local_notifier.dart';
 
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
+import 'globals.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
 
@@ -30,7 +31,6 @@ class Settings {
   bool autoUpdate = false;
   bool showTrayBar = true;
   bool showWeather = true;
-  bool betaVersions = false;
   bool viewsEnabled = false;
   bool previewTheme = false;
   bool showPowerShell = true;
@@ -50,7 +50,7 @@ class Settings {
   String customLogo = "";
   String customSpash = "";
   String quickRunText = "";
-  String lastChangelog = "0.9";
+  String lastChangelog = Globals.version;
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;

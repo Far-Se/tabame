@@ -75,7 +75,7 @@ class SettingsPageState extends State<SettingsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
-                              const ListTile(title: Text("Version")),
+                              ListTile(title: Text("Version", style: Theme.of(context).textTheme.bodyLarge)),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -86,8 +86,21 @@ class SettingsPageState extends State<SettingsPage> {
                                       leading: Container(height: double.infinity, child: const Tooltip(message: "Check for update", child: Icon(Icons.refresh))),
                                       title: Text("Current Version: v${Globals.version}"),
                                       subtitle: Text("$updateResponse"),
-                                      onTap: () {
-                                        WinUtils.open("https://github.com/Far-Se/tabame/releases/");
+                                      onTap: () async {
+                                        final int r = await Boxes.checkForUpdates();
+                                        if (r == -1) {
+                                          updateResponse = "Failed to fetch!";
+                                          setState(() {});
+                                          WinUtils.open("https://github.com/Far-Se/tabame/releases/");
+                                          return;
+                                        }
+                                        if (r == 0) {
+                                          updateResponse = "Latest version installed!";
+                                          setState(() {});
+                                        } else {
+                                          updateResponse = "New version detected! Downloading...";
+                                          setState(() {});
+                                        }
                                         // updateResponse = "Latest version already installed!";
                                         setState(() {});
                                         //globalSettings.checkForUpdate(context);
@@ -109,18 +122,24 @@ class SettingsPageState extends State<SettingsPage> {
                                             Boxes.updateSettings("autoUpdate", globalSettings.autoUpdate);
                                           }),
                                         ),
-                                        /* CheckboxListTile(
-                                          controlAffinity: ListTileControlAffinity.leading,
-                                          title: const Text("Beta Versions"),
-                                          value: globalSettings.betaVersions,
-                                          onChanged: (bool? newValue) async => setState(() => globalSettings.betaVersions = !globalSettings.betaVersions),
-                                        ), */
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
-                              const ListTile(title: Text("General Settings")),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: InkWell(
+                                  onTap: () {
+                                    WinUtils.open("https://github.com/Far-Se/tabame/releases/");
+                                  },
+                                  child: const Text(
+                                    "Repository link",
+                                    style: TextStyle(color: Colors.blue, fontStyle: FontStyle.italic, fontSize: 13),
+                                  ),
+                                ),
+                              ),
+                              ListTile(title: Text("General Settings", style: Theme.of(context).textTheme.bodyLarge)),
                               CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
                                 title: const Text("Run on Startup"),
@@ -200,7 +219,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   mainAxisSize: MainAxisSize.max,
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
-                                    const ListTile(title: Text("Volume OSD Style")),
+                                    ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.bodyLarge)),
                                     RadioListTile<VolumeOSDStyle>(
                                       title: const Text('Normal Volume OSD'),
                                       value: VolumeOSDStyle.normal,
@@ -291,7 +310,7 @@ class SettingsPageState extends State<SettingsPage> {
                                   mainAxisSize: MainAxisSize.max,
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
-                                    const ListTile(title: Text("Set Theme")),
+                                    ListTile(title: Text("Set Theme", style: Theme.of(context).textTheme.bodyLarge)),
                                     RadioListTile<ThemeType>(
                                       title: const Text("System Theme"),
                                       value: ThemeType.system,

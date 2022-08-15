@@ -119,6 +119,7 @@ class TopBar extends StatelessWidget {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
+                                Boxes.checkForUpdates();
                                 // final ScreenState x = WinUtils.checkUserScreenState();
                               },
                               child: const Icon(Icons.textsms_outlined),

@@ -445,6 +445,7 @@ It records keystrokes, mouse movement and active Window.
                                 isDense: true,
                                 value: selectedDay,
                                 items: allDates
+                                    .take(30)
                                     .map<DropdownMenuItem<String>>(
                                         (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
                                     .toList(),
@@ -671,7 +672,10 @@ It records keystrokes, mouse movement and active Window.
                                         mainAxisAlignment: MainAxisAlignment.start,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          Expanded(child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false)),
+                                          Expanded(
+                                              child: Padding(
+                                                  padding: const EdgeInsets.only(right: 5.0),
+                                                  child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false))),
                                           SizedBox(width: 80, child: Text(track.value.timeFormat)),
                                           SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
                                           SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
@@ -752,7 +756,10 @@ It records keystrokes, mouse movement and active Window.
                                         mainAxisAlignment: MainAxisAlignment.start,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          Expanded(child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false)),
+                                          Expanded(
+                                              child: Padding(
+                                                  padding: const EdgeInsets.only(right: 5.0),
+                                                  child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false))),
                                           SizedBox(width: 80, child: Text(track.value.timeFormat)),
                                           SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
                                           SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
@@ -769,7 +776,7 @@ It records keystrokes, mouse movement and active Window.
                     ],
                   ),
                 ),
-                if (startDate.isEmpty && selectedDay.isNotEmpty)
+                if ((startDate.isEmpty && selectedDay.isNotEmpty) || (startDate.isNotEmpty && startDate == endDate))
                   LayoutBuilder(
                     builder: (BuildContext context, BoxConstraints constraints) {
                       return Column(
@@ -887,7 +894,7 @@ It records keystrokes, mouse movement and active Window.
                       );
                     },
                   ),
-                if (startDate.isNotEmpty && dailyStats.isNotEmpty)
+                if (startDate.isNotEmpty && dailyStats.isNotEmpty && startDate != endDate)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -944,7 +951,12 @@ It records keystrokes, mouse movement and active Window.
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    Expanded(child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))))),
+                                    Expanded(
+                                        child: Padding(
+                                      padding: const EdgeInsets.only(right: 5.0),
+                                      child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))),
+                                          maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
+                                    )),
                                     SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).timeFormat)),
                                     SizedBox(width: 80, child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),
                                     SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).keyboard.formatInt())),
@@ -965,13 +977,13 @@ It records keystrokes, mouse movement and active Window.
                               const SizedBox(height: 20),
                               Text("Daily Average", style: Theme.of(context).textTheme.headline6),
                               Text("Active hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.time).average.toInt())}",
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
                               Text("Idle hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.idleTime).average.toInt())}",
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
                               Text("Key Strokes: ${dailyStats.values.map((DMTRack e) => e.keyboard).average.toInt().formatInt()}",
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
                               Text("Mouse Pings: ${dailyStats.values.map((DMTRack e) => e.mouse).average.toInt().formatInt()}",
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
                             ],
                           ))
                     ],
