@@ -850,21 +850,72 @@ void SetWallpaperColor(int color)
     }
     CoUninitialize();
 }
+
+void CreateShortcut(bool create, std::wstring exePath, std::wstring destPath, int ShowCmd, std::string args)
+{
+    // WCHAR startMenuPath[MAX_PATH];
+    // HRESULT result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startMenuPath);
+    std::wstring wExe = exePath.substr(exePath.find_last_of(L"\\") + 1);
+    // std::wstring wExe = Encoding::Utf8ToWide(exe);
+    wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
+
+    std::wstring wStartMenuPath = std::wstring(destPath);
+    wStartMenuPath.append(L"\\");
+    wStartMenuPath.append(wExe);
+    if (!create)
+    {
+        std::string startMenupath = Encoding::WideToUtf8(wStartMenuPath.c_str());
+        std::remove(startMenupath.c_str());
+        return;
+    }
+
+    CoInitialize(NULL);
+    IShellLink *psl = NULL;
+    HRESULT hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, reinterpret_cast<void **>(&psl));
+
+    if (SUCCEEDED(hres))
+    {
+        // TCHAR pszExePath[MAX_PATH];
+
+        // TCHAR *pszExePath = W2T(exePath.c_str());
+        TCHAR *pszExePath = (wchar_t *)exePath.c_str();
+        // MultiByteToWideChar(CP_ACP, 0, exePath.c_str(), -1, pszExePath, MAX_PATH);
+
+        psl->SetPath(pszExePath);
+        PathRemoveFileSpec(pszExePath);
+        psl->SetWorkingDirectory(pszExePath);
+        psl->SetShowCmd(ShowCmd);
+        if (!args.empty())
+        {
+            std::wstring wArgs = Encoding::Utf8ToWide(args);
+            psl->SetArguments(wArgs.c_str());
+        }
+        IPersistFile *ppf = NULL;
+        hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf));
+        if (SUCCEEDED(hres))
+        {
+            hres = ppf->Save(wStartMenuPath.c_str(), TRUE);
+            ppf->Release();
+        }
+        psl->Release();
+    }
+    CoUninitialize();
+}
 void SetStartOnSystemStartup(bool fAutoStart, std::string exePath, int ShowCmd, std::string args)
 {
-    WCHAR startMenuPath[MAX_PATH];
-    HRESULT result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startMenuPath);
+    WCHAR RunOnStartup[MAX_PATH];
+    HRESULT result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, RunOnStartup);
     std::string exe = exePath.substr(exePath.find_last_of("\\") + 1);
     std::wstring wExe = Encoding::Utf8ToWide(exe);
     wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
 
-    std::wstring wStartMenuPath = std::wstring(startMenuPath);
-    wStartMenuPath.append(L"\\");
-    wStartMenuPath.append(wExe);
+    std::wstring wRunOnStartup = std::wstring(RunOnStartup);
+    wRunOnStartup.append(L"\\");
+    wRunOnStartup.append(wExe);
     if (!fAutoStart)
     {
-        std::string startMenupath = Encoding::WideToUtf8(wStartMenuPath.c_str());
-        std::remove(startMenupath.c_str());
+        std::string RunOnStartup2 = Encoding::WideToUtf8(wRunOnStartup.c_str());
+        std::remove(RunOnStartup2.c_str());
         return;
     }
 
@@ -889,26 +940,20 @@ void SetStartOnSystemStartup(bool fAutoStart, std::string exePath, int ShowCmd, 
                 std::wstring wArgs = Encoding::Utf8ToWide(args);
                 psl->SetArguments(wArgs.c_str());
             }
-            IPersistFile *ppf = NULL;
-            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf));
-            if (SUCCEEDED(hres))
-            {
-                hres = ppf->Save(wStartMenuPath.c_str(), TRUE);
-                ppf->Release();
-            }
             // Add it to startmenu.
             WCHAR startMenuPath2[MAX_PATH];
             result = SHGetFolderPathW(NULL, CSIDL_COMMON_STARTMENU, NULL, 0, startMenuPath2);
             std::wstring wStartMenuPath2 = std::wstring(startMenuPath2);
             wStartMenuPath2.append(L"\\");
             wStartMenuPath2.append(wExe);
-            psl->SetArguments(L"");
-            IPersistFile *ppf2 = NULL;
-            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf2));
+
+            IPersistFile *ppf = NULL;
+            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void **>(&ppf));
             if (SUCCEEDED(hres))
             {
-                hres = ppf2->Save(wStartMenuPath2.c_str(), TRUE);
-                ppf2->Release();
+                hres = ppf->Save(wRunOnStartup.c_str(), TRUE);
+                hres = ppf->Save(wStartMenuPath2.c_str(), TRUE);
+                ppf->Release();
             }
             psl->Release();
         }
@@ -1823,8 +1868,27 @@ namespace tabamewin32
             int ShowCmd = std::get<int>(args.at(flutter::EncodableValue("showCmd")));
             std::string startArgs = std::get<std::string>(args.at(flutter::EncodableValue("args")));
 
-            SetStartOnSystemStartup(enabled, exePath, ShowCmd, startArgs);
+            WCHAR startUpFolder[MAX_PATH];
+            SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startUpFolder);
+            CreateShortcut(enabled, Encoding::Utf8ToWide(exePath), startUpFolder, ShowCmd, startArgs);
+            // WCHAR startMenuFolder[MAX_PATH];
+            // SHGetFolderPathW(NULL, CSIDL_COMMON_STARTMENU, NULL, 0, startMenuFolder);
+            // CreateShortcut(enabled, Encoding::Utf8ToWide(exePath), startMenuFolder, ShowCmd, startArgs);
+            // SetStartOnSystemStartup(enabled, exePath, ShowCmd, startArgs);
 
+            result->Success(flutter::EncodableValue(""));
+        }
+        else if (method_name.compare("createShortcut") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+
+            std::string exePath = std::get<std::string>(args.at(flutter::EncodableValue("exePath")));
+            std::string destPath = std::get<std::string>(args.at(flutter::EncodableValue("destPath")));
+            bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
+            int ShowCmd = std::get<int>(args.at(flutter::EncodableValue("showCmd")));
+            std::string startArgs = std::get<std::string>(args.at(flutter::EncodableValue("args")));
+
+            CreateShortcut(enabled, Encoding::Utf8ToWide(exePath), Encoding::Utf8ToWide(destPath), ShowCmd, startArgs);
             result->Success(flutter::EncodableValue(""));
         }
         else if (method_name.compare("setStartOnStartupAsAdmin") == 0)

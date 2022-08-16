@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
@@ -65,11 +66,11 @@ class Boxes {
           weekDays: <bool>[true, true, true, true, true, false, false],
           voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
-      if (kReleaseMode) {
-        await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
-      } else {
-        await WinUtils.setStartUpShortcut(true);
-      }
+      // if (kReleaseMode) {
+      //   await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+      // } else {
+      //   await WinUtils.setStartUpShortcut(true);
+      // }
     }
     //!fetch
     globalSettings
@@ -101,6 +102,13 @@ class Boxes {
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? globalSettings.usePowerShellAsToastNotification
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // * always after schedule
 
+    // ? Just Installed
+    final bool justInstalled = pref.getBool("justInstalled") ?? false;
+    if (justInstalled) {
+      updateSettings("justInstalled", false);
+      final String destPath = WinUtils.getKnownFolderCLSID(CSIDL_COMMON_STARTMENU);
+      createShortcut("${WinUtils.getTabameSettingsFolder()}\\tabame.exe", destPath);
+    }
     // ? Trktivity
     if (!Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").existsSync()) {
       Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").createSync(recursive: true);

@@ -369,6 +369,18 @@ Future<void> setStartOnSystemStartup(bool enabled, {String? exePath, int showCmd
   return;
 }
 
+Future<void> createShortcut(String exePath, String destPath, {bool create = true, int showCmd = 1, String args = ""}) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'exePath': exePath,
+    'destPath': destPath,
+    'enabled': create,
+    'showCmd': showCmd,
+    'args': args,
+  };
+  await audioMethodChannel.invokeMethod('createShortcut', arguments);
+  return;
+}
+
 Future<void> setStartOnStartupAsAdmin(bool enabled, {String? exePath}) async {
   exePath ??= Platform.resolvedExecutable;
   final Map<String, dynamic> arguments = <String, dynamic>{

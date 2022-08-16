@@ -59,7 +59,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
     for (Map<String, dynamic> x in mainHotkeyData) {
       hokeyObj.add(Hotkeys.fromMap(x));
     }
-    Future<void>.delayed(const Duration(seconds: 1), () => downloadTabame());
+    // Future<void>.delayed(const Duration(seconds: 1), () => downloadTabame());
   }
 
   @override
@@ -103,14 +103,16 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                             Text("Before anything, you need to set the main hotkey:", style: Theme.of(context).textTheme.button?.copyWith(height: 2)),
                             if (hotkey.isNotEmpty)
                               InkWell(
-                                onTap: () {
+                                onTap: () async {
                                   if (kReleaseMode) {
                                     hokeyObj.first.key = hotkey;
                                     hokeyObj.first.modifiers = modifiers;
                                     Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
                                   }
+                                  await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+                                  Boxes.updateSettings("justInstalled", true);
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
-                                  // downloadTabame();
+                                  downloadTabame();
                                 },
                                 child: Container(
                                   height: 26,
