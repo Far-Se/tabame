@@ -52,6 +52,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
   final FocusNode focusNode = FocusNode();
   int trktivityIdleState = 0;
+  QuickRun? theQuickRun;
   @override
   void initState() {
     super.initState();
@@ -431,6 +432,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
+          theQuickRun = QuickRun(key: UniqueKey());
           setState(() {});
         }
       },
@@ -481,7 +483,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
                                 const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                               ]),
                           child: globalSettings.quickRunState != 0
-                              ? const QuickRun()
+                              ? theQuickRun
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.max,

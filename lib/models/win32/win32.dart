@@ -28,7 +28,8 @@ import 'registry.dart';
 // vscode-fold=2
 class Win32 {
   static void activateWindow(int hWnd, {bool forced = false}) {
-    keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    // keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    WinKeys.single("VK_MENU", KeySentMode.down);
     AttachThreadInput(GetCurrentThreadId(), GetWindowThreadProcessId(hWnd, nullptr), TRUE);
 
     final Pointer<WINDOWPLACEMENT> place = calloc<WINDOWPLACEMENT>();
@@ -60,8 +61,9 @@ class Win32 {
       SetForegroundWindow(hWnd);
     }
 
+    // keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
     AttachThreadInput(GetCurrentThreadId(), GetWindowThreadProcessId(hWnd, nullptr), FALSE);
-    keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    WinKeys.single("VK_MENU", KeySentMode.up);
     // Future<void>.delayed(const Duration(milliseconds: 50), () => keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0));
     // SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
     // SendMessage(hWnd, WM_ACTIVATE, 0, 0);
@@ -408,6 +410,9 @@ class Win32 {
   }
 
   static int parent(int hWnd) {
+    int gW = GetWindow(hWnd, 4);
+    if (gW != 0 || gW != GetDesktopWindow()) return gW;
+
     return GetAncestor(hWnd, 2);
   }
 
@@ -547,7 +552,7 @@ class WinUtils {
   }
 
   static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
-    exePath ??= "${WinUtils.getTabameSettingsFolder()}\\tabame.exe";
+    exePath ??= Platform.resolvedExecutable;
     setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
 

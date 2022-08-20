@@ -130,6 +130,15 @@ Future<void> registerAll() async {
 typedef Maa = MainAxisAlignment;
 typedef Caa = CrossAxisAlignment;
 
+extension NumExtension on num {
+  String formatNum() {
+    final NumberFormat format = NumberFormat("#,##0.00", "en_US");
+    final String nr = format.format(this);
+    if (nr.endsWith(".00")) return nr.substring(0, nr.lastIndexOf(".00"));
+    return nr;
+  }
+}
+
 extension IntegerExtension on int {
   String formatTime() {
     final int hour = (this ~/ 60);

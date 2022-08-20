@@ -42,14 +42,16 @@ Future<void> main(List<String> arguments2) async {
   await registerAll();
 
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
-    globalSettings.args.remove('-strudel');
     globalSettings.args.add('-tryadmin');
     // WinUtils.msgBox('"${globalSettings.args.join('" "')}"', "Args");
     WinUtils.run(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
     Timer(const Duration(seconds: 1), () => exit(0));
     runApp(EmptyWidget());
     return;
-  }
+  } /*  else if (!globalSettings.args.join(' ').contains('-refreshed') && globalSettings.args.join(' ').contains('-refreshed')) {
+    globalSettings.args.add('-refreshed');
+    WinUtils.open(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
+  } */
   if (Globals.debugHotkeysEnabled || kReleaseMode) {
     await NativeHotkey.register();
     //!hook

@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:math';
@@ -121,7 +122,7 @@ enum TriggerType {
   duration,
 }
 
-class KeyMap {
+class KeyMap with TabameListener {
   bool enabled;
   bool windowUnderMouse;
   String name;
@@ -198,99 +199,115 @@ class KeyMap {
         }
       }
     }
-    int delayed = 1;
     if (windowUnderMouse) {
       final Pointer<POINT> lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
       int hWnd = WindowFromPoint(lpPoint.ref);
-      hWnd = GetAncestor(hWnd, 2);
       free(lpPoint);
-      if (GetForegroundWindow() != hWnd) {
-        delayed = 150;
-        SetForegroundWindow(hWnd);
-        SetFocus(hWnd);
-        SetActiveWindow(hWnd);
-        SendMessage(hWnd, WM_UPDATEUISTATE, 2 & 0x2, 0);
+      if (GetWindow(hWnd, 4) != 0) {
+        hWnd = GetWindow(hWnd, 4);
+      } else {
+        hWnd = GetAncestor(hWnd, 2);
+      }
+      int fHwnd = GetForegroundWindow();
+      if (GetWindow(fHwnd, 4) != 0) {
+        fHwnd = GetWindow(fHwnd, 4);
+      } else {
+        fHwnd = GetAncestor(fHwnd, 2);
+      }
+      if (fHwnd != hWnd) {
+        Win32.activateWindow(hWnd);
+        int ticks = 0;
+        Timer.periodic(const Duration(milliseconds: 2), (Timer t) {
+          ticks++;
+          if (ticks >= 200) t.cancel();
+          if (GetForegroundWindow() != hWnd) return;
+          t.cancel();
+          applyActionsForWindow();
+        });
+        return;
       }
     }
-    Future<void>.delayed(Duration(milliseconds: delayed), () {
-      for (KeyAction action in actions) {
-        if (action.type == ActionType.hotkey) {
-          final List<String> keys = action.value.split('+');
-          String sendKey = "";
-          for (String key in keys) {
-            if (key.length > 1) {
-              sendKey += "{#$key}";
-            } else {
-              sendKey += "$key";
-            }
-          }
-          WinKeys.send(sendKey);
+    applyActionsForWindow();
+  }
 
-          //
-        } else if (action.type == ActionType.sendKeys) {
-          WinKeys.send(action.value);
-        } else if (action.type == ActionType.sendClick) {
-          int hwnd = GetForegroundWindow();
-          final Pointer<POINT> lpPoint = calloc<POINT>();
-          GetCursorPos(lpPoint);
-          if (windowUnderMouse) {
-            hwnd = WindowFromPoint(lpPoint.ref);
-            hwnd = GetAncestor(hwnd, 2);
+  void applyActionsForWindow() {
+    for (KeyAction action in actions) {
+      if (action.type == ActionType.hotkey) {
+        final List<String> keys = action.value.split('+');
+        String sendKey = "";
+        for (String key in keys) {
+          if (key.length > 1) {
+            sendKey += "{#$key}";
+          } else {
+            sendKey += "$key";
           }
-          final int sX = lpPoint.ref.x;
-          final int sY = lpPoint.ref.y;
-          free(lpPoint);
-          final Pointer<RECT> lpRect = calloc<RECT>();
-          GetWindowRect(hwnd, lpRect);
-
-          final ClickAction click = ClickAction.fromJson(action.value);
-          int x = 0;
-          int y = 0;
-          if (click.anchorType == AnchorType.topLeft) {
-            x = lpRect.ref.left + click.x;
-            y = lpRect.ref.top + click.y;
-          } else if (click.anchorType == AnchorType.topRight) {
-            x = lpRect.ref.right - click.x;
-            y = lpRect.ref.top + click.y;
-          } else if (click.anchorType == AnchorType.bottomLeft) {
-            x = lpRect.ref.left + click.x;
-            y = lpRect.ref.bottom - click.y;
-          } else if (click.anchorType == AnchorType.bottomRight) {
-            x = lpRect.ref.right - click.x;
-            y = lpRect.ref.bottom - click.y;
-          }
-          free(lpRect);
-          //
-          SetCursorPos(x, y);
-          Future<void>.delayed(const Duration(milliseconds: 500), () {
-            final Pointer<INPUT> input = calloc<INPUT>();
-            input.ref.type = INPUT_MOUSE;
-            // input.ref.mi.dx = x;
-            // input.ref.mi.dy = y;
-            input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
-            input.ref.mi.mouseData = 0;
-            input.ref.mi.dwExtraInfo = NULL;
-            input.ref.mi.time = 0;
-            SendInput(1, input, sizeOf<INPUT>());
-            SetCursorPos(sX, sY);
-            free(input);
-          });
-          //
-        } else if (action.type == ActionType.tabameFunction) {
-          if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
-            HotKeyInfo.tabameFunctionsMap[action.value]!();
-          }
-          //
-        } else if (action.type == ActionType.setVar && action.value.isNotEmpty) {
-          final List<dynamic> split = jsonDecode(action.value);
-          if (split.length == 2) {
-            Boxes.pref.setString("k_${split[0]}", split[1]);
-          }
-          //
         }
+        WinKeys.send(sendKey);
+
+        //
+      } else if (action.type == ActionType.sendKeys) {
+        WinKeys.send(action.value);
+      } else if (action.type == ActionType.sendClick) {
+        int hwnd = GetForegroundWindow();
+        final Pointer<POINT> lpPoint = calloc<POINT>();
+        GetCursorPos(lpPoint);
+        if (windowUnderMouse) {
+          hwnd = WindowFromPoint(lpPoint.ref);
+          hwnd = GetAncestor(hwnd, 2);
+        }
+        final int sX = lpPoint.ref.x;
+        final int sY = lpPoint.ref.y;
+        free(lpPoint);
+        final Pointer<RECT> lpRect = calloc<RECT>();
+        GetWindowRect(hwnd, lpRect);
+
+        final ClickAction click = ClickAction.fromJson(action.value);
+        int x = 0;
+        int y = 0;
+        if (click.anchorType == AnchorType.topLeft) {
+          x = lpRect.ref.left + click.x;
+          y = lpRect.ref.top + click.y;
+        } else if (click.anchorType == AnchorType.topRight) {
+          x = lpRect.ref.right - click.x;
+          y = lpRect.ref.top + click.y;
+        } else if (click.anchorType == AnchorType.bottomLeft) {
+          x = lpRect.ref.left + click.x;
+          y = lpRect.ref.bottom - click.y;
+        } else if (click.anchorType == AnchorType.bottomRight) {
+          x = lpRect.ref.right - click.x;
+          y = lpRect.ref.bottom - click.y;
+        }
+        free(lpRect);
+        //
+        SetCursorPos(x, y);
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          final Pointer<INPUT> input = calloc<INPUT>();
+          input.ref.type = INPUT_MOUSE;
+          // input.ref.mi.dx = x;
+          // input.ref.mi.dy = y;
+          input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
+          input.ref.mi.mouseData = 0;
+          input.ref.mi.dwExtraInfo = NULL;
+          input.ref.mi.time = 0;
+          SendInput(1, input, sizeOf<INPUT>());
+          SetCursorPos(sX, sY);
+          free(input);
+        });
+        //
+      } else if (action.type == ActionType.tabameFunction) {
+        if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
+          HotKeyInfo.tabameFunctionsMap[action.value]!();
+        }
+        //
+      } else if (action.type == ActionType.setVar && action.value.isNotEmpty) {
+        final List<dynamic> split = jsonDecode(action.value);
+        if (split.length == 2) {
+          Boxes.pref.setString("k_${split[0]}", split[1]);
+        }
+        //
       }
-    });
+    }
   }
 
   KeyMap copyWith({

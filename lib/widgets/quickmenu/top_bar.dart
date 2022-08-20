@@ -29,6 +29,7 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Map<String, Widget> widgets = <String, Widget>{
       "TaskManagerButton": const TaskManagerButton(),
+      "SpotifyButton": const SpotifyButton(),
       "VirtualDesktopButton": const VirtualDesktopButton(),
       "ToggleTaskbarButton": const ToggleTaskbarButton(),
       "PinWindowButton": const PinWindowButton(),
@@ -36,7 +37,6 @@ class TopBar extends StatelessWidget {
       "AlwaysAwakeButton": const AlwaysAwakeButton(),
       "ChangeThemeButton": const ChangeThemeButton(),
       "HideDesktopFilesButton": const HideDesktopFilesButton(),
-      "SpotifyButton": const SpotifyButton(),
       "ToggleHiddenFilesButton": const ToggleHiddenFilesButton()
     };
     List<Widget> showWidgets = <Widget>[];
@@ -118,10 +118,7 @@ class TopBar extends StatelessWidget {
                           child: Tooltip(
                             message: "Testing",
                             child: InkWell(
-                              onTap: () async {
-                                Boxes.checkForUpdates();
-                                // final ScreenState x = WinUtils.checkUserScreenState();
-                              },
+                              onTap: () async {},
                               child: const Icon(Icons.textsms_outlined),
                             ),
                           ),

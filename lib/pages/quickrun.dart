@@ -158,6 +158,7 @@ class QuickRunState extends State<QuickRun> {
                         controller: textController,
                         onSubmitted: (String input) => onSubmitted(input),
                         onChanged: (String input) async {
+                          input = input.trimLeft();
                           if (input.isEmpty) {
                             result = ParserResult();
                             for (RunShortcuts x in shortcuts) {
@@ -166,7 +167,6 @@ class QuickRunState extends State<QuickRun> {
                             setState(() {});
                             return;
                           }
-                          input = input.trimLeft();
                           String command = "";
                           List<String> x = getCommandFromString(input);
                           if (x.isEmpty) {
@@ -485,7 +485,7 @@ class Parsers {
         result.error = e.toString();
       }
       mathVars[mathVars.keys.elementAt(i)] = x;
-      result.results.add("${mathVars.keys.elementAt(i)} = $x");
+      result.results.add("${mathVars.keys.elementAt(i)} = ${x.formatNum()}");
     }
     return result;
   }
@@ -536,7 +536,7 @@ class Parsers {
       return result..error = "Format: NUMBER unit to unit";
     }
     final RegExpMatch matches = reg.firstMatch(input)!;
-    final double number = double.parse(matches[1]!);
+    final double number = double.tryParse(matches[1]!) ?? 0;
     String from = matches[2]!;
     String to = "";
     if (from == "f") from = "fahrenheit";
@@ -904,7 +904,7 @@ class Parsers {
     } else {
       final RegExpMatch? reg = RegExp(r'(\w{3,4}) ([\d\.\,]+) to (\w{3,4})').firstMatch(input);
       if (reg != null) {
-        amount = double.parse(reg[2]!);
+        amount = double.tryParse(reg[2]!) ?? 0;
         from = reg[1]!;
         to = reg[3]!;
       } else {
@@ -930,14 +930,28 @@ class Parsers {
 
   final TimeZones timeZone = TimeZones();
   Future<ParserResult> timezones(String input) async {
-    // input = input.trim();
     final ParserResult result = ParserResult();
     DateTime dateTime = DateTime.now().toUtc();
 
     int jan = DateTime(dateTime.year, 0, 1).timeZoneOffset.inMinutes;
     int jul = DateTime(dateTime.year, 6, 1).timeZoneOffset.inMinutes;
     bool dst = max(jan, jul) != dateTime.timeZoneOffset.inMinutes;
-    final List<List<String>> timeZones = timeZone.getTime(input);
+    String timezone = "";
+    int hour = 0;
+    if (RegExp(r'^[0-9:]+ ').hasMatch(input)) {
+      final List<String> oInput = input.splitFirst(' ');
+      final String time = oInput[0];
+      if (time.contains(':')) {
+        final List<String> tSplit = time.split(':');
+        hour = int.tryParse(tSplit[0]) ?? 0;
+      } else {
+        hour = int.tryParse(time) ?? 0;
+      }
+      timezone = oInput[1];
+    } else {
+      timezone = input;
+    }
+    final List<List<String>> timeZones = timeZone.getTime(timezone);
     if (timeZones.isNotEmpty) {
       for (List<String> zone in timeZones) {
         final List<String> offset = zone.removeAt(0).split(':');
@@ -945,6 +959,13 @@ class Parsers {
         final int hours = int.parse(offset[0].substring(1));
         final int minutes = int.parse(offset[1]);
         final int offsetTime = hours * 60 + minutes;
+        if (hour != 0) {
+          if (hour > dateTime.hour) {
+            dateTime = dateTime.add(Duration(hours: dateTime.hour - hour));
+          } else {
+            dateTime = dateTime.subtract(Duration(hours: dateTime.hour - hour));
+          }
+        }
         if (type == "+") {
           dateTime = dateTime.add(Duration(minutes: offsetTime));
         } else {
@@ -996,7 +1017,7 @@ class Parsers {
     if (input.isEmpty) return result..error = "Format [nr or pharagraphs]\n[short, medium, long, verylong]\nOpt:[headers, plaintext, decorate, prude]";
     final RegExpMatch? reg = RegExp(r'^(\d+) (short|medium|long|verylong) ?((headers|plaintext|decorate|prude)|$)').firstMatch(input);
     if (reg != null) {
-      final int nr = int.parse(reg[1]!);
+      final int nr = int.tryParse(reg[1]!) ?? 0;
       final String type = reg[2]!;
       String opt = "";
       if (reg.groupCount == 4) {
@@ -1234,7 +1255,7 @@ class Parsers {
     }
     final RegExpMatch? timeMessage = RegExp(r'^(\d+) (.*?)$').firstMatch(input);
     if (timeMessage == null) return result..results.addAll(<String>["Format: t [minutes] message", "Format: t [minutes] [a,n,m]:message"]);
-    final int minutes = int.parse(timeMessage[1]!);
+    final int minutes = int.tryParse(timeMessage[1]!) ?? 0;
     input = timeMessage[2]!;
     final RegExpMatch? regExp = RegExp(r'^(\w):').firstMatch(input);
     int type = 0;

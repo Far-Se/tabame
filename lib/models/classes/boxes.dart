@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
@@ -66,11 +65,6 @@ class Boxes {
           weekDays: <bool>[true, true, true, true, true, false, false],
           voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
-      // if (kReleaseMode) {
-      //   await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
-      // } else {
-      //   await WinUtils.setStartUpShortcut(true);
-      // }
     }
     //!fetch
     globalSettings
@@ -106,8 +100,6 @@ class Boxes {
     final bool justInstalled = pref.getBool("justInstalled") ?? false;
     if (justInstalled) {
       updateSettings("justInstalled", false);
-      final String destPath = WinUtils.getKnownFolderCLSID(CSIDL_COMMON_STARTMENU);
-      createShortcut("${WinUtils.getTabameSettingsFolder()}\\tabame.exe", destPath);
     }
     // ? Trktivity
     if (!Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").existsSync()) {
@@ -324,11 +316,12 @@ class Boxes {
         savedFileText = newSavedFileText;
         // await Boxes.registerBoxes(reload: true);
         updating = false;
-        final String prevThemeLight = Boxes.pref.getString("previewThemeLight") ?? "";
+        final Map<String, dynamic> js = jsonDecode(savedFileText);
+        final String prevThemeLight = js["flutter.previewThemeLight"] ?? "";
         if (prevThemeLight.isNotEmpty) {
           globalSettings.lightTheme = ThemeColors.fromJson(prevThemeLight);
         }
-        final String prevThemeDark = Boxes.pref.getString("previewThemeDark") ?? "";
+        final String prevThemeDark = js["flutter.previewThemeDark"] ?? "";
         if (prevThemeDark.isNotEmpty) {
           globalSettings.darkTheme = ThemeColors.fromJson(prevThemeDark);
         }

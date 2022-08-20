@@ -46,7 +46,7 @@ class InterfaceRunConverterState extends State<InterfaceRunConverter> {
                   link: "",
                   tooltip: "Unit Converter",
                   info: "Default is u . Supports area, length, mass, pressure, temperature, time, volume ",
-                  example: <String>["66*20/12", "c 10 inch to cm", "c 2+3*sqrt(4)"]),
+                  example: <String>["u 1 in to cm", "u 1 mass"]),
               RunShortCutInfo(
                 onChanged: (String newStr) {
                   globalSettings.run.currency = newStr;

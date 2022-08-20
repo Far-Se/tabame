@@ -188,13 +188,6 @@ class SettingsPageState extends State<SettingsPage> {
                                   value: globalSettings.runAsAdministrator,
                                   onChanged: (bool? newValue) async {
                                     newValue ??= false;
-                                    // await setStartOnStartupAsAdmin(newValue);
-                                    await WinUtils.setStartUpShortcut(false);
-                                    if (newValue == true) {
-                                      await WinUtils.setStartUpShortcut(true, args: "-strudel");
-                                    } else {
-                                      await WinUtils.setStartUpShortcut(true);
-                                    }
                                     globalSettings.runAsAdministrator = newValue;
                                     await Boxes.updateSettings("runAsAdministrator", newValue);
                                     if (!mounted) return;

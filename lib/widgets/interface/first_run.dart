@@ -59,6 +59,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
     for (Map<String, dynamic> x in mainHotkeyData) {
       hokeyObj.add(Hotkeys.fromMap(x));
     }
+    WinUtils.setStartUpShortcut(true);
     // Future<void>.delayed(const Duration(seconds: 1), () => downloadTabame());
   }
 
@@ -109,10 +110,8 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                                     hokeyObj.first.modifiers = modifiers;
                                     Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
                                   }
-                                  await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
                                   Boxes.updateSettings("justInstalled", true);
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
-                                  downloadTabame();
                                 },
                                 child: Container(
                                   height: 26,
@@ -204,9 +203,9 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                         value: WinUtils.checkIfRegisterAsStartup(),
                         onChanged: (bool? newValue) async {
                           if (newValue == true) {
-                            await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+                            await WinUtils.setStartUpShortcut(true);
                           } else {
-                            await WinUtils.setStartUpShortcut(false, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+                            await WinUtils.setStartUpShortcut(false);
                           }
                           if (!mounted) return;
                           setState(() {});
@@ -229,12 +228,6 @@ So it's recommended to enable checkbox below:
                         value: globalSettings.runAsAdministrator,
                         onChanged: (bool? newValue) async {
                           newValue ??= false;
-                          await WinUtils.setStartUpShortcut(false, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
-                          if (newValue == true) {
-                            await WinUtils.setStartUpShortcut(true, args: "-strudel", exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
-                          } else {
-                            await WinUtils.setStartUpShortcut(true, exePath: "${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
-                          }
                           globalSettings.runAsAdministrator = newValue;
                           await Boxes.updateSettings("runAsAdministrator", newValue);
                           if (!mounted) return;
@@ -367,8 +360,7 @@ You can also scan folder sizes and delete files that are too big."""),
                         onTap: () async {
                           //!Save and exit
                           if (kReleaseMode) {
-                            // WinUtils.reloadTabameQuickMenu();
-                            WinUtils.open("${WinUtils.getTabameSettingsFolder()}\\tabame.exe");
+                            WinUtils.reloadTabameQuickMenu();
                             Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
                           } else {
                             Globals.changingPages = true;

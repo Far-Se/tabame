@@ -682,7 +682,7 @@ class RunAPI {
 }
 
 class RunCommands {
-  String calculator = r"c ;^[0-9\.\,]+ ?[+\-*\\%]";
+  String calculator = r"c ;^[0-9\.\,]+ ?[+\-*/%\|]";
   String color = r"col ;^(#|0x|rgb)";
   String unit = r"u ";
   String currency = r"cur ;\d+ \w{3,4} to \w{3,4}";

@@ -104,12 +104,8 @@ class ThemeSetupState extends State<ThemeSetup> {
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
-                        if (e % 10 < 1 || (globalSettings.darkTheme.gradientAlpha - e).abs() > 10) {
-                          globalSettings.darkTheme.gradientAlpha = e.toInt();
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
-                        } else {
-                          globalSettings.darkTheme.gradientAlpha = e.toInt();
-                        }
+                        globalSettings.darkTheme.gradientAlpha = e.toInt();
+                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.darkTheme.quickMenuBoldFont = e;
@@ -136,12 +132,8 @@ class ThemeSetupState extends State<ThemeSetup> {
                         setState(() {});
                       },
                       onGradiendChanged: (double e) {
-                        if (e % 10 < 1 || (globalSettings.lightTheme.gradientAlpha - e).abs() > 10) {
-                          globalSettings.lightTheme.gradientAlpha = e.toInt();
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
-                        } else {
-                          globalSettings.lightTheme.gradientAlpha = e.toInt();
-                        }
+                        globalSettings.lightTheme.gradientAlpha = e.toInt();
+                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                       },
                       quickMenuBoldChanged: (bool e) {
                         globalSettings.lightTheme.quickMenuBoldFont = e;
@@ -243,6 +235,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             child: Slider(
               min: 199,
               max: 255,
+              divisions: 25,
               value: widget.currentColors.gradientAlpha.toDouble(),
               onChanged: (double e) {
                 changed = true;
