@@ -12,26 +12,65 @@ Main purpose of this app is to be a replacement for the Taskbar, but in meanwhil
 | <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> 	|
 |------	|------	|
 
+# How to Install
+
+Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in right sidebar. Download either installer.ps1 or tabame.zip
+
+## Easiest way to install:
+1. Download **installer.ps1**
+2. Open your **Downloads folder**
+3. Right click and press **"Run with PowerShell"**
+4. Complete main setup and it's done 😄 
+
+
+| ![image](https://user-images.githubusercontent.com/20853986/184855270-4bf0f8d9-ec81-4b22-aee6-1b1df97fc459.png) | ![image](https://user-images.githubusercontent.com/20853986/184855277-f484dc64-b0e9-4468-afb0-44c0ed8f0c0a.png) |
+|------|------|
+
+## Manual Install:
+1. Download zip archive.
+2. Extract it in a folder you want.
+3. Open tabame.exe
+
+### Make your own:
+This project is open source, which means you can compile your own version.
+1. Install Flutter for Windows
+2. Open Visual Studio Installer, on Individual Components select ATL Dependencies and install.
+3. Open a console in Tabame folder and type `flutter build windows`
+4. The exe is in `build\windows\runner\Release`
+5. You can open vsCode an debug the app.
+
+# Written in Flutter
+Which means it consumes very little resources and disk space. 
+
+On idle cpu is 0.0% and when in use is below 3%.
+
+Ram usage is below 50 MB, usually around 40 MB.
+
+It takes only 26.5 MB of space.
+
+**Works very fast, no interruptions**
+
+
 # Main Features
 ## [🎛️ QuickMenu](#%EF%B8%8F-quickmenu)  
 
-[🎚️ QuickRun](#quickrun) 
+## [🎚️ QuickRun](#%EF%B8%8F-quickrun) 
 
-[🎨 Theme](#theme) 
+## [🎨 Theme](#-theme) 
 
-[🎶 Audio](#audio) 
+## [🎶 Audio](#-audio) 
 
-[⌨️ Hotkeys](#hotkeys) 
+## [⌨️ Hotkeys](#%EF%B8%8F-hotkeys) 
 
-[📕 Projects](#projects)
+## [📕 Projects](#-projects)
 
-[📝 Trktivity](#trktivity)
+## [📝 Trktivity](#-trktivity)
 
-[📅 Tasks](#tasks)
+## [📅 Tasks](#-tasks)
 
-[✨ Wizardly](#wizardly)
+## [✨ Wizardly](#-wizardly)
 
-[🙃 Outro](#outro)
+## [🙃 Outro](#-outro)
 
 # **🎛️ QuickMenu**
 
