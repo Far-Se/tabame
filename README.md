@@ -52,25 +52,25 @@ It takes only 26.5 MB of space.
 
 
 # Main Features
-## [🎛️ QuickMenu](#%EF%B8%8F-quickmenu)  
+[🎛️ QuickMenu](#%EF%B8%8F-quickmenu)  
 
-## [🎚️ QuickRun](#%EF%B8%8F-quickrun) 
+[🎚️ QuickRun](#%EF%B8%8F-quickrun) 
 
-## [🎨 Theme](#-theme) 
+[🎨 Theme](#-theme) 
 
-## [🎶 Audio](#-audio) 
+[🎶 Audio](#-audio) 
 
-## [⌨️ Hotkeys](#%EF%B8%8F-hotkeys) 
+[⌨️ Hotkeys](#%EF%B8%8F-hotkeys) 
 
-## [📕 Projects](#-projects)
+[📕 Projects](#-projects)
 
-## [📝 Trktivity](#-trktivity)
+[📝 Trktivity](#-trktivity)
 
-## [📅 Tasks](#-tasks)
+[📅 Tasks](#-tasks)
 
-## [✨ Wizardly](#-wizardly)
+[✨ Wizardly](#-wizardly)
 
-## [🙃 Outro](#-outro)
+[🙃 Outro](#-outro)
 
 # **🎛️ QuickMenu**
 
