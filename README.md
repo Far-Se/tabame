@@ -12,7 +12,7 @@ Main purpose of this app is to be a replacement for the Taskbar, but in meanwhil
 | <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> 	|
 |------	|------	|
 
-# How to Install
+# 📥 How to Install
 
 Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in right sidebar. Download either installer.ps1 or tabame.zip
 
@@ -31,11 +31,11 @@ Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in
 2. Extract it in a folder you want.
 3. Open tabame.exe
 
-### How to uninstall:
+### 📤 How to uninstall:
 If you installed it with installer.ps1 Open file explorer, in adress bar write `%localappdata%` then delete folder `Tabame`.
 If you manually installed it, delete the folder where you placed it.
 
-## If you encounter any errors or bugs:
+## 🐛 If you encounter any errors or bugs:
 Please submit a [issue here](https://github.com/Far-Se/tabame/issues), it will be very helpful. On my Computer it works, but each PC can be different.
 
 **Please also provide errors.log file**. You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
