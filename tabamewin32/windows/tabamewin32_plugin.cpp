@@ -851,17 +851,19 @@ void SetWallpaperColor(int color)
     CoUninitialize();
 }
 
-void CreateShortcut(bool create, std::wstring exePath, std::wstring destPath, int ShowCmd, std::string args)
+void CreateShortcut(bool create, std::wstring exePath, std::wstring destPath, int ShowCmd, std::string args, std::wstring destExe = L"")
 {
-    // WCHAR startMenuPath[MAX_PATH];
-    // HRESULT result = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startMenuPath);
     std::wstring wExe = exePath.substr(exePath.find_last_of(L"\\") + 1);
-    // std::wstring wExe = Encoding::Utf8ToWide(exe);
     wExe.replace(wExe.find(L".exe"), sizeof(L".exe") - 1, L".lnk");
 
     std::wstring wStartMenuPath = std::wstring(destPath);
     wStartMenuPath.append(L"\\");
-    wStartMenuPath.append(wExe);
+    if (destExe.length() > 0)
+    {
+        wStartMenuPath.append(destExe);
+    }
+    else
+        wStartMenuPath.append(wExe);
     if (!create)
     {
         std::string startMenupath = Encoding::WideToUtf8(wStartMenuPath.c_str());
@@ -1887,8 +1889,9 @@ namespace tabamewin32
             bool enabled = std::get<bool>(args.at(flutter::EncodableValue("enabled")));
             int ShowCmd = std::get<int>(args.at(flutter::EncodableValue("showCmd")));
             std::string startArgs = std::get<std::string>(args.at(flutter::EncodableValue("args")));
+            std::string destExe = std::get<std::string>(args.at(flutter::EncodableValue("destExe")));
 
-            CreateShortcut(enabled, Encoding::Utf8ToWide(exePath), Encoding::Utf8ToWide(destPath), ShowCmd, startArgs);
+            CreateShortcut(enabled, Encoding::Utf8ToWide(exePath), Encoding::Utf8ToWide(destPath), ShowCmd, startArgs, Encoding::Utf8ToWide(destExe));
             result->Success(flutter::EncodableValue(""));
         }
         else if (method_name.compare("setStartOnStartupAsAdmin") == 0)

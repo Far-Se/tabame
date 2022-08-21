@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
@@ -100,6 +101,7 @@ class Boxes {
     final bool justInstalled = pref.getBool("justInstalled") ?? false;
     if (justInstalled) {
       updateSettings("justInstalled", false);
+      createShortcut(Platform.resolvedExecutable, WinUtils.getKnownFolder(FOLDERID_Programs), args: "-interface", destExe: "Tabame Interface.lnk");
     }
     // ? Trktivity
     if (!Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").existsSync()) {
@@ -139,6 +141,7 @@ class Boxes {
     globalSettings.run.fetch();
     //! Startup
     //? Taskbar
+    if (globalSettings.previewTheme) return;
     //if (kReleaseMode) {
     if (globalSettings.page == TPage.quickmenu) {
       if (globalSettings.hideTaskbarOnStartup) {
@@ -314,7 +317,7 @@ class Boxes {
       if (savedFileText != newSavedFileText) {
         updating = true;
         savedFileText = newSavedFileText;
-        // await Boxes.registerBoxes(reload: true);
+        await Boxes.registerBoxes(reload: true);
         updating = false;
         final Map<String, dynamic> js = jsonDecode(savedFileText);
         final String prevThemeLight = js["flutter.previewThemeLight"] ?? "";

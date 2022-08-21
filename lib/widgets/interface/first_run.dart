@@ -32,6 +32,7 @@ class FirstRunState extends State<FirstRun> {
   String hotkey = "";
   bool listeningToHotkey = false;
   String data2 = """
+## **The hotkey will work after you finish Setup process.**
 ### Info:
 If your mouse has more buttons than the standard ones, you can open your mouse's App and set it to a more obscure hotkey like **CTRL+ALT+SHIFT+F9** then press that button above.
 

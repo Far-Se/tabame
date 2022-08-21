@@ -71,7 +71,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "triggerType": 0,
         "triggerInfo": [0, 0, 0],
         "actions": [
-          {"type": 0, "value": "{WIN}"}
+          {"type": 0, "value": "{#WIN}X{|}{WIN}{WIN}"}
         ],
         "variableCheck": ["", ""]
       },
@@ -170,7 +170,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "triggerType": 3,
         "triggerInfo": [200, 500, 0],
         "actions": [
-          {"type": 0, "value": "{WIN}"}
+          {"type": 0, "value": "{#WIN}X{|}{WIN}{WIN}"}
         ],
         "variableCheck": ["", ""]
       },

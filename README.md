@@ -31,13 +31,22 @@ Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in
 2. Extract it in a folder you want.
 3. Open tabame.exe
 
-### Make your own:
+### How to uninstall:
+If you installed it with installer.ps1 Open file explorer, in adress bar write `%localappdata%` then delete folder `Tabame`.
+If you manually installed it, delete the folder where you placed it.
+
+## If you encounter any errors or bugs:
+Please submit a [issue here](https://github.com/Far-Se/tabame/issues), it will be very helpful. On my Computer it works, but each PC can be different.
+
+**Please also provide errors.log file**. You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
+
+## Make your own:
 This project is open source, which means you can compile your own version.
 1. Install Flutter for Windows
 2. Open Visual Studio Installer, on Individual Components select ATL Dependencies and install.
 3. Open a console in Tabame folder and type `flutter build windows`
 4. The exe is in `build\windows\runner\Release`
-5. You can open vsCode an debug the app.
+5. You can open vsCode and debug the app.
 
 # Written in Flutter
 Which means it consumes very little resources and disk space. 
@@ -104,11 +113,17 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - Toggle Hidden Files Button - Hides/Shows hidden files.
 
 ## **Taskbar**
-Contains your opened windows, it shows the icon, if it makes sound,if it is pinned,Monitor Number, Title, Media Control and Close button
+Contains your opened windows, it shows the icon, if it makes sound, if it is pinned, Monitor Number, Title, Media Control and Close button.
 
- **You can right click a listed window to move it to right or left Desktop, pin or force close**
+**You can right click a listed window to move it to right or left Desktop, pin or force close**
 
 **You can drag to left or right to switch the app to a different Desktop**
+
+You can show QuickMenu at Taskbar Level or TopBar Level. You can order windows by monitor, activity, or only current monitor.
+
+You can rewrite app titles using regex, example:
+
+![example](https://user-images.githubusercontent.com/20853986/185778878-14ef5a6f-0981-4e7d-aa68-a5afc5b7feb4.png)
 
 ## **Bottom Bar**
 Main elements of bottom bar are the time and the weather.
@@ -253,7 +268,7 @@ It counts lines of code and makes a summary. **You can ignore folders or only sh
 
 It shows code lines, non-code lines (lines with 1-2 chars line `[]{}()`), comment lines and empty lines.
 
-It also calculates how many books you could have written with same characters. In my opinion it was surprising this project is equivalent of 7 and a half books.
+It also calculates how many books you could have written with same characters. It was surprising that this project is equivalent of 7 and a half books.
 
 For example, at this time of writing this README.md, Tabame has `27,191 lines` with `761,698 characters` which is impressive in my opinion because I've written it by myself.
 

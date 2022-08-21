@@ -1,5 +1,8 @@
+import 'dart:ffi';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -118,7 +121,18 @@ class TopBar extends StatelessWidget {
                           child: Tooltip(
                             message: "Testing",
                             child: InkWell(
-                              onTap: () async {},
+                              onTap: () async {
+                                // ShowWindow(FindWindow(TEXT("DV2ControlHost"), TEXT("Start menu")), 5);
+                                final int hScreenDC = GetDC(0);
+                                final int height = GetDeviceCaps(hScreenDC, VERTRES);
+                                ReleaseDC(0, hScreenDC);
+                                final int hTaskBarWnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+                                final int hStartButtonWnd = GetWindow(hTaskBarWnd, GW_CHILD);
+
+                                // Now simulate a press on the Start button
+                                SendMessage(hStartButtonWnd, WM_LBUTTONDOWN, 1, LOWORD(5) + HIWORD(height - 20));
+                                print("m");
+                              },
                               child: const Icon(Icons.textsms_outlined),
                             ),
                           ),

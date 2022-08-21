@@ -525,11 +525,11 @@ class WinUtils {
     return path;
   }
 
-  static String getKnownFolderCLSID(int FOLDERID) {
+  static String getKnownFolderCLSID(int CSIDL) {
     final LPWSTR startMenuPath = wsalloc(MAX_PATH);
     String path = "";
     // final int hr = SHGetKnownFolderPath(NULL, KF_FLAG_DEFAULT, NULL, ppszPath);
-    final int hr = SHGetFolderPath(NULL, FOLDERID, NULL, 0, startMenuPath);
+    final int hr = SHGetFolderPath(NULL, CSIDL, NULL, 0, startMenuPath);
     if (!FAILED(hr)) {
       path = startMenuPath.toDartString();
     }
@@ -977,43 +977,55 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
 
 class WizardlyContextMenu {
   bool isWizardlyInstalledInContextMenu() {
-    final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
-    if (!xxkey.subkeyNames.contains('shell')) {
-      xxkey.createKey("shell");
-    }
-    xxkey.close();
-    final RegistryKey key =
-        Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
+    try {
+      final RegistryKey xxxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory');
+      if (!xxxkey.subkeyNames.contains('Background')) {
+        xxxkey.createKey("Background");
+      }
+      final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
+      if (!xxkey.subkeyNames.contains('shell')) {
+        xxkey.createKey("shell");
+      }
+      xxkey.close();
+      final RegistryKey key =
+          Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
 
-    final bool output = key.subkeyNames.contains("tabame");
-    key.close();
-    return output;
+      final bool output = key.subkeyNames.contains("tabame");
+      key.close();
+      return output;
+    } catch (_) {
+      return false;
+    }
   }
 
   void toggleWizardlyToContextMenu() {
-    final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
-    if (!xxkey.subkeyNames.contains('shell')) {
-      xxkey.createKey("shell");
-    }
-    xxkey.close();
-    final RegistryKey key =
-        Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
+    try {
+      final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
+      if (!xxkey.subkeyNames.contains('shell')) {
+        xxkey.createKey("shell");
+      }
+      xxkey.close();
+      final RegistryKey key =
+          Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background\shell', desiredAccessRights: AccessRights.allAccess);
 
-    final String exe = Platform.resolvedExecutable;
-    if (key.subkeyNames.contains("tabame")) {
-      key.deleteKey(r'tabame\command');
-      key.deleteKey('tabame');
+      final String exe = Platform.resolvedExecutable;
+      if (key.subkeyNames.contains("tabame")) {
+        key.deleteKey(r'tabame\command');
+        key.deleteKey('tabame');
+        return;
+      }
+      final RegistryKey subkey = key.createKey("tabame");
+      subkey.createValue(RegistryValue(r"Icon", RegistryValueType.string, exe));
+      subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
+
+      final RegistryKey command = subkey.createKey("command");
+      command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
+
+      key.close();
+      return;
+    } catch (_) {
       return;
     }
-    final RegistryKey subkey = key.createKey("tabame");
-    subkey.createValue(RegistryValue(r"Icon", RegistryValueType.string, exe));
-    subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
-
-    final RegistryKey command = subkey.createKey("command");
-    command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
-
-    key.close();
-    return;
   }
 }
 
