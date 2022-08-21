@@ -17,6 +17,8 @@ assignees: ''
 
 **Error.log file**
 
+*If you encounter a bug and not an error, delete this section.*
+
 You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
 
 ```dart
