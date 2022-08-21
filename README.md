@@ -32,7 +32,7 @@ Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in
 3. Open tabame.exe
 
 ### 📤 How to uninstall:
-If you installed it with installer.ps1 Open file explorer, in adress bar write `%localappdata%` then delete folder `Tabame`.
+If you installed it with installer.ps1 Open file explorer, in address bar write `%localappdata%` then delete folder `Tabame`.
 If you manually installed it, delete the folder where you placed it.
 
 ## 🐛 If you encounter any errors or bugs:
@@ -177,7 +177,7 @@ You can change the background color, text color and accent color. Also QuickMenu
 You can pick between predefined colors or your own colors.
 
 # **🎶 Audio**
-A main reason I've made this app is to easily manage Audio. You can easily switch between outputs and inputs, change volume from hotkeys and moving your mouse and modify specific app volume.
+A main reason I've made this app is to easily manage Audio. You can easily switch between output devices, change volume from hotkeys by moving your mouse and modify specific app volume.
 
 Another reason is to fix Spotify, that listen to all media trigger and acts upon them, I think this is a marketing strategy of "did you wanted music? we are your music". So I made this functions (that you need to enable from settings):
 - When you play an app, Tabame will try to mute Spotify.

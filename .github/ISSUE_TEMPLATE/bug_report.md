@@ -17,7 +17,7 @@ assignees: ''
 
 **Error.log file**
 
-*If you encounter a bug and not an error, delete this section.*
+*If `error.log` file is empty or you are reporting a visual bug, delete this part.*
 
 You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
 

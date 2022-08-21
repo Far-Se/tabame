@@ -1,12 +1,12 @@
-import 'dart:ffi';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/win32/registry.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -123,14 +123,23 @@ class TopBar extends StatelessWidget {
                             child: InkWell(
                               onTap: () async {
                                 // ShowWindow(FindWindow(TEXT("DV2ControlHost"), TEXT("Start menu")), 5);
-                                final int hScreenDC = GetDC(0);
-                                final int height = GetDeviceCaps(hScreenDC, VERTRES);
-                                ReleaseDC(0, hScreenDC);
-                                final int hTaskBarWnd = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-                                final int hStartButtonWnd = GetWindow(hTaskBarWnd, GW_CHILD);
 
-                                // Now simulate a press on the Start button
-                                SendMessage(hStartButtonWnd, WM_LBUTTONDOWN, 1, LOWORD(5) + HIWORD(height - 20));
+                                final RegistryKey key =
+                                    Registry.openPath(RegistryHive.localMachine, path: r'SOFTWARE\Classes\Directory\shell', desiredAccessRights: AccessRights.allAccess);
+                                final String exe = Platform.resolvedExecutable;
+                                if (key.subkeyNames.contains("tabame")) {
+                                  key.deleteKey(r'tabame\command');
+                                  key.deleteKey('tabame');
+                                  return;
+                                }
+                                final RegistryKey subkey = key.createKey("tabame");
+                                subkey.createValue(RegistryValue(r"Icon", RegistryValueType.string, exe));
+                                subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
+
+                                final RegistryKey command = subkey.createKey("command");
+                                command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
+
+                                key.close();
                                 print("m");
                               },
                               child: const Icon(Icons.textsms_outlined),

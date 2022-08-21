@@ -20,7 +20,14 @@ final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
   // if (kReleaseMode) {
   FlutterError.onError = (FlutterErrorDetails details) async {
-    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("${details.exceptionAsString()}\n${details.stack.toString()}", mode: FileMode.append);
+    final String error = details.exceptionAsString();
+    String stack = details.exceptionAsString();
+    final List<String> stackArr = stack.split("\n");
+    if (stackArr.length > 11) {
+      stack = stackArr.take(10).join("\n");
+    }
+    stack = "$stack\n===============\n===============\n===============\n";
+    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("$error\n$stack", mode: FileMode.append);
   };
   // }
   List<String> arguments = arguments2;

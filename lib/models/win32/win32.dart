@@ -982,6 +982,7 @@ class WizardlyContextMenu {
       if (!xxxkey.subkeyNames.contains('Background')) {
         xxxkey.createKey("Background");
       }
+      xxxkey.close();
       final RegistryKey xxkey = Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Classes\Directory\Background');
       if (!xxkey.subkeyNames.contains('shell')) {
         xxkey.createKey("shell");
