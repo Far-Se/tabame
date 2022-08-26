@@ -12,6 +12,8 @@ import 'package:win32/win32.dart' hide Point;
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../keys.dart';
+import '../settings.dart';
+import '../win32/mixed.dart';
 import '../win32/win32.dart';
 import '../window_watcher.dart';
 import 'boxes.dart';
@@ -247,6 +249,11 @@ class KeyMap with TabameListener {
 
         //
       } else if (action.type == ActionType.sendKeys) {
+        if (action.value == "{WIN}") {
+          int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+          if (tray == 0) tray = GetDesktopWindow();
+          SetForegroundWindow(tray);
+        }
         WinKeys.send(action.value);
       } else if (action.type == ActionType.sendClick) {
         int hwnd = GetForegroundWindow();
@@ -437,6 +444,22 @@ class HotKeyInfo {
     },
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
+    "ShowStartMenu": () {
+      int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+      if (tray != 0) {
+        final int mID = Monitor.getMonitorNumber(Monitor.getCursorMonitor());
+        if (mID > 1) tray = FindWindow(TEXT("Shell_SecondaryTrayWnd"), nullptr);
+        if (tray == 0) tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+        final int start = FindWindowEx(tray, 0, TEXT("Start"), nullptr);
+        if (start != 0) {
+          SetForegroundWindow(start);
+          WinKeys.send("{SPACE}");
+        } else {
+          SetForegroundWindow(tray);
+          WinKeys.send("{#SHIFT}{TAB}{|}{#SHIFT}{TAB}{|}{SPACE}");
+        }
+      }
+    },
     "ShowLastActiveWindow": () {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.focusSecondWindow();
@@ -445,8 +468,18 @@ class HotKeyInfo {
     "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
-    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output),
-    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input),
+    "SwitchAudioOutput": () => Audio.switchDefaultDevice(
+          AudioDeviceType.output,
+          console: globalSettings.audioConsole,
+          multimedia: globalSettings.audioMultimedia,
+          communications: globalSettings.audioCommunications,
+        ),
+    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
+          AudioDeviceType.input,
+          console: globalSettings.audioConsole,
+          multimedia: globalSettings.audioMultimedia,
+          communications: globalSettings.audioCommunications,
+        ),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
     // "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),
     "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),

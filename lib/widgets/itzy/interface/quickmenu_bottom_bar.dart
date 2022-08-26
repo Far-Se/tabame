@@ -175,7 +175,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                                       final http.Response response =
                                                           await http.get(Uri.parse("https://geocoding-api.open-meteo.com/v1/search?name=${cityLatLong.text}"));
                                                       if (response.statusCode == 200) {
-                                                        print(response.body);
                                                         final Map<String, dynamic> data = json.decode(response.body);
                                                         if (data.containsKey("results")) {
                                                           final Map<String, dynamic> res = data["results"][0];
@@ -329,7 +328,16 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                                             },
                                                             isSelected: <bool>[!item.clickOpensExe, item.clickOpensExe],
                                                           ),
-                                                          Padding(padding: const EdgeInsets.symmetric(horizontal: 5), child: Image.memory(item.iconData, width: 20)),
+                                                          Padding(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                                                              child: Image.memory(
+                                                                item.iconData,
+                                                                width: 20,
+                                                                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                                  Icons.check_box_outline_blank,
+                                                                  size: 16,
+                                                                ),
+                                                              )),
                                                           Padding(
                                                             padding: const EdgeInsets.symmetric(horizontal: 10),
                                                             child: item.processExe == ""

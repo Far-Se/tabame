@@ -7,6 +7,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/globals.dart';
 import '../../../models/keys.dart';
+import '../../../models/settings.dart';
 import 'widget_audio.dart';
 
 class AudioButton extends StatefulWidget {
@@ -63,7 +64,12 @@ class _AudioButtonState extends State<AudioButton> {
                 setState(() {});
               }
               if (event.buttons == kSecondaryMouseButton) {
-                Audio.switchDefaultDevice(AudioDeviceType.output);
+                Audio.switchDefaultDevice(
+                  AudioDeviceType.output,
+                  console: globalSettings.audioConsole,
+                  multimedia: globalSettings.audioMultimedia,
+                  communications: globalSettings.audioCommunications,
+                );
                 switchedDefaultDevice = true;
                 setState(() {});
                 Timer(const Duration(milliseconds: 1000), () {

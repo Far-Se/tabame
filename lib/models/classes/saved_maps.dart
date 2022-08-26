@@ -1,10 +1,13 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
 import '../settings.dart';
+import '../win32/win32.dart';
 import 'boxes.dart';
 
 abstract class SavedMap {
@@ -739,5 +742,123 @@ class RunCommands {
       "setvar": setvar,
       "keys": keys,
     };
+  }
+}
+
+class DefaultVolume {
+  String type;
+  String match;
+  int volume;
+  DefaultVolume({
+    required this.type,
+    required this.match,
+    required this.volume,
+  });
+
+  DefaultVolume copyWith({
+    String? type,
+    String? match,
+    int? volume,
+  }) {
+    return DefaultVolume(
+      type: type ?? this.type,
+      match: match ?? this.match,
+      volume: volume ?? this.volume,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'type': type,
+      'match': match,
+      'volume': volume,
+    };
+  }
+
+  factory DefaultVolume.fromMap(Map<String, dynamic> map) {
+    return DefaultVolume(
+      type: (map['type'] ?? '') as String,
+      match: (map['match'] ?? '') as String,
+      volume: (map['volume'] ?? 0) as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory DefaultVolume.fromJson(String source) => DefaultVolume.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'DefaultVolume(type: $type, match: $match, volume: $volume)';
+
+  @override
+  bool operator ==(covariant DefaultVolume other) {
+    if (identical(this, other)) return true;
+
+    return other.type == type && other.match == match && other.volume == volume;
+  }
+
+  @override
+  int get hashCode => type.hashCode ^ match.hashCode ^ volume.hashCode;
+}
+
+class ViewsSettings {
+  int minW = 10;
+  int maxW = 40;
+  int minH = 10;
+  int maxH = 40;
+  int scaleW = 15;
+  int scaleH = 15;
+  int scrollStepW = 5;
+  int scrollStepH = 5;
+  bool setPreviousSize = true;
+  Color bgColor = const Color(0xff202020);
+  ViewsSettings();
+  Future<void> load() async {
+    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    if (!File(file).existsSync()) File(file).createSync();
+    String fileData = File(file).readAsStringSync();
+    if (fileData.isEmpty) {
+      File(file).writeAsStringSync(toJson());
+      fileData = File(file).readAsStringSync();
+    }
+    final Map<String, dynamic> map = json.decode(fileData);
+    minW = (map['minW'] ?? 10) as int;
+    maxW = (map['maxW'] ?? 10) as int;
+    minH = (map['minH'] ?? 30) as int;
+    maxH = (map['maxH'] ?? 30) as int;
+    scaleW = (map['scaleW'] ?? 15) as int;
+    scaleH = (map['scaleH'] ?? 15) as int;
+    scrollStepW = (map['scrollStepW'] ?? 5) as int;
+    scrollStepH = (map['scrollStepH'] ?? 5) as int;
+    setPreviousSize = (map['setPreviousSize'] ?? setPreviousSize) as bool;
+    bgColor = Color((map['bgColor'] ?? bgColor.value));
+  }
+
+  Future<void> save() async {
+    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    if (!File(file).existsSync()) File(file).createSync();
+    File(file).writeAsStringSync(toJson());
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'minW': minW,
+      'maxW': maxW,
+      'minH': minH,
+      'maxH': maxH,
+      'scaleW': scaleW,
+      'scaleH': scaleH,
+      'scrollStepW': scrollStepW,
+      'scrollStepH': scrollStepH,
+      'bgColor': bgColor.value,
+      'setPreviousSize': setPreviousSize,
+    };
+  }
+
+  String toJson() => json.encode(toMap());
+
+  @override
+  String toString() {
+    return 'ViewsSettings(minW: $minW, maxW: $maxW, minH: $minH, maxH: $maxH, scaleW: $scaleW, scaleH: $scaleH, scrollStepW: $scrollStepW, scrollStepH: $scrollStepH, bgColor: $bgColor)';
   }
 }

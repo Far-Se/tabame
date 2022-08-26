@@ -184,7 +184,7 @@ DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
     return DeviceProps();
 }
 
-static HRESULT setDefaultDevice(LPWSTR devID)
+static HRESULT setDefaultDevice(LPWSTR devID, bool console, bool multimedia, bool communications)
 {
     IPolicyConfigVista *pPolicyConfig = nullptr;
 
@@ -192,12 +192,14 @@ static HRESULT setDefaultDevice(LPWSTR devID)
                                   NULL, CLSCTX_ALL, __uuidof(IPolicyConfigVista), (LPVOID *)&pPolicyConfig);
     if (SUCCEEDED(hr))
     {
-        hr = pPolicyConfig->SetDefaultEndpoint(devID, eConsole);
-        hr = pPolicyConfig->SetDefaultEndpoint(devID, eMultimedia);
-        hr = pPolicyConfig->SetDefaultEndpoint(devID, eCommunications);
+        if (console)
+            hr = pPolicyConfig->SetDefaultEndpoint(devID, eConsole);
+        if (multimedia)
+            hr = pPolicyConfig->SetDefaultEndpoint(devID, eMultimedia);
+        if (communications)
+            hr = pPolicyConfig->SetDefaultEndpoint(devID, eCommunications);
         pPolicyConfig->Release();
     }
-    // delete pPolicyConfig;
     return hr;
 }
 
@@ -358,7 +360,7 @@ bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
     return true;
 }
 
-static bool switchDefaultDevice(EDataFlow deviceType = eRender)
+static bool switchDefaultDevice(EDataFlow deviceType, bool console, bool multimedia, bool communications)
 {
     std::vector<DeviceProps> result = EnumAudioDevices(deviceType);
     if (!result.empty())
@@ -376,7 +378,7 @@ static bool switchDefaultDevice(EDataFlow deviceType = eRender)
         }
         if (activateID == L"x" || activateID == L"")
             activateID = result[0].id;
-        setDefaultDevice((LPWSTR)activateID.c_str());
+        setDefaultDevice((LPWSTR)activateID.c_str(), console, multimedia, communications);
         return true;
     }
     return false;

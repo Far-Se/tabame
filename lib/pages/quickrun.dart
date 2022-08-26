@@ -94,246 +94,247 @@ class QuickRunState extends State<QuickRun> {
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
-        child: Material(
-      type: MaterialType.transparency,
-      child: Shortcuts(
-        shortcuts: <ShortcutActivator, Intent>{
-          LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextElement(),
-          LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousElement(),
-        },
-        child: Actions(
-          actions: <Type, Action<Intent>>{
-            NextElement: CallbackAction<NextElement>(
-              onInvoke: (NextElement intent) => setState(() {
-                _currentFocus += 1;
-                if (_currentFocus > result.results.length) {
-                  FocusScope.of(context).requestFocus(textFocusNode);
-                  _currentFocus = -1;
-                } else {
-                  FocusScope.of(context).nextFocus();
-                }
-              }),
-            ),
-            PreviousElement: CallbackAction<PreviousElement>(
-              onInvoke: (PreviousElement intent) => setState(() {
-                _currentFocus -= 1;
-                if (_currentFocus == -1) {
-                  FocusScope.of(context).requestFocus(textFocusNode);
-                  _currentFocus = 0;
-                } else {
-                  FocusScope.of(context).previousFocus();
-                }
-              }),
-            ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Shortcuts(
+          shortcuts: <ShortcutActivator, Intent>{
+            LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextElement(),
+            LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousElement(),
           },
-          child: Focus(
-            autofocus: true,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    SizedBox(
-                      width: 25,
-                      height: 35,
-                      child: GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onPanStart: (DragStartDetails details) {
-                            windowManager.startDragging();
-                          },
-                          child: const Icon(Icons.drag_indicator_sharp)),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10.0),
-                        ),
-                        focusNode: textFocusNode,
-                        controller: textController,
-                        onSubmitted: (String input) => onSubmitted(input),
-                        onChanged: (String input) async {
-                          input = input.trimLeft();
-                          if (input.isEmpty) {
-                            result = ParserResult();
-                            for (RunShortcuts x in shortcuts) {
-                              result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
-                            }
-                            setState(() {});
-                            return;
-                          }
-                          String command = "";
-                          List<String> x = getCommandFromString(input);
-                          if (x.isEmpty) {
-                            result = ParserResult();
-                            for (RunShortcuts x in shortcuts) {
-                              result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
-                            }
-                            setState(() {});
-                            return;
-                          }
-                          command = x[0];
-                          if (x.length == 2) input = input.replaceFirst(x[1], "");
-                          if (currentRun != command) {
-                            currentRun = command;
-                          }
-                          final Map<String, Function(String)> functions = <String, Function(String)>{
-                            "calculator": parser.calculator,
-                            "unit": parser.unit,
-                            "color": parser.color,
-                            "timer": parser.timer,
-                            "currency": parser.currency,
-                            "timezones": parser.timezones,
-                            "memo": parser.memos,
-                            "projects": parser.projects,
-                            "shortcut": parser.shortcuts,
-                            "regex": parser.regex,
-                            "lorem": parser.loremIpsum,
-                            "encoders": parser.encoders,
-                            "setvar": parser.setVar,
-                            "keys": parser.sendKeys,
-                          };
-                          if (functions.containsKey(currentRun)) {
-                            result = await functions[currentRun]!(input.toLowerCase());
-                          } else {
-                            result = ParserResult();
-                          }
-                          setState(() {});
-                        },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              NextElement: CallbackAction<NextElement>(
+                onInvoke: (NextElement intent) => setState(() {
+                  _currentFocus += 1;
+                  if (_currentFocus > result.results.length) {
+                    FocusScope.of(context).requestFocus(textFocusNode);
+                    _currentFocus = -1;
+                  } else {
+                    FocusScope.of(context).nextFocus();
+                  }
+                }),
+              ),
+              PreviousElement: CallbackAction<PreviousElement>(
+                onInvoke: (PreviousElement intent) => setState(() {
+                  _currentFocus -= 1;
+                  if (_currentFocus == -1) {
+                    FocusScope.of(context).requestFocus(textFocusNode);
+                    _currentFocus = 0;
+                  } else {
+                    FocusScope.of(context).previousFocus();
+                  }
+                }),
+              ),
+            },
+            child: Focus(
+              autofocus: true,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 25,
+                        height: 35,
+                        child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onPanStart: (DragStartDetails details) {
+                              windowManager.startDragging();
+                            },
+                            child: const Icon(Icons.drag_indicator_sharp)),
                       ),
-                    )
-                  ],
-                ),
-                if (result.results.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 250),
-                    // constraints: BoxConstraints.loose(const Size(280, 200)),
-                    child: SingleChildScrollView(
-                      // scrollDirection: Axis.vertical,
-                      controller: ScrollController(),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          ...List<Widget>.generate(
-                            result.results.length,
-                            (int index) {
-                              String item = result.results[index];
-                              if (item.startsWith("custom:")) {
-                                item = item.replaceFirst("custom:", "");
-                                if (item.startsWith("color:")) {
-                                  item = item.replaceFirst("color:", "");
-                                  final Color color = Color(int.parse(item));
-                                  return Row(
+                      Expanded(
+                        child: TextField(
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                          ),
+                          focusNode: textFocusNode,
+                          controller: textController,
+                          onSubmitted: (String input) => onSubmitted(input),
+                          onChanged: (String input) async {
+                            input = input.trimLeft();
+                            if (input.isEmpty) {
+                              result = ParserResult();
+                              for (RunShortcuts x in shortcuts) {
+                                result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
+                              }
+                              setState(() {});
+                              return;
+                            }
+                            String command = "";
+                            List<String> x = getCommandFromString(input);
+                            if (x.isEmpty) {
+                              result = ParserResult();
+                              for (RunShortcuts x in shortcuts) {
+                                result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
+                              }
+                              setState(() {});
+                              return;
+                            }
+                            command = x[0];
+                            if (x.length == 2) input = input.replaceFirst(x[1], "");
+                            if (currentRun != command) {
+                              currentRun = command;
+                            }
+                            final Map<String, Function(String)> functions = <String, Function(String)>{
+                              "calculator": parser.calculator,
+                              "unit": parser.unit,
+                              "color": parser.color,
+                              "timer": parser.timer,
+                              "currency": parser.currency,
+                              "timezones": parser.timezones,
+                              "memo": parser.memos,
+                              "projects": parser.projects,
+                              "shortcut": parser.shortcuts,
+                              "regex": parser.regex,
+                              "lorem": parser.loremIpsum,
+                              "encoders": parser.encoders,
+                              "setvar": parser.setVar,
+                              "keys": parser.sendKeys,
+                            };
+                            if (functions.containsKey(currentRun)) {
+                              result = await functions[currentRun]!(input.toLowerCase());
+                            } else {
+                              result = ParserResult();
+                            }
+                            setState(() {});
+                          },
+                        ),
+                      )
+                    ],
+                  ),
+                  if (result.results.isNotEmpty)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      // constraints: BoxConstraints.loose(const Size(280, 200)),
+                      child: SingleChildScrollView(
+                        // scrollDirection: Axis.vertical,
+                        controller: ScrollController(),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            ...List<Widget>.generate(
+                              result.results.length,
+                              (int index) {
+                                String item = result.results[index];
+                                if (item.startsWith("custom:")) {
+                                  item = item.replaceFirst("custom:", "");
+                                  if (item.startsWith("color:")) {
+                                    item = item.replaceFirst("color:", "");
+                                    final Color color = Color(int.parse(item));
+                                    return Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                            child: DecoratedBox(
+                                          decoration: BoxDecoration(color: color),
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                            child: Text("  "),
+                                          ),
+                                        )),
+                                      ],
+                                    );
+                                  }
+                                  return Container();
+                                }
+                                return InkWell(
+                                  onTap: () {
+                                    if (result.type == ResultType.copy) {
+                                      if (currentRun == "unit") {
+                                        final RegExpMatch? match = RegExp(r'^([\d,\.]+)').firstMatch(item);
+                                        if (match != null) {
+                                          Clipboard.setData(ClipboardData(text: match[1]!.replaceAll(',', '.')));
+                                        } else {
+                                          Clipboard.setData(ClipboardData(text: item));
+                                        }
+                                      } else {
+                                        Clipboard.setData(ClipboardData(text: result.actions.containsKey(item) ? result.actions[item] : item));
+                                      }
+                                      setState(() => copied = index);
+                                      Future<void>.delayed(const Duration(seconds: 1), () {
+                                        if (mounted) setState(() => copied = -1);
+                                      });
+                                    } else if (result.type == ResultType.open) {
+                                      WinUtils.open(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                    } else if (result.type == ResultType.send) {
+                                      WinKeys.send(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                    }
+                                    WidgetsBinding.instance.addPostFrameCallback((_) => regainFocus());
+                                  },
+                                  onFocusChange: (bool f) {
+                                    if (f) {
+                                      activeElement = index;
+                                    } else {
+                                      activeElement = -1;
+                                    }
+                                  },
+                                  onHover: (bool f) {
+                                    if (f) {
+                                      activeElement = index;
+                                    } else {
+                                      activeElement = -1;
+                                    }
+                                    setState(() {});
+                                  },
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       Expanded(
-                                          child: DecoratedBox(
-                                        decoration: BoxDecoration(color: color),
-                                        child: const Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
-                                          child: Text("  "),
-                                        ),
-                                      )),
-                                    ],
-                                  );
-                                }
-                                return Container();
-                              }
-                              return InkWell(
-                                onTap: () {
-                                  if (result.type == ResultType.copy) {
-                                    if (currentRun == "unit") {
-                                      final RegExpMatch? match = RegExp(r'^([\d,\.]+)').firstMatch(item);
-                                      if (match != null) {
-                                        Clipboard.setData(ClipboardData(text: match[1]!.replaceAll(',', '.')));
-                                      } else {
-                                        Clipboard.setData(ClipboardData(text: item));
-                                      }
-                                    } else {
-                                      Clipboard.setData(ClipboardData(text: result.actions.containsKey(item) ? result.actions[item] : item));
-                                    }
-                                    setState(() => copied = index);
-                                    Future<void>.delayed(const Duration(seconds: 1), () {
-                                      if (mounted) setState(() => copied = -1);
-                                    });
-                                  } else if (result.type == ResultType.open) {
-                                    WinUtils.open(result.actions.containsKey(item) ? result.actions[item]! : item);
-                                  } else if (result.type == ResultType.send) {
-                                    WinKeys.send(result.actions.containsKey(item) ? result.actions[item]! : item);
-                                  }
-                                  WidgetsBinding.instance.addPostFrameCallback((_) => regainFocus());
-                                },
-                                onFocusChange: (bool f) {
-                                  if (f) {
-                                    activeElement = index;
-                                  } else {
-                                    activeElement = -1;
-                                  }
-                                },
-                                onHover: (bool f) {
-                                  if (f) {
-                                    activeElement = index;
-                                  } else {
-                                    activeElement = -1;
-                                  }
-                                  setState(() {});
-                                },
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1))),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
-                                          child: Stack(
-                                            children: <Widget>[
-                                              Text(item),
-                                              Positioned(
-                                                right: 0,
-                                                top: 2.5,
-                                                child: SizedBox(
-                                                  width: 15,
-                                                  child: activeElement == index
-                                                      ? Icon(
-                                                          result.type == ResultType.copy
-                                                              ? Icons.copy
-                                                              : result.type == ResultType.open
-                                                                  ? Icons.open_in_browser
-                                                                  : Icons.extension,
-                                                          size: 15,
-                                                          color: copied == index ? Colors.cyan : Theme.of(context).iconTheme.color)
-                                                      : null,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1))),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3),
+                                            child: Stack(
+                                              children: <Widget>[
+                                                Text(item),
+                                                Positioned(
+                                                  right: 0,
+                                                  top: 2.5,
+                                                  child: SizedBox(
+                                                    width: 15,
+                                                    child: activeElement == index
+                                                        ? Icon(
+                                                            result.type == ResultType.copy
+                                                                ? Icons.copy
+                                                                : result.type == ResultType.open
+                                                                    ? Icons.open_in_browser
+                                                                    : Icons.extension,
+                                                            size: 15,
+                                                            color: copied == index ? Colors.cyan : Theme.of(context).iconTheme.color)
+                                                        : null,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                if (result.error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Text(result.error)),
-                // const SizedBox(height: 5),
-              ],
+                  if (result.error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), child: Text(result.error)),
+                  // const SizedBox(height: 5),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   List<String> getCommandFromString(String input) {
@@ -892,7 +893,7 @@ class Parsers {
     double amount = 0;
     String from = "";
     String to = "";
-    final RegExpMatch? reg = RegExp(r'([\d\.\,]+\d) (\w{3,4}) to (\w{3,4})').firstMatch(input);
+    final RegExpMatch? reg = RegExp(r'((?:[\d\.\,]+\d)|\d+) (\w{3,4}) to (\w{3,4})').firstMatch(input);
     if (reg != null) {
       String amountReg = reg[1]!;
       amountReg = amountReg.replaceFirstMapped(RegExp(r',(\d{2})$'), (Match match) => "p${match[1]}");
@@ -1222,8 +1223,8 @@ class Parsers {
     for (ProjectGroup projectGroup in savedProjects) {
       for (ProjectInfo project in projectGroup.projects) {
         if (project.title.toLowerCase().contains(input)) {
-          result.results.add("${project.emoji} ${project.title} - ${projectGroup.title.truncate(20, suffix: "...")}");
-          result.actions["${project.emoji} ${project.title} - ${projectGroup.title.truncate(20, suffix: "...")}"] = "${project.stringToExecute}";
+          result.results.add("${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}");
+          result.actions["${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}"] = "${project.stringToExecute}";
         }
       }
     }

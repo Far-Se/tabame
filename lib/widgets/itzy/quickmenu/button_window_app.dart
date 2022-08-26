@@ -37,6 +37,10 @@ class WindowsAppButton extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         width: size,
                         gaplessPlayback: true,
+                        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                          Icons.check_box_outline_blank,
+                          size: 16,
+                        ),
                       ),
                     )
                   : Icon(Icons.circle_outlined, size: size),

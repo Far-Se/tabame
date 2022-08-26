@@ -72,13 +72,15 @@ class Boxes {
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
       ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
+      ..views = pref.getBool("views") ?? globalSettings.views
+      ..audio = pref.getStringList("audio") ?? globalSettings.audio
       ..weather = pref.getStringList("weather") ?? globalSettings.weather
       ..autoUpdate = pref.getBool("autoUpdate") ?? globalSettings.autoUpdate
       ..customLogo = pref.getString("customLogo") ?? globalSettings.customLogo
       ..showTrayBar = pref.getBool("showTrayBar") ?? globalSettings.showTrayBar
       ..showWeather = pref.getBool("showWeather") ?? globalSettings.showWeather
       ..customSpash = pref.getString("customSpash") ?? globalSettings.customSpash
-      ..viewsEnabled = pref.getBool("viewsEnabled") ?? globalSettings.viewsEnabled
+      ..volumeSetBack = pref.getBool("volumeSetBack") ?? globalSettings.volumeSetBack
       ..lastChangelog = pref.getString("lastChangelog") ?? globalSettings.lastChangelog
       ..showPowerShell = pref.getBool("showPowerShell") ?? globalSettings.showPowerShell
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage
@@ -97,6 +99,7 @@ class Boxes {
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? globalSettings.usePowerShellAsToastNotification
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // * always after schedule
 
+    // ? other
     // ? Just Installed
     final bool justInstalled = pref.getBool("justInstalled") ?? false;
     if (justInstalled) {
@@ -307,6 +310,11 @@ class Boxes {
   static set runApi(List<RunAPI> list) => _runApi = list;
   static List<RunAPI> get runApi => _runApi.isEmpty ? _runApi = getSavedMap<RunAPI>(RunAPI.fromJson, "runApi") : _runApi;
 
+  static List<DefaultVolume> _defaultVolume = <DefaultVolume>[];
+  static set defaultVolume(List<DefaultVolume> list) => _defaultVolume = list;
+  static List<DefaultVolume> get defaultVolume =>
+      _defaultVolume.isEmpty ? _defaultVolume = getSavedMap<DefaultVolume>(DefaultVolume.fromJson, "defaultVolume") : _defaultVolume;
+
   void watchForSettingsChange() {
     globalSettings.previewTheme = true;
     String savedFileText = File(Boxes.pref.fileName).readAsStringSync();
@@ -374,14 +382,11 @@ class Boxes {
     final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
     await WinUtils.downloadFile(downloadLink, fileName, () {
       final String dir = "${Directory.current.path}";
-      WinUtils.open(
-        'powershell.exe',
-        arguments: 'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;'
-            'Start-Process "$dir\\tabame.exe";'
-            'Remove-Item -LiteralPath "$fileName" -Force;',
-      );
+      WinUtils.open('powershell.exe',
+          arguments: 'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;'
+              'Start-Process "$dir\\tabame.exe";');
       if (kReleaseMode) {
-        WinUtils.closeMainTabame();
+        WinUtils.closeAllTabameExProcesses();
         exit(0);
       }
     });
@@ -616,8 +621,8 @@ class WinHotkeys {
       }
     }
     //!hook
-    if (Globals.debugHotkeysEnabled || kReleaseMode) {
-      NativeHotkey.run(allHotkeys);
+    if (Globals.debugHooks || kReleaseMode) {
+      NativeHooks.runHotkeys(allHotkeys);
     }
   }
 }

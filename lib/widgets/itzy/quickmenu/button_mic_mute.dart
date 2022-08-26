@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../models/settings.dart';
+
 class MicMuteButton extends StatefulWidget {
   const MicMuteButton({Key? key}) : super(key: key);
 
@@ -23,7 +25,12 @@ class _MicMuteButtonState extends State<MicMuteButton> {
           type: MaterialType.transparency,
           child: GestureDetector(
             onSecondaryTap: () async {
-              await Audio.switchDefaultDevice(AudioDeviceType.input);
+              await Audio.switchDefaultDevice(
+                AudioDeviceType.input,
+                console: globalSettings.audioConsole,
+                multimedia: globalSettings.audioMultimedia,
+                communications: globalSettings.audioCommunications,
+              );
               switchedDefaultDevice = true;
               setState(() {});
               Future<void>.delayed(const Duration(milliseconds: 1000), () {

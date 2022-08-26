@@ -92,7 +92,12 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                           //
                           key: ValueKey<int>(index),
                           title: Text(Win32.getExe(pinnedApps[index])),
-                          leading: Image.memory(pinnedAppsIcons[Win32.getExe(pinnedApps[index])]!, width: 20),
+                          leading: Image.memory(pinnedAppsIcons[Win32.getExe(pinnedApps[index])]!,
+                              width: 20,
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                    Icons.check_box_outline_blank,
+                                    size: 16,
+                                  )),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete),
                             tooltip: "Remove",

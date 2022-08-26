@@ -114,7 +114,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!mounted) return;
     QuickMenuFunctions.addListener(this);
-    NativeHotkey.addListener(this);
+    NativeHooks.addListener(this);
     fetchWindows();
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
       if (globalSettings.pauseSpotifyWhenNewSound && !keepFetching) {
@@ -326,6 +326,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                               width: 20,
                                               height: 20,
                                               gaplessPlayback: true,
+                                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                Icons.check_box_outline_blank,
+                                                size: 20,
+                                              ),
                                             )
                                           : const Icon(Icons.web_asset_sharp, size: 20)),
                                     ),

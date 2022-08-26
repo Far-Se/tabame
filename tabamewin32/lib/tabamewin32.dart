@@ -122,8 +122,14 @@ class Audio {
 
   /// Sets the default audio device.
   /// The type is specified by the [AudioDeviceType] enum.
-  static Future<int> setDefaultDevice(String deviceID) async {
-    final Map<String, dynamic> arguments = <String, String>{'deviceID': deviceID};
+  static Future<int> setDefaultDevice(String deviceID, {required bool console, required bool multimedia, required bool communications}) async {
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'deviceID': deviceID,
+      'console': console,
+      'multimedia': multimedia,
+      'communications': communications,
+    };
+
     final int? result = await audioMethodChannel.invokeMethod<int>('setDefaultAudioDevice', arguments);
     return result as int;
   }
@@ -161,8 +167,13 @@ class Audio {
   }
 
   /// This function switches the audio device to the specified type. The type is specified by the [AudioDeviceType] enum.
-  static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType) async {
-    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index};
+  static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType, {required bool console, required bool multimedia, required bool communications}) async {
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'deviceType': audioDeviceType.index,
+      'console': console,
+      'multimedia': multimedia,
+      'communications': communications,
+    };
     final bool? result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
     return result as bool;
   }
@@ -493,16 +504,26 @@ enum WinEventType {
   nameChange,
 }
 
+enum ViewsAction {
+  open,
+  moveStart,
+  moveEnd,
+  selecting,
+  selected,
+  switchUp,
+  switchDown,
+}
+
 abstract class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
   void onForegroundWindowChanged(int hWnd) {}
   void onTricktivityEvent(String action, String info) {}
-
   void onWinEventReceived(int hWnd, WinEventType type) {}
+  void onViewsEvent(ViewsAction action, int hWnd) {}
 }
 
 /// ? NativeHotkey
-class NativeHotkey {
+class NativeHooks {
   static final ObserverList<TabameListener> listenersObv = ObserverList<TabameListener>();
   static bool isRegistered = false;
   static List<TabameListener> get listeners => List<TabameListener>.from(listenersObv);
@@ -550,7 +571,12 @@ class NativeHotkey {
         listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
       }
     }
-    if (call.method == "ViewsEvent") {}
+    if (call.method == "ViewsEvent") {
+      for (final TabameListener listener in listeners) {
+        if (!listenersObv.contains(listener)) return;
+        listener.onViewsEvent(ViewsAction.values.firstWhere((ViewsAction element) => element.name == call.arguments["action"]), call.arguments["hwnd"]);
+      }
+    }
     if (call.method == "WinEvent") {
       if (call.arguments['action'] == "foreground") {
         for (final TabameListener listener in listeners) {
@@ -567,15 +593,15 @@ class NativeHotkey {
     }
   }
 
-  static register() {
+  static registerCallHandler() {
     audioMethodChannel.setMethodCallHandler(_methodCallHandler);
   }
 
-  static Future<void> add(Map<String, dynamic> hotkey) async {
+  static Future<void> addHotkey(Map<String, dynamic> hotkey) async {
     await audioMethodChannel.invokeMethod('hotkeyAdd', hotkey);
   }
 
-  static Future<void> reset() async {
+  static Future<void> resetHotkeys() async {
     await audioMethodChannel.invokeMethod('hotkeyReset');
   }
 
@@ -589,15 +615,15 @@ class NativeHotkey {
     isRegistered = false;
   }
 
-  static Future<void> free() async {
+  static Future<void> freeHotkeys() async {
     await audioMethodChannel.invokeMethod('freeHotkey');
   }
 
-  static Future<void> run(List<Map<String, dynamic>> hotkeys) async {
+  static Future<void> runHotkeys(List<Map<String, dynamic>> hotkeys) async {
     if (isRegistered) await unHook();
-    reset();
+    resetHotkeys();
     for (Map<String, dynamic> i in hotkeys) {
-      await add(i);
+      await addHotkey(i);
     }
     hook();
   }

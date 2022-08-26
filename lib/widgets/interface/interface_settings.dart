@@ -205,41 +205,6 @@ class SettingsPageState extends State<SettingsPage> {
                                   setState(() {});
                                 },
                               ),
-                              RadioTheme(
-                                data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: <Widget>[
-                                    ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.bodyLarge)),
-                                    RadioListTile<VolumeOSDStyle>(
-                                      title: const Text('Normal Volume OSD'),
-                                      value: VolumeOSDStyle.normal,
-                                      groupValue: globalSettings.volumeOSDStyle,
-                                      onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                                    ),
-                                    RadioListTile<VolumeOSDStyle>(
-                                      title: const Text('Hide Media'),
-                                      value: VolumeOSDStyle.media,
-                                      groupValue: globalSettings.volumeOSDStyle,
-                                      onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                                    ),
-                                    RadioListTile<VolumeOSDStyle>(
-                                      title: const Text('Thin'),
-                                      value: VolumeOSDStyle.thin,
-                                      groupValue: globalSettings.volumeOSDStyle,
-                                      onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                                    ),
-                                    RadioListTile<VolumeOSDStyle>(
-                                      title: const Text('Hidden'),
-                                      value: VolumeOSDStyle.visible,
-                                      groupValue: globalSettings.volumeOSDStyle,
-                                      onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               ListTile(
                                   leading: Container(height: double.infinity, child: const Icon(Icons.wallpaper)),
                                   title: Text("Wallpaper", style: Theme.of(context).textTheme.bodyMedium),
@@ -383,29 +348,7 @@ class SettingsPageState extends State<SettingsPage> {
                               ),
                               // const ListTile(title: Text("Post Styling")),
                               const SizedBox(height: 20),
-                              const Divider(height: 10, thickness: 2),
-                              CheckboxListTile(
-                                controlAffinity: ListTileControlAffinity.leading,
-                                title: const Text("Pause Spotify when sound comes from other sources"),
-                                value: globalSettings.pauseSpotifyWhenNewSound,
-                                onChanged: (bool? newValue) async {
-                                  globalSettings.pauseSpotifyWhenNewSound = !globalSettings.pauseSpotifyWhenNewSound;
-                                  Boxes.updateSettings("pauseSpotifyWhenNewSound", globalSettings.pauseSpotifyWhenNewSound);
-                                  if (!mounted) return;
-                                  setState(() {});
-                                },
-                              ),
-                              CheckboxListTile(
-                                controlAffinity: ListTileControlAffinity.leading,
-                                title: const Text("Pause Spotify when you play a different app."),
-                                value: globalSettings.pauseSpotifyWhenPlaying,
-                                onChanged: (bool? newValue) async {
-                                  globalSettings.pauseSpotifyWhenPlaying = !globalSettings.pauseSpotifyWhenPlaying;
-                                  Boxes.updateSettings("pauseSpotifyWhenPlaying", globalSettings.pauseSpotifyWhenPlaying);
-                                  if (!mounted) return;
-                                  setState(() {});
-                                },
-                              ),
+
                               const Divider(height: 10, thickness: 2),
                               CheckboxListTile(
                                 controlAffinity: ListTileControlAffinity.leading,
@@ -440,14 +383,6 @@ To Export settings, open [this](this) folder and copy *settings.json* file. To i
         ),
       ],
     );
-  }
-
-  void setVolumeOSDStyle(VolumeOSDStyle? value) async {
-    globalSettings.volumeOSDStyle = value ?? VolumeOSDStyle.normal;
-    WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
-    WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
-    await Boxes.updateSettings("volumeOSDStyle", globalSettings.volumeOSDStyle.index);
-    setState(() {});
   }
 
   setThemeType(ThemeType? value) async {

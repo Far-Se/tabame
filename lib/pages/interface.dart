@@ -16,6 +16,7 @@ import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
+import '../widgets/interface/audio_interface.dart';
 import '../widgets/interface/changelog.dart';
 import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
@@ -27,6 +28,7 @@ import '../widgets/interface/quickrun_settings.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
+import '../widgets/interface/views_interface.dart';
 import '../widgets/interface/wizardly.dart';
 
 class PageClass {
@@ -45,12 +47,12 @@ Future<int> interfaceWindowSetup() async {
   Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
-  await WindowManager.instance.setMinimumSize(const Size(700, 400));
+  await WindowManager.instance.setMinimumSize(const Size(700, 600));
   // await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
-  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.55));
+  await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.4));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }
@@ -88,11 +90,12 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
+    PageClass(title: 'Audio', icon: Icons.speaker, widget: const AudioInterface()),
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
     PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
-    // PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
+    PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
     PageClass(title: 'Projects', icon: Icons.folder_copy, widget: const ProjectsPage()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
@@ -397,7 +400,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                     actions: <Widget>[
                                                                       ElevatedButton(
                                                                           onPressed: () {
-                                                                            WinUtils.closeMainTabame();
+                                                                            WinUtils.closeAllTabameExProcesses();
                                                                             exit(0);
                                                                           },
                                                                           child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),

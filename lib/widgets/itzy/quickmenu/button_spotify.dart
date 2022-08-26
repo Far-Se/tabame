@@ -40,10 +40,28 @@ class _SpotifyButtonState extends State<SpotifyButton> {
             SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPlay);
           }
         },
-        onTertiaryTapUp: (TapUpDetails e) async {
+        onLongPress: () async {
           final List<int> spotify = WindowWatcher.getSpotify();
           if (spotify[0] != 0) {
             Win32.closeWindow(spotify[0], forced: true);
+          }
+        },
+        onTertiaryTapDown: (TapDownDetails e) async {
+          final List<int> spotify = WindowWatcher.getSpotify();
+          if (spotify[0] != 0) {
+            SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
+            RenderBox box = spotifyKey.currentContext?.findRenderObject() as RenderBox;
+            Offset position = box.localToGlobal(Offset.zero);
+
+            WidgetsBinding.instance.handlePointerEvent(PointerDownEvent(
+              pointer: 0,
+              position: position,
+            ));
+            WidgetsBinding.instance.handlePointerEvent(PointerUpEvent(
+              pointer: 0,
+              position: position,
+            ));
+            SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPlay);
           }
         },
         child: InkWell(

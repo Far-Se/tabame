@@ -101,11 +101,11 @@ class WinKeys {
       // return false;
     }
     if (mode == KeySentMode.up) {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_KEYUP, 0);
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
     } else {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY, 0);
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | 0, 0);
       if (mode == KeySentMode.normal) {
-        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_KEYUP, 0);
+        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
       }
     }
     return true;

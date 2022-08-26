@@ -75,56 +75,6 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                         setState(() {});
                       },
                     ),
-                    CheckboxListTile(
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: const Text("Show Media Control for each App"),
-                      value: globalSettings.showMediaControlForApp,
-                      onChanged: (bool? newValue) async {
-                        globalSettings.showMediaControlForApp = newValue ?? false;
-                        await Boxes.updateSettings("showMediaControlForApp", globalSettings.showMediaControlForApp);
-                        if (!mounted) return;
-                        setState(() {});
-                      },
-                    ),
-                    if (globalSettings.showMediaControlForApp)
-                      ListTile(
-                        title: TextField(
-                          decoration: const InputDecoration(
-                            labelText: "Predefined Media apps (press Enter to save)",
-                            hintText: "Predefined apps",
-                            border: InputBorder.none,
-                            isDense: false,
-                          ),
-                          controller: TextEditingController(text: Boxes.mediaControls.join(", ")),
-                          toolbarOptions: const ToolbarOptions(
-                            paste: true,
-                            cut: true,
-                            copy: true,
-                            selectAll: true,
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                          enableInteractiveSelection: true,
-                          onSubmitted: (String e) {
-                            if (e == "") {
-                              Boxes.mediaControls = <String>[];
-                              Boxes.updateSettings("mediaControls", Boxes.mediaControls);
-                            } else {
-                              Boxes.mediaControls = e.replaceAll(',,', ',').split(",");
-                              for (int i = 0; i < Boxes.mediaControls.length; i++) {
-                                Boxes.mediaControls[i] = Boxes.mediaControls[i].trim();
-                                if (Boxes.mediaControls[i] == "") {
-                                  Boxes.mediaControls.removeAt(i);
-                                  i--;
-                                }
-                              }
-                              Boxes.updateSettings("mediaControls", Boxes.mediaControls);
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved"), duration: Duration(seconds: 2)));
-                            if (!mounted) return;
-                            setState(() {});
-                          },
-                        ),
-                      ),
                     RadioTheme(
                       data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
                       child: Column(

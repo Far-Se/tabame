@@ -924,16 +924,18 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
     }
   }
 
-  static closeMainTabame() {
-    final int win = FindWindow(nullptr, TEXT("Tabame"));
-    if (win != 0) {
-      Win32.closeWindow(win);
+  static closeAllTabameExProcesses() {
+    final List<int> wins = enumWindows();
+    for (int win in wins) {
+      if (Win32.getClass(win) == "TABAME_WIN32_WINDOW" && win != Win32.hWnd) {
+        Win32.closeWindow(win);
+      }
     }
   }
 
   static reloadTabameQuickMenu() {
     if (!kReleaseMode) return;
-    closeMainTabame();
+    closeAllTabameExProcesses();
     startTabame(closeCurrent: false, arguments: "-restarted");
   }
 

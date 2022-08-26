@@ -30,6 +30,24 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     Map<String, String> changelog = <String, String>{
+      '1.1': '''
+## Added Views
+With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.
+
+### **Added Audio Tab**
+All Audio Settings were spread over all tabs so I've moved them on their own tab.
+
+Now you can set which type is changed when you change default Audio device (Multimedia, Console, Communications)
+
+Now you can set default Volume for apps, for example if you open a game, and usually you keep your volume at 25, you can set that automatically.
+
+### Other Features:
+- You can load GitHub and GitLab repositories directly from Project Overview.
+
+### Fixes:
+- Fixed Wizardly ContextMenu. For some people it crashed because the Registry Path was missing.
+
+''',
       '1.0': '''
 ### Public release with all main features implemented.
 ''',

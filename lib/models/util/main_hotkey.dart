@@ -22,28 +22,28 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
       {
         "enabled": true,
         "windowUnderMouse": true,
-        "name": "Browser Open Tab",
-        "windowsInfo": ["exe", "(chrome|firefox)"],
+        "name": "Browser Close Tab",
+        "windowsInfo": ["title", "(chrome|firefox)"],
         "boundToRegion": true,
-        "region": {"x1": 0, "y1": 0, "x2": 100, "y2": 6, "asPercentage": true, "anchorType": 0},
+        "region": {"x1": 0, "y1": 0, "x2": 99, "y2": 6, "asPercentage": true, "anchorType": 0},
         "triggerType": 3,
         "triggerInfo": [200, 1000, 0],
         "actions": [
-          {"type": 0, "value": "{#CTRL}t"}
+          {"type": 0, "value": "{MMB}"}
         ],
         "variableCheck": ["", ""]
       },
       {
         "enabled": true,
         "windowUnderMouse": true,
-        "name": "Browser Close Tab",
-        "windowsInfo": ["title", "(chrome|firefox)"],
+        "name": "Browser Open Tab",
+        "windowsInfo": ["exe", "(chrome|firefox)"],
         "boundToRegion": true,
-        "region": {"x1": 0, "y1": 0, "x2": 99, "y2": 6, "asPercentage": true, "anchorType": 0},
+        "region": {"x1": 0, "y1": 0, "x2": 100, "y2": 6, "asPercentage": true, "anchorType": 0},
         "triggerType": 0,
         "triggerInfo": [0, 0, 0],
         "actions": [
-          {"type": 0, "value": "{MMB}"}
+          {"type": 0, "value": "{#CTRL}t"}
         ],
         "variableCheck": ["", ""]
       },
@@ -71,7 +71,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "triggerType": 0,
         "triggerInfo": [0, 0, 0],
         "actions": [
-          {"type": 0, "value": "{#WIN}X{|}{WIN}{WIN}"}
+          {"type": 2, "value": "ShowStartMenu"}
         ],
         "variableCheck": ["", ""]
       },
@@ -170,7 +170,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "triggerType": 3,
         "triggerInfo": [200, 500, 0],
         "actions": [
-          {"type": 0, "value": "{#WIN}X{|}{WIN}{WIN}"}
+          {"type": 2, "value": "ShowStartMenu"}
         ],
         "variableCheck": ["", ""]
       },

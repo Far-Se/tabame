@@ -154,7 +154,7 @@ Consists of:
 - Calculator: default shortcut is `c `. You can divide multiple math equations with | and use x,y,z,a,b,c as variables. It supports complex equations. Example: `66*20/12` ... `c 75 | x * 20% | x - y | z * 30% | z-a` ... `c 2+3*sqrt(4)`
 - Unit converter: Default is `u `. Supports length, mass, temperature, volume, speed, digital, area, energy, force, fuel, power, pressure, shoe, time, torque
 Example: `u 1 in to cm` ... `u 1 mass`
-- Currency converter: default is `cur `. It uses [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api/tree/1/latest/currencies) repository to get latest rates. Example: `cur 100 eur to usd` ... `100$ to eur`
+- Currency converter: default is `cur `. It uses [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api/tree/1/latest/currencies) repository to get latest rates. Example: `cur 100 eur to usd` ... `100 usd to eur` ... `100$ to eur`
 - Color converter: default is `col `. Converts from and to: hex `#` or `0x`, rgba, hsla, hsv, cmyk. Example: `col #ff00ff` ... `rgba(123,255,54,12)`
 - Time zones: default is `tz `. Shows current time in specific timezone, contains DTS as well.
 

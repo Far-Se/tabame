@@ -14,7 +14,7 @@ class TextInput extends StatefulWidget {
     required this.labelText,
     this.hintText,
     this.value,
-    required this.onChanged,
+    required this.onChanged(String val),
     this.onSubmitted,
     this.onUpdated,
     this.multiline = false,

@@ -1,14 +1,18 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
+import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
@@ -117,23 +121,48 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
             ),
             Flexible(
               fit: FlexFit.loose,
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (stateFileProcessing == 1) {
-                    stateFileProcessing = 2;
-                    return;
-                  }
-                  stateFileProcessing = 1;
-                  setState(() {});
-                  // if (loadedFiles.isEmpty)
-                  // loadedFiles.clear();
-                  // print(loadedFiles.length);
-                  await loadFiles();
-                  projectAnalyzed = false;
-                  getCode();
-                  setState(() {});
-                },
-                child: Text(stateFileProcessing == 0 ? "Generate" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
+              child: Column(
+                children: <Widget>[
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (stateFileProcessing == 1) {
+                        stateFileProcessing = 2;
+                        return;
+                      }
+                      stateFileProcessing = 1;
+                      setState(() {});
+                      await loadFiles();
+                      projectAnalyzed = false;
+                      getCode();
+                      setState(() {});
+                    },
+                    child: Text(stateFileProcessing == 0 ? "Generate" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () async {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            content: LoadFromGitWidget(onSelected: (String folder) {
+                              Navigator.of(context).pop();
+                              projectFolder = folder;
+                              if (!Directory(projectFolder).existsSync()) return;
+                              if (mounted) setState(() {});
+                            }),
+                            actions: <Widget>[
+                              ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                            ],
+                          );
+                        },
+                      ).then((_) {});
+                      setState(() {});
+                    },
+                    child: const Text("Load from Git"),
+                  )
+                ],
               ),
             ),
           ],
@@ -624,3 +653,172 @@ Map<String, MultiLineComment> multiLineComment = <String, MultiLineComment>{
   "lhs": MultiLineComment("{-", "-}"),
   "pas": MultiLineComment("(*", "*)"),
 };
+
+class LoadFromGitWidget extends StatefulWidget {
+  final void Function(String folder) onSelected;
+  const LoadFromGitWidget({Key? key, required this.onSelected}) : super(key: key);
+  @override
+  LoadFromGitWidgetState createState() => LoadFromGitWidgetState();
+}
+
+class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
+  final String dir = "${WinUtils.getTabameSettingsFolder()}\\projectOverview";
+  String downloadMessage = "Download";
+
+  String headerMsg = "Works only with GitHub and GitLab!";
+  final List<String> allDirs = <String>[];
+  @override
+  void initState() {
+    super.initState();
+    loadProjects();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  void downloadProject(String link) async {
+    downloadMessage = "Downloading";
+    headerMsg = "Works only with GitHub and GitLab!";
+    setState(() {});
+    String repo = "";
+    if (link.contains("github.com")) {
+      final RegExpMatch? reg = RegExp(r'github\.com/(.*?/.*?)$', caseSensitive: false).firstMatch(link);
+      if (reg != null) {
+        repo = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
+      } else {
+        final RegExpMatch? reg = RegExp(r':(.*?/.*?)\.git').firstMatch(link);
+        if (reg != null) {
+          repo = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
+        }
+      }
+    } else if (link.contains("gitlab.com")) {
+      final RegExpMatch? reg = RegExp(r'gitlab\.com/(.*?/.*?)$', caseSensitive: false).firstMatch(link);
+      if (reg != null) {
+        final String repName = reg[1]!.split('/').last;
+        repo = "https://gitlab.com/${reg[1]!}/-/archive/master/$repName.zip";
+      }
+    }
+    if (repo.isEmpty) {
+      downloadMessage = "Download";
+      headerMsg = "Suports only GitHub and GitLab";
+      setState(() {});
+      return;
+    }
+    final String zipFile = "$dir\\archived.zip";
+    downloadFile(repo, zipFile, () async {
+      downloadMessage = "Extracting";
+      if (!mounted) return;
+      setState(() {});
+      await WinUtils.runPowerShell(<String>['Expand-Archive -LiteralPath "$zipFile" -DestinationPath "$dir" -Force']);
+      downloadMessage = "Download";
+      if (!mounted) return;
+      File(zipFile).deleteSync();
+      setState(() {});
+      loadProjects();
+    });
+
+    return;
+  }
+
+  void loadProjects() {
+    if (!Directory(dir).existsSync()) Directory(dir).createSync();
+    final List<FileSystemEntity> dirs = Directory(dir).listSync(followLinks: false);
+    allDirs.clear();
+    for (FileSystemEntity x in dirs) {
+      if (x is! File) allDirs.add(x.path);
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> downloadFile(String url, String filename, Function callback) async {
+    int downloaded = 0;
+    int skipten = 0;
+    http.Client httpClient = http.Client();
+    http.Request request = http.Request('GET', Uri.parse(url));
+    Future<http.StreamedResponse> response = httpClient.send(request);
+
+    List<List<int>> chunks = <List<int>>[];
+    response.asStream().listen((http.StreamedResponse r) {
+      r.stream.listen((List<int> chunk) {
+        chunks.add(chunk);
+        skipten++;
+        if (skipten == 10) {
+          downloadMessage = "${getFileSize(downloaded, 2)}";
+          if (mounted) setState(() {});
+          skipten = 0;
+        }
+        downloaded += chunk.length;
+      }, onDone: () async {
+        File file = File('$filename');
+        final Uint8List bytes = Uint8List(downloaded);
+        int offset = 0;
+        for (List<int> chunk in chunks) {
+          bytes.setRange(offset, offset + chunk.length, chunk);
+          offset += chunk.length;
+        }
+        await file.writeAsBytes(bytes);
+        callback();
+        return;
+      });
+    });
+  }
+
+  getFileSize(int bytes, int decimals) {
+    if (bytes <= 0) return "0 B";
+    const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+    int i = (log(bytes) / log(1024)).floor();
+    return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
+  }
+
+  String gitlink = "https://github.com/Far-Se/tabame";
+  @override
+  Widget build(BuildContext context) {
+    loadProjects();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(headerMsg),
+        TextField(
+          controller: TextEditingController(text: gitlink),
+          onChanged: (String e) => gitlink = e,
+          decoration: const InputDecoration(
+            labelText: "Github/GitLab link",
+          ),
+        ),
+        Row(
+          children: <Widget>[
+            Expanded(
+                child: ElevatedButton(
+                    onPressed: () => downloadMessage == "Download" ? downloadProject(gitlink) : null,
+                    child: Text(downloadMessage, style: TextStyle(color: Color(globalSettings.theme.background))))),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text("Downloaded Projects:", style: Theme.of(context).textTheme.bodyLarge),
+        Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List<Widget>.generate(
+                allDirs.length,
+                (int index) => ListTile(
+                      onTap: () => widget.onSelected(allDirs[index]),
+                      title: Text(allDirs[index].split('\\').last),
+                      trailing: Container(
+                        width: 40,
+                        height: double.infinity,
+                        child: InkWell(
+                          onTap: () {
+                            File(allDirs[index]).deleteSync(recursive: true);
+                            loadProjects();
+                          },
+                          child: const Icon(Icons.delete),
+                        ),
+                      ),
+                    ))),
+      ],
+    );
+  }
+}

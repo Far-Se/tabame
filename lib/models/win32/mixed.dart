@@ -39,9 +39,20 @@ class Square {
   }
 }
 
+class Dpi {
+  int x;
+  int y;
+  double coef;
+  Dpi({
+    required this.x,
+    required this.y,
+    required this.coef,
+  });
+}
+
 class Monitor {
   static List<int> _monitors = <int>[];
-  static Map<int, Map<int, int>> dpi = <int, Map<int, int>>{};
+  static Map<int, Dpi> dpi = <int, Dpi>{};
   static final Map<int, int> _monitorIds = <int, int>{};
   static Map<int, Square> monitorSizes = <int, Square>{};
   static List<int> get list {
@@ -62,7 +73,8 @@ class Monitor {
       final Pointer<Uint32> dpiX = calloc<Uint32>();
       final Pointer<Uint32> dpiY = calloc<Uint32>();
       GetDpiForMonitor(_monitors[i], 0, dpiX, dpiY);
-      dpi[_monitors[i]] = <int, int>{0: dpiX.value, 1: dpiY.value};
+      final double dpiCoef = dpiX.value / 96.0;
+      dpi[_monitors[i]] = Dpi(coef: dpiCoef, x: dpiX.value, y: dpiY.value);
       free(dpiX);
       free(dpiY);
       _monitorIds[_monitors[i]] = i + 1;
@@ -85,6 +97,13 @@ class Monitor {
     return monitor;
   }
 
+  static int getMonitorNumber(int monitorID) {
+    if (_monitorIds.containsKey(monitorID)) {
+      return _monitorIds[monitorID]!;
+    }
+    return -1;
+  }
+
   static int getMonitorFromPoint(PointXY point) {
     final Pointer<POINT> winPoint = calloc<POINT>()
       ..ref.x = point.X
@@ -97,12 +116,17 @@ class Monitor {
   static PointXY adjustPointToDPI(PointXY point) {
     PointXY newPoint = PointXY(X: 0, Y: 0);
     final int monitor = getMonitorFromPoint(point);
-    final double dpiCoefX = dpi[monitor]![0]! / 96.0;
-    final double dpiCoefY = dpi[monitor]![1]! / 96.0;
+    final double dpiCoefX = dpi[monitor]!.x / 96.0;
+    final double dpiCoefY = dpi[monitor]!.y / 96.0;
     newPoint.X = (point.X / dpiCoefX).round();
     newPoint.Y = (point.Y / dpiCoefY).round();
 
     return newPoint;
+  }
+
+  static double dpiAdjust(double point, [int monitor = -1]) {
+    if (monitor == -1) monitor = getCursorMonitor();
+    return (point / dpi[monitor]!.coef);
   }
 }
 

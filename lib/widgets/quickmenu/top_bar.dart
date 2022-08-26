@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
-import '../../models/win32/registry.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
@@ -122,25 +119,7 @@ class TopBar extends StatelessWidget {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
-                                // ShowWindow(FindWindow(TEXT("DV2ControlHost"), TEXT("Start menu")), 5);
-
-                                final RegistryKey key =
-                                    Registry.openPath(RegistryHive.localMachine, path: r'SOFTWARE\Classes\Directory\shell', desiredAccessRights: AccessRights.allAccess);
-                                final String exe = Platform.resolvedExecutable;
-                                if (key.subkeyNames.contains("tabame")) {
-                                  key.deleteKey(r'tabame\command');
-                                  key.deleteKey('tabame');
-                                  return;
-                                }
-                                final RegistryKey subkey = key.createKey("tabame");
-                                subkey.createValue(RegistryValue(r"Icon", RegistryValueType.string, exe));
-                                subkey.createValue(const RegistryValue("", RegistryValueType.string, "Open in Wizardly"));
-
-                                final RegistryKey command = subkey.createKey("command");
-                                command.createValue(RegistryValue("", RegistryValueType.string, '"$exe" "%V" -interface -wizardly'));
-
-                                key.close();
-                                print("m");
+                                //
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

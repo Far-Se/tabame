@@ -11,7 +11,10 @@ import 'package:flutter/src/gestures/events.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
+import '../models/classes/saved_maps.dart';
 import '../models/keys.dart';
+import '../models/win32/window.dart';
+import '../models/window_watcher.dart';
 import '../widgets/itzy/quickmenu/widget_audio.dart';
 import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
@@ -56,8 +59,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   @override
   void initState() {
     super.initState();
-    NativeHotkey.unHook();
-    NativeHotkey.addListener(this);
+    NativeHooks.unHook();
+    NativeHooks.addListener(this);
     QuickMenuFunctions.addListener(this);
     WindowManager.instance.addListener(this);
     WinHotkeys.update();
@@ -92,7 +95,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     if (!kDebugMode) changeHeightTimer?.cancel();
-    NativeHotkey.removeListener(this);
+    NativeHooks.removeListener(this);
     QuickMenuFunctions.removeListener(this);
     focusNode.dispose();
     super.dispose();
@@ -174,8 +177,45 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   @override
   void onWindowBlur() async {}
 
+  double previousVolume = 0.0;
   @override
   void onForegroundWindowChanged(int hWnd) {
+    if (!kReleaseMode && !Globals.debugHotkeys) return;
+    bool setting = false;
+    if (Boxes.defaultVolume.isNotEmpty) {
+      final int wW = WindowWatcher.list.indexWhere((Window element) => element.hWnd == hWnd);
+      for (DefaultVolume def in Boxes.defaultVolume) {
+        if (def.type == "exe") {
+          String stringCheck = "";
+          switch (def.type) {
+            case "exe":
+              stringCheck = wW > -1 ? WindowWatcher.list.elementAt(wW).process.exe : Win32.getWindowExePath(hWnd);
+              break;
+            case "class":
+              stringCheck = wW > -1 ? WindowWatcher.list.elementAt(wW).process.className : Win32.getClass(hWnd);
+              break;
+            case "title":
+              stringCheck = wW > -1 ? WindowWatcher.list.elementAt(wW).title : Win32.getTitle(hWnd);
+              break;
+          }
+          if (RegExp(def.match, caseSensitive: false).hasMatch(stringCheck)) {
+            if (globalSettings.volumeSetBack) {
+              Audio.getVolume(AudioDeviceType.output).then((double value) {
+                previousVolume = value;
+                Audio.setVolume(def.volume / 100, AudioDeviceType.output);
+              });
+            } else {
+              Audio.setVolume(def.volume / 100, AudioDeviceType.output);
+            }
+            break;
+          }
+        }
+      }
+      if (setting == false && previousVolume != 0.0) {
+        Audio.setVolume(previousVolume, AudioDeviceType.output);
+        previousVolume = 0.0;
+      }
+    }
     if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible && globalSettings.quickRunState == 0) {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.toggleQuickMenu(visible: false));
@@ -192,6 +232,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   int currentVK = -1;
   @override
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
+    if (!kReleaseMode && !Globals.debugHotkeys) return;
     final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey).toList()];
     if (hk.isEmpty) return;
     final Hotkeys hotkey = hk[0];
@@ -211,10 +252,10 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       // NativeHotkey.free();
       if (hotkeyInfo.vk == currentVK) {
         currentVK = -1;
-        NativeHotkey.free();
+        NativeHooks.freeHotkeys();
         hotkeyInfo.action = "released";
-        for (final TabameListener listener in NativeHotkey.listeners) {
-          if (!NativeHotkey.listenersObv.contains(listener)) return;
+        for (final TabameListener listener in NativeHooks.listeners) {
+          if (!NativeHooks.listenersObv.contains(listener)) return;
           listener.onHotKeyEvent(hotkeyInfo);
         }
         return;

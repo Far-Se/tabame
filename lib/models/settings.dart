@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:local_notifier/local_notifier.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
@@ -26,13 +27,13 @@ enum TPage {
 class Settings {
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;
-
+  bool views = false;
   int quickRunState = 0;
   bool autoUpdate = false;
   bool showTrayBar = true;
   bool showWeather = true;
-  bool viewsEnabled = false;
   bool previewTheme = false;
+  bool volumeSetBack = false;
   bool showPowerShell = true;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
@@ -55,6 +56,16 @@ class Settings {
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
+
+  List<String> audio = <String>["false", "true", "false"];
+
+  bool get audioConsole => audio[0] == "false" ? false : true;
+  bool get audioMultimedia => audio[1] == "false" ? false : true;
+  bool get audioCommunications => audio[2] == "false" ? false : true;
+
+  set audioConsole(bool val) => audio[0] = val == false ? "false" : "true";
+  set audioMultimedia(bool val) => audio[1] = val == false ? "false" : "true";
+  set audioCommunications(bool val) => audio[2] = val == false ? "false" : "true";
 
   set weatherTemperature(String temp) => weather[0] = temp;
   String get weatherTemperature => weather[0];
@@ -116,6 +127,9 @@ Future<void> registerAll() async {
   await Boxes.registerBoxes();
   //Schedule Theme
   globalSettings.setScheduleThemeChange();
+  if (globalSettings.views && globalSettings.args.contains("-views")) {
+    enableViews(true);
+  }
   //
 
   //Toast

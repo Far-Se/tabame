@@ -20,7 +20,8 @@ enum Pages {
 }
 
 class Globals {
-  static bool debugHotkeysEnabled = false;
+  static bool debugHooks = false;
+  static bool debugHotkeys = false;
   static String version = "1.0";
 
   static int virtualDesktop = 0;

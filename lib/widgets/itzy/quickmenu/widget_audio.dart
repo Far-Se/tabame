@@ -224,7 +224,13 @@ class AudioBoxState extends State<AudioBox> {
                                     Flexible(
                                       fit: FlexFit.loose,
                                       child: deviceVar.icons.containsKey(device.id)
-                                          ? Image.memory(deviceVar.icons[device.id]!, width: 18, gaplessPlayback: true)
+                                          ? Image.memory(deviceVar.icons[device.id]!,
+                                              width: 18,
+                                              gaplessPlayback: true,
+                                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                    Icons.check_box_outline_blank,
+                                                    size: 16,
+                                                  ))
                                           : const Icon(Icons.audiotrack, size: 18),
                                     ),
                                     Expanded(
@@ -248,7 +254,12 @@ class AudioBoxState extends State<AudioBox> {
                                 ),
                               ),
                               onTap: () {
-                                Audio.setDefaultDevice(device.id);
+                                Audio.setDefaultDevice(
+                                  device.id,
+                                  console: globalSettings.audioConsole,
+                                  multimedia: globalSettings.audioMultimedia,
+                                  communications: globalSettings.audioCommunications,
+                                );
                                 fetchData();
                               },
                             ),
@@ -382,6 +393,10 @@ class AudioBoxState extends State<AudioBox> {
                                                                   audioMixerIcons[mix.processId]!,
                                                                   width: 18,
                                                                   gaplessPlayback: true,
+                                                                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                                    Icons.check_box_outline_blank,
+                                                                    size: 16,
+                                                                  ),
                                                                 )
                                                               : const Icon(Icons.audiotrack, size: 18),
                                                         ),

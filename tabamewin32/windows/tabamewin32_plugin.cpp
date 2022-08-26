@@ -593,11 +593,11 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
         {
             if (button == BTN_SWUP)
             {
-                ViewsEvent("switchup", NULL);
+                ViewsEvent("switchUp", NULL);
             }
             else
             {
-                ViewsEvent("switchdown", NULL);
+                ViewsEvent("switchDown", NULL);
             }
         }
     }
@@ -679,13 +679,13 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
     {
         if (dwEvent == EVENT_SYSTEM_MOVESIZESTART)
         {
-            ViewsEvent("movestart", hwnd);
+            ViewsEvent("moveStart", hwnd);
             movingWindow = hwnd;
             viewsState = 1;
         }
         else if (dwEvent == EVENT_SYSTEM_MOVESIZEEND)
         {
-            ViewsEvent("moveend", hwnd);
+            ViewsEvent("moveEnd", hwnd);
             movingWindow = 0;
             viewsState = 0;
         }
@@ -1490,8 +1490,11 @@ namespace tabamewin32
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             std::string deviceID = std::get<std::string>(args.at(flutter::EncodableValue("deviceID")));
+            bool console = std::get<bool>(args.at(flutter::EncodableValue("console")));
+            bool multimedia = std::get<bool>(args.at(flutter::EncodableValue("multimedia")));
+            bool communications = std::get<bool>(args.at(flutter::EncodableValue("communications")));
             std::wstring deviceIDW = Encoding::Utf8ToWide(deviceID);
-            HRESULT nativeFuncResult = setDefaultDevice((LPWSTR)deviceIDW.c_str());
+            HRESULT nativeFuncResult = setDefaultDevice((LPWSTR)deviceIDW.c_str(), console, multimedia, communications);
             result->Success(flutter::EncodableValue((int)nativeFuncResult));
         }
         else if (method_name.compare("getAudioVolume") == 0)
@@ -1528,7 +1531,10 @@ namespace tabamewin32
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
-            bool nativeFuncResult = switchDefaultDevice((EDataFlow)deviceType);
+            bool console = std::get<bool>(args.at(flutter::EncodableValue("console")));
+            bool multimedia = std::get<bool>(args.at(flutter::EncodableValue("multimedia")));
+            bool communications = std::get<bool>(args.at(flutter::EncodableValue("communications")));
+            bool nativeFuncResult = switchDefaultDevice((EDataFlow)deviceType, console, multimedia, communications);
             result->Success(flutter::EncodableValue(nativeFuncResult));
         }
         //? AudioMixer

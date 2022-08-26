@@ -2,10 +2,12 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'pages/views.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -18,19 +20,21 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
-  // if (kReleaseMode) {
-  FlutterError.onError = (FlutterErrorDetails details) async {
-    final String error = details.exceptionAsString();
-    String stack = details.exceptionAsString();
-    final List<String> stackArr = stack.split("\n");
-    if (stackArr.length > 11) {
-      stack = stackArr.take(10).join("\n");
-    }
-    stack = "$stack\n===============\n===============\n===============\n";
-    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("$error\n$stack", mode: FileMode.append);
-  };
-  // }
-  List<String> arguments = arguments2;
+  if (kReleaseMode) {
+    FlutterError.onError = (FlutterErrorDetails details) async {
+      final String error = details.exceptionAsString();
+      String stack = details.exceptionAsString();
+      final List<String> stackArr = stack.split("\n");
+      if (stackArr.length > 11) {
+        stack = stackArr.take(10).join("\n");
+      }
+      stack = "$stack\n===============\n===============\n===============\n";
+      File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("$error\n$stack", mode: FileMode.append);
+    };
+  }
+  List<String> arguments = <String>[...arguments2];
+  // arguments.add('-views');
+
   // WinUtils.msgBox('"${arguments.join('" "')}"', "Args");
   if (arguments.isNotEmpty) {
     if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
@@ -50,26 +54,37 @@ Future<void> main(List<String> arguments2) async {
 
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
     globalSettings.args.add('-tryadmin');
-    // WinUtils.msgBox('"${globalSettings.args.join('" "')}"', "Args");
+    WinUtils.closeAllTabameExProcesses();
     WinUtils.run(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
-    Timer(const Duration(seconds: 1), () => exit(0));
+    Timer(const Duration(seconds: 1), () {
+      exit(0);
+    });
     runApp(EmptyWidget());
     return;
-  } /*  else if (!globalSettings.args.join(' ').contains('-refreshed') && globalSettings.args.join(' ').contains('-refreshed')) {
-    globalSettings.args.add('-refreshed');
-    WinUtils.open(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
-  } */
-  if (Globals.debugHotkeysEnabled || kReleaseMode) {
-    await NativeHotkey.register();
+  }
+  if (kReleaseMode && globalSettings.views && !globalSettings.args.contains('-views')) {
+    Future<void>.delayed(Duration(seconds: 1), () => WinUtils.startTabame(closeCurrent: false, arguments: "-views"));
+  }
+
+  if (Globals.debugHooks || kReleaseMode) {
+    await NativeHooks.registerCallHandler();
     //!hook
   }
 
   /// ? Window
   late WindowOptions windowOptions;
-  if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
-    print("nomap");
+  if (arguments.contains('-views')) {
     windowOptions = WindowOptions(
-      size: Size(700, 400),
+      size: Size(300, 300),
+      center: false,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      title: "Tabame Views",
+    );
+  } else if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    windowOptions = WindowOptions(
+      size: Size(700, 600),
       center: false,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
@@ -97,7 +112,9 @@ Future<void> main(List<String> arguments2) async {
   });
 
   await setWindowAsTransparent();
-
+  // if (arguments.contains('-views')) {
+  //   return runApp(ViewsScreen());
+  // }
   runApp(const Tabame());
 }
 
@@ -120,6 +137,7 @@ class _TabameState extends State<Tabame> {
 
   @override
   void initState() {
+    super.initState();
     ThemeType theme = globalSettings.themeTypeMode;
     Timer.periodic(Duration(minutes: 1), (Timer timer) {
       if (theme != globalSettings.themeTypeMode) {
@@ -128,7 +146,13 @@ class _TabameState extends State<Tabame> {
         if (mounted) setState(() {});
       }
     });
-    super.initState();
+
+    final SingletonFlutterWindow window = WidgetsBinding.instance.window;
+    window.onPlatformBrightnessChanged = () {
+      theme = globalSettings.themeTypeMode;
+      themeChangeNotifier.value = !themeChangeNotifier.value;
+      if (mounted) setState(() {});
+    };
   }
 
   @override
@@ -221,6 +245,9 @@ class _TabameState extends State<Tabame> {
                   allowImplicitScrolling: false,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (BuildContext context, int index) {
+                    if (globalSettings.args.contains('-views')) {
+                      return const ViewsScreen();
+                    }
                     if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
                       return const Interface();
                     }

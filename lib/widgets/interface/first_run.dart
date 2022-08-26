@@ -73,10 +73,6 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
 
   @override
   Widget build(BuildContext context) {
-    // final List<Hotkeys> m = Boxes.remap;
-    // print(m.first.toJson());
-
-    // Clipboard.setData(ClipboardData(text: m.firstWhere((element) => element.key == "A").toJson()));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
@@ -410,7 +406,6 @@ You can also scan folder sizes and delete files that are too big."""),
     String downloadLink = "";
     for (Map<String, dynamic> x in lastVersion["assets"]) {
       if (!x["name"].endsWith("zip")) continue;
-      print(x["browser_download_url"]);
       if (x.containsKey("browser_download_url")) {
         downloadLink = x["browser_download_url"];
         break;
