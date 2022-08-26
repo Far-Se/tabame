@@ -79,6 +79,8 @@ It takes only 26.5 MB of space.
 
 [✨ Wizardly](#-wizardly)
 
+[🧩 Views](#-views) (v1.1)
+
 [🙃 Outro](#-outro)
 
 # **🎛️ QuickMenu**
@@ -262,6 +264,7 @@ You can search text in a folder, recursively. You can use regex, case sensitive 
 
 Import feature to this (and why I've created it): You can exclude files/folders, so if you do not want to see results from, for example `node_modules` you can set that in filters. For example Notepad++ and vsCode does not have this feature and it's annoying.
 
+
 ## Project Overview
 
 It counts lines of code and makes a summary. **You can ignore folders or only show specific file types**.
@@ -278,7 +281,12 @@ You can rename files in bulk, you can use regex but also Lists. This can be usef
 ## Folder Size Scan
 You can scan folders recursively and see each folder size, you can delete folders.
 
+# **🧩 Views**
+Views is an alternative to PowerToys FancyZones. If presets are not what you need and you need more flexibility, you should try this feature.
 
+If consists of a grid where you can change it's size using scroll wheel. Drag a window, press right click, move the window where you want, hold right click, select a region the release right and left click. When you move again the window, it will regain it's previous size.
+
+**This is not DPI aware. Use PowerToys if you changed your monitor DPI**
 # 🙃 Outro
 I've started this project to learn Dart and Flutter, in my mind I had only `QuickMenu` features/app, but while writing for it I got new ideas for it, and it ended up `Tabame`, random name I came up with.
 
