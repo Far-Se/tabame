@@ -45,7 +45,7 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 using namespace std;
 
-//#h red
+//#h green
 ///
 LRESULT CALLBACK HandleKeyboardHook(int, WPARAM, LPARAM);
 LRESULT CALLBACK HandleMouseHook(int, WPARAM, LPARAM);
@@ -701,20 +701,11 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
 ///!!
 ///!!
 //#e
+//
+#define _WIN32_WINNT_WIN11 0x0B00
 bool IsWindows11OrGreater()
 {
-    DWORD dwVersion = 0;
-    DWORD dwBuild = 0;
-
-#pragma warning(push)
-#pragma warning(disable : 4996)
-    dwVersion = GetVersion();
-    // Get the build number.
-    if (dwVersion < 0x80000000)
-        dwBuild = (DWORD)(HIWORD(dwVersion));
-#pragma warning(pop)
-
-    return dwBuild < 22000;
+    return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WIN11), LOBYTE(_WIN32_WINNT_WIN11), 0);
 }
 void FindDesktopFolderView(REFIID riid, void **ppv)
 {

@@ -180,6 +180,13 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   double previousVolume = 0.0;
   @override
   void onForegroundWindowChanged(int hWnd) {
+    if (globalSettings.hookedWins.containsKey(hWnd)) {
+      for (int win in globalSettings.hookedWins[hWnd]!) {
+        if (Win32.winExists(win)) {
+          Win32.surfaceWindow(win);
+        }
+      }
+    }
     if (!kReleaseMode && !Globals.debugHotkeys) return;
     bool setting = false;
     if (Boxes.defaultVolume.isNotEmpty) {

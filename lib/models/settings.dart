@@ -112,6 +112,9 @@ class Settings {
       themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {});
     }
   }
+
+  //other
+  Map<int, List<int>> hookedWins = <int, List<int>>{};
 }
 
 Settings globalSettings = Settings();

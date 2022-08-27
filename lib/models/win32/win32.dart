@@ -420,6 +420,17 @@ class Win32 {
     SetFocus(hWnd);
     SetActiveWindow(hWnd);
   }
+
+  static bool winExists(int win) {
+    return IsWindow(win) != 0;
+  }
+
+  static void surfaceWindow(int hWnd) {
+    ShowWindow(hWnd, SW_SHOWNOACTIVATE);
+
+    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
 }
 
 class WinUtils {
