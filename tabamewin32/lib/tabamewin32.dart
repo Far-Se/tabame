@@ -429,6 +429,13 @@ Future<String> pickFolder() async {
   return result;
 }
 
+Future<bool> isWindows11() async {
+  final bool result = await audioMethodChannel.invokeMethod<bool>('isWindows11') ?? true;
+  return result;
+}
+
+//!Hooks
+
 Future<void> enableTrcktivity(bool enabled) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,

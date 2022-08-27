@@ -32,6 +32,7 @@ class Settings {
   bool autoUpdate = false;
   bool showTrayBar = true;
   bool showWeather = true;
+  bool isWindows11 = false;
   bool previewTheme = false;
   bool volumeSetBack = false;
   bool showPowerShell = true;

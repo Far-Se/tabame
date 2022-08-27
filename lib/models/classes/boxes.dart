@@ -32,7 +32,7 @@ class Boxes {
     } else {
       pref = await SaveSettings.getInstance();
     }
-
+    globalSettings.isWindows11 = await isWindows11();
     // await pref.remove("projects");
     // pref = await SaveSettings.getInstance();
     //? Settings
@@ -152,9 +152,8 @@ class Boxes {
       }
 
       //? Volume
-      // globalSettings.volumeOSDStyle = VolumeOSDStyle.media;
-      WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
-      if (globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+      if (!globalSettings.isWindows11 && globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+        WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
         WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
       }
       if (globalSettings.autoUpdate) checkForUpdates();

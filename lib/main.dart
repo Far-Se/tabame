@@ -20,6 +20,8 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   if (kReleaseMode) {
     FlutterError.onError = (FlutterErrorDetails details) async {
       final String error = details.exceptionAsString();
@@ -47,9 +49,6 @@ Future<void> main(List<String> arguments2) async {
     }
   }
 
-  WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
-
   await registerAll();
 
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
@@ -62,8 +61,8 @@ Future<void> main(List<String> arguments2) async {
     runApp(EmptyWidget());
     return;
   }
-  if (kReleaseMode && globalSettings.views && !globalSettings.args.contains('-views')) {
-    Future<void>.delayed(Duration(seconds: 1), () => WinUtils.startTabame(closeCurrent: false, arguments: "-views"));
+  if (kReleaseMode && globalSettings.views && !globalSettings.args.contains('-views') && !globalSettings.args.contains("-interface")) {
+    Future<void>.delayed(Duration(seconds: 3), () => WinUtils.startTabame(closeCurrent: false, arguments: "-views"));
   }
 
   if (Globals.debugHooks || kReleaseMode) {

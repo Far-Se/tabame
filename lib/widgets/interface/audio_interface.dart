@@ -173,41 +173,42 @@ class AudioInterfaceState extends State<AudioInterface> {
                           ),
                         ),
                       const Divider(height: 10, thickness: 1),
-                      RadioTheme(
-                        data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.headline6)),
-                            RadioListTile<VolumeOSDStyle>(
-                              title: const Text('Normal Volume OSD'),
-                              value: VolumeOSDStyle.normal,
-                              groupValue: globalSettings.volumeOSDStyle,
-                              onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                            ),
-                            RadioListTile<VolumeOSDStyle>(
-                              title: const Text('Hide Media'),
-                              value: VolumeOSDStyle.media,
-                              groupValue: globalSettings.volumeOSDStyle,
-                              onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                            ),
-                            RadioListTile<VolumeOSDStyle>(
-                              title: const Text('Thin'),
-                              value: VolumeOSDStyle.thin,
-                              groupValue: globalSettings.volumeOSDStyle,
-                              onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                            ),
-                            RadioListTile<VolumeOSDStyle>(
-                              title: const Text('Hidden'),
-                              value: VolumeOSDStyle.visible,
-                              groupValue: globalSettings.volumeOSDStyle,
-                              onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
-                            ),
-                          ],
+                      if (!globalSettings.isWindows11)
+                        RadioTheme(
+                          data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.headline6)),
+                              RadioListTile<VolumeOSDStyle>(
+                                title: const Text('Normal Volume OSD'),
+                                value: VolumeOSDStyle.normal,
+                                groupValue: globalSettings.volumeOSDStyle,
+                                onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
+                              ),
+                              RadioListTile<VolumeOSDStyle>(
+                                title: const Text('Hide Media'),
+                                value: VolumeOSDStyle.media,
+                                groupValue: globalSettings.volumeOSDStyle,
+                                onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
+                              ),
+                              RadioListTile<VolumeOSDStyle>(
+                                title: const Text('Thin'),
+                                value: VolumeOSDStyle.thin,
+                                groupValue: globalSettings.volumeOSDStyle,
+                                onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
+                              ),
+                              RadioListTile<VolumeOSDStyle>(
+                                title: const Text('Hidden'),
+                                value: VolumeOSDStyle.visible,
+                                groupValue: globalSettings.volumeOSDStyle,
+                                onChanged: (VolumeOSDStyle? value) => setVolumeOSDStyle(value),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
