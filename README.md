@@ -40,6 +40,8 @@ Please submit a [issue here](https://github.com/Far-Se/tabame/issues), it will b
 
 **Please also provide errors.log file**. You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
 
+Thanks to @elvinvandalen for helping me fix a bug where the app crashed on start because AudioPropertyStore was bugged for some users.
+
 ## Make your own:
 This project is open source, which means you can compile your own version.
 1. Install Flutter for Windows

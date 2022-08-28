@@ -14,6 +14,7 @@ class BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Debug.add("QuickMenu: BottomBar");
     Globals.heights.traybar = 30;
     final bool showPowerShell = globalSettings.showPowerShell && Boxes().powerShellScripts.isNotEmpty;
     if (!showPowerShell &&

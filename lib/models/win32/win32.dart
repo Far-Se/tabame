@@ -986,6 +986,21 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
       });
     });
   }
+
+  static bool isWindows11() {
+    // var reg = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+    final RegistryKey reg = Registry.openPath(RegistryHive.localMachine, path: r'SOFTWARE\Microsoft\Windows NT\CurrentVersion');
+
+    // var currentBuildStr = (string)reg.GetValue("CurrentBuild");
+    // var currentBuild = int.Parse(currentBuildStr);
+    final int currentBuild = reg.getValueAsInt("CurrentBuild") ?? 0;
+
+    return currentBuild >= 22000;
+  }
+
+  static bool isWindows10() {
+    return Platform.operatingSystemVersion.contains("Windows 10");
+  }
 }
 
 class WizardlyContextMenu {

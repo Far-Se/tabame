@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 
 class MicMuteButton extends StatefulWidget {
   const MicMuteButton({Key? key}) : super(key: key);
 
   @override
-  State<MicMuteButton> createState() => _MicMuteButtonState();
+  State<MicMuteButton> createState() => MicMuteButtonState();
 }
 
-class _MicMuteButtonState extends State<MicMuteButton> {
+class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
   bool switchedDefaultDevice = false;
+  @override
+  void initState() {
+    super.initState();
+    QuickMenuFunctions.addListener(this);
+  }
+
+  @override
+  Future<void> onQuickMenuShown(int type) async {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {

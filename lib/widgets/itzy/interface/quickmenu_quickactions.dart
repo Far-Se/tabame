@@ -25,6 +25,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "HideDesktopFilesButton": Icons.hide_image,
     "SpotifyButton": Icons.music_note,
     "ToggleHiddenFilesButton": Icons.folder_off,
+    "WorkSpaceButton": Icons.workspaces,
     "Deactivated:": Icons.do_disturb,
   };
   @override

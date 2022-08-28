@@ -20,8 +20,15 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
+  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync() || true) {
+    Debug.register(clean: false);
+  }
+
+  Debug.add("===");
+  Debug.add("Started");
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
+  Debug.add("Register WindowManager");
   if (kReleaseMode) {
     FlutterError.onError = (FlutterErrorDetails details) async {
       final String error = details.exceptionAsString();
@@ -48,24 +55,36 @@ Future<void> main(List<String> arguments2) async {
       globalSettings.page = TPage.views;
     }
   }
+  Debug.add("Parsed arguments ${globalSettings.page}");
 
   await registerAll();
 
+  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync() || true) {
+    Debug.methodDebug(clean: false);
+  }
+  Debug.add("Registered All");
+
   if (kReleaseMode && globalSettings.runAsAdministrator && !WinUtils.isAdministrator() && !globalSettings.args.join(' ').contains('-tryadmin')) {
+    Debug.add("Trying Admin");
     globalSettings.args.add('-tryadmin');
     WinUtils.closeAllTabameExProcesses();
+    Debug.add("Closed all tabame processed");
     WinUtils.run(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
+    Debug.add("Started New");
     Timer(const Duration(seconds: 1), () {
+      Debug.add("Started Close Current");
       exit(0);
     });
     runApp(EmptyWidget());
     return;
   }
   if (kReleaseMode && globalSettings.views && !globalSettings.args.contains('-views') && !globalSettings.args.contains("-interface")) {
+    Debug.add("Starting Views");
     Future<void>.delayed(Duration(seconds: 3), () => WinUtils.startTabame(closeCurrent: false, arguments: "-views"));
   }
 
   if (Globals.debugHooks || kReleaseMode) {
+    Debug.add("Registering Hooks");
     await NativeHooks.registerCallHandler();
     //!hook
   }
@@ -100,6 +119,7 @@ Future<void> main(List<String> arguments2) async {
       title: "Tabame",
     );
   }
+  Debug.add("Setting windowOptions");
   windowManager.setMinimizable(false);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
@@ -108,9 +128,12 @@ Future<void> main(List<String> arguments2) async {
     await windowManager.setHasShadow(false);
     await Win32.fetchMainWindowHandle();
     fullLoaded.value = true;
+    Debug.add("Set windowOptions");
   });
 
+  Debug.add("Setting transparency");
   await setWindowAsTransparent();
+  Debug.add("Set transparency");
   // if (arguments.contains('-views')) {
   //   return runApp(ViewsScreen());
   // }
@@ -137,6 +160,7 @@ class _TabameState extends State<Tabame> {
   @override
   void initState() {
     super.initState();
+    Debug.add("Tabame: init");
     ThemeType theme = globalSettings.themeTypeMode;
     Timer.periodic(Duration(minutes: 1), (Timer timer) {
       if (theme != globalSettings.themeTypeMode) {
@@ -159,10 +183,12 @@ class _TabameState extends State<Tabame> {
     return ValueListenableBuilder<bool>(
         valueListenable: fullLoaded,
         builder: (BuildContext context, bool value, __) {
+          Debug.add("Tabame: fullLoaded");
           if (value == false) return Container();
           return ValueListenableBuilder<bool>(
             valueListenable: themeChangeNotifier,
             builder: (_, bool refreshed, __) {
+              Debug.add("Tabame: Theme");
               ThemeMode scheduled = ThemeMode.system;
               ThemeType themeType = globalSettings.themeType;
               if (themeType.index == 3) {
@@ -244,6 +270,7 @@ class _TabameState extends State<Tabame> {
                   allowImplicitScrolling: false,
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (BuildContext context, int index) {
+                    Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
                     if (globalSettings.args.contains('-views')) {
                       return const ViewsScreen();
                     }

@@ -862,3 +862,153 @@ class ViewsSettings {
     return 'ViewsSettings(minW: $minW, maxW: $maxW, minH: $minH, maxH: $maxH, scaleW: $scaleW, scaleH: $scaleH, scrollStepW: $scrollStepW, scrollStepH: $scrollStepH, bgColor: $bgColor)';
   }
 }
+
+class WorkspaceWindow {
+  String exe;
+  String title;
+  int monitorID;
+  int posX;
+  int posY;
+  int width;
+  int height;
+  WorkspaceWindow({
+    required this.exe,
+    required this.title,
+    required this.monitorID,
+    required this.posX,
+    required this.posY,
+    required this.width,
+    required this.height,
+  });
+
+  WorkspaceWindow copyWith({
+    String? exe,
+    String? title,
+    int? monitorID,
+    int? posX,
+    int? posY,
+    int? width,
+    int? height,
+  }) {
+    return WorkspaceWindow(
+      exe: exe ?? this.exe,
+      title: title ?? this.title,
+      monitorID: monitorID ?? this.monitorID,
+      posX: posX ?? this.posX,
+      posY: posY ?? this.posY,
+      width: width ?? this.width,
+      height: height ?? this.height,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'exe': exe,
+      'title': title,
+      'monitorID': monitorID,
+      'posX': posX,
+      'posY': posY,
+      'width': width,
+      'height': height,
+    };
+  }
+
+  factory WorkspaceWindow.fromMap(Map<String, dynamic> map) {
+    return WorkspaceWindow(
+      exe: (map['exe'] ?? '') as String,
+      title: (map['title'] ?? '') as String,
+      monitorID: (map['monitorID'] ?? 0) as int,
+      posX: (map['posX'] ?? 0) as int,
+      posY: (map['posY'] ?? 0) as int,
+      width: (map['width'] ?? 0) as int,
+      height: (map['height'] ?? 0) as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory WorkspaceWindow.fromJson(String source) => WorkspaceWindow.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'WorkspaceWindow(exe: $exe, title: $title, monitorID: $monitorID, posX: $posX, posY: $posY, width: $width, height: $height)';
+  }
+
+  @override
+  bool operator ==(covariant WorkspaceWindow other) {
+    if (identical(this, other)) return true;
+
+    return other.exe == exe &&
+        other.title == title &&
+        other.monitorID == monitorID &&
+        other.posX == posX &&
+        other.posY == posY &&
+        other.width == width &&
+        other.height == height;
+  }
+
+  @override
+  int get hashCode {
+    return exe.hashCode ^ title.hashCode ^ monitorID.hashCode ^ posX.hashCode ^ posY.hashCode ^ width.hashCode ^ height.hashCode;
+  }
+}
+
+class Workspaces {
+  String name;
+  List<WorkspaceWindow> windows;
+  Map<int, List<int>> hooks;
+  Workspaces({
+    required this.name,
+    required this.windows,
+    required this.hooks,
+  });
+
+  Workspaces copyWith({
+    String? name,
+    List<WorkspaceWindow>? windows,
+    Map<int, List<int>>? hooks,
+  }) {
+    return Workspaces(
+      name: name ?? this.name,
+      windows: windows ?? this.windows,
+      hooks: hooks ?? this.hooks,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'windows': windows.map((WorkspaceWindow x) => x.toMap()).toList(),
+      'hooks': hooks,
+    };
+  }
+
+  factory Workspaces.fromMap(Map<String, dynamic> map) {
+    return Workspaces(
+      name: (map['name'] ?? '') as String,
+      windows: List<WorkspaceWindow>.from(
+        (map['windows'] as List<int>).map<WorkspaceWindow>(
+          (int x) => WorkspaceWindow.fromMap(x as Map<String, dynamic>),
+        ),
+      ),
+      hooks: Map<int, List<int>>.from((map['hooks'] ?? const <Map<int, List<int>>>{}) as Map<int, List<int>>),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory Workspaces.fromJson(String source) => Workspaces.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'Workspaces(name: $name, windows: $windows, hooks: $hooks)';
+
+  @override
+  bool operator ==(covariant Workspaces other) {
+    if (identical(this, other)) return true;
+
+    return other.name == name && listEquals(other.windows, windows) && mapEquals(other.hooks, hooks);
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ windows.hashCode ^ hooks.hashCode;
+}

@@ -53,6 +53,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
         if (!fetching) fetchTray();
       }
     });
+    Debug.add("QuickMenu: Tray");
   }
 
   @override

@@ -32,11 +32,14 @@ class Boxes {
     } else {
       pref = await SaveSettings.getInstance();
     }
-    globalSettings.isWindows11 = await isWindows11();
+    globalSettings.isWindows10 = WinUtils.isWindows10();
+    // globalSettings.isWindows11 = await isWindows11();
+    Debug.add("Registered: Loaded Box info (win10: ${globalSettings.isWindows10} | ${Platform.operatingSystemVersion})");
     // await pref.remove("projects");
     // pref = await SaveSettings.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
+      await pref.setBool("DEBUGGING", false);
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
 
@@ -66,6 +69,7 @@ class Boxes {
           weekDays: <bool>[true, true, true, true, true, false, false],
           voiceVolume: 100);
       await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
+      Debug.add("Registered: setDefault Settings");
     }
     //!fetch
     globalSettings
@@ -98,17 +102,24 @@ class Boxes {
       ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? globalSettings.quickMenuPinnedWithTrayAtBottom
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? globalSettings.usePowerShellAsToastNotification
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // * always after schedule
-
+    Debug.add("Registered: Fetched All");
+    if (pref.getBool("DEBUGGING") ?? false == true) {
+      Debug.register(clean: false);
+      Debug.methodDebug(clean: false);
+    }
     // ? other
     // ? Just Installed
     final bool justInstalled = pref.getBool("justInstalled") ?? false;
     if (justInstalled) {
       updateSettings("justInstalled", false);
+      Debug.add("Registered: Shortcut");
       createShortcut(Platform.resolvedExecutable, WinUtils.getKnownFolder(FOLDERID_Programs), args: "-interface", destExe: "Tabame Interface.lnk");
+      Debug.add("Registered: shortcut Installed");
     }
     // ? Trktivity
     if (!Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").existsSync()) {
       Directory("${WinUtils.getTabameSettingsFolder()}\\trktivity").createSync(recursive: true);
+      Debug.add("Registered: Trktivity");
     }
 
     // ? Theme
@@ -121,6 +132,7 @@ class Boxes {
     if (lightTheme != null) globalSettings.lightTheme = ThemeColors.fromJson(lightTheme);
     if (darkTheme != null) globalSettings.darkTheme = ThemeColors.fromJson(darkTheme);
     themeChangeNotifier.value = !themeChangeNotifier.value;
+    Debug.add("Registered: Theme");
 
     //? Pinned Apps
     if (pref.getStringList("pinnedApps") == null) {
@@ -128,6 +140,7 @@ class Boxes {
       final String taskManagerPath = WinUtils.getTaskManagerPath();
       if (taskManagerPath != "") pinnedApps2.add(taskManagerPath);
       await pref.setStringList("pinnedApps", pinnedApps2);
+      Debug.add("Registered: Pinned");
     }
 
     //?PowerShell
@@ -136,12 +149,14 @@ class Boxes {
         PowerShellScript(name: "🏠Show IP", command: "(Invoke-WebRequest -uri \"http://ifconfig.me/ip\").Content", showTerminal: true).toJson()
       ];
       await pref.setString("powerShellScripts", jsonEncode(powerShellScripts));
+      Debug.add("Registered: PowerShell");
     }
 
     //? Media Controls
     mediaControls = pref.getStringList("mediaControls") ?? <String>["Spotify.exe", "chrome.exe", "firefox.exe", "Music.UI.exe"];
     //? Run Shortcuts
     globalSettings.run.fetch();
+    Debug.add("Registered: Shortcuts");
     //! Startup
     //? Taskbar
     if (globalSettings.previewTheme) return;
@@ -149,18 +164,21 @@ class Boxes {
     if (globalSettings.page == TPage.quickmenu) {
       if (globalSettings.hideTaskbarOnStartup) {
         WinUtils.toggleTaskbar(visible: false);
+        Debug.add("Registered: Taskbar");
       }
 
       //? Volume
-      if (!globalSettings.isWindows11 && globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+      if (globalSettings.isWindows10 && globalSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
         WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
         WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
+        Debug.add("Registered: Volume");
       }
       if (globalSettings.autoUpdate) checkForUpdates();
     }
     if (globalSettings.page == TPage.quickmenu) {
       if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
       if (reminders.where((Reminder element) => element.enabled).isNotEmpty) Tasks().startReminders();
+      Debug.add("Registered: Tasks");
     }
   }
 
@@ -277,6 +295,7 @@ class Boxes {
       "ChangeThemeButton",
       "HideDesktopFilesButton",
       "ToggleHiddenFilesButton",
+      "WorkSpaceButton",
     ];
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
@@ -308,6 +327,10 @@ class Boxes {
   static List<RunAPI> _runApi = <RunAPI>[];
   static set runApi(List<RunAPI> list) => _runApi = list;
   static List<RunAPI> get runApi => _runApi.isEmpty ? _runApi = getSavedMap<RunAPI>(RunAPI.fromJson, "runApi") : _runApi;
+
+  static List<Workspaces> _workspaces = <Workspaces>[];
+  static set workspaces(List<Workspaces> list) => _workspaces = list;
+  static List<Workspaces> get workspaces => _workspaces.isEmpty ? _workspaces = getSavedMap<Workspaces>(Workspaces.fromJson, "workspaces") : _workspaces;
 
   static List<DefaultVolume> _defaultVolume = <DefaultVolume>[];
   static set defaultVolume(List<DefaultVolume> list) => _defaultVolume = list;
@@ -362,6 +385,7 @@ class Boxes {
   }
 
   static Future<int> checkForUpdates() async {
+    Debug.add("Updates: Checking");
     final http.Response response = await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
     if (response.statusCode != 200) return -1;
     final List<dynamic> json = jsonDecode(response.body);
@@ -389,7 +413,7 @@ class Boxes {
         exit(0);
       }
     });
-
+    Debug.add("Updates: Checked");
     return 1;
   }
 
@@ -674,6 +698,7 @@ class QuickMenuFunctions {
         visible = false;
       }
     } else {
+      if (!kReleaseMode) return;
       Win32.setPosition(const Offset(-99999, -99999));
       // Win32.setPosition(const Offset(0, 0));
       hidTime = DateTime.now().millisecondsSinceEpoch;

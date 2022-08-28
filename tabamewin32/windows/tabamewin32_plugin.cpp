@@ -702,6 +702,18 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
 ///!!
 //#e
 //
+bool debugging = false;
+std::string debugFile = "";
+
+void appendLineToFile(const std::string name, const std::string content)
+{
+    if (debugging == false)
+        return;
+    std::ofstream outfile;
+    outfile.open(name, std::ios_base::app);
+    outfile << content << endl;
+    outfile.close();
+}
 #define _WIN32_WINNT_WIN11 0x0B00
 bool IsWindows11OrGreater()
 {
@@ -1459,6 +1471,8 @@ namespace tabamewin32
     {
 
         std::string method_name = method_call.method_name();
+        if (debugging)
+            appendLineToFile(debugFile, method_name);
         //?
 
         //#h white
@@ -1474,12 +1488,19 @@ namespace tabamewin32
             {
                 flutter::EncodableMap deviceMap;
                 deviceMap[flutter::EncodableValue("id")] = flutter::EncodableValue(Encoding::WideToUtf8(device.id));
-                deviceMap[flutter::EncodableValue("name")] = flutter::EncodableValue(Encoding::WideToUtf8(device.name));
-                deviceMap[flutter::EncodableValue("iconInfo")] = flutter::EncodableValue(Encoding::WideToUtf8(device.iconInfo));
+                deviceMap[flutter::EncodableValue("name")] = flutter::EncodableValue(device.name);
+                deviceMap[flutter::EncodableValue("iconInfo")] = flutter::EncodableValue(device.iconInfo);
                 deviceMap[flutter::EncodableValue("isActive")] = flutter::EncodableValue(device.isActive);
                 map[flutter::EncodableValue(Encoding::WideToUtf8(device.id))] = flutter::EncodableValue(deviceMap);
             }
             result->Success(flutter::EncodableValue(map));
+        }
+        else if (method_name.compare("canAccessAudio") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
+            bool device = canAccessAudio((EDataFlow)deviceType);
+            result->Success(flutter::EncodableValue(device));
         }
         else if (method_name.compare("getDefaultDevice") == 0)
         {
@@ -1489,8 +1510,8 @@ namespace tabamewin32
 
             flutter::EncodableMap deviceMap;
             deviceMap[flutter::EncodableValue("id")] = flutter::EncodableValue(Encoding::WideToUtf8(device.id));
-            deviceMap[flutter::EncodableValue("name")] = flutter::EncodableValue(Encoding::WideToUtf8(device.name));
-            deviceMap[flutter::EncodableValue("iconInfo")] = flutter::EncodableValue(Encoding::WideToUtf8(device.iconInfo));
+            deviceMap[flutter::EncodableValue("name")] = flutter::EncodableValue(device.name);
+            deviceMap[flutter::EncodableValue("iconInfo")] = flutter::EncodableValue(device.iconInfo);
             deviceMap[flutter::EncodableValue("isActive")] = flutter::EncodableValue(device.isActive);
             result->Success(flutter::EncodableValue(deviceMap));
         }
@@ -2083,11 +2104,23 @@ namespace tabamewin32
         {
             result->Success(flutter::EncodableValue(IsWindows11OrGreater()));
         }
+        else if (method_name.compare("enableDebug") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            string path = std::get<std::string>(args.at(flutter::EncodableValue("path")));
+            debugging = true;
+            debugFile = path;
+            appendLineToFile(path, "INITIATED");
+            setAudioDebugInfo(path);
+            result->Success(flutter::EncodableValue(true));
+        }
 
         else
         {
             result->NotImplemented();
         }
+        if (debugging)
+            appendLineToFile(debugFile, "-done");
     }
     //#e
 } // namespace tabamewin32

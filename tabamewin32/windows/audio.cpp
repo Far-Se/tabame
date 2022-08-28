@@ -6,11 +6,14 @@
 #include <ShellAPI.h>
 #include <olectl.h>
 #include <mmdeviceapi.h>
+#include <Audioclient.h>
 #include <propsys.h>
 #include <propvarutil.h>
 #include <stdio.h>
 #include <Functiondiscoverykeys_devpkey.h>
+#include <atlstr.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <memory>
@@ -31,6 +34,24 @@
 #pragma comment(lib, "propsys")
 using namespace std;
 
+bool aDebugging = false;
+std::string debFile = "";
+
+void appendDebugFile(const std::string name, const std::string content)
+{
+    if (aDebugging == false)
+        return;
+    std::ofstream outfile;
+    outfile.open(name, std::ios_base::app);
+    outfile << content << endl;
+    outfile.close();
+}
+void setAudioDebugInfo(string debugFi)
+{
+    aDebugging = true;
+    debFile = debugFi;
+}
+
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 struct ProcessVolume
@@ -43,57 +64,56 @@ struct ProcessVolume
 
 struct DeviceProps
 {
-    wstring id;
-    wstring name;
-    wstring iconInfo;
-    bool isActive;
+    wstring id = L"00x";
+    string name = "Missing";
+    string iconInfo = "missing,0";
+    bool isActive = false;
 };
 
 static HRESULT getDeviceProperty(IMMDevice *pDevice, DeviceProps *output)
 {
-    IPropertyStore *pStore = NULL;
-    HRESULT hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
-    if (SUCCEEDED(hr))
+    HRESULT hr = (HRESULT) false;
+    try
     {
-        PROPVARIANT prop;
-        PropVariantInit(&prop);
-        hr = pStore->GetValue(PKEY_Device_FriendlyName, &prop);
+        appendDebugFile(debFile, "getDevProp");
+        IPropertyStore *pStore = NULL;
+        appendDebugFile(debFile, "getDevProp: Store Init");
+        hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
         if (SUCCEEDED(hr))
         {
-            if (IsPropVariantString(prop))
+            PROPVARIANT prop;
+            appendDebugFile(debFile, "getDevProp: Get PKEY_Device_FriendlyName");
+            PropVariantInit(&prop);
+            appendDebugFile(debFile, "getDevProp: Prop Variant");
+            hr = pStore->GetValue(PKEY_Device_FriendlyName, &prop);
+            if (SUCCEEDED(hr))
             {
-                // 3h of debugging wchar to char conversion just to find out
-                // this dumb function does not work propertly :)
-                // output->name = PropVariantToStringWithDefault(prop, L"missing"); <- 3h of debugging
+                string result;
 
-                STRRET strret;
-                PropVariantToStrRet(prop, &strret);
-                output->name = strret.pOleStr;
+                result = CW2A((LPCWSTR)prop.pwszVal);
+                output->name = result;
             }
-            else
-                hr = E_UNEXPECTED;
-        }
-        PROPVARIANT prop2;
-        PropVariantInit(&prop2);
-        hr = pStore->GetValue(PKEY_DeviceClass_IconPath, &prop2);
-        if (SUCCEEDED(hr))
-        {
-            if (IsPropVariantString(prop2))
+            PROPVARIANT prop2;
+            appendDebugFile(debFile, "getDevProp: PKEY_DeviceClass_IconPath");
+            PropVariantInit(&prop2);
+            appendDebugFile(debFile, "getDevProp: Str Prop Variant");
+            hr = pStore->GetValue(PKEY_DeviceClass_IconPath, &prop2);
+            if (SUCCEEDED(hr))
             {
-                STRRET strret;
-                PropVariantToStrRet(prop2, &strret);
-                output->iconInfo = strret.pOleStr;
-            }
+                string result;
 
-            else
-            {
-                output->iconInfo = L"missing,0";
-                hr = E_UNEXPECTED;
+                result = CW2A((LPCWSTR)prop2.pwszVal);
+                output->iconInfo = result;
             }
+            PropVariantClear(&prop);
+            PropVariantClear(&prop2);
+            appendDebugFile(debFile, "getDevProp: Release");
+            pStore->Release();
         }
-        PropVariantClear(&prop);
-        PropVariantClear(&prop2);
-        pStore->Release();
+    }
+    catch (...)
+    {
+        appendDebugFile(debFile, "Audio: getDevProp Throw exception");
     }
     // delete pStore;
     return hr;
@@ -155,6 +175,7 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
             pEnumerator->Release();
         }
     }
+    CoUninitialize();
     return output;
 }
 
@@ -177,10 +198,14 @@ DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
             LPWSTR aid;
             pActive->GetId(&aid);
             activeDevice.id = aid;
+            pEnumerator->Release();
+            CoUninitialize();
 
             return activeDevice;
         }
+        pEnumerator->Release();
     }
+    CoUninitialize();
     return DeviceProps();
 }
 
@@ -217,11 +242,8 @@ float getVolume(EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            DeviceProps activeDevice;
-            getDeviceProperty(pActive, &activeDevice);
             LPWSTR aid;
             pActive->GetId(&aid);
-            activeDevice.id = aid;
 
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
@@ -232,10 +254,13 @@ float getVolume(EDataFlow deviceType = eRender)
 
                 m_spVolumeControl->Release();
                 pActive->Release();
+                pEnumerator->Release();
+                CoUninitialize();
                 return volumeLevel;
             }
         }
     }
+    CoUninitialize();
     return 0.0;
 }
 
@@ -255,8 +280,10 @@ bool registerNotificationCallback(EDataFlow deviceType = eRender)
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
             IMMNotificationClient *pNotify = NULL;
             pEnumerator->RegisterEndpointNotificationCallback(pNotify);
+            pEnumerator->Release();
         }
     }
+    CoUninitialize();
     return 0.0;
 }
 
@@ -273,11 +300,8 @@ bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            DeviceProps activeDevice;
-            getDeviceProperty(pActive, &activeDevice);
             LPWSTR aid;
             pActive->GetId(&aid);
-            activeDevice.id = aid;
 
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
@@ -287,8 +311,10 @@ bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
                 m_spVolumeControl->Release();
                 pActive->Release();
             }
+            pEnumerator->Release();
         }
     }
+    CoUninitialize();
     return true;
 }
 
@@ -296,35 +322,100 @@ bool getMuteAudioDevice(EDataFlow deviceType = eRender)
 {
     BOOL muteState = false;
 
+    appendDebugFile(debFile, "Audio: CoIn");
     HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+
     if (SUCCEEDED(hr))
     {
+
+        appendDebugFile(debFile, "Audio: EnumDevice");
         IMMDeviceEnumerator *pEnumerator = NULL;
         hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, reinterpret_cast<void **>(&pEnumerator));
         if (SUCCEEDED(hr))
         {
             IMMDevice *pActive = NULL;
 
-            pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            DeviceProps activeDevice;
-            getDeviceProperty(pActive, &activeDevice);
-            LPWSTR aid;
-            pActive->GetId(&aid);
-            activeDevice.id = aid;
-
-            IAudioEndpointVolume *m_spVolumeControl = NULL;
-            hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
+            appendDebugFile(debFile, "Audio: GetDefault endpoint");
+            hr = pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
             if (SUCCEEDED(hr))
             {
-                m_spVolumeControl->GetMute(&muteState);
-                m_spVolumeControl->Release();
-                pActive->Release();
+                LPWSTR aid;
+
+                appendDebugFile(debFile, "Audio: getID");
+                pActive->GetId(&aid);
+
+                IAudioEndpointVolume *m_spVolumeControl = NULL;
+
+                appendDebugFile(debFile, "Audio: Activate");
+                hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
+                if (SUCCEEDED(hr))
+                {
+
+                    appendDebugFile(debFile, "Audio: GetMute");
+                    m_spVolumeControl->GetMute(&muteState);
+
+                    appendDebugFile(debFile, "Audio: Release");
+                    m_spVolumeControl->Release();
+                    pActive->Release();
+                    pEnumerator->Release();
+                    return muteState;
+                }
             }
+            pEnumerator->Release();
         }
     }
+    CoUninitialize();
     return muteState;
 }
 
+bool canAccessAudio(EDataFlow deviceType = eRender)
+{
+    BOOL muteState = false;
+
+    appendDebugFile(debFile, "Audio: CanAccessAudio CoInitializeEx");
+    HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+
+    if (!SUCCEEDED(hr))
+    {
+        CoUninitialize();
+        return false;
+    }
+
+    appendDebugFile(debFile, "Audio: EnumDevice");
+    IMMDeviceEnumerator *pEnumerator = NULL;
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, reinterpret_cast<void **>(&pEnumerator));
+    if (!SUCCEEDED(hr))
+        return false;
+    IMMDevice *pActive = NULL;
+
+    appendDebugFile(debFile, "Audio: GetDefault endpoint");
+    hr = pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+    if (!SUCCEEDED(hr))
+        return false;
+    LPWSTR aid;
+
+    appendDebugFile(debFile, "Audio: getID");
+    hr = pActive->GetId(&aid);
+    if (!SUCCEEDED(hr))
+        return false;
+
+    IAudioEndpointVolume *m_spVolumeControl = NULL;
+
+    appendDebugFile(debFile, "Audio: Activate");
+    hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
+    if (!SUCCEEDED(hr))
+        return false;
+
+    appendDebugFile(debFile, "Audio: GetMute");
+    m_spVolumeControl->GetMute(&muteState);
+
+    appendDebugFile(debFile, "Audio: Release");
+    m_spVolumeControl->Release();
+    pActive->Release();
+    pEnumerator->Release();
+    CoUninitialize();
+    return true;
+}
 bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
 {
     std::vector<DeviceProps> output;
@@ -339,12 +430,8 @@ bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            DeviceProps activeDevice;
-            getDeviceProperty(pActive, &activeDevice);
             LPWSTR aid;
             pActive->GetId(&aid);
-            activeDevice.id = aid;
-
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
             if (SUCCEEDED(hr))
@@ -354,9 +441,11 @@ bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
                 m_spVolumeControl->SetMasterVolumeLevelScalar((float)volumeLevel, NULL);
                 m_spVolumeControl->Release();
                 pActive->Release();
+                pEnumerator->Release();
             }
         }
     }
+    CoUninitialize();
     return true;
 }
 
@@ -500,6 +589,7 @@ std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0)
                 session2->Release();
                 session->Release();
                 volumes2.push_back(data);
+                CoUninitialize();
                 return volumes2;
                 break;
             }
@@ -521,8 +611,10 @@ std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0)
         {
             return std::vector<ProcessVolume>{};
         }
+        CoUninitialize();
         return volumes;
     }
+    CoUninitialize();
     return std::vector<ProcessVolume>{};
 }
 #endif

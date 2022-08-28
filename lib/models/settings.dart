@@ -32,7 +32,7 @@ class Settings {
   bool autoUpdate = false;
   bool showTrayBar = true;
   bool showWeather = true;
-  bool isWindows11 = false;
+  bool isWindows10 = false;
   bool previewTheme = false;
   bool volumeSetBack = false;
   bool showPowerShell = true;
@@ -123,23 +123,32 @@ Future<void> registerAll() async {
   final String locale = Platform.localeName.substring(0, 2);
   Intl.systemLocale = await findSystemLocale();
   await initializeDateFormatting(locale);
+  Debug.add("Registered: Locale");
 
   // ? Monitor Handle
   Monitor.fetchMonitor();
+  Debug.add("Registered: Monitor");
   Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitor());
   //register
   await Boxes.registerBoxes();
+  Debug.add("Registered: Boxes");
   //Schedule Theme
   globalSettings.setScheduleThemeChange();
+  Debug.add("Registered: ScheduleTheme");
   if (globalSettings.views && globalSettings.args.contains("-views")) {
     enableViews(true);
+    Debug.add("Registered: ViewsEnabled");
   }
   //
 
+  await Audio.detectAudioSupport(AudioDeviceType.output);
   //Toast
-  Future<void>.delayed(const Duration(seconds: 2), () async {
+  Timer(const Duration(seconds: 2), () async {
     if (!WinUtils.windowsNotificationRegistered) {
+      Debug.add("Registered: Toast");
       await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
+
+      Debug.add("Registered: Toast Done");
       WinUtils.windowsNotificationRegistered = true;
     }
   });
@@ -245,3 +254,23 @@ enum TaskBarAppsStyle { onlyActiveMonitor, activeMonitorFirst, orderByActivity }
 enum VolumeOSDStyle { normal, media, visible, thin }
 
 enum ThemeType { system, light, dark, schedule }
+
+class Debug {
+  static File theFile = File("${WinUtils.getTabameSettingsFolder()}\\debug.log");
+  static bool enabled = false;
+  static void register({bool clean = true}) {
+    enabled = true;
+    theFile.writeAsStringSync("========\n", mode: clean ? FileMode.write : FileMode.append);
+    File("${WinUtils.getTabameSettingsFolder()}\\debug_cpp.log").writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
+  }
+
+  static void add(String text) {
+    if (!enabled) return;
+    theFile.writeAsStringSync("$text\n", mode: FileMode.append);
+  }
+
+  static void methodDebug({bool clean = true}) {
+    File("${WinUtils.getTabameSettingsFolder()}\\debug_cpp.log").writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
+    enableDebug("${WinUtils.getTabameSettingsFolder()}\\debug_cpp.log");
+  }
+}

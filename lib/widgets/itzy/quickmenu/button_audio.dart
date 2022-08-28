@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/keys.dart';
 import '../../../models/settings.dart';
@@ -17,8 +18,7 @@ class AudioButton extends StatefulWidget {
   State<AudioButton> createState() => _AudioButtonState();
 }
 
-class _AudioButtonState extends State<AudioButton> {
-  late Timer timer;
+class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   bool muteState = false;
 
   bool switchedDefaultDevice = false;
@@ -26,16 +26,18 @@ class _AudioButtonState extends State<AudioButton> {
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) async {
-      muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
-      if (!mounted) return;
-      setState(() {});
-    });
+    QuickMenuFunctions.addListener(this);
+    Debug.add("QuickMenu: Topbar: AudioButton");
+  }
+
+  @override
+  Future<void> onQuickMenuShown(int type) async {
+    muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
+    setState(() {});
   }
 
   @override
   void dispose() {
-    timer.cancel();
     super.dispose();
   }
 

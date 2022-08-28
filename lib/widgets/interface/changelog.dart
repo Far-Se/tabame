@@ -31,10 +31,18 @@ class _ChangelogState extends State<Changelog> {
   Widget build(BuildContext context) {
     Map<String, String> changelog = <String, String>{
       '1.1': '''
-## Added Views
+## **Added Views**
 With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.
 
-### **Added Audio Tab**
+### **Added Workspaces**
+With Workspaces you can save current position and size of specific windows, so you can load them easily from QuickMenu QuickActions
+
+### **Added Hooks**
+You can hook windows togheter, so when you focus the main one, other will appear on foreground as well. You can access this by right clicking a window in QuickMenu.
+
+---
+
+## **Added Audio Tab**
 All Audio Settings were spread over all tabs so I've moved them on their own tab.
 
 Now you can set which type is changed when you change default Audio device (Multimedia, Console, Communications)
@@ -71,6 +79,7 @@ Now you can set default Volume for apps, for example if you open a game, and usu
                   shrinkWrap: true,
                   data: changelog.values.elementAt(index),
                 ),
+                const Divider(height: 10, thickness: 2)
               ],
             ),
           ),

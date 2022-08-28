@@ -18,6 +18,7 @@ import 'win32/win32.dart';
 import 'win32/window.dart';
 
 class WindowWatcher {
+  static bool firstEverRun = true;
   static List<Window> list = <Window>[];
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
   static Map<int, int> iconsHandles = <int, int>{};
@@ -37,7 +38,7 @@ class WindowWatcher {
   static Future<bool> fetchWindows() async {
     if (fetching) return false;
     fetching = true;
-
+    if (firstEverRun) Debug.add("QuickMenu: enumWindows");
     final List<int> winHWNDS = enumWindows();
     final List<int> allHWNDs = <int>[];
     if (winHWNDS.isEmpty) print("ENUM WINDS IS EMPTY");
@@ -47,8 +48,10 @@ class WindowWatcher {
         allHWNDs.add(hWnd);
       }
     }
+    if (firstEverRun) Debug.add("QuickMenu: Wins ${allHWNDs.length}");
     final List<Window> newList = <Window>[];
 
+    if (firstEverRun) Debug.add("QuickMenu: adding Win");
     for (int element in allHWNDs) {
       newList.add(Window(element));
 
@@ -56,6 +59,7 @@ class WindowWatcher {
         specialList["Spotify"] = newList.last;
         if (Boxes.pref.getString("SpotifyLocation") == null) {
           Boxes.pref.setString("SpotifyLocation", newList.last.process.exePath);
+          if (firstEverRun) Debug.add("QuickMenu: Spotify");
         }
       }
     }
@@ -91,7 +95,7 @@ class WindowWatcher {
 
     await handleIcons();
     await orderBy(globalSettings.taskBarAppsStyle);
-
+    firstEverRun = false;
     return true;
   }
 

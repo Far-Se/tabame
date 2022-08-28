@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +20,7 @@ import '../itzy/quickmenu/button_spotify.dart';
 import '../itzy/quickmenu/button_task_manager.dart';
 import '../itzy/quickmenu/button_toggle_desktop.dart';
 import '../itzy/quickmenu/button_toggle_hidden_files.dart';
+import '../itzy/quickmenu/button_workspace.dart';
 import '../itzy/quickmenu/list_pinned_apps.dart';
 import '../containers/bar_with_buttons.dart';
 import '../itzy/quickmenu/button_toggle_taskbar.dart';
@@ -27,6 +30,7 @@ class TopBar extends StatelessWidget {
   const TopBar({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    Debug.add("QuickMenu: Topbar");
     Map<String, Widget> widgets = <String, Widget>{
       "TaskManagerButton": const TaskManagerButton(),
       "SpotifyButton": const SpotifyButton(),
@@ -37,7 +41,8 @@ class TopBar extends StatelessWidget {
       "AlwaysAwakeButton": const AlwaysAwakeButton(),
       "ChangeThemeButton": const ChangeThemeButton(),
       "HideDesktopFilesButton": const HideDesktopFilesButton(),
-      "ToggleHiddenFilesButton": const ToggleHiddenFilesButton()
+      "ToggleHiddenFilesButton": const ToggleHiddenFilesButton(),
+      "WorkSpaceButton": const WorkSpaceButton(),
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
@@ -91,7 +96,11 @@ class TopBar extends StatelessWidget {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
                           child: BarWithButtons(
-                            children: showWidgets,
+                            children: List<Widget>.generate(showWidgets.length, (int i) {
+                              Debug.add(
+                                  "QuickMenu: Topbar: ${widgets.entries.firstWhere((MapEntry<String, Widget> element) => element.value == showWidgets[i], orElse: () => MapEntry<String, Widget>("Null", Container())).key}");
+                              return showWidgets[i];
+                            }),
                           ),
                         ),
                       ),
@@ -120,6 +129,7 @@ class TopBar extends StatelessWidget {
                             child: InkWell(
                               onTap: () async {
                                 //
+                                print(Platform.operatingSystemVersion);
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

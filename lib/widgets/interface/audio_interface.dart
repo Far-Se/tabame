@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
@@ -53,6 +54,11 @@ class AudioInterfaceState extends State<AudioInterface> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            if (!Audio.canRunAudioModule)
+              Text(
+                "\nSorry but Audio Module is bugged on your Windows install, I am trying to figure it out why it doesn't work for some people.\n\n",
+                style: Theme.of(context).textTheme.headline6,
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +179,7 @@ class AudioInterfaceState extends State<AudioInterface> {
                           ),
                         ),
                       const Divider(height: 10, thickness: 1),
-                      if (!globalSettings.isWindows11)
+                      if (globalSettings.isWindows10)
                         RadioTheme(
                           data: Theme.of(context).radioTheme.copyWith(visualDensity: VisualDensity.compact, splashRadius: 20),
                           child: Column(

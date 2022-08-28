@@ -66,6 +66,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   bool spotifyWasPaused = false;
   int spotifyDelayPlay = 0;
   Future<void> handleAudio() async {
+    Debug.add("QuickMenu: Taskbar: Audio Handling");
     final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
     if (audioMixer.isEmpty) return Caches.audioMixer.clear();
     Caches.audioMixer.clear();
@@ -90,12 +91,13 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         }
       }
     }
+    Debug.add("QuickMenu: Taskbar: Audio Handled");
   }
 
   Future<void> fetchWindows({bool state = true}) async {
     // ! commented this, moved on initState;
     // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
-    if (!fetching && await WindowWatcher.fetchWindows()) {
+    if (keepFetching && !fetching && await WindowWatcher.fetchWindows()) {
       windows = <Window>[...WindowWatcher.list];
       fetching = true;
       await handleAudio();
@@ -111,12 +113,16 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   bool audioJumpOneTick = false;
   @override
   void initState() {
+    Debug.add("QuickMenu: Taskbar-Init");
     super.initState();
     PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (!mounted) return;
     QuickMenuFunctions.addListener(this);
+    Debug.add("QuickMenu: Taskbar:Listener Quick");
     NativeHooks.addListener(this);
+    Debug.add("QuickMenu: Taskbar:Listener NativeHooks");
     fetchWindows();
+    Debug.add("QuickMenu: Taskbar: Windows Fetched");
     mainTimer = Timer.periodic(const Duration(milliseconds: 300), (Timer timer) {
       if (globalSettings.pauseSpotifyWhenNewSound && !keepFetching) {
         if (audioJumpOneTick) {
@@ -131,6 +137,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         fetchWindows();
       }
     });
+    Debug.add("QuickMenu: Taskbar");
   }
 
   @override
@@ -675,7 +682,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                 SizedBox(
                                     child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                                  child: Icon(Icons.pin_end_outlined, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18),
+                                  child: Icon(Icons.highlight_off, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18),
                                 )),
                                 Expanded(child: Text("Force Close", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
                               ],
@@ -713,6 +720,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               itemCount: WindowWatcher.list.length,
                               itemBuilder: (BuildContext context, int index) {
                                 final Window win = WindowWatcher.list.elementAt(index);
+                                if (win.hWnd == widget.hWnd) return const SizedBox();
                                 return InkWell(
                                   onTap: () {
                                     globalSettings.hookedWins[widget.hWnd] ??= <int>[];

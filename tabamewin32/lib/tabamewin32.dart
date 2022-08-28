@@ -84,10 +84,21 @@ enum AudioDeviceType {
 const MethodChannel audioMethodChannel = MethodChannel('tabamewin32');
 
 class Audio {
+  static bool canRunAudioModule = false;
+  static Future<bool> detectAudioSupport(AudioDeviceType audioDeviceType) async {
+    final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
+    final bool map = await audioMethodChannel.invokeMethod('canAccessAudio', arguments);
+    canRunAudioModule = map;
+    return map;
+  }
+
   /// Returns a Future list of audio devices of a specified type.
   /// The type is specified by the [AudioDeviceType] enum.
   ///
   static Future<List<AudioDevice>?> enumDevices(AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return <AudioDevice>[];
+    }
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioDevices', arguments);
     List<AudioDevice>? audioDevices = <AudioDevice>[];
@@ -108,6 +119,9 @@ class Audio {
   /// The type is specified by the [AudioDeviceType] enum.
   ///
   static Future<AudioDevice?> getDefaultDevice(AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return AudioDevice();
+    }
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('getDefaultDevice', arguments);
     final AudioDevice audioDevice = AudioDevice();
@@ -123,6 +137,9 @@ class Audio {
   /// Sets the default audio device.
   /// The type is specified by the [AudioDeviceType] enum.
   static Future<int> setDefaultDevice(String deviceID, {required bool console, required bool multimedia, required bool communications}) async {
+    if (!canRunAudioModule) {
+      return 0;
+    }
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceID': deviceID,
       'console': console,
@@ -137,6 +154,9 @@ class Audio {
   /// Returns the current volume for the given audio device type.
   /// The type is specified by the [AudioDeviceType] enum.
   static Future<double> getVolume(AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return 0;
+    }
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final double? result = await audioMethodChannel.invokeMethod<double>('getAudioVolume', arguments);
     return result as double;
@@ -146,6 +166,9 @@ class Audio {
   /// The type is specified by the [AudioDeviceType] enum.
   ///
   static Future<int> setVolume(double volume, AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return 0;
+    }
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'volumeLevel': volume};
     final int? result = await audioMethodChannel.invokeMethod<int>('setAudioVolume', arguments);
@@ -153,12 +176,18 @@ class Audio {
   }
 
   static Future<int> setMuteAudioDevice(bool muteState, AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return 0;
+    }
     final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'muteState': muteState};
     final int? result = await audioMethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
     return result as int;
   }
 
   static Future<bool> getMuteAudioDevice(AudioDeviceType audioDeviceType) async {
+    if (!canRunAudioModule) {
+      return false;
+    }
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceType': audioDeviceType.index,
     };
@@ -168,6 +197,9 @@ class Audio {
 
   /// This function switches the audio device to the specified type. The type is specified by the [AudioDeviceType] enum.
   static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType, {required bool console, required bool multimedia, required bool communications}) async {
+    if (!canRunAudioModule) {
+      return false;
+    }
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceType': audioDeviceType.index,
       'console': console,
@@ -180,6 +212,9 @@ class Audio {
 
   /// Returns a Future with a list of ProcessVolume objects containing information about all audio mixers.
   static Future<List<ProcessVolume>?> enumAudioMixer() async {
+    if (!canRunAudioModule) {
+      return <ProcessVolume>[];
+    }
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioMixer');
     List<ProcessVolume>? processVolumes = <ProcessVolume>[];
     for (int key in map.keys) {
@@ -197,6 +232,9 @@ class Audio {
   /// The process ID is the process ID of the process that is using the audio mixer.
   /// The process ID can be obtained by calling the enumAudioMixer function.
   static Future<ProcessVolume> setAudioMixerVolume(int processID, double volume) async {
+    if (!canRunAudioModule) {
+      return ProcessVolume();
+    }
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = <String, dynamic>{'processID': processID, 'volumeLevel': volume};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('setAudioMixerVolume', arguments);
@@ -223,6 +261,7 @@ resizeImage(Uint8List data) {
 /// The icon ID can be obtained by calling the enumAudioDevices function.
 Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
 Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) async {
+  // return Uint8List.fromList([0]);
   if (___kCacheIcons.containsKey(iconLocation) && iconID == 0) return ___kCacheIcons[iconLocation];
   final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconLocation, 'iconID': iconID};
   final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
@@ -231,16 +270,19 @@ Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) asyn
 }
 
 Future<Uint8List?> getExecutableIcon(String iconlocation, {int iconID = 0}) async {
+  // return Uint8List.fromList([0]);
   return await nativeIconToBytes(iconlocation, iconID: iconID);
 }
 
 Future<Uint8List?> getWindowIcon(int hWnd) async {
+  // return Uint8List.fromList([0]);
   final Map<String, dynamic> arguments = <String, dynamic>{'hWnd': hWnd};
   final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);
   return result;
 }
 
 Future<Uint8List?> getIconPng(int hIcon) async {
+  // return Uint8List.fromList([0]);
   final Map<String, dynamic> arguments = <String, dynamic>{'hIcon': hIcon};
   final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getIconPng', arguments);
   return result;
@@ -634,4 +676,12 @@ class NativeHooks {
     }
     hook();
   }
+}
+
+Future<bool> enableDebug(String path) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'path': path,
+  };
+  await audioMethodChannel.invokeMethod('enableDebug', arguments);
+  return true;
 }

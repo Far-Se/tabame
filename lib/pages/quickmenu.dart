@@ -46,6 +46,7 @@ Future<int> quickMenuWindowSetup() async {
   } else {
     await Win32.setMainWindowToMousePos();
   }
+  Debug.add("QuickMenu: setup");
   return 1;
 }
 
@@ -88,6 +89,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         }
       });
     }
+    Debug.add("QuickMenu: init");
     // WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(focusNode));
   }
 
