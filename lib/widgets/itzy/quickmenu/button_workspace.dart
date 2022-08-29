@@ -122,52 +122,57 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
             child: Container(
               height: 350,
               child: workspaces.isEmpty
-                  ? const Text("You do not have any Workspaces. Open Settings and create one!")
-                  : Material(
-                      type: MaterialType.transparency,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: List<Widget>.generate(workspaces.length, (int index) {
-                          final Workspaces workspace = workspaces.elementAt(index);
-                          int totalFound = 0;
-                          for (WorkspaceWindow win in workspace.windows) {
-                            for (Window wWatch in WindowWatcher.list) {
-                              if (win.exe == wWatch.process.exe) {
-                                if (win.title.isNotEmpty) {
-                                  if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
+                  ? Text("\nYou do not have any Workspaces. Open Settings and create one!", style: Theme.of(context).textTheme.titleMedium)
+                  : SingleChildScrollView(
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: List<Widget>.generate(workspaces.length, (int index) {
+                            final Workspaces workspace = workspaces.elementAt(index);
+                            int totalFound = 0;
+                            for (WorkspaceWindow win in workspace.windows) {
+                              for (Window wWatch in WindowWatcher.list) {
+                                if (win.exe == wWatch.process.exe) {
+                                  if (win.title.isNotEmpty) {
+                                    if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
+                                      totalFound++;
+                                    }
+                                  } else {
                                     totalFound++;
                                   }
-                                } else {
-                                  totalFound++;
                                 }
                               }
                             }
-                          }
-                          return ListTile(
-                            onTap: () {
-                              for (WorkspaceWindow win in workspace.windows) {
-                                for (Window wWatch in WindowWatcher.list) {
-                                  if (win.exe == wWatch.process.exe) {
-                                    if (win.title.isNotEmpty) {
-                                      if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
+                            return ListTile(
+                              minVerticalPadding: 0,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                              visualDensity: VisualDensity.compact,
+                              onTap: () {
+                                for (WorkspaceWindow win in workspace.windows) {
+                                  for (Window wWatch in WindowWatcher.list) {
+                                    if (win.exe == wWatch.process.exe) {
+                                      if (win.title.isNotEmpty) {
+                                        if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
+                                          SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
+                                          SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                                        }
+                                      } else {
                                         SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
                                         SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
                                       }
-                                    } else {
-                                      SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
-                                      SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
                                     }
                                   }
                                 }
-                              }
-                            },
-                            title: Text(workspace.name),
-                            subtitle: totalFound == workspace.windows.length
-                                ? const Text("All Windows Present")
-                                : Text("${workspace.windows.length - totalFound} windows missing"),
-                          );
-                        }),
+                              },
+                              title: Text(workspace.name),
+                              subtitle: totalFound == workspace.windows.length
+                                  ? const Text("All Windows Present")
+                                  : Text("${workspace.windows.length - totalFound} windows missing"),
+                            );
+                          }),
+                        ),
                       ),
                     ),
             ),

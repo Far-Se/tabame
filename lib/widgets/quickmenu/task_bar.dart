@@ -271,7 +271,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                 Win32.activateWindow(window.hWnd);
                                 Globals.lastFocusedWinHWND = window.hWnd;
                               },
-                              onSecondaryTap: () async {
+                              // onSecondaryTap: () async {
+                              onSecondaryTapUp: (TapUpDetails e) async {
                                 showModalBottomSheet<void>(
                                   context: context,
                                   anchorPoint: const Offset(100, 200),
@@ -712,7 +713,8 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               ),
                             ),
                           ),
-                        const Text("Hook window with:"),
+                        Text("  Hook window with:", style: Theme.of(context).textTheme.button),
+                        const SizedBox(height: 5),
                         Container(
                           height: 130,
                           child: ListView.builder(

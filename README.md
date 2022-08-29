@@ -261,13 +261,13 @@ Page watchers will check a link each to see if specific text exists or not. For 
 # **✨ Wizardly**
 Wizardly is a set of tools that works with folders. You can add it in Context Menu for easier access.
 
-## Find Text In Folder
+## **Find Text In Folder**
 You can search text in a folder, recursively. You can use regex, case sensitive or match the whole text only.
 
 Import feature to this (and why I've created it): You can exclude files/folders, so if you do not want to see results from, for example `node_modules` you can set that in filters. For example Notepad++ and vsCode does not have this feature and it's annoying.
 
 
-## Project Overview
+## **Project Overview**
 
 It counts lines of code and makes a summary. **You can ignore folders or only show specific file types**.
 
@@ -277,18 +277,25 @@ It also calculates how many books you could have written with same characters. I
 
 For example, at this time of writing this README.md, Tabame has `27,191 lines` with `761,698 characters` which is impressive in my opinion because I've written it by myself.
 
-## Rename Files
+## **Rename Files**
 You can rename files in bulk, you can use regex but also Lists. This can be useful when you want to change from **IMG_20220725_121728.jpg** to **25 July 2022.jpg** 
 
-## Folder Size Scan
+## **Folder Size Scan**
 You can scan folders recursively and see each folder size, you can delete folders.
 
 # **🧩 Views**
 Views is an alternative to PowerToys FancyZones. If presets are not what you need and you need more flexibility, you should try this feature.
 
-If consists of a grid where you can change it's size using scroll wheel. Drag a window, press right click, move the window where you want, hold right click, select a region the release right and left click. When you move again the window, it will regain it's previous size.
+It consists of a grid where you can change it's size using scroll wheel. Drag a window, press right click, move the window where you want, hold right click, select a region the release right and left click. When you move again the window, it will regain it's previous size.
 
 **This is not DPI aware. Use PowerToys if you changed your monitor DPI**
+
+## **Workspaces**
+With Workspaces you can save current position and size of specific windows, so you can load them easily from QuickMenu QuickActions. 
+
+## **Hooks**
+With Hooks you can hook multiple windows together, when you focus one, other will surface as well. You can access this feature by right clicking a window in QuickMenu.
+
 # 🙃 Outro
 I've started this project to learn Dart and Flutter, in my mind I had only `QuickMenu` features/app, but while writing for it I got new ideas for it, and it ended up `Tabame`, random name I came up with.
 

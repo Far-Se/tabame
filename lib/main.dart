@@ -20,7 +20,7 @@ import 'pages/quickmenu.dart';
 
 final ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
 Future<void> main(List<String> arguments2) async {
-  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync() || true) {
+  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync()) {
     Debug.register(clean: false);
   }
 
@@ -59,7 +59,7 @@ Future<void> main(List<String> arguments2) async {
 
   await registerAll();
 
-  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync() || true) {
+  if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync()) {
     Debug.methodDebug(clean: false);
   }
   Debug.add("Registered All");

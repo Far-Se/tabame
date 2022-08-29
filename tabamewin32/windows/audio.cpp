@@ -242,8 +242,6 @@ float getVolume(EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            LPWSTR aid;
-            pActive->GetId(&aid);
 
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
@@ -300,8 +298,6 @@ bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            LPWSTR aid;
-            pActive->GetId(&aid);
 
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
@@ -339,11 +335,6 @@ bool getMuteAudioDevice(EDataFlow deviceType = eRender)
             hr = pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
             if (SUCCEEDED(hr))
             {
-                LPWSTR aid;
-
-                appendDebugFile(debFile, "Audio: getID");
-                pActive->GetId(&aid);
-
                 IAudioEndpointVolume *m_spVolumeControl = NULL;
 
                 appendDebugFile(debFile, "Audio: Activate");
@@ -430,8 +421,6 @@ bool setVolume(float volumeLevel, EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            LPWSTR aid;
-            pActive->GetId(&aid);
             IAudioEndpointVolume *m_spVolumeControl = NULL;
             hr = pActive->Activate(__uuidof(m_spVolumeControl), CLSCTX_INPROC_SERVER, NULL, (void **)&m_spVolumeControl);
             if (SUCCEEDED(hr))

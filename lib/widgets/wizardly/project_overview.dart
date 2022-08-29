@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -12,6 +13,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
+import '../../models/util/task_runner.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
@@ -406,20 +408,14 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
     project.programmingLanguages.clear();
     project.projectFiles.clear();
     final List<String> auxFiles = <String>[...loadedFiles];
-    for (String file in auxFiles) {
-      if (stateFileProcessing == 2) {
-        stateFileProcessing = 0;
-        if (mounted) setState(() {});
-        return;
-      }
+    Future<bool> getFileInfo(String file) async {
       final Future<List<String>> futureLines = File(file).readAsLines().catchError((_) {
         return <String>[];
       });
-
-      final List<String> fileLines = await futureLines;
+      List<String> fileLines = await futureLines;
       if (fileLines.isEmpty) {
         loadedFiles.remove(file);
-        continue;
+        return true;
       }
       final String filePath = file.replaceFirst("$projectFolder\\", "");
       final String fileName = filePath.split(r'\').last;
@@ -485,24 +481,42 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
       }
       total.empty += total.lines - (total.code + total.comments + total.nonCode + total.empty);
       project.projectFiles.add(ProjectFile(name: fileName, path: filePath, ext: fileExtension, total: total));
+      return true;
     }
-    stateFileProcessing = 0;
-    projectAnalyzed = true;
-    project.projectFiles.sort((ProjectFile a, ProjectFile b) => b.total.lines.compareTo(a.total.lines));
-    project.totalComments = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.comments);
-    project.totalLines = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.lines);
-    project.totalCode = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.code);
-    project.totalEmpty = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.empty);
-    project.totalNonCde = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.nonCode);
-    project.totalChars = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.characters);
 
-    int i = 0;
-    for (List<String> x in project.programmingLanguages) {
-      if (i >= extensionColors.length) break;
-      extColors[x[0]] = Color(extensionColors[i]);
-      i++;
+    final TaskRunner<String, bool> runner = TaskRunner<String, bool>(getFileInfo, maxConcurrentTasks: 30);
+    for (String file in auxFiles) {
+      if (stateFileProcessing == 2) {
+        stateFileProcessing = 0;
+        if (mounted) setState(() {});
+        return;
+      }
+      runner.add(file);
     }
-    setState(() {});
+    runner.startExecution();
+    int totalProcessed = 0;
+    runner.stream.forEach((bool listOfString) {
+      totalProcessed++;
+      if (totalProcessed >= auxFiles.length) {
+        stateFileProcessing = 0;
+        projectAnalyzed = true;
+        project.projectFiles.sort((ProjectFile a, ProjectFile b) => b.total.lines.compareTo(a.total.lines));
+        project.totalComments = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.comments);
+        project.totalLines = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.lines);
+        project.totalCode = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.code);
+        project.totalEmpty = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.empty);
+        project.totalNonCde = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.nonCode);
+        project.totalChars = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.characters);
+
+        int i = 0;
+        for (List<String> x in project.programmingLanguages) {
+          if (i >= extensionColors.length) break;
+          extColors[x[0]] = Color(extensionColors[i]);
+          i++;
+        }
+        if (mounted) setState(() {});
+      }
+    });
   }
 
   Future<void> loadFiles() async {

@@ -7,6 +7,7 @@ import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
+import '../../models/util/task_runner.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
@@ -194,36 +195,37 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                   if (currentFolder.isEmpty) return;
                   if (!Directory(currentFolder).existsSync()) return;
                   //!HERE
-                  final Map<String, int> allDirs = await listDirectoriesSizes(currentFolder, (int total) {
-                    processedFiles = "Processed $total files ...";
+                  await listDirectoriesSizes(currentFolder, (int total, int type) {
+                    processedFiles = " ${type == 0 ? "Fetched" : "Processed"} $total files ...";
+                    if (mounted) setState(() {});
+                  }, (Map<String, int> allDirs) {
+                    processedFiles = "Formating Directories ...";
+                    if (mounted) setState(() {});
+                    if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.dirs.clear();
+                    if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.names.clear();
+                    if (DirectoryScan.unfoldedDirectories.isNotEmpty) DirectoryScan.unfoldedDirectories.clear();
+
+                    for (MapEntry<String, int> dir in allDirs.entries) {
+                      DirectoryScan.dirs.add(DirectoryInfo(path: dir.key, size: dir.value));
+                    }
+                    DirectoryScan.dirs.sort((DirectoryInfo a, DirectoryInfo b) => b.size.compareTo(a.size));
+                    int index = 0;
+                    for (DirectoryInfo item in DirectoryScan.dirs) {
+                      DirectoryScan.names[item.path] = index;
+                      index++;
+                    }
+                    DirectoryScan.main
+                      ..size = DirectoryScan.dirs.first.size
+                      ..path = DirectoryScan.dirs.first.path
+                      ..deleted = DirectoryScan.dirs.first.deleted;
+
+                    if (!DirectoryScan.names.containsKey(currentFolder)) {
+                      DirectoryScan.dirs.add(DirectoryScan.main);
+                    }
+                    finishedProcessing = true;
+                    processedFiles = " ${DirectoryScan.dirs.length} directories with a total of ${getFileSize(DirectoryScan.main.size, 1)}!";
                     if (mounted) setState(() {});
                   });
-                  processedFiles = "Formating Directories ...";
-                  if (mounted) setState(() {});
-                  if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.dirs.clear();
-                  if (DirectoryScan.dirs.isNotEmpty) DirectoryScan.names.clear();
-                  if (DirectoryScan.unfoldedDirectories.isNotEmpty) DirectoryScan.unfoldedDirectories.clear();
-
-                  for (MapEntry<String, int> dir in allDirs.entries) {
-                    DirectoryScan.dirs.add(DirectoryInfo(path: dir.key, size: dir.value));
-                  }
-                  DirectoryScan.dirs.sort((DirectoryInfo a, DirectoryInfo b) => b.size.compareTo(a.size));
-                  int index = 0;
-                  for (DirectoryInfo item in DirectoryScan.dirs) {
-                    DirectoryScan.names[item.path] = index;
-                    index++;
-                  }
-                  DirectoryScan.main
-                    ..size = DirectoryScan.dirs.first.size
-                    ..path = DirectoryScan.dirs.first.path
-                    ..deleted = DirectoryScan.dirs.first.deleted;
-
-                  if (!DirectoryScan.names.containsKey(currentFolder)) {
-                    DirectoryScan.dirs.add(DirectoryScan.main);
-                  }
-                  finishedProcessing = true;
-                  processedFiles = " ${DirectoryScan.dirs.length} directories with a total of ${getFileSize(DirectoryScan.main.size, 1)}!";
-                  if (mounted) setState(() {});
                 },
                 child: Text("Run", style: TextStyle(color: Color(globalSettings.theme.background))),
               ),
@@ -485,7 +487,7 @@ class _FolderInfoState extends State<FolderInfo> {
   }
 }
 
-Future<Map<String, int>> listDirectoriesSizes(String dirPath, Function(int) ping) async {
+Future<void> listDirectoriesSizes(String dirPath, Function(int, int) ping, Function(Map<String, int> items) onDone) async {
   int fileNum = 0;
 
   dirPath.replaceAll('/', '\\');
@@ -493,15 +495,18 @@ Future<Map<String, int>> listDirectoriesSizes(String dirPath, Function(int) ping
   Directory dir = Directory(dirPath);
   final Map<String, int> totalFiles = <String, int>{};
 
-  if (!dir.existsSync()) return <String, int>{"Empty": 0};
+  if (!dir.existsSync()) {
+    onDone(<String, int>{"Empty": 0});
+    return;
+  }
   Stream<FileSystemEntity> stream =
       dir.list(recursive: true, followLinks: false).handleError((dynamic e) => print('Ignoring error: $e'), test: (dynamic e) => e is FileSystemException);
   totalFiles[dirPath] = 0;
-  await for (FileSystemEntity entity in stream) {
+  Future<bool> getFileInfo(FileSystemEntity entity) async {
     if (entity is File) {
       fileNum++;
-      if (fileNum % 1000 == 0) ping(fileNum);
-      final int fileSize = entity.lengthSync();
+      if (fileNum % 1000 == 0) ping(fileNum, 1);
+      final int fileSize = await entity.length();
       int ticks = 0;
       Directory currentPath = entity.parent;
       do {
@@ -513,15 +518,32 @@ Future<Map<String, int>> listDirectoriesSizes(String dirPath, Function(int) ping
         currentPath = currentPath.parent;
       } while (true);
     }
-    // if (fileNum > 50000) break;
+    return true;
   }
 
-  return totalFiles;
+  final TaskRunner<FileSystemEntity, bool> runner = TaskRunner<FileSystemEntity, bool>(getFileInfo, maxConcurrentTasks: 30);
+  int total = 0;
+  fileNum = 0;
+  await for (FileSystemEntity entity in stream) {
+    fileNum++;
+    if (fileNum % 1000 == 0) ping(fileNum, 0);
+    runner.add(entity);
+    total++;
+  }
+  fileNum = 0;
+  runner.startExecution();
+  int totalProcessed = 0;
+  runner.stream.forEach((bool listOfString) {
+    totalProcessed++;
+    if (totalProcessed >= total) {
+      onDone(totalFiles);
+      return;
+    }
+  });
 }
 
 Future<Map<String, int>> listFilesSizes(String dirPath) async {
   dirPath.replaceAll('/', '\\');
-  // if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
   Directory dir = Directory(dirPath);
   final Map<String, int> totalFiles = <String, int>{};
 
@@ -535,10 +557,6 @@ Future<Map<String, int>> listFilesSizes(String dirPath) async {
       }
     }
   }
-  // if (totalFiles.isEmpty) {
-  //   totalFiles["Empty"] = 0;
-  //   return totalFiles;
-  // }
   return totalFiles;
 }
 
