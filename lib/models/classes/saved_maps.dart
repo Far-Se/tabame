@@ -987,11 +987,11 @@ class Workspaces {
     return Workspaces(
       name: (map['name'] ?? '') as String,
       windows: List<WorkspaceWindow>.from(
-        (map['windows'] as List<int>).map<WorkspaceWindow>(
-          (int x) => WorkspaceWindow.fromMap(x as Map<String, dynamic>),
+        (map['windows'] as List<dynamic>).map<WorkspaceWindow>(
+          (dynamic x) => WorkspaceWindow.fromMap(x as Map<String, dynamic>),
         ),
       ),
-      hooks: Map<int, List<int>>.from((map['hooks'] ?? const <Map<int, List<int>>>{}) as Map<int, List<int>>),
+      hooks: Map<int, List<int>>.from(map['hooks'] ?? const <int, List<int>>{}),
     );
   }
 

@@ -90,7 +90,9 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       });
     }
     Debug.add("QuickMenu: init");
-    // WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => FocusScope.of(context).requestFocus(focusNode));
+    /* WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Boxes.pref.setBool("initializing", true);
+    }); */
   }
 
   @override

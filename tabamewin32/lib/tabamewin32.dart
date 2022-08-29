@@ -85,10 +85,13 @@ const MethodChannel audioMethodChannel = MethodChannel('tabamewin32');
 
 class Audio {
   static bool canRunAudioModule = false;
+  static bool alreadySet = false;
   static Future<bool> detectAudioSupport(AudioDeviceType audioDeviceType) async {
+    if (alreadySet) return canRunAudioModule;
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final bool map = await audioMethodChannel.invokeMethod('canAccessAudio', arguments);
     canRunAudioModule = map;
+    alreadySet = true;
     return map;
   }
 

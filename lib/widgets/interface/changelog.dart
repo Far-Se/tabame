@@ -51,6 +51,8 @@ Now you can set default Volume for apps, for example if you open a game, and usu
 
 ### Other Features:
 - You can load GitHub and GitLab repositories directly from Project Overview.
+- Change Hide Desktop Files: left click to toggle, right to hide, middle to show desktop files.
+- Way faster Project Overview and Scan Folder because now it uses Queue.
 
 ### Fixes:
 - Fixed Wizardly ContextMenu. For some people it crashed because the Registry Path was missing.

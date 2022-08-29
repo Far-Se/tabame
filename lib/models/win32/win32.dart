@@ -807,7 +807,7 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
     final String desktop = WinUtils.getKnownFolderCLSID(CSIDL_DESKTOP);
     final List<String> files = Directory(desktop).listSync().map((io.FileSystemEntity event) => event.path).toList();
     for (String file in files.reversed) {
-      if (file == "desktop.ini") continue;
+      if (file.contains("desktop.ini")) continue;
       final int attributes = GetFileAttributes(TEXT(file));
       if (visible == null) {
         if ((attributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {

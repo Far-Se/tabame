@@ -48,8 +48,8 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               Boxes.updateSettings("views", globalSettings.views);
             },
           ),
-          title: Text("Views", style: Theme.of(context).textTheme.headline6),
-          subtitle: const InfoText("With views, you can organize windows on your screen"),
+          title: Text("Grid View", style: Theme.of(context).textTheme.headline6),
+          subtitle: const InfoText("With Grid View, you can organize windows on your screen based on a grid"),
         ),
         if (globalSettings.views)
           Column(
@@ -457,8 +457,9 @@ This can use this when presets do not give you enough flexibility.
                               Boxes.updateSettings("workspaces", jsonEncode(workspaces));
                               setState(() {});
                             },
+                            dense: true,
                             title: Text("${workspaces.elementAt(index).name}"),
-                            trailing: const Icon(Icons.delete),
+                            trailing: const Icon(Icons.delete, size: 17),
                           );
                         })
                       ],
@@ -466,10 +467,15 @@ This can use this when presets do not give you enough flexibility.
                   )
                 ],
               ),
+              const Divider(height: 10, thickness: 1),
+              Text("Hooks", style: Theme.of(context).textTheme.headline6),
+              const SizedBox(height: 5),
+              const InfoText(
+                  "Hooks is part of Views. With hooks you can bind windows together, so when you focus the main one, others will appear on screen as well. Open QuickMenu and right click a window, then select other windows."),
+              const SizedBox(height: 20),
             ],
           ),
         ),
-        const SizedBox(height: 50),
       ],
     );
   }

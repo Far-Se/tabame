@@ -10,11 +10,15 @@ class ToggleHiddenFilesButton extends StatelessWidget {
     return SizedBox(
       width: 20,
       height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Toggle Hidden Files", child: Icon(Icons.folder_off)),
-        onTap: () async {
-          WinUtils.toggleHiddenFiles();
-        },
+      child: GestureDetector(
+        onSecondaryTap: () => WinUtils.toggleHiddenFiles(visible: false),
+        onTertiaryTapUp: (TapUpDetails details) => WinUtils.toggleHiddenFiles(visible: true),
+        child: InkWell(
+          child: const Tooltip(message: "Toggle Hidden Files", child: Icon(Icons.folder_off)),
+          onTap: () async {
+            WinUtils.toggleHiddenFiles();
+          },
+        ),
       ),
     );
   }

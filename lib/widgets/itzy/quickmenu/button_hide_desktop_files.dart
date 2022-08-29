@@ -11,10 +11,12 @@ class HideDesktopFilesButton extends StatelessWidget {
       width: 20,
       height: double.maxFinite,
       child: InkWell(
-        child: const Tooltip(message: "Toggle Desktop Files", child: Icon(Icons.hide_image)),
-        onTap: () async {
-          WinUtils.toggleDesktopFiles();
-        },
+        onTap: () async => WinUtils.toggleDesktopFiles(),
+        child: GestureDetector(
+          onSecondaryTap: () => WinUtils.toggleDesktopFiles(visible: false),
+          onTertiaryTapUp: (TapUpDetails details) => WinUtils.toggleDesktopFiles(visible: true),
+          child: const Tooltip(message: "Toggle Desktop Files", child: Icon(Icons.hide_image)),
+        ),
       ),
     );
   }

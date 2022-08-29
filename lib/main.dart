@@ -23,7 +23,10 @@ Future<void> main(List<String> arguments2) async {
   if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync()) {
     Debug.register(clean: false);
   }
-
+  if (File("${WinUtils.getTabameSettingsFolder()}\\disable_audio.txt").existsSync()) {
+    Audio.alreadySet = true;
+    Audio.canRunAudioModule = false;
+  }
   Debug.add("===");
   Debug.add("Started");
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,14 +34,14 @@ Future<void> main(List<String> arguments2) async {
   Debug.add("Register WindowManager");
   if (kReleaseMode) {
     FlutterError.onError = (FlutterErrorDetails details) async {
-      final String error = details.exceptionAsString();
-      String stack = details.exceptionAsString();
+      final String error = "(${details.library ?? "unknownLib"}) ${details.exceptionAsString()}";
+      String stack = details.stack.toString();
       final List<String> stackArr = stack.split("\n");
-      if (stackArr.length > 11) {
+      if (stackArr.length > 10) {
         stack = stackArr.take(10).join("\n");
       }
-      stack = "$stack\n===============\n===============\n===============\n";
-      File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsString("$error\n$stack", mode: FileMode.append);
+      stack = "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n";
+      File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("$error\n$stack", mode: FileMode.append);
     };
   }
   List<String> arguments = <String>[...arguments2];
@@ -137,7 +140,16 @@ Future<void> main(List<String> arguments2) async {
   // if (arguments.contains('-views')) {
   //   return runApp(ViewsScreen());
   // }
-  runApp(const Tabame());
+  // runApp(const Tabame());
+  runZonedGuarded(() => runApp(Tabame()), (Object error, StackTrace stackTrace) async {
+    String stack = stackTrace.toString();
+    final List<String> stackArr = stack.split("\n");
+    if (stackArr.length > 11) {
+      stack = stackArr.take(10).join("\n");
+    }
+    stack = "$stack\n===============\n===============\n";
+    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${error.toString()}\n$stack", mode: FileMode.append);
+  });
 }
 
 final ValueNotifier<bool> themeChangeNotifier = ValueNotifier<bool>(false);

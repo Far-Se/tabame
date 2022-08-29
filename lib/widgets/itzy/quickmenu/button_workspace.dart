@@ -138,9 +138,11 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
                                   if (win.title.isNotEmpty) {
                                     if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
                                       totalFound++;
+                                      break;
                                     }
                                   } else {
                                     totalFound++;
+                                    break;
                                   }
                                 }
                               }
@@ -157,10 +159,12 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
                                         if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
                                           SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
                                           SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                                          break;
                                         }
                                       } else {
                                         SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
                                         SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                                        break;
                                       }
                                     }
                                   }

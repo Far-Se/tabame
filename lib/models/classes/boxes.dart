@@ -33,10 +33,7 @@ class Boxes {
       pref = await SaveSettings.getInstance();
     }
     globalSettings.isWindows10 = WinUtils.isWindows10();
-    // globalSettings.isWindows11 = await isWindows11();
     Debug.add("Registered: Loaded Box info (win10: ${globalSettings.isWindows10} | ${Platform.operatingSystemVersion})");
-    // await pref.remove("projects");
-    // pref = await SaveSettings.getInstance();
     //? Settings
     if (pref.getString("language") == null) {
       await pref.setBool("DEBUGGING", false);
@@ -404,10 +401,11 @@ class Boxes {
     if (downloadLink == "") return -1;
     final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
     await WinUtils.downloadFile(downloadLink, fileName, () {
-      final String dir = "${Directory.current.path}";
+      final String dir = "${Directory.current.absolute.path}";
       WinUtils.open('powershell.exe',
-          arguments: 'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;'
-              'Start-Process "$dir\\tabame.exe";');
+          arguments: /* '-NoExit ' */
+              ' Expand-Archive -LiteralPath \\"$fileName\\" -DestinationPath \\"$dir\\" -Force;'
+              'Invoke-Item \\"$dir\\tabame.exe\\";');
       if (kReleaseMode) {
         WinUtils.closeAllTabameExProcesses();
         exit(0);
