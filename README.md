@@ -42,6 +42,9 @@ Please submit a [issue here](https://github.com/Far-Se/tabame/issues), it will b
 
 Thanks to @elvinvandalen for helping me fix a bug where the app crashed on start because AudioPropertyStore was bugged for some users.
 
+**Known Issue**: for a small amount of users Audio Module makes the app crash, if you experience crash on startup and still want to use Tabame, open folder
+`%localappdata%/Tabame` and create a file called `disable_audio.txt` then start Tabame again.
+
 ## Make your own:
 This project is open source, which means you can compile your own version.
 1. Install Flutter for Windows
