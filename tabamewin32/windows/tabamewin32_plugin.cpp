@@ -1183,8 +1183,6 @@ float GetCPULoad()
     FILETIME idleTime, kernelTime, userTime;
     return GetSystemTimes(&idleTime, &kernelTime, &userTime) ? CalculateCPULoad(FileTimeToInt64(idleTime), FileTimeToInt64(kernelTime) + FileTimeToInt64(userTime)) : -1.0f;
 }
-
-//! VIRTUAL DESKTOP
 void SetTransparent(HWND target_window, bool type)
 {
     DWORD exstyle;
@@ -1230,6 +1228,8 @@ void ToggleTaskbar(bool visible)
     } while (hwnd != nullptr);
     SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
 }
+
+//! VIRTUAL DESKTOP
 void SetHwndSkipTaskbar(HWND hWnd, bool skip)
 {
     ITaskbarList3 *taskbar_ = nullptr;

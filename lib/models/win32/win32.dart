@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io' as io;
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';

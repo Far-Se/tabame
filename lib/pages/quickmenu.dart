@@ -56,7 +56,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
   final FocusNode focusNode = FocusNode();
   int trktivityIdleState = 0;
-  QuickRun? theQuickRun;
+  QuickRun theQuickRun = QuickRun(key: UniqueKey());
   @override
   void initState() {
     super.initState();
@@ -119,6 +119,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         // }
         globalSettings.quickRunState = 1;
         globalSettings.quickRunText = "";
+        setState(() {});
       } else if (type == 2) {
         Globals.audioBoxVisible = true;
         showModalBottomSheet<void>(

@@ -76,6 +76,10 @@ class QuickRunState extends State<QuickRun> {
       scuts.addAll(split);
 
       shortcuts.add(RunShortcuts(name: x.key, shortcuts: scuts, regex: regex));
+      result = ParserResult();
+      for (RunShortcuts x in shortcuts) {
+        result.results.add("${x.name}: ${x.shortcuts.join(',')} ${x.regex.isNotEmpty ? "[${x.regex}]" : ""}");
+      }
     }
     textController.text = globalSettings.quickRunText;
     globalSettings.quickRunState = 2;

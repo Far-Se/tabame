@@ -27,27 +27,18 @@ Future<void> main(List<String> arguments2) async {
     Audio.alreadySet = true;
     Audio.canRunAudioModule = false;
   }
+
   Debug.add("===");
   Debug.add("Started");
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
   Debug.add("Register WindowManager");
+  await windowManager.ensureInitialized();
+
   if (kReleaseMode) {
-    FlutterError.onError = (FlutterErrorDetails details) async {
-      final String error = "(${details.library ?? "unknownLib"}) ${details.exceptionAsString()}";
-      String stack = details.stack.toString();
-      final List<String> stackArr = stack.split("\n");
-      if (stackArr.length > 10) {
-        stack = stackArr.take(10).join("\n");
-      }
-      stack = "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n";
-      File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("$error\n$stack", mode: FileMode.append);
-    };
+    FlutterError.onError = handleErrors;
+    PlatformDispatcher.instance.onError = handlePlatformErrors;
   }
   List<String> arguments = <String>[...arguments2];
-  // arguments.add('-views');
-
-  // WinUtils.msgBox('"${arguments.join('" "')}"', "Args");
   if (arguments.isNotEmpty) {
     if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
     String argString = arguments.join(" ");
@@ -141,15 +132,38 @@ Future<void> main(List<String> arguments2) async {
   //   return runApp(ViewsScreen());
   // }
   // runApp(const Tabame());
-  runZonedGuarded(() => runApp(Tabame()), (Object error, StackTrace stackTrace) async {
-    String stack = stackTrace.toString();
-    final List<String> stackArr = stack.split("\n");
-    if (stackArr.length > 11) {
-      stack = stackArr.take(10).join("\n");
-    }
-    stack = "$stack\n===============\n===============\n";
-    File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${error.toString()}\n$stack", mode: FileMode.append);
-  });
+  runApp(Tabame());
+  // runZonedGuarded(() => runApp(Tabame()), (Object error, StackTrace stackTrace) async {
+  //   String stack = stackTrace.toString();
+  //   final List<String> stackArr = stack.split("\n");
+  //   if (stackArr.length > 11) {
+  //     stack = stackArr.take(10).join("\n");
+  //   }
+  //   stack = "$stack\n===============\n===============\n";
+  //   File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${error.toString()}\n$stack", mode: FileMode.append);
+  // });
+}
+
+void handleErrors(FlutterErrorDetails details) async {
+  final String error = "(${details.library ?? "unknownLib"}) ${details.exceptionAsString()}";
+  String stack = details.stack.toString();
+  final List<String> stackArr = stack.split("\n");
+  if (stackArr.length > 10) {
+    stack = stackArr.take(10).join("\n");
+  }
+  stack = "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n";
+  File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("$error\n$stack", mode: FileMode.append);
+}
+
+bool handlePlatformErrors(Object error, StackTrace stack2) {
+  String stack = stack2.toString();
+  final List<String> stackArr = stack.split("\n");
+  if (stackArr.length > 10) {
+    stack = stackArr.take(10).join("\n");
+  }
+  stack = "$stack\n===============\n";
+  File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${error.toString()}\n$stack", mode: FileMode.append);
+  return true;
 }
 
 final ValueNotifier<bool> themeChangeNotifier = ValueNotifier<bool>(false);

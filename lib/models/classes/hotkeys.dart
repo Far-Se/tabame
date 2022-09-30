@@ -445,6 +445,10 @@ class HotKeyInfo {
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
     "ShowStartMenu": () {
+      // if(!globalSettings.isWindows10)
+      // {
+      //   return;
+      // }
       int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (tray != 0) {
         final int mID = Monitor.getMonitorNumber(Monitor.getCursorMonitor());

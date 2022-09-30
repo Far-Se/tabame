@@ -395,8 +395,8 @@ class RoundColorPreview extends StatelessWidget {
           child: const SizedBox(),
           style: ElevatedButton.styleFrom(
             shape: const CircleBorder(),
+            backgroundColor: color,
             padding: const EdgeInsets.all(0),
-            primary: color,
             fixedSize: const Size(5, 5),
           ),
         ),

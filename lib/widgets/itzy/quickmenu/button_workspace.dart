@@ -122,7 +122,7 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
             child: Container(
               height: 350,
               child: workspaces.isEmpty
-                  ? Text("\nYou do not have any Workspaces. Open Settings and create one!", style: Theme.of(context).textTheme.titleMedium)
+                  ? Text("\nYou do not have any Workspaces. Open Settings, go to Views and create one!", style: Theme.of(context).textTheme.titleMedium)
                   : SingleChildScrollView(
                       child: Material(
                         type: MaterialType.transparency,

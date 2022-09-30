@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -34,6 +32,7 @@ class TopBar extends StatelessWidget {
     Map<String, Widget> widgets = <String, Widget>{
       "TaskManagerButton": const TaskManagerButton(),
       "SpotifyButton": const SpotifyButton(),
+      "WorkSpaceButton": const WorkSpaceButton(),
       "VirtualDesktopButton": const VirtualDesktopButton(),
       "ToggleTaskbarButton": const ToggleTaskbarButton(),
       "PinWindowButton": const PinWindowButton(),
@@ -42,7 +41,6 @@ class TopBar extends StatelessWidget {
       "ChangeThemeButton": const ChangeThemeButton(),
       "HideDesktopFilesButton": const HideDesktopFilesButton(),
       "ToggleHiddenFilesButton": const ToggleHiddenFilesButton(),
-      "WorkSpaceButton": const WorkSpaceButton(),
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
@@ -66,7 +64,7 @@ class TopBar extends StatelessWidget {
           size: 16,
           color: Theme.of(context).iconTheme.color,
         ),
-        child: SizedBox(
+        child: Container(
           height: 25,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -129,7 +127,8 @@ class TopBar extends StatelessWidget {
                             child: InkWell(
                               onTap: () async {
                                 //
-                                print(Platform.operatingSystemVersion);
+                                print("test");
+                                // throw ("ee");
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

@@ -1,6 +1,7 @@
 {
     "enabled": false,
-    "name": "-",
+    "name": "SuperList",
+    "size": "140x100",
     "imageDark": "",
     "imageLight": "",
     "url": ""

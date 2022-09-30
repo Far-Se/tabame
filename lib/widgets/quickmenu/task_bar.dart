@@ -1,7 +1,6 @@
 // ignore_for_file: unnecessary_string_interpolations
 
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -67,9 +66,9 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   int spotifyDelayPlay = 0;
   Future<void> handleAudio() async {
     Debug.add("QuickMenu: Taskbar: Audio Handling");
-    final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
-    if (audioMixer.isEmpty) return Caches.audioMixer.clear();
     Caches.audioMixer.clear();
+    final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
+    if (audioMixer.isEmpty) return;
     Caches.audioMixer = audioMixer.where((ProcessVolume element) => element.peakVolume > 0.005).map((ProcessVolume x) => x.processId).toList();
     Caches.audioMixerExes = audioMixer
         .where((ProcessVolume element) => element.peakVolume > 0.01)

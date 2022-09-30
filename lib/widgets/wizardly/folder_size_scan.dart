@@ -378,7 +378,7 @@ class _FolderInfoState extends State<FolderInfo> {
                                           onPressed: () => Navigator.of(context).pop(),
                                           child: Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background)))),
                                       ElevatedButton(
-                                          style: ElevatedButton.styleFrom(primary: Colors.red),
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                           onPressed: () {
                                             if (actuallyDeleteFiles) File(dir.path).deleteSync(recursive: true); //! delete Directory
                                             DirectoryScan.deleteDir(dir.path);
@@ -460,7 +460,7 @@ class _FolderInfoState extends State<FolderInfo> {
                                         onPressed: () => Navigator.of(context).pop(),
                                         child: Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background)))),
                                     ElevatedButton(
-                                        style: ElevatedButton.styleFrom(primary: Colors.red),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                         onPressed: () {
                                           if (actuallyDeleteFiles) File(file.key).deleteSync(); //! delete file
                                           DirectoryScan.deleteDir(file.key, file.value);

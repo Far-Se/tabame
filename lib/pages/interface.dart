@@ -378,63 +378,62 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                     ),
                                                   ),
                                                   //2 Exit
-                                                  const Divider(height: 5, thickness: 1),
-                                                  DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                        color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
-                                                    child: MouseRegion(
-                                                      onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
-                                                      onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
-                                                      cursor: SystemMouseCursors.click,
-                                                      child: InkWell(
-                                                        radius: 0,
-                                                        onTap: () => setState(() {
-                                                          showDialog(
-                                                              context: context,
-                                                              builder: (BuildContext context) => AlertDialog(
-                                                                    content: Container(
-                                                                        height: 50,
-                                                                        child: const Center(
-                                                                            child: Text("This will close the whole app, not just Interface, continue?",
-                                                                                style: TextStyle(fontSize: 20)))),
-                                                                    actions: <Widget>[
-                                                                      ElevatedButton(
-                                                                          onPressed: () {
-                                                                            WinUtils.closeAllTabameExProcesses();
-                                                                            exit(0);
-                                                                          },
-                                                                          child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
-                                                                      ElevatedButton(
-                                                                          onPressed: () => Navigator.of(context).pop(),
-                                                                          child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
-                                                                    ],
-                                                                  ));
-                                                        }),
-                                                        child: Padding(
-                                                          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                          child: Row(
-                                                            mainAxisAlignment: MainAxisAlignment.start,
-                                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: <Widget>[
-                                                              const SizedBox(width: 5),
-                                                              const Icon(Icons.exit_to_app),
-                                                              const SizedBox(width: 5),
-                                                              const Text("Exit"),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  )
                                                 ],
                                               ),
                                             ),
                                           ),
-
+                                          const Divider(height: 5, thickness: 1),
+                                          DecoratedBox(
+                                            decoration:
+                                                BoxDecoration(color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
+                                            child: MouseRegion(
+                                              onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
+                                              onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
+                                              cursor: SystemMouseCursors.click,
+                                              child: InkWell(
+                                                radius: 0,
+                                                onTap: () => setState(() {
+                                                  showDialog(
+                                                      context: context,
+                                                      builder: (BuildContext context) => AlertDialog(
+                                                            content: Container(
+                                                                height: 50,
+                                                                child: const Center(
+                                                                    child: Text("This will close the whole app, not just Interface, continue?",
+                                                                        style: TextStyle(fontSize: 20)))),
+                                                            actions: <Widget>[
+                                                              ElevatedButton(
+                                                                  onPressed: () {
+                                                                    WinUtils.closeAllTabameExProcesses();
+                                                                    exit(0);
+                                                                  },
+                                                                  child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                              ElevatedButton(
+                                                                  onPressed: () => Navigator.of(context).pop(),
+                                                                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                            ],
+                                                          ));
+                                                }),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.start,
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: <Widget>[
+                                                      const SizedBox(width: 5),
+                                                      const Icon(Icons.exit_to_app),
+                                                      const SizedBox(width: 5),
+                                                      const Text("Exit"),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                           //2 Donation Box
                                           SizedBox(
-                                            height: 240,
+                                            height: 245,
                                             child: Padding(
                                               padding: const EdgeInsets.fromLTRB(5, 0, 2, 5),
                                               child: Column(
@@ -456,7 +455,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                 child: sponsorImageLight != null
                                                                     ? Image.file(
                                                                         globalSettings.themeType == ThemeType.light ? sponsorImageLight! : sponsorImageDark!,
-                                                                        height: 90,
+                                                                        height: 100,
                                                                       )
                                                                     : const SizedBox())),
                                                         const Divider(height: 5, thickness: 1),

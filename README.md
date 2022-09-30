@@ -6,6 +6,8 @@
 ## 🤔 What is this app about?
 
 Main purpose of this app is to be a replacement for the Taskbar, but in meanwhile I've added more features that can come in handy sometimes. It's not about the 30px you add on your screen, but to limit distraction that comes from flashes, badges, notifications and other apps Microsoft forcefully tries to push to their users.
+### **Best way to use:**
+**You can bind the QuickMenu on mouse buttons from left side, or any extra buttons on mouse for easy access**. If you do not have any extra buttons on your mouse, you can bind it to something simple like `Win+Z`
 
 ### You can watch a small demo here:
 

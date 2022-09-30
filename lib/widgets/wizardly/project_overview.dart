@@ -722,15 +722,10 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     }
     final String zipFile = "$dir\\archived.zip";
     downloadFile(repo, zipFile, () async {
-      downloadMessage = "Extracting";
-      if (!mounted) return;
-      setState(() {});
-      await WinUtils.runPowerShell(<String>['Expand-Archive -LiteralPath "$zipFile" -DestinationPath "$dir" -Force']);
       downloadMessage = "Download";
       if (!mounted) return;
-      File(zipFile).deleteSync();
       setState(() {});
-      loadProjects();
+      WinUtils.open("powershell.exe", arguments: '-NoExit Expand-Archive -LiteralPath \\"$zipFile\\" -DestinationPath \\"$dir\\" -Force;');
     });
 
     return;
@@ -786,7 +781,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
   }
 
-  String gitlink = "https://github.com/Far-Se/tabame";
+  String gitlink = "";
   @override
   Widget build(BuildContext context) {
     loadProjects();
@@ -811,7 +806,14 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
           ],
         ),
         const SizedBox(height: 20),
-        Text("Downloaded Projects:", style: Theme.of(context).textTheme.bodyLarge),
+        ListTile(
+          onTap: () {
+            setState(() {});
+            loadProjects();
+          },
+          title: Text("Downloaded Projects:", style: Theme.of(context).textTheme.bodyLarge),
+          trailing: const Icon(Icons.refresh),
+        ),
         Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,

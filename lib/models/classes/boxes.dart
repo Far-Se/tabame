@@ -283,16 +283,16 @@ class Boxes {
   List<String> get topBarWidgets {
     List<String> defaultWidgets = <String>[
       "TaskManagerButton",
+      "SpotifyButton",
+      "WorkSpaceButton",
       "VirtualDesktopButton",
       "ToggleTaskbarButton",
       "PinWindowButton",
       "MicMuteButton",
       "AlwaysAwakeButton",
-      "SpotifyButton",
       "ChangeThemeButton",
       "HideDesktopFilesButton",
       "ToggleHiddenFilesButton",
-      "WorkSpaceButton",
     ];
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
