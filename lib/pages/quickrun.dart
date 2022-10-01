@@ -194,7 +194,7 @@ class QuickRunState extends State<QuickRun> {
                               "currency": parser.currency,
                               "timezones": parser.timezones,
                               "memo": parser.memos,
-                              "projects": parser.bookmarks,
+                              "bookmarks": parser.bookmarks,
                               "shortcut": parser.shortcuts,
                               "regex": parser.regex,
                               "lorem": parser.loremIpsum,
@@ -457,7 +457,7 @@ class QuickRunState extends State<QuickRun> {
       if (parser.keysToSent.isEmpty) return;
       WinKeys.send(parser.keysToSent);
       regainFocus();
-    } else if (currentRun == "projects") {
+    } else if (currentRun == "bookmarks") {
       if (result.actions.isEmpty) return;
       regainFocus();
       WinUtils.open(result.actions.values.elementAt(0));
@@ -1226,7 +1226,7 @@ class Parsers {
     result.type = ResultType.open;
     for (BookmarkGroup projectGroup in savedBookmarks) {
       for (BookmarkInfo project in projectGroup.bookmarks) {
-        if (project.title.toLowerCase().contains(input)) {
+        if (project.title.toLowerCase().contains(input) || projectGroup.title.toLowerCase().contains(input)) {
           result.results.add("${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}");
           result.actions["${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}"] = "${project.stringToExecute}";
         }

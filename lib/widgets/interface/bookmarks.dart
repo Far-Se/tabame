@@ -53,7 +53,7 @@ class BookmarksPageState extends State<BookmarksPage> {
       data: Theme.of(context).listTileTheme.copyWith(horizontalTitleGap: 10),
       child: Column(
         children: <Widget>[
-          const InfoText("To open a project, open QuickRun and type p then the name of the project"),
+          const InfoText("To open a bookmark, open QuickRun and type b then the name of the bookmark"),
           ListTile(
             title: const Text("Bookmarks", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             leading: Container(

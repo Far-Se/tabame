@@ -22,7 +22,7 @@ import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/interface_settings.dart';
-import '../widgets/interface/projects.dart';
+import '../widgets/interface/bookmarks.dart';
 import '../widgets/interface/quickmenu_settings.dart';
 import '../widgets/interface/quickrun_settings.dart';
 import '../widgets/interface/tasks.dart';

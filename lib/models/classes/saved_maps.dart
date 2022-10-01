@@ -716,7 +716,7 @@ class RunCommands {
     lorem = output["lorem"] ?? lorem;
     encoders = output["encoders"] ?? encoders;
     setvar = output["setvar"] ?? setvar;
-    bookmarks = output["projects"] ?? bookmarks;
+    bookmarks = output["bookmarks"] ?? bookmarks;
     timer = output["timer"] ?? timer;
     keys = output["keys"] ?? keys;
     timezones = output["timezones"] ?? timezones;
@@ -733,7 +733,7 @@ class RunCommands {
       "currency": currency,
       "timezones": timezones,
       "shortcut": shortcut,
-      "projects": bookmarks,
+      "bookmarks": bookmarks,
       "timer": timer,
       "memo": memo,
       "regex": regex,

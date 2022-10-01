@@ -8,6 +8,7 @@ import '../itzy/interface/quickmenu_bottom_bar.dart';
 import '../itzy/interface/quickmenu_pinned_apps.dart';
 import '../itzy/interface/quickmenu_taskbar.dart';
 import '../itzy/interface/quickmenu_quickactions.dart';
+import '../widgets/info_text.dart';
 
 class QuickmenuSettings extends StatefulWidget {
   const QuickmenuSettings({Key? key}) : super(key: key);
@@ -134,6 +135,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
               ))
             ],
           ),
+          const InfoText("     Pro tip: press TAB and arrows to navigate with keyboard."),
           const SizedBox(height: 10),
           const Divider(thickness: 2, height: 10),
           Center(child: Text("Top Bar", style: Theme.of(context).textTheme.headline6)),
