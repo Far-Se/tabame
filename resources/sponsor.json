@@ -1,8 +1,8 @@
 {
-    "enabled": true,
+    "enabled": false,
     "name": "SuperList",
     "size": "140x100",
-    "imageDark": "https://i.imgur.com/Fym54Yq.png",
-    "imageLight": "https://i.imgur.com/eWwmcR3.png",
-    "url": "https://www.superlist.com/"
+    "imageDark": "",
+    "imageLight": "",
+    "url": ""
 }
