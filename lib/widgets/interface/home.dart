@@ -74,7 +74,7 @@ class _HomeState extends State<Home> {
                     imageBuilder: (Uri uri, String? str1, String? str2) {
                       final Map<String, IconData> icons = <String, IconData>{
                         "tips": Icons.tips_and_updates,
-                        "projects": Icons.folder_copy,
+                        "bookmarks": Icons.folder_copy,
                         "trktivty": Icons.scatter_plot,
                         "tasks": Icons.task_alt,
                       };

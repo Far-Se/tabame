@@ -212,25 +212,25 @@ class PageWatcher extends SavedMap {
   }
 }
 
-class ProjectGroup extends SavedMap {
+class BookmarkGroup extends SavedMap {
   String title;
   String emoji;
-  List<ProjectInfo> projects;
-  ProjectGroup({
+  List<BookmarkInfo> bookmarks;
+  BookmarkGroup({
     required this.title,
     required this.emoji,
-    required this.projects,
+    required this.bookmarks,
   });
 
-  ProjectGroup copyWith({
+  BookmarkGroup copyWith({
     String? title,
     String? emoji,
-    List<ProjectInfo>? projects,
+    List<BookmarkInfo>? bookmarks,
   }) {
-    return ProjectGroup(
+    return BookmarkGroup(
       title: title ?? this.title,
       emoji: emoji ?? this.emoji,
-      projects: projects ?? this.projects,
+      bookmarks: bookmarks ?? this.bookmarks,
     );
   }
 
@@ -238,17 +238,17 @@ class ProjectGroup extends SavedMap {
     return <String, dynamic>{
       'title': title,
       'emoji': emoji,
-      'projects': projects.map((ProjectInfo x) => x.toMap()).toList(),
+      'projects': bookmarks.map((BookmarkInfo x) => x.toMap()).toList(),
     };
   }
 
-  factory ProjectGroup.fromMap(Map<String, dynamic> map) {
-    return ProjectGroup(
+  factory BookmarkGroup.fromMap(Map<String, dynamic> map) {
+    return BookmarkGroup(
       title: map['title'] as String,
       emoji: map['emoji'] as String,
-      projects: List<ProjectInfo>.from(
-        (map['projects'] as List<dynamic>).map<ProjectInfo>(
-          (dynamic x) => ProjectInfo.fromMap(x as Map<String, dynamic>),
+      bookmarks: List<BookmarkInfo>.from(
+        (map['projects'] as List<dynamic>).map<BookmarkInfo>(
+          (dynamic x) => BookmarkInfo.fromMap(x as Map<String, dynamic>),
         ),
       ),
     );
@@ -256,39 +256,39 @@ class ProjectGroup extends SavedMap {
 
   String toJson() => json.encode(toMap());
 
-  factory ProjectGroup.fromJson(String source) => ProjectGroup.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory BookmarkGroup.fromJson(String source) => BookmarkGroup.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() => 'ProjectGroup(title: $title, emoji: $emoji, projects: $projects)';
+  String toString() => 'ProjectGroup(title: $title, emoji: $emoji, projects: $bookmarks)';
 
   @override
-  bool operator ==(covariant ProjectGroup other) {
+  bool operator ==(covariant BookmarkGroup other) {
     if (identical(this, other)) return true;
 
-    return other.title == title && other.emoji == emoji && listEquals(other.projects, projects);
+    return other.title == title && other.emoji == emoji && listEquals(other.bookmarks, bookmarks);
   }
 
   @override
-  int get hashCode => title.hashCode ^ emoji.hashCode ^ projects.hashCode;
+  int get hashCode => title.hashCode ^ emoji.hashCode ^ bookmarks.hashCode;
 }
 
-class ProjectInfo {
+class BookmarkInfo {
   String emoji;
   String title;
   // ProjectType type;
   String stringToExecute;
-  ProjectInfo({
+  BookmarkInfo({
     required this.emoji,
     required this.title,
     required this.stringToExecute,
   });
 
-  ProjectInfo copyWith({
+  BookmarkInfo copyWith({
     String? emoji,
     String? title,
     String? stringToExecute,
   }) {
-    return ProjectInfo(
+    return BookmarkInfo(
       emoji: emoji ?? this.emoji,
       title: title ?? this.title,
       stringToExecute: stringToExecute ?? this.stringToExecute,
@@ -303,8 +303,8 @@ class ProjectInfo {
     };
   }
 
-  factory ProjectInfo.fromMap(Map<String, dynamic> map) {
-    return ProjectInfo(
+  factory BookmarkInfo.fromMap(Map<String, dynamic> map) {
+    return BookmarkInfo(
       emoji: map['emoji'] as String,
       title: map['title'] as String,
       stringToExecute: map['stringToExecute'] as String,
@@ -313,13 +313,13 @@ class ProjectInfo {
 
   String toJson() => json.encode(toMap());
 
-  factory ProjectInfo.fromJson(String source) => ProjectInfo.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory BookmarkInfo.fromJson(String source) => BookmarkInfo.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   String toString() => 'ProjectInfo(emoji: $emoji, title: $title, stringToExecute: $stringToExecute)';
 
   @override
-  bool operator ==(covariant ProjectInfo other) {
+  bool operator ==(covariant BookmarkInfo other) {
     if (identical(this, other)) return true;
 
     return other.emoji == emoji && other.title == title && other.stringToExecute == stringToExecute;
@@ -690,7 +690,7 @@ class RunCommands {
   String unit = r"u ";
   String currency = r"cur ;\d+ \w{3,4} to \w{3,4}";
   String shortcut = r"s ;";
-  String projects = r"p ";
+  String bookmarks = r"b ";
   String timer = r"t ;~";
   String memo = r"m ;";
   String regex = r"rgx ;^/";
@@ -716,7 +716,7 @@ class RunCommands {
     lorem = output["lorem"] ?? lorem;
     encoders = output["encoders"] ?? encoders;
     setvar = output["setvar"] ?? setvar;
-    projects = output["projects"] ?? projects;
+    bookmarks = output["projects"] ?? bookmarks;
     timer = output["timer"] ?? timer;
     keys = output["keys"] ?? keys;
     timezones = output["timezones"] ?? timezones;
@@ -733,7 +733,7 @@ class RunCommands {
       "currency": currency,
       "timezones": timezones,
       "shortcut": shortcut,
-      "projects": projects,
+      "projects": bookmarks,
       "timer": timer,
       "memo": memo,
       "regex": regex,

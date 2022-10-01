@@ -22,17 +22,17 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
         child: Column(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
           const Divider(height: 10, thickness: 1),
           RunShortCutInfo(
-              value: globalSettings.run.projects,
+              value: globalSettings.run.bookmarks,
               onChanged: (String newStr) {
-                globalSettings.run.projects = newStr;
+                globalSettings.run.bookmarks = newStr;
                 globalSettings.run.save();
                 setState(() {});
               },
-              title: "Projects",
+              title: "Bookmarks",
               link: "",
-              tooltip: "Quick Open a project",
-              info: "Open a project. You can add projects from Project tab on sidebar.",
-              example: <String>["p tabame"]),
+              tooltip: "Quickly access bookmarks",
+              info: "Open links, folders, files and commands",
+              example: <String>["b tabame"]),
           RunShortCutInfo(
               value: globalSettings.run.timer,
               onChanged: (String newStr) {

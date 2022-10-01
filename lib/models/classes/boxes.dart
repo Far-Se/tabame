@@ -307,7 +307,7 @@ class Boxes {
 
   List<String> get pinnedApps => pref.getStringList("pinnedApps") ?? <String>[];
   List<PowerShellScript> get powerShellScripts => getSavedMap<PowerShellScript>(PowerShellScript.fromJson, "powerShellScripts");
-  List<ProjectGroup> get projects => getSavedMap<ProjectGroup>(ProjectGroup.fromJson, "projects");
+  List<BookmarkGroup> get bookmarks => getSavedMap<BookmarkGroup>(BookmarkGroup.fromJson, "projects");
 
   static List<PageWatcher> _pageWatchers = <PageWatcher>[];
   static set pageWatchers(List<PageWatcher> list) => _pageWatchers = list;

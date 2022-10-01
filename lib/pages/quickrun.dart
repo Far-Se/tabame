@@ -194,7 +194,7 @@ class QuickRunState extends State<QuickRun> {
                               "currency": parser.currency,
                               "timezones": parser.timezones,
                               "memo": parser.memos,
-                              "projects": parser.projects,
+                              "projects": parser.bookmarks,
                               "shortcut": parser.shortcuts,
                               "regex": parser.regex,
                               "lorem": parser.loremIpsum,
@@ -1220,12 +1220,12 @@ class Parsers {
     return result;
   }
 
-  final List<ProjectGroup> savedProjects = Boxes().projects;
-  Future<ParserResult> projects(String input) async {
+  final List<BookmarkGroup> savedBookmarks = Boxes().bookmarks;
+  Future<ParserResult> bookmarks(String input) async {
     final ParserResult result = ParserResult();
     result.type = ResultType.open;
-    for (ProjectGroup projectGroup in savedProjects) {
-      for (ProjectInfo project in projectGroup.projects) {
+    for (BookmarkGroup projectGroup in savedBookmarks) {
+      for (BookmarkInfo project in projectGroup.bookmarks) {
         if (project.title.toLowerCase().contains(input)) {
           result.results.add("${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}");
           result.actions["${project.emoji} ${project.title} - ${projectGroup.emoji} ${projectGroup.title.truncate(20, suffix: "...")}"] = "${project.stringToExecute}";

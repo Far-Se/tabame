@@ -128,11 +128,11 @@ Future<void> main(List<String> arguments2) async {
   Debug.add("Setting transparency");
   await setWindowAsTransparent();
   Debug.add("Set transparency");
+  runApp(Tabame());
   // if (arguments.contains('-views')) {
   //   return runApp(ViewsScreen());
   // }
   // runApp(const Tabame());
-  runApp(Tabame());
   // runZonedGuarded(() => runApp(Tabame()), (Object error, StackTrace stackTrace) async {
   //   String stack = stackTrace.toString();
   //   final List<String> stackArr = stack.split("\n");

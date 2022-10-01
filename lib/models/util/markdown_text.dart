@@ -35,7 +35,7 @@ Quick Actions is a set of predefined tools that give you access to useful functi
 
 QuickRun has a suite of tools that can be accessed with a prefix. You can start Shortcuts, use Currency Convertor, Set Countdown, calculate/convert units and timezones and many other.
 
-You can also access your projects and create new Tasks.
+You can also access your bookmarks and create new Tasks.
 
 ---
 ### **![remap]() Hotkeys**
@@ -85,8 +85,8 @@ const String markdownHomeRight = '''
   It also tracks active window and you can specify what titles to track, so you can see how much time you spent on apps and projects.
 
 ---
-### **![projects]() Projects**
-  You can save folders and files to your projects and access them from QuickRun. This comes in handy when you want to open an older project or specific file but don't know the path.
+### **![bookmarks]() Bookmarks**
+  You can save folders, files, commands and links to your bookmarks and access them from QuickRun. This comes in handy when you want to open an older project or specific file but don't know the path.
 
 ---
 ### **![tasks]() Tasks**

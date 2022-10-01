@@ -12,20 +12,20 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 
-class ProjectsPage extends StatefulWidget {
-  const ProjectsPage({Key? key}) : super(key: key);
+class BookmarksPage extends StatefulWidget {
+  const BookmarksPage({Key? key}) : super(key: key);
 
   @override
-  ProjectsPageState createState() => ProjectsPageState();
+  BookmarksPageState createState() => BookmarksPageState();
 }
 
-class ProjectsPageState extends State<ProjectsPage> {
+class BookmarksPageState extends State<BookmarksPage> {
   final TextEditingController folderEmojiController = TextEditingController();
   final TextEditingController folderTitleController = TextEditingController();
   final TextEditingController projectEmojiController = TextEditingController();
   final TextEditingController projectTitleController = TextEditingController();
   final TextEditingController projectPathController = TextEditingController();
-  final List<ProjectGroup> projects = Boxes().projects;
+  final List<BookmarkGroup> bookmarks = Boxes().bookmarks;
 
   int activeProject = -1;
   double opacity = 0;
@@ -33,7 +33,7 @@ class ProjectsPageState extends State<ProjectsPage> {
   List<double> heights = <double>[];
   @override
   void initState() {
-    heights = List<double>.filled(projects.length, 0);
+    heights = List<double>.filled(bookmarks.length, 0);
     super.initState();
   }
 
@@ -55,16 +55,16 @@ class ProjectsPageState extends State<ProjectsPage> {
         children: <Widget>[
           const InfoText("To open a project, open QuickRun and type p then the name of the project"),
           ListTile(
-            title: const Text("Projects", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            title: const Text("Bookmarks", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             leading: Container(
               height: double.infinity,
               width: 50,
               child: const Icon(Icons.add),
             ),
             onTap: () async {
-              projects.add(ProjectGroup(title: "New Project Group", emoji: "✨", projects: <ProjectInfo>[]));
-              heights = List<double>.filled(projects.length, 0);
-              await Boxes.updateSettings("projects", jsonEncode(projects));
+              bookmarks.add(BookmarkGroup(title: "New Project Group", emoji: "✨", bookmarks: <BookmarkInfo>[]));
+              heights = List<double>.filled(bookmarks.length, 0);
+              await Boxes.updateSettings("projects", jsonEncode(bookmarks));
 
               setState(() {});
             },
@@ -74,11 +74,11 @@ class ProjectsPageState extends State<ProjectsPage> {
             child: ReorderableListView.builder(
               shrinkWrap: true,
               dragStartBehavior: DragStartBehavior.down,
-              itemCount: projects.length,
+              itemCount: bookmarks.length,
               physics: const AlwaysScrollableScrollPhysics(),
               scrollController: ScrollController(),
               itemBuilder: (BuildContext context, int mainIndex) {
-                final ProjectGroup project = projects[mainIndex];
+                final BookmarkGroup project = bookmarks[mainIndex];
                 return Column(
                   key: ValueKey<int>(mainIndex),
                   children: <Widget>[
@@ -89,11 +89,11 @@ class ProjectsPageState extends State<ProjectsPage> {
                             MenuItem(
                                 label: 'Delete',
                                 onClick: (_) async {
-                                  projects.removeAt(mainIndex);
-                                  heights = List<double>.filled(projects.length, 0);
+                                  bookmarks.removeAt(mainIndex);
+                                  heights = List<double>.filled(bookmarks.length, 0);
                                   activeProject = -1;
 
-                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                   setState(() {});
                                 }),
                           ],
@@ -109,7 +109,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                           } else {
                             activeProject = mainIndex;
                           }
-                          heights = List<double>.filled(projects.length, 0);
+                          heights = List<double>.filled(bookmarks.length, 0);
                           setState(() {});
                           if (activeProject != -1) {
                             Future<void>.delayed(const Duration(milliseconds: 100), () {
@@ -178,11 +178,11 @@ class ProjectsPageState extends State<ProjectsPage> {
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  projects.removeAt(mainIndex);
-                                                  heights = List<double>.filled(projects.length, 0);
+                                                  bookmarks.removeAt(mainIndex);
+                                                  heights = List<double>.filled(bookmarks.length, 0);
                                                   activeProject = -1;
 
-                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
@@ -190,9 +190,9 @@ class ProjectsPageState extends State<ProjectsPage> {
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  projects[mainIndex].emoji = folderEmojiController.value.text.truncate(2);
-                                                  projects[mainIndex].title = folderTitleController.value.text;
-                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  bookmarks[mainIndex].emoji = folderEmojiController.value.text.truncate(2);
+                                                  bookmarks[mainIndex].title = folderTitleController.value.text;
+                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
@@ -209,10 +209,10 @@ class ProjectsPageState extends State<ProjectsPage> {
                                 child: InkWell(
                                   child: const Icon(Icons.add),
                                   onTap: () async {
-                                    projects[mainIndex].projects.add(ProjectInfo(emoji: "🎀", title: "New Project", stringToExecute: "C:\\"));
-                                    await Boxes.updateSettings("projects", jsonEncode(projects));
+                                    bookmarks[mainIndex].bookmarks.add(BookmarkInfo(emoji: "🎀", title: "New Project", stringToExecute: "C:\\"));
+                                    await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                     if (activeProject != mainIndex) {
-                                      heights = List<double>.filled(projects.length, 0);
+                                      heights = List<double>.filled(bookmarks.length, 0);
                                       activeProject = mainIndex;
                                       setState(() {});
                                       Future<void>.delayed(const Duration(milliseconds: 100), () {
@@ -240,11 +240,11 @@ class ProjectsPageState extends State<ProjectsPage> {
                           child: ReorderableListView.builder(
                             shrinkWrap: true,
                             dragStartBehavior: DragStartBehavior.down,
-                            itemCount: projects[mainIndex].projects.length,
+                            itemCount: bookmarks[mainIndex].bookmarks.length,
                             physics: const AlwaysScrollableScrollPhysics(),
                             scrollController: ScrollController(),
                             itemBuilder: (BuildContext context, int index) {
-                              final ProjectInfo projectItem = projects[mainIndex].projects[index];
+                              final BookmarkInfo projectItem = bookmarks[mainIndex].bookmarks[index];
                               return ListTile(
                                 key: ValueKey<int>(index),
                                 leading: Text(projectItem.emoji),
@@ -377,7 +377,7 @@ class ProjectsPageState extends State<ProjectsPage> {
                                                       ],
                                                     ),
                                                     const SizedBox(height: 10),
-                                                    Text("You can Write:\n - a Folder Path or file to open\n - a command like code C:\\somepath\\\n - a link",
+                                                    Text("You can Write:\n - a Folder Path or file to open\n - a command like: code C:\\somepath\\\n - a link",
                                                         style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 12))
                                                   ],
                                                 )),
@@ -388,8 +388,8 @@ class ProjectsPageState extends State<ProjectsPage> {
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  projects[mainIndex].projects.removeAt(index);
-                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  bookmarks[mainIndex].bookmarks.removeAt(index);
+                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
@@ -397,10 +397,10 @@ class ProjectsPageState extends State<ProjectsPage> {
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
-                                                  projects[mainIndex].projects[index].emoji = projectEmojiController.value.text.truncate(2);
-                                                  projects[mainIndex].projects[index].title = projectTitleController.value.text;
-                                                  projects[mainIndex].projects[index].stringToExecute = projectPathController.value.text;
-                                                  await Boxes.updateSettings("projects", jsonEncode(projects));
+                                                  bookmarks[mainIndex].bookmarks[index].emoji = projectEmojiController.value.text.truncate(2);
+                                                  bookmarks[mainIndex].bookmarks[index].title = projectTitleController.value.text;
+                                                  bookmarks[mainIndex].bookmarks[index].stringToExecute = projectPathController.value.text;
+                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
@@ -417,9 +417,9 @@ class ProjectsPageState extends State<ProjectsPage> {
                             },
                             onReorder: (int oldIndex, int newIndex) async {
                               if (oldIndex < newIndex) newIndex -= 1;
-                              final ProjectInfo item = projects[mainIndex].projects.removeAt(oldIndex);
-                              projects[mainIndex].projects.insert(newIndex, item);
-                              await Boxes.updateSettings("projects", jsonEncode(projects));
+                              final BookmarkInfo item = bookmarks[mainIndex].bookmarks.removeAt(oldIndex);
+                              bookmarks[mainIndex].bookmarks.insert(newIndex, item);
+                              await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                               setState(() {});
                             },
                           ),
@@ -432,14 +432,14 @@ class ProjectsPageState extends State<ProjectsPage> {
               onReorder: (int oldIndex, int newIndex) async {
                 activeProject = -1;
                 if (oldIndex < newIndex) newIndex -= 1;
-                final ProjectGroup item = projects.removeAt(oldIndex);
-                projects.insert(newIndex, item);
+                final BookmarkGroup item = bookmarks.removeAt(oldIndex);
+                bookmarks.insert(newIndex, item);
                 final double hh = heights[oldIndex];
                 heights[oldIndex] = heights[newIndex];
                 heights[newIndex] = hh;
                 activeProject = newIndex;
                 timerDelay = 50;
-                await Boxes.updateSettings("projects", jsonEncode(projects));
+                await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                 setState(() {});
                 Future<void>.delayed(const Duration(milliseconds: 500), () => timerDelay = 300);
               },

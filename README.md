@@ -78,7 +78,7 @@ It takes only 26.5 MB of space.
 
 [⌨️ Hotkeys](#%EF%B8%8F-hotkeys) 
 
-[📕 Projects](#-projects)
+[📕 Bookmarks](#-bookmarks)
 
 [📝 Trktivity](#-trktivity)
 
@@ -175,7 +175,7 @@ Example: `u 1 in to cm` ... `u 1 mass`
 - Encoders: default is `enc `. Use ! to encode and @ to decode. supports url, base, rot13, ascii.
 
 ## Utility
-- Projects: default is `p `. You open your saved projects from Interface. It is good to save older projects or side projects or examples folders, so you do not browse and try to find them manually.
+- Bookmarks: default is `p `. You open your saved bookmarks from Interface. It is good to save older bookmarks or side bookmarks or examples folders, so you do not browse and try to find them manually.
 - Timer: default is `t `. Use this to set quick timers, for example for `t 5 tea` to remind you in 5 minutes to drink your tea and not forget it for 4 hours.
 - Variable: default is `v `. Use this in combination with Hotkeys if you need to reset a variable.
 - Send keys: default is `k `. You can save specific keys and trigger them from quick menu. For example: `k m` to trigger `MEDIA_NEXT_TRACK` if you don't want to stretch your fingers to the random media next track keyboard button.
@@ -241,10 +241,12 @@ You can set multiple Actions.
 Example: With main hotkey, you can open tabame, show previous window, toggle taskbar, open start menu, open `Win+X` menu, open new chrome tab, show desktop, change volume level or switch desktops. You do not need to learn new hotkeys for each thing you need.
 
 
-# **📕 Projects**
-Here you can save your projects, important folders/files, or documentation/example folder.
+# **📕 Bookmarks**
+Here you can create bookmarks for your projects, docs and other items you need to quick access.
 
-You can create groups and in them you can add your projects. You can set an emoji for each so you can differentiate between them later when you forgot which is which.
+You can bookmark folders, links or commands.
+
+You can create groups and that contains your bookmarks. You can set an emoji for each so you can differentiate between them later when you forgot which is which.
 
 
 # **📝 Trktivity**
