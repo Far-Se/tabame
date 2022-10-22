@@ -85,6 +85,8 @@ class Settings {
   ThemeColors lightTheme = ThemeColors(background: 0xffD5E0FB, textColor: 0xff3A404A, accentColor: 0xff446EE9, gradientAlpha: 200, quickMenuBoldFont: true);
   ThemeColors darkTheme = ThemeColors(background: 0xff1E1F28, accentColor: 0xDCFFDCAA, gradientAlpha: 240, textColor: 0xFFFAF9F8, quickMenuBoldFont: true);
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
+
+  /// Get Dark or Light Theme
   ThemeType get themeTypeMode {
     if (themeType == ThemeType.system) {
       if (MediaQueryData.fromWindow(WidgetsBinding.instance.window).platformBrightness == Brightness.dark) return ThemeType.dark;

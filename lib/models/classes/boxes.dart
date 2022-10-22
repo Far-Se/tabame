@@ -308,6 +308,9 @@ class Boxes {
       "ToggleHiddenFilesButton",
       "QuickActionsMenuButton",
       "FancyShotButton",
+      "TimersButton",
+      "CountdownButton",
+      "BookmarksButton",
     ];
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
@@ -388,6 +391,7 @@ class Boxes {
   void addQuickTimer(String name, int minutes, int type) {
     final QuickTimer quick = QuickTimer();
     quick.name = name;
+    quick.endTime = DateTime.now().add(Duration(minutes: minutes));
     quick.timer = Timer(Duration(minutes: minutes), () {
       if (type == 0) {
         WinUtils.textToSpeech(name, repeat: -1);
@@ -501,6 +505,8 @@ class TrktivityFilter {
 class QuickTimer {
   String name = "";
   Timer? timer;
+
+  DateTime? endTime;
 }
 
 class Tasks {

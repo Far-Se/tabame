@@ -685,7 +685,6 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
       //   // includeParentEnvironment: false,
       //   runInShell: true,
       // );
-      // msgBox(path, "as powershell");
       // WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
       return;
     }
@@ -933,7 +932,7 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
   }
 
   static msgBox(String text, String title) {
-    MessageBox(0, TEXT(text), TEXT(title), 0);
+    MessageBox(0, TEXT(text), TEXT(title), MB_ICONEXCLAMATION | MB_DEFAULT_DESKTOP_ONLY);
   }
 
   static startTabame({bool closeCurrent = false, String? arguments}) {
@@ -1082,7 +1081,7 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
     final String temp = getTempFolder();
-    await saveClipboardImageAsPngFile("$temp\\capture.png");
+    await WinClipboard().saveClipboardToPng("$temp\\capture.png");
     return true;
   }
 }

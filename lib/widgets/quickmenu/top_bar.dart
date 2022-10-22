@@ -7,8 +7,10 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
+import '../itzy/quickmenu/button_bookmarks.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
 import '../itzy/quickmenu/button_changelog.dart';
+import '../itzy/quickmenu/button_countdown.dart';
 import '../itzy/quickmenu/button_fancyshot.dart';
 import '../itzy/quickmenu/button_hide_desktop_files.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
@@ -19,6 +21,7 @@ import '../itzy/quickmenu/button_pin_window.dart';
 import '../itzy/quickmenu/button_quickactions_menu.dart';
 import '../itzy/quickmenu/button_spotify.dart';
 import '../itzy/quickmenu/button_task_manager.dart';
+import '../itzy/quickmenu/button_timers.dart';
 import '../itzy/quickmenu/button_toggle_desktop.dart';
 import '../itzy/quickmenu/button_toggle_hidden_files.dart';
 import '../itzy/quickmenu/button_workspace.dart';
@@ -46,6 +49,9 @@ class TopBar extends StatelessWidget {
       "ToggleHiddenFilesButton": const ToggleHiddenFilesButton(),
       "QuickActionsMenuButton": const QuickActionsMenuButton(),
       "FancyShotButton": const FancyShotButton(),
+      "TimersButton": const TimersButton(),
+      "CountdownButton": const CountdownButton(),
+      "BookmarksButton": const BookmarksButton(),
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;

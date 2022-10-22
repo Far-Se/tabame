@@ -124,6 +124,12 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - Change Theme Button - Changes between Dark to White. It does not change the settings too!
 - Hide Desktop Files Button - Hides/Shows files on desktop, good if you do not always use them.
 - Toggle Hidden Files Button - Hides/Shows hidden files.
+- **v1.2**
+- Fancyshot - Screen Capture with editor.
+- Bookmarks - See your saved Bookmarks.
+- Countdown - A countdown for quick access.
+- Timers - Create Quick Timers.
+- QuickActionsMenu - A dedicated menu with Quick Actions.
 
 ## **Taskbar**
 Contains your opened windows, it shows the icon, if it makes sound, if it is pinned, Monitor Number, Title, Media Control and Close button.

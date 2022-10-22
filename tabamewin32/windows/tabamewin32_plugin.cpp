@@ -766,6 +766,47 @@ void SaveClipboardImageAsPngFile(
 
     result->Success(flutter::EncodableValue(result_map));
 }
+void CopyImageToClipboard2(std::wstring imagePath)
+{
+    OpenClipboard(nullptr);
+    EmptyClipboard();
+    // SetClipboardData(CF_BITMAP, Gdiplus::Image::FromFile(imagePath.c_str()));
+    SetClipboardData(CF_BITMAP, CopyImage(Gdiplus::Image::FromFile(TEXT("e://xx.png")), IMAGE_BITMAP, 0, 0, LR_COPYRETURNORG));
+    CloseClipboard();
+    std::cout << "a mers?" << std::endl;
+}
+bool CopyImageToClipboard(const wchar_t *filename)
+{
+    bool result = false;
+    Gdiplus::Bitmap *gdibmp = Gdiplus::Bitmap::FromFile(filename);
+    if (gdibmp)
+    {
+        HBITMAP hbitmap;
+        gdibmp->GetHBITMAP(0, &hbitmap);
+        if (OpenClipboard(NULL))
+        {
+            EmptyClipboard();
+            DIBSECTION ds;
+            if (GetObject(hbitmap, sizeof(DIBSECTION), &ds))
+            {
+                HDC hdc = GetDC(HWND_DESKTOP);
+                // create compatible bitmap (get DDB from DIB)
+                HBITMAP hbitmap_ddb = CreateDIBitmap(hdc, &ds.dsBmih, CBM_INIT,
+                                                     ds.dsBm.bmBits, (BITMAPINFO *)&ds.dsBmih, DIB_RGB_COLORS);
+                ReleaseDC(HWND_DESKTOP, hdc);
+                SetClipboardData(CF_BITMAP, hbitmap_ddb);
+                DeleteObject(hbitmap_ddb);
+                result = true;
+            }
+            CloseClipboard();
+        }
+
+        // cleanup:
+        DeleteObject(hbitmap);
+        delete gdibmp;
+    }
+    return result;
+}
 
 bool debugging = false;
 std::string debugFile = "";
@@ -1484,6 +1525,8 @@ HWND FindTopWindow(DWORD pid)
     return 0;
 }
 
+ULONG_PTR gdiplusToken;
+bool gdiInitialized = false;
 namespace tabamewin32
 {
 
@@ -1509,7 +1552,6 @@ namespace tabamewin32
 
     Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar) : registrar_(registrar)
     {
-
         // if (g_MouseHook != NULL)
         //     g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook, GetModuleHandle(NULL), 0);
         // if (g_KeyboardHook != NULL)
@@ -1531,6 +1573,8 @@ namespace tabamewin32
             UnhookWindowsHookEx(g_MouseHook);
         if (g_KeyboardHook != NULL)
             UnhookWindowsHookEx(g_KeyboardHook);
+        if (gdiInitialized)
+            Gdiplus::GdiplusShutdown(gdiplusToken);
     }
     void Tabamewin32Plugin::HandleMethodCall(const flutter::MethodCall<flutter::EncodableValue> &method_call, std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
     {
@@ -2182,6 +2226,23 @@ namespace tabamewin32
         else if (method_name.compare("saveClipboardImageAsPngFile") == 0)
         {
             SaveClipboardImageAsPngFile(method_call, std::move(result));
+        }
+        else if (method_name.compare("copyImageToClipboard") == 0)
+        {
+            const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+            string path = std::get<std::string>(args.at(flutter::EncodableValue("path")));
+            CopyImageToClipboard(Encoding::Utf8ToWide(path).c_str());
+            result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("initializeGDI") == 0)
+        {
+            if (!gdiInitialized)
+            {
+                Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+                Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+                gdiInitialized = true;
+            }
+            result->Success(flutter::EncodableValue(true));
         }
 
         else

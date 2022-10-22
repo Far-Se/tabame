@@ -11,10 +11,12 @@ import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import '../widgets/checkbox_widget.dart';
 import '../widgets/info_text.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
@@ -62,6 +64,10 @@ class FancyshotState extends State<Fancyshot> {
 
   TextEditingController watermarkTextController = TextEditingController();
 
+  bool closeOnAction = true;
+
+  String copyMessage = "Copy";
+  final WinClipboard winClipboard = WinClipboard();
   @override
   void initState() {
     super.initState();
@@ -149,7 +155,7 @@ class FancyshotState extends State<Fancyshot> {
               children: <Widget>[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[
                     const SizedBox(width: 10),
                     ElevatedButton.icon(
@@ -169,12 +175,15 @@ class FancyshotState extends State<Fancyshot> {
                       onPressed: () async {
                         capturing = true;
                         setState(() {});
-                        await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot', pixelRatio: 1.5);
+                        await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot');
                         Future<void>.delayed(const Duration(milliseconds: 30), () {
                           capturing = false;
                           setState(() {});
                         });
                         WinUtils.open('${WinUtils.getTabameSettingsFolder()}/fancyshot');
+                        if (globalSettings.args.contains("-fancyshot") && closeOnAction) {
+                          exit(0);
+                        }
                       },
                       icon: const Icon(Icons.save),
                       label: const Text("Save"),
@@ -184,23 +193,26 @@ class FancyshotState extends State<Fancyshot> {
                       onPressed: () async {
                         capturing = true;
                         setState(() {});
-                        final String? filename = await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot', pixelRatio: 1.5);
+                        final String? filename = (await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot'))?.replaceAll('/', r'\');
+                        if (filename == null) return;
                         Future<void>.delayed(const Duration(milliseconds: 30), () {
                           capturing = false;
-                          WinUtils.runPowerShell(<String>[
-                            "Add-Type -Assembly System.Windows.Forms;",
-                            "Add-Type -Assembly System.Drawing;",
-                            "\$imgpath = '$filename';",
-                            "\$img = [Drawing.Image]::FromFile(\$imgpath);",
-                            "[Windows.Forms.Clipboard]::SetImage(\$img);",
-                            r"[System.Console]::Beep(100,400);",
-                          ]);
+                          winClipboard.copyImageToClipboard(filename);
                           setState(() {});
+                          if (globalSettings.args.contains("-fancyshot") && closeOnAction) {
+                            exit(0);
+                          }
+                          copyMessage = "Copied!";
+                          Future<void>.delayed(const Duration(seconds: 1), () => mounted ? setState(() => copyMessage = "Copy") : null);
                         });
                       },
                       icon: const Icon(Icons.copy_all),
-                      label: const Text("Copy"),
+                      label: Text(copyMessage),
                     ),
+                    const SizedBox(width: 10),
+                    if (globalSettings.args.contains("-fancyshot"))
+                      SizedBox(
+                          width: 70, child: CheckBoxWidget(onChanged: (bool e) => setState(() => closeOnAction = !closeOnAction), value: closeOnAction, text: "Exit"))
                   ],
                 ),
                 Align(
@@ -258,6 +270,7 @@ class FancyshotState extends State<Fancyshot> {
                               if (i >= 0) {
                                 selectedProfile = value;
                                 filters = profiles[i].copyWith();
+                                watermarkTextController.text = filters.watermark;
                                 Boxes.pref.setString("fancyshot", value);
                               }
                               setState(() {});
@@ -697,6 +710,7 @@ class _FancyShotViewState extends State<FancyShotView> {
   @override
   void initState() {
     super.initState();
+    initializeGDI();
   }
 
   @override

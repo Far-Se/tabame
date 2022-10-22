@@ -28,6 +28,9 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "WorkSpaceButton": Icons.workspaces,
     "QuickActionsMenuButton": Icons.grid_view,
     "FancyShotButton": Icons.center_focus_strong_rounded,
+    "TimersButton": Icons.timer_sharp,
+    "CountdownButton": Icons.hourglass_bottom_rounded,
+    "BookmarksButton": Icons.folder_copy_outlined,
     "Deactivated:": Icons.do_disturb,
   };
   @override

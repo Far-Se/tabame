@@ -688,9 +688,22 @@ Future<bool> enableDebug(String path) async {
   return true;
 }
 
-Future<void> saveClipboardImageAsPngFile(String path) async {
-  final Map<String, dynamic> arguments = <String, dynamic>{
-    'imagePath': path,
-  };
-  await audioMethodChannel.invokeMethod('saveClipboardImageAsPngFile', arguments);
+class WinClipboard {
+  Future<void> saveClipboardToPng(String path) async {
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'imagePath': path,
+    };
+    await audioMethodChannel.invokeMethod('saveClipboardImageAsPngFile', arguments);
+  }
+
+  Future<void> copyImageToClipboard(String path) async {
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'path': path,
+    };
+    await audioMethodChannel.invokeMethod('copyImageToClipboard', arguments);
+  }
+}
+
+Future<void> initializeGDI() async {
+  await audioMethodChannel.invokeMethod('initializeGDI');
 }
