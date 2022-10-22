@@ -332,6 +332,8 @@ You can bind Fancyshot on a hotkey or add it in QuickMenuActions.
 
 Interface needs to open in order for the image to drawn.
 
+![image](https://user-images.githubusercontent.com/20853986/197355194-7938261b-0247-45e1-8e91-94e1952251df.png)
+
 # 🙃 Outro
 I've started this project to learn Dart and Flutter, in my mind I had only `QuickMenu` features/app, but while writing for it I got new ideas for it, and it ended up `Tabame`, random name I came up with.
 
