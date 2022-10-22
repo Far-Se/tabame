@@ -267,8 +267,10 @@ class QuickRunState extends State<QuickRun> {
                                       });
                                     } else if (result.type == ResultType.open) {
                                       WinUtils.open(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                      QuickMenuFunctions.toggleQuickMenu(visible: false);
                                     } else if (result.type == ResultType.send) {
                                       WinKeys.send(result.actions.containsKey(item) ? result.actions[item]! : item);
+                                      QuickMenuFunctions.toggleQuickMenu(visible: false);
                                     }
                                     WidgetsBinding.instance.addPostFrameCallback((_) => regainFocus());
                                   },

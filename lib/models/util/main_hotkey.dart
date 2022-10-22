@@ -121,6 +121,34 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
       {
         "enabled": true,
         "windowUnderMouse": false,
+        "name": "Fancyshot",
+        "windowsInfo": ["any", ""],
+        "boundToRegion": false,
+        "region": {"x1": 0, "y1": 0, "x2": 0, "y2": 0, "asPercentage": false, "anchorType": 0},
+        "triggerType": 2,
+        "triggerInfo": [0, 100, 400],
+        "actions": [
+          {"type": 2, "value": "FancyShot"}
+        ],
+        "variableCheck": ["", ""]
+      },
+      {
+        "enabled": true,
+        "windowUnderMouse": false,
+        "name": "Quick Actions Menu",
+        "windowsInfo": ["any", ""],
+        "boundToRegion": false,
+        "region": {"x1": 0, "y1": 0, "x2": 0, "y2": 0, "asPercentage": false, "anchorType": 0},
+        "triggerType": 2,
+        "triggerInfo": [1, 100, 400],
+        "actions": [
+          {"type": 2, "value": "ToggleQuickActions"}
+        ],
+        "variableCheck": ["", ""]
+      },
+      {
+        "enabled": true,
+        "windowUnderMouse": false,
         "name": "Volume Down",
         "windowsInfo": ["any", ""],
         "boundToRegion": false,

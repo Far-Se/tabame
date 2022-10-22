@@ -26,6 +26,8 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "SpotifyButton": Icons.music_note,
     "ToggleHiddenFilesButton": Icons.folder_off,
     "WorkSpaceButton": Icons.workspaces,
+    "QuickActionsMenuButton": Icons.grid_view,
+    "FancyShotButton": Icons.center_focus_strong_rounded,
     "Deactivated:": Icons.do_disturb,
   };
   @override
@@ -65,7 +67,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                           leading: Icon(icons[topBarItems[index]], size: 17),
                           key: ValueKey<int>(index),
                           title: Text(
-                            topBarItems[index].toUperCaseAll(),
+                            topBarItems[index].toUperCaseAll().replaceAll("Button", ""),
                             style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                           ),
                         );
@@ -74,7 +76,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                         leading: Icon(icons[topBarItems[index]], size: 17),
                         key: ValueKey<int>(index),
                         title: Text(
-                          topBarItems[index].replaceAllMapped(RegExp(r'([A-Z])', caseSensitive: true), (Match match) => ' ${match[0]}'),
+                          topBarItems[index].replaceAllMapped(RegExp(r'([A-Z])', caseSensitive: true), (Match match) => ' ${match[0]}').replaceAll("Button", ""),
                         ),
                       );
                     },

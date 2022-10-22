@@ -95,13 +95,21 @@ Future<void> main(List<String> arguments2) async {
       title: "Tabame Views",
     );
   } else if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    late String title;
+    if (globalSettings.args.contains("-wizardly")) {
+      title = "Wizardly";
+    } else if (globalSettings.args.contains("-fancyshot")) {
+      title = "Fancyshot";
+    } else {
+      title = "Interface";
+    }
     windowOptions = WindowOptions(
       size: Size(700, 600),
       center: false,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       alwaysOnTop: false,
-      title: globalSettings.args.contains("-wizardly") ? "Tabame - Wizardly" : "Tabame - Interface",
+      title: "Tabame - $title",
     );
   } else {
     windowOptions = const WindowOptions(
@@ -151,7 +159,7 @@ void handleErrors(FlutterErrorDetails details) async {
   if (stackArr.length > 10) {
     stack = stackArr.take(10).join("\n");
   }
-  stack = "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n";
+  stack = "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n${DateTime.now().toString()}\n";
   File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("$error\n$stack", mode: FileMode.append);
 }
 
@@ -162,7 +170,7 @@ bool handlePlatformErrors(Object error, StackTrace stack2) {
     stack = stackArr.take(10).join("\n");
   }
   stack = "$stack\n===============\n";
-  File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${error.toString()}\n$stack", mode: FileMode.append);
+  File("${WinUtils.getTabameSettingsFolder()}\\errors.log").writeAsStringSync("${DateTime.now().toString()}\n${error.toString()}\n$stack", mode: FileMode.append);
   return true;
 }
 
@@ -267,6 +275,10 @@ class _TabameState extends State<Tabame> {
                         displayColor: Color(globalSettings.darkTheme.textColor),
                         decorationColor: Color(globalSettings.darkTheme.textColor),
                       ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                      style: ElevatedButton.styleFrom(
+                    foregroundColor: Color(globalSettings.darkTheme.background),
+                  )),
                   toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
                   checkboxTheme: ThemeData.dark()
                       .checkboxTheme

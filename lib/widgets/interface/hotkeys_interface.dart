@@ -551,6 +551,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         CheckBoxWidget(
+          key: UniqueKey(),
           onChanged: (bool e) => setState(() => trackingEnabled = !trackingEnabled),
           value: trackingEnabled,
           padding: const EdgeInsets.symmetric(vertical: 5),
@@ -642,7 +643,7 @@ Will open Task Manager And move to Performance Tab.
 Aditionally, for mouse use {LMB} {MMB} {RMB} {MSU} {MSD}
 ''',
           onTapLink: (String e, String? e1, String e2) {
-            WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/keys.dart#L158");
+            WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/keys.dart#L188");
           },
         )
       ],
@@ -672,8 +673,10 @@ class HotKeyAction extends StatefulWidget {
 
 class HotKeyActionState extends State<HotKeyAction> {
   FocusNode focusNode = FocusNode();
+  bool variableCheck = false;
   @override
   void initState() {
+    variableCheck = widget.hotkey.variableCheck[0].isNotEmpty;
     super.initState();
   }
 
@@ -705,6 +708,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                 ),
                 TextInput(labelText: "Name", value: widget.hotkey.name, onChanged: (String e) => setState(() => widget.hotkey.name = e)),
                 CheckBoxWidget(
+                  key: UniqueKey(),
                   onChanged: (bool e) => setState(() => widget.hotkey.windowUnderMouse = !widget.hotkey.windowUnderMouse),
                   value: widget.hotkey.windowUnderMouse,
                   text: "Activate window under mouse",
@@ -757,6 +761,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                                   ),
                                 ),
                                 CheckBoxWidget(
+                                    key: UniqueKey(),
                                     onChanged: (bool e) => setState(() => widget.hotkey.region.asPercentage = !widget.hotkey.region.asPercentage),
                                     value: widget.hotkey.region.asPercentage,
                                     text: "As percentage"),
@@ -817,6 +822,44 @@ class HotKeyActionState extends State<HotKeyAction> {
                   ],
                 ),
                 const Divider(height: 10, thickness: 1),
+                CheckBoxWidget(
+                    key: UniqueKey(),
+                    onChanged: (bool e) {
+                      variableCheck = !variableCheck;
+                      if (widget.hotkey.variableCheck[0].isNotEmpty) variableCheck = true;
+                      setState(() {});
+                      print(variableCheck);
+                    },
+                    value: variableCheck,
+                    text: "Variable Check"),
+                if (variableCheck)
+                  Focus(
+                    onFocusChange: (bool e) {
+                      if (!e) setState(() {});
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        IgnorePointer(child: Checkbox(value: widget.hotkey.variableCheck[0].isNotEmpty, onChanged: (bool? e) {})),
+                        Expanded(
+                          child: TextField(
+                            controller: TextEditingController(text: widget.hotkey.variableCheck[0]),
+                            decoration: const InputDecoration(hintText: "Var Name", labelText: "Var Name"),
+                            onChanged: (String e) => widget.hotkey.variableCheck[0] = e,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: TextEditingController(text: widget.hotkey.variableCheck[1]),
+                            decoration: const InputDecoration(hintText: "Var Value", labelText: "Var Value"),
+                            onChanged: (String e) => widget.hotkey.variableCheck[1] = e,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                const Divider(height: 10, thickness: 1),
                 const Text("Trigger:"),
                 DropdownButton<String>(
                   value: HotKeyInfo.triggers[widget.hotkey.triggerType.index],
@@ -865,6 +908,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           CheckBoxWidget(
+                              key: UniqueKey(),
                               onChanged: (bool e) => setState(() => widget.hotkey.triggerInfo[2] = e ? -1 : 0),
                               value: widget.hotkey.triggerInfo[2] == -1,
                               text: "Execute while moving"),
@@ -898,33 +942,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                       ),
                     ],
                   ),
-                const Text("Execute if variable equals:"),
-                Focus(
-                  onFocusChange: (bool e) {
-                    if (!e) setState(() {});
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      IgnorePointer(child: Checkbox(value: widget.hotkey.variableCheck[0].isNotEmpty, onChanged: (bool? e) {})),
-                      Expanded(
-                        child: TextField(
-                          controller: TextEditingController(text: widget.hotkey.variableCheck[0]),
-                          decoration: const InputDecoration(hintText: "Var Name", labelText: "Var Name"),
-                          onChanged: (String e) => widget.hotkey.variableCheck[0] = e,
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: TextEditingController(text: widget.hotkey.variableCheck[1]),
-                          decoration: const InputDecoration(hintText: "Var Value", labelText: "Var Value"),
-                          onChanged: (String e) => widget.hotkey.variableCheck[1] = e,
-                        ),
-                      )
-                    ],
-                  ),
-                ),
+
                 const SizedBox(height: 15),
                 ListTile(
                   leading: const Icon(Icons.add),

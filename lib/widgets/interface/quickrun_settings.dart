@@ -40,7 +40,6 @@ class RunSettingsState extends State<RunSettings> {
     WizardPage(title: "Converters", widget: const InterfaceRunConverter(), tooltip: "Calculator, Currency, Color"),
     WizardPage(title: "Processors", widget: const InterfaceRunProcessors(), tooltip: "Regex, Lorem, Bookmarks, Encoders"),
     WizardPage(title: "Utility", widget: const InterfaceRunUtility(), tooltip: "Shortcuts, Timer"),
-    // WizardPage(title: "Image Work", widget: Container()),
   ];
   int currentPage = 0;
   @override

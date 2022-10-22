@@ -7,9 +7,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:win32/win32.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
@@ -147,6 +147,19 @@ class Boxes {
       ];
       await pref.setString("powerShellScripts", jsonEncode(powerShellScripts));
       Debug.add("Registered: PowerShell");
+    }
+    if (pref.getString("quickActions") == null) {
+      final List<QuickActions> quickActionList = <QuickActions>[
+        QuickActions(name: "🎧 Spotify", type: "Spotify Controls", value: ""),
+        QuickActions(name: "📷 Fancyshot", type: "Quick Action", value: "8"),
+        QuickActions(name: "🔉 Volume Level 3", type: "Set Volume", value: "3"),
+        QuickActions(name: "🔊 Volume Level 100", type: "Set Volume", value: "100"),
+        QuickActions(name: "🖥 Toggle Taskbar", type: "Quick Action", value: "2"),
+        QuickActions(name: "🔓 PowerShell", type: "Run Command", value: "powershell start-process powershell"),
+        QuickActions(name: "🎚 Audio Devices", type: "Audio Output Devices", value: "")
+      ];
+      await pref.setString("quickActions", jsonEncode(quickActionList));
+      Debug.add("Registered: quickActions");
     }
 
     //? Media Controls
@@ -293,6 +306,8 @@ class Boxes {
       "ChangeThemeButton",
       "HideDesktopFilesButton",
       "ToggleHiddenFilesButton",
+      "QuickActionsMenuButton",
+      "FancyShotButton",
     ];
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
@@ -333,6 +348,15 @@ class Boxes {
   static set defaultVolume(List<DefaultVolume> list) => _defaultVolume = list;
   static List<DefaultVolume> get defaultVolume =>
       _defaultVolume.isEmpty ? _defaultVolume = getSavedMap<DefaultVolume>(DefaultVolume.fromJson, "defaultVolume") : _defaultVolume;
+
+  static List<PredefinedSizes> _predefinedSizes = <PredefinedSizes>[];
+  static set predefinedSizes(List<PredefinedSizes> list) => _predefinedSizes = list;
+  static List<PredefinedSizes> get predefinedSizes =>
+      _predefinedSizes.isEmpty ? _predefinedSizes = getSavedMap<PredefinedSizes>(PredefinedSizes.fromJson, "predefinedSizes") : _predefinedSizes;
+
+  static List<QuickActions> _quickActions = <QuickActions>[];
+  static set quickActions(List<QuickActions> list) => _quickActions = list;
+  static List<QuickActions> get quickActions => _quickActions.isEmpty ? _quickActions = getSavedMap<QuickActions>(QuickActions.fromJson, "quickActions") : _quickActions;
 
   void watchForSettingsChange() {
     globalSettings.previewTheme = true;
@@ -916,4 +940,132 @@ class Trktivity {
     }
     return TrkFilterInfo(exe: exe, title: title, result: newtitle, hasFilters: hasFilters);
   }
+}
+
+class PredefinedSizes {
+  String name;
+  int width;
+  int height;
+  int x;
+  int y;
+  PredefinedSizes({
+    required this.name,
+    required this.width,
+    required this.height,
+    required this.x,
+    required this.y,
+  });
+
+  PredefinedSizes copyWith({
+    String? name,
+    int? width,
+    int? height,
+    int? x,
+    int? y,
+  }) {
+    return PredefinedSizes(
+      name: name ?? this.name,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      x: x ?? this.x,
+      y: y ?? this.y,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'width': width,
+      'height': height,
+      'x': x,
+      'y': y,
+    };
+  }
+
+  factory PredefinedSizes.fromMap(Map<String, dynamic> map) {
+    return PredefinedSizes(
+      name: (map['name'] ?? '') as String,
+      width: (map['width'] ?? 0) as int,
+      height: (map['height'] ?? 0) as int,
+      x: (map['x'] ?? 0) as int,
+      y: (map['y'] ?? 0) as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory PredefinedSizes.fromJson(String source) => PredefinedSizes.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'PredefinedSizes(name: $name, width: $width, height: $height, x: $x, y: $y)';
+  }
+
+  @override
+  bool operator ==(covariant PredefinedSizes other) {
+    if (identical(this, other)) return true;
+
+    return other.name == name && other.width == width && other.height == height && other.x == x && other.y == y;
+  }
+
+  @override
+  int get hashCode {
+    return name.hashCode ^ width.hashCode ^ height.hashCode ^ x.hashCode ^ y.hashCode;
+  }
+}
+
+class QuickActions {
+  String name;
+  String type;
+  String value;
+  QuickActions({
+    required this.name,
+    required this.type,
+    required this.value,
+  });
+
+  QuickActions copyWith({
+    String? name,
+    String? type,
+    String? value,
+  }) {
+    return QuickActions(
+      name: name ?? this.name,
+      type: type ?? this.type,
+      value: value ?? this.value,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'type': type,
+      'value': value,
+    };
+  }
+
+  factory QuickActions.fromMap(Map<String, dynamic> map) {
+    return QuickActions(
+      name: (map['name'] ?? '') as String,
+      type: (map['type'] ?? '') as String,
+      value: (map['value'] ?? '') as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory QuickActions.fromJson(String source) => QuickActions.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'QuickActions(name: $name, type: $type, value: $value)';
+
+  @override
+  bool operator ==(covariant QuickActions other) {
+    if (identical(this, other)) return true;
+
+    return other.name == name && other.type == type && other.value == value;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ type.hashCode ^ value.hashCode;
 }

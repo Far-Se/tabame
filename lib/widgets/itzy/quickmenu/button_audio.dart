@@ -33,7 +33,9 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   @override
   Future<void> onQuickMenuShown(int type) async {
     muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override

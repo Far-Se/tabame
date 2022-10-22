@@ -5,9 +5,9 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io' as io;
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:flutter/foundation.dart';
@@ -425,10 +425,19 @@ class Win32 {
   }
 
   static void surfaceWindow(int hWnd) {
-    ShowWindow(hWnd, SW_SHOWNOACTIVATE);
+    // ShowWindow(hWnd, SW_SHOWNOACTIVATE);
+    ShowWindow(hWnd, SW_SHOWNA);
 
     SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+  }
+
+  static void changePosition(int hWnd, int x, int y, int width, int height) {
+    if (x == -1 || y == -1) {
+      SetWindowPos(hWnd, HWND_TOP, 0, 0, width, height, SWP_NOMOVE | SWP_NOACTIVATE);
+    } else {
+      SetWindowPos(hWnd, HWND_TOP, x, y, width, height, SWP_NOACTIVATE);
+    }
   }
 }
 
@@ -695,6 +704,10 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
 
   static void run(String link, {String? arguments}) {
     ShellExecute(NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+  }
+
+  static void nativeOpen(String link, {String? arguments}) {
+    ShellExecute(NULL, TEXT("open"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
   }
 
   static void sendCommand({int command = AppCommand.appCommand}) {
@@ -999,6 +1012,78 @@ $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\po
 
   static bool isWindows10() {
     return Platform.operatingSystemVersion.contains("Windows 10");
+  }
+
+  static bool isScreenClipping() {
+    final int hWnd = GetForegroundWindow();
+    final Pointer<Uint32> lpdwProcessId = calloc<Uint32>();
+
+    GetWindowThreadProcessId(hWnd, lpdwProcessId);
+    // Get a handle to the process.
+    final int hProcess = OpenProcess(
+      PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+      FALSE,
+      lpdwProcessId.value,
+    );
+
+    if (hProcess == 0) {
+      return false;
+    }
+
+    // Get a list of all the modules in this process.
+    final Pointer<HMODULE> hModules = calloc<HMODULE>(1024);
+    final Pointer<DWORD> cbNeeded = calloc<DWORD>();
+
+    try {
+      int r = EnumProcessModules(
+        hProcess,
+        hModules,
+        sizeOf<HMODULE>() * 1024,
+        cbNeeded,
+      );
+
+      if (r == 1) {
+        for (int i = 0; i < (cbNeeded.value ~/ sizeOf<HMODULE>()); i++) {
+          final LPWSTR szModName = wsalloc(MAX_PATH);
+          // Get the full path to the module's file.
+          final int hModule = hModules.elementAt(i).value;
+          if (GetModuleFileNameEx(hProcess, hModule, szModName, MAX_PATH) != 0) {
+            String moduleName = szModName.toDartString();
+            if (moduleName.contains("ScreenClippingHost.exe")) {
+              free(szModName);
+              return true;
+            }
+          }
+          free(szModName);
+        }
+      }
+    } finally {
+      free(hModules);
+      free(cbNeeded);
+      CloseHandle(hProcess);
+    }
+
+    return false;
+  }
+
+  static Future<bool> screenCapture() async {
+    await Clipboard.setData(const ClipboardData(text: ''));
+    ShellExecute(
+      0,
+      "open".toNativeUtf16(),
+      "ms-screenclip://?clippingMode=Rectangle".toNativeUtf16(),
+      nullptr,
+      nullptr,
+      SW_SHOWNORMAL,
+    );
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    while (isScreenClipping()) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    final String temp = getTempFolder();
+    await saveClipboardImageAsPngFile("$temp\\capture.png");
+    return true;
   }
 }
 

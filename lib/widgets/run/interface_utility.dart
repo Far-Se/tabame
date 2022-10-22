@@ -31,7 +31,7 @@ class InterfaceRunUtilityState extends State<InterfaceRunUtility> {
               title: "Bookmarks",
               link: "",
               tooltip: "Quickly access bookmarks",
-              info: "Open links, folders, files and commands",
+              info: "Open Bookmarks",
               example: <String>["b tabame"]),
           RunShortCutInfo(
               value: globalSettings.run.timer,

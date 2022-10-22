@@ -4,16 +4,19 @@ import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
 import '../itzy/quickmenu/button_changelog.dart';
+import '../itzy/quickmenu/button_fancyshot.dart';
 import '../itzy/quickmenu/button_hide_desktop_files.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_media_control.dart';
 import '../itzy/quickmenu/button_mic_mute.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
 import '../itzy/quickmenu/button_pin_window.dart';
+import '../itzy/quickmenu/button_quickactions_menu.dart';
 import '../itzy/quickmenu/button_spotify.dart';
 import '../itzy/quickmenu/button_task_manager.dart';
 import '../itzy/quickmenu/button_toggle_desktop.dart';
@@ -41,6 +44,8 @@ class TopBar extends StatelessWidget {
       "ChangeThemeButton": const ChangeThemeButton(),
       "HideDesktopFilesButton": const HideDesktopFilesButton(),
       "ToggleHiddenFilesButton": const ToggleHiddenFilesButton(),
+      "QuickActionsMenuButton": const QuickActionsMenuButton(),
+      "FancyShotButton": const FancyShotButton(),
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
@@ -127,8 +132,8 @@ class TopBar extends StatelessWidget {
                             child: InkWell(
                               onTap: () async {
                                 //
-                                print("test");
-                                // throw ("ee");
+                                // QuickMenuFunctions.toggleQuickMenu(type: 3);
+                                await WinUtils.screenCapture();
                               },
                               child: const Icon(Icons.textsms_outlined),
                             ),

@@ -30,6 +30,17 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     Map<String, String> changelog = <String, String>{
+      '1.2': '''
+## **Added Fancyshot**
+With Fancyshot you can make screenshots that are social media friendly. You can set custom background, round corners and padding, a company logo or a watermark and blur regions.
+You can create Profiles so you only need to set it once.
+
+## **Added QuickActions Menu**
+You can add quick actions in a separate menu so it's easier to access. You can run commands, trigger special actions, manage volume, manage Spotify and audio devices.
+
+### **Added Predefined Sizes**
+You can set a specific size to a window. Create a list of sizes from Settings -> Views then right click a window in QuickMenu and select the new size.
+''',
       '1.1': '''
 ## **Added Views**
 With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.

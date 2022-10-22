@@ -16,6 +16,7 @@ import '../models/keys.dart';
 import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../widgets/itzy/quickmenu/widget_audio.dart';
+import 'quickactions.dart';
 import 'quickrun.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/settings.dart';
@@ -48,6 +49,13 @@ Future<int> quickMenuWindowSetup() async {
   }
   Debug.add("QuickMenu: setup");
   return 1;
+}
+
+enum QuickMenuTypes {
+  quickMenu,
+  quickRun,
+  audioBox,
+  quickActions,
 }
 
 class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTriggers, WindowListener {
@@ -105,22 +113,24 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     super.dispose();
   }
 
+  QuickMenuTypes typeShown = QuickMenuTypes.quickMenu;
   @override
   Future<void> onQuickMenuToggled(bool visible, int type) async {
     globalSettings.quickRunState = 0;
     globalSettings.quickRunText = "";
+    typeShown = QuickMenuTypes.values.elementAt(type);
     if (visible) {
       FocusScope.of(context).requestFocus(focusNode);
-      if (type == 0) {
+      //? QuickMenu
+      if (typeShown == QuickMenuTypes.quickMenu || typeShown == QuickMenuTypes.quickActions) {
         setState(() {});
-      } else if (type == 1) {
-        // if (lastHeight < 330) {
-        //   Future<void>.delayed(const Duration(seconds: 1), () => windowManager.setSize(const Size(300, 330)));
-        // }
+      } else if (typeShown == QuickMenuTypes.quickRun) {
+        //? QuickRun
         globalSettings.quickRunState = 1;
         globalSettings.quickRunText = "";
         setState(() {});
-      } else if (type == 2) {
+      } else if (typeShown == QuickMenuTypes.audioBox) {
+        //? AudioBox
         Globals.audioBoxVisible = true;
         showModalBottomSheet<void>(
           context: context,
@@ -479,9 +489,18 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         if (globalSettings.noopKeyListener) return;
         PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
         if (currentKey == PhysicalKeyboardKey.escape) {
-          globalSettings.quickRunState = 0;
-          globalSettings.quickRunText = "";
-          setState(() {});
+          if (keyEvent is RawKeyUpEvent) {
+            if (typeShown == QuickMenuTypes.quickActions) {
+              typeShown = QuickMenuTypes.quickMenu;
+              setState(() {});
+            } else if (globalSettings.quickRunState != 0) {
+              globalSettings.quickRunState = 0;
+              globalSettings.quickRunText = "";
+              setState(() {});
+            } else {
+              QuickMenuFunctions.toggleQuickMenu(visible: false);
+            }
+          }
         } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
           if (keyEvent.isAltPressed || keyEvent.isControlPressed || keyEvent.isMetaPressed || keyEvent.isShiftPressed) return;
           globalSettings.quickRunState = 1;
@@ -500,12 +519,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           backgroundColor: Colors.transparent,
           body: MouseRegion(
             onEnter: (PointerEnterEvent event) async {
-              // if (!await WindowManager.instance.isFocused()) {}
-              // await WindowManager.instance.focus();
               Globals.isWindowActive = true;
-              // Win32.activateWindow(Win32.hWnd, forced: true);
               await WindowManager.instance.focus();
-              // setState(() {});
             },
             onExit: (PointerExitEvent event) => Globals.isWindowActive = false,
             child: SingleChildScrollView(
@@ -538,19 +553,20 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
                               ]),
                           child: globalSettings.quickRunState != 0
                               ? theQuickRun
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: <Widget>[
-                                    //3 Items
-                                    const TopBar(),
-                                    const TaskBar(),
-                                    const Divider(thickness: 1, height: 1),
-                                    if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
-                                    const BottomBar(),
-                                  ],
-                                ),
+                              : typeShown == QuickMenuTypes.quickActions
+                                  ? QuickActionWidget(key: UniqueKey())
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.max,
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        const TopBar(),
+                                        const TaskBar(),
+                                        const Divider(thickness: 1, height: 1),
+                                        if (globalSettings.quickMenuPinnedWithTrayAtBottom) const PinnedAndTrayList(),
+                                        const BottomBar(),
+                                      ],
+                                    ),
                         ),
                       ),
                     ),

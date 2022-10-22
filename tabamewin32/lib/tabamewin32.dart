@@ -687,3 +687,10 @@ Future<bool> enableDebug(String path) async {
   await audioMethodChannel.invokeMethod('enableDebug', arguments);
   return true;
 }
+
+Future<void> saveClipboardImageAsPngFile(String path) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'imagePath': path,
+  };
+  await audioMethodChannel.invokeMethod('saveClipboardImageAsPngFile', arguments);
+}

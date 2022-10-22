@@ -88,6 +88,10 @@ It takes only 26.5 MB of space.
 
 [🧩 Views](#-views) (v1.1)
 
+[🧰 QuickActionsMenu](#-quickactionsmenu) (v1.2)
+
+[📷 Fancyshot](#-fancyshot) (v1.2)
+
 [🙃 Outro](#-outro)
 
 # **🎛️ QuickMenu**
@@ -175,7 +179,7 @@ Example: `u 1 in to cm` ... `u 1 mass`
 - Encoders: default is `enc `. Use ! to encode and @ to decode. supports url, base, rot13, ascii.
 
 ## Utility
-- Bookmarks: default is `p `. You open your saved bookmarks from Interface. It is good to save older bookmarks or side bookmarks or examples folders, so you do not browse and try to find them manually.
+- Bookmarks: default is `b `. You open your saved bookmarks from Interface.
 - Timer: default is `t `. Use this to set quick timers, for example for `t 5 tea` to remind you in 5 minutes to drink your tea and not forget it for 4 hours.
 - Variable: default is `v `. Use this in combination with Hotkeys if you need to reset a variable.
 - Send keys: default is `k `. You can save specific keys and trigger them from quick menu. For example: `k m` to trigger `MEDIA_NEXT_TRACK` if you don't want to stretch your fingers to the random media next track keyboard button.
@@ -248,6 +252,10 @@ You can bookmark folders, links or commands.
 
 You can create groups and that contains your bookmarks. You can set an emoji for each so you can differentiate between them later when you forgot which is which.
 
+You can access Bookmarks from QuickMenu/Quickrun by typing `b ` then name of the bookmark, like `b tabame`.
+
+For example I've made a group Tabame where I saved command for vscode, release folder, install folder and github page. When I need to open one, rather the navigate manually, I open QuickRun and type `b tabame` and nagivate with arrows.
+
 
 # **📝 Trktivity**
 Trktivity tracks your activity 🧐. It records keystrokes, mouse pings each 3 seconds and active window exe and title (if you set filters for it). 
@@ -271,7 +279,7 @@ Wizardly is a set of tools that works with folders. You can add it in Context Me
 ## **Find Text In Folder**
 You can search text in a folder, recursively. You can use regex, case sensitive or match the whole text only.
 
-Import feature to this (and why I've created it): You can exclude files/folders, so if you do not want to see results from, for example `node_modules` you can set that in filters. For example Notepad++ and vsCode does not have this feature and it's annoying.
+Important feature (and why I've made it): You can exclude files/folders, so if you do not want to see results from, for example `node_modules` you can set that in filters. For example Notepad++ and vsCode does not have this feature and it's annoying.
 
 
 ## **Project Overview**
@@ -302,6 +310,21 @@ With Workspaces you can save current position and size of specific windows, so y
 
 ## **Hooks**
 With Hooks you can hook multiple windows together, when you focus one, other will surface as well. You can access this feature by right clicking a window in QuickMenu.
+
+## **Predefined Sizes (v1.2)**
+You can register predefined sizes and access then by right clicking a window in QuickMenu. This comes handy when you need specific window sizes such as mobile view or half screen.
+
+# **🧰 QuickActionsMenu**
+You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands.
+
+# **📷 Fancyshot**
+With Fancyshot you can capture custom screenshots. You can set a background stock image, custom image, capture itself or transparency. Also you can change image padding or background padding and add a watermark.
+
+You can create custom profiles.
+
+You can bind Fancyshot on a hotkey or add it in QuickMenuActions. 
+
+Interface needs to open in order for the image to drawn.
 
 # 🙃 Outro
 I've started this project to learn Dart and Flutter, in my mind I had only `QuickMenu` features/app, but while writing for it I got new ideas for it, and it ended up `Tabame`, random name I came up with.

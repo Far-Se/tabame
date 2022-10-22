@@ -5,6 +5,7 @@ class TextInput extends StatefulWidget {
   final String labelText;
   final String? hintText;
   final String? value;
+  final InputDecoration? decoration;
   final void Function(String val) onChanged;
   final void Function(String val)? onSubmitted;
   final void Function(String val)? onUpdated;
@@ -18,6 +19,7 @@ class TextInput extends StatefulWidget {
     this.onSubmitted,
     this.onUpdated,
     this.multiline = false,
+    this.decoration,
   }) : super(key: key);
 
   @override
@@ -54,12 +56,13 @@ class TextInputState extends State<TextInput> {
       },
       child: TextField(
         maxLines: widget.multiline ? null : 1,
-        decoration: InputDecoration(
-          labelText: widget.labelText,
-          hintText: widget.hintText ?? widget.labelText,
-          border: InputBorder.none,
-          isDense: false,
-        ),
+        decoration: widget.decoration ??
+            InputDecoration(
+              labelText: widget.labelText,
+              hintText: widget.hintText ?? widget.labelText,
+              border: InputBorder.none,
+              isDense: false,
+            ),
         controller: _controller,
         toolbarOptions: const ToolbarOptions(
           paste: true,

@@ -436,19 +436,12 @@ class HotKeyInfo {
   static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
-    "ToggleTaskbar": () {
-      WinUtils.toggleTaskbar();
-    },
-    "ToggleQuickMenu": () {
-      return QuickMenuFunctions.toggleQuickMenu();
-    },
+    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
+    "ToggleQuickMenu": () => QuickMenuFunctions.toggleQuickMenu(),
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
+    "ToggleQuickActions": () => QuickMenuFunctions.toggleQuickMenu(type: 3),
     "ShowStartMenu": () {
-      // if(!globalSettings.isWindows10)
-      // {
-      //   return;
-      // }
       int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (tray != 0) {
         final int mID = Monitor.getMonitorNumber(Monitor.getCursorMonitor());
@@ -468,27 +461,24 @@ class HotKeyInfo {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.focusSecondWindow();
     },
+    "FancyShot": () async {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      await WinUtils.screenCapture();
+      WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot");
+    },
     "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
     "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
-    "SwitchAudioOutput": () => Audio.switchDefaultDevice(
-          AudioDeviceType.output,
-          console: globalSettings.audioConsole,
-          multimedia: globalSettings.audioMultimedia,
-          communications: globalSettings.audioCommunications,
-        ),
-    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
-          AudioDeviceType.input,
-          console: globalSettings.audioConsole,
-          multimedia: globalSettings.audioMultimedia,
-          communications: globalSettings.audioCommunications,
-        ),
+    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output,
+        console: globalSettings.audioConsole, multimedia: globalSettings.audioMultimedia, communications: globalSettings.audioCommunications),
+    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input,
+        console: globalSettings.audioConsole, multimedia: globalSettings.audioMultimedia, communications: globalSettings.audioCommunications),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
-    // "SwitchDesktop": () => moveDesktopMethod(DesktopDirection.right),
     "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
     "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
   };
+
   static List<String> tabameFunctions = tabameFunctionsMap.keys.toList();
   //keymap.keymaps[index].actions[0].type
   static const Map<ActionType, IconData> actionTypeIcons = <ActionType, IconData>{

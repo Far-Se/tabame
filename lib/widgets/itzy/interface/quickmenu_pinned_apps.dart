@@ -43,6 +43,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                   title: Text("Pinned Files", style: Theme.of(context).textTheme.headline6),
                   trailing: IconButton(
                     icon: const Icon(Icons.add),
+                    splashRadius: 20,
                     onPressed: () async {
                       final OpenFilePicker file = OpenFilePicker()
                         ..filterSpecification = <String, String>{'All Files': '*.*', 'Executable (*.exe;*.ps1;*.sh;*.bat)': '*.exe;*.ps1;*.sh;*.bat'}
@@ -87,7 +88,9 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                           minLeadingWidth: 10,
                           dense: true,
                           style: ListTileStyle.drawer,
+                          isThreeLine: false,
                           minVerticalPadding: 0,
+
                           contentPadding: const EdgeInsets.fromLTRB(20, 0, 30, 0),
                           //
                           key: ValueKey<int>(index),
@@ -99,8 +102,9 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                                     size: 16,
                                   )),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete, size: 18),
                             tooltip: "Remove",
+                            splashRadius: 20,
                             onPressed: () async {
                               pinnedApps.removeAt(index);
                               await Boxes.updateSettings("pinnedApps", pinnedApps);

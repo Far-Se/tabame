@@ -18,13 +18,13 @@ import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../widgets/interface/audio_interface.dart';
 import '../widgets/interface/changelog.dart';
+import '../widgets/interface/fancyshot.dart';
 import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/bookmarks.dart';
-import '../widgets/interface/quickmenu_settings.dart';
-import '../widgets/interface/quickrun_settings.dart';
+import '../widgets/interface/quickmenu_full.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
@@ -92,14 +92,15 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
     PageClass(title: 'Audio', icon: Icons.speaker, widget: const AudioInterface()),
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
-    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
-    PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
+    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const AllQuickMenu()),
+    // PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
     PageClass(title: 'Bookmarks', icon: Icons.folder_copy, widget: const BookmarksPage()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
+    PageClass(title: 'Fancyshot', icon: Icons.center_focus_strong_rounded, widget: const Fancyshot()),
     PageClass(title: 'Changelog', icon: Icons.newspaper, widget: const Changelog()),
     PageClass(title: 'FirstRun', icon: Icons.newspaper, widget: const FirstRun()),
   ];
@@ -116,6 +117,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     super.initState();
     if (globalSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
+    } else if (globalSettings.args.contains("-fancyshot")) {
+      currentPage = pages.indexWhere((PageClass element) => element.title == "Fancyshot");
     } else if (globalSettings.args.contains("-changelog")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
     } else if (Boxes.remap.isEmpty) {
@@ -275,6 +278,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                         onTap: () async {
                                           if (kReleaseMode) {
                                             if (globalSettings.args.contains('-wizardly')) {
+                                              exit(0);
+                                            } else if (globalSettings.args.contains('-fancyshot')) {
                                               exit(0);
                                             } else if (globalSettings.args.contains('-interface')) {
                                               await Boxes.pref.remove("previewThemeLight");

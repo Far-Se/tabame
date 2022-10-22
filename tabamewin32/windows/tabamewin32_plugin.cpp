@@ -1,3 +1,4 @@
+#define _HAS_STD_BYTE 0
 #include "tabamewin32_plugin.h"
 
 #include <windows.h>
@@ -21,6 +22,9 @@
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <atlimage.h>
+#include <codecvt>
+
 #include <cctype>
 #include <memory>
 #include <sstream>
@@ -43,7 +47,7 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 #define EVENTHOOK 1
 #define MOUSEHOOK 2
 
-using namespace std;
+// using namespace std;
 
 //#h green
 ///
@@ -702,6 +706,67 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
 ///!!
 //#e
 //
+
+bool SaveHbitmapToPngFile(HBITMAP hbitmap,
+                          std::string image_path)
+{
+    if (hbitmap != NULL)
+    {
+        std::vector<BYTE> buf;
+        IStream *stream = NULL;
+        CreateStreamOnHGlobal(0, TRUE, &stream);
+        CImage image;
+        ULARGE_INTEGER liSize;
+
+        // screenshot to png and save to stream
+        image.Attach(hbitmap);
+        image.Save(stream, Gdiplus::ImageFormatPNG);
+        IStream_Size(stream, &liSize);
+        DWORD len = liSize.LowPart;
+        IStream_Reset(stream);
+        buf.resize(len);
+        IStream_Read(stream, &buf[0], len);
+        stream->Release();
+
+        // put the imapge in the file
+        std::fstream fi;
+        fi.open(image_path, std::fstream::binary | std::fstream::out);
+        fi.write(reinterpret_cast<const char *>(&buf[0]), buf.size() * sizeof(BYTE));
+        fi.close();
+
+        return true;
+    }
+    return false;
+}
+
+void SaveClipboardImageAsPngFile(
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
+{
+    const flutter::EncodableMap &args =
+        std::get<flutter::EncodableMap>(*method_call.arguments());
+
+    std::string image_path =
+        std::get<std::string>(args.at(flutter::EncodableValue("imagePath")));
+
+    flutter::EncodableMap result_map = flutter::EncodableMap();
+    HBITMAP hbitmap = NULL;
+
+    OpenClipboard(nullptr);
+    hbitmap = (HBITMAP)GetClipboardData(CF_BITMAP);
+    CloseClipboard();
+
+    bool saved = SaveHbitmapToPngFile(hbitmap, image_path);
+
+    if (saved)
+    {
+        result_map[flutter::EncodableValue("imagePath")] =
+            flutter::EncodableValue(image_path.c_str());
+    }
+
+    result->Success(flutter::EncodableValue(result_map));
+}
+
 bool debugging = false;
 std::string debugFile = "";
 
@@ -2113,6 +2178,10 @@ namespace tabamewin32
             appendLineToFile(path, "INITIATED");
             setAudioDebugInfo(path);
             result->Success(flutter::EncodableValue(true));
+        }
+        else if (method_name.compare("saveClipboardImageAsPngFile") == 0)
+        {
+            SaveClipboardImageAsPngFile(method_call, std::move(result));
         }
 
         else

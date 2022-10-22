@@ -112,8 +112,17 @@ class TrktivityPageState extends State<TrktivityPage> {
   void showReport() {
     dataAnalyzed = false;
     uTrack.clear();
+
     wTrack.clear();
+    wTimeTrack.clear();
+    wTrackList.clear();
+    wTimeTrackList.clear();
+
     tTrack.clear();
+    tTimeTrack.clear();
+    tTrackList.clear();
+    tTimeTrackList.clear();
+
     dailyStats.clear();
     if (startDate.isEmpty && selectedDay.isNotEmpty) {
       parseTrkFile(selectedDay);
@@ -449,6 +458,10 @@ It records keystrokes, mouse movement and active Window.
                                     .map<DropdownMenuItem<String>>(
                                         (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
                                     .toList(),
+                                onTap: () {
+                                  dataAnalyzed = false;
+                                  setState(() {});
+                                },
                                 onChanged: (String? e) {
                                   dataAnalyzed = false;
                                   setState(() {});

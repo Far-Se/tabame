@@ -23,6 +23,7 @@ class ViewsInterface extends StatefulWidget {
 }
 
 class ViewsInterfaceState extends State<ViewsInterface> {
+  List<PredefinedSizes> predefinedSizes = Boxes.predefinedSizes;
   final ViewsSettings settings = ViewsSettings();
   final List<Workspaces> workspaces = Boxes.workspaces;
   Workspaces newWorkspace = Workspaces(name: 'name', hooks: const <int, List<int>>{}, windows: <WorkspaceWindow>[]);
@@ -467,12 +468,173 @@ This can use this when presets do not give you enough flexibility.
                   )
                 ],
               ),
-              const Divider(height: 10, thickness: 1),
-              Text("Hooks", style: Theme.of(context).textTheme.headline6),
-              const SizedBox(height: 5),
-              const InfoText(
-                  "Hooks is part of Views. With hooks you can bind windows together, so when you focus the main one, others will appear on screen as well. Open QuickMenu and right click a window, then select other windows."),
-              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Divider(height: 10, thickness: 1),
+                        ListTile(title: Text("Hooks", style: Theme.of(context).textTheme.headline6)),
+                        const SizedBox(height: 5),
+                        const InfoText(
+                            "Hooks is part of Views. With hooks you can bind windows together, so when you focus the main one, others will appear on screen as well. Open QuickMenu and right click a window, then select other windows."),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Divider(height: 10, thickness: 1),
+                        ListTile(
+                          title: Text("Predefined Sizes", style: Theme.of(context).textTheme.headline6),
+                          onTap: () {
+                            predefinedSizes.add(PredefinedSizes(name: "new", width: 0, height: 0, x: -1, y: -1));
+                            Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                            setState(() {});
+                          },
+                          trailing: const Icon(Icons.add),
+                        ),
+                        const SizedBox(height: 5),
+                        const InfoText(
+                            "You can set a specific size to a window. Right Click the window in QuickMenu then select a predefined size. Set -1 to not change the value."),
+                        if (predefinedSizes.isNotEmpty)
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: List<Widget>.generate(
+                              predefinedSizes.length,
+                              (int index) => Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                TextInput(
+                                                  key: UniqueKey(),
+                                                  labelText: "Title",
+                                                  onChanged: (String e) {
+                                                    if (e.isEmpty) e = "New";
+                                                    predefinedSizes.elementAt(index).name = e;
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                    setState(() {});
+                                                  },
+                                                  value: predefinedSizes.elementAt(index).name,
+                                                ),
+                                                IconButton(
+                                                  onPressed: () {
+                                                    predefinedSizes.removeAt(index);
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                    setState(() {});
+                                                    print("removed $index, ${predefinedSizes.length}");
+                                                  },
+                                                  icon: const Icon(Icons.delete),
+                                                  splashRadius: 20,
+                                                )
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                TextInput(
+                                                  key: UniqueKey(),
+                                                  labelText: "Width",
+                                                  onChanged: (String e) {
+                                                    predefinedSizes.elementAt(index).width = int.tryParse(e) ?? 0;
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                  },
+                                                  value: predefinedSizes.elementAt(index).width.toString(),
+                                                ),
+                                                TextInput(
+                                                  key: UniqueKey(),
+                                                  labelText: "Height",
+                                                  onChanged: (String e) {
+                                                    predefinedSizes.elementAt(index).height = int.tryParse(e) ?? 0;
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                  },
+                                                  value: predefinedSizes.elementAt(index).height.toString(),
+                                                )
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                TextInput(
+                                                  key: UniqueKey(),
+                                                  labelText: "X",
+                                                  onChanged: (String e) {
+                                                    predefinedSizes.elementAt(index).x = int.tryParse(e) ?? 0;
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                  },
+                                                  value: predefinedSizes.elementAt(index).x.toString(),
+                                                ),
+                                                TextInput(
+                                                  key: UniqueKey(),
+                                                  labelText: "Y",
+                                                  onChanged: (String e) {
+                                                    predefinedSizes.elementAt(index).y = int.tryParse(e) ?? 0;
+                                                    Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
+                                                  },
+                                                  value: predefinedSizes.elementAt(index).y.toString(),
+                                                )
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Divider(
+                                    height: 1,
+                                    thickness: 2,
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
             ],
           ),
         ),

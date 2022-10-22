@@ -21,7 +21,7 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
 
   @override
   Future<void> onQuickMenuShown(int type) async {
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override

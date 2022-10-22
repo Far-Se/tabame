@@ -116,6 +116,7 @@ class Monitor {
   static PointXY adjustPointToDPI(PointXY point) {
     PointXY newPoint = PointXY(X: 0, Y: 0);
     final int monitor = getMonitorFromPoint(point);
+    if (!dpi.containsKey(monitor)) return newPoint;
     final double dpiCoefX = dpi[monitor]!.x / 96.0;
     final double dpiCoefY = dpi[monitor]!.y / 96.0;
     newPoint.X = (point.X / dpiCoefX).round();

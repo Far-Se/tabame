@@ -17,6 +17,7 @@ import '../../models/win32/win32.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../models/keys.dart';
 import '../../models/globals.dart';
+import '../widgets/info_text.dart';
 
 class TaskBar extends StatefulWidget {
   const TaskBar({Key? key}) : super(key: key);
@@ -611,40 +612,49 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        InkWell(
-                          onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: <Widget>[
-                                SizedBox(
-                                    child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                                        child:
-                                            Icon(Icons.keyboard_double_arrow_right, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18))),
-                                Expanded(child: Text("Move to right Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
-                              ],
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: <Widget>[
+                                      SizedBox(
+                                          child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                                              child: Icon(Icons.keyboard_double_arrow_left,
+                                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18))),
+                                      Expanded(child: Text("Left Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: <Widget>[
-                                SizedBox(
-                                    child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                                        child: Icon(Icons.keyboard_double_arrow_left, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18))),
-                                Expanded(child: Text("Move to left Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
-                              ],
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: <Widget>[
+                                      Expanded(child: Text("Right Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                      SizedBox(
+                                          child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                                              child: Icon(Icons.keyboard_double_arrow_right,
+                                                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18))),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                         InkWell(
                           onTap: () {
@@ -712,65 +722,123 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               ),
                             ),
                           ),
-                        Text("  Hook window with:", style: Theme.of(context).textTheme.button),
-                        const SizedBox(height: 5),
-                        Container(
-                          height: 130,
-                          child: ListView.builder(
-                              controller: ScrollController(),
-                              itemCount: WindowWatcher.list.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final Window win = WindowWatcher.list.elementAt(index);
-                                if (win.hWnd == widget.hWnd) return const SizedBox();
-                                return InkWell(
-                                  onTap: () {
-                                    globalSettings.hookedWins[widget.hWnd] ??= <int>[];
-                                    globalSettings.hookedWins[widget.hWnd]!.toggle(win.hWnd);
-                                    if (globalSettings.hookedWins[widget.hWnd]!.isEmpty) globalSettings.hookedWins.remove(widget.hWnd);
-                                    setState(() {});
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        SizedBox(
-                                          width: 25,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                                            child: ((WindowWatcher.icons.containsKey(win.hWnd))
-                                                ? Image.memory(
-                                                    WindowWatcher.icons[win.hWnd] ?? Uint8List(0),
-                                                    width: 16,
-                                                    height: 16,
-                                                    gaplessPlayback: true,
-                                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                                      Icons.check_box_outline_blank,
-                                                      size: 16,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text("  Hook window with:", style: Theme.of(context).textTheme.button),
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    height: 130,
+                                    child: ListView.builder(
+                                        controller: ScrollController(),
+                                        itemCount: WindowWatcher.list.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          final Window win = WindowWatcher.list.elementAt(index);
+                                          if (win.hWnd == widget.hWnd) return const SizedBox();
+                                          return InkWell(
+                                            onTap: () {
+                                              globalSettings.hookedWins[widget.hWnd] ??= <int>[];
+                                              globalSettings.hookedWins[widget.hWnd]!.toggle(win.hWnd);
+                                              if (globalSettings.hookedWins[widget.hWnd]!.isEmpty) globalSettings.hookedWins.remove(widget.hWnd);
+                                              setState(() {});
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: <Widget>[
+                                                  SizedBox(
+                                                    width: 25,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
+                                                      child: ((WindowWatcher.icons.containsKey(win.hWnd))
+                                                          ? Image.memory(
+                                                              WindowWatcher.icons[win.hWnd] ?? Uint8List(0),
+                                                              width: 16,
+                                                              height: 16,
+                                                              gaplessPlayback: true,
+                                                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                                Icons.check_box_outline_blank,
+                                                                size: 16,
+                                                              ),
+                                                            )
+                                                          : const Icon(Icons.web_asset_sharp, size: 20)),
                                                     ),
+                                                  ),
+                                                  Expanded(
+                                                    child: Text(
+                                                      win.title,
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.fade,
+                                                      softWrap: false,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    width: 20,
+                                                    child: Icon((globalSettings.hookedWins[widget.hWnd] ?? <int>[]).contains(win.hWnd) ? Icons.phishing : null,
+                                                        size: 16, color: Theme.of(context).iconTheme.color?.withOpacity(0.7)),
                                                   )
-                                                : const Icon(Icons.web_asset_sharp, size: 20)),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            win.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.fade,
-                                            softWrap: false,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: 20,
-                                          child: Icon((globalSettings.hookedWins[widget.hWnd] ?? <int>[]).contains(win.hWnd) ? Icons.phishing : null,
-                                              size: 16, color: Theme.of(context).iconTheme.color?.withOpacity(0.7)),
-                                        )
-                                      ],
-                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }),
                                   ),
-                                );
-                              }),
+                                ],
+                              ),
+                            ),
+                            if (Boxes.predefinedSizes.isNotEmpty)
+                              Expanded(
+                                flex: 1,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    const Text("Resize:"),
+                                    Container(
+                                      height: 150,
+                                      child: SingleChildScrollView(
+                                        controller: ScrollController(),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: List<Widget>.generate(
+                                            Boxes.predefinedSizes.length,
+                                            (int index) => InkWell(
+                                              onTap: () {
+                                                Win32.changePosition(
+                                                  window.hWnd,
+                                                  Boxes.predefinedSizes.elementAt(index).x,
+                                                  Boxes.predefinedSizes.elementAt(index).y,
+                                                  Boxes.predefinedSizes.elementAt(index).width,
+                                                  Boxes.predefinedSizes.elementAt(index).height,
+                                                );
+                                              },
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: <Widget>[
+                                                  Text(Boxes.predefinedSizes.elementAt(index).name),
+                                                  InfoText("${Boxes.predefinedSizes.elementAt(index).width}x${Boxes.predefinedSizes.elementAt(index).height}")
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              )
+                          ],
                         )
                       ],
                     ),
