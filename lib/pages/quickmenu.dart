@@ -501,7 +501,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
               QuickMenuFunctions.toggleQuickMenu(visible: false);
             }
           }
-        } else if (globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
+        } else if (typeShown != QuickMenuTypes.quickActions && globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
           if (keyEvent.isAltPressed || keyEvent.isControlPressed || keyEvent.isMetaPressed || keyEvent.isShiftPressed) return;
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);

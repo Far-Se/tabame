@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
+import '../../../models/win32/win32.dart';
 
 class BookmarksButton extends StatefulWidget {
   const BookmarksButton({Key? key}) : super(key: key);
@@ -122,39 +123,45 @@ class TimersWidgetState extends State<TimersWidget> {
               type: MaterialType.transparency,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    ...List<Widget>.generate(
-                      bookmarks.length,
-                      (int index) => Column(
+                child: bookmarks.isEmpty
+                    ? const Text("You have no bookmarks")
+                    : Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
-                            child: Text(
-                              "${bookmarks[index].emoji} ${bookmarks[index].title} (${bookmarks[index].bookmarks.length})",
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                            ),
-                          ),
                           ...List<Widget>.generate(
-                              bookmarks[index].bookmarks.length,
-                              (int mark) => InkWell(
-                                    onTap: () {},
-                                    child: Text(
-                                      "${bookmarks[index].bookmarks[mark].emoji} ${bookmarks[index].bookmarks[mark].title}",
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  )),
-                          const SizedBox(height: 10),
-                          const Divider(height: 3, thickness: 1),
+                            bookmarks.length,
+                            (int index) => Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
+                                  child: Text(
+                                    "${bookmarks[index].emoji} ${bookmarks[index].title} (${bookmarks[index].bookmarks.length})",
+                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                ...List<Widget>.generate(
+                                    bookmarks[index].bookmarks.length,
+                                    (int mark) => InkWell(
+                                          onTap: () {
+                                            WinUtils.open(bookmarks[index].bookmarks[mark].stringToExecute);
+                                            QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: Text(
+                                            "${bookmarks[index].bookmarks[mark].emoji} ${bookmarks[index].bookmarks[mark].title}",
+                                            style: const TextStyle(fontSize: 16),
+                                          ),
+                                        )),
+                                const SizedBox(height: 10),
+                                const Divider(height: 3, thickness: 1),
+                              ],
+                            ),
+                          )
                         ],
                       ),
-                    )
-                  ],
-                ),
               ),
             ),
           ),

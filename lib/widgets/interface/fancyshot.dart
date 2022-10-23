@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
+// import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
@@ -54,7 +55,56 @@ class FancyshotState extends State<Fancyshot> {
   Uint8List? capture;
   Color? bgColor;
   // final List<String> profiles = <String>[""];
-  final List<FancyShotProfile> profiles = Boxes.getSavedMap<FancyShotProfile>(FancyShotProfile.fromJson, "fancyShotProfile");
+  final List<FancyShotProfile> profiles = Boxes.getSavedMap<FancyShotProfile>(FancyShotProfile.fromJson, "fancyShotProfile", def: <FancyShotProfile>[
+    FancyShotProfile(
+      name: "Default",
+      backgroundPadding: 10,
+      imagePadding: 0,
+      backgroundType: BackgroundType.transparent,
+      backgroundImage: "resources/gradient/gradient1.jpg",
+      borderRadius: 5,
+      shadowSpread: 1,
+      shadowRadius: 1,
+      backgroundBlur: 0,
+      background: 0,
+      aspectRatio: 0,
+      width: 0,
+      height: 0,
+      watermark: "",
+    ),
+    FancyShotProfile(
+      name: "Self Background",
+      backgroundPadding: 16,
+      imagePadding: 7.5,
+      backgroundType: BackgroundType.self,
+      backgroundImage: "resources/gradient/gradient1.jpg",
+      borderRadius: 8,
+      shadowSpread: 3,
+      shadowRadius: 6,
+      backgroundBlur: 8,
+      background: 0,
+      aspectRatio: 0,
+      width: 0,
+      height: 0,
+      watermark: "",
+    ),
+    FancyShotProfile(
+      name: "Image Background",
+      backgroundPadding: 28,
+      imagePadding: 7.5,
+      backgroundType: BackgroundType.stock,
+      backgroundImage: "resources/gradient/gradient7.jpg",
+      borderRadius: 5,
+      shadowSpread: 3,
+      shadowRadius: 6,
+      backgroundBlur: 18,
+      background: 0,
+      aspectRatio: 0,
+      width: 0,
+      height: 0,
+      watermark: "",
+    )
+  ]);
   final List<String> profilesName = <String>[""];
   int aspectRatio = 0;
   String? selectedProfile;
@@ -136,9 +186,143 @@ class FancyshotState extends State<Fancyshot> {
                         child: MouseScrollWidget(
                           scrollDirection: Axis.horizontal,
                           child: MouseScrollWidget(
-                            scrollDirection: Axis.vertical,
-                            child: FancyShotView(screenshotController: screenshotController, filters: filters, capture: capture, capturing: capturing, bgColor: bgColor),
-                          ),
+                              scrollDirection: Axis.vertical,
+                              child: Screenshot<Widget>(
+                                controller: screenshotController,
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: ClipRect(
+                                    child: Container(
+                                      padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
+                                      decoration: filters.backgroundType == BackgroundType.stock
+                                          ? BoxDecoration(
+                                              image: DecorationImage(
+                                                image: AssetImage(filters.backgroundImage),
+                                                fit: BoxFit.cover,
+                                              ),
+                                            )
+                                          : filters.backgroundType == BackgroundType.self
+                                              ? BoxDecoration(
+                                                  image: DecorationImage(
+                                                    image: MemoryImage(capture!),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                )
+                                              : filters.backgroundType == BackgroundType.custom
+                                                  ? BoxDecoration(
+                                                      image: File(filters.backgroundImage).existsSync()
+                                                          ? DecorationImage(
+                                                              image: FileImage(File(filters.backgroundImage)),
+                                                              fit: BoxFit.cover,
+                                                            )
+                                                          : null,
+                                                    )
+                                                  : const BoxDecoration(color: Colors.transparent),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: filters.backgroundBlur,
+                                          sigmaY: filters.backgroundBlur,
+                                        ),
+                                        child: Transform(
+                                          transform: filters.skewX != 0 && filters.skewY != 0
+                                              ? (Matrix4.identity()
+                                                ..setEntry(3, 2, 0.001)
+                                                ..rotateX(0.1 * filters.skewY)
+                                                ..rotateY(-0.1 * filters.skewX))
+                                              : Matrix4.identity(),
+                                          filterQuality: FilterQuality.high,
+                                          alignment: Alignment.center,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.start,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
+                                              Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: <Widget>[
+                                                  if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                                                  Container(
+                                                    constraints: capturing ? null : const BoxConstraints(maxHeight: 400, maxWidth: 500),
+                                                    child: FittedBox(
+                                                      alignment: Alignment.center,
+                                                      // fit: BoxFit.fill,
+                                                      child: Stack(
+                                                        children: <Widget>[
+                                                          Container(
+                                                            decoration: BoxDecoration(
+                                                              color: bgColor,
+                                                              borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
+                                                              boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
+                                                                  ? <BoxShadow>[
+                                                                      BoxShadow(
+                                                                        offset: const Offset(3, 3),
+                                                                        spreadRadius: filters.shadowSpread,
+                                                                        blurRadius: filters.shadowRadius,
+                                                                        color: const Color.fromRGBO(0, 0, 0, 0.5),
+                                                                      ),
+                                                                    ]
+                                                                  : null,
+                                                            ),
+                                                            padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
+                                                            child: GestureDetector(
+                                                              onPanUpdate: (DragUpdateDetails details) => setState(() {
+                                                                filters
+                                                                  ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2)).clamp(-1, 1)
+                                                                  ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2)).clamp(-1, 1);
+                                                              }),
+                                                              onDoubleTap: () => setState(() => filters
+                                                                ..skewX = 0
+                                                                ..skewY = 0),
+                                                              child: ClipRRect(
+                                                                borderRadius: BorderRadius.circular(filters.borderRadius),
+                                                                child: Image.memory(
+                                                                  capture!,
+                                                                  fit: BoxFit.contain,
+                                                                  width: photo!.width.toDouble(),
+                                                                  height: photo!.height.toDouble(),
+                                                                  filterQuality: FilterQuality.high,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          Positioned(
+                                                            bottom: 0,
+                                                            right: 0,
+                                                            child: Transform.translate(
+                                                              offset: const Offset(0, 25),
+                                                              child: Transform(
+                                                                transform: Matrix4.skewX(-0.2),
+                                                                child: Text(
+                                                                  filters.watermark,
+                                                                  textAlign: TextAlign.right,
+                                                                  style: TextStyle(
+                                                                    fontWeight: FontWeight.bold,
+                                                                    fontSize: 17,
+                                                                    shadows: <Shadow>[Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.7))],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          )
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                                                ],
+                                              ),
+                                              if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )),
                         ),
                       )
               ],
@@ -176,7 +360,7 @@ class FancyshotState extends State<Fancyshot> {
                         capturing = true;
                         setState(() {});
                         await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot');
-                        Future<void>.delayed(const Duration(milliseconds: 30), () {
+                        Future<void>.delayed(const Duration(milliseconds: 50), () {
                           capturing = false;
                           setState(() {});
                         });
@@ -195,9 +379,9 @@ class FancyshotState extends State<Fancyshot> {
                         setState(() {});
                         final String? filename = (await screenshotController.captureAndSave('${WinUtils.getTabameSettingsFolder()}/fancyshot'))?.replaceAll('/', r'\');
                         if (filename == null) return;
-                        Future<void>.delayed(const Duration(milliseconds: 30), () {
+                        Future<void>.delayed(const Duration(milliseconds: 50), () async {
                           capturing = false;
-                          winClipboard.copyImageToClipboard(filename);
+                          await winClipboard.copyImageToClipboard(filename);
                           setState(() {});
                           if (globalSettings.args.contains("-fancyshot") && closeOnAction) {
                             exit(0);
@@ -409,6 +593,9 @@ class FancyshotState extends State<Fancyshot> {
                               filters.shadowSpread = 1;
                             }
                             filters.shadowRadius = e;
+                            if (filters.shadowRadius == 0) {
+                              filters.shadowSpread = 0;
+                            }
                             setState(() {});
                           },
                         ),
@@ -425,6 +612,9 @@ class FancyshotState extends State<Fancyshot> {
                               filters.shadowRadius = 1;
                             }
                             filters.shadowSpread = e;
+                            if (filters.shadowSpread == 0) {
+                              filters.shadowRadius = 0;
+                            }
                             setState(() {});
                           },
                         ),
@@ -485,6 +675,17 @@ class FancyshotState extends State<Fancyshot> {
                               setState(() {});
                             },
                           ),
+                          const SizedBox(height: 5),
+                          OutlinedButton.icon(
+                            onPressed: () => setState(() => filters
+                              ..skewX = 0
+                              ..skewY = 0),
+                            icon: const Icon(Icons.clear, size: 16),
+                            label: const Text("Reset Skew", style: TextStyle(height: 1.1)),
+                          ),
+                          const SizedBox(height: 5),
+                          OutlinedButton(onPressed: () => setState(() => capturing = !capturing), child: const Text("Real View"))
+
                           // const Divider(height: 10, thickness: 1),
                           // MouseScrollWidget(
                           //   scrollDirection: Axis.horizontal,
@@ -601,28 +802,29 @@ class FancyshotState extends State<Fancyshot> {
                       ],
                     ),
                   ),
-                  InkWell(
-                    onTap: () {
-                      filters.backgroundType = BackgroundType.self;
-                      setState(() {});
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          width: 60,
-                          height: 37,
-                          decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 1), image: DecorationImage(image: MemoryImage(capture!))),
-                        ),
-                        Text(
-                          "Image",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 10, shadows: <Shadow>[Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
-                        )
-                      ],
+                  if (capture != null)
+                    InkWell(
+                      onTap: () {
+                        filters.backgroundType = BackgroundType.self;
+                        setState(() {});
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Container(
+                            width: 60,
+                            height: 37,
+                            decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 1), image: DecorationImage(image: MemoryImage(capture!))),
+                          ),
+                          Text(
+                            "Image",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 10, shadows: <Shadow>[Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.5))]),
+                          )
+                        ],
+                      ),
                     ),
-                  ),
                   InkWell(
                     onTap: () {
                       final OpenFilePicker file = OpenFilePicker()
@@ -686,153 +888,6 @@ class FancyshotState extends State<Fancyshot> {
   }
 }
 
-class FancyShotView extends StatefulWidget {
-  const FancyShotView({
-    Key? key,
-    required this.screenshotController,
-    required this.filters,
-    required this.capture,
-    required this.capturing,
-    required this.bgColor,
-  }) : super(key: key);
-
-  final ScreenshotController screenshotController;
-  final FancyShotProfile filters;
-  final Uint8List? capture;
-  final bool capturing;
-  final Color? bgColor;
-
-  @override
-  State<FancyShotView> createState() => _FancyShotViewState();
-}
-
-class _FancyShotViewState extends State<FancyShotView> {
-  @override
-  void initState() {
-    super.initState();
-    initializeGDI();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Screenshot<Widget>(
-      controller: widget.screenshotController,
-      child: Material(
-        type: MaterialType.transparency,
-        child: ClipRect(
-          child: Container(
-            padding: EdgeInsets.all(widget.filters.backgroundPadding),
-            decoration: widget.filters.backgroundType == BackgroundType.stock
-                ? BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage(widget.filters.backgroundImage),
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : widget.filters.backgroundType == BackgroundType.self
-                    ? BoxDecoration(
-                        image: DecorationImage(
-                          image: MemoryImage(widget.capture!),
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : widget.filters.backgroundType == BackgroundType.custom
-                        ? BoxDecoration(
-                            image: File(widget.filters.backgroundImage).existsSync()
-                                ? DecorationImage(
-                                    image: FileImage(File(widget.filters.backgroundImage)),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          )
-                        : const BoxDecoration(color: Colors.transparent),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: widget.filters.backgroundBlur,
-                sigmaY: widget.filters.backgroundBlur,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (widget.filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (widget.filters.watermark.isNotEmpty) const SizedBox(height: 20),
-                      Container(
-                        constraints: widget.capturing ? null : const BoxConstraints(maxHeight: 400, maxWidth: 500),
-                        child: Stack(
-                          children: <Widget>[
-                            Container(
-                              decoration: BoxDecoration(
-                                color: widget.bgColor,
-                                borderRadius: BorderRadius.all(Radius.circular(widget.filters.borderRadius)),
-                                boxShadow: widget.filters.shadowRadius != 0 && widget.filters.shadowSpread != 0
-                                    ? <BoxShadow>[
-                                        BoxShadow(
-                                          offset: const Offset(3, 3),
-                                          spreadRadius: widget.filters.shadowSpread,
-                                          blurRadius: widget.filters.shadowRadius,
-                                          color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              padding: EdgeInsets.all(widget.filters.imagePadding),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(widget.filters.borderRadius),
-                                child: widget.filters.width != 0 && widget.filters.height != 0
-                                    ? Image.memory(
-                                        widget.capture!,
-                                        fit: BoxFit.cover,
-                                        width: widget.filters.width.toDouble() -
-                                            (widget.filters.backgroundPadding * 2 + widget.filters.imagePadding * 2 + (widget.filters.watermark.isNotEmpty ? 20 * 2 : 0)),
-                                        height: widget.filters.height.toDouble() -
-                                            (widget.filters.backgroundPadding * 2 + widget.filters.imagePadding * 2 + (widget.filters.watermark.isNotEmpty ? 20 * 2 : 0)),
-                                      )
-                                    : Image.memory(widget.capture!, fit: BoxFit.contain),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Transform.translate(
-                                offset: const Offset(0, 25),
-                                child: Transform(
-                                  transform: Matrix4.skewX(-0.2),
-                                  child: Text(
-                                    widget.filters.watermark,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 17,
-                                      shadows: <Shadow>[Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.7))],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                      if (widget.filters.watermark.isNotEmpty) const SizedBox(height: 20),
-                    ],
-                  ),
-                  if (widget.filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 enum BackgroundType {
   transparent,
   self,
@@ -851,6 +906,8 @@ class FancyShotProfile {
   double shadowSpread = 0;
   double shadowRadius = 0;
   double backgroundBlur = 0;
+  double skewX = 0;
+  double skewY = 0;
   int background = 0;
   int aspectRatio = 0;
   String watermark = "";
@@ -858,19 +915,21 @@ class FancyShotProfile {
   int height = 0;
   FancyShotProfile({
     required this.name,
-    required this.backgroundPadding,
-    required this.imagePadding,
-    required this.backgroundType,
-    required this.backgroundImage,
-    required this.borderRadius,
-    required this.shadowSpread,
-    required this.shadowRadius,
-    required this.backgroundBlur,
-    required this.background,
-    required this.aspectRatio,
-    required this.watermark,
-    required this.width,
-    required this.height,
+    this.backgroundPadding = 10,
+    this.imagePadding = 10,
+    this.backgroundType = BackgroundType.transparent,
+    this.backgroundImage = "resources/gradient/gradient1.jpg",
+    this.borderRadius = 10,
+    this.shadowSpread = 0,
+    this.shadowRadius = 0,
+    this.backgroundBlur = 0,
+    this.skewX = 0,
+    this.skewY = 0,
+    this.background = 0,
+    this.aspectRatio = 0,
+    this.watermark = "",
+    this.width = 0,
+    this.height = 0,
   });
 
   FancyShotProfile copyWith({
@@ -883,6 +942,8 @@ class FancyShotProfile {
     double? shadowSpread,
     double? shadowRadius,
     double? backgroundBlur,
+    double? skewX,
+    double? skewY,
     int? background,
     int? aspectRatio,
     String? watermark,
@@ -899,6 +960,8 @@ class FancyShotProfile {
       shadowSpread: shadowSpread ?? this.shadowSpread,
       shadowRadius: shadowRadius ?? this.shadowRadius,
       backgroundBlur: backgroundBlur ?? this.backgroundBlur,
+      skewX: skewX ?? this.skewX,
+      skewY: skewY ?? this.skewY,
       background: background ?? this.background,
       aspectRatio: aspectRatio ?? this.aspectRatio,
       watermark: watermark ?? this.watermark,
@@ -918,6 +981,8 @@ class FancyShotProfile {
       'shadowSpread': shadowSpread,
       'shadowRadius': shadowRadius,
       'backgroundBlur': backgroundBlur,
+      'skewX': skewX,
+      'skewY': skewY,
       'background': background,
       'aspectRatio': aspectRatio,
       'watermark': watermark,
@@ -932,11 +997,13 @@ class FancyShotProfile {
       backgroundPadding: (map['backgroundPadding'] ?? 0.0) as double,
       imagePadding: (map['imagePadding'] ?? 0.0) as double,
       backgroundType: BackgroundType.values[(map['backgroundType'] ?? 0) as int],
-      backgroundImage: (map['backgroundImage'] ?? '') as String,
+      backgroundImage: (map['backgroundImage'] ?? "resources/gradient/gradient1.jpg") as String,
       borderRadius: (map['borderRadius'] ?? 0.0) as double,
       shadowSpread: (map['shadowSpread'] ?? 0.0) as double,
       shadowRadius: (map['shadowRadius'] ?? 0.0) as double,
       backgroundBlur: (map['backgroundBlur'] ?? 0.0) as double,
+      skewX: (map['skewX'] ?? 0.0) as double,
+      skewY: (map['skewY'] ?? 0.0) as double,
       background: (map['background'] ?? 0) as int,
       aspectRatio: (map['aspectRatio'] ?? 0) as int,
       watermark: (map['watermark'] ?? '') as String,
@@ -951,7 +1018,7 @@ class FancyShotProfile {
 
   @override
   String toString() {
-    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, backgroundBlur: $backgroundBlur, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, width: $width, height: $height)';
+    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, backgroundBlur: $backgroundBlur, skewX: $skewX, skewY: $skewY, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, width: $width, height: $height)';
   }
 
   @override
@@ -967,6 +1034,8 @@ class FancyShotProfile {
         other.shadowSpread == shadowSpread &&
         other.shadowRadius == shadowRadius &&
         other.backgroundBlur == backgroundBlur &&
+        other.skewX == skewX &&
+        other.skewY == skewY &&
         other.background == background &&
         other.aspectRatio == aspectRatio &&
         other.watermark == watermark &&
@@ -985,6 +1054,8 @@ class FancyShotProfile {
         shadowSpread.hashCode ^
         shadowRadius.hashCode ^
         backgroundBlur.hashCode ^
+        skewX.hashCode ^
+        skewY.hashCode ^
         background.hashCode ^
         aspectRatio.hashCode ^
         watermark.hashCode ^

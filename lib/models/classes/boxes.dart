@@ -209,9 +209,9 @@ class Boxes {
     pref = await SaveSettings.getInstance();
   }
 
-  static List<T> getSavedMap<T>(T Function(String json) fromJson, String key, {T? def}) {
+  static List<T> getSavedMap<T>(T Function(String json) fromJson, String key, {List<T>? def}) {
     final String savedString = pref.getString(key) ?? "";
-    if (savedString.isEmpty) return def == null ? <T>[] : <T>[def];
+    if (savedString.isEmpty) return def ?? <T>[];
     final List<dynamic> list = jsonDecode(savedString);
     final List<T> varMapped = <T>[];
     for (String value in list) {
@@ -373,7 +373,12 @@ class Boxes {
         savedFileText = newSavedFileText;
         await Boxes.registerBoxes(reload: true);
         updating = false;
-        final Map<String, dynamic> js = jsonDecode(savedFileText);
+        Map<String, dynamic> js;
+        try {
+          js = jsonDecode(savedFileText);
+        } catch (e) {
+          return;
+        }
         final String prevThemeLight = js["flutter.previewThemeLight"] ?? "";
         if (prevThemeLight.isNotEmpty) {
           globalSettings.lightTheme = ThemeColors.fromJson(prevThemeLight);
@@ -505,7 +510,6 @@ class TrktivityFilter {
 class QuickTimer {
   String name = "";
   Timer? timer;
-
   DateTime? endTime;
 }
 
@@ -728,6 +732,7 @@ class QuickMenuFunctions {
     } else {
       if (!kReleaseMode) return;
       Win32.setPosition(const Offset(-99999, -99999));
+
       // Win32.setPosition(const Offset(0, 0));
       hidTime = DateTime.now().millisecondsSinceEpoch;
     }
@@ -880,7 +885,7 @@ class Trktivity {
   set filters(List<TrktivityFilter> list) => _filters = list;
   List<TrktivityFilter> get filters => _filters.isEmpty
       ? _filters = Boxes.getSavedMap<TrktivityFilter>(TrktivityFilter.fromJson, "trktivityFilter",
-          def: TrktivityFilter(exe: "code", titleSearch: r"([\w\. ]+\w)[\W ]+([\w ]+) [\W ]+Visual", titleReplace: r"$2 - $1"))
+          def: <TrktivityFilter>[TrktivityFilter(exe: "code", titleSearch: r"([\w\. ]+\w)[\W ]+([\w ]+) [\W ]+Visual", titleReplace: r"$2 - $1")])
       : _filters;
 
   void add(TrktivityType type, String value) {

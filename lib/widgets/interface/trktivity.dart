@@ -4,6 +4,7 @@ import 'dart:io';
 
 // ignore: depend_on_referenced_packages
 import 'package:collection/collection.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -449,29 +450,35 @@ It records keystrokes, mouse movement and active Window.
                             const Flexible(child: Text("Pick a date: ")),
                             Flexible(
                               // width: 130,
-                              child: DropdownButton<String>(
-                                alignment: Alignment.center,
-                                isDense: true,
-                                value: selectedDay,
-                                items: allDates
-                                    .take(30)
-                                    .map<DropdownMenuItem<String>>(
-                                        (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
-                                    .toList(),
-                                onTap: () {
-                                  dataAnalyzed = false;
-                                  setState(() {});
-                                },
-                                onChanged: (String? e) {
-                                  dataAnalyzed = false;
-                                  setState(() {});
-                                  selectedDay = e ?? allDates.first;
-                                  pickText = "Pick Dates";
-                                  startDate = "";
-                                  endDate = "";
-                                  showReport();
-                                  setState(() {});
-                                },
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton2<String>(
+                                  alignment: Alignment.center,
+                                  isDense: true,
+                                  isExpanded: true,
+                                  itemHeight: 30,
+                                  buttonWidth: 140,
+                                  value: selectedDay,
+                                  items: allDates
+                                      .take(30)
+                                      .map<DropdownMenuItem<String>>(
+                                          (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
+                                      .toList(),
+                                  onMenuStateChange: (bool e) {
+                                    if (!e) return;
+                                    dataAnalyzed = false;
+                                    setState(() {});
+                                  },
+                                  onChanged: (String? e) {
+                                    dataAnalyzed = false;
+                                    setState(() {});
+                                    selectedDay = e ?? allDates.first;
+                                    pickText = "Pick Dates";
+                                    startDate = "";
+                                    endDate = "";
+                                    showReport();
+                                    setState(() {});
+                                  },
+                                ),
                               ),
                             ),
                           ],

@@ -40,6 +40,14 @@ You can add quick actions in a separate menu so it's easier to access. You can r
 
 ### **Added Predefined Sizes**
 You can set a specific size to a window. Create a list of sizes from Settings -> Views then right click a window in QuickMenu and select the new size.
+
+### **New Quick Actions Buttons:**
+
+ - Fancyshot - Screen Capture with editor.
+ - Bookmarks - See your saved Bookmarks.
+ - Countdown - A countdown for quick access.
+ - Timers - Create Quick Timers.
+ - QuickActionsMenu - A dedicated menu with Quick Actions.
 ''',
       '1.1': '''
 ## **Added Views**
