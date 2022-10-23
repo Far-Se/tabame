@@ -121,6 +121,7 @@ class FancyshotState extends State<Fancyshot> {
   @override
   void initState() {
     super.initState();
+    initializeGDI();
     filters = defaultProfile.copyWith();
     if (profiles.isEmpty) profiles.add(defaultProfile);
     profilesName.addAll(profiles.map((FancyShotProfile e) => e.name));
