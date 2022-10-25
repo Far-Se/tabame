@@ -10,6 +10,7 @@ import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_bookmarks.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
 import '../itzy/quickmenu/button_changelog.dart';
+import '../itzy/quickmenu/button_closeonfocus.dart';
 import '../itzy/quickmenu/button_countdown.dart';
 import '../itzy/quickmenu/button_fancyshot.dart';
 import '../itzy/quickmenu/button_hide_desktop_files.dart';
@@ -52,6 +53,7 @@ class TopBar extends StatelessWidget {
       "TimersButton": const TimersButton(),
       "CountdownButton": const CountdownButton(),
       "BookmarksButton": const BookmarksButton(),
+      "CloseOnFocusLossButton": const CloseOnFocusLossButton(),
     };
     List<Widget> showWidgets = <Widget>[];
     final List<String> showWidgetsNames = Boxes().topBarWidgets;

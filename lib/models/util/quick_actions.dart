@@ -5,6 +5,8 @@ const List<String> quickActionsType = <String>[
   "Audio Input Devices",
   "Set Volume",
   "Run Command",
+  "Open",
+  "Volume Slider"
   // "Send Keys",
 ];
 const List<String> quickActionsList = <String>[

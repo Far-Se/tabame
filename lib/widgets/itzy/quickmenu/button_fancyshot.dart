@@ -7,23 +7,8 @@ import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 import '../../../pages/quickmenu.dart';
 
-class FancyShotButton extends StatefulWidget {
+class FancyShotButton extends StatelessWidget {
   const FancyShotButton({Key? key}) : super(key: key);
-  @override
-  FancyShotButtonState createState() => FancyShotButtonState();
-}
-
-class FancyShotButtonState extends State<FancyShotButton> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(

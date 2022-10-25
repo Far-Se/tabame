@@ -113,6 +113,7 @@ class FancyshotState extends State<Fancyshot> {
   bool capturing = false;
 
   TextEditingController watermarkTextController = TextEditingController();
+  TextEditingController skewPerspectiveController = TextEditingController();
 
   bool closeOnAction = true;
 
@@ -132,6 +133,7 @@ class FancyshotState extends State<Fancyshot> {
       selectedProfile = profile;
       filters = profiles[i].copyWith();
       watermarkTextController.text = filters.watermark;
+      skewPerspectiveController.text = filters.skewPerspective.toString();
     }
 
     if (profilesName.length > 1) profilesName.remove("");
@@ -142,6 +144,7 @@ class FancyshotState extends State<Fancyshot> {
   void dispose() {
     textEditingController.dispose();
     watermarkTextController.dispose();
+    skewPerspectiveController.dispose();
     super.dispose();
   }
 
@@ -227,7 +230,8 @@ class FancyshotState extends State<Fancyshot> {
                                         child: Transform(
                                           transform: filters.skewX != 0 && filters.skewY != 0
                                               ? (Matrix4.identity()
-                                                ..setEntry(3, 2, 0.001)
+                                                ..scaled(0.1, 0.1, 0.1)
+                                                ..setEntry(3, 2, filters.skewPerspective)
                                                 ..rotateX(0.1 * filters.skewY)
                                                 ..rotateY(-0.1 * filters.skewX))
                                               : Matrix4.identity(),
@@ -269,11 +273,9 @@ class FancyshotState extends State<Fancyshot> {
                                                             ),
                                                             padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
                                                             child: GestureDetector(
-                                                              onPanUpdate: (DragUpdateDetails details) => setState(() {
-                                                                filters
-                                                                  ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2)).clamp(-1, 1)
-                                                                  ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2)).clamp(-1, 1);
-                                                              }),
+                                                              onPanUpdate: (DragUpdateDetails details) => setState(() => filters
+                                                                ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2))
+                                                                ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2))),
                                                               onDoubleTap: () => setState(() => filters
                                                                 ..skewX = 0
                                                                 ..skewY = 0),
@@ -438,15 +440,7 @@ class FancyshotState extends State<Fancyshot> {
                             isDense: true,
                             style: const TextStyle(fontSize: 200),
                             items: profilesName
-                                .map((String item) => DropdownMenuItem<String>(
-                                      value: item,
-                                      child: Text(
-                                        item,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ))
+                                .map((String item) => DropdownMenuItem<String>(value: item, child: Text(item, style: const TextStyle(fontSize: 14))))
                                 .toList(),
                             value: selectedProfile,
                             onChanged: (String? value) {
@@ -456,6 +450,7 @@ class FancyshotState extends State<Fancyshot> {
                                 selectedProfile = value;
                                 filters = profiles[i].copyWith();
                                 watermarkTextController.text = filters.watermark;
+                                skewPerspectiveController.text = filters.skewPerspective.toString();
                                 Boxes.pref.setString("fancyshot", value);
                               }
                               setState(() {});
@@ -489,22 +484,7 @@ class FancyshotState extends State<Fancyshot> {
                                 onFieldSubmitted: (String? newValue) {
                                   if (newValue == null) return;
                                   if (newValue.isEmpty) return;
-                                  profiles.add(FancyShotProfile(
-                                    name: newValue,
-                                    backgroundPadding: filters.backgroundPadding,
-                                    imagePadding: filters.imagePadding,
-                                    backgroundType: filters.backgroundType,
-                                    backgroundImage: filters.backgroundImage,
-                                    borderRadius: filters.borderRadius,
-                                    shadowSpread: filters.shadowSpread,
-                                    shadowRadius: filters.shadowRadius,
-                                    backgroundBlur: filters.backgroundBlur,
-                                    background: filters.background,
-                                    aspectRatio: filters.aspectRatio,
-                                    watermark: filters.watermark,
-                                    width: filters.width,
-                                    height: filters.height,
-                                  ));
+                                  profiles.add(filters.copyWith(name: newValue));
                                   profilesName.add(newValue);
                                   if (profilesName.contains("")) profilesName.remove("");
                                   Boxes.updateSettings("fancyShotProfile", jsonEncode(profiles));
@@ -677,12 +657,39 @@ class FancyshotState extends State<Fancyshot> {
                             },
                           ),
                           const SizedBox(height: 5),
-                          OutlinedButton.icon(
-                            onPressed: () => setState(() => filters
-                              ..skewX = 0
-                              ..skewY = 0),
-                            icon: const Icon(Icons.clear, size: 16),
-                            label: const Text("Reset Skew", style: TextStyle(height: 1.1)),
+                          MouseScrollWidget(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: <Widget>[
+                                OutlinedButton(
+                                  onPressed: () => setState(() => filters
+                                    ..skewX = 0
+                                    ..skewY = 0),
+                                  child: const Text("Reset Skew", style: TextStyle(height: 1.1)),
+                                ),
+                                Tooltip(
+                                  message: "Skew Perspective",
+                                  child: Container(
+                                    width: 80,
+                                    child: TextField(
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                        hintText: "0.001",
+                                        hintStyle: const TextStyle(fontSize: 12),
+                                        border: UnderlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      controller: skewPerspectiveController,
+                                      onChanged: (String e) {
+                                        filters.skewPerspective = double.tryParse(e) ?? 0.0;
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 5),
                           OutlinedButton(onPressed: () => setState(() => capturing = !capturing), child: const Text("Real View"))
@@ -909,6 +916,7 @@ class FancyShotProfile {
   double backgroundBlur = 0;
   double skewX = 0;
   double skewY = 0;
+  double skewPerspective = 0;
   int background = 0;
   int aspectRatio = 0;
   String watermark = "";
@@ -926,6 +934,7 @@ class FancyShotProfile {
     this.backgroundBlur = 0,
     this.skewX = 0,
     this.skewY = 0,
+    this.skewPerspective = 0,
     this.background = 0,
     this.aspectRatio = 0,
     this.watermark = "",
@@ -945,6 +954,7 @@ class FancyShotProfile {
     double? backgroundBlur,
     double? skewX,
     double? skewY,
+    double? skewPerspective,
     int? background,
     int? aspectRatio,
     String? watermark,
@@ -963,6 +973,7 @@ class FancyShotProfile {
       backgroundBlur: backgroundBlur ?? this.backgroundBlur,
       skewX: skewX ?? this.skewX,
       skewY: skewY ?? this.skewY,
+      skewPerspective: skewPerspective ?? this.skewPerspective,
       background: background ?? this.background,
       aspectRatio: aspectRatio ?? this.aspectRatio,
       watermark: watermark ?? this.watermark,
@@ -984,6 +995,7 @@ class FancyShotProfile {
       'backgroundBlur': backgroundBlur,
       'skewX': skewX,
       'skewY': skewY,
+      'skewPerspective': skewPerspective,
       'background': background,
       'aspectRatio': aspectRatio,
       'watermark': watermark,
@@ -1005,6 +1017,7 @@ class FancyShotProfile {
       backgroundBlur: (map['backgroundBlur'] ?? 0.0) as double,
       skewX: (map['skewX'] ?? 0.0) as double,
       skewY: (map['skewY'] ?? 0.0) as double,
+      skewPerspective: (map['skewPerspective'] ?? 0.0) as double,
       background: (map['background'] ?? 0) as int,
       aspectRatio: (map['aspectRatio'] ?? 0) as int,
       watermark: (map['watermark'] ?? '') as String,
@@ -1037,6 +1050,7 @@ class FancyShotProfile {
         other.backgroundBlur == backgroundBlur &&
         other.skewX == skewX &&
         other.skewY == skewY &&
+        other.skewPerspective == skewPerspective &&
         other.background == background &&
         other.aspectRatio == aspectRatio &&
         other.watermark == watermark &&
@@ -1057,6 +1071,7 @@ class FancyShotProfile {
         backgroundBlur.hashCode ^
         skewX.hashCode ^
         skewY.hashCode ^
+        skewPerspective.hashCode ^
         background.hashCode ^
         aspectRatio.hashCode ^
         watermark.hashCode ^

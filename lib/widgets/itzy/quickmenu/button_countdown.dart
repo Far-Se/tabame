@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:win32/win32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
@@ -261,7 +262,6 @@ class TimersWidgetState extends State<TimersWidget> {
                                 controller: secondsController,
                                 onChanged: (String e) {},
                                 onSubmitted: (String e) {
-                                  print("submmited");
                                   setState(() {});
                                 },
                               ),
@@ -290,7 +290,6 @@ class TimersWidgetState extends State<TimersWidget> {
                           if (timers.length > 5) {
                             timers.removeRange(5, timers.length);
                           }
-                          print(timers);
 
                           currentCountdown.minutes = minutes;
                           currentCountdown.seconds = seconds;
@@ -379,6 +378,14 @@ class TimersWidgetState extends State<TimersWidget> {
       currentCountdown.minutes = 0;
       countDownTimer?.cancel();
       countDownTimer = null;
+      setState(() {});
+      Future<void>.delayed(const Duration(milliseconds: 100), () {
+        Beep(100, 200);
+        Beep(500, 200);
+        Beep(1000, 200);
+        Beep(500, 200);
+      });
+      return;
     }
     setState(() {});
   }

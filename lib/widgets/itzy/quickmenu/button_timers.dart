@@ -293,15 +293,10 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
                         icon: const Icon(Icons.delete),
                       ),
                       Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Container(
-                            width: 200,
-                            child: Text(
-                              Boxes.quickTimers[index].name,
-                              overflow: TextOverflow.fade,
-                              softWrap: false,
-                            ),
-                          ),
+                          Container(width: 200, child: Text(Boxes.quickTimers[index].name, overflow: TextOverflow.fade, softWrap: false)),
                           Text("${diff.toString().replaceAll(RegExp(r'(\.\d+|-)'), '')}")
                         ],
                       )

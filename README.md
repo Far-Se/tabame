@@ -129,7 +129,8 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - Bookmarks - See your saved Bookmarks.
 - Countdown - A countdown for quick access.
 - Timers - Create Quick Timers.
-- QuickActionsMenu - A dedicated menu with Quick Actions.
+- Quick Actions Menu - A dedicated menu with Quick Actions.
+- Close on Focus Loss - If you want to keep QuickMenu on screen, toggle this.
 
 ## **Taskbar**
 Contains your opened windows, it shows the icon, if it makes sound, if it is pinned, Monitor Number, Title, Media Control and Close button.

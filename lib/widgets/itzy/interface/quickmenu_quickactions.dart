@@ -31,6 +31,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
     "TimersButton": Icons.timer_sharp,
     "CountdownButton": Icons.hourglass_bottom_rounded,
     "BookmarksButton": Icons.folder_copy_outlined,
+    "CloseOnFocusLossButton": Icons.visibility,
     "Deactivated:": Icons.do_disturb,
   };
   @override

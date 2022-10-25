@@ -311,6 +311,7 @@ class Boxes {
       "TimersButton",
       "CountdownButton",
       "BookmarksButton",
+      "CloseOnFocusLossButton",
     ];
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;

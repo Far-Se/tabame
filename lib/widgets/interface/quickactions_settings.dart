@@ -226,7 +226,7 @@ class QuickActionEditState extends State<QuickActionEdit> {
               return DropdownMenuItem<int>(value: quickActionsList.indexWhere((String element) => element == value), child: Text(value), alignment: Alignment.center);
             }).toList(),
           )
-        else if (quickActionsType.indexOf(widget.leAction.type) > 3)
+        else if (quickActionsType.indexOf(widget.leAction.type) > 3 && quickActionsType.indexOf(widget.leAction.type) < 7)
           TextInput(
             labelText: "Value",
             onChanged: (String e) {
