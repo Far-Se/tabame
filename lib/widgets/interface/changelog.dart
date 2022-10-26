@@ -49,6 +49,10 @@ You can set a specific size to a window. Create a list of sizes from Settings ->
  - Timers - Create Quick Timers.
  - QuickActionsMenu - A dedicated menu with Quick Actions.
  - Close on Focus Loss - If you want to keep QuickMenu on screen, toggle this.
+
+Added Persistent Reminders, good for pill reminders
+
+
 """,
       '1.1': '''
 ## **Added Views**
