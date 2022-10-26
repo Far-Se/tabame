@@ -57,7 +57,7 @@ class Settings {
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
-
+  List<String> persistentReminders = <String>[];
   List<String> audio = <String>["false", "true", "false"];
 
   bool get audioConsole => audio[0] == "false" ? false : true;

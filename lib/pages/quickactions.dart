@@ -53,7 +53,11 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
                 );
               } else if (item.type == "Set Volume") {
                 return InkWell(
-                  onTap: () => Audio.setVolume((int.tryParse(item.value) ?? 100).toDouble(), AudioDeviceType.output),
+                  onTap: () {
+                    Audio.setVolume((int.tryParse(item.value) ?? 100).toDouble(), AudioDeviceType.output);
+                    currentVolumeLevel = (int.tryParse(item.value) ?? 100) / 100;
+                    setState(() {});
+                  },
                   child: ListItem(title: item.name),
                 );
               } else if (item.type == "Send Keys") {
@@ -153,14 +157,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
                                   child: Row(
                                     children: <Widget>[
                                       if (defaultDevice.id == device.id) const Icon(Icons.check_rounded, size: 16),
-                                      Container(
-                                          width: 230,
-                                          child: Text(
-                                            device.name,
-                                            overflow: TextOverflow.fade,
-                                            maxLines: 1,
-                                            softWrap: false,
-                                          )),
+                                      Container(width: 230, child: Text(device.name, overflow: TextOverflow.fade, maxLines: 1, softWrap: false)),
                                     ],
                                   )),
                             );
@@ -171,35 +168,38 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
                     });
               } else if (item.type == "Volume Slider") {
                 return MouseScrollWidget(
-                  child: FutureBuilder<double>(
-                      future: Audio.getVolume(AudioDeviceType.output),
-                      builder: (BuildContext context, AsyncSnapshot<double> snapshot) {
-                        if (!snapshot.hasData) {
-                          currentVolumeLevel = 0;
-                        } else {
-                          currentVolumeLevel = snapshot.data!;
-                        }
-                        return Row(
-                          children: <Widget>[
-                            Text("${item.name}: ${((currentVolumeLevel * 100).toStringAsFixed(0)).padLeft(2, '0')}"),
-                            SliderTheme(
-                                data: Theme.of(context).sliderTheme.copyWith(
-                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7, elevation: 0),
-                                      minThumbSeparation: 0,
-                                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 5.0),
-                                    ),
-                                child: Slider(
-                                    value: currentVolumeLevel,
-                                    min: 0,
-                                    max: 1,
-                                    onChanged: (double e) {
-                                      Audio.setVolume(e, AudioDeviceType.output);
-                                      currentVolumeLevel = e;
-                                      setState(() {});
-                                    })),
-                          ],
-                        );
-                      }),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+                    child: FutureBuilder<double>(
+                        future: Audio.getVolume(AudioDeviceType.output),
+                        builder: (BuildContext context, AsyncSnapshot<double> snapshot) {
+                          if (!snapshot.hasData) {
+                            currentVolumeLevel = 0;
+                          } else {
+                            currentVolumeLevel = snapshot.data!;
+                          }
+                          return Row(
+                            children: <Widget>[
+                              Text("${item.name}: ${((currentVolumeLevel * 100).toStringAsFixed(0)).padLeft(2, '0')}"),
+                              SliderTheme(
+                                  data: Theme.of(context).sliderTheme.copyWith(
+                                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7, elevation: 0),
+                                        minThumbSeparation: 0,
+                                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 5.0),
+                                      ),
+                                  child: Slider(
+                                      value: currentVolumeLevel,
+                                      min: 0,
+                                      max: 1,
+                                      onChanged: (double e) {
+                                        Audio.setVolume(e, AudioDeviceType.output);
+                                        currentVolumeLevel = e;
+                                        setState(() {});
+                                      })),
+                            ],
+                          );
+                        }),
+                  ),
                 );
               }
 

@@ -18,6 +18,7 @@ import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_media_control.dart';
 import '../itzy/quickmenu/button_mic_mute.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
+import '../itzy/quickmenu/button_persistent_reminders.dart';
 import '../itzy/quickmenu/button_pin_window.dart';
 import '../itzy/quickmenu/button_quickactions_menu.dart';
 import '../itzy/quickmenu/button_spotify.dart';
@@ -31,8 +32,30 @@ import '../containers/bar_with_buttons.dart';
 import '../itzy/quickmenu/button_toggle_taskbar.dart';
 import '../itzy/quickmenu/button_virtual_desktop.dart';
 
-class TopBar extends StatelessWidget {
+class TopBar extends StatefulWidget {
   const TopBar({Key? key}) : super(key: key);
+
+  @override
+  State<TopBar> createState() => _TopBarState();
+}
+
+class _TopBarState extends State<TopBar> with QuickMenuTriggers {
+  @override
+  void initState() {
+    super.initState();
+    QuickMenuFunctions.addListener(this);
+  }
+
+  @override
+  void refreshQuickMenu() {
+    print("refreshed");
+    if (mounted) {
+      setState(() {});
+    } else {
+      print("ce plm");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Debug.add("QuickMenu: Topbar");
@@ -107,11 +130,14 @@ class TopBar extends StatelessWidget {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(minWidth: 10, maxWidth: 200),
                           child: BarWithButtons(
-                            children: List<Widget>.generate(showWidgets.length, (int i) {
-                              Debug.add(
-                                  "QuickMenu: Topbar: ${widgets.entries.firstWhere((MapEntry<String, Widget> element) => element.value == showWidgets[i], orElse: () => MapEntry<String, Widget>("Null", Container())).key}");
-                              return showWidgets[i];
-                            }),
+                            children: <Widget>[
+                              if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                              ...List<Widget>.generate(showWidgets.length, (int i) {
+                                Debug.add(
+                                    "QuickMenu: Topbar: ${widgets.entries.firstWhere((MapEntry<String, Widget> element) => element.value == showWidgets[i], orElse: () => MapEntry<String, Widget>("Null", Container())).key}");
+                                return showWidgets[i];
+                              })
+                            ],
                           ),
                         ),
                       ),

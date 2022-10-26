@@ -56,16 +56,27 @@ class Boxes {
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
-      final Reminder demoReminder = Reminder(
-          enabled: false,
-          interval: <int>[540, 1200],
-          message: "Stretch",
-          repetitive: true,
-          time: 60,
-          voiceNotification: true,
-          weekDays: <bool>[true, true, true, true, true, false, false],
-          voiceVolume: 100);
-      await pref.setString("reminders", jsonEncode(<Reminder>[demoReminder]));
+      final List<Reminder> demoReminders = <Reminder>[
+        Reminder(
+            enabled: false,
+            interval: <int>[540, 1200],
+            message: "Stretch",
+            repetitive: true,
+            time: 60,
+            voiceNotification: true,
+            weekDays: <bool>[true, true, true, true, true, false, false],
+            voiceVolume: 100),
+        Reminder(
+            enabled: false,
+            weekDays: <bool>[true, true, true, true, true, true, true],
+            time: 540,
+            repetitive: false,
+            interval: <int>[480, 1200],
+            message: "p:Take your meds",
+            voiceNotification: false,
+            voiceVolume: 100)
+      ];
+      await pref.setString("reminders", jsonEncode(demoReminders));
       Debug.add("Registered: setDefault Settings");
     }
     //!fetch
@@ -152,6 +163,7 @@ class Boxes {
       final List<QuickActions> quickActionList = <QuickActions>[
         QuickActions(name: "🎧 Spotify", type: "Spotify Controls", value: ""),
         QuickActions(name: "📷 Fancyshot", type: "Quick Action", value: "8"),
+        QuickActions(name: "🔊 Volume", type: "Volume Slider", value: ""),
         QuickActions(name: "🔉 Volume Level 3", type: "Set Volume", value: "3"),
         QuickActions(name: "🔊 Volume Level 100", type: "Set Volume", value: "100"),
         QuickActions(name: "🖥 Toggle Taskbar", type: "Quick Action", value: "2"),
@@ -617,11 +629,19 @@ class Tasks {
   void reminderPeriodic(Reminder reminder) {
     if (!reminder.enabled) return;
     final int now = DateTime.now().hour * 60 + DateTime.now().minute;
+    final String cleanMessage = reminder.message.replaceFirst("p:", "");
     if (now.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday - 1]) {
       if (reminder.voiceNotification) {
-        WinUtils.textToSpeech('${reminder.message}', repeat: -1, volume: reminder.voiceVolume);
+        WinUtils.textToSpeech('$cleanMessage', repeat: -1, volume: reminder.voiceVolume);
       } else {
-        WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: ${reminder.message}", onClick: () {});
+        WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: $cleanMessage", onClick: () {});
+      }
+      if (reminder.message.startsWith("p:")) {
+        globalSettings.persistentReminders.add("$cleanMessage each ${reminder.time} minutes");
+        for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
+          if (!QuickMenuFunctions.listeners.contains(listener)) return;
+          listener.refreshQuickMenu();
+        }
       }
     }
     reminder.timer = Timer(Duration(minutes: reminder.time), () => reminderPeriodic(reminder));
@@ -629,11 +649,19 @@ class Tasks {
 
   reminderDaily(Reminder reminder) {
     if (!reminder.enabled) return;
+    final String cleanMessage = reminder.message.replaceFirst("p:", "");
     if (reminder.weekDays[DateTime.now().weekday - 1]) {
       if (reminder.voiceNotification) {
-        WinUtils.textToSpeech('${reminder.message}', repeat: -1, volume: reminder.voiceVolume);
+        WinUtils.textToSpeech('$cleanMessage', repeat: -1, volume: reminder.voiceVolume);
       } else {
-        WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: ${reminder.message}", onClick: () {});
+        WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: $cleanMessage", onClick: () {});
+      }
+      if (reminder.message.startsWith("p:")) {
+        globalSettings.persistentReminders.add("$cleanMessage at ${reminder.time.formatTime()}");
+        for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
+          if (!QuickMenuFunctions.listeners.contains(listener)) return;
+          listener.refreshQuickMenu();
+        }
       }
     }
     reminder.timer = Timer(const Duration(days: 1), () => reminderDaily(reminder));
@@ -686,6 +714,7 @@ class WinHotkeys {
 abstract class QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, int type) async {}
   Future<void> onQuickMenuShown(int type) async {}
+  void refreshQuickMenu() async {}
 }
 
 class QuickMenuFunctions {

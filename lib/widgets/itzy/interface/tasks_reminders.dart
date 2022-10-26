@@ -43,7 +43,6 @@ class TasksRemindersState extends State<TasksReminders> {
             if (mounted) setState(() {});
           },
         ),
-        const InfoText("Tip: Add x[number] at the end of the string to repeat it if voice notification is enabled. Ex: Workout x3"),
         const SizedBox(height: 5),
         ListView.builder(
           shrinkWrap: true,
@@ -52,7 +51,7 @@ class TasksRemindersState extends State<TasksReminders> {
           reverse: true,
           itemBuilder: (BuildContext context, int index) {
             final Reminder reminder = Boxes.reminders[index];
-            final TextEditingController messageTextController = TextEditingController(text: reminder.message);
+            final TextEditingController messageTextController = TextEditingController(text: reminder.message.replaceFirst("p:", ""));
             return Column(
               children: <Widget>[
                 Row(
@@ -75,8 +74,14 @@ class TasksRemindersState extends State<TasksReminders> {
                       child: Focus(
                         onFocusChange: (bool value) async {
                           if (value == false) {
-                            reminder.message = messageTextController.text;
+                            // reminder.message = messageTextController.text;
+                            if (reminder.message.startsWith("p:")) {
+                              reminder.message = "p:${messageTextController.text}";
+                            } else {
+                              reminder.message = messageTextController.text;
+                            }
                             await updateReminders();
+                            setState(() {});
                           }
                         },
                         child: TextField(
@@ -88,20 +93,47 @@ class TasksRemindersState extends State<TasksReminders> {
                             border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
                           ),
                           onSubmitted: (String value) async {
-                            reminder.message = value;
+                            if (reminder.message.startsWith("p:")) {
+                              reminder.message = "p:$value";
+                            } else {
+                              reminder.message = value;
+                            }
+                            print(reminder);
+                            // reminder.message = value;
                             await updateReminders();
                             if (mounted) setState(() {});
                           },
                         ),
                       ),
                     ),
-                    IconButton(
-                        onPressed: () async {
-                          Boxes.reminders.removeAt(index);
-                          await updateReminders();
-                          if (mounted) setState(() {});
-                        },
-                        icon: const Icon(Icons.delete))
+                    Row(
+                      children: <Widget>[
+                        IconButton(
+                            onPressed: () async {
+                              if (!reminder.message.startsWith("p:")) {
+                                reminder.message = "p:${reminder.message}";
+                              } else {
+                                reminder.message = reminder.message.replaceFirst("p:", "");
+                              }
+
+                              messageTextController.text = reminder.message.replaceFirst("p:", "");
+                              await updateReminders();
+                              if (mounted) setState(() {});
+                            },
+                            splashRadius: 20,
+                            tooltip: "Persistent",
+                            icon: reminder.message.startsWith("p:") ? const Icon(Icons.warning_rounded, color: Colors.red) : const Icon(Icons.warning_rounded)),
+                        IconButton(
+                            tooltip: "Delete",
+                            onPressed: () async {
+                              Boxes.reminders.removeAt(index);
+                              await updateReminders();
+                              if (mounted) setState(() {});
+                            },
+                            splashRadius: 20,
+                            icon: const Icon(Icons.delete_outline)),
+                      ],
+                    )
                   ],
                 ),
                 if (reminder.enabled)
@@ -278,6 +310,8 @@ class TasksRemindersState extends State<TasksReminders> {
             );
           },
         ),
+        const InfoText("Tip: Add x[number] at the end of the string to repeat it if voice notification is enabled. Ex: Workout x3"),
+        const InfoText("When Persistent is activated, a warning message will appear in QuickActions QuickMenu."),
       ],
     );
   }

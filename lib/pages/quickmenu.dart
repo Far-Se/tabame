@@ -113,6 +113,11 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     super.dispose();
   }
 
+  @override
+  void refreshQuickMenu() {
+    if (mounted) setState(() {});
+  }
+
   QuickMenuTypes typeShown = QuickMenuTypes.quickMenu;
   @override
   Future<void> onQuickMenuToggled(bool visible, int type) async {

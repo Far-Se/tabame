@@ -187,6 +187,7 @@ class FancyshotState extends State<Fancyshot> {
                     ? Container()
                     : Container(
                         constraints: const BoxConstraints(maxHeight: 450),
+                        decoration: BoxDecoration(border: Border.all(width: 1, color: Colors.black26.withOpacity(0.5))),
                         child: MouseScrollWidget(
                           scrollDirection: Axis.horizontal,
                           child: MouseScrollWidget(
