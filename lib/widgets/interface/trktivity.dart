@@ -429,7 +429,7 @@ It records keystrokes, mouse movement and active Window.
                 ],
               ),
         if (allDates.isEmpty)
-          const Text("There is no file to analyze.")
+          const Text("  There is no file to analyze. Close Interface, do some activity and come back to see it saved!")
         else
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
@@ -437,83 +437,82 @@ It records keystrokes, mouse movement and active Window.
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (allDates.length > 1)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: <Widget>[
-                            const Flexible(child: Text("Pick a date: ")),
-                            Flexible(
-                              // width: 130,
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton2<String>(
-                                  alignment: Alignment.center,
-                                  isDense: true,
-                                  isExpanded: true,
-                                  itemHeight: 30,
-                                  buttonWidth: 140,
-                                  value: selectedDay,
-                                  items: allDates
-                                      .take(30)
-                                      .map<DropdownMenuItem<String>>(
-                                          (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
-                                      .toList(),
-                                  onMenuStateChange: (bool e) {
-                                    if (!e) return;
-                                    dataAnalyzed = false;
-                                    setState(() {});
-                                  },
-                                  onChanged: (String? e) {
-                                    dataAnalyzed = false;
-                                    setState(() {});
-                                    selectedDay = e ?? allDates.first;
-                                    pickText = "Pick Dates";
-                                    startDate = "";
-                                    endDate = "";
-                                    showReport();
-                                    setState(() {});
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: <Widget>[
-                            const Flexible(child: Text("Pick a Date Range: ")),
-                            OutlinedButton(
-                              onPressed: () {
-                                showDateRangePicker(
-                                  context: context,
-                                  firstDate: DateTime.parse(allDates.last),
-                                  lastDate: DateTime.parse(allDates.first),
-                                ).then((DateTimeRange? value) {
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          const Flexible(child: Text("Pick a date: ")),
+                          Flexible(
+                            // width: 130,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton2<String>(
+                                alignment: Alignment.center,
+                                isDense: true,
+                                isExpanded: true,
+                                itemHeight: 30,
+                                buttonWidth: 140,
+                                value: selectedDay,
+                                items: allDates
+                                    .take(30)
+                                    .map<DropdownMenuItem<String>>(
+                                        (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
+                                    .toList(),
+                                onMenuStateChange: (bool e) {
+                                  if (!e) return;
                                   dataAnalyzed = false;
                                   setState(() {});
-                                  if (value == null) return;
-                                  startDate = DateFormat('yyyy-MM-dd').format(value.start);
-                                  endDate = DateFormat('yyyy-MM-dd').format(value.end);
-                                  pickText = "$startDate\n$endDate";
+                                },
+                                onChanged: (String? e) {
+                                  dataAnalyzed = false;
+                                  setState(() {});
+                                  selectedDay = e ?? allDates.first;
+                                  pickText = "Pick Dates";
+                                  startDate = "";
+                                  endDate = "";
                                   showReport();
                                   setState(() {});
-                                });
-                              },
-                              child: Text(pickText),
-                            )
-                          ],
-                        ),
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          const Flexible(child: Text("Pick a Date Range: ")),
+                          OutlinedButton(
+                            onPressed: () {
+                              showDateRangePicker(
+                                context: context,
+                                firstDate: DateTime.parse(allDates.last),
+                                lastDate: DateTime.parse(allDates.first),
+                              ).then((DateTimeRange? value) {
+                                dataAnalyzed = false;
+                                setState(() {});
+                                if (value == null) return;
+                                startDate = DateFormat('yyyy-MM-dd').format(value.start);
+                                endDate = DateFormat('yyyy-MM-dd').format(value.end);
+                                pickText = "$startDate\n$endDate";
+                                showReport();
+                                setState(() {});
+                              });
+                            },
+                            child: Text(pickText),
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

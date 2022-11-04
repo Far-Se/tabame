@@ -127,6 +127,7 @@ class TimersWidgetState extends State<TimersWidget> {
                             (int index) => ListTile(
                                   onTap: () {
                                     globalSettings.persistentReminders.removeAt(index);
+                                    Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
                                     for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
                                       if (!QuickMenuFunctions.listeners.contains(listener)) return;
                                       listener.refreshQuickMenu();

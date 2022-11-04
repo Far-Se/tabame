@@ -13,7 +13,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
-import '../keys.dart';
+import '../win32/keys.dart';
 import '../settings.dart';
 import '../win32/win32.dart';
 import 'hotkeys.dart';
@@ -52,7 +52,7 @@ class Boxes {
       await pref.setBool("showMediaControlForApp", true);
       await pref.setBool("showTrayBar", true);
       await pref.setBool("showWeather", true);
-      await pref.setBool("showPowerShell", true);
+      await pref.setBool("showPowerShell", false);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
@@ -102,6 +102,7 @@ class Boxes {
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? globalSettings.runAsAdministrator
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? globalSettings.hideTabameOnUnfocus
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? globalSettings.hideTaskbarOnStartup
+      ..persistentReminders = pref.getStringList("persistentReminders") ?? globalSettings.persistentReminders
       ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? globalSettings.showMediaControlForApp
       ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? globalSettings.trktivitySaveAllTitles
       ..pauseSpotifyWhenPlaying = pref.getBool("pauseSpotifyWhenPlaying") ?? globalSettings.pauseSpotifyWhenPlaying
@@ -110,6 +111,7 @@ class Boxes {
       ..quickMenuPinnedWithTrayAtBottom = pref.getBool("quickMenuPinnedWithTrayAtBottom") ?? globalSettings.quickMenuPinnedWithTrayAtBottom
       ..usePowerShellAsToastNotification = pref.getBool("usePowerShellAsToastNotification") ?? globalSettings.usePowerShellAsToastNotification
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // * always after schedule
+    loadQuickTimers();
     Debug.add("Registered: Fetched All");
     if (pref.getBool("DEBUGGING") ?? false == true) {
       Debug.register(clean: false);
@@ -198,9 +200,30 @@ class Boxes {
       if (globalSettings.autoUpdate) checkForUpdates();
     }
     if (globalSettings.page == TPage.quickmenu) {
-      if (pageWatchers.where((PageWatcher element) => element.enabled).isNotEmpty) Tasks().startPageWatchers();
-      if (reminders.where((Reminder element) => element.enabled).isNotEmpty) Tasks().startReminders();
+      if (pageWatchers.any((PageWatcher element) => element.enabled)) Tasks().startPageWatchers();
+      if (reminders.any((Reminder element) => element.enabled)) Tasks().startReminders();
       Debug.add("Registered: Tasks");
+    }
+    shutDownScheduler();
+  }
+
+  static Timer? shutDownTimer;
+  static void shutDownScheduler() {
+    if ((Boxes.pref.getBool("isShutDownScheduled") ?? false) == true) {
+      final int unix = Boxes.pref.getInt("shutDownUnix") ?? 0;
+      if (unix == 0) return;
+      final int diff = unix - DateTime.now().millisecondsSinceEpoch;
+      if (diff < 0) return;
+      shutDownTimer = Timer(Duration(milliseconds: diff), () async {
+        if ((Boxes.pref.getBool("isShutDownScheduled") ?? false) == false) return;
+        await Boxes.pref.setBool("isShutDownScheduled", false);
+        await Boxes.pref.setInt("shutDownUnix", 0);
+        if (kReleaseMode) {
+          WinUtils.runPowerShell(<String>["shutdown /s"]);
+        }
+      });
+    } else {
+      shutDownTimer?.cancel();
     }
   }
 
@@ -323,6 +346,9 @@ class Boxes {
       "TimersButton",
       "CountdownButton",
       "BookmarksButton",
+      "CustomCharsButton",
+      "ShutDownButton",
+      "CaseChangeButton",
       "CloseOnFocusLossButton",
     ];
     defaultWidgets.add("Deactivated:");
@@ -410,6 +436,7 @@ class Boxes {
     final QuickTimer quick = QuickTimer();
     quick.name = name;
     quick.endTime = DateTime.now().add(Duration(minutes: minutes));
+    quick.type = type;
     quick.timer = Timer(Duration(minutes: minutes), () {
       if (type == 0) {
         WinUtils.textToSpeech(name, repeat: -1);
@@ -423,8 +450,31 @@ class Boxes {
         );
       }
       quickTimers.remove(quick);
+      saveQuickTimers();
     });
     quickTimers.add(quick);
+    saveQuickTimers();
+  }
+
+  void saveQuickTimers() {
+    final List<Map<String, dynamic>> saveMap = <Map<String, dynamic>>[];
+    for (QuickTimer qt in quickTimers) {
+      saveMap.add(<String, dynamic>{"name": qt.name, "end": qt.endTime.millisecondsSinceEpoch, "type": qt.type});
+    }
+    Boxes.pref.setString("quickTimersList", jsonEncode(saveMap));
+  }
+
+  static void loadQuickTimers() {
+    final String? string = Boxes.pref.getString("quickTimersList");
+    if (string == null) return;
+    final List<dynamic> data = jsonDecode(string);
+    if (data.isEmpty) return;
+    for (Map<dynamic, dynamic> qt in data) {
+      final DateTime endTime = DateTime.fromMillisecondsSinceEpoch(qt["end"]);
+      final Duration minutes = endTime.difference(DateTime.now());
+      if (minutes.inMinutes < 1) return;
+      Boxes().addQuickTimer(qt["name"], minutes.inMinutes, qt["type"]);
+    }
   }
 
   static Future<int> checkForUpdates() async {
@@ -523,7 +573,8 @@ class TrktivityFilter {
 class QuickTimer {
   String name = "";
   Timer? timer;
-  DateTime? endTime;
+  DateTime endTime = DateTime.now();
+  int type = 0;
 }
 
 class Tasks {
@@ -638,6 +689,7 @@ class Tasks {
       }
       if (reminder.message.startsWith("p:")) {
         globalSettings.persistentReminders.add("$cleanMessage each ${reminder.time} minutes");
+        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
         for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
           if (!QuickMenuFunctions.listeners.contains(listener)) return;
           listener.refreshQuickMenu();
@@ -658,6 +710,7 @@ class Tasks {
       }
       if (reminder.message.startsWith("p:")) {
         globalSettings.persistentReminders.add("$cleanMessage at ${reminder.time.formatTime()}");
+        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
         for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
           if (!QuickMenuFunctions.listeners.contains(listener)) return;
           listener.refreshQuickMenu();

@@ -93,6 +93,8 @@ class TimersWidgetState extends State<TimersWidget> {
   @override
   void dispose() {
     super.dispose();
+    messageController.dispose();
+    durationController.dispose();
   }
 
   @override
@@ -278,7 +280,7 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
               children: List<Widget>.generate(
                 Boxes.quickTimers.length,
                 (int index) {
-                  final Duration diff = DateTime.now().difference(Boxes.quickTimers[index].endTime ?? DateTime.now());
+                  final Duration diff = DateTime.now().difference(Boxes.quickTimers[index].endTime);
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,

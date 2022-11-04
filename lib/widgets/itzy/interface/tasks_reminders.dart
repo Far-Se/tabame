@@ -98,7 +98,6 @@ class TasksRemindersState extends State<TasksReminders> {
                             } else {
                               reminder.message = value;
                             }
-                            print(reminder);
                             // reminder.message = value;
                             await updateReminders();
                             if (mounted) setState(() {});

@@ -11,7 +11,7 @@ import 'package:win32/win32.dart' hide Point;
 
 import 'package:tabamewin32/tabamewin32.dart';
 
-import '../keys.dart';
+import '../win32/keys.dart';
 import '../settings.dart';
 import '../win32/mixed.dart';
 import '../win32/win32.dart';
@@ -466,6 +466,11 @@ class HotKeyInfo {
       await WinUtils.screenCapture();
       WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot");
     },
+    // "QuickFancyShot": () async {
+    //   QuickMenuFunctions.toggleQuickMenu(visible: false);
+    //   await WinUtils.screenCapture();
+    //   FancyShot().quickCapture();
+    // },
     "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
     "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),

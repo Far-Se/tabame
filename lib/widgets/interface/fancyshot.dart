@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 // import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
@@ -1078,5 +1079,187 @@ class FancyShotProfile {
         watermark.hashCode ^
         width.hashCode ^
         height.hashCode;
+  }
+}
+
+class FancyShot {
+  img.Image? photo;
+  Uint8List? capture;
+  Color? bgColor;
+
+  late FancyShotProfile filters;
+  final List<FancyShotProfile> profiles = Boxes.getSavedMap<FancyShotProfile>(FancyShotProfile.fromJson, "fancyShotProfile");
+  String? profile = Boxes.pref.getString("fancyshot");
+  final WinClipboard winClipboard = WinClipboard();
+
+  bool wasInitialized = false;
+  Future<void> init() async {
+    if (wasInitialized) return;
+    wasInitialized = true;
+    await initializeGDI();
+    if (profile == null) return;
+    final int i = profiles.indexWhere((FancyShotProfile element) => element.name == profile);
+    if (i == -1) return;
+    filters = profiles[i].copyWith();
+  }
+
+  Future<void> quickCapture() async {
+    await init();
+    loadCaptureFile();
+
+    ScreenshotController screenshotController = ScreenshotController();
+
+    final Uint8List output = await screenshotController.captureFromWidget(Material(
+      type: MaterialType.transparency,
+      child: ClipRect(
+        child: Container(
+          width: photo!.width.toDouble(),
+          height: photo!.height.toDouble(),
+          padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
+          decoration: filters.backgroundType == BackgroundType.stock
+              ? BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(filters.backgroundImage),
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : filters.backgroundType == BackgroundType.self
+                  ? BoxDecoration(
+                      image: DecorationImage(
+                        image: MemoryImage(capture!),
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : filters.backgroundType == BackgroundType.custom
+                      ? BoxDecoration(
+                          image: File(filters.backgroundImage).existsSync()
+                              ? DecorationImage(
+                                  image: FileImage(File(filters.backgroundImage)),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        )
+                      : const BoxDecoration(color: Colors.transparent),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: filters.backgroundBlur,
+              sigmaY: filters.backgroundBlur,
+            ),
+            child: Transform(
+              transform: filters.skewX != 0 && filters.skewY != 0
+                  ? (Matrix4.identity()
+                    ..scaled(0.1, 0.1, 0.1)
+                    ..setEntry(3, 2, filters.skewPerspective)
+                    ..rotateX(0.1 * filters.skewY)
+                    ..rotateY(-0.1 * filters.skewX))
+                  : Matrix4.identity(),
+              filterQuality: FilterQuality.high,
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
+                        child: FittedBox(
+                          alignment: Alignment.center,
+                          // fit: BoxFit.fill,
+                          child: Stack(
+                            children: <Widget>[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
+                                  boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
+                                      ? <BoxShadow>[
+                                          BoxShadow(
+                                            offset: const Offset(3, 3),
+                                            spreadRadius: filters.shadowSpread,
+                                            blurRadius: filters.shadowRadius,
+                                            color: const Color.fromRGBO(0, 0, 0, 0.5),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(filters.borderRadius),
+                                  child: Image.memory(
+                                    capture!,
+                                    fit: BoxFit.contain,
+                                    width: photo!.width.toDouble(),
+                                    height: photo!.height.toDouble(),
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Transform.translate(
+                                  offset: const Offset(0, 25),
+                                  child: Transform(
+                                    transform: Matrix4.skewX(-0.2),
+                                    child: Text(
+                                      filters.watermark,
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 17,
+                                        shadows: <Shadow>[Shadow(blurRadius: 1, color: Colors.black.withOpacity(0.7))],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                    ],
+                  ),
+                  if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    final String path = "${WinUtils.getTempFolder()}/copy.png";
+    File(path).writeAsBytesSync(output);
+    await winClipboard.copyImageToClipboard(path);
+    Beep(1000, 200);
+    Beep(500, 200);
+    Beep(200, 200);
+  }
+
+  void loadCaptureFile() async {
+    final String temp = WinUtils.getTempFolder();
+    if (File("$temp\\capture.png").existsSync()) {
+      capture = File("$temp\\capture.png").readAsBytesSync();
+      photo = img.decodeImage(capture!);
+      int pixel32 = photo!.getPixelSafe(0, 0);
+      int hex = abgrToArgb(pixel32);
+      bgColor = Color(hex);
+    } else {
+      capture = null;
+    }
+  }
+
+  int abgrToArgb(int argbColor) {
+    int r = (argbColor >> 16) & 0xFF;
+    int b = argbColor & 0xFF;
+    return (argbColor & 0xFF00FF00) | (b << 16) | r;
   }
 }

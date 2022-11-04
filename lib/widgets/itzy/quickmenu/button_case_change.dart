@@ -2,19 +2,19 @@ import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
 
-class BookmarksButton extends StatefulWidget {
-  const BookmarksButton({Key? key}) : super(key: key);
+class CaseChangeButton extends StatefulWidget {
+  const CaseChangeButton({Key? key}) : super(key: key);
   @override
-  BookmarksButtonState createState() => BookmarksButtonState();
+  CaseChangeButtonState createState() => CaseChangeButtonState();
 }
 
-class BookmarksButtonState extends State<BookmarksButton> {
+class CaseChangeButtonState extends State<CaseChangeButton> {
   @override
   void initState() {
     super.initState();
@@ -31,7 +31,7 @@ class BookmarksButtonState extends State<BookmarksButton> {
       width: 20,
       height: double.maxFinite,
       child: InkWell(
-        child: const Tooltip(message: "Bookmarks", child: Icon(Icons.folder_copy_outlined)),
+        child: const Tooltip(message: "Case Change", child: Icon(Icons.text_fields_rounded)),
         onTap: () async {
           showModalBottomSheet<void>(
             context: context,
@@ -78,8 +78,20 @@ class TimersWidget extends StatefulWidget {
   TimersWidgetState createState() => TimersWidgetState();
 }
 
+enum Case {
+  camel,
+  pascal,
+  snake,
+  kebab,
+  title,
+  upper,
+  lower,
+}
+
 class TimersWidgetState extends State<TimersWidget> {
   final List<BookmarkGroup> bookmarks = Boxes().bookmarks;
+
+  String info = "";
   @override
   void initState() {
     bookmarks;
@@ -123,50 +135,57 @@ class TimersWidgetState extends State<TimersWidget> {
               type: MaterialType.transparency,
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: bookmarks.isEmpty
-                    ? const Text("You have no bookmarks")
-                    : Column(
+                child: FutureBuilder<ClipboardData?>(
+                    future: Clipboard.getData("text/plain"),
+                    builder: (BuildContext context, AsyncSnapshot<ClipboardData?> snapshot) {
+                      if (!snapshot.hasData) return Container(child: const Text("Clipboard is empty, copy some text first!"));
+                      if (snapshot.data == null) return Container(child: const Text("Clipboard is empty, copy some text first!"));
+                      final String clipboard = snapshot.data?.text ?? "";
+                      if (clipboard.isEmpty) return Container(child: const Text("Clipboard is empty, copy some text first!"));
+                      return Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          ...List<Widget>.generate(
-                            bookmarks.length,
-                            (int index) => Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: <Widget>[
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
-                                  child: Text(
-                                    "${bookmarks[index].emoji} ${bookmarks[index].title} (${bookmarks[index].bookmarks.length})",
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                ...List<Widget>.generate(
-                                    bookmarks[index].bookmarks.length,
-                                    (int mark) => InkWell(
-                                          onTap: () {
-                                            WinUtils.open(bookmarks[index].bookmarks[mark].stringToExecute, parseParamaters: true);
-                                            QuickMenuFunctions.toggleQuickMenu(visible: false);
-                                            Navigator.of(context).pop();
-                                          },
-                                          child: Text(
-                                            "${bookmarks[index].bookmarks[mark].emoji} ${bookmarks[index].bookmarks[mark].title}",
-                                            style: const TextStyle(fontSize: 16),
-                                          ),
-                                        )),
-                                const SizedBox(height: 10),
-                                const Divider(height: 3, thickness: 1),
-                              ],
-                            ),
+                          TextButton(onPressed: () => convertTo(Case.camel), child: const Text("Convert to camelCase")),
+                          TextButton(onPressed: () => convertTo(Case.pascal), child: const Text("Convert to PascalCase")),
+                          TextButton(onPressed: () => convertTo(Case.snake), child: const Text("Convert to snake_case")),
+                          TextButton(onPressed: () => convertTo(Case.kebab), child: const Text("Convert to kebab-case")),
+                          TextButton(onPressed: () => convertTo(Case.title), child: const Text("Convert to Title Case")),
+                          TextButton(onPressed: () => convertTo(Case.upper), child: const Text("Convert to UPPERCASE")),
+                          TextButton(onPressed: () => convertTo(Case.lower), child: const Text("Convert to lowercase")),
+                          Text(info),
+                          TextField(
+                            maxLines: null,
+                            controller: TextEditingController(text: clipboard),
                           )
                         ],
-                      ),
+                      );
+                    }),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> convertTo(Case type) async {
+    final String text = (await Clipboard.getData("text/plain"))?.text ?? "";
+    if (text.isEmpty) return;
+    const String regex = r"([\w_-]{2,})";
+    if (!RegExp(regex).hasMatch(text)) {
+      info = "No matches!";
+      if (!mounted) return;
+      setState(() {});
+      return;
+    }
+
+    final Iterable<RegExpMatch> matches = RegExp(regex).allMatches(text);
+    for (RegExpMatch x in matches) {
+      print(x.group(1));
+      // switch (type) {
+      //   case Case.camel:
+      // }
+    }
   }
 }

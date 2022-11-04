@@ -12,7 +12,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:http/http.dart' as http;
 import '../models/classes/boxes.dart';
 import '../models/classes/saved_maps.dart';
-import '../models/keys.dart';
+import '../models/win32/keys.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
@@ -462,7 +462,7 @@ class QuickRunState extends State<QuickRun> {
     } else if (currentRun == "bookmarks") {
       if (result.actions.isEmpty) return;
       regainFocus();
-      WinUtils.open(result.actions.values.elementAt(0));
+      WinUtils.open(result.actions.values.elementAt(0), parseParamaters: true);
       QuickMenuFunctions.toggleQuickMenu(visible: false);
     }
   }

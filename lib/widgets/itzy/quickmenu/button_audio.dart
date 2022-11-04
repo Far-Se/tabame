@@ -7,7 +7,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
-import '../../../models/keys.dart';
+import '../../../models/win32/keys.dart';
 import '../../../models/settings.dart';
 import 'widget_audio.dart';
 

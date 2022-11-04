@@ -18,7 +18,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../globals.dart';
-import '../keys.dart';
+import 'keys.dart';
 import '../settings.dart';
 import 'imports.dart';
 import 'mixed.dart';
@@ -371,6 +371,7 @@ class Win32 {
     windowSize.ref.cx = 300;
     windowSize.ref.cy = Globals.heights.allSummed.toInt();
     if (globalSettings.showQuickMenuAtTaskbarLevel == false) windowSize.ref.cy += 30;
+    if (globalSettings.quickMenuPinnedWithTrayAtBottom == true) windowSize.ref.cy += 30;
     if (windowSize.ref.cy == 0) windowSize.ref.cy = 300;
 
     CalculatePopupWindowPosition(anchorPoint, windowSize, flags, nullptr, popupWindowPosition);
@@ -378,6 +379,7 @@ class Win32 {
     vertical = popupWindowPosition.ref.top.toDouble();
 
     if (globalSettings.showQuickMenuAtTaskbarLevel == true) vertical -= 30;
+    if (globalSettings.quickMenuPinnedWithTrayAtBottom == false) vertical -= 30;
     await WindowManager.instance.setPosition(Offset(horizontal + 1, vertical));
     // SetForegroundWindow(hWnd);
     // WindowManager.instance.blur();
@@ -648,53 +650,64 @@ class WinUtils {
 
   static void open(String path, {String? arguments, bool parseParamaters = false, bool userpowerShell = false}) {
     if (userpowerShell && arguments == null && !parseParamaters && globalSettings.runAsAdministrator && !path.startsWith("http")) {
-      //! jesus fuckin christ microsoft is dumb as fuck.
       //! you can gain admin priv with one command, but there is no command to de-elevate yourself or app you are launching.
       //! only way I've found is to start powershell that starts explorer THAT starts the file.
       runPowerShell(<String>['explorer.exe "$path"']);
 
-      /*$newProc = new-object System.Diagnostics.ProcessStartInfo "PowerShell"
-# Specify what to run, you need the full path after explorer.exe
-$newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-[System.Diagnostics.Process]::Start($newProc)*/
-      // io.Process.run("explorer.exe", <String>['"$path"']);
-      // io.Process.run("runas", <String>["/trustlevel:0x20000", '"$path"']);
-      // ShellExecute(NULL, TEXT("runas"), TEXT(path), TEXT("/trustlevel:0x20000"), nullptr, SW_SHOWNORMAL);
+/*  //? testing every method, didnt work
+       $newProc = new-object System.Diagnostics.ProcessStartInfo "PowerShell"
+      # Specify what to run, you need the full path after explorer.exe
+      $newProc.Arguments = "explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+      [System.Diagnostics.Process]::Start($newProc)
+      io.Process.run("explorer.exe", <String>['"$path"']);
+      io.Process.run("runas", <String>["/trustlevel:0x20000", '"$path"']);
+      ShellExecute(NULL, TEXT("runas"), TEXT(path), TEXT("/trustlevel:0x20000"), nullptr, SW_SHOWNORMAL);
 
-      // io.Process.run("explorer.exe", <String>['"$path"']);
+      io.Process.run("explorer.exe", <String>['"$path"']);
 
-      // return;
-      // ShellExecute(hwnd, lpOperation, lpFile, lpParameters, lpDirectory, nShowCmd)
+      return;
+      ShellExecute(hwnd, lpOperation, lpFile, lpParameters, lpDirectory, nShowCmd)
 
-      // final io.File vbs = File("${getTabameSettingsFolder()}\\bat.vbs");
-      // if (!vbs.existsSync()) {
-      //   vbs.writeAsStringSync('Set shell = CreateObject("WScript.Shell")\nshell.Run "run_aux.bat"');
-      // }
-      // final io.File bat = File("${getTabameSettingsFolder()}\\vbs.bat");
-      // if (!bat.existsSync()) {
-      //   bat.writeAsStringSync("@echo off\npushd %~dp0\ncscript bat.vbs");
-      // }
-      // final String run = "${getTabameSettingsFolder()}\\run_aux.bat";
-      // File(run).writeAsStringSync('START "" "$path"');
+      final io.File vbs = File("${getTabameSettingsFolder()}\\bat.vbs");
+      if (!vbs.existsSync()) {
+        vbs.writeAsStringSync('Set shell = CreateObject("WScript.Shell")\nshell.Run "run_aux.bat"');
+      }
+      final io.File bat = File("${getTabameSettingsFolder()}\\vbs.bat");
+      if (!bat.existsSync()) {
+        bat.writeAsStringSync("@echo off\npushd %~dp0\ncscript bat.vbs");
+      }
+      final String run = "${getTabameSettingsFolder()}\\run_aux.bat";
+      File(run).writeAsStringSync('START "" "$path"');
 
-      // io.Process.run("${getTabameSettingsFolder()}\\vbs.bat", <String>[]);
-      // runPowerShell(['-c', '"$path"']);
-      // io.Process.run(
-      //   "powershell",
-      //   <String>['-c "$path"'],
-      //   // includeParentEnvironment: false,
-      //   runInShell: true,
-      // );
-      // WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);
+      io.Process.run("${getTabameSettingsFolder()}\\vbs.bat", <String>[]);
+      runPowerShell(['-c', '"$path"']);
+      io.Process.run(
+        "powershell",
+        <String>['-c "$path"'],
+        // includeParentEnvironment: false,
+        runInShell: true,
+      );
+      WinUtils.runPowerShell(<String>['Invoke-Item "$path"']);  
+*/
       return;
     }
     if (parseParamaters) {
       final RegExp reg = RegExp(r"^([a-z0-9-_]+) (.*?)$");
       if (reg.hasMatch(path)) {
         final RegExpMatch out = reg.firstMatch(path)!;
-        ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
+        if (!globalSettings.runAsAdministrator) {
+          ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
+          return;
+        }
+        final String fileOpen = "${WinUtils.getTabameSettingsFolder()}\\open.vbs";
+        File(fileOpen).writeAsStringSync("""
+Dim objShell
+Set objShell = CreateObject("Shell.Application")
+Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)}", "", "open", ${out.group(1) == "code" ? 0 : 1})""");
+        runPowerShell(<String>['explorer.exe "$fileOpen"']);
       } else {
-        ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+        // ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+        runPowerShell(<String>['explorer.exe "$path"']);
       }
     } else {
       ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, path == "code" ? SW_HIDE : SW_SHOWNORMAL);

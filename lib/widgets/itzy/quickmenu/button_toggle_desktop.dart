@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
-import '../../../models/keys.dart';
+import '../../../models/win32/keys.dart';
 
 class ToggleDesktopButton extends StatelessWidget {
   const ToggleDesktopButton({Key? key}) : super(key: key);

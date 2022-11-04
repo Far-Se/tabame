@@ -544,7 +544,6 @@ This can use this when presets do not give you enough flexibility.
                                                     predefinedSizes.removeAt(index);
                                                     Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
                                                     setState(() {});
-                                                    print("removed $index, ${predefinedSizes.length}");
                                                   },
                                                   icon: const Icon(Icons.delete),
                                                   splashRadius: 20,

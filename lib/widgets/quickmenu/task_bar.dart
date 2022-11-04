@@ -15,7 +15,7 @@ import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import '../../models/keys.dart';
+import '../../models/win32/keys.dart';
 import '../../models/globals.dart';
 import '../widgets/info_text.dart';
 
@@ -616,7 +616,11 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                           children: <Widget>[
                             Expanded(
                               child: InkWell(
-                                onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false),
+                                onTap: () async {
+                                  await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                  Future<void>.delayed(
+                                      const Duration(milliseconds: 200), () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false));
+                                },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
                                   child: Row(
@@ -636,7 +640,11 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                             ),
                             Expanded(
                               child: InkWell(
-                                onTap: () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false),
+                                onTap: () async {
+                                  await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                  Future<void>.delayed(
+                                      const Duration(milliseconds: 200), () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false));
+                                },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
                                   child: Row(

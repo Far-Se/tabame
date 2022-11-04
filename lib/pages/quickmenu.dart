@@ -12,7 +12,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/saved_maps.dart';
-import '../models/keys.dart';
+import '../models/win32/keys.dart';
 import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../widgets/itzy/quickmenu/widget_audio.dart';
@@ -75,18 +75,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     WinHotkeys.update();
     if (globalSettings.trktivityEnabled) enableTrcktivity(globalSettings.trktivityEnabled);
     Globals.changingPages = false;
-    //!RELEASE MODE
-    if (1 + 1 == 3 && !kDebugMode) {
-      changeHeightTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) async {
-        if (Globals.isWindowActive || globalSettings.quickRunState != 0) return;
-        final double newHeight = Globals.heights.allSummed + 80;
-        if (lastHeight != newHeight) {
-          if (!mounted) return;
-          await windowManager.setSize(Size(300, newHeight));
-          lastHeight = newHeight;
-        }
-      });
-    }
     if (globalSettings.trktivityEnabled) {
       Timer.periodic(const Duration(seconds: 15), (Timer timer) {
         if (trktivityIdleState == 0) {
@@ -98,9 +86,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       });
     }
     Debug.add("QuickMenu: init");
-    /* WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Boxes.pref.setBool("initializing", true);
-    }); */
   }
 
   @override

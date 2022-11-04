@@ -35,7 +35,7 @@ class Settings {
   bool isWindows10 = false;
   bool previewTheme = false;
   bool volumeSetBack = false;
-  bool showPowerShell = true;
+  bool showPowerShell = false;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool trktivityEnabled = false;
@@ -47,7 +47,7 @@ class Settings {
   bool pauseSpotifyWhenPlaying = true;
   bool pauseSpotifyWhenNewSound = false;
   bool showQuickMenuAtTaskbarLevel = true;
-  bool quickMenuPinnedWithTrayAtBottom = false;
+  bool quickMenuPinnedWithTrayAtBottom = true;
   bool usePowerShellAsToastNotification = false;
   String customLogo = "";
   String customSpash = "";

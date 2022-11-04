@@ -4,7 +4,7 @@ import 'package:win32/win32.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
-import '../models/keys.dart';
+import '../models/win32/keys.dart';
 import '../models/settings.dart';
 import '../models/win32/imports.dart';
 import '../models/win32/mixed.dart';
@@ -81,7 +81,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
               } else if (item.type == "Open") {
                 return InkWell(
                   onTap: () {
-                    WinUtils.open(item.value);
+                    WinUtils.open(item.value, parseParamaters: true);
                   },
                   child: ListItem(title: item.name),
                 );

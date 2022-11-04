@@ -8,8 +8,10 @@ import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_always_awake.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_bookmarks.dart';
+import '../itzy/quickmenu/button_case_change.dart';
 import '../itzy/quickmenu/button_change_theme.dart';
 import '../itzy/quickmenu/button_changelog.dart';
+import '../itzy/quickmenu/button_chars.dart';
 import '../itzy/quickmenu/button_closeonfocus.dart';
 import '../itzy/quickmenu/button_countdown.dart';
 import '../itzy/quickmenu/button_fancyshot.dart';
@@ -21,6 +23,7 @@ import '../itzy/quickmenu/button_open_settings.dart';
 import '../itzy/quickmenu/button_persistent_reminders.dart';
 import '../itzy/quickmenu/button_pin_window.dart';
 import '../itzy/quickmenu/button_quickactions_menu.dart';
+import '../itzy/quickmenu/button_shutdown.dart';
 import '../itzy/quickmenu/button_spotify.dart';
 import '../itzy/quickmenu/button_task_manager.dart';
 import '../itzy/quickmenu/button_timers.dart';
@@ -48,12 +51,9 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
 
   @override
   void refreshQuickMenu() {
-    print("refreshed");
     if (mounted) {
       setState(() {});
-    } else {
-      print("ce plm");
-    }
+    } else {}
   }
 
   @override
@@ -76,6 +76,9 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
       "TimersButton": const TimersButton(),
       "CountdownButton": const CountdownButton(),
       "BookmarksButton": const BookmarksButton(),
+      "CustomCharsButton": const CustomCharsButton(),
+      "ShutDownButton": const ShutDownButton(),
+      "CaseChangeButton": const CaseChangeButton(),
       "CloseOnFocusLossButton": const CloseOnFocusLossButton(),
     };
     List<Widget> showWidgets = <Widget>[];

@@ -4,7 +4,7 @@ import 'dart:ffi';
 import 'package:win32/win32.dart';
 import 'package:ffi/ffi.dart';
 
-import 'win32/imports.dart';
+import 'imports.dart';
 
 enum KeySentMode {
   normal,

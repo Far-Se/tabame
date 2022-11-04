@@ -49,7 +49,7 @@ int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
 // using namespace std;
 
-//#h green
+// #h green
 ///
 LRESULT CALLBACK HandleKeyboardHook(int, WPARAM, LPARAM);
 LRESULT CALLBACK HandleMouseHook(int, WPARAM, LPARAM);
@@ -696,15 +696,15 @@ VOID CALLBACK EventHook(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, L
         }
     }
 }
-//#e
-//#h red
+// #e
+// #h red
 ///!!
 ///!!
 ///!!
 ///!!
 ///!!
 ///!!
-//#e
+// #e
 //
 
 bool SaveHbitmapToPngFile(HBITMAP hbitmap,
@@ -916,7 +916,7 @@ void bagmiaspulainmatadeWindowsprost(wstring file)
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    delete[](char *) p;
+    delete[] (char *)p;
     CloseHandle(process);
 }
 
@@ -1335,24 +1335,31 @@ void ToggleTaskbar(bool visible)
     SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
 }
 
+ITaskbarList3 *taskbar_ = nullptr;
 //! VIRTUAL DESKTOP
+bool taskbarInitialized = false;
 void SetHwndSkipTaskbar(HWND hWnd, bool skip)
 {
-    ITaskbarList3 *taskbar_ = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbar_));
-    if (SUCCEEDED(hr))
+    if (!taskbarInitialized)
     {
-        taskbar_->HrInit();
-        if (!skip)
-        {
-            taskbar_->AddTab(hWnd);
-        }
-        else
-        {
-            taskbar_->DeleteTab(hWnd);
-        }
-        taskbar_->Release();
+        HRESULT res = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbar_));
+        taskbarInitialized = true;
+        if (res)
+            taskbar_->HrInit();
     }
+    // ITaskbarList3 *taskbar_ = nullptr;
+    // HRESULT hr = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbar_));
+    LPVOID lp = NULL;
+    CoInitialize(lp);
+    if (!skip)
+    {
+        taskbar_->AddTab(hWnd);
+    }
+    else
+    {
+        taskbar_->DeleteTab(hWnd);
+    }
+    // taskbar_->Release();
 }
 //! Hooks
 LRESULT CALLBACK
@@ -1584,7 +1591,7 @@ namespace tabamewin32
             appendLineToFile(debugFile, method_name);
         //?
 
-        //#h white
+        // #h white
         //? Audio
         if (method_name.compare("enumAudioDevices") == 0)
         {
@@ -1712,7 +1719,7 @@ namespace tabamewin32
             }
             result->Success(flutter::EncodableValue(map));
         }
-        //#e
+        // #e
         //? Utilities
         else if (method_name.compare("iconToBytes") == 0)
         {
@@ -1853,7 +1860,7 @@ namespace tabamewin32
             ToggleTaskbar(state);
             result->Success(flutter::EncodableValue(true));
         }
-        //#h white
+        // #h white
         //? WIN HOOKS
         else if (method_name.compare("installHooks") == 0)
         {
@@ -1923,7 +1930,7 @@ namespace tabamewin32
                 mouseWatchButtons[button] = method == "add" ? 1 : 0;
             result->Success(flutter::EncodableValue(true));
         }
-        //#e
+        // #e
         //? ACRYLIC
         else if (method_name.compare("setTransparent") == 0)
         {
@@ -2083,7 +2090,7 @@ namespace tabamewin32
             std::string out = BrowseFolder();
             result->Success(flutter::EncodableValue(out));
         }
-        //#h white
+        // #h white
         else if (method_name.compare("hotkeyAdd") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -2196,7 +2203,7 @@ namespace tabamewin32
             result->Success(flutter::EncodableValue(true));
         }
 
-        //#e
+        // #e
         else if (method_name.compare("shellOpen") == 0)
         {
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -2252,5 +2259,5 @@ namespace tabamewin32
         if (debugging)
             appendLineToFile(debugFile, "-done");
     }
-    //#e
+    // #e
 } // namespace tabamewin32

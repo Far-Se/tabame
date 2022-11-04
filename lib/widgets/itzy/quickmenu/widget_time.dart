@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../models/keys.dart';
+import '../../../models/win32/keys.dart';
 import '../../../models/settings.dart';
 
 class TimeWidget extends StatefulWidget {

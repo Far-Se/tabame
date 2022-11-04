@@ -828,7 +828,6 @@ class HotKeyActionState extends State<HotKeyAction> {
                       variableCheck = !variableCheck;
                       if (widget.hotkey.variableCheck[0].isNotEmpty) variableCheck = true;
                       setState(() {});
-                      print(variableCheck);
                     },
                     value: variableCheck,
                     text: "Variable Check"),

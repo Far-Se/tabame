@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../../../models/keys.dart';
+import '../../../models/win32/keys.dart';
 
 class MediaControlButton extends StatefulWidget {
   const MediaControlButton({Key? key}) : super(key: key);

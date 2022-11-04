@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/keys.dart';
+import '../../../models/win32/keys.dart';
 
 class SimulateKeyButton extends StatelessWidget {
   final IconData icon;
