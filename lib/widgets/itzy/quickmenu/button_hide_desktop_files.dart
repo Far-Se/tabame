@@ -7,6 +7,7 @@ class HideDesktopFilesButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    //return QuickActionItem(message: "Toggle Desktop Files", icon: const Icon(Icons.hide_image_outlined), onTap: () => WinUtils.toggleDesktopFiles());
     return SizedBox(
       width: 20,
       height: double.maxFinite,

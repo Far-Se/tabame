@@ -17,9 +17,17 @@ enum Pages {
   interface,
   run,
   views,
+  quickActions,
+}
+
+enum QuickMenuPage {
+  quickMenu,
+  quickRun,
+  quickActions,
 }
 
 class Globals {
+  static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = false;
   static bool debugHotkeys = false;
   static String version = "1.2";

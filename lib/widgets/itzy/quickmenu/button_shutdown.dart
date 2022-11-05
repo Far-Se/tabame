@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../widgets/info_text.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class ShutDownButton extends StatefulWidget {
   const ShutDownButton({Key? key}) : super(key: key);
@@ -28,47 +29,44 @@ class ShutDownButtonState extends State<ShutDownButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Schedule Shutdown", child: Icon(Icons.power_settings_new_rounded)),
-        onTap: () async {
-          showModalBottomSheet<void>(
-            context: context,
-            anchorPoint: const Offset(100, 200),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.transparent,
-            constraints: const BoxConstraints(maxWidth: 280),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            enableDrag: true,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: Listener(
-                    onPointerDown: (PointerDownEvent event) {
-                      if (event.kind == PointerDeviceKind.mouse) {
-                        if (event.buttons == kSecondaryMouseButton) {
-                          Navigator.pop(context);
-                        }
+    return QuickActionItem(
+      message: "Schedule Shutdown",
+      icon: const Icon(Icons.power_settings_new_rounded),
+      onTap: () async {
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Listener(
+                  onPointerDown: (PointerDownEvent event) {
+                    if (event.kind == PointerDeviceKind.mouse) {
+                      if (event.buttons == kSecondaryMouseButton) {
+                        Navigator.pop(context);
                       }
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.all(2.0),
-                      child: TimersWidget(),
-                    ),
+                    }
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: TimersWidget(),
                   ),
                 ),
-              );
-            },
-          );
-          return;
-        },
-      ),
+              ),
+            );
+          },
+        );
+        return;
+      },
     );
   }
 }
@@ -89,6 +87,11 @@ class TimersWidgetState extends State<TimersWidget> {
   void initState() {
     isShutDownScheduled = Boxes.pref.getBool("isShutDownScheduled") ?? false;
     shutDownUnix = Boxes.pref.getInt("shutDownUnix") ?? 0;
+    if (shutDownUnix != 0) {
+      final Duration diff = Duration(milliseconds: shutDownUnix - DateTime.now().millisecondsSinceEpoch);
+      hoursController.text = diff.inHours.toString().padLeft(2, '0');
+      minutesController.text = (diff.inMinutes - diff.inHours * 60).toString().padLeft(2, '0');
+    }
     super.initState();
   }
 

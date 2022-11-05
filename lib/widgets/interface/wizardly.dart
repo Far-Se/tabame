@@ -5,7 +5,7 @@ import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
-import '../widgets/mouse_scroll_widget.dart';
+import '../wizardly/hosts_editor.dart';
 import '../wizardly/rename_files.dart';
 import '../wizardly/folder_size_scan.dart';
 import '../wizardly/project_overview.dart';
@@ -34,6 +34,9 @@ class WizardlyState extends State<Wizardly> {
   @override
   void initState() {
     super.initState();
+    if (!globalSettings.args.contains("-wizardly")) {
+      pages.add(WizardPage(title: "Hosts Editor", widget: const HostsEditor(), tooltip: "Edit hosts File"));
+    }
     wizzardID = Random().nextInt(4) + 1;
   }
 
@@ -47,8 +50,6 @@ class WizardlyState extends State<Wizardly> {
     WizardPage(title: "Project Overview", widget: const ProjectOverviewWidget(), tooltip: "Count line of Code\nView project breakdown"),
     WizardPage(title: "Rename Files", widget: const FileNameWidget(), tooltip: "Rename files in bulk"),
     WizardPage(title: "Folder Size Scan", widget: const FileSizeWidget(), tooltip: "See how big folders and subfolder are"),
-    WizardPage(title: "Hosts Editor", widget: Container()),
-    // WizardPage(title: "Mp3 Tags", widget: Container()),
   ];
   int currentPage = 0;
   @override
@@ -69,21 +70,15 @@ class WizardlyState extends State<Wizardly> {
                   child: Transform.translate(offset: const Offset(10, 0), child: Transform.scale(scale: 4, child: Image.asset("resources/wizzard$wizzardID.png"))),
                 ),
                 Expanded(
-                  child: MouseScrollWidget(
-                    child: Container(
-                      width: 900,
-                      child: AnimatedButtonBar(
-                        foregroundColor: Color(globalSettings.theme.accentColor),
-                        radius: 8.0,
-                        padding: const EdgeInsets.all(16.0),
-                        invertedSelection: true,
-                        children: List<ButtonBarEntry>.generate(
-                            pages.length,
-                            (int i) => ButtonBarEntry(
-                                onTap: () => setState(() => currentPage = i),
-                                child: Tooltip(message: pages[i].tooltip, verticalOffset: 20, child: Text(pages[i].title)))),
-                      ),
-                    ),
+                  child: AnimatedButtonBar(
+                    foregroundColor: Color(globalSettings.theme.accentColor),
+                    radius: 8.0,
+                    padding: const EdgeInsets.all(16.0),
+                    invertedSelection: true,
+                    children: List<ButtonBarEntry>.generate(
+                        pages.length,
+                        (int i) => ButtonBarEntry(
+                            onTap: () => setState(() => currentPage = i), child: Tooltip(message: pages[i].tooltip, verticalOffset: 20, child: Text(pages[i].title)))),
                   ),
                 ),
               ],

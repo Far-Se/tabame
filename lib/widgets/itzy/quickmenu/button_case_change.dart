@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class CaseChangeButton extends StatefulWidget {
   const CaseChangeButton({Key? key}) : super(key: key);
@@ -27,47 +28,44 @@ class CaseChangeButtonState extends State<CaseChangeButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Case Change", child: Icon(Icons.text_fields_rounded)),
-        onTap: () async {
-          showModalBottomSheet<void>(
-            context: context,
-            anchorPoint: const Offset(100, 200),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.transparent,
-            constraints: const BoxConstraints(maxWidth: 280),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            enableDrag: true,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: Listener(
-                    onPointerDown: (PointerDownEvent event) {
-                      if (event.kind == PointerDeviceKind.mouse) {
-                        if (event.buttons == kSecondaryMouseButton) {
-                          Navigator.pop(context);
-                        }
+    return QuickActionItem(
+      message: "Case Change",
+      icon: const Icon(Icons.text_fields_rounded),
+      onTap: () async {
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Listener(
+                  onPointerDown: (PointerDownEvent event) {
+                    if (event.kind == PointerDeviceKind.mouse) {
+                      if (event.buttons == kSecondaryMouseButton) {
+                        Navigator.pop(context);
                       }
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.all(2.0),
-                      child: TimersWidget(),
-                    ),
+                    }
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: TimersWidget(),
                   ),
                 ),
-              );
-            },
-          );
-          return;
-        },
-      ),
+              ),
+            );
+          },
+        );
+        return;
+      },
     );
   }
 }
@@ -86,6 +84,85 @@ enum Case {
   title,
   upper,
   lower,
+}
+
+class StringUtils {
+  static bool isLowerCase(String s) {
+    return s == s.toLowerCase();
+  }
+
+  ///
+  /// Checks if the given string [s] is upper case
+  ///
+  static bool isUpperCase(String s) {
+    return s == s.toUpperCase();
+  }
+
+  static String camelCaseToUpperUnderscore(String s) {
+    StringBuffer sb = StringBuffer();
+    bool first = true;
+    for (int rune in s.runes) {
+      String char = String.fromCharCode(rune);
+      if (isUpperCase(char) && !first) {
+        sb.write('_');
+        sb.write(char.toUpperCase());
+      } else {
+        first = false;
+        sb.write(char.toUpperCase());
+      }
+    }
+    return sb.toString();
+  }
+
+  ///
+  /// Transfers the given String [s] from camcelCase to lowerCaseUnderscore
+  /// Example : helloWorld => hello_world
+  ///
+  static String camelCaseToLowerUnderscore(String s) {
+    StringBuffer sb = StringBuffer();
+    bool first = true;
+    for (int rune in s.runes) {
+      String char = String.fromCharCode(rune);
+      if (isUpperCase(char) && !first) {
+        if (char != '_') {
+          sb.write('_');
+        }
+        sb.write(char.toLowerCase());
+      } else {
+        first = false;
+        sb.write(char.toLowerCase());
+      }
+    }
+    return sb.toString();
+  }
+
+  static String capitalize(String s, {bool allWords = false}) {
+    if (s.isEmpty) {
+      return '';
+    }
+    s = s.trim();
+    if (allWords) {
+      List<String> words = s.split(' ');
+      List<String> capitalized = <String>[];
+      for (String w in words) {
+        capitalized.add(capitalize(w));
+      }
+      return capitalized.join(' ');
+    } else {
+      return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+    }
+  }
+
+  static String toPascalCase(String s) {
+    final List<String> separatedWords = s.split(RegExp(r'[!@#<>?":`~;[\]\\|=+)(*&^%-\s_]+'));
+    String newString = '';
+
+    for (final String word in separatedWords) {
+      newString += word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }
+
+    return newString;
+  }
 }
 
 class TimersWidgetState extends State<TimersWidget> {
@@ -153,11 +230,8 @@ class TimersWidgetState extends State<TimersWidget> {
                           TextButton(onPressed: () => convertTo(Case.title), child: const Text("Convert to Title Case")),
                           TextButton(onPressed: () => convertTo(Case.upper), child: const Text("Convert to UPPERCASE")),
                           TextButton(onPressed: () => convertTo(Case.lower), child: const Text("Convert to lowercase")),
-                          Text(info),
-                          TextField(
-                            maxLines: null,
-                            controller: TextEditingController(text: clipboard),
-                          )
+                          Center(child: Text(info)),
+                          TextField(maxLines: null, controller: TextEditingController(text: clipboard))
                         ],
                       );
                     }),
@@ -169,23 +243,113 @@ class TimersWidgetState extends State<TimersWidget> {
     );
   }
 
-  Future<void> convertTo(Case type) async {
-    final String text = (await Clipboard.getData("text/plain"))?.text ?? "";
-    if (text.isEmpty) return;
+  Future<String> convertTo(Case type) async {
+    String text = (await Clipboard.getData("text/plain"))?.text ?? "";
+    if (text.isEmpty) return "";
     const String regex = r"([\w_-]{2,})";
     if (!RegExp(regex).hasMatch(text)) {
       info = "No matches!";
-      if (!mounted) return;
+      if (!mounted) return text;
       setState(() {});
-      return;
+      return text;
     }
 
-    final Iterable<RegExpMatch> matches = RegExp(regex).allMatches(text);
+    final Iterable<RegExpMatch> matches = RegExp(regex, caseSensitive: false).allMatches(text);
     for (RegExpMatch x in matches) {
-      print(x.group(1));
-      // switch (type) {
-      //   case Case.camel:
-      // }
+      String word = x.group(1)!;
+      switch (type) {
+        case Case.camel:
+          //camelcase
+          final RegExpMatch? camelCase = RegExp(r'[a-z][A-Z][a-z]', caseSensitive: true).firstMatch(word);
+          if (camelCase != null) {
+            word = word.toLowerCase();
+            word = word.replaceRange(camelCase.start, camelCase.end, camelCase.group(0)!);
+            break;
+          }
+          //kebab snake
+          if (word.contains(RegExp(r'([\-_])([a-z])'))) {
+            word = word.toLowerCase();
+            word = word.replaceFirstMapped(RegExp(r'([\-_])([a-z])'), (Match match) {
+              return match.group(2)!.toUpperCase();
+            });
+            break;
+          }
+          //pascal
+          if (word.startsWith(RegExp(r'[A-Z][a-z0-9]', caseSensitive: true))) {
+            final RegExpMatch? firstCase = RegExp(r'[a-z][A-Z]', caseSensitive: true).firstMatch(word);
+            word = word.toLowerCase();
+            if (firstCase != null) {
+              word = word.replaceRange(firstCase.start, firstCase.end, firstCase.group(0)!);
+            }
+            break;
+          }
+          word = word.toLowerCase();
+          break;
+        case Case.pascal:
+          //pascal
+          final RegExpMatch? pascalCase = RegExp(r'^[A-Z].*?[a-z][A-Z][a-z]', caseSensitive: true).firstMatch(word);
+          if (pascalCase != null) {
+            break;
+          }
+          //camelCase
+          final RegExpMatch? camelCase = RegExp(r'[a-z][A-Z][a-z]', caseSensitive: true).firstMatch(word);
+          if (camelCase != null) {
+            word = word.toUpperCaseFirst();
+            word = word.replaceRange(camelCase.start, camelCase.end, camelCase.group(0)!);
+
+            break;
+          }
+          //kebab snake
+          if (word.contains(RegExp(r'([\-_])([a-z])'))) {
+            word = word.toLowerCase();
+            word = word.toUpperCaseFirst();
+            word = word.replaceFirstMapped(RegExp(r'([\-_])([a-z])'), (Match match) {
+              return match.group(2)!.toUpperCase();
+            });
+            break;
+          }
+          word = word.toUpperCaseFirst();
+          break;
+        case Case.snake:
+          //camelCase pascan
+          final RegExpMatch? camelCase = RegExp(r'([a-z])([A-Z][a-z])', caseSensitive: true).firstMatch(word);
+          if (camelCase != null) {
+            word = '${word.substring(0, camelCase.start)}${camelCase.group(1)!}_${camelCase.group(2)!}${word.substring(camelCase.end)}';
+            word = word.toLowerCase();
+            break;
+          }
+          word = word.replaceAll('-', '_');
+          word = word.toLowerCase();
+          break;
+        case Case.kebab:
+          //camelCase pascan
+          final RegExpMatch? camelCase = RegExp(r'([a-z])([A-Z][a-z])', caseSensitive: true).firstMatch(word);
+          if (camelCase != null) {
+            word = '${word.substring(0, camelCase.start)}${camelCase.group(1)!}-${camelCase.group(2)!}${word.substring(camelCase.end)}';
+            word = word.toLowerCase();
+            break;
+          }
+          word = word.replaceAll('_', '-');
+          word = word.toLowerCase();
+          break;
+        case Case.title:
+          word = word.replaceAllMapped(RegExp(r'[A-Z]\w'), (Match e) => ' ${e.group(0)}');
+          word = word.replaceAll(RegExp(r'[\-_]'), ' ');
+          word = word.toUpperCaseEach();
+          word = word.trim();
+          break;
+        case Case.upper:
+          word = word.toUpperCase();
+          break;
+        case Case.lower:
+          word = word.toLowerCase();
+          break;
+      }
+      text = text.replaceFirst(x.group(1)!, word);
     }
+    Clipboard.setData(ClipboardData(text: text));
+    info = "💾 Text copied to clipboard";
+    setState(() {});
+    return text;
   }
 }

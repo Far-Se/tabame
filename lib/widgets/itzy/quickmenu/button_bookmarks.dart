@@ -7,6 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class BookmarksButton extends StatefulWidget {
   const BookmarksButton({Key? key}) : super(key: key);
@@ -27,47 +28,44 @@ class BookmarksButtonState extends State<BookmarksButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Bookmarks", child: Icon(Icons.folder_copy_outlined)),
-        onTap: () async {
-          showModalBottomSheet<void>(
-            context: context,
-            anchorPoint: const Offset(100, 200),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.transparent,
-            constraints: const BoxConstraints(maxWidth: 280),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            enableDrag: true,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: Listener(
-                    onPointerDown: (PointerDownEvent event) {
-                      if (event.kind == PointerDeviceKind.mouse) {
-                        if (event.buttons == kSecondaryMouseButton) {
-                          Navigator.pop(context);
-                        }
+    return QuickActionItem(
+      message: "Bookmarks",
+      icon: const Icon(Icons.folder_copy_outlined),
+      onTap: () async {
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Listener(
+                  onPointerDown: (PointerDownEvent event) {
+                    if (event.kind == PointerDeviceKind.mouse) {
+                      if (event.buttons == kSecondaryMouseButton) {
+                        Navigator.pop(context);
                       }
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.all(2.0),
-                      child: TimersWidget(),
-                    ),
+                    }
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: TimersWidget(),
                   ),
                 ),
-              );
-            },
-          );
-          return;
-        },
-      ),
+              ),
+            );
+          },
+        );
+        return;
+      },
     );
   }
 }

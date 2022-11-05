@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../main.dart';
 import '../../../models/settings.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class ChangeThemeButton extends StatelessWidget {
   const ChangeThemeButton({
@@ -10,17 +11,14 @@ class ChangeThemeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        onTap: () {
-          if (globalSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark) globalSettings.themeType = ThemeType.dark;
-          globalSettings.themeType = globalSettings.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
-          themeChangeNotifier.value = !themeChangeNotifier.value;
-        },
-        child: const Tooltip(message: "Change Theme", child: Icon(Icons.theater_comedy_sharp)),
-      ),
+    return QuickActionItem(
+      message: "Change Theme",
+      icon: const Icon(Icons.theater_comedy_sharp),
+      onTap: () {
+        if (globalSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark) globalSettings.themeType = ThemeType.dark;
+        globalSettings.themeType = globalSettings.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
+        themeChangeNotifier.value = !themeChangeNotifier.value;
+      },
     );
   }
 }

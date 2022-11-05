@@ -15,16 +15,17 @@
 - ..
 
 ## Feature:
-- ~~QuickRun Accent + Button~~
-- QuickRun Case Change + Button
-- ~~Shutdown Scheduler Button (save as well)~~
-- Wizardly hosts editor
+- __QuickRun Accent + Button__
+- __QuickRun Case Change + Button__
+- __Shutdown Scheduler Button (save as well)__
+- __Wizardly hosts editor__
+- __QuickActions to include all buttons__
 
 ## Change:
 - Move Window To Desktop done in $PowerShell$
-- ~~Persistent Reminders~~
-- ~~Timers save after restart~~
-- ~~Move Tasks above Trktivity~~
+- __Persistent Reminders__
+- __Timers save after restart__
+- __Move Tasks above Trktivity__
 
 # v1.2:
 

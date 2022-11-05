@@ -13,6 +13,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../main.dart';
 import '../globals.dart';
+import '../util/quick_action_list.dart';
 import '../win32/keys.dart';
 import '../settings.dart';
 import '../win32/win32.dart';
@@ -329,28 +330,7 @@ class Boxes {
   }
 
   List<String> get topBarWidgets {
-    List<String> defaultWidgets = <String>[
-      "TaskManagerButton",
-      "SpotifyButton",
-      "WorkSpaceButton",
-      "VirtualDesktopButton",
-      "ToggleTaskbarButton",
-      "PinWindowButton",
-      "MicMuteButton",
-      "AlwaysAwakeButton",
-      "ChangeThemeButton",
-      "HideDesktopFilesButton",
-      "ToggleHiddenFilesButton",
-      "QuickActionsMenuButton",
-      "FancyShotButton",
-      "TimersButton",
-      "CountdownButton",
-      "BookmarksButton",
-      "CustomCharsButton",
-      "ShutDownButton",
-      "CaseChangeButton",
-      "CloseOnFocusLossButton",
-    ];
+    List<String> defaultWidgets = quickActionsMap.keys.toList();
     defaultWidgets.add("Deactivated:");
     final List<String> topBarWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
     if (topBarWidgets.length != defaultWidgets.length) {
@@ -797,6 +777,13 @@ class QuickMenuFunctions {
       await listener.onQuickMenuToggled(visible, type);
     }
     if (visible) {
+      if (type == 3) {
+        Globals.quickMenuPage = QuickMenuPage.quickActions;
+      } else if (type == 2) {
+        Globals.quickMenuPage = QuickMenuPage.quickRun;
+      } else {
+        Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      }
       if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
         Future<void>.delayed(const Duration(milliseconds: 100), () async {
           if (center) {
@@ -813,6 +800,7 @@ class QuickMenuFunctions {
         visible = false;
       }
     } else {
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
       if (!kReleaseMode) return;
       Win32.setPosition(const Offset(-99999, -99999));
 

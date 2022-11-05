@@ -9,6 +9,7 @@ import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class WorkSpaceButton extends StatefulWidget {
   const WorkSpaceButton({Key? key}) : super(key: key);
@@ -29,43 +30,40 @@ class WorkSpaceButtonState extends State<WorkSpaceButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Workspaces", child: Icon(Icons.workspaces)),
-        onTap: () async {
-          showModalBottomSheet<void>(
-            context: context,
-            anchorPoint: const Offset(100, 200),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.transparent,
-            constraints: const BoxConstraints(maxWidth: 280),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            enableDrag: true,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: Listener(
-                    onPointerDown: (PointerDownEvent event) {
-                      if (event.kind == PointerDeviceKind.mouse) {
-                        if (event.buttons == kSecondaryMouseButton) {
-                          Navigator.pop(context);
-                        }
+    return QuickActionItem(
+      message: "Workspaces",
+      icon: const Icon(Icons.workspaces),
+      onTap: () async {
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Listener(
+                  onPointerDown: (PointerDownEvent event) {
+                    if (event.kind == PointerDeviceKind.mouse) {
+                      if (event.buttons == kSecondaryMouseButton) {
+                        Navigator.pop(context);
                       }
-                    },
-                    child: const Padding(padding: EdgeInsets.all(2.0), child: WorkspacesWidget()),
-                  ),
+                    }
+                  },
+                  child: const Padding(padding: EdgeInsets.all(2.0), child: WorkspacesWidget()),
                 ),
-              );
-            },
-          );
-        },
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

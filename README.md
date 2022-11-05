@@ -128,9 +128,14 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - Fancyshot - Screen Capture with editor.
 - Bookmarks - See your saved Bookmarks.
 - Countdown - A countdown for quick access.
-- Timers - Create Quick Timers.
+- Timers - Create Quick Timers. (v1.3:Timers save after restart)
 - Quick Actions Menu - A dedicated menu with Quick Actions.
 - Close on Focus Loss - If you want to keep QuickMenu on screen, toggle this.
+- **v1.3**
+- Custom Chars - You can save custom chars or browse different language accents or currency symbols.
+- Schedule Shutdown - Schendule a Computer shutdown at a specific hour or after a specific period.
+- Case Change - Convert text to camelCase, PascalCase, snake_case, kebab-case, UPPERCASE or lowercase
+
 
 ## **Taskbar**
 Contains your opened windows, it shows the icon, if it makes sound, if it is pinned, Monitor Number, Title, Media Control and Close button.
@@ -278,7 +283,7 @@ Tasks consists of Reminders and Page Watchers.
 
 Reminders can be repetitive or one time per day. You can set which days of the week to be active and for repetitive reminders you can set interval when the reminder is active. You can set to receive Toast Notification or Audio Notification. You can use `xNR` to repeat the message, ex `Workout x3`. 
 
-You can create Pesistent Reminders. You will see a warning sign in QuickActions QuickMenu when you receive a new Reminder notification and you need to manually click on it to remove. It's good for meds reminder.
+v1.3: You can create Pesistent Reminders. You will see a warning sign in QuickActions QuickMenu when you receive a new Reminder notification and you need to manually click on it to remove. It's good for meds reminder.
 
 Page watchers will check a link each to see if specific text exists or not. For example if you made a post on a obscure forum and want to know when you receive a reply, you can set the link, 60 second interval and `\d+ Replies` and when that string changes, you will be notified.
 
@@ -307,6 +312,9 @@ You can rename files in bulk, you can use regex but also Lists. This can be usef
 ## **Folder Size Scan**
 You can scan folders recursively and see each folder size, you can delete folders.
 
+## **Hosts Editor (v1.3)**
+You can edit hosts files directly from Tabame! You need Admin Privileges to use this.
+
 # **🧩 Views**
 Views is an alternative to PowerToys FancyZones. If presets are not what you need and you need more flexibility, you should try this feature.
 
@@ -325,6 +333,8 @@ You can register predefined sizes and access then by right clicking a window in 
 
 # **🧰 QuickActionsMenu**
 You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands.
+
+**v1.3**: QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu.
 
 # **📷 Fancyshot**
 With Fancyshot you can capture custom screenshots. You can set a background stock image, custom image, capture itself or transparency. Also you can change image padding or background padding and add a watermark.

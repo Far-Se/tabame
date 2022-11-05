@@ -113,6 +113,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
       FocusScope.of(context).requestFocus(focusNode);
       //? QuickMenu
       if (typeShown == QuickMenuTypes.quickMenu || typeShown == QuickMenuTypes.quickActions) {
+        if (typeShown == QuickMenuTypes.quickMenu) {
+          Globals.quickMenuPage = QuickMenuPage.quickMenu;
+        } else {
+          Globals.quickMenuPage = QuickMenuPage.quickActions;
+        }
+        print("wtf");
         setState(() {});
       } else if (typeShown == QuickMenuTypes.quickRun) {
         //? QuickRun
@@ -158,6 +164,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         });
       }
     } else {
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
       FocusScope.of(context).unfocus();
       globalSettings.quickRunState = 0;
       globalSettings.quickRunText = "";
@@ -444,6 +451,13 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
 
   @override
   Widget build(BuildContext context) {
+    if (typeShown == QuickMenuTypes.quickActions) {
+      Globals.quickMenuPage = QuickMenuPage.quickActions;
+    } else if (typeShown == QuickMenuTypes.quickRun) {
+      Globals.quickMenuPage = QuickMenuPage.quickRun;
+    } else {
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    }
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
     }
@@ -480,6 +494,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
         if (currentKey == PhysicalKeyboardKey.escape) {
           if (keyEvent is RawKeyUpEvent) {
+            Globals.quickMenuPage = QuickMenuPage.quickMenu;
             if (typeShown == QuickMenuTypes.quickActions) {
               typeShown = QuickMenuTypes.quickMenu;
               setState(() {});
@@ -496,6 +511,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
           theQuickRun = QuickRun(key: UniqueKey());
+          Globals.quickMenuPage = QuickMenuPage.quickRun;
           setState(() {});
         }
       },

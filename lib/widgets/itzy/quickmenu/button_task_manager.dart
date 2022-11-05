@@ -9,7 +9,8 @@ class TaskManagerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SimulateKeyButton(
+    // ignore: prefer_const_constructors
+    return SimulateKeyButton(
       icon: Icons.app_registration,
       simulateKeys: "{#CTRL}{#SHIFT}{ESC}",
       tooltip: "Open Task Manager",

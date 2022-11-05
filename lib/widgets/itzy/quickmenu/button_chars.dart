@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class CustomCharsButton extends StatefulWidget {
   const CustomCharsButton({Key? key}) : super(key: key);
@@ -76,38 +77,35 @@ class CustomCharsButtonState extends State<CustomCharsButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Custom Chars", child: Icon(Icons.format_quote)),
-        onTap: () async {
-          showModalBottomSheet<void>(
-            context: context,
-            anchorPoint: const Offset(100, 200),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.transparent,
-            constraints: const BoxConstraints(maxWidth: 280),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            enableDrag: true,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: const FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: Padding(
-                    padding: EdgeInsets.all(2.0),
-                    child: TimersWidget(),
-                  ),
+    return QuickActionItem(
+      message: "Custom Chars",
+      icon: const Icon(Icons.format_quote),
+      onTap: () async {
+        showModalBottomSheet<void>(
+          context: context,
+          anchorPoint: const Offset(100, 200),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          constraints: const BoxConstraints(maxWidth: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          enableDrag: true,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: const FractionallySizedBox(
+                heightFactor: 0.85,
+                child: Padding(
+                  padding: EdgeInsets.all(2.0),
+                  child: TimersWidget(),
                 ),
-              );
-            },
-          );
-          return;
-        },
-      ),
+              ),
+            );
+          },
+        );
+        return;
+      },
     );
   }
 }

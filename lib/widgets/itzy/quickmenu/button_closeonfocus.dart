@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/settings.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class CloseOnFocusLossButton extends StatefulWidget {
   const CloseOnFocusLossButton({Key? key}) : super(key: key);
@@ -21,15 +22,15 @@ class CloseOnFocusLossButtonState extends State<CloseOnFocusLossButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: globalSettings.hideTabameOnUnfocus
-            ? const Tooltip(message: "Hide on Focus Loss", child: Icon(Icons.disabled_visible_outlined))
-            : const Tooltip(message: "Stay Visible", child: Icon(Icons.visibility_outlined)),
-        onTap: () => setState(() => globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus),
-      ),
-    );
+    if (globalSettings.hideTabameOnUnfocus) {
+      return QuickActionItem(
+          message: "Hide on Focus Loss",
+          icon: const Icon(Icons.disabled_visible_outlined),
+          onTap: () => setState(() => globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus));
+    }
+    return QuickActionItem(
+        message: "Stay Visible",
+        icon: const Icon(Icons.visibility_outlined),
+        onTap: () => setState(() => globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus));
   }
 }

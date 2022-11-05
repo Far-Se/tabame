@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/win32/win32.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class ToggleTaskbarButton extends StatelessWidget {
   const ToggleTaskbarButton({
@@ -9,15 +10,12 @@ class ToggleTaskbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: InkWell(
-        child: const Tooltip(message: "Toggle Taskbar", child: Icon(Icons.call_to_action_outlined)),
-        onTap: () async {
-          WinUtils.toggleTaskbar();
-        },
-      ),
+    return QuickActionItem(
+      message: "Toggle Taskbar",
+      icon: const Icon(Icons.call_to_action_outlined),
+      onTap: () async {
+        WinUtils.toggleTaskbar();
+      },
     );
   }
 }

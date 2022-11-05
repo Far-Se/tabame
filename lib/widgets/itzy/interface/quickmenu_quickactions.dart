@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/quick_action_list.dart';
 import '../../../pages/interface.dart';
 
 class QuickmenuTopbar extends StatefulWidget {
@@ -14,29 +15,14 @@ class QuickmenuTopbar extends StatefulWidget {
 
 class QuickmenuTopbarState extends State<QuickmenuTopbar> {
   List<String> topBarItems = Boxes().topBarWidgets;
-  final Map<String, IconData> icons = <String, IconData>{
-    "TaskManagerButton": Icons.app_registration,
-    "VirtualDesktopButton": Icons.display_settings_outlined,
-    "ToggleTaskbarButton": Icons.call_to_action_outlined,
-    "PinWindowButton": Icons.pin_end,
-    "MicMuteButton": Icons.mic,
-    "AlwaysAwakeButton": Icons.running_with_errors,
-    "ChangeThemeButton": Icons.theater_comedy_sharp,
-    "HideDesktopFilesButton": Icons.hide_image,
-    "SpotifyButton": Icons.music_note,
-    "ToggleHiddenFilesButton": Icons.folder_off,
-    "WorkSpaceButton": Icons.workspaces,
-    "QuickActionsMenuButton": Icons.grid_view,
-    "FancyShotButton": Icons.center_focus_strong_rounded,
-    "TimersButton": Icons.timer_sharp,
-    "CountdownButton": Icons.hourglass_bottom_rounded,
-    "BookmarksButton": Icons.folder_copy_outlined,
-    "CustomCharsButton": Icons.format_quote,
-    "ShutDownButton": Icons.power_settings_new_rounded,
-    "CloseOnFocusLossButton": Icons.visibility,
-    "CaseChangeButton": Icons.text_fields_rounded,
-    "Deactivated:": Icons.do_disturb,
-  };
+  final Map<String, IconData> icons = <String, IconData>{};
+  @override
+  void initState() {
+    icons.addAll(quickActionsMap.map((String key, QuickAction value) => MapEntry<String, IconData>("$key", value.icon)));
+    icons["Deactivated:"] = Icons.do_disturb;
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
