@@ -34,9 +34,10 @@ class FirstRunState extends State<FirstRun> {
   String data2 = """
 ## **The hotkey will work after you finish Setup process.**
 ### Info:
-If your mouse has more buttons than the standard ones, you can open your mouse's App and set it to a more obscure hotkey like **CTRL+ALT+SHIFT+F9** then press that button above.
-
-If your mouse has side buttons, you can pick between MouseButton4 and MouseButton5.
+- If your mouse has side buttons, you can pick between **MouseButton4** and **MouseButton5**.
+- If your mouse has more buttons than the standard ones, you can open your mouse's App and set it to a more obscure hotkey like **CTRL+ALT+SHIFT+F9** then press that button above.
+- If you do not have any extra buttons, bind to something simple like **WIN+SHIFT+A**, it's easy for the fingers.
+- You can NOT bind it to WIN + one button like WIN+Z
 ## Button functions:
 - Normal press will open QuickMenu
 - Holding the button will open Start
@@ -44,7 +45,7 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
 - Holding and moving the mouse up and down will change volume
 - Pressing and moving mouse left or right will switch Virtual Desktop
 - Normal press in bottom left corner will open Start, holding will open Win+X menu
-- Normal press in screen bottom will toggle Taskbar
+- Normal press in bottom screen will toggle Taskbar
 - Normal press in bottom right corner will toggle Desktop
 - On Chrome/Firefox, on tab bar:
     - hold it to open a new tab
@@ -144,8 +145,10 @@ If your mouse has side buttons, you can pick between MouseButton4 and MouseButto
                               if (k.isMetaPressed) modifier.add("WIN");
                               if (k.data.modifiersPressed.isEmpty) return KeyEventResult.handled;
                               if (k.data.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
+                              if (k.isMetaPressed && modifier.length == 1) return KeyEventResult.handled;
                               if (hotkey == "MouseButton4") mouseButtons.add("MouseButton4");
                               if (hotkey == "MouseButton5") mouseButtons.add("MouseButton5");
+
                               hotkey = k.data.logicalKey.keyLabel;
                               modifiers = modifier;
 

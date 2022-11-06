@@ -22,7 +22,7 @@
 - __QuickActions to include all buttons__
 - __Periodic Reminders__
 - __Memos Button__
-
+    
 ## Change:
 - Move Window To Desktop done in $PowerShell$
 - __Persistent Reminders__

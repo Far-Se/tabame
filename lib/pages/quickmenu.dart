@@ -102,10 +102,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
   }
 
   QuickMenuTypes typeShown = QuickMenuTypes.quickMenu;
+  int unixVisible = 0;
   @override
   Future<void> onQuickMenuToggled(bool visible, int type) async {
     globalSettings.quickRunState = 0;
     globalSettings.quickRunText = "";
+    unixVisible = DateTime.now().millisecondsSinceEpoch;
     typeShown = QuickMenuTypes.values.elementAt(type);
     if (visible) {
       FocusScope.of(context).requestFocus(focusNode);
@@ -349,6 +351,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
           }
         } else if (typeShown != QuickMenuTypes.quickActions && globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
           if (keyEvent.isAltPressed || keyEvent.isControlPressed || keyEvent.isMetaPressed || keyEvent.isShiftPressed) return;
+          if (DateTime.now().millisecondsSinceEpoch - unixVisible < 700) return;
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
           theQuickRun = QuickRun(key: UniqueKey());

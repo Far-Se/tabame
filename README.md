@@ -7,7 +7,10 @@
 
 Main purpose of this app is to be a replacement for the Taskbar, but in meanwhile I've added more features that can come in handy sometimes. It's not about the 30px you add on your screen, but to limit distraction that comes from flashes, badges, notifications and other apps Microsoft forcefully tries to push to their users.
 ### **Best way to use:**
-**You can bind the QuickMenu on mouse buttons from left side, or any extra buttons on mouse for easy access**. If you do not have any extra buttons on your mouse, you can bind it to something simple like `Win+Z`
+- **You can bind the QuickMenu on:**
+- Mouse Side buttons, most mouses have them.
+- Any extra mouse button. Open your mouse software, bind it to something like `CTRL+ALT+SHIFT+F9` then focus Tabame and press the button on field above.
+- If you do not have any extra buttons on your mouse, you can bind it to something simple like `Shift+Win+A`, it's easy for the fingers.
 
 ### You can watch a small demo here:
 
@@ -255,7 +258,7 @@ Tabame Functions are:
 
 You can set multiple Actions.
 
-Example: With main hotkey, you can open tabame, show previous window, toggle taskbar, open start menu, open `Win+X` menu, open new chrome tab, show desktop, change volume level or switch desktops. You do not need to learn new hotkeys for each thing you need.
+Example: With main hotkey, you can open tabame, show previous window, toggle taskbar, open start menu, open `ALT+Z` menu, open new chrome tab, show desktop, change volume level or switch desktops. You do not need to learn new hotkeys for each thing you need.
 
 
 # **📕 Bookmarks**

@@ -166,12 +166,9 @@ class Boxes {
     if (pref.getString("quickActions") == null) {
       final List<QuickActions> quickActionList = <QuickActions>[
         QuickActions(name: "🎧 Spotify", type: "Spotify Controls", value: ""),
-        QuickActions(name: "📷 Fancyshot", type: "Quick Action", value: "8"),
         QuickActions(name: "🔊 Volume", type: "Volume Slider", value: ""),
         QuickActions(name: "🔉 Volume Level 3", type: "Set Volume", value: "3"),
         QuickActions(name: "🔊 Volume Level 100", type: "Set Volume", value: "100"),
-        QuickActions(name: "🖥 Toggle Taskbar", type: "Quick Action", value: "2"),
-        QuickActions(name: "🔓 PowerShell", type: "Run Command", value: "powershell start-process powershell"),
         QuickActions(name: "🎚 Audio Devices", type: "Audio Output Devices", value: "")
       ];
       await pref.setString("quickActions", jsonEncode(quickActionList));
