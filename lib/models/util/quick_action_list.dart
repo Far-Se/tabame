@@ -9,6 +9,7 @@ import '../../widgets/itzy/quickmenu/button_closeonfocus.dart';
 import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
+import '../../widgets/itzy/quickmenu/button_memo.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions_menu.dart';
@@ -132,5 +133,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "CloseOnFocusLossButton",
     icon: Icons.text_fields_rounded,
     widget: const CloseOnFocusLossButton(),
+  ),
+  "MemosButton": QuickAction(
+    name: "MemosButton",
+    icon: Icons.note_alt_outlined,
+    widget: const MemosButton(),
   ),
 };

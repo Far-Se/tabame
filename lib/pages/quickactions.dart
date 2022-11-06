@@ -225,9 +225,6 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
     final List<String> forbiddenButtons = <String>[
       "TaskManagerButton",
       "SpotifyButton",
-      "VirtualDesktopButton",
-      "HideDesktopFilesButton",
-      "ToggleHiddenFilesButton",
       "MicMuteButton",
     ];
     for (String x in showWidgetsNames) {
@@ -252,7 +249,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
             children: List<Widget>.generate(showWidgets.length, (int i) {
           Debug.add(
               "QuickMenu: Topbar: ${widgets.entries.firstWhere((MapEntry<String, Widget> element) => element.value == showWidgets[i], orElse: () => MapEntry<String, Widget>("Null", Container())).key}");
-          return Container(width: 280, height: 30, child: showWidgets[i]);
+          return Container(constraints: const BoxConstraints(maxWidth: 280, minHeight: 25), child: showWidgets[i]);
         })),
       ),
     );

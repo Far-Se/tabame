@@ -36,6 +36,7 @@ class Settings {
   bool previewTheme = false;
   bool volumeSetBack = false;
   bool showPowerShell = false;
+  bool keepPopupsOpen = false;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool trktivityEnabled = false;

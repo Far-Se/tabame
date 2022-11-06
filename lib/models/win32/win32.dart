@@ -853,11 +853,20 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)}", "", "open", ${o
     final RegistryKey key =
         Registry.openPath(RegistryHive.currentUser, path: r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced', desiredAccessRights: AccessRights.allAccess);
     final int hidden = key.getValueAsInt('Hidden') ?? 1;
-    if (hidden == 2) {
-      key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 1));
+    // 1 - Visible, 2 - Hidden
+    int newValue = 1;
+    if (visible != null) {
+      if (visible) {
+        newValue = 1;
+      } else {
+        newValue = 2;
+      }
+    } else if (hidden == 2) {
+      newValue = 1;
     } else {
-      key.createValue(const RegistryValue("Hidden", RegistryValueType.int32, 2));
+      newValue = 2;
     }
+    key.createValue(RegistryValue("Hidden", RegistryValueType.int32, newValue));
     await Future<void>.delayed(const Duration(milliseconds: 500), () => SendNotifyMessage(HWND_BROADCAST, 0x111, 41504, NULL));
     return;
   }

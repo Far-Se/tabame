@@ -146,7 +146,7 @@ class TimersWidgetState extends State<TimersWidget> {
                                           onTap: () {
                                             WinUtils.open(bookmarks[index].bookmarks[mark].stringToExecute, parseParamaters: true);
                                             QuickMenuFunctions.toggleQuickMenu(visible: false);
-                                            Navigator.of(context).pop();
+                                            // Navigator.of(context).pop();
                                           },
                                           child: Text(
                                             "${bookmarks[index].bookmarks[mark].emoji} ${bookmarks[index].bookmarks[mark].title}",

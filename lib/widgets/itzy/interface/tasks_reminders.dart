@@ -7,6 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../widgets/info_text.dart';
+import '../../widgets/mouse_scroll_widget.dart';
 
 class TasksReminders extends StatefulWidget {
   const TasksReminders({Key? key}) : super(key: key);
@@ -52,6 +53,7 @@ class TasksRemindersState extends State<TasksReminders> {
           itemBuilder: (BuildContext context, int index) {
             final Reminder reminder = Boxes.reminders[index];
             final TextEditingController messageTextController = TextEditingController(text: reminder.message.replaceFirst("p:", ""));
+            final TextEditingController intervalDaysController = TextEditingController(text: reminder.interval[1].toString());
             return Column(
               children: <Widget>[
                 Row(
@@ -143,8 +145,8 @@ class TasksRemindersState extends State<TasksReminders> {
                         child: Row(
                           children: <Widget>[
                             SizedBox(
-                              width: 40,
-                              height: 40,
+                              width: 30,
+                              height: 30,
                               child: Tooltip(
                                 message: reminder.voiceNotification ? "Voice Notification" : "Toast Notification",
                                 child: InkWell(
@@ -156,31 +158,87 @@ class TasksRemindersState extends State<TasksReminders> {
                                     }),
                               ),
                             ),
-                            Flexible(
-                              fit: FlexFit.loose,
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                controller: ScrollController(),
-                                child: ToggleButtons(
-                                  constraints: const BoxConstraints(minHeight: 25, minWidth: 25),
-                                  children: <Widget>[
-                                    const Tooltip(message: "Monday", child: Text("  Mon  ")),
-                                    const Tooltip(message: "Tueday", child: Text("  Tue  ")),
-                                    const Tooltip(message: "Wednesday", child: Text("  Wed  ")),
-                                    const Tooltip(message: "Thursday", child: Text("  Thu  ")),
-                                    const Tooltip(message: "Friday", child: Text("  Fri  ")),
-                                    const Tooltip(message: "Saturday", child: Text("  Sat  ")),
-                                    const Tooltip(message: "Sunday", child: Text("  Sun  ")),
-                                  ],
-                                  onPressed: (int index) async {
-                                    reminder.weekDays[index] = !reminder.weekDays[index];
-                                    await updateReminders();
-                                    if (mounted) setState(() {});
-                                  },
-                                  isSelected: reminder.weekDays,
-                                ),
-                              ),
+                            Expanded(
+                              // fit: FlexFit.loose,
+                              child: reminder.interval[0] >= 0
+                                  ? MouseScrollWidget(
+                                      scrollDirection: Axis.horizontal,
+                                      // controller: ScrollController(),
+                                      child: ToggleButtons(
+                                        constraints: const BoxConstraints(minHeight: 25, minWidth: 25),
+                                        children: <Widget>[
+                                          const Tooltip(message: "Monday", child: Text("  Mon  ")),
+                                          const Tooltip(message: "Tueday", child: Text("  Tue  ")),
+                                          const Tooltip(message: "Wednesday", child: Text("  Wed  ")),
+                                          const Tooltip(message: "Thursday", child: Text("  Thu  ")),
+                                          const Tooltip(message: "Friday", child: Text("  Fri  ")),
+                                          const Tooltip(message: "Saturday", child: Text("  Sat  ")),
+                                          const Tooltip(message: "Sunday", child: Text("  Sun  ")),
+                                        ],
+                                        onPressed: (int index) async {
+                                          reminder.weekDays[index] = !reminder.weekDays[index];
+                                          await updateReminders();
+                                          if (mounted) setState(() {});
+                                        },
+                                        isSelected: reminder.weekDays,
+                                      ),
+                                    )
+                                  : MouseScrollWidget(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: <Widget>[
+                                          const Text("Repeat each "),
+                                          SizedBox(
+                                            width: 30,
+                                            child: Focus(
+                                              onFocusChange: (bool value) async {
+                                                if (value == false) {
+                                                  reminder.interval[1] = int.tryParse(intervalDaysController.text) ?? 1;
+                                                  if (reminder.interval[1] <= 0) reminder.interval[1] = 1;
+                                                  intervalDaysController.text = reminder.interval[1].toString();
+                                                  reminder.interval[0] = -DateTime.now().millisecondsSinceEpoch;
+                                                  await updateReminders();
+                                                  setState(() {});
+                                                }
+                                              },
+                                              child: TextField(
+                                                controller: intervalDaysController,
+                                                textAlign: TextAlign.center,
+                                                decoration: InputDecoration(
+                                                  isDense: true,
+                                                  border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const Text(" days since today"),
+                                        ],
+                                      ),
+                                    ),
                             ),
+                            if (!reminder.repetitive)
+                              SizedBox(
+                                width: 30,
+                                height: 30,
+                                child: Tooltip(
+                                  message: reminder.interval[0] != -1 ? "Per day" : "Periodic",
+                                  child: InkWell(
+                                      child: Icon(reminder.interval[0] != -1 ? Icons.calendar_month_outlined : Icons.schedule_outlined, size: 16),
+                                      onTap: () async {
+                                        // reminder.voiceNotification = !reminder.voiceNotification;
+                                        if (reminder.interval[0] < 0) {
+                                          reminder.interval[0] = 0;
+                                          reminder.interval[1] = 0;
+                                        } else {
+                                          reminder.interval[0] = -DateTime.now().day;
+                                          reminder.interval[1] = 0;
+                                        }
+                                        await updateReminders();
+                                        if (mounted) setState(() {});
+                                      }),
+                                ),
+                              )
                           ],
                         ),
                       ),
@@ -214,6 +272,7 @@ class TasksRemindersState extends State<TasksReminders> {
                           reminder.repetitive = newValue ?? false;
                           if (reminder.repetitive) {
                             reminder.time = 60;
+                            reminder.interval = <int>[8 * 60, 20 * 60];
                           } else {
                             reminder.time = 12 * 60;
                           }

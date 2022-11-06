@@ -30,6 +30,25 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     Map<String, String> changelog = <String, String>{
+      '1.3': """
+## Reminders change
+ - Persistent Reminders: You will see a warning sign on QuickMenu when a persistent reminder triggers, its good for meds reminder.
+ - Periodic Reminders: It will trigger each  X days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
+## QuickActions Improvement
+ All QuickActions Buttons are now listed in QuickActions Menu, easier rather than scrolling the TopBar on QuickMenu
+
+### Added new QuickActions:
+ - CharMap: You can save custom characters or browse between currency, math characters or language accents.
+ - Shut Down Scheduler: You can schedule a shutdown.
+ - Case Change: You can change text case to camelCase, PascalCase, snake_case, kebab-case, UPPERCASE, lowercase.
+ - Memos: Save your memos.
+
+## Wizardly Hosts Editor
+Now you can edit Hosts file directly in Wizardly, you neeed to run Tabame with Admin Privilieges to save the file.
+
+### Other:
+Now timers save after restart
+""",
       '1.2': """
 ## **Added Fancyshot**
 With Fancyshot you can make screenshots that are social media friendly. You can set custom background, round corners and padding, a company logo or a watermark and blur regions.

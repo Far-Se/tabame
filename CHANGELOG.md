@@ -15,11 +15,13 @@
 - ..
 
 ## Feature:
-- __QuickRun Accent + Button__
-- __QuickRun Case Change + Button__
-- __Shutdown Scheduler Button (save as well)__
+- __CharMap Button__
+- __Case Change Button__
+- __Shutdown Scheduler Button__
 - __Wizardly hosts editor__
 - __QuickActions to include all buttons__
+- __Periodic Reminders__
+- __Memos Button__
 
 ## Change:
 - Move Window To Desktop done in $PowerShell$
@@ -32,8 +34,7 @@
 ## BUG: 
 
 - Hooks resizes maximized windows.
-- monitor id for monitor.
-- Trktivity timeline not reseting/cleaing
+- Trktivity timeline not reseting/cleaning
 - Fix Double escape
 - fancyshot copy transparency
 - bookmarks wont open.
@@ -41,17 +42,17 @@
 ## Feature:
 - Predifened sizes for windows.
 - Fancyshot.
+    - default profiles for fancyshot.
+    - fancyshot skew image
 - QuickActions Menu. 
 - ESC closes quickmenu.
 - QuickActions Menu Button
-- default profiles for fancyshot.
-- fancyshot skew image
+    - QuickActions Powershell 
+- Quick Action Button Dont Close on focus loss 
 - In QuickMenu:
     - timer widget
     - countdown widget
     - bookmarks widget
-- QuickActions Powershell 
-- Quick Action Button Dont Close on focus loss 
 
 ## Change:
 - Two column right click menu.

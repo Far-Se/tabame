@@ -30,7 +30,7 @@ class Globals {
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = false;
   static bool debugHotkeys = false;
-  static String version = "1.2";
+  static String version = "1.3";
 
   static int virtualDesktop = 0;
 

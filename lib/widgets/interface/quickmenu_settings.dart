@@ -65,6 +65,16 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                         if (mounted) setState(() {});
                       },
                     ),
+                    CheckboxListTile(
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text("Keep popups open after losing focus"),
+                      value: globalSettings.keepPopupsOpen,
+                      onChanged: (bool? newValue) async {
+                        globalSettings.keepPopupsOpen = newValue ?? false;
+                        Boxes.updateSettings("keepPopupsOpen", globalSettings.keepPopupsOpen);
+                        if (mounted) setState(() {});
+                      },
+                    ),
                   ],
                 ),
               ),

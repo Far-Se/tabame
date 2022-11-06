@@ -96,6 +96,7 @@ class Boxes {
       ..volumeSetBack = pref.getBool("volumeSetBack") ?? globalSettings.volumeSetBack
       ..lastChangelog = pref.getString("lastChangelog") ?? globalSettings.lastChangelog
       ..showPowerShell = pref.getBool("showPowerShell") ?? globalSettings.showPowerShell
+      ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? globalSettings.keepPopupsOpen
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? globalSettings.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? globalSettings.themeScheduleMax
@@ -682,7 +683,23 @@ class Tasks {
   reminderDaily(Reminder reminder) {
     if (!reminder.enabled) return;
     final String cleanMessage = reminder.message.replaceFirst("p:", "");
-    if (reminder.weekDays[DateTime.now().weekday - 1]) {
+    bool correctDay = true;
+    if (!reminder.weekDays[DateTime.now().weekday - 1]) correctDay = false;
+    //? is it a bug? NO. its a feature (future self)
+    if (correctDay && reminder.interval[0] < 0) {
+      if (reminder.interval[1] <= 0) reminder.interval[1] = 1;
+      final DateTime day = DateTime.fromMillisecondsSinceEpoch(reminder.interval[0].abs());
+      final DateTime today = DateTime.now();
+      DateTime span = day;
+      int ticks = 0;
+      while (span.millisecondsSinceEpoch < today.millisecondsSinceEpoch) {
+        span = span.add(Duration(days: reminder.interval[1]));
+        ticks++;
+        if (ticks > 5000) break;
+      }
+      if (span.day != today.day) correctDay = false;
+    }
+    if (correctDay) {
       if (reminder.voiceNotification) {
         WinUtils.textToSpeech('$cleanMessage', repeat: -1, volume: reminder.voiceVolume);
       } else {
