@@ -1,8 +1,8 @@
 {
-    "enabled": false,
+    "enabled": true,
     "name": "SuperList",
     "size": "140x100",
-    "imageDark": "",
-    "imageLight": "",
-    "url": ""
+    "imageDark": "https://github.com/Far-Se/tabame/raw/master/resources/wizzard1.png",
+    "imageLight": "https://github.com/Far-Se/tabame/raw/master/resources/wizzard2.png",
+    "url": "https://www.superlist.com/?utm_source=tabame"
 }
