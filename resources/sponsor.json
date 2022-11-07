@@ -1,5 +1,5 @@
 {
-    "enabled": true,
+    "enabled": false,
     "name": "SuperList",
     "size": "140x100",
     "imageDark": "https://github.com/Far-Se/tabame/raw/master/resources/wizzard1.png",
