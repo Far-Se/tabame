@@ -337,6 +337,10 @@ With Hooks you can hook multiple windows together, when you focus one, other wil
 ## **Predefined Sizes (v1.2)**
 You can register predefined sizes and access then by right clicking a window in QuickMenu. This comes handy when you need specific window sizes such as mobile view or half screen.
 
+Views in actions:
+
+https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-8b9c-e5729c3ca80b.mp4
+
 # **🧰 QuickActionsMenu**
 You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands.
 
