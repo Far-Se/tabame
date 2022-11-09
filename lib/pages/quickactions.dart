@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -25,6 +26,7 @@ double _currentVolumeLevel = 0;
 
 class QuickActionWidgetState extends State<QuickActionWidget> {
   final List<QuickActions> quickActions = Boxes.quickActions;
+  ScrollController controller = ScrollController();
   @override
   void initState() {
     super.initState();
@@ -32,6 +34,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
 
   @override
   void dispose() {
+    controller.dispose();
     super.dispose();
   }
 
@@ -42,101 +45,112 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
       type: MaterialType.transparency,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 300),
-        child: SingleChildScrollView(
-          controller: ScrollController(),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              ...List<Widget>.generate(quickActions.length, (int index) {
-                final QuickActions item = quickActions.elementAt(index);
-                if (item.type == "Quick Action") {
-                  return InkWell(
-                    onTap: () => executeQuickAction(int.tryParse(item.value) ?? 0),
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Set Volume") {
-                  return InkWell(
-                    onTap: () {
-                      Audio.setVolume((int.tryParse(item.value) ?? 100).toDouble(), AudioDeviceType.output);
-                      _currentVolumeLevel = (int.tryParse(item.value) ?? 100) / 100;
-                      setState(() {});
-                    },
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Send Keys") {
-                  return InkWell(
-                    onTap: () {
-                      FocusScope.of(context).unfocus();
-                      SetFocus(GetDesktopWindow());
-                      Future<void>.delayed(const Duration(milliseconds: 200), () {
-                        WinKeys.send(item.value);
-                      });
-                    },
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Run Command") {
-                  return InkWell(
-                    onTap: () async {
-                      await WinUtils.runPowerShell(<String>[item.value]);
-                    },
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Open") {
-                  return InkWell(
-                    onTap: () {
-                      WinUtils.open(item.value, parseParamaters: true);
-                    },
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Run Command") {
-                  return InkWell(
-                    onTap: () {
-                      WinUtils.runPowerShell(<String>[item.value]);
-                    },
-                    child: ListItem(title: item.name),
-                  );
-                } else if (item.type == "Spotify Controls") {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      InkWell(
-                        onTap: () => sendSpotifyMedia(AppCommand.mediaPrevioustrack),
-                        child: const Padding(
-                          padding: EdgeInsets.all(3.5),
-                          child: SizedBox(width: 20, child: Icon(Icons.skip_previous_rounded, size: 22)),
+        child: Listener(
+          onPointerSignal: (PointerSignalEvent pointerSignal) {
+            if (pointerSignal is PointerScrollEvent) {
+              if (pointerSignal.scrollDelta.dy < 0) {
+                controller.animateTo(controller.offset - 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+              } else {
+                controller.animateTo(controller.offset + 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+              }
+            }
+          },
+          child: SingleChildScrollView(
+            controller: ScrollController(),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ...List<Widget>.generate(quickActions.length, (int index) {
+                  final QuickActions item = quickActions.elementAt(index);
+                  if (item.type == "Quick Action") {
+                    return InkWell(
+                      onTap: () => executeQuickAction(int.tryParse(item.value) ?? 0),
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Set Volume") {
+                    return InkWell(
+                      onTap: () {
+                        Audio.setVolume((int.tryParse(item.value) ?? 100).toDouble(), AudioDeviceType.output);
+                        _currentVolumeLevel = (int.tryParse(item.value) ?? 100) / 100;
+                        setState(() {});
+                      },
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Send Keys") {
+                    return InkWell(
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        SetFocus(GetDesktopWindow());
+                        Future<void>.delayed(const Duration(milliseconds: 200), () {
+                          WinKeys.send(item.value);
+                        });
+                      },
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Run Command") {
+                    return InkWell(
+                      onTap: () async {
+                        await WinUtils.runPowerShell(<String>[item.value]);
+                      },
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Open") {
+                    return InkWell(
+                      onTap: () {
+                        WinUtils.open(item.value, parseParamaters: true);
+                      },
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Run Command") {
+                    return InkWell(
+                      onTap: () {
+                        WinUtils.runPowerShell(<String>[item.value]);
+                      },
+                      child: ListItem(title: item.name),
+                    );
+                  } else if (item.type == "Spotify Controls") {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        InkWell(
+                          onTap: () => sendSpotifyMedia(AppCommand.mediaPrevioustrack),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3.5),
+                            child: SizedBox(width: 20, child: Icon(Icons.skip_previous_rounded, size: 22)),
+                          ),
                         ),
-                      ),
-                      InkWell(
-                        onTap: () => sendSpotifyMedia(AppCommand.mediaPlayPause),
-                        child: const Padding(
-                          padding: EdgeInsets.all(3.5),
-                          child: SizedBox(width: 20, child: Icon(Icons.play_arrow_rounded, size: 22)),
+                        InkWell(
+                          onTap: () => sendSpotifyMedia(AppCommand.mediaPlayPause),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3.5),
+                            child: SizedBox(width: 20, child: Icon(Icons.play_arrow_rounded, size: 22)),
+                          ),
                         ),
-                      ),
-                      InkWell(
-                        onTap: () => sendSpotifyMedia(AppCommand.mediaNexttrack),
-                        child: const Padding(
-                          padding: EdgeInsets.all(3.5),
-                          child: SizedBox(width: 20, child: Icon(Icons.skip_next_rounded, size: 22)),
+                        InkWell(
+                          onTap: () => sendSpotifyMedia(AppCommand.mediaNexttrack),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3.5),
+                            child: SizedBox(width: 20, child: Icon(Icons.skip_next_rounded, size: 22)),
+                          ),
                         ),
-                      ),
-                      ListItem(title: item.name)
-                    ],
-                  );
-                } else if (item.type == "Audio Output Devices" || item.type == "Audio Input Devices") {
-                  return QuickActionAudioDevice(item: item);
-                } else if (item.type == "Volume Slider") {
-                  return VolumeSlider(
-                    name: item.name,
-                  );
-                }
+                        ListItem(title: item.name)
+                      ],
+                    );
+                  } else if (item.type == "Audio Output Devices" || item.type == "Audio Input Devices") {
+                    return QuickActionAudioDevice(item: item);
+                  } else if (item.type == "Volume Slider") {
+                    return VolumeSlider(
+                      name: item.name,
+                    );
+                  }
 
-                return Container();
-              }),
-              if (!widget.popup) const ShowStandardQuickActions()
-            ],
+                  return Container();
+                }),
+                if (!widget.popup) const ShowStandardQuickActions()
+              ],
+            ),
           ),
         ),
       ),

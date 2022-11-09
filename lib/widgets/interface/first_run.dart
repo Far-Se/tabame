@@ -109,6 +109,7 @@ class FirstRunState extends State<FirstRun> {
                                     Boxes.updateSettings("remap", jsonEncode(hokeyObj)); //!uncomment this.
                                   }
                                   Boxes.updateSettings("justInstalled", true);
+                                  Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
                                   pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeIn);
                                 },
                                 child: Container(

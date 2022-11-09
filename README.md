@@ -287,9 +287,9 @@ Tasks consists of Reminders and Page Watchers.
 
 Reminders can be repetitive or one time per day. You can set which days of the week to be active and for repetitive reminders you can set interval when the reminder is active. You can set to receive Toast Notification or Audio Notification. You can use `xNR` to repeat the message, ex `Workout x3`. 
 
-v1.3: You can create Pesistent Reminders. You will see a warning sign in QuickActions QuickMenu when you receive a new Reminder notification and you need to manually click on it to remove. It's good for meds reminder.
-
-v1.4: You can create Interval Reminders at each other $X$ days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
+v1.3: 
+- You can create Pesistent Reminders. You will see a warning sign in QuickActions QuickMenu when you receive a new Reminder notification and you need to manually click on it to remove. It's good for meds reminder.
+- You can create Interval Reminders at each other $X$ days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
 
 Page watchers will check a link each to see if specific text exists or not. For example if you made a post on a obscure forum and want to know when you receive a reply, you can set the link, 60 second interval and `\d+ Replies` and when that string changes, you will be notified.
 

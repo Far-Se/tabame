@@ -20,6 +20,12 @@ class _BarWithButtonsState extends State<BarWithButtons> {
   final ScrollController _buttonBarScrollController = ScrollController();
 
   @override
+  void dispose() {
+    super.dispose();
+    _buttonBarScrollController.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     double middleOffset = 0.93;
     // if (widget.children.length < 8 && globalSettings.quickMenuPinnedWithTrayAtBottom) {
@@ -47,9 +53,9 @@ class _BarWithButtonsState extends State<BarWithButtons> {
                 onPointerSignal: (PointerSignalEvent pointerSignal) {
                   if (pointerSignal is PointerScrollEvent) {
                     if (pointerSignal.scrollDelta.dy < 0) {
-                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
                     } else {
-                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset + 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+                      _buttonBarScrollController.animateTo(_buttonBarScrollController.offset + 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
                     }
                   }
                 },

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/win32/win32.dart';
-import '../../../pages/interface.dart';
 
 class QuickmenuPinnedApps extends StatefulWidget {
   const QuickmenuPinnedApps({Key? key}) : super(key: key);
@@ -35,7 +34,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
       builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
         if (!snapshot.hasData) return const SizedBox();
         return ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 200, minHeight: 100),
+          constraints: const BoxConstraints(maxHeight: 250, minHeight: 100),
           child: Column(
             children: <Widget>[
               Center(
@@ -68,12 +67,12 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                 fit: FlexFit.loose,
                 child: MouseRegion(
                   onEnter: (PointerEnterEvent e) {
-                    mainScrollEnabled = false;
-                    context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
+                    // mainScrollEnabled = false;
+                    // context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
                   },
                   onExit: (PointerExitEvent e) {
-                    mainScrollEnabled = true;
-                    context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
+                    // mainScrollEnabled = true;
+                    // context.findAncestorStateOfType<InterfaceState>()?.setState(() {});
                   },
                   child: SingleChildScrollView(
                     controller: ScrollController(),

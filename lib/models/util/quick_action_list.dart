@@ -46,7 +46,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   ),
   "WorkSpaceButton": QuickAction(
     name: "WorkSpaceButton",
-    icon: Icons.add,
+    icon: Icons.workspaces,
     widget: const WorkSpaceButton(),
   ),
   "VirtualDesktopButton": QuickAction(
@@ -126,12 +126,12 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   ),
   "CaseChangeButton": QuickAction(
     name: "CaseChangeButton",
-    icon: Icons.visibility,
+    icon: Icons.text_fields_rounded,
     widget: const CaseChangeButton(),
   ),
   "CloseOnFocusLossButton": QuickAction(
     name: "CloseOnFocusLossButton",
-    icon: Icons.text_fields_rounded,
+    icon: Icons.visibility,
     widget: const CloseOnFocusLossButton(),
   ),
   "MemosButton": QuickAction(

@@ -26,7 +26,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 200, minHeight: 100),
+      constraints: const BoxConstraints(maxHeight: 250, minHeight: 100),
       child: ListTileTheme(
         dense: true,
         style: ListTileStyle.drawer,

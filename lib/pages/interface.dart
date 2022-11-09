@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 
@@ -137,8 +138,20 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       }
     }
     checkForSponsor();
+    if (!Boxes.pref.containsKey("bmacPopup")) {
+      final int? installDate = Boxes.pref.getInt("installDate");
+      if (installDate == null) {
+        Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
+      } else {
+        final Duration diff = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(installDate));
+        if (diff.inDays >= 2) {
+          showBuyMeACoffeePopup = true;
+        }
+      }
+    }
   }
 
+  bool showBuyMeACoffeePopup = false;
   @override
   void dispose() {
     page.dispose();
@@ -159,8 +172,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         ..url = json["url"];
       json["name"] ??= "test";
       if (!sponsor.enabled) {
-        Boxes.pref.remove("sponsorName");
-        Boxes.pref.remove("sponsorLink");
+        await Boxes.pref.remove("sponsorName");
+        await Boxes.pref.remove("sponsorLink");
         if (mounted) setState(() {});
         return;
       }
@@ -183,6 +196,46 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   Widget build(BuildContext context) {
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
+    }
+    if (showBuyMeACoffeePopup) {
+      showBuyMeACoffeePopup = false;
+      Future<void>.delayed(
+        const Duration(seconds: 1),
+        () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              content: Container(
+                height: 160,
+                width: 320,
+                child: const Markdown(
+                  data: """
+# Thanks for using Tabame!
+## If you find this app useful please consider a donation, it will be appreciated ☺
+""",
+                  shrinkWrap: true,
+                ),
+              ),
+              actionsAlignment: MainAxisAlignment.spaceEvenly,
+              actions: <Widget>[
+                OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Boxes.pref.setBool("bmacPopup", true);
+                    },
+                    child: const Text("Never show again")),
+                ElevatedButton(
+                    onPressed: () {
+                      WinUtils.open("https://www.buymeacoffee.com/far.se");
+                      Boxes.pref.setBool("bmacPopup", true);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text("☕ Buy me a Coffee")),
+              ],
+            ),
+          );
+        },
+      );
     }
     return FutureBuilder<int>(
       future: interfaceWindow,

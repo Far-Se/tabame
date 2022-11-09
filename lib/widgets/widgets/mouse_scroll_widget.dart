@@ -13,14 +13,25 @@ class MouseScrollWidget extends StatefulWidget {
 class MouseScrollWidgetState extends State<MouseScrollWidget> {
   ScrollController controller = ScrollController();
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Listener(
       onPointerSignal: (PointerSignalEvent pointerSignal) {
         if (pointerSignal is PointerScrollEvent) {
           if (pointerSignal.scrollDelta.dy < 0) {
-            controller.animateTo(controller.offset - 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+            controller.animateTo(controller.offset - 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
           } else {
-            controller.animateTo(controller.offset + 50, duration: const Duration(milliseconds: 200), curve: Curves.ease);
+            controller.animateTo(controller.offset + 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
           }
         }
       },

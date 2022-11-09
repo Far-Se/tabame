@@ -362,7 +362,7 @@ class QuickRunState extends State<QuickRun> {
 
   void regainFocus() {
     textController.selection = TextSelection.fromPosition(TextPosition(offset: textController.text.length));
-    setState(() {});
+    if (mounted) setState(() {});
     FocusScope.of(context).requestFocus(textFocusNode);
   }
 

@@ -703,7 +703,7 @@ class WinUtils {
         File(fileOpen).writeAsStringSync("""
 Dim objShell
 Set objShell = CreateObject("Shell.Application")
-Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)}", "", "open", ${out.group(1) == "code" ? 0 : 1})""");
+Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '""')}", "", "open", ${out.group(1) == "code" ? 0 : 1})""");
         runPowerShell(<String>['explorer.exe "$fileOpen"']);
       } else {
         // ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
