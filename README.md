@@ -273,6 +273,9 @@ You can access Bookmarks from QuickMenu/Quickrun by typing `b ` then name of the
 For example I've made a group Tabame where I saved command for vscode, release folder, install folder and github page. When I need to open one, rather the navigate manually, I open QuickRun and type `b tabame` and nagivate with arrows.
 
 
+<img src="https://user-images.githubusercontent.com/20853986/200884861-d761c8bc-6885-43d2-86fe-119c1d6b60e3.png" align="right" width="250" height="auto"
+     alt="Trktivity.">
+     
 # **📝 Trktivity**
 Trktivity tracks your activity 🧐. It records keystrokes, mouse pings each 3 seconds and active window exe and title (if you set filters for it). 
 
