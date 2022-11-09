@@ -342,9 +342,9 @@ Views in actions:
 https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-8b9c-e5729c3ca80b.mp4
 
 # **🧰 QuickActionsMenu**
-You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands.
 
-**v1.3**: QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu.
+| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. |  <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 
 # **📷 Fancyshot**
 With Fancyshot you can capture custom screenshots. You can set a background stock image, custom image, capture itself or transparency. Also you can change image padding or background padding and add a watermark.
