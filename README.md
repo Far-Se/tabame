@@ -3,6 +3,10 @@
     <h1>Tabame</h1>
 </div>
 
+![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
+
+![promote_dark](https://user-images.githubusercontent.com/20853986/204137665-9bc5d98e-51a2-4bbd-959a-52160aa383cb.png#gh-dark-mode-only)
+
 ## 🤔 What is this app about?
 
 Main purpose of this app is to be a replacement for the Taskbar, but in meanwhile I've added more features that can come in handy sometimes. It's not about the 30px you add on your screen, but to limit distraction that comes from flashes, badges, notifications and other apps Microsoft forcefully tries to push to their users.

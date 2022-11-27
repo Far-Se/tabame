@@ -232,9 +232,9 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "boundToRegion": false,
         "region": {"x1": 0, "y1": 0, "x2": 0, "y2": 0, "asPercentage": false, "anchorType": 0},
         "triggerType": 3,
-        "triggerInfo": [0, 0, 0],
+        "triggerInfo": [0, 300, 2000],
         "actions": [
-          {"type": 2, "value": "ToggleTaskbar"}
+          {"type": 2, "value": "OpenAudioSettings"}
         ],
         "variableCheck": ["", ""]
       },

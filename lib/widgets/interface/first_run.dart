@@ -354,7 +354,7 @@ You can also scan folder sizes and delete files that are too big."""),
                           child: Text("After restarting I recommend to open settings and browse through all sidebar tabs",
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
                       Center(
-                          child: Text("Tabame has way more customizable features then one listed above!",
+                          child: Text("Tabame has way more customizable features than the ones listed above!",
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 17, height: 2))),
                       const SizedBox(height: 10),
                       InkWell(

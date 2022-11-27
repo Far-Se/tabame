@@ -1,12 +1,13 @@
 # v1.4:
 
 ## BUG:
-- ..
+- fix trktivity tracking even when not enabled >.<
 ## Feature:
-- Color Picker
-- Keyboard Visualiser: KeyFlux
+- PredefinedZones for specific window.
+- Counter, day/week/month/all
+- Wizardly ADB manager.
 ## Change:
-- ..
+- PredefinedZones better UI
 
 
 # v1.3:

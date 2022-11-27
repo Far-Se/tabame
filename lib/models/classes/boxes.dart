@@ -974,6 +974,7 @@ class Trktivity {
       : _filters;
 
   void add(TrktivityType type, String value) {
+    if (!globalSettings.trktivityEnabled) return;
     if (type == TrktivityType.idle) {
       final String data = TrktivityData(e: "idle.exe", t: "w", tl: "Idle").toJson();
       saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "w", d: data));
