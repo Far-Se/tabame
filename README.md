@@ -7,6 +7,19 @@
 
 ![promote_dark](https://user-images.githubusercontent.com/20853986/204138108-e57e9b1b-4d2b-445e-b8cb-4480d188ebb9.png#gh-dark-mode-only)
 
+## If you want updated code
+
+You can clone "personal" branch for development.
+I will not update main branch because i've made enough personal changes that it won't fit general usage.
+
+https://github.com/Far-Se/tabame/tree/personal
+
+To clone:
+
+`git clone -b personal git@github.com:Far-Se/tabame.git`
+
+> If you do not have ATL on Visual Studio, open Visual Studio Installer, press on Modify for VS 2019, go to Individual components, search for ATL and install last version for your processor architecture.
+
 ## 🤔 What is this app about?
 
 Main purpose of this app is to be a replacement for the Taskbar, but in meanwhile I've added more features that can come in handy sometimes. It's not about the 30px you add on your screen, but to limit distraction that comes from flashes, badges, notifications and other apps Microsoft forcefully tries to push to their users.
