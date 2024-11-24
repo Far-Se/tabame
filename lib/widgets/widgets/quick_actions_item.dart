@@ -6,7 +6,7 @@ class QuickActionItem extends StatelessWidget {
   final String message;
   final Widget icon;
   final Function() onTap;
-  const QuickActionItem({Key? key, required this.message, required this.icon, required this.onTap}) : super(key: key);
+  const QuickActionItem({super.key, required this.message, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

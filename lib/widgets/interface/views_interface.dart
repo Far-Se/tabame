@@ -16,7 +16,7 @@ import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
 
 class ViewsInterface extends StatefulWidget {
-  const ViewsInterface({Key? key}) : super(key: key);
+  const ViewsInterface({super.key});
 
   @override
   ViewsInterfaceState createState() => ViewsInterfaceState();
@@ -49,7 +49,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               Boxes.updateSettings("views", globalSettings.views);
             },
           ),
-          title: Text("Grid View", style: Theme.of(context).textTheme.headline6),
+          title: Text("Grid View", style: Theme.of(context).textTheme.titleLarge),
           subtitle: const InfoText("With Grid View, you can organize windows on your screen based on a grid"),
         ),
         if (globalSettings.views)
@@ -79,7 +79,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
                                 settings.save();
                               },
                             ),
-                            title: Text("Reset Previous Size", style: Theme.of(context).textTheme.button),
+                            title: Text("Reset Previous Size", style: Theme.of(context).textTheme.labelLarge),
                             subtitle: const Text("When you move the window after you set it on grid, it will regain it's original size"),
                           ),
                           ListTile(
@@ -279,7 +279,7 @@ This can use this when presets do not give you enough flexibility.
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text("Workspaces", style: Theme.of(context).textTheme.headline6),
+              Text("Workspaces", style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 5),
               const InfoText("With Workspaces you can save current position and size of specific windows, so you can load them easily from QuickMenu QuickActions"),
               const SizedBox(height: 20),
@@ -293,7 +293,7 @@ This can use this when presets do not give you enough flexibility.
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text("Create new Workspace:", style: Theme.of(context).textTheme.headline6),
+                        Text("Create new Workspace:", style: Theme.of(context).textTheme.titleLarge),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,7 +450,7 @@ This can use this when presets do not give you enough flexibility.
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text("Workspaces:", style: Theme.of(context).textTheme.headline6),
+                        Text("Workspaces:", style: Theme.of(context).textTheme.titleLarge),
                         ...List<Widget>.generate(workspaces.length, (int index) {
                           return ListTile(
                             onTap: () {
@@ -478,7 +478,7 @@ This can use this when presets do not give you enough flexibility.
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         const Divider(height: 10, thickness: 1),
-                        ListTile(title: Text("Hooks", style: Theme.of(context).textTheme.headline6)),
+                        ListTile(title: Text("Hooks", style: Theme.of(context).textTheme.titleLarge)),
                         const SizedBox(height: 5),
                         const InfoText(
                             "Hooks is part of Views. With hooks you can bind windows together, so when you focus the main one, others will appear on screen as well. Open QuickMenu and right click a window, then select other windows."),
@@ -493,7 +493,7 @@ This can use this when presets do not give you enough flexibility.
                       children: <Widget>[
                         const Divider(height: 10, thickness: 1),
                         ListTile(
-                          title: Text("Predefined Sizes", style: Theme.of(context).textTheme.headline6),
+                          title: Text("Predefined Sizes", style: Theme.of(context).textTheme.titleLarge),
                           onTap: () {
                             predefinedSizes.add(PredefinedSizes(name: "new", width: 0, height: 0, x: -1, y: -1));
                             Boxes.updateSettings("predefinedSizes", jsonEncode(predefinedSizes));
@@ -644,10 +644,10 @@ This can use this when presets do not give you enough flexibility.
 
 class RoundColorPreview extends StatelessWidget {
   const RoundColorPreview({
-    Key? key,
+    super.key,
     required this.color,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   final Color color;
   final Function()? onPressed;
@@ -675,10 +675,10 @@ class RoundColorPreview extends StatelessWidget {
 
 class CustomColorPicker extends StatelessWidget {
   const CustomColorPicker({
-    Key? key,
+    super.key,
     required this.startColor,
     required this.onColorChanged,
-  }) : super(key: key);
+  });
   final Color startColor;
   final Function(Color) onColorChanged;
   @override
@@ -711,7 +711,7 @@ class CustomColorPicker extends StatelessWidget {
         width: 20,
         height: 20,
         borderRadius: 22,
-        subheading: Text('Select color shade', style: Theme.of(context).textTheme.subtitle1),
+        subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleMedium),
       ),
     );
   }

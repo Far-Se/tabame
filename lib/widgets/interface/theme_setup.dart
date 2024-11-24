@@ -14,7 +14,7 @@ import '../../models/settings.dart';
 import '../widgets/info_text.dart';
 
 class ThemeSetup extends StatefulWidget {
-  const ThemeSetup({Key? key}) : super(key: key);
+  const ThemeSetup({super.key});
 
   @override
   ThemeSetupState createState() => ThemeSetupState();
@@ -167,7 +167,7 @@ class ThemeSetupWidget extends StatefulWidget {
   final ThemeColors currentColors;
   final List<Map<ColorSwatch<Object>, String>> predefinedColors;
   const ThemeSetupWidget({
-    Key? key,
+    super.key,
     required this.title,
     required this.constraints,
     required this.onSaved,
@@ -177,7 +177,7 @@ class ThemeSetupWidget extends StatefulWidget {
     required this.savedColors,
     required this.currentColors,
     required this.predefinedColors,
-  }) : super(key: key);
+  });
 
   @override
   State<ThemeSetupWidget> createState() => _ThemeSetupWidgetState();
@@ -205,7 +205,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           verticalOffset: 30,
           decoration: BoxDecoration(
             border: Border.all(width: 1, color: Colors.black26),
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: ListTile(
             leading: const Icon(Icons.save_outlined),
@@ -283,9 +283,9 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
 
 class AppsWrittenInbold extends StatefulWidget {
   const AppsWrittenInbold({
-    Key? key,
+    super.key,
     required this.widget,
-  }) : super(key: key);
+  });
 
   final ThemeSetupWidget widget;
 
@@ -310,13 +310,13 @@ class _AppsWrittenInboldState extends State<AppsWrittenInbold> {
 
 class ColorSetup extends StatelessWidget {
   const ColorSetup({
-    Key? key,
+    super.key,
     required this.savedColor,
     required this.currentColor,
     required this.colorName,
     required this.predefinedColors,
     required this.onColorChanged,
-  }) : super(key: key);
+  });
 
   final Color savedColor;
   final Color currentColor;
@@ -376,10 +376,10 @@ class ColorSetup extends StatelessWidget {
 
 class RoundColorPreview extends StatelessWidget {
   const RoundColorPreview({
-    Key? key,
+    super.key,
     required this.color,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   final Color color;
   final Function()? onPressed;
@@ -407,10 +407,10 @@ class RoundColorPreview extends StatelessWidget {
 
 class CustomColorPicker extends StatelessWidget {
   const CustomColorPicker({
-    Key? key,
+    super.key,
     required this.startColor,
     required this.onColorChanged,
-  }) : super(key: key);
+  });
   final Color startColor;
   final Function(Color) onColorChanged;
   @override
@@ -443,7 +443,7 @@ class CustomColorPicker extends StatelessWidget {
         width: 20,
         height: 20,
         borderRadius: 22,
-        subheading: Text('Select color shade', style: Theme.of(context).textTheme.subtitle1),
+        subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleMedium),
       ),
     );
   }
@@ -451,10 +451,10 @@ class CustomColorPicker extends StatelessWidget {
 
 class ListColors extends StatelessWidget {
   ListColors({
-    Key? key,
+    super.key,
     required this.colorsNameMap,
     required this.onColorChanged,
-  }) : super(key: key);
+  });
 
   final ScrollController colorScrollController = ScrollController();
   final Map<ColorSwatch<Object>, String> colorsNameMap;
@@ -511,7 +511,7 @@ class ListColors extends StatelessWidget {
                       width: 20,
                       height: 20,
                       borderRadius: 22,
-                      subheading: Text('Select color shade', style: Theme.of(context).textTheme.subtitle1),
+                      subheading: Text('Select color shade', style: Theme.of(context).textTheme.titleMedium),
                     ),
                     const SizedBox(width: 50)
                   ],

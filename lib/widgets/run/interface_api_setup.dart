@@ -14,7 +14,7 @@ import '../widgets/popup_dialog.dart';
 import '../widgets/text_input.dart';
 
 class InterfaceApiSetup extends StatefulWidget {
-  const InterfaceApiSetup({Key? key}) : super(key: key);
+  const InterfaceApiSetup({super.key});
 
   @override
   InterfaceApiSetupState createState() => InterfaceApiSetupState();
@@ -132,7 +132,8 @@ class InterfaceApiSetupState extends State<InterfaceApiSetup> {
                                               decoration:
                                                   const InputDecoration(labelText: "Token Expiration in minutes(press Enter)", isDense: true, border: InputBorder.none),
                                               onSubmitted: (String v) => setState(() => api.refreshTokenAfterMinutes = int.parse(v)),
-                                              toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+
+                                              ////toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
                                             ),
                                         ],
                                       ),
@@ -159,7 +160,7 @@ class InterfaceApiSetupState extends State<InterfaceApiSetup> {
                                               maxLines: null,
                                               decoration: const InputDecoration(labelText: "Variables:", isDense: true, border: InputBorder.none),
                                               controller: variableController[index],
-                                              toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                                              //toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
                                             ),
                                           ),
                                         ],
@@ -196,7 +197,7 @@ class ModifyApiInfo extends StatefulWidget {
   final ApiRequest api;
   final bool isToken;
   final Map<String, String> variables;
-  const ModifyApiInfo({Key? key, required this.api, this.isToken = false, required this.variables}) : super(key: key);
+  const ModifyApiInfo({super.key, required this.api, this.isToken = false, required this.variables});
 
   @override
   ModifyApiInfoState createState() => ModifyApiInfoState();
@@ -242,7 +243,7 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
                   maxLines: null,
                   decoration: const InputDecoration(labelText: "Headers, multiline", isDense: true, border: InputBorder.none),
                   controller: headersController,
-                  toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                  //toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
                 ),
               ),
               const Text("Data:"),
@@ -253,7 +254,7 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
                   maxLines: null,
                   decoration: const InputDecoration(labelText: "Data, multiline", isDense: true, border: InputBorder.none),
                   controller: dataController,
-                  toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                  //toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
                 ),
               ),
             ],
@@ -278,11 +279,11 @@ class ModifyApiInfoState extends State<ModifyApiInfo> {
                   maxLines: null,
                   decoration: InputDecoration(labelText: "Match ${widget.api.parseAsJson ? "" : "(regex aware)"}", isDense: true, border: InputBorder.none),
                   controller: matchController,
-                  toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                  //toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
                 ),
               ),
               ElevatedButton(
-                child: Text("Test", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                child: Text("Test", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                 onPressed: () {
                   final Map<String, String> headers = <String, String>{};
                   String data = widget.api.data.join("&");

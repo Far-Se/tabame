@@ -4,8 +4,8 @@ import 'button_simulate_key.dart';
 
 class TaskManagerButton extends StatelessWidget {
   const TaskManagerButton({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

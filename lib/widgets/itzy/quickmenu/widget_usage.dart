@@ -6,7 +6,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 
 class SystemUsageWidget extends StatefulWidget {
-  const SystemUsageWidget({Key? key}) : super(key: key);
+  const SystemUsageWidget({super.key});
 
   @override
   SystemUsageWidgetState createState() => SystemUsageWidgetState();

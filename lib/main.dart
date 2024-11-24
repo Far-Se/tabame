@@ -54,7 +54,7 @@ Future<void> main(List<String> arguments2) async {
   await registerAll();
 
   if (File("${WinUtils.getTabameSettingsFolder()}\\enable_debug.txt").existsSync()) {
-    Debug.methodDebug(clean: false);
+    Debug.methodDebug(clean: true);
   }
   Debug.add("Registered All");
 
@@ -69,8 +69,11 @@ Future<void> main(List<String> arguments2) async {
       Debug.add("Started Close Current");
       exit(0);
     });
-    runApp(EmptyWidget());
+    //runApp(EmptyWidget());
     return;
+  }
+  if (globalSettings.args.contains("-restarted")) {
+    Future<void>.delayed(Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
   }
   if (kReleaseMode && globalSettings.views && !globalSettings.args.contains('-views') && !globalSettings.args.contains("-interface")) {
     Debug.add("Starting Views");
@@ -113,7 +116,7 @@ Future<void> main(List<String> arguments2) async {
     );
   } else {
     windowOptions = const WindowOptions(
-      size: Size(300, 540),
+      size: Size(299, 540),
       center: false,
       backgroundColor: Colors.transparent,
       skipTaskbar: true,
@@ -129,6 +132,7 @@ Future<void> main(List<String> arguments2) async {
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
     await Win32.fetchMainWindowHandle();
+    //Future<void>.delayed(const Duration(seconds: 2), () => MoveWindow(Win32.hWnd, 0, 0, 299, 540, 1));
     fullLoaded.value = true;
     Debug.add("Set windowOptions");
   });
@@ -178,7 +182,7 @@ final ValueNotifier<bool> themeChangeNotifier = ValueNotifier<bool>(false);
 PageController mainPageViewController = PageController();
 
 class Tabame extends StatefulWidget {
-  const Tabame({Key? key}) : super(key: key);
+  const Tabame({super.key});
 
   @override
   State<Tabame> createState() => _TabameState();
@@ -204,6 +208,7 @@ class _TabameState extends State<Tabame> {
       }
     });
 
+    // ignore: deprecated_member_use
     final SingletonFlutterWindow window = WidgetsBinding.instance.window;
     window.onPlatformBrightnessChanged = () {
       theme = globalSettings.themeTypeMode;
@@ -214,6 +219,39 @@ class _TabameState extends State<Tabame> {
 
   @override
   Widget build(BuildContext context) {
+    /* return MaterialApp(
+      scrollBehavior: MyCustomScrollBehavior(),
+      debugShowCheckedModeBanner: true,
+      title: 'Tabame - Taskbar Menu',
+      theme: getLightThemeData(),
+      darkTheme: getDarkThemeData(context),
+      themeMode: ThemeMode.dark,
+      // title: 'Tabame - Taskbar Menu',
+      home: Container(
+        child: PageView.builder(
+          controller: mainPageViewController,
+          allowImplicitScrolling: false,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (BuildContext context, int index) {
+            Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
+            if (globalSettings.args.contains('-views')) {
+              return const ViewsScreen();
+            }
+            if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+              return const Interface();
+            }
+            if (index == Pages.quickmenu.index) {
+              return const QuickMenu();
+            } else if (index == Pages.interface.index) {
+              return const Interface();
+            }
+            return const QuickMenu();
+          },
+        ),
+      ),
+    ); */
+
+    // ignore: dead_code
     return ValueListenableBuilder<bool>(
         valueListenable: fullLoaded,
         builder: (BuildContext context, bool value, __) {
@@ -234,99 +272,195 @@ class _TabameState extends State<Tabame> {
                 scrollBehavior: MyCustomScrollBehavior(),
                 debugShowCheckedModeBanner: false,
                 title: 'Tabame - Taskbar Menu',
-                theme: ThemeData.light().copyWith(
-                  splashColor: Color.fromARGB(225, 0, 0, 0),
-                  backgroundColor: Color(globalSettings.lightTheme.background),
-                  dialogBackgroundColor: Color(globalSettings.lightTheme.background),
-                  cardColor: Color(globalSettings.lightTheme.background),
-                  errorColor: Color(globalSettings.lightTheme.accentColor),
-                  iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
-                  textTheme: ThemeData.light().textTheme.apply(
-                      bodyColor: Color(globalSettings.lightTheme.textColor),
-                      displayColor: Color(globalSettings.lightTheme.textColor),
-                      decorationColor: Color(globalSettings.lightTheme.textColor)),
-                  toggleableActiveColor: Color(globalSettings.lightTheme.accentColor),
-                  checkboxTheme: ThemeData.light()
-                      .checkboxTheme
-                      .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.lightTheme.background))),
-                  tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
-                        verticalOffset: 10,
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        height: 0,
-                        margin: EdgeInsets.all(0),
-                        textStyle: TextStyle(color: Color(globalSettings.lightTheme.textColor), fontSize: 12, height: 0),
-                        decoration: BoxDecoration(color: Color(globalSettings.lightTheme.background)),
-                        preferBelow: false,
-                      ),
-                  colorScheme: ThemeData.light().colorScheme.copyWith(
-                        primary: Color(globalSettings.lightTheme.accentColor),
-                        secondary: Color(globalSettings.lightTheme.accentColor),
-                      ),
-                ),
-                darkTheme: ThemeData.dark().copyWith(
-                  splashColor: Color.fromARGB(225, 0, 0, 0),
-                  backgroundColor: Color(globalSettings.darkTheme.background),
-                  dialogBackgroundColor: Color(globalSettings.darkTheme.background),
-                  cardColor: Color(globalSettings.darkTheme.background),
-                  errorColor: Color(globalSettings.darkTheme.accentColor),
-                  iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
-                  textTheme: ThemeData.dark().textTheme.apply(
-                        bodyColor: Color(globalSettings.darkTheme.textColor),
-                        displayColor: Color(globalSettings.darkTheme.textColor),
-                        decorationColor: Color(globalSettings.darkTheme.textColor),
-                      ),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                      style: ElevatedButton.styleFrom(
-                    foregroundColor: Color(globalSettings.darkTheme.background),
-                  )),
-                  toggleableActiveColor: Color(globalSettings.darkTheme.accentColor),
-                  checkboxTheme: ThemeData.dark()
-                      .checkboxTheme
-                      .copyWith(visualDensity: VisualDensity.compact, checkColor: MaterialStateProperty.all(Color(globalSettings.darkTheme.background))),
-                  tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
-                        verticalOffset: 10,
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        height: 0,
-                        margin: EdgeInsets.all(0),
-                        textStyle: TextStyle(color: Color(globalSettings.darkTheme.textColor), fontSize: 12, height: 0),
-                        decoration: BoxDecoration(color: Color(globalSettings.darkTheme.background)),
-                        preferBelow: false,
-                      ),
-                  colorScheme: ThemeData.dark().colorScheme.copyWith(
-                        primary: Color(globalSettings.darkTheme.accentColor),
-                        secondary: Color(globalSettings.darkTheme.accentColor),
-                        tertiary: Color(globalSettings.darkTheme.textColor),
-                      ),
-                  buttonTheme: ThemeData.dark().buttonTheme.copyWith(
-                        textTheme: ButtonTextTheme.primary,
-                        colorScheme: Theme.of(context).colorScheme.copyWith(primary: Theme.of(context).backgroundColor),
-                      ),
-                ),
+                theme: getLightThemeData(),
+                darkTheme: getDarkThemeData(context),
                 themeMode: themeMode,
-                home: PageView.builder(
-                  controller: mainPageViewController,
-                  allowImplicitScrolling: false,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemBuilder: (BuildContext context, int index) {
-                    Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
-                    if (globalSettings.args.contains('-views')) {
-                      return const ViewsScreen();
-                    }
-                    if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
-                      return const Interface();
-                    }
-                    if (index == Pages.quickmenu.index) {
-                      return const QuickMenu();
-                    } else if (index == Pages.interface.index) {
-                      return const Interface();
-                    }
-                    return const QuickMenu();
-                  },
-                ),
+                home: 1 + 1 == 3
+                    ? Container(child: Text("Test"))
+                    : PageView.builder(
+                        controller: mainPageViewController,
+                        allowImplicitScrolling: false,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (BuildContext context, int index) {
+                          Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
+                          if (globalSettings.args.contains('-views')) {
+                            return const ViewsScreen();
+                          }
+                          if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+                            return const Interface();
+                          }
+                          if (index == Pages.quickmenu.index) {
+                            return const QuickMenu();
+                          } else if (index == Pages.interface.index) {
+                            return const Interface();
+                          }
+                          return const QuickMenu();
+                        },
+                      ),
               );
             },
           );
         });
+  }
+
+  ThemeData getDarkThemeData(BuildContext context) {
+    return ThemeData.dark().copyWith(
+      splashColor: Color.fromARGB(225, 0, 0, 0),
+      dialogBackgroundColor: Color(globalSettings.darkTheme.background),
+      cardColor: Color(globalSettings.darkTheme.background),
+      iconTheme: ThemeData.dark().iconTheme.copyWith(color: Color(globalSettings.darkTheme.textColor)),
+      textTheme: ThemeData.dark().textTheme.apply(
+            bodyColor: Color(globalSettings.darkTheme.textColor),
+            displayColor: Color(globalSettings.darkTheme.textColor),
+            decorationColor: Color(globalSettings.darkTheme.textColor),
+          ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+        foregroundColor: Color(globalSettings.darkTheme.background),
+      )),
+      tooltipTheme: ThemeData.dark().tooltipTheme.copyWith(
+            verticalOffset: 10,
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            height: 0,
+            margin: EdgeInsets.all(0),
+            textStyle: TextStyle(color: Color(globalSettings.darkTheme.textColor), fontSize: 12, height: 0),
+            decoration: BoxDecoration(color: Color(globalSettings.darkTheme.background)),
+            preferBelow: false,
+          ),
+      buttonTheme: ThemeData.dark().buttonTheme.copyWith(
+            textTheme: ButtonTextTheme.primary,
+            colorScheme: Theme.of(context).colorScheme.copyWith(primary: Theme.of(context).colorScheme.primary),
+          ),
+      checkboxTheme: ThemeData.dark()
+          .checkboxTheme
+          .copyWith(visualDensity: VisualDensity.compact, checkColor: WidgetStateProperty.all(Color(globalSettings.darkTheme.background)))
+          .copyWith(
+        fillColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.darkTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.darkTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.darkTheme.accentColor);
+          }
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.darkTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      colorScheme: ThemeData.dark()
+          .colorScheme
+          .copyWith(
+            primary: Color(globalSettings.darkTheme.accentColor),
+            secondary: Color(globalSettings.darkTheme.accentColor),
+            tertiary: Color(globalSettings.darkTheme.textColor),
+          )
+          .copyWith(surface: Color(globalSettings.darkTheme.background))
+          .copyWith(error: Color(globalSettings.darkTheme.accentColor)),
+    );
+  }
+
+  ThemeData getLightThemeData() {
+    return ThemeData.light().copyWith(
+      splashColor: Color.fromARGB(225, 0, 0, 0),
+      dialogBackgroundColor: Color(globalSettings.lightTheme.background),
+      cardColor: Color(globalSettings.lightTheme.background),
+      iconTheme: ThemeData.light().iconTheme.copyWith(color: Color(globalSettings.lightTheme.textColor)),
+      textTheme: ThemeData.light().textTheme.apply(
+          bodyColor: Color(globalSettings.lightTheme.textColor),
+          displayColor: Color(globalSettings.lightTheme.textColor),
+          decorationColor: Color(globalSettings.lightTheme.textColor)),
+      tooltipTheme: ThemeData.light().tooltipTheme.copyWith(
+            verticalOffset: 10,
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            height: 0,
+            margin: EdgeInsets.all(0),
+            textStyle: TextStyle(color: Color(globalSettings.lightTheme.textColor), fontSize: 12, height: 0),
+            decoration: BoxDecoration(color: Color(globalSettings.lightTheme.background)),
+            preferBelow: false,
+          ),
+      checkboxTheme: ThemeData.light()
+          .checkboxTheme
+          .copyWith(visualDensity: VisualDensity.compact, checkColor: WidgetStateProperty.all(Color(globalSettings.lightTheme.background)))
+          .copyWith(
+        fillColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.lightTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.lightTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.lightTheme.accentColor);
+          }
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
+            return null;
+          }
+          if (states.contains(WidgetState.selected)) {
+            return Color(globalSettings.lightTheme.accentColor);
+          }
+          return null;
+        }),
+      ),
+      colorScheme: ThemeData.light()
+          .colorScheme
+          .copyWith(
+            primary: Color(globalSettings.lightTheme.accentColor),
+            secondary: Color(globalSettings.lightTheme.accentColor),
+          )
+          .copyWith(surface: Color(globalSettings.lightTheme.background))
+          .copyWith(error: Color(globalSettings.lightTheme.accentColor)),
+    );
   }
 }
 
@@ -336,7 +470,7 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
 }
 
 class EmptyWidget extends StatelessWidget {
-  const EmptyWidget({Key? key}) : super(key: key);
+  const EmptyWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

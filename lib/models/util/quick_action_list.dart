@@ -8,9 +8,11 @@ import '../../widgets/itzy/quickmenu/button_chars.dart';
 import '../../widgets/itzy/quickmenu/button_closeonfocus.dart';
 import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
+import '../../widgets/itzy/quickmenu/button_foobar.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_memo.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
+import '../../widgets/itzy/quickmenu/button_musicbee.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions_menu.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
@@ -43,6 +45,16 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "SpotifyButton",
     icon: Icons.music_note,
     widget: const SpotifyButton(),
+  ),
+  "FoobarButton": QuickAction(
+    name: "FoobarButton",
+    icon: Icons.queue_music_outlined,
+    widget: const FoobarButton(),
+  ),
+  "MusicBeeButton": QuickAction(
+    name: "MusicBeeButton",
+    icon: Icons.music_video_outlined,
+    widget: const MusicBeeButton(),
   ),
   "WorkSpaceButton": QuickAction(
     name: "WorkSpaceButton",

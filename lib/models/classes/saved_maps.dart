@@ -24,10 +24,13 @@ class Reminder extends SavedMap {
   bool voiceNotification;
   int voiceVolume;
   Timer? timer;
+  List<int> multipleTimes;
+
   Reminder({
     required this.enabled,
     required this.weekDays,
     required this.time,
+    required this.multipleTimes,
     required this.repetitive,
     required this.interval,
     required this.message,
@@ -44,6 +47,7 @@ class Reminder extends SavedMap {
     bool? enabled,
     List<bool>? weekDays,
     int? time,
+    List<int>? multipleTimes,
     bool? repetitive,
     List<int>? interval,
     String? message,
@@ -54,6 +58,7 @@ class Reminder extends SavedMap {
       enabled: enabled ?? this.enabled,
       weekDays: weekDays ?? this.weekDays,
       time: time ?? this.time,
+      multipleTimes: multipleTimes ?? this.multipleTimes,
       repetitive: repetitive ?? this.repetitive,
       interval: interval ?? this.interval,
       message: message ?? this.message,
@@ -67,6 +72,7 @@ class Reminder extends SavedMap {
       'enabled': enabled,
       'weekDays': weekDays,
       'time': time,
+      'multipleTimes': multipleTimes,
       'repetitive': repetitive,
       'interval': interval,
       'message': message,
@@ -80,6 +86,7 @@ class Reminder extends SavedMap {
       enabled: (map['enabled'] ?? false) as bool,
       weekDays: List<bool>.from(map['weekDays'] ?? const <bool>[]),
       time: (map['time'] ?? 0) as int,
+      multipleTimes: List<int>.from(map['multipleTimes'] ?? const <int>[]),
       repetitive: (map['repetitive'] ?? false) as bool,
       interval: List<int>.from(map['interval'] ?? const <int>[]),
       message: (map['message'] ?? '') as String,
@@ -104,6 +111,7 @@ class Reminder extends SavedMap {
     return other.enabled == enabled &&
         listEquals(other.weekDays, weekDays) &&
         other.time == time &&
+        other.multipleTimes == multipleTimes &&
         other.repetitive == repetitive &&
         listEquals(other.interval, interval) &&
         other.message == message &&
@@ -116,6 +124,7 @@ class Reminder extends SavedMap {
     return enabled.hashCode ^
         weekDays.hashCode ^
         time.hashCode ^
+        multipleTimes.hashCode ^
         repetitive.hashCode ^
         interval.hashCode ^
         message.hashCode ^

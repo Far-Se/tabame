@@ -53,6 +53,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setSkipTaskbar(false);
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
+  await WindowManager.instance.setAspectRatio(1);
   await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.4));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
@@ -62,7 +63,7 @@ bool mainScrollEnabled = true;
 BoxConstraints? interfaceConstraints;
 
 class NotImplemeneted extends StatelessWidget {
-  const NotImplemeneted({Key? key}) : super(key: key);
+  const NotImplemeneted({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +72,7 @@ class NotImplemeneted extends StatelessWidget {
 }
 
 class Interface extends StatefulWidget {
-  const Interface({Key? key}) : super(key: key);
+  const Interface({super.key});
   @override
   InterfaceState createState() => InterfaceState();
 }
@@ -98,7 +99,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
     PageClass(title: 'Bookmarks', icon: Icons.folder_copy, widget: const BookmarksPage()),
-    PageClass(title: 'Tasks', icon: Icons.task_alt, widget: const TasksPage()),
+    PageClass(title: 'Reminders', icon: Icons.schedule_rounded, widget: const TasksPage()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
     PageClass(title: 'Fancyshot', icon: Icons.center_focus_strong_rounded, widget: const Fancyshot()),
@@ -112,6 +113,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   bool bmaCoffeHovered = false;
   File? sponsorImageLight;
   File? sponsorImageDark;
+  int sizeIncrement = 1;
 
   @override
   void initState() {
@@ -149,6 +151,14 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         }
       }
     }
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100), () {
+        windowManager.getSize().then((Size value) {
+          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
+          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
+        });
+      });
+    });
   }
 
   bool showBuyMeACoffeePopup = false;
@@ -272,7 +282,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                 spreadRadius: 0.5,
                               )
                             ],
-                            color: Theme.of(context).backgroundColor,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -362,9 +372,13 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                           interfaceConstraints = mainConstraints;
                           return DecoratedBox(
                             decoration: BoxDecoration(
-                                color: Theme.of(context).backgroundColor,
+                                color: Theme.of(context).colorScheme.surface,
                                 gradient: LinearGradient(
-                                  colors: <Color>[Theme.of(context).backgroundColor, Theme.of(context).backgroundColor.withAlpha(180), Theme.of(context).backgroundColor],
+                                  colors: <Color>[
+                                    Theme.of(context).colorScheme.surface,
+                                    Theme.of(context).colorScheme.surface.withAlpha(180),
+                                    Theme.of(context).colorScheme.surface
+                                  ],
                                   stops: <double>[0, 0.4, 1],
                                   end: Alignment.bottomRight,
                                 )),
@@ -465,24 +479,24 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                     WinUtils.closeAllTabameExProcesses();
                                                                     exit(0);
                                                                   },
-                                                                  child: Text("Full Exit", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                                  child: Text("Full Exit", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
                                                               ElevatedButton(
                                                                   onPressed: () => Navigator.of(context).pop(),
-                                                                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                                                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
                                                             ],
                                                           ));
                                                 }),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.symmetric(vertical: 5, horizontal: 5),
                                                   child: Row(
                                                     mainAxisAlignment: MainAxisAlignment.start,
                                                     crossAxisAlignment: CrossAxisAlignment.center,
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: <Widget>[
-                                                      const SizedBox(width: 5),
-                                                      const Icon(Icons.exit_to_app),
-                                                      const SizedBox(width: 5),
-                                                      const Text("Exit"),
+                                                      SizedBox(width: 5),
+                                                      Icon(Icons.exit_to_app),
+                                                      SizedBox(width: 5),
+                                                      Text("Exit"),
                                                     ],
                                                   ),
                                                 ),
@@ -521,92 +535,94 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                     ),
                                                   const Center(
                                                       child: Text("Coded by Far Se", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
-                                                  Column(
-                                                    mainAxisAlignment: MainAxisAlignment.start,
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: <Widget>[
-                                                      const SizedBox(height: 5),
-                                                      const Padding(
-                                                        padding: EdgeInsets.only(left: 5.0),
-                                                        child: Text(
-                                                          "If you find this app useful consider a donation\nit will be appreciated ☺",
-                                                          style: TextStyle(fontSize: 12),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 10),
-                                                      TextButton(
-                                                        onPressed: () {
-                                                          WinUtils.open("https://www.buymeacoffee.com/far.se");
-                                                        },
-                                                        onHover: (bool value) {},
-                                                        child: MouseRegion(
-                                                          onEnter: (PointerEnterEvent e) => setState(() => bmaCoffeHovered = true),
-                                                          onExit: (PointerExitEvent e) => setState(() => bmaCoffeHovered = false),
-                                                          child: Container(
-                                                            width: double.infinity,
-                                                            height: 26,
-                                                            padding: const EdgeInsets.symmetric(vertical: 5),
-                                                            decoration: BoxDecoration(
-                                                              color: const Color(0xffCE3F00).withOpacity(0.5),
-                                                              borderRadius: BorderRadius.circular(20),
-                                                            ),
-                                                            child: ClipRRect(
-                                                              child: Stack(
-                                                                children: <Widget>[
-                                                                  Center(
-                                                                    child: TweenAnimationBuilder<double>(
-                                                                      duration: const Duration(milliseconds: 400),
-                                                                      tween: Tween<double>(begin: 1.0, end: bmaCoffeHovered ? -30 : 1),
-                                                                      curve: Curves.fastLinearToSlowEaseIn,
-                                                                      builder: (BuildContext context, double value, _) {
-                                                                        return Transform.translate(
-                                                                          offset: Offset(1, value),
-                                                                          child: const Text(
-                                                                            "Buy me a coffee",
-                                                                            style: TextStyle(
-                                                                              color: Colors.white,
-                                                                              height: 1.001,
-                                                                              fontSize: 14,
-                                                                              fontWeight: FontWeight.bold,
-                                                                            ),
-                                                                          ),
-                                                                        );
-                                                                      },
-                                                                    ),
-                                                                  ),
-                                                                  Center(
-                                                                    child: TweenAnimationBuilder<double>(
-                                                                      duration: const Duration(milliseconds: 400),
-                                                                      tween: Tween<double>(begin: 30.0, end: bmaCoffeHovered ? 0 : 30),
-                                                                      curve: Curves.fastLinearToSlowEaseIn,
-                                                                      builder: (BuildContext context, double value, _) {
-                                                                        return Transform.translate(
-                                                                          offset: Offset(1, value),
-                                                                          child: Transform.rotate(
-                                                                            angle: value / 10,
-                                                                            child: const Text(
-                                                                              "☕",
-                                                                              style: TextStyle(
-                                                                                color: Colors.white,
-                                                                                height: 1,
-                                                                                fontSize: 17.5,
-                                                                                fontWeight: FontWeight.bold,
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                        );
-                                                                      },
-                                                                    ),
-                                                                  )
-                                                                ],
+                                                  1 + 1 == 2
+                                                      ? const SizedBox()
+                                                      : Column(
+                                                          mainAxisAlignment: MainAxisAlignment.start,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: <Widget>[
+                                                            const SizedBox(height: 5),
+                                                            const Padding(
+                                                              padding: EdgeInsets.only(left: 5.0),
+                                                              child: Text(
+                                                                "If you find this app useful consider a donation\nit will be appreciated ☺",
+                                                                style: TextStyle(fontSize: 12),
                                                               ),
                                                             ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 5),
-                                                    ],
-                                                  )
+                                                            const SizedBox(height: 10),
+                                                            TextButton(
+                                                              onPressed: () {
+                                                                WinUtils.open("https://www.buymeacoffee.com/far.se");
+                                                              },
+                                                              onHover: (bool value) {},
+                                                              child: MouseRegion(
+                                                                onEnter: (PointerEnterEvent e) => setState(() => bmaCoffeHovered = true),
+                                                                onExit: (PointerExitEvent e) => setState(() => bmaCoffeHovered = false),
+                                                                child: Container(
+                                                                  width: double.infinity,
+                                                                  height: 26,
+                                                                  padding: const EdgeInsets.symmetric(vertical: 5),
+                                                                  decoration: BoxDecoration(
+                                                                    color: const Color(0xffCE3F00).withOpacity(0.5),
+                                                                    borderRadius: BorderRadius.circular(20),
+                                                                  ),
+                                                                  child: ClipRRect(
+                                                                    child: Stack(
+                                                                      children: <Widget>[
+                                                                        Center(
+                                                                          child: TweenAnimationBuilder<double>(
+                                                                            duration: const Duration(milliseconds: 400),
+                                                                            tween: Tween<double>(begin: 1.0, end: bmaCoffeHovered ? -30 : 1),
+                                                                            curve: Curves.fastLinearToSlowEaseIn,
+                                                                            builder: (BuildContext context, double value, _) {
+                                                                              return Transform.translate(
+                                                                                offset: Offset(1, value),
+                                                                                child: const Text(
+                                                                                  "Buy me a coffee",
+                                                                                  style: TextStyle(
+                                                                                    color: Colors.white,
+                                                                                    height: 1.001,
+                                                                                    fontSize: 14,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                  ),
+                                                                                ),
+                                                                              );
+                                                                            },
+                                                                          ),
+                                                                        ),
+                                                                        Center(
+                                                                          child: TweenAnimationBuilder<double>(
+                                                                            duration: const Duration(milliseconds: 400),
+                                                                            tween: Tween<double>(begin: 30.0, end: bmaCoffeHovered ? 0 : 30),
+                                                                            curve: Curves.fastLinearToSlowEaseIn,
+                                                                            builder: (BuildContext context, double value, _) {
+                                                                              return Transform.translate(
+                                                                                offset: Offset(1, value),
+                                                                                child: Transform.rotate(
+                                                                                  angle: value / 10,
+                                                                                  child: const Text(
+                                                                                    "☕",
+                                                                                    style: TextStyle(
+                                                                                      color: Colors.white,
+                                                                                      height: 1,
+                                                                                      fontSize: 17.5,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              );
+                                                                            },
+                                                                          ),
+                                                                        )
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(height: 5),
+                                                          ],
+                                                        )
                                                 ],
                                               ),
                                             ),

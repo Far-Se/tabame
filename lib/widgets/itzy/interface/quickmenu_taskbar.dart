@@ -7,7 +7,7 @@ import '../../../models/settings.dart';
 import '../../../models/window_watcher.dart';
 
 class QuickmenuTaskbar extends StatefulWidget {
-  const QuickmenuTaskbar({Key? key}) : super(key: key);
+  const QuickmenuTaskbar({super.key});
 
   @override
   State<QuickmenuTaskbar> createState() => _QuickmenuTaskbarState();

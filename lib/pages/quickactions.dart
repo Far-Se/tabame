@@ -17,7 +17,7 @@ import '../widgets/widgets/mouse_scroll_widget.dart';
 
 class QuickActionWidget extends StatefulWidget {
   final bool popup;
-  const QuickActionWidget({Key? key, this.popup = false}) : super(key: key);
+  const QuickActionWidget({super.key, this.popup = false});
   @override
   QuickActionWidgetState createState() => QuickActionWidgetState();
 }
@@ -222,7 +222,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
 }
 
 class ShowStandardQuickActions extends StatefulWidget {
-  const ShowStandardQuickActions({Key? key}) : super(key: key);
+  const ShowStandardQuickActions({super.key});
 
   @override
   State<ShowStandardQuickActions> createState() => _ShowStandardQuickActionsState();
@@ -239,6 +239,9 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
     final List<String> forbiddenButtons = <String>[
       "TaskManagerButton",
       "SpotifyButton",
+      "FoobarButton",
+      "MusicBeeButton",
+      "QuickActionsMenuButton",
       "MicMuteButton",
     ];
     for (String x in showWidgetsNames) {
@@ -272,7 +275,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
 
 class QuickActionAudioDevice extends StatefulWidget {
   final QuickActions item;
-  const QuickActionAudioDevice({Key? key, required this.item}) : super(key: key);
+  const QuickActionAudioDevice({super.key, required this.item});
   @override
   QuickActionAudioDeviceState createState() => QuickActionAudioDeviceState();
 }
@@ -339,7 +342,7 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
 
 class VolumeSlider extends StatefulWidget {
   final String name;
-  const VolumeSlider({Key? key, required this.name}) : super(key: key);
+  const VolumeSlider({super.key, required this.name});
   @override
   VolumeSliderState createState() => VolumeSliderState();
 }
@@ -366,7 +369,7 @@ class VolumeSliderState extends State<VolumeSlider> {
         padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
         child: Row(
           children: <Widget>[
-            Text("${widget.name}: ${((_currentVolumeLevel * 100).toStringAsFixed(0)).padLeft(2, '0')}"),
+            Text(" ${widget.name}: ${((_currentVolumeLevel * 100).toStringAsFixed(0)).padLeft(2, '0')}"),
             SliderTheme(
                 data: Theme.of(context).sliderTheme.copyWith(
                       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7, elevation: 0),
@@ -391,9 +394,9 @@ class VolumeSliderState extends State<VolumeSlider> {
 
 class ListItem extends StatelessWidget {
   const ListItem({
-    Key? key,
+    super.key,
     required this.title,
-  }) : super(key: key);
+  });
 
   final String title;
 

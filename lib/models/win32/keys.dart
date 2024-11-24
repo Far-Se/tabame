@@ -101,20 +101,20 @@ class WinKeys {
       // return false;
     }
     if (mode == KeySentMode.up) {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP, 0);
     } else {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | 0, 0);
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY | 0, 0);
       if (mode == KeySentMode.normal) {
-        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP, 0);
       }
     }
     return true;
   }
 
   static const Map<String, int> mouseVK = <String, int>{
-    "VK_LMB": MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP,
-    "VK_RMB": MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP,
-    "VK_MMB": MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP,
+    "VK_LMB": MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP,
+    "VK_RMB": MOUSE_EVENT_FLAGS.MOUSEEVENTF_RIGHTDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_RIGHTUP,
+    "VK_MMB": MOUSE_EVENT_FLAGS.MOUSEEVENTF_MIDDLEDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_MIDDLEUP,
   };
 
   /// Send a single key
@@ -124,9 +124,9 @@ class WinKeys {
   static bool single(String key, KeySentMode mode) {
     if (mouseVK.containsKey(key)) {
       final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_MOUSE;
+      input.ref.type = INPUT_TYPE.INPUT_MOUSE;
 
-      input.ref.mi.dwFlags = (MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
+      input.ref.mi.dwFlags = (MOUSE_EVENT_FLAGS.MOUSEEVENTF_MIDDLEDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_MIDDLEUP);
       input.ref.mi.mouseData = 0;
       input.ref.mi.dwExtraInfo = NULL;
       input.ref.mi.time = 0;
@@ -136,9 +136,9 @@ class WinKeys {
     }
     if (key == "VK_MSU" || key == "VK_MSD") {
       final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_MOUSE;
+      input.ref.type = INPUT_TYPE.INPUT_MOUSE;
 
-      input.ref.mi.dwFlags = MOUSEEVENTF_WHEEL;
+      input.ref.mi.dwFlags = MOUSE_EVENT_FLAGS.MOUSEEVENTF_WHEEL;
       input.ref.mi.mouseData = key == "VK_MSU" ? 120 : -120;
       input.ref.mi.dwExtraInfo = NULL;
       input.ref.mi.time = 0;
@@ -152,9 +152,9 @@ class WinKeys {
       // return false;
     }
     final Pointer<INPUT> input = calloc<INPUT>();
-    input.ref.type = INPUT_KEYBOARD;
+    input.ref.type = INPUT_TYPE.INPUT_KEYBOARD;
     if (mode == KeySentMode.up) {
-      input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
+      input.ref.ki.dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
     } else {
       input.ref.ki.dwFlags = WM_KEYDOWN;
     }
@@ -166,8 +166,8 @@ class WinKeys {
     free(input);
     if (mode == KeySentMode.normal) {
       final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_KEYBOARD;
-      input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
+      input.ref.type = INPUT_TYPE.INPUT_KEYBOARD;
+      input.ref.ki.dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
       input.ref.ki.wVk = keyValue;
       SendInput(1, input, sizeOf<INPUT>());
     }

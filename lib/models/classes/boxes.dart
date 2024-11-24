@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+// ignore_for_file: public_member_api_docs, sort_constructors_first, dead_code
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -64,6 +64,7 @@ class Boxes {
             message: "Stretch",
             repetitive: true,
             time: 60,
+            multipleTimes: <int>[],
             voiceNotification: true,
             weekDays: <bool>[true, true, true, true, true, false, false],
             voiceVolume: 100),
@@ -71,6 +72,7 @@ class Boxes {
             enabled: false,
             weekDays: <bool>[true, true, true, true, true, true, true],
             time: 540,
+            multipleTimes: <int>[],
             repetitive: false,
             interval: <int>[480, 1200],
             message: "p:Take your meds",
@@ -243,7 +245,8 @@ class Boxes {
     pref = await SaveSettings.getInstance();
   }
 
-  static List<T> getSavedMap<T>(T Function(String json) fromJson, String key, {List<T>? def}) {
+  //@deprecated use getSavedMap
+  static List<T> getSavedMap2<T>(T Function(String json) fromJson, String key, {List<T>? def}) {
     final String savedString = pref.getString(key) ?? "";
     if (savedString.isEmpty) return def ?? <T>[];
     final List<dynamic> list = jsonDecode(savedString);
@@ -252,6 +255,13 @@ class Boxes {
       varMapped.add(fromJson(value));
     }
     return varMapped;
+  }
+
+  static List<T> getSavedMap<T>(T Function(String json) fromJson, String key, {List<T>? def}) {
+    final String savedString = pref.getString(key) ?? '';
+    if (savedString.isEmpty) return def ?? <T>[];
+
+    return (jsonDecode(savedString) as List<dynamic>).cast<String>().map(fromJson).toList();
   }
 
   Map<String, String> get taskBarRewrites {
@@ -419,10 +429,10 @@ class Boxes {
       if (type == 0) {
         WinUtils.textToSpeech(name, repeat: -1);
       } else if (type == 1) {
-        WinUtils.msgBox(name, "Tabame Quick Timer");
+        WinUtils.textToSpeech(name, repeat: -1).then((void e) => WinUtils.msgBox(name, "Tabame Quick Timer"));
       } else if (type == 2) {
         WinUtils.showWindowsNotification(
-          title: "Tabame Quick Timer",
+          title: "Tabame Quick Timer $minutes minutes",
           body: "Timer Expired: $name",
           onClick: () {},
         );
@@ -435,6 +445,7 @@ class Boxes {
   }
 
   void saveQuickTimers() {
+    return;
     final List<Map<String, dynamic>> saveMap = <Map<String, dynamic>>[];
     for (QuickTimer qt in quickTimers) {
       saveMap.add(<String, dynamic>{"name": qt.name, "end": qt.endTime.millisecondsSinceEpoch, "type": qt.type});
@@ -443,6 +454,7 @@ class Boxes {
   }
 
   static void loadQuickTimers() {
+    return;
     final String? string = Boxes.pref.getString("quickTimersList");
     if (string == null) return;
     final List<dynamic> data = jsonDecode(string);
@@ -453,6 +465,30 @@ class Boxes {
       if (minutes.inMinutes < 1) return;
       Boxes().addQuickTimer(qt["name"], minutes.inMinutes, qt["type"]);
     }
+  }
+
+  static final List<SavedQuickTimers> lastQuickTimers = <SavedQuickTimers>[];
+  void loadLatestQuickTimers() {
+    lastQuickTimers.clear();
+    final String? string = Boxes.pref.getString("lastQuickTimers");
+    if (string == null) return;
+    final List<dynamic> data = jsonDecode(string);
+    if (data.isEmpty) return;
+    for (Map<dynamic, dynamic> qt in data) {
+      SavedQuickTimers timer = SavedQuickTimers();
+      timer.name = qt["name"];
+      timer.minutes = qt["minutes"];
+      timer.type = qt["type"];
+      lastQuickTimers.add(timer);
+    }
+  }
+
+  void saveLatestQuickTimers() {
+    final List<Map<String, dynamic>> saveMap = <Map<String, dynamic>>[];
+    for (SavedQuickTimers qt in lastQuickTimers) {
+      saveMap.add(<String, dynamic>{"name": qt.name, "minutes": qt.minutes, "type": qt.type});
+    }
+    Boxes.pref.setString("lastQuickTimers", jsonEncode(saveMap));
   }
 
   static Future<int> checkForUpdates() async {
@@ -555,6 +591,12 @@ class QuickTimer {
   int type = 0;
 }
 
+class SavedQuickTimers {
+  String name = "";
+  int minutes = 0;
+  int type = 0;
+}
+
 class Tasks {
   void startPageWatchers({int? specificIndex}) {
     int index = -1;
@@ -614,7 +656,60 @@ class Tasks {
     return "Fetch Failed";
   }
 
+  //<id, time>
+  final Map<Reminder, int> remindersTime = <Reminder, int>{};
+  void processReminders({bool reset = false}) {
+    if (reset) remindersTime.clear();
+    if (remindersTime.isEmpty) {
+      for (Reminder reminder in Boxes.reminders) {
+        if (!reminder.enabled) continue;
+        remindersTime[reminder] = reminder.time;
+      }
+    }
+  }
+
+  Timer? _timer;
+  //create timer variable
+  void initReminders() {
+    print("Timers Begin");
+    _timer?.cancel();
+    final DateTime now = DateTime.now();
+    Timer(Duration(seconds: 60 - now.second, milliseconds: 60 - now.millisecond), () {
+      print("Timers Init");
+
+      callback() {
+        final DateTime now = DateTime.now();
+        final int nowInMinutes = now.hour * 60 + now.minute;
+        for (final Reminder reminder in Boxes.reminders) {
+          if (!reminder.enabled) continue;
+
+          if (reminder.repetitive) {
+            if (!(nowInMinutes.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday - 1])) continue;
+            int timerInMinutes = 0;
+            while (timerInMinutes < nowInMinutes) {
+              timerInMinutes += reminder.time;
+            }
+            if (timerInMinutes == nowInMinutes) triggerReminder(reminder);
+          } else {
+            if (!reminder.weekDays[DateTime.now().weekday - 1]) continue;
+            if (nowInMinutes == reminder.time) triggerReminder(reminder);
+            if (reminder.multipleTimes.isNotEmpty) {
+              for (int rem in reminder.multipleTimes) {
+                if (nowInMinutes == rem) triggerReminder(reminder);
+              }
+            }
+          }
+        }
+      }
+
+      callback();
+      _timer = Timer.periodic(const Duration(minutes: 1), (Timer timer) => callback());
+    });
+  }
+
   void startReminders() {
+    initReminders();
+    return;
     for (Reminder reminder in Boxes.reminders) {
       reminder.timer?.cancel();
       if (!reminder.enabled) continue;
@@ -650,7 +745,25 @@ class Tasks {
           minutes = reminder.time - now;
         }
         minutes = (minutes * 60 - dateTime.second) * 1000 - dateTime.millisecond;
+        //print("$minutes: ${reminder.message}");
         reminder.timer = Timer(Duration(milliseconds: minutes), () => reminderDaily(reminder));
+      }
+    }
+  }
+
+  void triggerReminder(Reminder reminder) {
+    final String cleanMessage = reminder.message.replaceFirst("p:", "");
+    if (reminder.voiceNotification) {
+      WinUtils.textToSpeech('$cleanMessage', repeat: -1, volume: reminder.voiceVolume);
+    } else {
+      WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: $cleanMessage", onClick: () {});
+    }
+    if (reminder.message.startsWith("p:")) {
+      globalSettings.persistentReminders.add("$cleanMessage ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}");
+      Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+      for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
+        if (!QuickMenuFunctions.listeners.contains(listener)) return;
+        listener.refreshQuickMenu();
       }
     }
   }
@@ -666,7 +779,7 @@ class Tasks {
         WinUtils.showWindowsNotification(title: "Tabame Reminder", body: "Reminder: $cleanMessage", onClick: () {});
       }
       if (reminder.message.startsWith("p:")) {
-        globalSettings.persistentReminders.add("$cleanMessage each ${reminder.time} minutes");
+        globalSettings.persistentReminders.add("$cleanMessage ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}");
         Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
         for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
           if (!QuickMenuFunctions.listeners.contains(listener)) return;
@@ -758,7 +871,7 @@ class WinHotkeys {
   }
 }
 
-abstract class QuickMenuTriggers {
+mixin class QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, int type) async {}
   Future<void> onQuickMenuShown(int type) async {}
   void refreshQuickMenu() async {}

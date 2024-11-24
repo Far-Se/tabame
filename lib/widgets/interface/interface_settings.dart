@@ -15,7 +15,7 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   SettingsPageState createState() => SettingsPageState();

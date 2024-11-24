@@ -10,7 +10,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
 class AudioBox extends StatefulWidget {
-  const AudioBox({Key? key}) : super(key: key);
+  const AudioBox({super.key});
 
   @override
   AudioBoxState createState() => AudioBoxState();
@@ -64,19 +64,23 @@ class AudioBoxState extends State<AudioBox> {
 
   void fetchData() async {
     audioInfo.devices = await Audio.enumDevices(AudioDeviceType.output) ?? <AudioDevice>[];
-    audioInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.output) ?? AudioDevice();
-    audioInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.output);
-    audioInfo.volume = await Audio.getVolume(AudioDeviceType.output);
-
+    if (audioInfo.devices.isNotEmpty) {
+      audioInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.output) ?? AudioDevice();
+      audioInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.output);
+      audioInfo.volume = await Audio.getVolume(AudioDeviceType.output);
+    }
     micInfo.devices = await Audio.enumDevices(AudioDeviceType.input) ?? <AudioDevice>[];
-    micInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.input) ?? AudioDevice();
-    micInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.input);
-    micInfo.volume = await Audio.getVolume(AudioDeviceType.input);
+    if (micInfo.devices.isNotEmpty) {
+      micInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.input) ?? AudioDevice();
+      micInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.input);
+      micInfo.volume = await Audio.getVolume(AudioDeviceType.input);
+    }
 
     for (AudioInfo inputType in <AudioInfo>[audioInfo, micInfo]) {
       for (AudioDevice device in inputType.devices) {
         if (inputType.icons.containsKey(device.id)) continue;
-        inputType.icons[device.id] = (await getExecutableIcon(device.iconPath, iconID: device.iconID))!;
+        inputType.icons[device.id] = WinUtils.extractIcon(device.iconPath, iconID: device.iconID)!;
+        //inputType.icons[device.id] = (await getExecutableIcon(device.iconPath, iconID: device.iconID))!;
       }
     }
     if (mounted) {
@@ -92,7 +96,7 @@ class AudioBoxState extends State<AudioBox> {
       final int hWnd = await findTopWindow(device.processId);
       //? Basic Way
       if (hWnd == 0) {
-        audioMixerIcons[device.processId] = (await getExecutableIcon(device.processPath))!;
+        audioMixerIcons[device.processId] = WinUtils.extractIcon(device.processPath)!;
         audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).toUpperCaseFirst();
         continue;
       }
@@ -103,10 +107,10 @@ class AudioBoxState extends State<AudioBox> {
         if (File(appxLogo).existsSync()) {
           icon = File(appxLogo).readAsBytesSync();
         } else {
-          icon = await getExecutableIcon(device.processPath);
+          icon = WinUtils.extractIcon(device.processPath);
         }
       } else {
-        icon = await getExecutableIcon(processPath.path);
+        icon = WinUtils.extractIcon(processPath.path);
       }
       audioMixerIcons[device.processId] = icon!;
       audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).toUpperCaseFirst();
@@ -292,9 +296,9 @@ class AudioBoxState extends State<AudioBox> {
             // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -302,7 +306,7 @@ class AudioBoxState extends State<AudioBox> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -365,8 +369,8 @@ class AudioBoxState extends State<AudioBox> {
                                     constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
                                     child: ScrollbarTheme(
                                       data: Theme.of(context).scrollbarTheme.copyWith(
-                                            thumbVisibility: MaterialStateProperty.all<bool>(true),
-                                            trackVisibility: MaterialStateProperty.all<bool>(true),
+                                            thumbVisibility: WidgetStateProperty.all<bool>(true),
+                                            trackVisibility: WidgetStateProperty.all<bool>(true),
                                           ),
                                       child: SingleChildScrollView(
                                         controller: ScrollController(),

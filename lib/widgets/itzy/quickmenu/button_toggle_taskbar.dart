@@ -5,8 +5,8 @@ import '../../widgets/quick_actions_item.dart';
 
 class ToggleTaskbarButton extends StatelessWidget {
   const ToggleTaskbarButton({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

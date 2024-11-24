@@ -6,7 +6,7 @@ import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
 class VirtualDesktopButton extends StatelessWidget {
-  const VirtualDesktopButton({Key? key}) : super(key: key);
+  const VirtualDesktopButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,16 +20,16 @@ class VirtualDesktopButton extends StatelessWidget {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
               Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
             },
-            child: SizedBox(
+            child: const SizedBox(
               height: 25,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.display_settings_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Move Desktop to Left")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.display_settings_outlined)),
+                  SizedBox(width: 5),
+                  Text("Move Desktop to Left")
                 ],
               ),
             ),
@@ -39,16 +39,16 @@ class VirtualDesktopButton extends StatelessWidget {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
               Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
             },
-            child: SizedBox(
+            child: const SizedBox(
               height: 25,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.display_settings_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Move Desktop to Right")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.display_settings_outlined)),
+                  SizedBox(width: 5),
+                  Text("Move Desktop to Right")
                 ],
               ),
             ),

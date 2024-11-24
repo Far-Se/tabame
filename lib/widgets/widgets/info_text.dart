@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class InfoText extends StatelessWidget {
   final String text;
-  const InfoText(this.text, {Key? key}) : super(key: key);
+  const InfoText(this.text, {super.key});
 
   @override
   Widget build(BuildContext context) {

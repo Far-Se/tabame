@@ -45,9 +45,9 @@ void showCustomModal(BuildContext context, {required Widget child}) {
                       // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
                       gradient: LinearGradient(
                         colors: <Color>[
-                          Theme.of(context).backgroundColor,
-                          Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                          Theme.of(context).backgroundColor,
+                          Theme.of(context).colorScheme.surface,
+                          Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                          Theme.of(context).colorScheme.surface,
                         ],
                         stops: <double>[0, 0.4, 1],
                         end: Alignment.bottomRight,
@@ -55,7 +55,7 @@ void showCustomModal(BuildContext context, {required Widget child}) {
                       boxShadow: <BoxShadow>[
                         const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                       ],
-                      color: Theme.of(context).backgroundColor,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     child: Padding(padding: const EdgeInsets.all(8.0), child: child),
                   ),

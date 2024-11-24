@@ -18,7 +18,7 @@ import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 
 class QuickRun extends StatefulWidget {
-  const QuickRun({Key? key}) : super(key: key);
+  const QuickRun({super.key});
 
   @override
   QuickRunState createState() => QuickRunState();
@@ -259,7 +259,7 @@ class QuickRunState extends State<QuickRun> {
                                           Clipboard.setData(ClipboardData(text: item));
                                         }
                                       } else {
-                                        Clipboard.setData(ClipboardData(text: result.actions.containsKey(item) ? result.actions[item] : item));
+                                        Clipboard.setData(ClipboardData(text: result.actions.containsKey(item) ? result.actions[item] ?? "XX" : item));
                                       }
                                       setState(() => copied = index);
                                       Future<void>.delayed(const Duration(seconds: 1), () {
@@ -498,17 +498,14 @@ class Parsers {
   }
 
   T? getUnitType<T>(String from, List<Unit> units, Iterable<T> names) {
-    T? matched;
     for (Unit e in units) {
       if (from == e.symbol?.toLowerCase()) {
         return (e.name as T);
       }
     }
-    if (matched == null) {
-      for (T type in names) {
-        if (type.toString().toLowerCase().split(".").last == from) {
-          return type;
-        }
+    for (T type in names) {
+      if (type.toString().toLowerCase().split(".").last == from) {
+        return type;
       }
     }
     return null;

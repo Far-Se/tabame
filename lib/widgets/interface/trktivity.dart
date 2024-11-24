@@ -20,7 +20,7 @@ import '../widgets/info_widget.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
 class TrktivityPage extends StatefulWidget {
-  const TrktivityPage({Key? key}) : super(key: key);
+  const TrktivityPage({super.key});
   @override
   TrktivityPageState createState() => TrktivityPageState();
 }
@@ -48,11 +48,11 @@ class MTrack {
 class DMTRack extends MTrack {
   int idleTime;
   DMTRack({
-    required int mouse,
-    required int keyboard,
-    required int time,
+    required super.mouse,
+    required super.keyboard,
+    required super.time,
     required this.idleTime,
-  }) : super(keyboard: keyboard, mouse: mouse, time: time);
+  });
 }
 
 class TTrack {
@@ -323,7 +323,7 @@ class TrktivityPageState extends State<TrktivityPage> {
           value: globalSettings.trktivityEnabled,
           title: Text(
             "Trktivity",
-            style: Theme.of(context).textTheme.headline5,
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
           secondary: InfoWidget("Press to open folder with saved data", onTap: () {
             WinUtils.open("${WinUtils.getTabameSettingsFolder()}\\trktivity");
@@ -454,8 +454,9 @@ It records keystrokes, mouse movement and active Window.
                                 alignment: Alignment.center,
                                 isDense: true,
                                 isExpanded: true,
-                                itemHeight: 30,
-                                buttonWidth: 140,
+                                buttonStyleData: const ButtonStyleData(padding: EdgeInsets.symmetric(horizontal: 5), height: 40, width: 140),
+                                menuItemStyleData: const MenuItemStyleData(height: 30),
+                                dropdownStyleData: const DropdownStyleData(padding: EdgeInsets.all(1), offset: Offset(0, 30), maxHeight: 200),
                                 value: selectedDay,
                                 items: allDates
                                     .take(30)
@@ -528,7 +529,7 @@ It records keystrokes, mouse movement and active Window.
                       ? "Stats for ${DateFormat("d MMMM, yyyy").format(DateTime.parse(selectedDay))}"
                       : "Stats from ${DateFormat("d MMM, yyyy").format(DateTime.parse(startDate))} to ${DateFormat("d MMM, yyyy").format(DateTime.parse(endDate))}"
                           "",
-                  style: Theme.of(context).textTheme.headline6,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 Text("Total Keys pressed: ${uTrack.values.fold(0, (int previousValue, MTrack element) => element.keyboard + previousValue).formatInt()}"),
                 const SizedBox(height: 20),
@@ -539,13 +540,14 @@ It records keystrokes, mouse movement and active Window.
                       maxY: uTrackMaxValue,
                       barTouchData: BarTouchData(
                           touchTooltipData: BarTouchTooltipData(
-                        tooltipBgColor: Theme.of(context).backgroundColor,
+                        // tooltipBgColor: Theme.of(context).colorScheme.surface,
+
                         tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                         getTooltipItem: (BarChartGroupData a, int b, BarChartRodData c, int d) {
                           if (a.barRods.isEmpty) return BarTooltipItem("", Theme.of(context).textTheme.labelMedium!);
                           final String kb = a.barRods.elementAt(0).rodStackItems.elementAt(0).toY.toInt().formatInt();
                           final String mouse = a.barRods.elementAt(0).rodStackItems.elementAt(1).toY.toInt().formatInt();
-                          return BarTooltipItem("${a.x.formatTime()}\n$kb keys pressed\n$mouse mouse pings", Theme.of(context).textTheme.button!);
+                          return BarTooltipItem("${a.x.formatTime()}\n$kb keys pressed\n$mouse mouse pings", Theme.of(context).textTheme.labelLarge!);
                         },
                       )),
                       barGroups: List<BarChartGroupData>.generate(
@@ -577,10 +579,10 @@ It records keystrokes, mouse movement and active Window.
                       ),
                       titlesData: FlTitlesData(
                         show: true,
-                        rightTitles: AxisTitles(
+                        rightTitles: const AxisTitles(
                           sideTitles: SideTitles(showTitles: false),
                         ),
-                        topTitles: AxisTitles(
+                        topTitles: const AxisTitles(
                           sideTitles: SideTitles(showTitles: false),
                         ),
                         bottomTitles: AxisTitles(
@@ -610,13 +612,13 @@ It records keystrokes, mouse movement and active Window.
                             reservedSize: 42,
                           ),
                         ),
-                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text("Focus time", style: Theme.of(context).textTheme.headline6),
+                Text("Focus time", style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 IntrinsicHeight(
                   child: Row(
@@ -636,10 +638,10 @@ It records keystrokes, mouse movement and active Window.
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    Expanded(child: Text("App", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.button)),
+                                    Expanded(child: Text("App", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.labelLarge)),
                                   ],
                                 ),
                                 InkWell(
@@ -650,13 +652,13 @@ It records keystrokes, mouse movement and active Window.
                                     children: <Widget>[
                                       Expanded(
                                           child: Text(wTrack.containsKey("idle.exe") ? "Idle: ${wTrack["idle.exe"]!.timeFormat}" : "Total",
-                                              style: Theme.of(context).textTheme.button)),
+                                              style: Theme.of(context).textTheme.labelLarge)),
                                       SizedBox(
                                         width: 80,
                                         child: Text(
                                           timeFormat(
                                               wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0))),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       ),
                                       SizedBox(
@@ -665,7 +667,7 @@ It records keystrokes, mouse movement and active Window.
                                           wTrackList
                                               .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.keyboard : 0))
                                               .formatInt(),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       ),
                                       SizedBox(
@@ -674,7 +676,7 @@ It records keystrokes, mouse movement and active Window.
                                           wTrackList
                                               .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.mouse : 0))
                                               .formatInt(),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       )
                                     ],
@@ -722,10 +724,10 @@ It records keystrokes, mouse movement and active Window.
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    Expanded(child: Text("Title", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.button)),
-                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.button)),
+                                    Expanded(child: Text("Title", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.labelLarge)),
+                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.labelLarge)),
                                   ],
                                 ),
                                 InkWell(
@@ -734,13 +736,13 @@ It records keystrokes, mouse movement and active Window.
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
-                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.labelLarge)),
                                       SizedBox(
                                         width: 80,
                                         child: Text(
                                           timeFormat(
                                               tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.time : 0))),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       ),
                                       SizedBox(
@@ -749,7 +751,7 @@ It records keystrokes, mouse movement and active Window.
                                           tTrackList
                                               .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.keyboard : 0))
                                               .formatInt(),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       ),
                                       SizedBox(
@@ -758,7 +760,7 @@ It records keystrokes, mouse movement and active Window.
                                           tTrackList
                                               .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.mouse : 0))
                                               .formatInt(),
-                                          style: Theme.of(context).textTheme.button,
+                                          style: Theme.of(context).textTheme.labelLarge,
                                         ),
                                       )
                                     ],
@@ -803,7 +805,7 @@ It records keystrokes, mouse movement and active Window.
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           const Divider(height: 20, thickness: 1),
-                          Text("Timeline by App", style: Theme.of(context).textTheme.headline6),
+                          Text("Timeline by App", style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 11),
                           Container(
                             height: 20,
@@ -864,7 +866,7 @@ It records keystrokes, mouse movement and active Window.
                             ),
                           ),
                           const SizedBox(height: 20),
-                          Text("Timeline by Title", style: Theme.of(context).textTheme.headline6),
+                          Text("Timeline by Title", style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 10),
                           Container(
                             height: 220,
@@ -925,16 +927,16 @@ It records keystrokes, mouse movement and active Window.
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             const SizedBox(height: 20),
-                            Text("Daily Stats", style: Theme.of(context).textTheme.headline6),
-                            Row(
+                            Text("Daily Stats", style: Theme.of(context).textTheme.titleLarge),
+                            const Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                const Expanded(child: Text("Day")),
-                                const SizedBox(width: 80, child: Text("Active")),
-                                const SizedBox(width: 80, child: Text("Idle")),
-                                const SizedBox(width: 80, child: Text("Keys")),
-                                const SizedBox(width: 80, child: Text("Mouse")),
+                                Expanded(child: Text("Day")),
+                                SizedBox(width: 80, child: Text("Active")),
+                                SizedBox(width: 80, child: Text("Idle")),
+                                SizedBox(width: 80, child: Text("Keys")),
+                                SizedBox(width: 80, child: Text("Mouse")),
                               ],
                             ),
                             InkWell(
@@ -943,23 +945,23 @@ It records keystrokes, mouse movement and active Window.
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  Expanded(child: Text("Total", style: Theme.of(context).textTheme.button)),
+                                  Expanded(child: Text("Total", style: Theme.of(context).textTheme.labelLarge)),
                                   SizedBox(
                                       width: 80,
                                       child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
-                                          style: Theme.of(context).textTheme.button)),
+                                          style: Theme.of(context).textTheme.labelLarge)),
                                   SizedBox(
                                       width: 80,
                                       child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
-                                          style: Theme.of(context).textTheme.button)),
+                                          style: Theme.of(context).textTheme.labelLarge)),
                                   SizedBox(
                                       width: 80,
                                       child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard).formatInt(),
-                                          style: Theme.of(context).textTheme.button)),
+                                          style: Theme.of(context).textTheme.labelLarge)),
                                   SizedBox(
                                       width: 80,
                                       child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse).formatInt(),
-                                          style: Theme.of(context).textTheme.button)),
+                                          style: Theme.of(context).textTheme.labelLarge)),
                                 ],
                               ),
                             ),
@@ -994,7 +996,7 @@ It records keystrokes, mouse movement and active Window.
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               const SizedBox(height: 20),
-                              Text("Daily Average", style: Theme.of(context).textTheme.headline6),
+                              Text("Daily Average", style: Theme.of(context).textTheme.titleLarge),
                               Text("Active hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.time).average.toInt())}",
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
                               Text("Idle hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.idleTime).average.toInt())}",
@@ -1020,10 +1022,10 @@ class TrktivityFilterSet extends StatefulWidget {
   final TrktivityFilter filter;
   final Function(TrktivityFilter filter) onSaved;
   const TrktivityFilterSet({
-    Key? key,
+    super.key,
     required this.filter,
     required this.onSaved,
-  }) : super(key: key);
+  });
   @override
   TrktivityFilterSetState createState() => TrktivityFilterSetState();
 }

@@ -14,7 +14,7 @@ import '../widgets/popup_dialog.dart';
 import '../widgets/text_input.dart';
 
 class SearchTextWidget extends StatefulWidget {
-  const SearchTextWidget({Key? key}) : super(key: key);
+  const SearchTextWidget({super.key});
 
   @override
   SearchTextWidgetState createState() => SearchTextWidgetState();

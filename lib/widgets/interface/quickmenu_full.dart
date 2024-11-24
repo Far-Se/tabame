@@ -7,7 +7,7 @@ import 'quickmenu_settings.dart';
 import 'quickrun_settings.dart';
 
 class AllQuickMenu extends StatefulWidget {
-  const AllQuickMenu({Key? key}) : super(key: key);
+  const AllQuickMenu({super.key});
   @override
   AllQuickMenuState createState() => AllQuickMenuState();
 }

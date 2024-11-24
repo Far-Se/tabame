@@ -24,7 +24,7 @@ linter:
   # producing the lint.
   rules:
     avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    dead_code: false 
+    # dead_code: false 
     prefer_relative_imports: true
     unnecessary_string_interpolations: false
     prefer_const_declarations: true

@@ -10,9 +10,9 @@ import '../../../models/settings.dart';
 class TimeWidget extends StatefulWidget {
   final bool? inline;
   const TimeWidget({
-    Key? key,
+    super.key,
     this.inline,
-  }) : super(key: key);
+  });
 
   @override
   State<TimeWidget> createState() => _TimeWidgetState();

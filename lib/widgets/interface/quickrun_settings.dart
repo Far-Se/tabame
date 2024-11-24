@@ -19,7 +19,7 @@ class WizardPage {
 }
 
 class RunSettings extends StatefulWidget {
-  const RunSettings({Key? key}) : super(key: key);
+  const RunSettings({super.key});
 
   @override
   RunSettingsState createState() => RunSettingsState();

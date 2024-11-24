@@ -9,7 +9,7 @@ import '../../../pages/quickmenu.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class FancyShotButton extends StatelessWidget {
-  const FancyShotButton({Key? key}) : super(key: key);
+  const FancyShotButton({super.key});
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(

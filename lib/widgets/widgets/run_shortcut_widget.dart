@@ -14,7 +14,7 @@ class RunShortCutInfo extends StatelessWidget {
   final String info;
   final List<String> example;
   const RunShortCutInfo({
-    Key? key,
+    super.key,
     required this.onChanged,
     required this.title,
     required this.value,
@@ -22,7 +22,7 @@ class RunShortCutInfo extends StatelessWidget {
     required this.tooltip,
     required this.info,
     required this.example,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +81,8 @@ class RunShortCutInfo extends StatelessWidget {
                                 data: Theme.of(context).textSelectionTheme.copyWith(selectionColor: Colors.red),
                                 child: SelectableText(
                                   example[index],
-                                  toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
-                                  style: TextStyle(color: Theme.of(context).backgroundColor, fontSize: 12, height: 1.00001),
+                                  //toolbarOptions: const ToolbarOptions(copy: true, cut: true, paste: true, selectAll: true),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.surface, fontSize: 12, height: 1.00001),
                                 ),
                               )))),
                 ],

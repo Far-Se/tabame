@@ -12,7 +12,7 @@ import '../../../models/win32/win32.dart';
 import '../../containers/bar_with_buttons.dart';
 
 class PowershellList extends StatefulWidget {
-  const PowershellList({Key? key}) : super(key: key);
+  const PowershellList({super.key});
 
   @override
   PowershellListState createState() => PowershellListState();
@@ -52,7 +52,7 @@ class PowershellListState extends State<PowershellList> {
                       WinUtils.runPowerShell(<String>[item.command]);
                     } else {
                       ShellExecute(Win32.hWnd, TEXT("open"), TEXT('powershell'), TEXT('-NoExit -executionpolicy bypass -command "${item.command}"'),
-                          Pointer<Utf16>.fromAddress(0), SW_SHOWNORMAL);
+                          Pointer<Utf16>.fromAddress(0), SHOW_WINDOW_CMD.SW_SHOWNORMAL);
                     }
                   },
                 ),

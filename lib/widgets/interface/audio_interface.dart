@@ -13,7 +13,7 @@ import '../widgets/popup_dialog.dart';
 import '../widgets/text_input.dart';
 
 class AudioInterface extends StatefulWidget {
-  const AudioInterface({Key? key}) : super(key: key);
+  const AudioInterface({super.key});
   @override
   AudioInterfaceState createState() => AudioInterfaceState();
 }
@@ -57,7 +57,7 @@ class AudioInterfaceState extends State<AudioInterface> {
             if (!Audio.canRunAudioModule)
               Text(
                 "\nSorry but Audio Module is bugged on your Windows install, I am trying to figure it out why it doesn't work for some people.\n\n",
-                style: Theme.of(context).textTheme.headline6,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
@@ -68,7 +68,7 @@ class AudioInterfaceState extends State<AudioInterface> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      ListTile(title: Text("Setting Default device:", style: Theme.of(context).textTheme.headline6)),
+                      ListTile(title: Text("Setting Default device:", style: Theme.of(context).textTheme.titleLarge)),
                       CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
                         title: const Text("Multimedia"),
@@ -103,7 +103,7 @@ class AudioInterfaceState extends State<AudioInterface> {
                         },
                       ),
                       const Divider(height: 10, thickness: 1),
-                      ListTile(title: Text("Spotify Settings", style: Theme.of(context).textTheme.headline6)),
+                      ListTile(title: Text("Spotify Settings", style: Theme.of(context).textTheme.titleLarge)),
                       CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
                         title: const Text("Pause Spotify when sound comes from other sources"),
@@ -127,7 +127,7 @@ class AudioInterfaceState extends State<AudioInterface> {
                         },
                       ),
                       const Divider(height: 10, thickness: 1),
-                      ListTile(title: Text("QuickMenu Audio", style: Theme.of(context).textTheme.headline6)),
+                      ListTile(title: Text("QuickMenu Audio", style: Theme.of(context).textTheme.titleLarge)),
                       CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
                         title: const Text("Show Media Control for each App"),
@@ -149,12 +149,6 @@ class AudioInterfaceState extends State<AudioInterface> {
                               isDense: false,
                             ),
                             controller: TextEditingController(text: Boxes.mediaControls.join(", ")),
-                            toolbarOptions: const ToolbarOptions(
-                              paste: true,
-                              cut: true,
-                              copy: true,
-                              selectAll: true,
-                            ),
                             style: const TextStyle(fontSize: 14),
                             enableInteractiveSelection: true,
                             onSubmitted: (String e) {
@@ -187,7 +181,7 @@ class AudioInterfaceState extends State<AudioInterface> {
                             mainAxisSize: MainAxisSize.max,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
-                              ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.headline6)),
+                              ListTile(title: Text("Volume OSD Style", style: Theme.of(context).textTheme.titleLarge)),
                               RadioListTile<VolumeOSDStyle>(
                                 title: const Text('Normal Volume OSD'),
                                 value: VolumeOSDStyle.normal,
@@ -229,7 +223,7 @@ class AudioInterfaceState extends State<AudioInterface> {
 }
 
 class DefaultVolumePerApp extends StatefulWidget {
-  const DefaultVolumePerApp({Key? key}) : super(key: key);
+  const DefaultVolumePerApp({super.key});
   @override
   DefaultVolumePerAppState createState() => DefaultVolumePerAppState();
 }
@@ -262,7 +256,7 @@ class DefaultVolumePerAppState extends State<DefaultVolumePerApp> {
           leading: Container(width: 20, height: double.infinity, child: const Icon(Icons.add)),
           title: Text(
             "Default Volume for app",
-            style: Theme.of(context).textTheme.headline6?.copyWith(height: 1),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1),
           ),
           trailing: InfoWidget(
             "Press",

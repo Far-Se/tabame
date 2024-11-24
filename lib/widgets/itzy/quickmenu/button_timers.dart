@@ -11,7 +11,7 @@ import '../../../models/settings.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class TimersButton extends StatefulWidget {
-  const TimersButton({Key? key}) : super(key: key);
+  const TimersButton({super.key});
   @override
   TimersButtonState createState() => TimersButtonState();
 }
@@ -19,6 +19,7 @@ class TimersButton extends StatefulWidget {
 class TimersButtonState extends State<TimersButton> {
   @override
   void initState() {
+    Boxes().loadLatestQuickTimers();
     super.initState();
   }
 
@@ -72,13 +73,13 @@ class TimersButtonState extends State<TimersButton> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
 
 class TimersWidgetState extends State<TimersWidget> {
-  String? selectedTimerType = "Audio";
+  String? selectedTimerType = "Message";
 
   TextEditingController messageController = TextEditingController();
   TextEditingController durationController = TextEditingController();
@@ -104,14 +105,14 @@ class TimersWidgetState extends State<TimersWidget> {
         child: Container(
           height: double.infinity,
           width: 280,
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
+          constraints: BoxConstraints(maxWidth: 280, maxHeight: 100 + Boxes.lastQuickTimers.length * 35),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -119,7 +120,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -127,29 +128,23 @@ class TimersWidgetState extends State<TimersWidget> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text("Create Timer:", style: TextStyle(fontSize: 17)),
+                // const Text("Create Timer:", style: TextStyle(fontSize: 17)),
                 Row(
                   children: <Widget>[
                     Expanded(
-                      flex: 1,
+                      flex: 2,
                       child: TextField(
                         keyboardType: TextInputType.number,
                         inputFormatters: <TextInputFormatter>[
                           FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(2),
+                          LengthLimitingTextInputFormatter(4),
                         ],
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                          hintText: "Minutes",
-                          hintStyle: const TextStyle(fontSize: 12),
-                          border: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                        decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            hintText: "Minutes",
+                            hintStyle: TextStyle(fontSize: 12),
+                            border: UnderlineInputBorder(borderRadius: BorderRadius.zero)),
                         controller: durationController,
                         onChanged: (String e) {
                           // filters.watermark = e;
@@ -157,21 +152,16 @@ class TimersWidgetState extends State<TimersWidget> {
                         },
                       ),
                     ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      flex: 3,
+                      flex: 5,
                       child: TextField(
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                          hintText: "Message",
-                          hintStyle: const TextStyle(fontSize: 12),
-                          border: UnderlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                        decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            hintText: "Message",
+                            hintStyle: TextStyle(fontSize: 12),
+                            border: UnderlineInputBorder(borderRadius: BorderRadius.zero)),
                         controller: messageController,
                         onChanged: (String e) {
                           // filters.watermark = e;
@@ -191,9 +181,9 @@ class TimersWidgetState extends State<TimersWidget> {
                             "Type",
                             style: TextStyle(fontSize: 14, color: Theme.of(context).hintColor),
                           ),
-                          buttonPadding: const EdgeInsets.symmetric(horizontal: 5),
-                          dropdownPadding: const EdgeInsets.all(1),
-                          offset: const Offset(0, 30),
+                          buttonStyleData: const ButtonStyleData(padding: EdgeInsets.symmetric(horizontal: 5), height: 40, width: 200),
+                          menuItemStyleData: const MenuItemStyleData(height: 30),
+                          dropdownStyleData: const DropdownStyleData(padding: EdgeInsets.all(1), offset: Offset(0, 30), maxHeight: 200),
                           isDense: true,
                           style: const TextStyle(fontSize: 200),
                           items: <String>["Audio", "Message", "Notification"]
@@ -204,29 +194,66 @@ class TimersWidgetState extends State<TimersWidget> {
                             selectedTimerType = value;
                             setState(() {});
                           },
-                          buttonHeight: 40,
-                          buttonWidth: 200,
-                          itemHeight: 30,
-                          dropdownMaxHeight: 200,
                         ),
                       ),
                     ),
                     Expanded(
                         child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              shape: const StadiumBorder(),
+                              side: const BorderSide(color: Colors.transparent),
+                            ),
                             onPressed: () {
                               Boxes().addQuickTimer(
-                                messageController.text,
+                                messageController.text.isEmpty ? "${durationController.text} Minute Timer" : messageController.text,
                                 int.tryParse(durationController.text) ?? 1,
                                 <String>["Audio", "Message", "Notification"].indexWhere((String el) => el == selectedTimerType),
                               );
+                              if (messageController.text.isEmpty) {
+                                context.findAncestorStateOfType<TimersButtonState>()?.setState(() {});
+                                if (mounted) setState(() {});
+                                return;
+                              }
+                              SavedQuickTimers timer = SavedQuickTimers();
+                              timer.name = messageController.text;
+                              timer.minutes = int.tryParse(durationController.text) ?? 1;
+                              timer.type = <String>["Audio", "Message", "Notification"].indexWhere((String el) => el == selectedTimerType);
+                              Boxes.lastQuickTimers.add(timer);
+                              Boxes.lastQuickTimers.sort(((SavedQuickTimers a, SavedQuickTimers b) => a.minutes - b.minutes));
+                              if (Boxes.lastQuickTimers.length > 20) {
+                                Boxes.lastQuickTimers.removeRange(0, Boxes.lastQuickTimers.length - 20);
+                              }
+                              Boxes().saveLatestQuickTimers();
+                              context.findAncestorStateOfType<TimersButtonState>()?.setState(() {});
+
                               setState(() {});
                             },
                             icon: const Icon(Icons.add),
                             label: const Text("Create", style: TextStyle(height: 1))))
                   ],
                 ),
-                const Divider(height: 5, thickness: 1),
-                Boxes.quickTimers.isEmpty ? const Text("No Active Timers") : const ListTimersWidget(),
+                // const Divider(height: 5, thickness: 1),
+                Container(
+                  height: 160 + Boxes.lastQuickTimers.length * 15, //175,
+                  width: 280,
+                  child: SingleChildScrollView(
+                    controller: ScrollController(),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          if (Boxes.quickTimers.isNotEmpty) const ListTimersWidget(),
+                          if (Boxes.lastQuickTimers.isNotEmpty)
+                            ListLatestQuickTimers(onTriggered: () {
+                              setState(() {});
+                            }),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -236,10 +263,90 @@ class TimersWidgetState extends State<TimersWidget> {
   }
 }
 
+class ListLatestQuickTimers extends StatefulWidget {
+  final Function onTriggered;
+  const ListLatestQuickTimers({super.key, required this.onTriggered});
+  @override
+  ListLatestQuickTimersState createState() => ListLatestQuickTimersState();
+}
+
+class ListLatestQuickTimersState extends State<ListLatestQuickTimers> {
+  //List<SavedQuickTimers> lastTimers = <SavedQuickTimers>[];
+  @override
+  void initState() {
+    super.initState();
+
+    //lastTimers = <SavedQuickTimers>[...Boxes.lastQuickTimers];
+    Boxes.lastQuickTimers.sort(((SavedQuickTimers a, SavedQuickTimers b) => a.minutes - b.minutes));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const Divider(height: 6, thickness: 1),
+        const Text(
+          "Latest Timers:",
+          style: TextStyle(
+            fontSize: 19.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        ...List<Widget>.generate(
+            Boxes.lastQuickTimers.length,
+            (int index) => Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Boxes().addQuickTimer(Boxes.lastQuickTimers[index].name, Boxes.lastQuickTimers[index].minutes, Boxes.lastQuickTimers[index].type);
+                          setState(() {});
+                          Timer(const Duration(milliseconds: 200), () => context.findAncestorStateOfType<TimersButtonState>()?.setState(() {}));
+                          widget.onTriggered();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(2.0),
+                          child: Text("${Boxes.lastQuickTimers[index].name}: ${Boxes.lastQuickTimers[index].minutes} minutes (${<String>[
+                            "Audio",
+                            "Message",
+                            "Notification"
+                          ][Boxes.lastQuickTimers[index].type]})"),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: InkWell(
+                        onTap: () {
+                          Boxes.lastQuickTimers.removeAt(index);
+                          Boxes.lastQuickTimers.sort(((SavedQuickTimers a, SavedQuickTimers b) => a.minutes - b.minutes));
+                          setState(() {});
+                          Boxes().saveLatestQuickTimers();
+                        },
+                        child: const Icon(Icons.close_rounded),
+                      ),
+                    )
+                  ],
+                ))
+      ],
+    );
+  }
+}
+
 class ListTimersWidget extends StatefulWidget {
   const ListTimersWidget({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ListTimersWidget> createState() => _ListTimersWidgetState();
@@ -265,47 +372,38 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 175,
-      width: 280,
-      child: SingleChildScrollView(
-        controller: ScrollController(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(
+    return Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List<Widget>.generate(
+          Boxes.quickTimers.length,
+          (int index) {
+            final Duration diff = DateTime.now().difference(Boxes.quickTimers[index].endTime);
+            final DateTime endTimer = Boxes.quickTimers[index].endTime;
+            return Row(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: List<Widget>.generate(
-                Boxes.quickTimers.length,
-                (int index) {
-                  final Duration diff = DateTime.now().difference(Boxes.quickTimers[index].endTime);
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      IconButton(
-                        splashRadius: 16,
-                        onPressed: () {
-                          Boxes.quickTimers[index].timer?.cancel();
-                          Boxes.quickTimers.removeAt(index);
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.delete),
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Container(width: 200, child: Text(Boxes.quickTimers[index].name, overflow: TextOverflow.fade, softWrap: false)),
-                          Text("${diff.toString().replaceAll(RegExp(r'(\.\d+|-)'), '')}")
-                        ],
-                      )
-                    ],
-                  );
-                },
-              )),
-        ),
-      ),
-    );
+              children: <Widget>[
+                IconButton(
+                  splashRadius: 16,
+                  onPressed: () {
+                    Boxes.quickTimers[index].timer?.cancel();
+                    Boxes.quickTimers.removeAt(index);
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.delete),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(width: 200, child: Text(Boxes.quickTimers[index].name, overflow: TextOverflow.fade, softWrap: false)),
+                    Text("${diff.toString().replaceAll(RegExp(r'(\.\d+|-)'), '')}" " (${endTimer.hour.formatZeros()}:${endTimer.minute.formatZeros()})")
+                  ],
+                )
+              ],
+            );
+          },
+        ));
   }
 }

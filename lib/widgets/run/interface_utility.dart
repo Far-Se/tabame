@@ -6,7 +6,7 @@ import '../widgets/run_shortcut_widget.dart';
 import '../widgets/text_input.dart';
 
 class InterfaceRunUtility extends StatefulWidget {
-  const InterfaceRunUtility({Key? key}) : super(key: key);
+  const InterfaceRunUtility({super.key});
 
   @override
   InterfaceRunUtilityState createState() => InterfaceRunUtilityState();

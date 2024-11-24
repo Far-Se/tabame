@@ -4,7 +4,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide MenuItem;
+import 'package:flutter/material.dart';
 // ignore: implementation_imports
 import 'package:flutter/src/gestures/events.dart';
 import 'package:window_manager/window_manager.dart';
@@ -20,7 +20,7 @@ import '../../models/globals.dart';
 import '../widgets/info_text.dart';
 
 class TaskBar extends StatefulWidget {
-  const TaskBar({Key? key}) : super(key: key);
+  const TaskBar({super.key});
 
   @override
   TaskBarState createState() => TaskBarState();
@@ -103,14 +103,19 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       await handleAudio();
       await handleHeight();
 
-      if (state && mounted) setState(() => fetching = false);
+      if (state && mounted) {
+        // print("echoo");
+        setState(() => fetching = false);
+      }
     }
+
     return;
   }
 
   int timerTicks = 0;
   bool keepFetching = true;
   bool audioJumpOneTick = false;
+  int sizeIncrement = 1;
   @override
   void initState() {
     Debug.add("QuickMenu: Taskbar-Init");
@@ -136,6 +141,14 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       if (!fetching) {
         fetchWindows();
       }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Future<void>.delayed(const Duration(milliseconds: 300), () {
+        windowManager.getSize().then((Size value) {
+          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
+          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
+        });
+      });
     });
     Debug.add("QuickMenu: Taskbar");
   }
@@ -208,7 +221,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
               itemBuilder: (BuildContext context, int index) {
                 final Window window = windows.elementAt(index);
                 double hoverButtonsWidth = (Boxes.mediaControls.contains(window.process.exe))
-                    ? 75
+                    ? 50
                     : ((Caches.audioMixerExes.contains(window.process.exe) || wasPausedByButton.contains(window.process.exe)) ? 50 : 25);
                 if (!globalSettings.showMediaControlForApp) hoverButtonsWidth = 25;
 
@@ -361,21 +374,23 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                       width: 5,
                                     ),
                                     //2 Icon
-                                    SizedBox(
-                                      width: 20,
-                                      child: ((WindowWatcher.icons.containsKey(window.hWnd))
-                                          ? Image.memory(
-                                              WindowWatcher.icons[window.hWnd] ?? Uint8List(0),
-                                              width: 20,
-                                              height: 20,
-                                              gaplessPlayback: true,
-                                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                                Icons.check_box_outline_blank,
-                                                size: 20,
-                                              ),
-                                            )
-                                          : const Icon(Icons.web_asset_sharp, size: 20)),
-                                    ),
+                                    Globals.getIconRewrite(window.process.exePath, window: window) != ""
+                                        ? Image.asset(Globals.getIconRewrite(window.process.exePath, window: window), width: 20)
+                                        : SizedBox(
+                                            width: 20,
+                                            child: ((WindowWatcher.icons.containsKey(window.hWnd))
+                                                ? Image.memory(
+                                                    WindowWatcher.icons[window.hWnd] ?? Uint8List(0),
+                                                    width: 20,
+                                                    height: 20,
+                                                    gaplessPlayback: true,
+                                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                                      Icons.check_box_outline_blank,
+                                                      size: 20,
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.web_asset_sharp, size: 20)),
+                                          ),
 
                                     //2 Info
                                     SizedBox(
@@ -443,17 +458,11 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                         children: <Widget>[
                                           InkWell(
                                             hoverColor: hoverColor,
-                                            onTap: () {
-                                              WindowWatcher.mediaControl(index);
-                                            },
-                                            child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),
-                                          ),
-                                          InkWell(
-                                            hoverColor: hoverColor,
-                                            onTap: () {
-                                              WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack);
-                                            },
-                                            child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.skip_next, size: 15)),
+                                            onTap: () => WindowWatcher.mediaControl(index),
+                                            child: GestureDetector(
+                                                onSecondaryTap: () => WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack),
+                                                onTertiaryTapUp: (TapUpDetails details) => WindowWatcher.mediaControl(index, button: AppCommand.mediaPrevioustrack),
+                                                child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15))),
                                           ),
                                         ],
                                       ),
@@ -465,13 +474,11 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                             (Caches.audioMixerExes.contains(window.process.exe) && !Boxes.mediaControls.contains(window.process.exe))))
                                       InkWell(
                                         hoverColor: hoverColor,
-                                        onTap: () {
-                                          if (!wasPausedByButton.contains(window.process.exe)) {
-                                            wasPausedByButton.add(window.process.exe);
-                                          }
-                                          WindowWatcher.mediaControl(index);
-                                        },
-                                        child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15)),
+                                        onTap: () => WindowWatcher.mediaControl(index),
+                                        child: GestureDetector(
+                                            onSecondaryTap: () => WindowWatcher.mediaControl(index, button: AppCommand.mediaNexttrack),
+                                            onTertiaryTapUp: (TapUpDetails details) => WindowWatcher.mediaControl(index, button: AppCommand.mediaPrevioustrack),
+                                            child: const SizedBox(width: 25, height: oneColumnHeight, child: Icon(Icons.play_arrow, size: 15))),
                                       ),
 
                                     //2 Close Button
@@ -515,7 +522,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
 class ContextMenuWidget extends StatefulWidget {
   final int hWnd;
-  const ContextMenuWidget({Key? key, required this.hWnd}) : super(key: key);
+  const ContextMenuWidget({super.key, required this.hWnd});
   @override
   ContextMenuWidgetState createState() => ContextMenuWidgetState();
 }
@@ -551,9 +558,9 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
             // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -561,7 +568,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -632,7 +639,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                                               child: Icon(Icons.keyboard_double_arrow_left,
                                                   color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18))),
-                                      Expanded(child: Text("Left Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                      Expanded(child: Text("Left Desktop", style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 1))),
                                     ],
                                   ),
                                 ),
@@ -651,7 +658,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: <Widget>[
-                                      Expanded(child: Text("Right Desktop", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                      Expanded(child: Text("Right Desktop", style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 1))),
                                       SizedBox(
                                           child: Padding(
                                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
@@ -681,7 +688,8 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                                   child: Icon(Icons.pin_end_outlined, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18),
                                 )),
-                                Expanded(child: Text(window.isPinned ? "Unpin" : 'Set Always on Top', style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                Expanded(
+                                    child: Text(window.isPinned ? "Unpin" : 'Set Always on Top', style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 1))),
                               ],
                             ),
                           ),
@@ -702,7 +710,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                                   child: Icon(Icons.highlight_off, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18),
                                 )),
-                                Expanded(child: Text("Force Close", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                Expanded(child: Text("Force Close", style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 1))),
                               ],
                             ),
                           ),
@@ -725,7 +733,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
                                     child: Icon(Icons.pin_end_outlined, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), size: 18),
                                   )),
-                                  Expanded(child: Text("UnHook", style: Theme.of(context).textTheme.button?.copyWith(height: 1))),
+                                  Expanded(child: Text("UnHook", style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 1))),
                                 ],
                               ),
                             ),
@@ -740,7 +748,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  Text("  Hook window with:", style: Theme.of(context).textTheme.button),
+                                  Text("  Hook window with:", style: Theme.of(context).textTheme.labelLarge),
                                   const SizedBox(height: 5),
                                   Container(
                                     height: 130,

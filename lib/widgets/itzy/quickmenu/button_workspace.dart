@@ -12,7 +12,7 @@ import '../../../models/window_watcher.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class WorkSpaceButton extends StatefulWidget {
-  const WorkSpaceButton({Key? key}) : super(key: key);
+  const WorkSpaceButton({super.key});
   @override
   WorkSpaceButtonState createState() => WorkSpaceButtonState();
 }
@@ -69,7 +69,7 @@ class WorkSpaceButtonState extends State<WorkSpaceButton> {
 }
 
 class WorkspacesWidget extends StatefulWidget {
-  const WorkspacesWidget({Key? key}) : super(key: key);
+  const WorkspacesWidget({super.key});
   @override
   WorkspacesWidgetState createState() => WorkspacesWidgetState();
 }
@@ -103,9 +103,9 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
             // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -113,7 +113,7 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -155,13 +155,13 @@ class WorkspacesWidgetState extends State<WorkspacesWidget> {
                                     if (win.exe == wWatch.process.exe) {
                                       if (win.title.isNotEmpty) {
                                         if (RegExp(win.title, caseSensitive: false).hasMatch(wWatch.title)) {
-                                          SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
-                                          SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                                          SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
+                                          SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE);
                                           break;
                                         }
                                       } else {
-                                        SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SWP_NOACTIVATE);
-                                        SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                                        SetWindowPos(wWatch.hWnd, HWND_TOPMOST, win.posX, win.posY, win.width, win.height, SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
+                                        SetWindowPos(wWatch.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE);
                                         break;
                                       }
                                     }

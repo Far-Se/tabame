@@ -6,7 +6,7 @@ import '../../models/globals.dart';
 import '../../models/settings.dart';
 
 class Changelog extends StatefulWidget {
-  const Changelog({Key? key}) : super(key: key);
+  const Changelog({super.key});
 
   @override
   State<Changelog> createState() => _ChangelogState();
@@ -111,7 +111,7 @@ Now you can set default Volume for apps, for example if you open a game, and usu
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text("Changelog", style: Theme.of(context).textTheme.headline4),
+          Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 10),
           ...List<Widget>.generate(
             changelog.length.clamp(0, 10),
@@ -119,7 +119,7 @@ Now you can set default Volume for apps, for example if you open a game, and usu
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text("Version ${changelog.keys.elementAt(index)}:", style: Theme.of(context).textTheme.headline6),
+                Text("Version ${changelog.keys.elementAt(index)}:", style: Theme.of(context).textTheme.titleLarge),
                 Markdown(
                   shrinkWrap: true,
                   data: changelog.values.elementAt(index),

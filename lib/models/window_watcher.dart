@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:win32/win32.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -60,6 +60,20 @@ class WindowWatcher {
         if (Boxes.pref.getString("SpotifyLocation") == null) {
           Boxes.pref.setString("SpotifyLocation", newList.last.process.exePath);
           if (firstEverRun) Debug.add("QuickMenu: Spotify");
+        }
+      }
+      if (newList.last.process.exe == "foobar2000.exe") {
+        specialList["Foobar"] = newList.last;
+        if (Boxes.pref.getString("FoobarLocation") == null) {
+          Boxes.pref.setString("FoobarLocation", newList.last.process.exePath);
+          if (firstEverRun) Debug.add("QuickMenu: Foobar");
+        }
+      }
+      if (newList.last.process.exe == "MusicBee.exe") {
+        specialList["MusicBee"] = newList.last;
+        if (Boxes.pref.getString("MusicBeeLocation") == null) {
+          Boxes.pref.setString("MusicBeeLocation", newList.last.process.exePath);
+          if (firstEverRun) Debug.add("QuickMenu: MusicBee");
         }
       }
     }
@@ -121,8 +135,13 @@ class WindowWatcher {
       }
 
       if (fetchingIcon) {
-        icons[win.hWnd] = await getWindowIcon(win.hWnd);
-        if (icons[win.hWnd]!.length == 3) icons[win.hWnd] = await getExecutableIcon(win.process.path + win.process.exe);
+        icons[win.hWnd] = WinUtils.windowIcon(win.hWnd);
+        if (<Object>[icons[win.hWnd] ?? 0].length == 3) {
+          icons[win.hWnd] = WinUtils.extractIcon(win.process.path + win.process.exe);
+          printError(win.title);
+        } else {
+          printWarning(win.title);
+        }
         iconsHandles[win.hWnd] = win.process.iconHandle;
       }
     }
@@ -161,6 +180,32 @@ class WindowWatcher {
       spotifyPID = Globals.spotifyTrayHwnd[1];
     }
     return <int>[spotifyHwnd, spotifyPID];
+  }
+
+  static List<int> getFoobar() {
+    int foobarHwnd = 0;
+    int foobarPID = 0;
+    if (specialList.containsKey("Foobar")) {
+      foobarHwnd = specialList["Foobar"]!.hWnd;
+      foobarPID = specialList["Foobar"]!.process.pId;
+    } else if (Globals.foobarTrayHwnd[0] != 0) {
+      foobarHwnd = Globals.foobarTrayHwnd[0];
+      foobarPID = Globals.foobarTrayHwnd[1];
+    }
+    return <int>[foobarHwnd, foobarPID];
+  }
+
+  static List<int> getMusicBee() {
+    int musicBeeHwnd = 0;
+    int musicBeePID = 0;
+    if (specialList.containsKey("MusicBee")) {
+      musicBeeHwnd = specialList["MusicBee"]!.hWnd;
+      musicBeePID = specialList["MusicBee"]!.process.pId;
+    } else if (Globals.musicBeeTrayHwnd[0] != 0) {
+      musicBeeHwnd = Globals.musicBeeTrayHwnd[0];
+      musicBeePID = Globals.musicBeeTrayHwnd[1];
+    }
+    return <int>[musicBeeHwnd, musicBeePID];
   }
 
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
@@ -229,7 +274,7 @@ class WindowWatcher {
       final int monitor = MonitorFromPoint(lpPoint.ref, 0);
       free(lpPoint);
       if (Monitor.list.contains(monitor)) {
-        final List<int> hWnds = list.where((Window element) => element.monitor == monitor).map((Window e) => e.hWnd).toList();
+        final List<int> hWnds = list.where((Window element) => element.monitor == monitor && !element.isPinned).map((Window e) => e.hWnd).toList();
         if (hWnds.length > 1) {
           final int h = hWnds[1];
           Win32.activateWindow(h);
@@ -240,6 +285,48 @@ class WindowWatcher {
           });
           return;
         }
+      }
+    });
+  }
+
+  /// Shows the second window under the cursor.
+  ///
+  /// This function delays the execution for 100 milliseconds and then retrieves
+  /// the current cursor position. It then checks if the cursor is within the
+  /// boundaries of any windows and activates the second window found. If the
+  /// second window cannot be activated, it waits for an additional 200
+  /// milliseconds and tries again.
+  static void showSecondWindowUnderCursor() {
+    Win32.activeWindowUnderCursor();
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      if (hierarchy.isEmpty) hierarchy = list.map((Window e) => e.hWnd).toList();
+      final Pointer<POINT> lpPoint = calloc<POINT>();
+      GetCursorPos(lpPoint);
+      final PointXY mousePos = PointXY(X: lpPoint.ref.x, Y: lpPoint.ref.y);
+
+      final int monitor = MonitorFromPoint(lpPoint.ref, 0);
+      free(lpPoint);
+      if (Monitor.list.contains(monitor)) {
+        final List<int> hWnds = list.where((Window element) => element.monitor == monitor && !element.isPinned).map((Window e) => e.hWnd).toList();
+        if (hWnds.length > 1) {
+          final int activeHandle = Win32.getActiveWindowHandle();
+          //loop through hWnds and find the second one
+          for (int i = 1; i < hWnds.length; i++) {
+            final int h = hWnds[i];
+            if (h == activeHandle) {
+              continue;
+            }
+            final Square rect = Win32.getWindowRect(hwnd: h);
+            if (mousePos.X.isBetween(rect.x, rect.x + rect.width) && mousePos.Y.isBetween(rect.y, rect.y + rect.height)) {
+              Win32.activateWindow(h);
+              Future<void>.delayed(const Duration(milliseconds: 200), () => GetForegroundWindow() != h ? Win32.activateWindow(h) : null);
+              return;
+            }
+          }
+          focusSecondWindow();
+          return;
+        }
+        focusSecondWindow();
       }
     });
   }

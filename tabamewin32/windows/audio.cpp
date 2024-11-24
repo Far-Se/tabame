@@ -79,6 +79,12 @@ static HRESULT getDeviceProperty(IMMDevice *pDevice, DeviceProps *output)
         IPropertyStore *pStore = NULL;
         appendDebugFile(debFile, "getDevProp: Store Init");
         hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
+        if (FAILED(hr) || pStore == NULL)
+        {
+            pDevice->Release();
+            CoUninitialize();
+            return hr;
+        }
         if (SUCCEEDED(hr))
         {
             PROPVARIANT prop;
@@ -124,15 +130,26 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
     std::vector<DeviceProps> output;
 
     HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+    // append debugFile("CoInitializeEx");
+    appendDebugFile(debFile, "EnumAudioDevices CoInitializeEx");
     if (SUCCEEDED(hr))
     {
         IMMDeviceEnumerator *pEnumerator = NULL;
         hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, reinterpret_cast<void **>(&pEnumerator));
+        appendDebugFile(debFile, "EnumAudioDevices CoCreateInstance");
         if (SUCCEEDED(hr))
         {
             IMMDevice *pActive = NULL;
 
-            pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+            hr = pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+            if (FAILED(hr) || pActive == NULL)
+            {
+                pEnumerator->Release();
+                CoUninitialize();
+                return output;
+            }
+            appendDebugFile(debFile, "EnumAudioDevices GetDefaultAudioEndpoint");
+
             LPWSTR activeID;
             pActive->GetId(&activeID);
             wstring activeDevID(activeID);
@@ -141,10 +158,21 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
 
             IMMDeviceCollection *pCollection = NULL;
             hr = pEnumerator->EnumAudioEndpoints(deviceType, DEVICE_STATE_ACTIVE, &pCollection);
+            appendDebugFile(debFile, "EnumAudioDevices EnumAudioEndpoints");
+            // check if pcollection is empty
+
+            if (pCollection == NULL)
+            {
+                pEnumerator->Release();
+                CoUninitialize();
+                return output;
+            }
+
             if (SUCCEEDED(hr))
             {
                 UINT cEndpoints = 0;
                 hr = pCollection->GetCount(&cEndpoints);
+                appendDebugFile(debFile, "EnumAudioDevices GetCount");
                 if (SUCCEEDED(hr))
                 {
                     for (UINT n = 0; SUCCEEDED(hr) && n < cEndpoints; ++n)
@@ -193,6 +221,12 @@ DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
             IMMDevice *pActive = NULL;
 
             pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+            if (FAILED(hr) || pActive == NULL)
+            {
+                pEnumerator->Release();
+                CoUninitialize();
+                return DeviceProps();
+            }
             DeviceProps activeDevice;
             getDeviceProperty(pActive, &activeDevice);
             LPWSTR aid;

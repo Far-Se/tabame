@@ -12,7 +12,7 @@ import '../../../models/settings.dart';
 import 'widget_audio.dart';
 
 class AudioButton extends StatefulWidget {
-  const AudioButton({Key? key}) : super(key: key);
+  const AudioButton({super.key});
 
   @override
   State<AudioButton> createState() => _AudioButtonState();

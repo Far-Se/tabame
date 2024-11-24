@@ -6,7 +6,7 @@ import 'package:win32/win32.dart';
 import '../../models/win32/win32.dart';
 
 class HostsEditor extends StatefulWidget {
-  const HostsEditor({Key? key}) : super(key: key);
+  const HostsEditor({super.key});
   @override
   HostsEditorState createState() => HostsEditorState();
 }
@@ -99,10 +99,10 @@ class HostsEditorState extends State<HostsEditor> {
 class HostRow extends StatefulWidget {
   final Function(String newLine) onChanged;
   const HostRow({
-    Key? key,
+    super.key,
     required this.hostLine,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   final String hostLine;
 

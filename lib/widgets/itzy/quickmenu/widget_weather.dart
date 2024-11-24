@@ -20,6 +20,7 @@ Future<String> fetchWeather([bool showUnit = false]) async {
             "https://api.open-meteo.com/v1/forecast?latitude=${latLong[0].trim()}&longitude=${latLong[1].trim()}&current_weather=true${globalSettings.weatherUnit == "u" ? "&temperature_unit=fahrenheit" : ""}"))
         .catchError((_) {
       failed = true;
+      return http.Response("", 500);
     });
 
     final http.Response response = await responseA;
@@ -74,10 +75,10 @@ class WeatherWidget extends StatefulWidget {
   final double width;
   final bool showUnit;
   const WeatherWidget({
-    Key? key,
+    super.key,
     this.width = 30,
     this.showUnit = false,
-  }) : super(key: key);
+  });
 
   @override
   State<WeatherWidget> createState() => _WeatherWidgetState();

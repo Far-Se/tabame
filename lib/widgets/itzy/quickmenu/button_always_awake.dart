@@ -6,8 +6,8 @@ import '../../widgets/quick_actions_item.dart';
 
 class AlwaysAwakeButton extends StatefulWidget {
   const AlwaysAwakeButton({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<AlwaysAwakeButton> createState() => _AlwaysAwakeButtonState();

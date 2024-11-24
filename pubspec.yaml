@@ -6,41 +6,44 @@ publish_to: 'none'
 version: 1.2.0
 
 environment:
-  sdk: ">=2.17.3 <3.0.0"
+  sdk: '>=3.4.3 <4.0.0'
 
 dependencies:
-  animated_button_bar: ^0.0.2+1
+  animated_button_bar: ^1.0.0
   characters: ^1.2.0
+  collection: any
   contextual_menu: ^0.1.2
   cupertino_icons: ^1.0.2
-  dropdown_button2: ^1.8.8
+  dropdown_button2: ^2.3.9
+  emoji_selector: ^0.0.6
   equatable: ^2.0.3
   ffi: ^2.0.0
   filepicker_windows: ^2.0.2
-  fl_chart: ^0.55.0
-  flex_color_picker: ^2.5.0
+  fl_chart: ^0.68.0
+  flex_color_picker: ^3.5.1
   flutter:
     sdk: flutter
-  flutter_markdown: ^0.6.10+3
+  flutter_markdown: ^0.7.3
   foldable_list: ^1.0.1
-  http: ^0.13.4
-  intl: ^0.17.0
+  http: ^1.2.1
+  image: ^4.0.15
+  intl: ^0.19.0
   local_notifier: ^0.1.5
   math_parser: ^1.5.0
-  screenshot: ^1.2.3
+  screenshot: ^3.0.0
   tabamewin32:
     path: tabamewin32
-  units_converter: ^2.0.1
-  win32: ^2.7.0
-  window_manager: ^0.2.5
+  units_converter: ^3.0.0
+  win32: ^5.5.1
+  window_manager: ^0.3.9
   zoom_widget: ^2.0.0
 
 dev_dependencies:
   build_runner: ^2.1.11
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
   flutter_test:
     sdk: flutter
-  lints: ^2.0.0
+  lints: ^4.0.0
   msix: ^3.6.3
 
 flutter:
@@ -56,3 +59,9 @@ flutter:
     - resources/wizzard3.png
     - resources/wizzard4.png
     - resources/gradient/
+    - resources/foobar.png
+    - resources/musicbee.png
+    - resources/code.png
+    - resources/chromium.png
+    - resources/youtube_music.png
+    - resources/devtools.png

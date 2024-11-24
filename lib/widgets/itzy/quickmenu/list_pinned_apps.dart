@@ -7,7 +7,7 @@ import '../../containers/bar_with_buttons.dart';
 import 'button_window_app.dart';
 
 class PinnedApps extends StatelessWidget {
-  const PinnedApps({Key? key}) : super(key: key);
+  const PinnedApps({super.key});
 
   @override
   Widget build(BuildContext context) {

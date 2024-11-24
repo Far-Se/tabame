@@ -11,7 +11,7 @@ class TextInput extends StatefulWidget {
   final void Function(String val)? onUpdated;
   final bool multiline;
   const TextInput({
-    Key? key,
+    super.key,
     required this.labelText,
     this.hintText,
     this.value,
@@ -20,7 +20,7 @@ class TextInput extends StatefulWidget {
     this.onUpdated,
     this.multiline = false,
     this.decoration,
-  }) : super(key: key);
+  });
 
   @override
   TextInputState createState() => TextInputState();
@@ -64,12 +64,6 @@ class TextInputState extends State<TextInput> {
               isDense: false,
             ),
         controller: _controller,
-        toolbarOptions: const ToolbarOptions(
-          paste: true,
-          cut: true,
-          copy: true,
-          selectAll: true,
-        ),
         style: const TextStyle(fontSize: 14),
         enableInteractiveSelection: true,
         onSubmitted: (String e) {

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../itzy/interface/tasks_page_watchers.dart';
 import '../itzy/interface/tasks_reminders.dart';
 import '../widgets/info_text.dart';
 
 class TasksPage extends StatefulWidget {
-  const TasksPage({Key? key}) : super(key: key);
+  const TasksPage({super.key});
 
   @override
   TasksPageState createState() => TasksPageState();
@@ -20,31 +19,30 @@ class TasksPageState extends State<TasksPage> {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Expanded(
+            Expanded(
               flex: 2,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 5),
                 child: TasksReminders(),
               ),
             ),
-            const VerticalDivider(
-              width: 10,
-              thickness: 2,
-              indent: 0,
-              endIndent: 0,
-              // color: Colors.white,
-            ),
-            const Expanded(
-              flex: 2,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 5),
-                child: TasksPageWatchers(),
-              ),
-            ),
+            // const VerticalDivider(
+            //   width: 10,
+            //   thickness: 2,
+            //   indent: 0,
+            //   endIndent: 0,
+            // ),
+            // const Expanded(
+            //   flex: 2,
+            //   child: Padding(
+            //     padding: EdgeInsets.symmetric(horizontal: 5),
+            //     child: TasksPageWatchers(),
+            //   ),
+            // ),
           ],
         ),
         CheckboxListTile(

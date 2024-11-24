@@ -9,7 +9,7 @@ class SimulateKeyButton extends StatelessWidget {
   final double iconSize;
   final String tooltip;
   const SimulateKeyButton({
-    Key? key,
+    super.key,
     required this.icon,
 
     /// [VK.KEY]
@@ -17,7 +17,7 @@ class SimulateKeyButton extends StatelessWidget {
     this.singleKey = "",
     this.iconSize = 0,
     this.tooltip = "",
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

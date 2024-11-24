@@ -6,8 +6,8 @@ import '../../widgets/quick_actions_item.dart';
 
 class PinWindowButton extends StatelessWidget {
   const PinWindowButton({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

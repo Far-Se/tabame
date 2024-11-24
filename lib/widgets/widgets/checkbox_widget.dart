@@ -7,12 +7,12 @@ class CheckBoxWidget extends StatefulWidget {
 
   final EdgeInsets padding;
   const CheckBoxWidget({
-    Key? key,
+    super.key,
     required this.onChanged,
     required this.value,
     required this.text,
     this.padding = EdgeInsets.zero,
-  }) : super(key: key);
+  });
 
   @override
   CheckBoxWidgetState createState() => CheckBoxWidgetState();

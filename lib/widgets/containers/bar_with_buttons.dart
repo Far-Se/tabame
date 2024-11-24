@@ -6,11 +6,11 @@ class BarWithButtons extends StatefulWidget {
   final bool withScroll;
   final double height;
   const BarWithButtons({
-    Key? key,
+    super.key,
     required this.children,
     this.withScroll = true,
     this.height = 30,
-  }) : super(key: key);
+  });
 
   @override
   State<BarWithButtons> createState() => _BarWithButtonsState();
@@ -68,9 +68,9 @@ class _BarWithButtonsState extends State<BarWithButtons> {
 
 class ListChildren extends StatelessWidget {
   const ListChildren({
-    Key? key,
+    super.key,
     required this.children,
-  }) : super(key: key);
+  });
 
   final List<Widget> children;
 

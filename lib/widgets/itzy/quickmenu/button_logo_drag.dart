@@ -7,7 +7,7 @@ import '../../../main.dart';
 import '../../../models/settings.dart';
 
 class LogoDragButton extends StatelessWidget {
-  const LogoDragButton({Key? key}) : super(key: key);
+  const LogoDragButton({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -10,7 +10,7 @@ import '../../../models/win32/win32.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class BookmarksButton extends StatefulWidget {
-  const BookmarksButton({Key? key}) : super(key: key);
+  const BookmarksButton({super.key});
   @override
   BookmarksButtonState createState() => BookmarksButtonState();
 }
@@ -71,7 +71,7 @@ class BookmarksButtonState extends State<BookmarksButton> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
@@ -98,14 +98,14 @@ class TimersWidgetState extends State<TimersWidget> {
         child: Container(
           height: double.infinity,
           width: 280,
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
+          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 350),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -113,7 +113,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: SingleChildScrollView(
             controller: ScrollController(),

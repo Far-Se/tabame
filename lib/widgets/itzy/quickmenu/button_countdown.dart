@@ -13,7 +13,7 @@ import '../../../models/settings.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class CountdownButton extends StatefulWidget {
-  const CountdownButton({Key? key}) : super(key: key);
+  const CountdownButton({super.key});
   @override
   CountdownButtonState createState() => CountdownButtonState();
 }
@@ -74,7 +74,7 @@ class CountdownButtonState extends State<CountdownButton> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
@@ -152,9 +152,9 @@ class TimersWidgetState extends State<TimersWidget> {
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -162,7 +162,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -171,13 +171,13 @@ class TimersWidgetState extends State<TimersWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const SizedBox(height: 5),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Expanded(child: Center(child: Text("Minutes", style: TextStyle(height: 1)))),
-                    const SizedBox(width: 20),
-                    const Expanded(child: Center(child: Text("Seconds", style: TextStyle(height: 1)))),
+                    Expanded(child: Center(child: Text("Minutes", style: TextStyle(height: 1)))),
+                    SizedBox(width: 20),
+                    Expanded(child: Center(child: Text("Seconds", style: TextStyle(height: 1)))),
                   ],
                 ),
                 Container(
@@ -195,7 +195,7 @@ class TimersWidgetState extends State<TimersWidget> {
                           children: <Widget>[
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).backgroundColor.withOpacity(0.6),
+                                color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
                                 backgroundBlendMode: BlendMode.screen,
                               ),
                               margin: const EdgeInsets.only(right: 10),
@@ -237,7 +237,7 @@ class TimersWidgetState extends State<TimersWidget> {
                           children: <Widget>[
                             Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).backgroundColor.withOpacity(0.6),
+                                color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
                                 backgroundBlendMode: BlendMode.screen,
                               ),
                               margin: const EdgeInsets.only(left: 10),

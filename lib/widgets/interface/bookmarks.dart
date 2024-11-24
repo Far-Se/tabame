@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:contextual_menu/contextual_menu.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart' hide MenuItem;
+import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
@@ -13,7 +13,7 @@ import '../../models/win32/win32.dart';
 import '../widgets/info_text.dart';
 
 class BookmarksPage extends StatefulWidget {
-  const BookmarksPage({Key? key}) : super(key: key);
+  const BookmarksPage({super.key});
 
   @override
   BookmarksPageState createState() => BookmarksPageState();
@@ -25,6 +25,7 @@ class BookmarksPageState extends State<BookmarksPage> {
   final TextEditingController projectEmojiController = TextEditingController();
   final TextEditingController projectTitleController = TextEditingController();
   final TextEditingController projectPathController = TextEditingController();
+  TextEditingController controller = TextEditingController();
   final List<BookmarkGroup> bookmarks = Boxes().bookmarks;
 
   int activeProject = -1;
@@ -140,7 +141,11 @@ class BookmarksPageState extends State<BookmarksPage> {
                                           return AlertDialog(
                                             content: Container(
                                                 width: 300,
-                                                height: 100,
+                                                height: 500,
+                                                foregroundDecoration: BoxDecoration(
+                                                  border: Border.all(color: Colors.black.withOpacity(0.5)),
+                                                  // color: Colors.purple,
+                                                ),
                                                 child: Column(
                                                   mainAxisAlignment: MainAxisAlignment.start,
                                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,7 +191,7 @@ class BookmarksPageState extends State<BookmarksPage> {
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
-                                                child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                                                child: Text("Delete", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                                               ),
                                               ElevatedButton(
                                                 onPressed: () async {
@@ -196,7 +201,7 @@ class BookmarksPageState extends State<BookmarksPage> {
                                                   setState(() {});
                                                   Navigator.of(context).pop();
                                                 },
-                                                child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                                                child: Text("Save", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                                               ),
                                             ],
                                           );
@@ -250,166 +255,166 @@ class BookmarksPageState extends State<BookmarksPage> {
                                 leading: Text(projectItem.emoji),
                                 title: Text(projectItem.title),
                                 onTap: () {
-                                  WinUtils.open(projectItem.stringToExecute, parseParamaters: true);
-                                  setState(() {});
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      projectEmojiController.value = TextEditingValue(text: projectItem.emoji);
+                                      projectTitleController.value = TextEditingValue(text: projectItem.title);
+                                      projectPathController.value = TextEditingValue(text: projectItem.stringToExecute);
+                                      return AlertDialog(
+                                        content: Container(
+                                            width: 400,
+                                            height: 250,
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                TextField(
+                                                  decoration: InputDecoration(
+                                                    labelText: "Emoji ( Press Win + . to toggle Emoji Picker)",
+                                                    hintText: "Emoji ( Press Win + . to toggle Emoji Picker)",
+                                                    isDense: true,
+                                                    border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                  ),
+                                                  controller: projectEmojiController,
+                                                  // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
+                                                  style: const TextStyle(fontSize: 14),
+                                                ),
+                                                const SizedBox(height: 5),
+                                                TextField(
+                                                  autofocus: true,
+                                                  decoration: InputDecoration(
+                                                    labelText: "Title",
+                                                    hintText: "Title",
+                                                    isDense: true,
+                                                    border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                  ),
+                                                  controller: projectTitleController,
+                                                  style: const TextStyle(fontSize: 14),
+                                                ),
+                                                const SizedBox(height: 5),
+                                                Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  mainAxisSize: MainAxisSize.max,
+                                                  children: <Widget>[
+                                                    Expanded(
+                                                      flex: 2,
+                                                      child: TextField(
+                                                        decoration: InputDecoration(
+                                                          labelText: "Path to execute",
+                                                          hintText: "Path to execute",
+                                                          isDense: true,
+                                                          border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
+                                                        ),
+                                                        controller: projectPathController,
+                                                        style: const TextStyle(fontSize: 14),
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 30,
+                                                      height: 50,
+                                                      child: Column(
+                                                        children: <Widget>[
+                                                          Container(
+                                                            width: 30,
+                                                            height: 25,
+                                                            child: Tooltip(
+                                                              message: "Pick a file.",
+                                                              child: InkWell(
+                                                                onTap: () async {
+                                                                  final OpenFilePicker file = OpenFilePicker()
+                                                                    ..filterSpecification = <String, String>{
+                                                                      'All Files': '*.*',
+                                                                    }
+                                                                    ..defaultFilterIndex = 0
+                                                                    ..defaultExtension = 'exe'
+                                                                    ..title = 'Select any file';
+
+                                                                  final File? result = file.getFile();
+                                                                  if (result != null) {
+                                                                    if (!mounted) return;
+                                                                    projectItem.stringToExecute = result.path;
+                                                                    projectPathController.value = TextEditingValue(text: result.path);
+                                                                    setState(() {});
+                                                                  }
+                                                                },
+                                                                child: Container(height: double.infinity, child: const Icon(Icons.file_open, size: 20)),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          Container(
+                                                            width: 30,
+                                                            height: 25,
+                                                            child: Tooltip(
+                                                              message: "Pick a folder.",
+                                                              preferBelow: true,
+                                                              child: InkWell(
+                                                                onTap: () async {
+                                                                  // final String result = await pickFolder();
+                                                                  final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
+                                                                  final Directory? dir = dirPicker.getDirectory();
+                                                                  if (dir == null) return;
+                                                                  String result = dir.path;
+                                                                  if (result == "") return;
+                                                                  if (!mounted) return;
+                                                                  projectItem.stringToExecute = result;
+                                                                  projectPathController.value = TextEditingValue(text: result);
+                                                                  setState(() {});
+                                                                },
+                                                                child: Container(height: double.infinity, child: const Icon(Icons.folder_copy, size: 20)),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text("You can Write:\n - a Folder Path or file to open\n - a command like: code C:\\somepath\\\n - a link",
+                                                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 12))
+                                              ],
+                                            )),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text("Cancel"),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              bookmarks[mainIndex].bookmarks.removeAt(index);
+                                              await Boxes.updateSettings("projects", jsonEncode(bookmarks));
+                                              setState(() {});
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text("Delete", style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              bookmarks[mainIndex].bookmarks[index].emoji = projectEmojiController.value.text.truncate(2);
+                                              bookmarks[mainIndex].bookmarks[index].title = projectTitleController.value.text;
+                                              bookmarks[mainIndex].bookmarks[index].stringToExecute = projectPathController.value.text;
+                                              await Boxes.updateSettings("projects", jsonEncode(bookmarks));
+                                              setState(() {});
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text("Save", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ).then((_) {});
                                 },
                                 trailing: Container(
                                   height: double.infinity,
                                   width: 50,
                                   padding: const EdgeInsets.only(right: 15),
                                   child: InkWell(
-                                    child: const Icon(Icons.edit),
+                                    child: const Icon(Icons.bug_report_outlined),
                                     onTap: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          projectEmojiController.value = TextEditingValue(text: projectItem.emoji);
-                                          projectTitleController.value = TextEditingValue(text: projectItem.title);
-                                          projectPathController.value = TextEditingValue(text: projectItem.stringToExecute);
-                                          return AlertDialog(
-                                            content: Container(
-                                                width: 300,
-                                                height: 250,
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.start,
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: <Widget>[
-                                                    TextField(
-                                                      decoration: InputDecoration(
-                                                        labelText: "Emoji ( Press Win + . to toggle Emoji Picker)",
-                                                        hintText: "Emoji ( Press Win + . to toggle Emoji Picker)",
-                                                        isDense: true,
-                                                        border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
-                                                      ),
-                                                      controller: projectEmojiController,
-                                                      // inputFormatters: <TextInputFormatter>[LengthLimitingTextInputFormatter(1)],
-                                                      style: const TextStyle(fontSize: 14),
-                                                    ),
-                                                    const SizedBox(height: 5),
-                                                    TextField(
-                                                      autofocus: true,
-                                                      decoration: InputDecoration(
-                                                        labelText: "Title",
-                                                        hintText: "Title",
-                                                        isDense: true,
-                                                        border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
-                                                      ),
-                                                      controller: projectTitleController,
-                                                      style: const TextStyle(fontSize: 14),
-                                                    ),
-                                                    const SizedBox(height: 5),
-                                                    Row(
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      mainAxisSize: MainAxisSize.max,
-                                                      children: <Widget>[
-                                                        Expanded(
-                                                          flex: 2,
-                                                          child: TextField(
-                                                            decoration: InputDecoration(
-                                                              labelText: "Path to execute",
-                                                              hintText: "Path to execute",
-                                                              isDense: true,
-                                                              border: UnderlineInputBorder(borderSide: BorderSide(width: 1, color: Colors.black.withOpacity(0.5))),
-                                                            ),
-                                                            controller: projectPathController,
-                                                            style: const TextStyle(fontSize: 14),
-                                                          ),
-                                                        ),
-                                                        SizedBox(
-                                                          width: 30,
-                                                          height: 50,
-                                                          child: Column(
-                                                            children: <Widget>[
-                                                              Container(
-                                                                width: 30,
-                                                                height: 25,
-                                                                child: Tooltip(
-                                                                  message: "Pick a file.",
-                                                                  child: InkWell(
-                                                                    onTap: () async {
-                                                                      final OpenFilePicker file = OpenFilePicker()
-                                                                        ..filterSpecification = <String, String>{
-                                                                          'All Files': '*.*',
-                                                                        }
-                                                                        ..defaultFilterIndex = 0
-                                                                        ..defaultExtension = 'exe'
-                                                                        ..title = 'Select any file';
-
-                                                                      final File? result = file.getFile();
-                                                                      if (result != null) {
-                                                                        if (!mounted) return;
-                                                                        projectItem.stringToExecute = result.path;
-                                                                        projectPathController.value = TextEditingValue(text: result.path);
-                                                                        setState(() {});
-                                                                      }
-                                                                    },
-                                                                    child: Container(height: double.infinity, child: const Icon(Icons.file_open, size: 20)),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              Container(
-                                                                width: 30,
-                                                                height: 25,
-                                                                child: Tooltip(
-                                                                  message: "Pick a folder.",
-                                                                  preferBelow: true,
-                                                                  child: InkWell(
-                                                                    onTap: () async {
-                                                                      // final String result = await pickFolder();
-                                                                      final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
-                                                                      final Directory? dir = dirPicker.getDirectory();
-                                                                      if (dir == null) return;
-                                                                      String result = dir.path;
-                                                                      if (result == "") return;
-                                                                      if (!mounted) return;
-                                                                      projectItem.stringToExecute = result;
-                                                                      projectPathController.value = TextEditingValue(text: result);
-                                                                      setState(() {});
-                                                                    },
-                                                                    child: Container(height: double.infinity, child: const Icon(Icons.folder_copy, size: 20)),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    Text("You can Write:\n - a Folder Path or file to open\n - a command like: code C:\\somepath\\\n - a link",
-                                                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 12))
-                                                  ],
-                                                )),
-                                            actions: <Widget>[
-                                              TextButton(
-                                                onPressed: () => Navigator.of(context).pop(),
-                                                child: const Text("Cancel"),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  bookmarks[mainIndex].bookmarks.removeAt(index);
-                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
-                                                  setState(() {});
-                                                  Navigator.of(context).pop();
-                                                },
-                                                child: Text("Delete", style: TextStyle(color: Theme.of(context).backgroundColor)),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  bookmarks[mainIndex].bookmarks[index].emoji = projectEmojiController.value.text.truncate(2);
-                                                  bookmarks[mainIndex].bookmarks[index].title = projectTitleController.value.text;
-                                                  bookmarks[mainIndex].bookmarks[index].stringToExecute = projectPathController.value.text;
-                                                  await Boxes.updateSettings("projects", jsonEncode(bookmarks));
-                                                  setState(() {});
-                                                  Navigator.of(context).pop();
-                                                },
-                                                child: Text("Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      ).then((_) {});
+                                      WinUtils.open(projectItem.stringToExecute, parseParamaters: true);
+                                      setState(() {});
                                     },
                                   ),
                                 ),

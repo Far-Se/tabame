@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 class PercentageBar extends StatelessWidget {
   const PercentageBar({
-    Key? key,
+    super.key,
     required this.percent,
     required this.barWidth,
-  }) : super(key: key);
+  });
 
   final double percent;
   final double barWidth;

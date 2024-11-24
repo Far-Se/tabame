@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class MouseScrollWidget extends StatefulWidget {
   final Widget child;
   final Axis scrollDirection;
-  const MouseScrollWidget({Key? key, required this.child, this.scrollDirection = Axis.horizontal}) : super(key: key);
+  const MouseScrollWidget({super.key, required this.child, this.scrollDirection = Axis.horizontal});
 
   @override
   MouseScrollWidgetState createState() => MouseScrollWidgetState();

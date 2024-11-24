@@ -4,12 +4,12 @@ import 'dart:typed_data';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+// import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/win32/win32.dart';
 
 class QuickmenuPinnedApps extends StatefulWidget {
-  const QuickmenuPinnedApps({Key? key}) : super(key: key);
+  const QuickmenuPinnedApps({super.key});
 
   @override
   QuickmenuPinnedAppsState createState() => QuickmenuPinnedAppsState();
@@ -19,7 +19,7 @@ List<String> pinnedApps = Boxes().pinnedApps;
 Map<String, Uint8List> pinnedAppsIcons = <String, Uint8List>{};
 Future<int> getAllIcons() async {
   for (String app in pinnedApps) {
-    pinnedAppsIcons[Win32.getExe(app)] = (await getExecutableIcon(app))!;
+    pinnedAppsIcons[Win32.getExe(app)] = WinUtils.extractIcon(app)!;
   }
   return 0;
 }
@@ -39,7 +39,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
             children: <Widget>[
               Center(
                 child: ListTile(
-                  title: Text("Pinned Files", style: Theme.of(context).textTheme.headline6),
+                  title: Text("Pinned Files", style: Theme.of(context).textTheme.titleLarge),
                   trailing: IconButton(
                     icon: const Icon(Icons.add),
                     splashRadius: 20,
@@ -54,7 +54,7 @@ class QuickmenuPinnedAppsState extends State<QuickmenuPinnedApps> {
                       if (result != null) {
                         if (Win32.getExe(result.path).contains(".dll")) return;
                         pinnedApps.add(result.path);
-                        pinnedAppsIcons[Win32.getExe(result.path)] = (await getExecutableIcon(result.path))!;
+                        pinnedAppsIcons[Win32.getExe(result.path)] = (WinUtils.extractIcon(result.path))!;
                         await Boxes.updateSettings("pinnedApps", pinnedApps);
                         if (!mounted) return;
                         setState(() {});

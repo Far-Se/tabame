@@ -26,7 +26,7 @@ import '../widgets/quickmenu/task_bar.dart';
 import '../widgets/quickmenu/top_bar.dart';
 
 class QuickMenu extends StatefulWidget {
-  const QuickMenu({Key? key}) : super(key: key);
+  const QuickMenu({super.key});
   @override
   State<QuickMenu> createState() => QuickMenuState();
 }
@@ -35,12 +35,12 @@ Future<int> quickMenuWindowSetup() async {
   Globals.currentPage = Pages.quickmenu;
 
   if (Globals.lastPage != Pages.quickmenu) {
-    await WindowManager.instance.setMinimumSize(const Size(300, 150));
-    await WindowManager.instance.setSize(const Size(300, 540));
+    await WindowManager.instance.setMinimumSize(const Size(299, 150));
+    await WindowManager.instance.setSize(const Size(299, 540));
     await WindowManager.instance.setSkipTaskbar(true);
-    await WindowManager.instance.setResizable(false);
+    await WindowManager.instance.setResizable(true);
     await WindowManager.instance.setAlwaysOnTop(true);
-    await WindowManager.instance.setAspectRatio(0);
+    await WindowManager.instance.setAspectRatio(1);
     await Win32.setMainWindowToMousePos();
   } else {
     await Win32.setMainWindowToMousePos();
@@ -56,7 +56,7 @@ enum QuickMenuTypes {
   quickActions,
 }
 
-class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTriggers, WindowListener {
+class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListener, QuickMenuTriggers {
   double lastHeight = 0;
   Timer? changeHeightTimer;
   final Future<int> quickMenuWindow = quickMenuWindowSetup();
@@ -83,6 +83,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
         }
       });
     }
+
     Debug.add("QuickMenu: init");
   }
 
@@ -328,15 +329,15 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
     );
   }
 
-  RawKeyboardListener mainWidget(BuildContext context) {
-    return RawKeyboardListener(
+  Widget mainWidget(BuildContext context) {
+    return KeyboardListener(
       focusNode: focusNode,
       autofocus: true,
-      onKey: (RawKeyEvent keyEvent) async {
+      onKeyEvent: (KeyEvent keyEvent) async {
         if (globalSettings.noopKeyListener) return;
         PhysicalKeyboardKey currentKey = keyEvent.physicalKey;
         if (currentKey == PhysicalKeyboardKey.escape) {
-          if (keyEvent is RawKeyUpEvent) {
+          if (keyEvent is KeyUpEvent) {
             Globals.quickMenuPage = QuickMenuPage.quickMenu;
             if (typeShown == QuickMenuTypes.quickActions) {
               typeShown = QuickMenuTypes.quickMenu;
@@ -350,7 +351,10 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
             }
           }
         } else if (typeShown != QuickMenuTypes.quickActions && globalSettings.quickRunState != 2 && keyEvent.logicalKey.keyId.isBetween(0, 255)) {
-          if (keyEvent.isAltPressed || keyEvent.isControlPressed || keyEvent.isMetaPressed || keyEvent.isShiftPressed) return;
+          if (HardwareKeyboard.instance.isAltPressed ||
+              HardwareKeyboard.instance.isControlPressed ||
+              HardwareKeyboard.instance.isMetaPressed ||
+              HardwareKeyboard.instance.isShiftPressed) return;
           if (DateTime.now().millisecondsSinceEpoch - unixVisible < 700) return;
           globalSettings.quickRunState = 1;
           globalSettings.quickRunText += String.fromCharCode(keyEvent.logicalKey.keyId);
@@ -388,12 +392,12 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
                         color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : Colors.black,
                         child: Container(
                           decoration: BoxDecoration(
-                              color: Theme.of(context).backgroundColor,
+                              color: Theme.of(context).colorScheme.surface,
                               gradient: LinearGradient(
                                 colors: <Color>[
-                                  Theme.of(context).backgroundColor,
-                                  Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                                  Theme.of(context).backgroundColor,
+                                  Theme.of(context).colorScheme.surface,
+                                  Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                  Theme.of(context).colorScheme.surface,
                                 ],
                                 stops: <double>[0, 0.4, 1],
                                 end: Alignment.bottomRight,
@@ -401,9 +405,11 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, QuickMenuTrig
                               boxShadow: <BoxShadow>[
                                 const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                               ]),
-                          child: globalSettings.quickRunState != 0
-                              ? theQuickRun
-                              : typeShown == QuickMenuTypes.quickActions
+                          child:
+                              //globalSettings.quickRunState != 0
+                              //    ? theQuickRun
+                              //    :
+                              typeShown == QuickMenuTypes.quickActions
                                   ? QuickActionWidget(key: UniqueKey())
                                   : Column(
                                       mainAxisAlignment: MainAxisAlignment.start,

@@ -4,7 +4,7 @@ import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
 class HideDesktopFilesButton extends StatelessWidget {
-  const HideDesktopFilesButton({Key? key}) : super(key: key);
+  const HideDesktopFilesButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +18,14 @@ class HideDesktopFilesButton extends StatelessWidget {
             height: 25,
             child: InkWell(
               onTap: () => WinUtils.toggleDesktopFiles(visible: false),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.hide_image_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Hide Desktop Files")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.hide_image_outlined)),
+                  SizedBox(width: 5),
+                  Text("Hide Desktop Files")
                 ],
               ),
             ),
@@ -34,14 +34,14 @@ class HideDesktopFilesButton extends StatelessWidget {
             height: 25,
             child: InkWell(
               onTap: () => WinUtils.toggleDesktopFiles(visible: true),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.image_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Show Desktop Files")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.image_outlined)),
+                  SizedBox(width: 5),
+                  Text("Show Desktop Files")
                 ],
               ),
             ),

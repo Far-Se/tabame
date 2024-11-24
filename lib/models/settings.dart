@@ -90,7 +90,7 @@ class Settings {
   /// Get Dark or Light Theme
   ThemeType get themeTypeMode {
     if (themeType == ThemeType.system) {
-      if (MediaQueryData.fromWindow(WidgetsBinding.instance.window).platformBrightness == Brightness.dark) return ThemeType.dark;
+      if (MediaQueryData.fromView(WidgetsBinding.instance.platformDispatcher.views.first).platformBrightness == Brightness.dark) return ThemeType.dark;
       return ThemeType.light;
     } else if (themeType == ThemeType.schedule) {
       final int minTime = globalSettings.themeScheduleMin;
@@ -179,6 +179,10 @@ extension IntegerExtension on int {
   String formatInt() {
     final NumberFormat format = NumberFormat("#,##0", "en_US");
     return format.format(this);
+  }
+
+  String formatZeros([int count = 2]) {
+    return toString().padLeft(count, '0');
   }
 
   String formatDouble() {

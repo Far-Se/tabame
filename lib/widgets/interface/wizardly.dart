@@ -12,7 +12,7 @@ import '../wizardly/project_overview.dart';
 import '../wizardly/find_text.dart';
 
 class Wizardly extends StatefulWidget {
-  const Wizardly({Key? key}) : super(key: key);
+  const Wizardly({super.key});
 
   @override
   WizardlyState createState() => WizardlyState();

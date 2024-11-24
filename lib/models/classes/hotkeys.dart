@@ -7,7 +7,7 @@ import 'dart:math';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart' hide Point;
+import 'package:win32/win32.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -290,10 +290,10 @@ class KeyMap with TabameListener {
         SetCursorPos(x, y);
         Future<void>.delayed(const Duration(milliseconds: 500), () {
           final Pointer<INPUT> input = calloc<INPUT>();
-          input.ref.type = INPUT_MOUSE;
+          input.ref.type = INPUT_TYPE.INPUT_MOUSE;
           // input.ref.mi.dx = x;
           // input.ref.mi.dy = y;
-          input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
+          input.ref.mi.dwFlags = (MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP);
           input.ref.mi.mouseData = 0;
           input.ref.mi.dwExtraInfo = NULL;
           input.ref.mi.time = 0;
@@ -460,6 +460,10 @@ class HotKeyInfo {
     "ShowLastActiveWindow": () {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.focusSecondWindow();
+    },
+    "ShowSecondWindowUnderCursor": () {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      WindowWatcher.showSecondWindowUnderCursor();
     },
     "FancyShot": () async {
       QuickMenuFunctions.toggleQuickMenu(visible: false);

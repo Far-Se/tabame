@@ -4,7 +4,7 @@ import '../../../models/settings.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class CloseOnFocusLossButton extends StatefulWidget {
-  const CloseOnFocusLossButton({Key? key}) : super(key: key);
+  const CloseOnFocusLossButton({super.key});
   @override
   CloseOnFocusLossButtonState createState() => CloseOnFocusLossButtonState();
 }

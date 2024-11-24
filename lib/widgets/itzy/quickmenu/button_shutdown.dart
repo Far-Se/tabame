@@ -11,7 +11,7 @@ import '../../widgets/info_text.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class ShutDownButton extends StatefulWidget {
-  const ShutDownButton({Key? key}) : super(key: key);
+  const ShutDownButton({super.key});
   @override
   ShutDownButtonState createState() => ShutDownButtonState();
 }
@@ -72,7 +72,7 @@ class ShutDownButtonState extends State<ShutDownButton> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
@@ -80,7 +80,7 @@ class TimersWidget extends StatefulWidget {
 class TimersWidgetState extends State<TimersWidget> {
   bool isShutDownScheduled = false;
   int shutDownUnix = 0;
-  String? selectedTimerType = "ShutDown in";
+  String? selectedTimerType = "ShutDown at";
   final TextEditingController minutesController = TextEditingController(text: "00");
   final TextEditingController hoursController = TextEditingController(text: "00");
   @override
@@ -114,9 +114,9 @@ class TimersWidgetState extends State<TimersWidget> {
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -124,7 +124,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: SingleChildScrollView(
             controller: ScrollController(),
@@ -154,7 +154,7 @@ class TimersWidgetState extends State<TimersWidget> {
                                     const Positioned(right: 20, bottom: 2, child: InfoText("Hours")),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).backgroundColor.withOpacity(0.6),
+                                        color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
                                         backgroundBlendMode: BlendMode.screen,
                                       ),
                                       margin: const EdgeInsets.only(right: 10),
@@ -206,7 +206,7 @@ class TimersWidgetState extends State<TimersWidget> {
                                     const Positioned(right: 5, bottom: 2, child: InfoText("Minutes")),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).backgroundColor.withOpacity(0.6),
+                                        color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
                                         backgroundBlendMode: BlendMode.screen,
                                       ),
                                       margin: const EdgeInsets.only(left: 10),
@@ -278,12 +278,12 @@ class TimersWidgetState extends State<TimersWidget> {
                                   child: DropdownButton2<String>(
                                     isExpanded: false,
                                     hint: Text("Type", style: TextStyle(fontSize: 14, color: Theme.of(context).hintColor)),
-                                    buttonPadding: const EdgeInsets.symmetric(horizontal: 5),
-                                    dropdownPadding: const EdgeInsets.all(1),
-                                    offset: const Offset(0, 30),
+                                    buttonStyleData: const ButtonStyleData(padding: EdgeInsets.symmetric(horizontal: 5), height: 40, width: 200),
+                                    menuItemStyleData: const MenuItemStyleData(height: 30),
+                                    dropdownStyleData: const DropdownStyleData(padding: EdgeInsets.all(1), offset: Offset(0, 30), maxHeight: 200),
                                     isDense: true,
                                     style: const TextStyle(fontSize: 200),
-                                    items: <String>["ShutDown in", "ShutDown at"]
+                                    items: <String>["ShutDown at", "ShutDown in"]
                                         .map((String item) => DropdownMenuItem<String>(value: item, child: Text(item, style: const TextStyle(fontSize: 14))))
                                         .toList(),
                                     value: selectedTimerType,
@@ -291,10 +291,6 @@ class TimersWidgetState extends State<TimersWidget> {
                                       selectedTimerType = value;
                                       setState(() {});
                                     },
-                                    buttonHeight: 40,
-                                    buttonWidth: 200,
-                                    itemHeight: 30,
-                                    dropdownMaxHeight: 200,
                                   ),
                                 ),
                               ),

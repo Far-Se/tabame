@@ -15,7 +15,7 @@ import '../widgets/percentage_bar.dart';
 
 // vscode-fold=2
 class FileSizeWidget extends StatefulWidget {
-  const FileSizeWidget({Key? key}) : super(key: key);
+  const FileSizeWidget({super.key});
 
   @override
   FileSizeWidgetState createState() => FileSizeWidgetState();
@@ -293,10 +293,10 @@ class FolderInfo extends StatefulWidget {
   final String directory;
   final int parentSize;
   const FolderInfo({
-    Key? key,
+    super.key,
     required this.directory,
     required this.parentSize,
-  }) : super(key: key);
+  });
 
   @override
   State<FolderInfo> createState() => _FolderInfoState();

@@ -5,7 +5,7 @@ import '../../models/settings.dart';
 import '../widgets/run_shortcut_widget.dart';
 
 class InterfaceRunConverter extends StatefulWidget {
-  const InterfaceRunConverter({Key? key}) : super(key: key);
+  const InterfaceRunConverter({super.key});
 
   @override
   InterfaceRunConverterState createState() => InterfaceRunConverterState();

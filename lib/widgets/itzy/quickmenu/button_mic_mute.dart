@@ -5,7 +5,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 
 class MicMuteButton extends StatefulWidget {
-  const MicMuteButton({Key? key}) : super(key: key);
+  const MicMuteButton({super.key});
 
   @override
   State<MicMuteButton> createState() => MicMuteButtonState();

@@ -9,7 +9,7 @@ import '../../../models/settings.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class CustomCharsButton extends StatefulWidget {
-  const CustomCharsButton({Key? key}) : super(key: key);
+  const CustomCharsButton({super.key});
   @override
   CustomCharsButtonState createState() => CustomCharsButtonState();
 }
@@ -111,7 +111,7 @@ class CustomCharsButtonState extends State<CustomCharsButton> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
@@ -147,9 +147,9 @@ class TimersWidgetState extends State<TimersWidget> {
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -157,7 +157,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: SingleChildScrollView(
             controller: ScrollController(),

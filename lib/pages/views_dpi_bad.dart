@@ -7,7 +7,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
@@ -19,7 +19,7 @@ import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 
 class ViewsScreen extends StatefulWidget {
-  const ViewsScreen({Key? key}) : super(key: key);
+  const ViewsScreen({super.key});
   @override
   ViewsScreenState createState() => ViewsScreenState();
 }
@@ -34,8 +34,9 @@ Future<bool> interfaceWindowSetup() async {
   await WindowManager.instance.setAlwaysOnTop(true);
   await WindowManager.instance.setSize(Size(Monitor.dpiAdjust(monitor.width.toDouble()), Monitor.dpiAdjust(monitor.height.toDouble())));
   await WindowManager.instance.setPosition(const Offset(-9999, -9999));
-  final int exstyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
-  SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+  final int exstyle = GetWindowLong(Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+  SetWindowLongPtr(
+      Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, exstyle | WINDOW_EX_STYLE.WS_EX_TRANSPARENT | WINDOW_EX_STYLE.WS_EX_LAYERED | WINDOW_EX_STYLE.WS_EX_TOOLWINDOW);
   return true;
 }
 
@@ -250,7 +251,6 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
             if (mounted) setState(() {});
           }
           //
-
         }
       }
     }
@@ -296,7 +296,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
     } else if (action == ViewsAction.moveEnd) {
       if (!visible) {
         if (winsSavedPos.containsKey(hWnd)) {
-          SetWindowPos(this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY, SWP_NOMOVE | SWP_NOZORDER);
+          SetWindowPos(
+              this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
           winsSavedPos.remove(hWnd);
         }
         this.hWnd = -1;
@@ -323,7 +324,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       final int y = (monitor.y + spaces.first.y.floor() / 1).toInt();
       final int sizeX = windowWidth.toInt();
       final int sizeY = windowHeight.toInt();
-      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, sizeX + (diffX * 2), sizeY + (diffY * 2), SWP_NOZORDER);
+      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, sizeX + (diffX * 2), sizeY + (diffY * 2), SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
       for (Space e in matrix) {
         e.selected = false;
         e.hovered = false;

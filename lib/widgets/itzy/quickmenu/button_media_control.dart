@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../models/win32/keys.dart';
 
 class MediaControlButton extends StatefulWidget {
-  const MediaControlButton({Key? key}) : super(key: key);
+  const MediaControlButton({super.key});
 
   @override
   State<MediaControlButton> createState() => _MediaControlButtonState();

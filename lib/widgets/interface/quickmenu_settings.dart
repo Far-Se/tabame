@@ -11,7 +11,7 @@ import '../itzy/interface/quickmenu_quickactions.dart';
 import '../widgets/info_text.dart';
 
 class QuickmenuSettings extends StatefulWidget {
-  const QuickmenuSettings({Key? key}) : super(key: key);
+  const QuickmenuSettings({super.key});
 
   @override
   QuickmenuSettingsState createState() => QuickmenuSettingsState();
@@ -33,7 +33,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           const SizedBox(height: 10),
-          Center(child: Text("QuickMenu", style: Theme.of(context).textTheme.headline6)),
+          Center(child: Text("QuickMenu", style: Theme.of(context).textTheme.titleLarge)),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -148,21 +148,21 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
           const InfoText("     Pro tip: press TAB and arrows to navigate with keyboard."),
           const SizedBox(height: 10),
           const Divider(thickness: 2, height: 10),
-          Center(child: Text("Top Bar", style: Theme.of(context).textTheme.headline6)),
+          Center(child: Text("Top Bar", style: Theme.of(context).textTheme.titleLarge)),
           const SizedBox(height: 10),
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Expanded(child: QuickmenuTopbar()),
-              const Expanded(child: QuickmenuPinnedApps()),
+              Expanded(child: QuickmenuTopbar()),
+              Expanded(child: QuickmenuPinnedApps()),
             ],
           ),
           const Divider(thickness: 2, height: 10),
-          Center(child: Text("Task Bar", style: Theme.of(context).textTheme.headline6)),
+          Center(child: Text("Task Bar", style: Theme.of(context).textTheme.titleLarge)),
           const QuickmenuTaskbar(),
           const Divider(thickness: 2, height: 10),
-          Center(child: Text("Bottom Bar", style: Theme.of(context).textTheme.headline6)),
+          Center(child: Text("Bottom Bar", style: Theme.of(context).textTheme.titleLarge)),
           const QuickmenuBottomBar()
         ],
       ),

@@ -10,7 +10,7 @@ import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
 
 class QuickActionsSettings extends StatefulWidget {
-  const QuickActionsSettings({Key? key}) : super(key: key);
+  const QuickActionsSettings({super.key});
   @override
   QuickActionsSettingsState createState() => QuickActionsSettingsState();
 }
@@ -119,10 +119,10 @@ class QuickActionEdit extends StatefulWidget {
   final QuickActions leAction;
   final void Function(QuickActions hotkey) onSaved;
   const QuickActionEdit({
-    Key? key,
+    super.key,
     required this.leAction,
     required this.onSaved,
-  }) : super(key: key);
+  });
   @override
   QuickActionEditState createState() => QuickActionEditState();
 }
@@ -179,7 +179,7 @@ class QuickActionEditState extends State<QuickActionEdit> {
                       const Icon(Icons.save),
                       Text(
                         "Save",
-                        style: TextStyle(color: Theme.of(context).backgroundColor),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
                       ),
                     ],
                   ),

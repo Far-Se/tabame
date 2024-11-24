@@ -3,7 +3,7 @@
 import 'dart:ffi' hide Size;
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:win32/win32.dart';
 
 import 'mixed.dart';
 
@@ -18,10 +18,10 @@ final void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo) _keybd_eve
     _user32.lookupFunction<Void Function(Uint8 bVk, Uint8 bScan, Uint32 dwFlags, IntPtr dwExtraInfo), void Function(int bVk, int bScan, int dwFlags, int dwExtraInfo)>(
         'keybd_event');
 
-int GetClassName(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount) => _GetClassName(hWnd, lpClassName, nMaxCount);
-final int Function(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount) _GetClassName =
-    _user32.lookupFunction<Int32 Function(IntPtr hWnd, Pointer<Utf16> lpClassName, Int32 nMaxCount), int Function(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount)>(
-        'GetClassNameW');
+// int GetClassName(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount) => _GetClassName(hWnd, lpClassName, nMaxCount);
+// final int Function(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount) _GetClassName =
+//     _user32.lookupFunction<Int32 Function(IntPtr hWnd, Pointer<Utf16> lpClassName, Int32 nMaxCount), int Function(int hWnd, Pointer<Utf16> lpClassName, int nMaxCount)>(
+//         'GetClassNameW');
 
 int GetWindowLong(int hWnd, int nIndex) => _GetWindowLong(hWnd, nIndex);
 final int Function(int hWnd, int nIndex) _GetWindowLong =
@@ -29,11 +29,11 @@ final int Function(int hWnd, int nIndex) _GetWindowLong =
 
 /// [KERNEL32]
 final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
-int QueryFullProcessImageName(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize) =>
+/* int QueryFullProcessImageName(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize) =>
     _QueryFullProcessImageName(hProcess, dwFlags, lpExeName, lpdwSize);
 final int Function(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize) _QueryFullProcessImageName = _kernel32.lookupFunction<
     Int32 Function(IntPtr hProcess, Uint32 dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize),
-    int Function(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize)>('QueryFullProcessImageNameW');
+    int Function(int hProcess, int dwFlags, Pointer<Utf16> lpExeName, Pointer<Uint32> lpdwSize)>('QueryFullProcessImageNameW'); */
 
 int GetApplicationUserModelId(int hProcess, Pointer<Uint32> applicationUserModelIdLength, Pointer<Utf16> applicationUserModelId) =>
     _GetApplicationUserModelId(hProcess, applicationUserModelIdLength, applicationUserModelId);
@@ -52,11 +52,11 @@ final int Function(Pointer<Utf16> applicationUserModelId, Pointer<Uint32> packag
         int Function(Pointer<Utf16> applicationUserModelId, Pointer<Uint32> packageFamilyNameLength, Pointer<Utf16> packageFamilyName,
             Pointer<Uint32> packageRelativeApplicationIdLength, Pointer<Utf16> packageRelativeApplicationId)>('ParseApplicationUserModelId');
 
-int SetFileAttributes(Pointer<Utf16> lpFileName, int dwFileAttributes) => _SetFileAttributes(lpFileName, dwFileAttributes);
+/* int SetFileAttributes(Pointer<Utf16> lpFileName, int dwFileAttributes) => _SetFileAttributes(lpFileName, dwFileAttributes);
 
 final int Function(Pointer<Utf16> lpFileName, int dwFileAttributes) _SetFileAttributes =
     _kernel32.lookupFunction<Int32 Function(Pointer<Utf16> lpFileName, Uint32 dwFileAttributes), int Function(Pointer<Utf16> lpFileName, int dwFileAttributes)>(
-        'SetFileAttributesW');
+        'SetFileAttributesW'); */
 
 /// [GDI]
 
@@ -76,6 +76,13 @@ final int Function(Pointer<Int32> pquns) _SHQueryUserNotificationState =
 bool IsUserAnAdmin() => _IsUserAnAdmin();
 final bool Function() _IsUserAnAdmin = _shell32.lookupFunction<Bool Function(), bool Function()>('IsUserAnAdmin');
 
+int ExtractIconEx(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, int nIcons) =>
+    _ExtractIconEx(lpszFile, nIconIndex, phiconLarge, phiconSmall, nIcons);
+
+final int Function(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, int nIcons) _ExtractIconEx =
+    _shell32.lookupFunction<Uint32 Function(Pointer<Utf16> lpszFile, Int32 nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, Uint32 nIcons),
+        int Function(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, int nIcons)>('ExtractIconExW');
+
 // #endregion
 
 // #region (collapsed) lowlevelFunction Helpers
@@ -87,7 +94,7 @@ int enumWindowsProc(int hWnd, int lParam) {
 
 List<int> enumWindows() {
   __helperWinsList.clear();
-  final Pointer<NativeFunction<EnumWindowsProc>> wndProc = Pointer.fromFunction<EnumWindowsProc>(enumWindowsProc, 0);
+  final Pointer<NativeFunction<WNDENUMPROC>> wndProc = Pointer.fromFunction<WNDENUMPROC>(enumWindowsProc, 0);
   EnumWindows(wndProc, 0);
   return <int>[...__helperWinsList];
 }
@@ -99,7 +106,7 @@ int helperChildEnumWindowFunc(int w, int p) {
 }
 
 List<int> enumChildWins(int hWnd) {
-  final Pointer<NativeFunction<EnumWindowsProc>> wndProc = Pointer.fromFunction<EnumWindowsProc>(helperChildEnumWindowFunc, 0);
+  final Pointer<NativeFunction<WNDENUMPROC>> wndProc = Pointer.fromFunction<WNDENUMPROC>(helperChildEnumWindowFunc, 0);
   __helpEnumChildWins.clear();
   //this was outside this function when i moved it..
   EnumChildWindows(hWnd, wndProc, 0);
@@ -108,7 +115,7 @@ List<int> enumChildWins(int hWnd) {
 
 final Map<int, Square> __helperMonitorList = <int, Square>{};
 //! added RECT
-int helperGetMonitorInfo(int hMonitor, int hDC, Pointer<RECT> lpRect, int lParam) {
+int helperGetMonitorInfo(int hMonitor, int hDC, Pointer<NativeType> lpRect, int lParam) {
   final Pointer<RECT> monitorInfo = Pointer<RECT>.fromAddress(lpRect.address);
   __helperMonitorList[hMonitor] = Square(
       x: monitorInfo.ref.left,
@@ -122,7 +129,7 @@ int helperGetMonitorInfo(int hMonitor, int hDC, Pointer<RECT> lpRect, int lParam
 
 Map<int, Square> enumMonitors() {
   __helperMonitorList.clear();
-  EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MonitorEnumProc>(helperGetMonitorInfo, 0), 0);
+  EnumDisplayMonitors(NULL, nullptr, Pointer.fromFunction<MONITORENUMPROC>(helperGetMonitorInfo, 0), 0);
   return <int, Square>{...__helperMonitorList};
 }
 // #endregion

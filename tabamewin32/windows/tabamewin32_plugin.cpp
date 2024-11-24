@@ -1595,9 +1595,21 @@ namespace tabamewin32
         //? Audio
         if (method_name.compare("enumAudioDevices") == 0)
         {
+            std::cout << "enumAudioDevices" << std::endl;
             const flutter::EncodableMap &args = std::get<flutter::EncodableMap>(*method_call.arguments());
             int deviceType = std::get<int>(args.at(flutter::EncodableValue("deviceType")));
+            appendLineToFile(debugFile, "enumAudioDevices 1");
             std::vector<DeviceProps> devices = EnumAudioDevices((EDataFlow)deviceType);
+            appendLineToFile(debugFile, "enumAudioDevices 1.1");
+            // check if there are devices and if they are empty return empy map
+            if (devices.empty())
+            {
+
+                appendLineToFile(debugFile, "enumAudioDevices 0");
+                result->Success(flutter::EncodableValue(flutter::EncodableMap()));
+                return;
+            }
+            appendLineToFile(debugFile, "enumAudioDevices 2");
             // loop through devices and add them to a map
             flutter::EncodableMap map;
             for (const auto &device : devices)
@@ -1609,6 +1621,7 @@ namespace tabamewin32
                 deviceMap[flutter::EncodableValue("isActive")] = flutter::EncodableValue(device.isActive);
                 map[flutter::EncodableValue(Encoding::WideToUtf8(device.id))] = flutter::EncodableValue(deviceMap);
             }
+            appendLineToFile(debugFile, "enumAudioDevices 3");
             result->Success(flutter::EncodableValue(map));
         }
         else if (method_name.compare("canAccessAudio") == 0)

@@ -5,7 +5,6 @@ import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/quick_action_list.dart';
-import '../../models/win32/win32.dart';
 import '../itzy/quickmenu/button_audio.dart';
 import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
@@ -17,7 +16,7 @@ import '../itzy/quickmenu/list_pinned_apps.dart';
 import '../containers/bar_with_buttons.dart';
 
 class TopBar extends StatefulWidget {
-  const TopBar({Key? key}) : super(key: key);
+  const TopBar({super.key});
 
   @override
   State<TopBar> createState() => _TopBarState();
@@ -58,7 +57,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
       data: Theme.of(context).copyWith(
           iconTheme: const IconThemeData(size: 16),
           hoverColor: Colors.grey.withAlpha(50),
-          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(decoration: BoxDecoration(color: Theme.of(context).backgroundColor), preferBelow: false)),
+          tooltipTheme: Theme.of(context).tooltipTheme.copyWith(decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface), preferBelow: false)),
       child: IconTheme(
         data: IconThemeData(
           size: 16,
@@ -129,26 +128,6 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                             message: "Testing",
                             child: InkWell(
                               onTap: () async {
-                                //
-                                // QuickMenuFunctions.toggleQuickMenu(type: 3);
-                                WinUtils.run("powershell", arguments: "Install-Module -Name AudioDeviceCmdlets -Force -Verbose;");
-                                1 + 1 == 2
-                                    ? true
-                                    : WinUtils.runPowerShell([
-                                        r"""
-If (! (Get-Module -Name "AudioDeviceCmdlets" -ListAvailable)) { 
-Install-Module -Name AudioDeviceCmdlets -Force -Verbose;
-get-module -Name "AudioDeviceCmdlets" -ListAvailable | Sort-Object Version | select -last 1 | Import-Module -Verbose; 
-[Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
-(New-Object System.Net.WebClient).DownloadFile($url, $location)
-}
-if((Get-AudioDevice -List | where {($_.Default -eq $true) -and ($_.Type -like "Playback")}).Name -like "*Intel*") {
-Get-AudioDevice -List | where Type -like "Playback" | where name -like "*realtek*" | Set-AudioDevice -Verbose 
-Get-AudioDevice -List | where Type -like "Recording" | where name -like "*realtek*" | Set-AudioDevice -Verbose
-}
-"""
-                                      ]).then((List<String> e) => print(e));
-
                                 // await WinUtils.screenCapture();
                               },
                               child: const Icon(Icons.textsms_outlined),

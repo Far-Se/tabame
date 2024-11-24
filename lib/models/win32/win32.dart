@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter/foundation.dart';
 import 'package:local_notifier/local_notifier.dart';
-import 'package:win32/win32.dart' hide Size, Point;
+import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
@@ -35,19 +35,19 @@ class Win32 {
     GetWindowPlacement(hWnd, place);
 
     switch (place.ref.showCmd) {
-      case SW_SHOWMAXIMIZED:
-        ShowWindow(hWnd, SW_SHOWMAXIMIZED);
+      case SHOW_WINDOW_CMD.SW_SHOWMAXIMIZED:
+        ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_SHOWMAXIMIZED);
         break;
-      case SW_SHOWMINIMIZED:
-        ShowWindow(hWnd, SW_RESTORE);
+      case SHOW_WINDOW_CMD.SW_SHOWMINIMIZED:
+        ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_RESTORE);
         break;
       default:
-        ShowWindow(hWnd, SW_NORMAL);
+        ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_NORMAL);
         break;
     }
     free(place);
     if (forced) {
-      ShowWindow(hWnd, SW_RESTORE);
+      ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_RESTORE);
       SetForegroundWindow(hWnd);
       BringWindowToTop(hWnd);
       SetFocus(hWnd);
@@ -70,6 +70,10 @@ class Win32 {
 
   static void forceActivateWindow(int hWnd) {
     activateWindow(hWnd, forced: true);
+  }
+
+  static int getActiveWindowHandle() {
+    return GetForegroundWindow();
   }
 
   static void closeWindow(int hWnd, {bool forced = false}) {
@@ -132,7 +136,7 @@ class Win32 {
 
   static String getProcessExePath(int processID) {
     String exePath = "";
-    final int hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+    final int hProcess = OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_INFORMATION | PROCESS_ACCESS_RIGHTS.PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
       CloseHandle(hProcess);
       return "";
@@ -193,8 +197,8 @@ class Win32 {
 
   static bool isWindowPresent(int hWnd) {
     bool visible = true;
-    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-    if ((exstyle & WS_EX_TOOLWINDOW) != 0) visible = false;
+    final int exstyle = GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+    if ((exstyle & WINDOW_EX_STYLE.WS_EX_TOOLWINDOW) != 0) visible = false;
     return visible;
   }
 
@@ -278,8 +282,8 @@ class Win32 {
     hwnd ??= hWnd;
     if (!useMouse) {
       final Square rect = getWindowRect(hwnd: hwnd);
-      final double x = (GetSystemMetrics(SM_CXSCREEN) - rect.width) / 2;
-      final double y = (GetSystemMetrics(SM_CYSCREEN) - rect.height) / 2;
+      final double x = (GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSCREEN) - rect.width) / 2;
+      final double y = (GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYSCREEN) - rect.height) / 2;
       SetWindowPos(hwnd, HWND_TOP, x ~/ 1, y ~/ 1, rect.width, rect.height, NULL);
     } else {
       final Square rect = getWindowRect(hwnd: hwnd);
@@ -360,7 +364,7 @@ class Win32 {
     double horizontal = mousePos.X.toDouble() - 10;
     double vertical = mousePos.Y.toDouble() - 30;
 
-    int flags = TPM_LEFTALIGN;
+    int flags = TRACK_POPUP_MENU_FLAGS.TPM_LEFTALIGN;
 
     final Pointer<POINT> anchorPoint = calloc<POINT>();
     anchorPoint.ref.x = horizontal.toInt();
@@ -393,12 +397,13 @@ class Win32 {
   static void setAlwaysOnTop(int hWnd, {bool? alwaysOnTop}) {
     int topmostOrNot = alwaysOnTop == true ? HWND_TOPMOST : HWND_NOTOPMOST;
     if (alwaysOnTop == null) {
-      final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-      topmostOrNot = (exstyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+      final int exstyle = GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+      topmostOrNot = (exstyle & WINDOW_EX_STYLE.WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
     }
-    SetWindowPos(hWnd, topmostOrNot, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    SetWindowPos(hWnd, topmostOrNot, 0, 0, 0, 0, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
   }
 
+  /// Activates the window under the cursor.
   static void activeWindowUnderCursor() {
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
@@ -428,17 +433,17 @@ class Win32 {
 
   static void surfaceWindow(int hWnd) {
     // ShowWindow(hWnd, SW_SHOWNOACTIVATE);
-    ShowWindow(hWnd, SW_SHOWNA);
+    ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_SHOWNA);
 
-    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
+    SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
   }
 
   static void changePosition(int hWnd, int x, int y, int width, int height) {
     if (x == -1 || y == -1) {
-      SetWindowPos(hWnd, HWND_TOP, 0, 0, width, height, SWP_NOMOVE | SWP_NOACTIVATE);
+      SetWindowPos(hWnd, HWND_TOP, 0, 0, width, height, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
     } else {
-      SetWindowPos(hWnd, HWND_TOP, x, y, width, height, SWP_NOACTIVATE);
+      SetWindowPos(hWnd, HWND_TOP, x, y, width, height, SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
     }
   }
 }
@@ -454,8 +459,8 @@ class WinUtils {
       if (type == VolumeOSDStyle.normal) {
         SetWindowRgn(volumeHwnd, 0, 1);
         ShowWindow(volumeHwnd, 9);
-        keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
-        keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+        keybd_event(VIRTUAL_KEY.VK_VOLUME_UP, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
+        keybd_event(VIRTUAL_KEY.VK_VOLUME_DOWN, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
       } else if (type == VolumeOSDStyle.media) {
         final int dpi = GetDpiForWindow(volumeHwnd);
         final double dpiCoef = dpi / 96.0;
@@ -471,8 +476,8 @@ class WinUtils {
           if (applyStyle == false) {
             ShowWindow(volumeHwnd, 9);
 
-            keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
-            keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+            keybd_event(VIRTUAL_KEY.VK_VOLUME_UP, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
+            keybd_event(VIRTUAL_KEY.VK_VOLUME_DOWN, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
           } else {
             ShowWindow(volumeHwnd, 6);
           }
@@ -494,8 +499,8 @@ class WinUtils {
         }
       }
     } else {
-      keybd_event(VK_VOLUME_UP, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
-      keybd_event(VK_VOLUME_DOWN, MapVirtualKey(VK_VOLUME_UP, 0), 0, 0);
+      keybd_event(VIRTUAL_KEY.VK_VOLUME_UP, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
+      keybd_event(VIRTUAL_KEY.VK_VOLUME_DOWN, MapVirtualKey(VIRTUAL_KEY.VK_VOLUME_UP, 0), 0, 0);
     }
     if (volumeHwnd == 0 && recursiveCheckHwnd > 0) {
       recursiveCheckHwnd--;
@@ -523,6 +528,25 @@ class WinUtils {
   }
 
   static String getLocalAppData() {
+    final Pointer<GUID> appsFolder = GUIDFromString(FOLDERID_LocalAppData);
+    final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
+
+    try {
+      final int hr = SHGetKnownFolderPath(appsFolder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, NULL, ppszPath);
+
+      if (FAILED(hr)) {
+        throw WindowsException(hr);
+      }
+
+      final String path = ppszPath.value.toDartString();
+      return path;
+    } finally {
+      free(appsFolder);
+      free(ppszPath);
+    }
+  }
+
+/*   static String getLocalAppData() {
     RoInitialize(RO_INIT_TYPE.RO_INIT_SINGLETHREADED);
     final UserDataPaths userData = UserDataPaths.GetDefault();
     final int hStrLocalAppData = userData.LocalAppData; //userData.RoamingAppData;
@@ -531,13 +555,13 @@ class WinUtils {
 
     RoUninitialize();
     return localAppData;
-  }
+  } */
 
   static String getKnownFolder(String FOLDERID) {
     final Pointer<GUID> appsFolder = GUIDFromString(FOLDERID);
     final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
     String path = "";
-    final int hr = SHGetKnownFolderPath(appsFolder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final int hr = SHGetKnownFolderPath(appsFolder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       path = ppszPath.value.toDartString();
     }
@@ -696,7 +720,7 @@ class WinUtils {
       if (reg.hasMatch(path)) {
         final RegExpMatch out = reg.firstMatch(path)!;
         if (!globalSettings.runAsAdministrator) {
-          ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SW_SHOWNORMAL);
+          ShellExecute(NULL, TEXT("open"), TEXT(out.group(1)!), TEXT(out.group(2)!), nullptr, SHOW_WINDOW_CMD.SW_SHOWNORMAL);
           return;
         }
         final String fileOpen = "${WinUtils.getTabameSettingsFolder()}\\open.vbs";
@@ -710,16 +734,17 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
         runPowerShell(<String>['explorer.exe "$path"']);
       }
     } else {
-      ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr, path == "code" ? SW_HIDE : SW_SHOWNORMAL);
+      ShellExecute(NULL, TEXT("open"), TEXT(path), arguments == null ? nullptr : TEXT(arguments), nullptr,
+          path == "code" ? SHOW_WINDOW_CMD.SW_HIDE : SHOW_WINDOW_CMD.SW_SHOWNORMAL);
     }
   }
 
   static void run(String link, {String? arguments}) {
-    ShellExecute(NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+    ShellExecute(NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SHOW_WINDOW_CMD.SW_SHOWNORMAL);
   }
 
   static void nativeOpen(String link, {String? arguments}) {
-    ShellExecute(NULL, TEXT("open"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
+    ShellExecute(NULL, TEXT("open"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SHOW_WINDOW_CMD.SW_SHOWNORMAL);
   }
 
   static void sendCommand({int command = AppCommand.appCommand}) {
@@ -730,7 +755,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     String location = "";
     final Pointer<GUID> folder = GUIDFromString(FOLDERID_Windows);
     final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
-    final int hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final int hr = SHGetKnownFolderPath(folder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       location = "${ppszPath.value.toDartString()}\\System32\\Taskmgr.exe";
     }
@@ -744,7 +769,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     String location = "";
     final Pointer<GUID> folder = GUIDFromString(FOLDERID_ProgramFiles);
     final Pointer<PWSTR> ppszPath = calloc<PWSTR>();
-    final int hr = SHGetKnownFolderPath(folder, KF_FLAG_DEFAULT, NULL, ppszPath);
+    final int hr = SHGetKnownFolderPath(folder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, NULL, ppszPath);
     if (!FAILED(hr)) {
       location = ppszPath.value.toDartString();
     }
@@ -792,14 +817,14 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
 
   static alwaysAwakeRun(bool state) {
     if (state == false) {
-      SetThreadExecutionState(ES_CONTINUOUS);
+      SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
     } else {
       Timer.periodic(const Duration(seconds: 45), (Timer timer) {
         if (Globals.alwaysAwake == false) {
-          SetThreadExecutionState(ES_CONTINUOUS);
+          SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
           timer.cancel();
         } else {
-          SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
+          SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS | EXECUTION_STATE.ES_SYSTEM_REQUIRED | EXECUTION_STATE.ES_AWAYMODE_REQUIRED);
         }
       });
     }
@@ -834,17 +859,17 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
       if (file.contains("desktop.ini")) continue;
       final int attributes = GetFileAttributes(TEXT(file));
       if (visible == null) {
-        if ((attributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
+        if ((attributes & FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN) == FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN) {
           visible = true;
         } else {
           visible = false;
         }
       }
-      if (!visible && (attributes & FILE_ATTRIBUTE_HIDDEN) == 0) {
-        SetFileAttributes(TEXT(file), attributes | FILE_ATTRIBUTE_HIDDEN);
+      if (!visible && (attributes & FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN) == 0) {
+        SetFileAttributes(TEXT(file), attributes | FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN);
       }
-      if (visible && (attributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN) {
-        SetFileAttributes(TEXT(file), attributes & ~FILE_ATTRIBUTE_HIDDEN);
+      if (visible && (attributes & FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN) == FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN) {
+        SetFileAttributes(TEXT(file), attributes & ~FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_HIDDEN);
       }
     }
   }
@@ -871,7 +896,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     return;
   }
 
-  static void textToSpeech(String text, {int repeat = 1, int volume = 100}) {
+  static Future<void> textToSpeech(String text, {int repeat = 1, int volume = 100}) async {
     if (repeat == -1) {
       final RegExp reg = RegExp(r'x\d+$');
       final RegExpMatch? match = reg.firstMatch(text);
@@ -890,7 +915,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     for (int i = 0; i < repeat; i++) {
       commands.add("\$speak.Speak('${text.replaceAll("'", '"')}');");
     }
-    WinUtils.runPowerShell(commands);
+    await WinUtils.runPowerShell(commands);
   }
 
   static bool windowsNotificationRegistered = false;
@@ -928,7 +953,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
 
   static startOnStartup({String? exeFilePath, String? arguments}) {
     // ! doenst work
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    CoInitializeEx(nullptr, COINIT.COINIT_APARTMENTTHREADED);
     final Pointer<Pointer<COMObject>> ppsi = calloc<Pointer<COMObject>>();
     final Pointer<COMObject> ppfi = calloc<COMObject>();
 
@@ -936,25 +961,25 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     final String directory = Directory(exeFilePath).parent.path;
     final IShellLink shell = IShellLink(ppsi.cast());
 
-    shell.SetPath(TEXT(exeFilePath));
-    shell.SetWorkingDirectory(TEXT(directory));
-    shell.SetShowCmd(SW_SHOWNORMAL);
+    shell.setPath(TEXT(exeFilePath));
+    shell.setWorkingDirectory(TEXT(directory));
+    shell.setShowCmd(SHOW_WINDOW_CMD.SW_SHOWNORMAL);
 
-    if (arguments != null) shell.SetArguments(TEXT(arguments));
+    if (arguments != null) shell.setArguments(TEXT(arguments));
 
     final IPersistFile file = IPersistFile(shell.toInterface(IID_IPersistFile));
     final String startUpPath = getKnownFolderCLSID(CSIDL_STARTUP);
     final String exeName = File(exeFilePath).uri.pathSegments.last.replaceFirst(".exe", ".lnk");
-    file.Save(TEXT("$startUpPath\\$exeName"), TRUE);
-    file.Release();
-    shell.Release();
+    file.save(TEXT("$startUpPath\\$exeName"), TRUE);
+    file.release();
+    shell.release();
     CoUninitialize();
     free(ppsi);
     free(ppfi);
   }
 
   static msgBox(String text, String title) {
-    MessageBox(0, TEXT(text), TEXT(title), MB_ICONEXCLAMATION | MB_DEFAULT_DESKTOP_ONLY);
+    MessageBox(0, TEXT(text), TEXT(title), MESSAGEBOX_STYLE.MB_ICONEXCLAMATION | MESSAGEBOX_STYLE.MB_DEFAULT_DESKTOP_ONLY);
   }
 
   static startTabame({bool closeCurrent = false, String? arguments}) {
@@ -1042,7 +1067,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     GetWindowThreadProcessId(hWnd, lpdwProcessId);
     // Get a handle to the process.
     final int hProcess = OpenProcess(
-      PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+      PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_INFORMATION | PROCESS_ACCESS_RIGHTS.PROCESS_VM_READ,
       FALSE,
       lpdwProcessId.value,
     );
@@ -1067,7 +1092,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
         for (int i = 0; i < (cbNeeded.value ~/ sizeOf<HMODULE>()); i++) {
           final LPWSTR szModName = wsalloc(MAX_PATH);
           // Get the full path to the module's file.
-          final int hModule = hModules.elementAt(i).value;
+          final int hModule = (hModules + i).value;
           if (GetModuleFileNameEx(hProcess, hModule, szModName, MAX_PATH) != 0) {
             String moduleName = szModName.toDartString();
             if (moduleName.contains("ScreenClippingHost.exe")) {
@@ -1095,7 +1120,7 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
       "ms-screenclip://?clippingMode=Rectangle".toNativeUtf16(),
       nullptr,
       nullptr,
-      SW_SHOWNORMAL,
+      SHOW_WINDOW_CMD.SW_SHOWNORMAL,
     );
     await Future<void>.delayed(const Duration(seconds: 1));
 
@@ -1106,6 +1131,204 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     await WinClipboard().saveClipboardToPng("$temp\\capture.png");
     return true;
   }
+
+  static Uint8List? extractIcon(String path, {int iconID = 0}) {
+    if (path.contains('.dll') && iconID != 98988) {
+      final Pointer<IntPtr> phiconLarge = calloc<IntPtr>();
+      final Pointer<IntPtr> phiconSmall = calloc<IntPtr>();
+      final Pointer<Utf16> lpszFile = path.toNativeUtf16();
+
+      final int result = ExtractIconEx(lpszFile, iconID, phiconLarge, phiconSmall, 1);
+      free(lpszFile);
+      if (result > 0) {
+        calloc.free(phiconLarge);
+        calloc.free(phiconSmall);
+        final Uint8List? bytes = hIconToBytes(phiconLarge.value);
+
+        DestroyIcon(phiconLarge.value);
+        DestroyIcon(phiconSmall.value);
+        return bytes;
+      }
+      calloc.free(phiconLarge);
+      calloc.free(phiconSmall);
+      return extractIcon(path, iconID: 98988);
+    }
+    return using((Arena arena) {
+      final Pointer<Utf16> filePath = path.toNativeUtf16(allocator: arena);
+      final int instance = GetModuleHandle(nullptr);
+      final Pointer<WORD> iID = arena<WORD>();
+      //iID.value = iconID;
+
+      final int hIcon = ExtractAssociatedIcon(instance, filePath, iID);
+      if (hIcon == NULL) return null;
+
+      return hIconToBytes(hIcon);
+    });
+  }
+
+  static Uint8List? windowIcon(int hWnd) {
+    int iconResult = SendMessage(hWnd, WM_GETICON, 2, 0); // ICON_SMALL2 - User Made Apps
+    if (iconResult == 0) {
+      iconResult = GetClassLongPtr(hWnd, -14); // GCLP_HICON - Microsoft Win Apps
+      // print("$hWnd From Class: ${Win32.getTitle(hWnd)}");
+    } else {
+      // print("$hWnd From Message: ${Win32.getTitle(hWnd)}");
+    }
+    return hIconToBytes(iconResult);
+  }
+
+  static Uint8List? hIconToBytes(int hIcon, {int nColorBits = 32}) {
+    return using((Arena arena) {
+      final List<int> buffer = <int>[];
+      final int hdc = CreateCompatibleDC(NULL);
+
+      final List<int> icoHeader = <int>[0, 0, 1, 0, 1, 0];
+      buffer.addAll(icoHeader);
+
+      final Pointer<ICONINFO> iconInfo = arena<ICONINFO>();
+      if (GetIconInfo(hIcon, iconInfo) == 0) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      final Pointer<BITMAPINFO> bmInfo = arena<BITMAPINFO>();
+      bmInfo.ref.bmiHeader
+        ..biSize = sizeOf<BITMAPINFOHEADER>()
+        ..biBitCount = 0;
+
+      if (GetDIBits(
+            hdc,
+            iconInfo.ref.hbmColor,
+            0,
+            0,
+            nullptr,
+            bmInfo,
+            DIB_USAGE.DIB_RGB_COLORS,
+          ) ==
+          0) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      int nBmInfoSize = sizeOf<BITMAPINFOHEADER>();
+      if (nColorBits < 24) {
+        nBmInfoSize += sizeOf<RGBQUAD>() * (1 << nColorBits);
+      }
+
+      if (bmInfo.ref.bmiHeader.biSizeImage == 0) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      final Pointer<Uint8> bits = arena<Uint8>(bmInfo.ref.bmiHeader.biSizeImage);
+
+      bmInfo.ref.bmiHeader
+        ..biBitCount = nColorBits
+        ..biCompression = BI_COMPRESSION.BI_RGB;
+
+      if (GetDIBits(
+            hdc,
+            iconInfo.ref.hbmColor,
+            0,
+            bmInfo.ref.bmiHeader.biHeight,
+            bits,
+            bmInfo,
+            DIB_USAGE.DIB_RGB_COLORS,
+          ) ==
+          0) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      final Pointer<BITMAPINFO> maskInfo = arena<BITMAPINFO>();
+      maskInfo.ref.bmiHeader
+        ..biSize = sizeOf<BITMAPINFOHEADER>()
+        ..biBitCount = 0;
+
+      if (GetDIBits(
+                hdc,
+                iconInfo.ref.hbmMask,
+                0,
+                0,
+                nullptr,
+                maskInfo,
+                DIB_USAGE.DIB_RGB_COLORS,
+              ) ==
+              0 ||
+          maskInfo.ref.bmiHeader.biBitCount != 1) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      final Pointer<Uint8> maskBits = arena<Uint8>(maskInfo.ref.bmiHeader.biSizeImage);
+      if (GetDIBits(
+            hdc,
+            iconInfo.ref.hbmMask,
+            0,
+            maskInfo.ref.bmiHeader.biHeight,
+            maskBits,
+            maskInfo,
+            DIB_USAGE.DIB_RGB_COLORS,
+          ) ==
+          0) {
+        DeleteDC(hdc);
+        return null;
+      }
+
+      final Pointer<_IconDirectoryEntry> dir = arena<_IconDirectoryEntry>();
+      dir.ref
+        ..nWidth = bmInfo.ref.bmiHeader.biWidth
+        ..nHeight = bmInfo.ref.bmiHeader.biHeight
+        ..nNumColorsInPalette = (nColorBits == 4 ? 16 : 0)
+        ..nNumColorPlanes = 0
+        ..nBitsPerPixel = bmInfo.ref.bmiHeader.biBitCount
+        ..nDataLength = bmInfo.ref.bmiHeader.biSizeImage + maskInfo.ref.bmiHeader.biSizeImage + nBmInfoSize
+        ..nOffset = sizeOf<_IconDirectoryEntry>() + 6;
+
+      buffer.addAll(dir.cast<Uint8>().asTypedList(sizeOf<_IconDirectoryEntry>()));
+
+      bmInfo.ref.bmiHeader
+        ..biHeight *= 2
+        ..biCompression = 0
+        ..biSizeImage += maskInfo.ref.bmiHeader.biSizeImage;
+      buffer.addAll(bmInfo.cast<Uint8>().asTypedList(nBmInfoSize));
+
+      buffer.addAll(bits.asTypedList(bmInfo.ref.bmiHeader.biSizeImage));
+      buffer.addAll(maskBits.asTypedList(maskInfo.ref.bmiHeader.biSizeImage));
+
+      DeleteObject(iconInfo.ref.hbmColor);
+      DeleteObject(iconInfo.ref.hbmMask);
+      DeleteDC(hdc);
+
+      return Uint8List.fromList(buffer);
+    });
+  }
+}
+
+base class _IconDirectoryEntry extends Struct {
+  @Uint8()
+  external int nWidth;
+
+  @Uint8()
+  external int nHeight;
+
+  @Uint8()
+  external int nNumColorsInPalette;
+
+  @Uint8()
+  external int nReserved;
+
+  @Uint16()
+  external int nNumColorPlanes;
+
+  @Uint16()
+  external int nBitsPerPixel;
+
+  @Uint32()
+  external int nDataLength;
+
+  @Uint32()
+  external int nOffset;
 }
 
 class WizardlyContextMenu {
@@ -1314,7 +1537,7 @@ class HwndPath {
     int process;
     final Pointer<Uint32> ppID = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, ppID);
-    process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
+    process = OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
     free(ppID);
     //Get Text
     final Pointer<Uint32> cMax = calloc<Uint32>()..value = 512;
@@ -1333,7 +1556,7 @@ class HwndPath {
 
         final Pointer<Uint32> ppID = calloc<Uint32>();
         GetWindowThreadProcessId(hWnd, ppID);
-        process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
+        process = OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppID.value);
         free(ppID);
 
         final Pointer<Uint32> cMax = calloc<Uint32>()..value = 512;
@@ -1379,7 +1602,7 @@ class HwndPath {
 
   static String getProcessExePath(int processID) {
     String exePath = "";
-    final int hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+    final int hProcess = OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_INFORMATION | PROCESS_ACCESS_RIGHTS.PROCESS_VM_READ, FALSE, processID);
     if (hProcess == 0) {
       CloseHandle(hProcess);
       return "";

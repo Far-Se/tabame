@@ -9,7 +9,7 @@ import '../../widgets/info_text.dart';
 import '../../widgets/info_widget.dart';
 
 class TasksPageWatchers extends StatefulWidget {
-  const TasksPageWatchers({Key? key}) : super(key: key);
+  const TasksPageWatchers({super.key});
 
   @override
   TasksPageWatchersState createState() => TasksPageWatchersState();

@@ -20,7 +20,7 @@ import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
 
 class ProjectOverviewWidget extends StatefulWidget {
-  const ProjectOverviewWidget({Key? key}) : super(key: key);
+  const ProjectOverviewWidget({super.key});
 
   @override
   ProjectOverviewWidgetState createState() => ProjectOverviewWidgetState();
@@ -155,7 +155,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                             }),
                             actions: <Widget>[
                               ElevatedButton(
-                                  onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                  onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
                             ],
                           );
                         },
@@ -173,8 +173,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
           padding: const EdgeInsets.only(left: 5),
           child: Row(
             children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10.0),
                 child: Column(
                   children: <Widget>[],
                 ),
@@ -305,19 +305,19 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
                               project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.lines > b.total.lines ? -1 : 1);
                               setState(() {});
                             },
-                            child: SizedBox(width: 70, child: Text("Lines", style: Theme.of(context).textTheme.button))),
+                            child: SizedBox(width: 70, child: Text("Lines", style: Theme.of(context).textTheme.labelLarge))),
                         InkWell(
                             onTap: () {
                               project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.code > b.total.code ? -1 : 1);
                               setState(() {});
                             },
-                            child: SizedBox(width: 70, child: Text("Code", style: Theme.of(context).textTheme.button))),
+                            child: SizedBox(width: 70, child: Text("Code", style: Theme.of(context).textTheme.labelLarge))),
                         InkWell(
                             onTap: () {
                               project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.nonCode > b.total.nonCode ? -1 : 1);
                               setState(() {});
                             },
-                            child: SizedBox(width: 70, child: Text("NonCode", style: Theme.of(context).textTheme.button))),
+                            child: SizedBox(width: 70, child: Text("NonCode", style: Theme.of(context).textTheme.labelLarge))),
                         InkWell(
                           onTap: () {
                             project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.comments > b.total.comments ? -1 : 1);
@@ -327,20 +327,20 @@ That means this project has **${((project.totalChars / 250).floor()).decimal} pa
                               width: 70,
                               child: Tooltip(
                                   message: "For common programming languages it works well\nIf you have bad comment formats it might break.",
-                                  child: Text("Comm*", style: Theme.of(context).textTheme.button))),
+                                  child: Text("Comm*", style: Theme.of(context).textTheme.labelLarge))),
                         ),
                         InkWell(
                             onTap: () {
                               project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.empty > b.total.empty ? -1 : 1);
                               setState(() {});
                             },
-                            child: SizedBox(width: 70, child: Text("Empty", style: Theme.of(context).textTheme.button))),
+                            child: SizedBox(width: 70, child: Text("Empty", style: Theme.of(context).textTheme.labelLarge))),
                         InkWell(
                             onTap: () {
                               project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.characters > b.total.characters ? -1 : 1);
                               setState(() {});
                             },
-                            child: SizedBox(width: 70, child: Text("Chars", style: Theme.of(context).textTheme.button))),
+                            child: SizedBox(width: 70, child: Text("Chars", style: Theme.of(context).textTheme.labelLarge))),
                       ],
                     ),
                     ...List<Widget>.generate(
@@ -670,7 +670,7 @@ Map<String, MultiLineComment> multiLineComment = <String, MultiLineComment>{
 
 class LoadFromGitWidget extends StatefulWidget {
   final void Function(String folder) onSelected;
-  const LoadFromGitWidget({Key? key, required this.onSelected}) : super(key: key);
+  const LoadFromGitWidget({super.key, required this.onSelected});
   @override
   LoadFromGitWidgetState createState() => LoadFromGitWidgetState();
 }

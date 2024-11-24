@@ -74,16 +74,21 @@ class Tray {
 
       if (__trayIconCache.containsKey(element.hWnd)) {
         if (__trayIconHandleCache[element.hWnd] != element.hIcon) {
-          final Uint8List? icon = await getIconPng(element.hIcon);
-          trayInfo.iconData = icon!;
+          final Uint8List? icon = WinUtils.hIconToBytes(element.hIcon);
+          trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
           __trayIconCache[element.hWnd] = trayInfo.iconData;
           __trayIconHandleCache[element.hWnd] = element.hIcon; //? Fetch New
         } else {
           trayInfo.iconData = __trayIconCache[element.hWnd]!; //? Cache
         }
       } else {
-        final Uint8List? icon = await getIconPng(element.hIcon); //? First Fetch
-        trayInfo.iconData = icon!;
+        late Uint8List? icon;
+        try {
+          icon = WinUtils.hIconToBytes(element.hIcon); //? First Fetch
+        } catch (e) {
+          icon = WinUtils.hIconToBytes(0);
+        }
+        trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
         __trayIconCache[element.hWnd] = trayInfo.iconData;
         __trayIconHandleCache[element.hWnd] = element.hIcon;
       }

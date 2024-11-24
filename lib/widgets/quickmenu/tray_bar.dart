@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart' hide Rect;
+import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -15,7 +15,7 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 
 class TrayBar extends StatefulWidget {
-  const TrayBar({Key? key}) : super(key: key);
+  const TrayBar({super.key});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -38,6 +38,18 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
       Globals.spotifyTrayHwnd = <int>[spotify[0].hWnd, spotify[0].processID];
     } else {
       Globals.spotifyTrayHwnd = <int>[0, 0];
+    }
+    final List<TrayBarInfo> foobar = tray.where((TrayBarInfo element) => element.processExe == "foobar2000.exe").toList();
+    if (foobar.isNotEmpty) {
+      Globals.foobarTrayHwnd = <int>[foobar[0].hWnd, foobar[0].processID];
+    } else {
+      Globals.foobarTrayHwnd = <int>[0, 0];
+    }
+    final List<TrayBarInfo> musicBee = tray.where((TrayBarInfo element) => element.processExe == "MusicBee.exe").toList();
+    if (musicBee.isNotEmpty) {
+      Globals.musicBeeTrayHwnd = <int>[musicBee[0].hWnd, musicBee[0].processID];
+    } else {
+      Globals.musicBeeTrayHwnd = <int>[0, 0];
     }
     if (mounted) setState(() {});
   }
@@ -160,16 +172,18 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                             message: info.processExe,
                             height: 0,
                             preferBelow: false,
-                            child: Image.memory(
-                              info.iconData,
-                              fit: BoxFit.scaleDown,
-                              gaplessPlayback: true,
-                              width: 16,
-                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                Icons.check_box_outline_blank,
-                                size: 16,
-                              ),
-                            )),
+                            child: Globals.getIconRewrite(info.processPath) != ""
+                                ? Image.asset(Globals.getIconRewrite(info.processPath), width: 20)
+                                : Image.memory(
+                                    info.iconData,
+                                    fit: BoxFit.scaleDown,
+                                    gaplessPlayback: true,
+                                    width: 16,
+                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                      Icons.check_box_outline_blank,
+                                      size: 16,
+                                    ),
+                                  )),
                       ),
                     ),
                   ),

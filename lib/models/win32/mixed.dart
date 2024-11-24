@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:win32/win32.dart';
 
 import 'imports.dart';
 

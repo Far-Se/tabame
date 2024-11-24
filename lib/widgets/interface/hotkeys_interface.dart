@@ -6,8 +6,9 @@ import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' hide TextInput;
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:win32/win32.dart' hide Point;
+import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
@@ -19,7 +20,7 @@ import '../widgets/info_text.dart';
 import '../widgets/text_input.dart';
 
 class HotkeysInterface extends StatefulWidget {
-  const HotkeysInterface({Key? key}) : super(key: key);
+  const HotkeysInterface({super.key});
   @override
   HotkeysInterfaceState createState() => HotkeysInterfaceState();
 }
@@ -98,7 +99,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   );
                 });
           },
-          title: Text("Hotkeys", style: Theme.of(context).textTheme.headline4),
+          title: Text("Hotkeys", style: Theme.of(context).textTheme.headlineMedium),
           leading: Container(height: double.infinity, child: const Icon(Icons.add, size: 30)),
           trailing: Tooltip(
             message: "Insert Default hotkey, if you messed it up",
@@ -299,10 +300,10 @@ class HotKeySettings extends StatefulWidget {
   final void Function() refresh;
 
   const HotKeySettings({
-    Key? key,
+    super.key,
     required this.hotkeyIndex,
     required this.refresh,
-  }) : super(key: key);
+  });
   @override
   HotKeySettingsState createState() => HotKeySettingsState();
 }
@@ -370,17 +371,17 @@ class HotKeySettingsState extends State<HotKeySettings> {
         ListTile(
           title: Focus(
             focusNode: focusNode,
-            onKey: (FocusNode e, RawKeyEvent k) {
+            onKeyEvent: (FocusNode e, KeyEvent k) {
               if (1 + 1 == 2) {
                 List<String> modifier = <String>[];
-                if (k.isControlPressed) modifier.add("CTRL");
-                if (k.isAltPressed) modifier.add("ALT");
-                if (k.isShiftPressed) modifier.add("SHIFT");
-                if (k.isMetaPressed) modifier.add("WIN");
-                if (k.data.modifiersPressed.isEmpty) return KeyEventResult.handled;
-                if (k.data.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
+                if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
+                if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
+                if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
+                if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
+                if (modifier.isEmpty) return KeyEventResult.handled;
+                if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
                 // final String newKey = String.fromCharCode(k.data.logicalKey.keyId);
-                final String newKey = k.data.logicalKey.keyLabel;
+                final String newKey = k.logicalKey.keyLabel;
                 final List<String> x = remap.map((Hotkeys e) => e.hotkey).toList();
                 if (x.contains("${modifier.join('+')}+$newKey")) {
                   ScaffoldMessenger.of(context)
@@ -454,9 +455,9 @@ class HotKeySettingsState extends State<HotKeySettings> {
 class MouseInfoWidget extends StatefulWidget {
   final Function(AnchorType anchor) onAnchorTypeChanged;
   const MouseInfoWidget({
-    Key? key,
+    super.key,
     required this.onAnchorTypeChanged,
-  }) : super(key: key);
+  });
   @override
   MouseInfoWidgetState createState() => MouseInfoWidgetState();
 }
@@ -481,7 +482,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
     super.initState();
     timer = Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
       if (!trackingEnabled) return;
-      final int state = GetKeyState(VK_MENU);
+      final int state = GetKeyState(VIRTUAL_KEY.VK_MENU);
       if (state < 0) {
         if (lastKey != state) {
           lastKey = state;
@@ -662,11 +663,11 @@ class HotKeyAction extends StatefulWidget {
   final void Function(KeyMap hotkey) onSaved;
   final void Function() onCloned;
   const HotKeyAction({
-    Key? key,
+    super.key,
     required this.hotkey,
     required this.onSaved,
     required this.onCloned,
-  }) : super(key: key);
+  });
   @override
   HotKeyActionState createState() => HotKeyActionState();
 }
@@ -945,7 +946,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                 const SizedBox(height: 15),
                 ListTile(
                   leading: const Icon(Icons.add),
-                  title: Text("Actions", style: Theme.of(context).textTheme.headline6),
+                  title: Text("Actions", style: Theme.of(context).textTheme.titleLarge),
                   onTap: () {
                     widget.hotkey.actions.add(KeyAction(type: ActionType.hotkey, value: "ALT+SHIFT+F"));
                     setState(() {});
@@ -1118,15 +1119,15 @@ class HotKeyActionState extends State<HotKeyAction> {
                           ListTile(
                             title: Focus(
                               focusNode: focusNode,
-                              onKey: (FocusNode e, RawKeyEvent k) {
-                                if (k.data.logicalKey.keyId < 256) {
+                              onKeyEvent: (FocusNode e, KeyEvent k) {
+                                if (k.logicalKey.keyId < 256) {
                                   List<String> modifier = <String>[];
-                                  if (k.isControlPressed) modifier.add("CTRL");
-                                  if (k.isAltPressed) modifier.add("ALT");
-                                  if (k.isShiftPressed) modifier.add("SHIFT");
-                                  if (k.isMetaPressed) modifier.add("WIN");
+                                  if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
+                                  if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
+                                  if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
+                                  if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
                                   if (modifier.isNotEmpty) {
-                                    final String newKey = String.fromCharCode(k.data.logicalKey.keyId);
+                                    final String newKey = String.fromCharCode(k.logicalKey.keyId);
                                     action.value = "${modifier.join("+")}+$newKey";
                                     FocusScope.of(context).unfocus();
                                     setState(() {});
@@ -1201,7 +1202,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                         const Icon(Icons.save),
                         Text(
                           "Save",
-                          style: TextStyle(color: Theme.of(context).backgroundColor),
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary),
                         ),
                       ],
                     ),
@@ -1227,12 +1228,12 @@ class HotKeyActionState extends State<HotKeyAction> {
                     },
                     child: Container(
                       width: 70,
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
-                          const Icon(Icons.copy_all, size: 15),
-                          const Text(" Clone"),
+                          Icon(Icons.copy_all, size: 15),
+                          Text(" Clone"),
                         ],
                       ),
                     ),
@@ -1251,7 +1252,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
                             const Icon(Icons.save),
-                            Text(" Save", style: TextStyle(color: Theme.of(context).backgroundColor)),
+                            Text(" Save", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                           ],
                         ),
                       ),
@@ -1278,12 +1279,12 @@ class IconInfo extends StatelessWidget {
   final double horizontal;
   final double vertical;
   const IconInfo({
-    Key? key,
+    super.key,
     required this.icon,
     required this.name,
     this.horizontal = 2,
     this.vertical = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

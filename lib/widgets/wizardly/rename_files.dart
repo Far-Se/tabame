@@ -13,7 +13,7 @@ import '../widgets/mouse_scroll_widget.dart';
 import '../widgets/text_input.dart';
 
 class FileNameWidget extends StatefulWidget {
-  const FileNameWidget({Key? key}) : super(key: key);
+  const FileNameWidget({super.key});
 
   @override
   FileNameWidgetState createState() => FileNameWidgetState();
@@ -106,9 +106,9 @@ class FileNameWidgetState extends State<FileNameWidget> {
                                   if (mounted) setState(() {});
                                   Navigator.of(context).pop();
                                 },
-                                child: Text("Process", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                child: Text("Process", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
                             ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).backgroundColor))),
+                                onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
                           ],
                         );
                       },
@@ -400,13 +400,13 @@ class ListTileFile extends StatefulWidget {
   final String oldName;
   final String newName;
   const ListTileFile({
-    Key? key,
+    super.key,
     required this.checkbox,
     required this.onCheckPressed,
     required this.onRenamePressed,
     required this.oldName,
     required this.newName,
-  }) : super(key: key);
+  });
 
   @override
   ListTileFileState createState() => ListTileFileState();
@@ -440,8 +440,8 @@ class ListTileFileState extends State<ListTileFile> {
                 child: TextButton(
                     onPressed: () => widget.onRenamePressed(),
                     style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                        if (states.contains(MaterialState.hovered)) {
+                      backgroundColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                        if (states.contains(WidgetState.hovered)) {
                           return Theme.of(context).primaryColor.withOpacity(0.5);
                         }
                         return Colors.transparent;

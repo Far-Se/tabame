@@ -4,7 +4,7 @@ import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
 class ToggleHiddenFilesButton extends StatelessWidget {
-  const ToggleHiddenFilesButton({Key? key}) : super(key: key);
+  const ToggleHiddenFilesButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,32 +15,32 @@ class ToggleHiddenFilesButton extends StatelessWidget {
         children: <Widget>[
           InkWell(
             onTap: () => WinUtils.toggleHiddenFiles(visible: false),
-            child: SizedBox(
+            child: const SizedBox(
               height: 25,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Hide Hidden Files")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)),
+                  SizedBox(width: 5),
+                  Text("Hide Hidden Files")
                 ],
               ),
             ),
           ),
           InkWell(
             onTap: () => WinUtils.toggleHiddenFiles(visible: true),
-            child: SizedBox(
+            child: const SizedBox(
               height: 25,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  const SizedBox(width: 5),
-                  const SizedBox(width: 20, child: Icon(Icons.folder_outlined)),
-                  const SizedBox(width: 5),
-                  const Text("Show Hidden Files")
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.folder_outlined)),
+                  SizedBox(width: 5),
+                  Text("Show Hidden Files")
                 ],
               ),
             ),

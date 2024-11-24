@@ -17,7 +17,7 @@ class HotkeyHandler {
   int currentVK = -1;
   void handle(HotkeyEvent hotkeyInfo) {
     if (!kReleaseMode && !Globals.debugHotkeys) return;
-    final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey).toList()];
+    final List<Hotkeys> hk = <Hotkeys>[...Boxes.remap.where((Hotkeys element) => element.hotkey == hotkeyInfo.hotkey)];
     if (hk.isEmpty) return;
     final Hotkeys hotkey = hk[0];
 

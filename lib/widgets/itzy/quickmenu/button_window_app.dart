@@ -2,17 +2,18 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
 class WindowsAppButton extends StatelessWidget {
   final String path;
   const WindowsAppButton({
-    Key? key,
+    super.key,
     required this.path,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,13 @@ class WindowsAppButton extends StatelessWidget {
       width: size + 5,
       height: double.maxFinite,
       child: FutureBuilder<Uint8List?>(
-        future: getExecutableIcon(path),
+        future: Globals.getIconRewrite(path) != ""
+            ? Future<Uint8List?>(() async {
+                final String x = Globals.getIconRewrite(path);
+                final ByteData bytes = await rootBundle.load(x);
+                return bytes.buffer.asUint8List();
+              })
+            : Future<Uint8List?>.value(WinUtils.extractIcon(path)),
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           return InkWell(
             child: Padding(

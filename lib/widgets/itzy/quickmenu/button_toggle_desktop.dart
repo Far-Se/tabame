@@ -4,7 +4,7 @@ import 'package:win32/win32.dart';
 import '../../../models/win32/keys.dart';
 
 class ToggleDesktopButton extends StatelessWidget {
-  const ToggleDesktopButton({Key? key}) : super(key: key);
+  const ToggleDesktopButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +18,7 @@ class ToggleDesktopButton extends StatelessWidget {
           splashRadius: 16,
           icon: const Tooltip(
             message: "Show Desktop",
-            child: Icon(Icons.desktop_windows),
+            child: Icon(Icons.desktop_windows_rounded),
           ),
           onPressed: () {
             FocusScope.of(context).unfocus();

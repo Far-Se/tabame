@@ -13,11 +13,11 @@ enum AccessRights {
   int get win32Value {
     switch (this) {
       case AccessRights.readOnly:
-        return KEY_READ;
+        return REG_SAM_FLAGS.KEY_READ;
       case AccessRights.writeOnly:
-        return KEY_WRITE;
+        return REG_SAM_FLAGS.KEY_WRITE;
       case AccessRights.allAccess:
-        return KEY_ALL_ACCESS;
+        return REG_SAM_FLAGS.KEY_ALL_ACCESS;
     }
   }
 }
@@ -125,7 +125,7 @@ class RegistryKey {
     try {
       final int retcode = RegCreateKey(hkey, lpSubKey, phkResult);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
 
@@ -144,7 +144,7 @@ class RegistryKey {
     try {
       final int retcode = RegDeleteKey(hkey, lpSubKey);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
     } finally {
@@ -160,7 +160,7 @@ class RegistryKey {
     try {
       final int retcode = RegSetValueEx(hkey, lpValueName, NULL, value.type.win32Value, lpWin32Data.data, lpWin32Data.lengthInBytes);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
     } finally {
@@ -176,11 +176,11 @@ class RegistryKey {
     final Pointer<DWORD> pdwType = calloc<DWORD>();
     final Pointer<DWORD> pcbData = calloc<DWORD>();
 
-    final int flags = expandPaths ? RRF_RT_ANY : RRF_RT_ANY | RRF_NOEXPAND;
+    final int flags = expandPaths ? REG_ROUTINE_FLAGS.RRF_RT_ANY : REG_ROUTINE_FLAGS.RRF_RT_ANY | REG_ROUTINE_FLAGS.RRF_NOEXPAND;
 
     // Call first time to find out how much memory we need to allocate
     int retcode = RegGetValue(hkey, lpSubKey, lpValue, flags, pdwType, nullptr, pcbData);
-    if (retcode == ERROR_FILE_NOT_FOUND) return null;
+    if (retcode == WIN32_ERROR.ERROR_FILE_NOT_FOUND) return null;
 
     // Now call for real to get the data we need.
     final Pointer<BYTE> pvData = calloc<BYTE>(pcbData.value);
@@ -230,7 +230,7 @@ class RegistryKey {
     try {
       final int retcode = RegDeleteValue(hkey, lpValueName);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
     } finally {
@@ -246,7 +246,7 @@ class RegistryKey {
     try {
       final int retcode = RegRenameKey(hkey, lpSubKeyName, lpNewKeyName);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
     } finally {
@@ -283,7 +283,7 @@ class RegistryKey {
           lpcbSecurityDescriptor,
           lpftLastWriteTime);
 
-      if (retcode != ERROR_SUCCESS) {
+      if (retcode != WIN32_ERROR.ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
       }
 
@@ -315,7 +315,7 @@ class RegistryKey {
         lpcchData.value = keyInfo.valueDataMaxSizeInBytes;
 
         final int retcode = RegEnumValue(hkey, idx, lpName, lpcchName, nullptr, lpType, lpData, lpcchData);
-        if (retcode == ERROR_SUCCESS) {
+        if (retcode == WIN32_ERROR.ERROR_SUCCESS) {
           yield RegistryValue.fromWin32(lpName.toDartString(), lpType.value, lpData, lpcchData.value);
         }
       }
@@ -345,7 +345,7 @@ class RegistryKey {
         lpcchName.value = keyNameLength;
 
         final int retcode = RegEnumKeyEx(hkey, idx, lpName, lpcchName, nullptr, nullptr, nullptr, nullptr);
-        if (retcode == ERROR_SUCCESS) {
+        if (retcode == WIN32_ERROR.ERROR_SUCCESS) {
           yield lpName.toDartString();
         }
       }
@@ -410,21 +410,21 @@ enum RegistryValueType {
   int get win32Value {
     switch (this) {
       case RegistryValueType.binary:
-        return REG_BINARY;
+        return REG_VALUE_TYPE.REG_BINARY;
       case RegistryValueType.int32:
-        return REG_DWORD;
+        return REG_VALUE_TYPE.REG_DWORD;
       case RegistryValueType.unexpandedString:
-        return REG_EXPAND_SZ;
+        return REG_VALUE_TYPE.REG_EXPAND_SZ;
       case RegistryValueType.link:
-        return REG_LINK;
+        return REG_VALUE_TYPE.REG_LINK;
       case RegistryValueType.stringArray:
-        return REG_MULTI_SZ;
+        return REG_VALUE_TYPE.REG_MULTI_SZ;
       case RegistryValueType.none:
-        return REG_NONE;
+        return REG_VALUE_TYPE.REG_NONE;
       case RegistryValueType.int64:
-        return REG_QWORD;
+        return REG_VALUE_TYPE.REG_QWORD;
       case RegistryValueType.string:
-        return REG_SZ;
+        return REG_VALUE_TYPE.REG_SZ;
       default:
         throw ArgumentError.value(RegistryValueType.unknown, 'Unknown values cannot be stored.');
     }
@@ -465,21 +465,21 @@ class RegistryValue {
 
   factory RegistryValue.fromWin32(String name, int type, Pointer<Uint8> byteData, int dataLength) {
     switch (type) {
-      case REG_SZ:
+      case REG_VALUE_TYPE.REG_SZ:
         return RegistryValue(name, RegistryValueType.string, byteData.cast<Utf16>().toDartString());
-      case REG_EXPAND_SZ:
+      case REG_VALUE_TYPE.REG_EXPAND_SZ:
         return RegistryValue(name, RegistryValueType.unexpandedString, byteData.cast<Utf16>().toDartString());
-      case REG_LINK:
+      case REG_VALUE_TYPE.REG_LINK:
         return RegistryValue(name, RegistryValueType.link, byteData.cast<Utf16>().toDartString());
-      case REG_MULTI_SZ:
+      case REG_VALUE_TYPE.REG_MULTI_SZ:
         return RegistryValue(name, RegistryValueType.stringArray, byteData.cast<Utf16>().unpackStringArray(dataLength));
-      case REG_DWORD:
+      case REG_VALUE_TYPE.REG_DWORD:
         return RegistryValue(name, RegistryValueType.int32, byteData.cast<DWORD>().value);
-      case REG_QWORD:
+      case REG_VALUE_TYPE.REG_QWORD:
         return RegistryValue(name, RegistryValueType.int64, byteData.cast<QWORD>().value);
-      case REG_BINARY:
+      case REG_VALUE_TYPE.REG_BINARY:
         return RegistryValue(name, RegistryValueType.binary, byteData.asTypedList(dataLength));
-      case REG_NONE:
+      case REG_VALUE_TYPE.REG_NONE:
         return RegistryValue(name, RegistryValueType.none, 0);
       default:
         return RegistryValue(name, RegistryValueType.unknown, 0);
@@ -553,7 +553,7 @@ class Registry {
     try {
       final int lStatus = RegOpenKeyEx(hive.win32Value, lpSubKey, 0, desiredAccessRights.win32Value, phKey);
 
-      if (lStatus == ERROR_SUCCESS) {
+      if (lStatus == WIN32_ERROR.ERROR_SUCCESS) {
         return RegistryKey(phKey.value);
       } else {
         throw WindowsException(HRESULT_FROM_WIN32(lStatus));
@@ -571,8 +571,8 @@ class Registry {
     final Pointer<HKEY> phKey = calloc<HKEY>();
 
     try {
-      final int lStatus = RegOpenCurrentUser(KEY_ALL_ACCESS, phKey);
-      if (lStatus == ERROR_SUCCESS) {
+      final int lStatus = RegOpenCurrentUser(REG_SAM_FLAGS.KEY_ALL_ACCESS, phKey);
+      if (lStatus == WIN32_ERROR.ERROR_SUCCESS) {
         return RegistryKey(phKey.value);
       } else {
         throw WindowsException(HRESULT_FROM_WIN32(lStatus));

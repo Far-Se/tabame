@@ -6,6 +6,8 @@
 - PredefinedZones for specific window.
 - Counter, day/week/month/all
 - Wizardly ADB manager.
+- Timers:
+    - save last 5 timers
 ## Change:
 - PredefinedZones better UI
 

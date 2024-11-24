@@ -11,7 +11,7 @@ import '../../../models/win32/win32.dart';
 import '../../../pages/quickmenu.dart';
 
 class OpenSettingsButton extends StatelessWidget {
-  const OpenSettingsButton({Key? key}) : super(key: key);
+  const OpenSettingsButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +26,10 @@ class OpenSettingsButton extends StatelessWidget {
             Icons.settings,
           ),
           onPressed: () {
+            if (Boxes.quickTimers.isNotEmpty) {
+              WinUtils.msgBox("You Have Running Timers", "You Have Running Timers");
+              return;
+            }
             if (kReleaseMode) {
               QuickMenuFunctions.toggleQuickMenu(visible: false);
               int hWnd = Win32.findWindow("Tabame - Interface");

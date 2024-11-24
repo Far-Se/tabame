@@ -9,7 +9,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
 class QuickmenuBottomBar extends StatefulWidget {
-  const QuickmenuBottomBar({Key? key}) : super(key: key);
+  const QuickmenuBottomBar({super.key});
 
   @override
   QuickmenuBottomBarState createState() => QuickmenuBottomBarState();
@@ -47,7 +47,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
         data: Theme.of(context).tooltipTheme.copyWith(
                 decoration: BoxDecoration(
               border: Border.all(color: Colors.white38),
-              color: Theme.of(context).backgroundColor,
+              color: Theme.of(context).colorScheme.surface,
             )),
         child: ListTileTheme(
           data: Theme.of(context).listTileTheme.copyWith(
@@ -98,7 +98,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                               },
                               secondary: InkWell(
                                 onTap: () => WinUtils.open("https://open-meteo.com/"),
-                                child: Tooltip(message: "It uses open-meteo.com", child: Icon(Icons.info_outline, color: Theme.of(context).toggleableActiveColor)),
+                                child: Tooltip(message: "It uses open-meteo.com", child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary)),
                               ),
                             ),
                             //! Weather.
@@ -137,7 +137,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                                             decoration: const InputDecoration(
                                                 labelText: "Latitude and longitude", hintText: "Latitude and longitude", border: InputBorder.none, isDense: false),
                                             controller: TextEditingController(text: globalSettings.weatherLatLong.toUpperCaseEach()),
-                                            toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
+                                            // //toolbarOptions: const ToolbarOptions(paste: true, cut: true, copy: true, selectAll: true),
                                             style: const TextStyle(fontSize: 14),
                                             enableInteractiveSelection: true,
                                             onChanged: (String e) => _cityCountryText = e,
@@ -378,7 +378,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                       style: ListTileStyle.drawer,
                       title: CheckboxListTile(
                         controlAffinity: ListTileControlAffinity.leading,
-                        title: Text("PowerShell Scripts", style: Theme.of(context).textTheme.headline6),
+                        title: Text("PowerShell Scripts", style: Theme.of(context).textTheme.titleLarge),
                         value: globalSettings.showPowerShell,
                         onChanged: (bool? newValue) async {
                           globalSettings.showPowerShell = newValue ?? false;

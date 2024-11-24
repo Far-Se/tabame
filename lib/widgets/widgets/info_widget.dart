@@ -6,15 +6,15 @@ class InfoWidget extends StatelessWidget {
   final String text;
   const InfoWidget(
     this.text, {
-    Key? key,
+    super.key,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => onTap(),
-      child: Tooltip(message: text, child: Icon(Icons.info_outline, color: Theme.of(context).toggleableActiveColor)),
+      child: Tooltip(message: text, child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary)),
     );
   }
 }

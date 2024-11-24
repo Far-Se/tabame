@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -7,15 +8,23 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 
 class PersistentRemindersWidget extends StatefulWidget {
-  const PersistentRemindersWidget({Key? key}) : super(key: key);
+  const PersistentRemindersWidget({super.key});
   @override
   PersistentRemindersWidgetState createState() => PersistentRemindersWidgetState();
 }
 
 class PersistentRemindersWidgetState extends State<PersistentRemindersWidget> {
+  int lastPersistentRemindersLength = 0;
   @override
   void initState() {
     super.initState();
+    //timer
+    Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+      if (globalSettings.persistentReminders.length != lastPersistentRemindersLength) {
+        lastPersistentRemindersLength = globalSettings.persistentReminders.length;
+        if (mounted) setState(() {});
+      }
+    });
   }
 
   @override
@@ -29,7 +38,33 @@ class PersistentRemindersWidgetState extends State<PersistentRemindersWidget> {
       width: 20,
       height: double.maxFinite,
       child: InkWell(
-        child: const Tooltip(message: "Reminders", child: Icon(Icons.warning_rounded, color: Colors.red)),
+        child: GestureDetector(
+          onSecondaryTap: () {
+            globalSettings.persistentReminders.clear();
+            Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+            for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
+              if (!QuickMenuFunctions.listeners.contains(listener)) return;
+              listener.refreshQuickMenu();
+            }
+            setState(() {});
+          },
+          child: Tooltip(
+            message: "Reminders",
+            child: globalSettings.persistentReminders.length > 1
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+                    child: Badge.count(
+                      offset: const Offset(8, -5),
+                      count: globalSettings.persistentReminders.length,
+                      backgroundColor: Colors.transparent,
+                      textStyle: const TextStyle(fontSize: 9),
+                      textColor: Colors.white,
+                      child: const Icon(Icons.warning_rounded, color: Colors.red),
+                    ),
+                  )
+                : const Icon(Icons.warning_rounded, color: Colors.red),
+          ),
+        ),
         onTap: () async {
           showModalBottomSheet<void>(
             context: context,
@@ -71,7 +106,7 @@ class PersistentRemindersWidgetState extends State<PersistentRemindersWidget> {
 }
 
 class TimersWidget extends StatefulWidget {
-  const TimersWidget({Key? key}) : super(key: key);
+  const TimersWidget({super.key});
   @override
   TimersWidgetState createState() => TimersWidgetState();
 }
@@ -101,9 +136,9 @@ class TimersWidgetState extends State<TimersWidget> {
             borderRadius: BorderRadius.circular(5),
             gradient: LinearGradient(
               colors: <Color>[
-                Theme.of(context).backgroundColor,
-                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).backgroundColor,
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                Theme.of(context).colorScheme.surface,
               ],
               stops: <double>[0, 0.4, 1],
               end: Alignment.bottomRight,
@@ -111,7 +146,7 @@ class TimersWidgetState extends State<TimersWidget> {
             boxShadow: <BoxShadow>[
               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
             ],
-            color: Theme.of(context).backgroundColor,
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: SingleChildScrollView(
             controller: ScrollController(),

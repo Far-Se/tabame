@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -17,7 +18,7 @@ import '../../models/win32/win32.dart';
 import '../widgets/info_widget.dart';
 
 class FirstRun extends StatefulWidget {
-  const FirstRun({Key? key}) : super(key: key);
+  const FirstRun({super.key});
   @override
   FirstRunState createState() => FirstRunState();
 }
@@ -80,7 +81,7 @@ class FirstRunState extends State<FirstRun> {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Center(child: Text("First Run settings", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2))),
+          Center(child: Text("First Run settings", style: Theme.of(context).textTheme.headlineSmall?.copyWith(height: 2))),
           LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
             return ConstrainedBox(
               constraints: BoxConstraints(maxWidth: constraints.maxWidth, maxHeight: 960),
@@ -99,7 +100,7 @@ class FirstRunState extends State<FirstRun> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text("Before anything, you need to set the main hotkey:", style: Theme.of(context).textTheme.button?.copyWith(height: 2)),
+                            Text("Before anything, you need to set the main hotkey:", style: Theme.of(context).textTheme.labelLarge?.copyWith(height: 2)),
                             if (hotkey.isNotEmpty)
                               InkWell(
                                 onTap: () async {
@@ -138,19 +139,19 @@ class FirstRunState extends State<FirstRun> {
                         ListTile(
                           title: Focus(
                             focusNode: focusNode,
-                            onKey: (FocusNode e, RawKeyEvent k) {
+                            onKeyEvent: (FocusNode e, KeyEvent k) {
                               List<String> modifier = <String>[];
-                              if (k.isControlPressed) modifier.add("CTRL");
-                              if (k.isAltPressed) modifier.add("ALT");
-                              if (k.isShiftPressed) modifier.add("SHIFT");
-                              if (k.isMetaPressed) modifier.add("WIN");
-                              if (k.data.modifiersPressed.isEmpty) return KeyEventResult.handled;
-                              if (k.data.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-                              if (k.isMetaPressed && modifier.length == 1) return KeyEventResult.handled;
+                              if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
+                              if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
+                              if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
+                              if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
+                              if (modifiers.isEmpty) return KeyEventResult.handled;
+                              if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
+                              if (HardwareKeyboard.instance.isMetaPressed && modifier.length == 1) return KeyEventResult.handled;
                               if (hotkey == "MouseButton4") mouseButtons.add("MouseButton4");
                               if (hotkey == "MouseButton5") mouseButtons.add("MouseButton5");
 
-                              hotkey = k.data.logicalKey.keyLabel;
+                              hotkey = k.logicalKey.keyLabel;
                               modifiers = modifier;
 
                               FocusScope.of(context).unfocus();
@@ -348,7 +349,7 @@ You can also scan folder sizes and delete files that are too big."""),
                           )
                         ],
                       ),
-                      Center(child: Text("Thanks for using Tabame", style: Theme.of(context).textTheme.headline5?.copyWith(height: 2))),
+                      Center(child: Text("Thanks for using Tabame", style: Theme.of(context).textTheme.headlineSmall?.copyWith(height: 2))),
                       const SizedBox(height: 10),
                       Center(
                           child: Text("After restarting I recommend to open settings and browse through all sidebar tabs",

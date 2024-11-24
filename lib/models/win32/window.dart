@@ -4,7 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' hide Size;
+import 'package:win32/win32.dart';
 
 import '../settings.dart';
 import 'imports.dart';
@@ -53,9 +53,9 @@ class Window {
   }
 
   getWorkspace() {
-    monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
-    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-    isPinned = (exstyle & WS_EX_TOPMOST) != 0 ? true : false;
+    monitor = MonitorFromWindow(hWnd, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTOPRIMARY);
+    final int exstyle = GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+    isPinned = (exstyle & WINDOW_EX_STYLE.WS_EX_TOPMOST) != 0 ? true : false;
   }
 
   getPath() {

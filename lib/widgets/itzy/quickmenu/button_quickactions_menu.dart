@@ -8,7 +8,7 @@ import '../../../pages/quickactions.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class QuickActionsMenuButton extends StatefulWidget {
-  const QuickActionsMenuButton({Key? key}) : super(key: key);
+  const QuickActionsMenuButton({super.key});
   @override
   QuickActionsMenuButtonState createState() => QuickActionsMenuButtonState();
 }
@@ -67,9 +67,9 @@ class QuickActionsMenuButtonState extends State<QuickActionsMenuButton> {
                             borderRadius: BorderRadius.circular(5),
                             gradient: LinearGradient(
                               colors: <Color>[
-                                Theme.of(context).backgroundColor,
-                                Theme.of(context).backgroundColor.withAlpha(globalSettings.themeColors.gradientAlpha),
-                                Theme.of(context).backgroundColor,
+                                Theme.of(context).colorScheme.surface,
+                                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                Theme.of(context).colorScheme.surface,
                               ],
                               stops: <double>[0, 0.4, 1],
                               end: Alignment.bottomRight,
@@ -77,7 +77,7 @@ class QuickActionsMenuButtonState extends State<QuickActionsMenuButton> {
                             boxShadow: <BoxShadow>[
                               const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
                             ],
-                            color: Theme.of(context).backgroundColor,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

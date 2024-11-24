@@ -7,7 +7,7 @@ import '../../../models/util/quick_action_list.dart';
 import '../../../pages/interface.dart';
 
 class QuickmenuTopbar extends StatefulWidget {
-  const QuickmenuTopbar({Key? key}) : super(key: key);
+  const QuickmenuTopbar({super.key});
 
   @override
   QuickmenuTopbarState createState() => QuickmenuTopbarState();
@@ -35,7 +35,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
         minLeadingWidth: 10,
         child: Column(
           children: <Widget>[
-            ListTile(title: Text("QuickActions Order", style: Theme.of(context).textTheme.headline6)),
+            ListTile(title: Text("QuickActions Order", style: Theme.of(context).textTheme.titleLarge)),
             Flexible(
               fit: FlexFit.loose,
               child: MouseRegion(
