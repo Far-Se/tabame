@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../main.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
@@ -26,10 +25,10 @@ class OpenSettingsButton extends StatelessWidget {
             Icons.settings,
           ),
           onPressed: () {
-            if (Boxes.quickTimers.isNotEmpty) {
-              WinUtils.msgBox("You Have Running Timers", "You Have Running Timers");
-              return;
-            }
+            // if (Boxes.quickTimers.isNotEmpty) {
+            //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");
+            //   return;
+            // }
             if (kReleaseMode) {
               QuickMenuFunctions.toggleQuickMenu(visible: false);
               int hWnd = Win32.findWindow("Tabame - Interface");
@@ -43,18 +42,18 @@ class OpenSettingsButton extends StatelessWidget {
               Boxes().watchForSettingsChange();
               Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
                 if (settingsChanged != globalSettings.settingsChanged) {
-                  themeChangeNotifier.value = !themeChangeNotifier.value;
+                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                   settingsChanged = globalSettings.settingsChanged;
                 }
               });
-              // themeChangeNotifier.value = !themeChangeNotifier.value;
+              // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
               return;
             }
             final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
             Globals.changingPages = true;
             //ignore: invalid_use_of_protected_member
             x?.setState(() {});
-            mainPageViewController.jumpToPage(Pages.interface.index);
+            Globals.mainPageViewController.jumpToPage(Pages.interface.index);
             Globals.changingPages = true;
             PaintingBinding.instance.imageCache.clear();
             PaintingBinding.instance.imageCache.clearLiveImages();

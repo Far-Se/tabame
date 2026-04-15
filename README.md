@@ -33,7 +33,7 @@ Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in
 
 
 | ![image](https://user-images.githubusercontent.com/20853986/184855270-4bf0f8d9-ec81-4b22-aee6-1b1df97fc459.png) | ![image](https://user-images.githubusercontent.com/20853986/184855277-f484dc64-b0e9-4468-afb0-44c0ed8f0c0a.png) |
-|------|------|
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 
 ## Manual Install:
 1. Download zip archive.
@@ -58,9 +58,11 @@ Thanks to @elvinvandalen for helping me fix a bug where the app crashed on start
 This project is open source, which means you can compile your own version.
 1. Install Flutter for Windows
 2. Open Visual Studio Installer, on Individual Components select ATL Dependencies and install.
-3. Open a console in Tabame folder and type `flutter build windows`
-4. The exe is in `build\windows\runner\Release`
-5. You can open vsCode and debug the app.
+3. Open a console in Tabame folder and run `.\build.ps1 -Config Release`
+4. If you want to rebuild an existing Windows build tree from terminal, run `.\build.ps1 -UseCMake -Config Debug`
+5. The script reuses Visual Studio's bundled CMake for direct CMake builds, which avoids version-mismatch issues with a newer `cmake.exe` on PATH.
+6. The exe is in `build\windows\runner\Release`
+7. You can open vsCode and debug the app.
 
 # Written in Flutter
 Which means it consumes very little resources and disk space. 
@@ -141,7 +143,6 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - **v1.3**
 - Custom Chars - You can save custom chars or browse different language accents or currency symbols.
 - Schedule Shutdown - Schendule a Computer shutdown at a specific hour or after a specific period.
-- Case Change - Convert text to camelCase, PascalCase, snake_case, kebab-case, UPPERCASE or lowercase
 - Memos - Save your memos.
 
 
@@ -335,14 +336,8 @@ It consists of a grid where you can change it's size using scroll wheel. Drag a 
 
 **This is not DPI aware. Use PowerToys if you changed your monitor DPI**
 
-## **Workspaces**
-With Workspaces you can save current position and size of specific windows, so you can load them easily from QuickMenu QuickActions. 
-
 ## **Hooks**
 With Hooks you can hook multiple windows together, when you focus one, other will surface as well. You can access this feature by right clicking a window in QuickMenu.
-
-## **Predefined Sizes (v1.2)**
-You can register predefined sizes and access then by right clicking a window in QuickMenu. This comes handy when you need specific window sizes such as mobile view or half screen.
 
 Views in actions:
 
@@ -350,8 +345,8 @@ https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-
 
 # **🧰 QuickActionsMenu**
 
-| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. |  <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 
 # **📷 Fancyshot**
 With Fancyshot you can capture custom screenshots. You can set a background stock image, custom image, capture itself or transparency. Also you can change image padding or background padding and add a watermark.

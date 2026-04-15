@@ -10,7 +10,7 @@ class InfoText extends StatelessWidget {
       text,
       style: TextStyle(
         fontStyle: FontStyle.italic,
-        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+        color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
       ),
     );
   }

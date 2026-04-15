@@ -1,626 +1,63 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/util/task_runner.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
-import '../widgets/info_text.dart';
-import '../widgets/text_input.dart';
+import '../widgets/popup_dialog.dart';
 
-class ProjectOverviewWidget extends StatefulWidget {
-  const ProjectOverviewWidget({super.key});
+// -----------------------------------------
+// DATA CLASSES
+// -----------------------------------------
 
-  @override
-  ProjectOverviewWidgetState createState() => ProjectOverviewWidgetState();
+class ProjectAnalysisArgs {
+  final String folder;
+  final String included;
+  final String excluded;
+  final bool useGitIgnore;
+
+  ProjectAnalysisArgs({
+    required this.folder,
+    required this.included,
+    required this.excluded,
+    required this.useGitIgnore,
+  });
 }
 
-class Project {
-  List<ProjectFile> projectFiles = <ProjectFile>[];
-  int totalComments = -1;
-  int totalLines = -1;
-  int totalCode = -1;
-  int totalEmpty = -1;
-  int totalNonCde = -1;
-  int totalChars = -1;
-  List<List<String>> _langaugeList = <List<String>>[];
-  List<List<String>> get programmingLanguages {
-    if (_langaugeList.isNotEmpty) return _langaugeList;
-    final Map<String, int> exts = <String, int>{};
-    for (final ProjectFile file in projectFiles) {
-      if (!exts.containsKey(file.ext)) {
-        exts[file.ext] = file.total.lines;
-      } else {
-        exts[file.ext] = exts[file.ext]! + file.total.lines;
-      }
-    }
-    //order exts by value
-    final List<MapEntry<String, int>> extsList = exts.entries.toList();
-    extsList.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
-    _langaugeList = extsList.map((MapEntry<String, int> entry) => <String>[entry.key, entry.value.toString()]).toList();
-    return _langaugeList;
-  }
-}
+class ProjectAnalysisResult {
+  final List<ProjectFile> files;
+  final int totalLines;
+  final int totalCode;
+  final int totalComments;
+  final int totalEmpty;
+  final int totalNonCode;
+  final int totalChars;
+  final List<List<String>> programmingLanguages;
 
-class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
-  Map<String, Color> extColors = <String, Color>{};
-  List<String> loadedFiles = <String>[];
-  String infoText = "";
+  ProjectAnalysisResult({
+    required this.files,
+    required this.totalLines,
+    required this.totalCode,
+    required this.totalComments,
+    required this.totalEmpty,
+    required this.totalNonCode,
+    required this.totalChars,
+    required this.programmingLanguages,
+  });
 
-  final List<int> extensionColors = <int>[0xff34B7FD, 0xffCB4802, 0xffFFA700, 0xffC3732A, 0xffA4DDED, 0xff922724, 0xff43B3AE, 0xffA020F0];
-
-  Project project = Project();
-  String projectFolder = r"";
-  String projectIncluded = "";
-  String projectExcluded = "";
-  bool searchFinished = false;
-
-  int stateFileProcessing = 0;
-
-  bool projectAnalyzed = false;
-
-  bool projectUseGitIgnore = true;
-
-  @override
-  void initState() {
-    projectFolder = Boxes.pref.getString("projectOverviewFolder") ?? "";
-    projectIncluded = Boxes.pref.getString("projectOverviewIncluded") ?? "";
-    projectExcluded = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{4,}$";
-
-    if (globalSettings.args.contains("-wizardly")) {
-      projectFolder = globalSettings.args[0].replaceAll('"', '');
-    }
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: Maa.start,
-      crossAxisAlignment: Caa.stretch,
-      children: <Widget>[
-        Row(
-          mainAxisAlignment: Maa.start,
-          children: <Widget>[
-            const SizedBox(width: 10),
-            Flexible(
-              flex: 4,
-              fit: FlexFit.tight,
-              child: ListTile(
-                onTap: () async {
-                  infoText = "";
-                  stateFileProcessing = 0;
-                  projectAnalyzed = false;
-                  project = Project();
-
-                  if (mounted) setState(() {});
-
-                  final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
-                  final Directory? dir = dirPicker.getDirectory();
-                  if (dir == null) return;
-                  // loadedFiles.clear();
-                  projectFolder = dir.path;
-                  Boxes.updateSettings("projectOverviewFolder", projectFolder);
-
-                  if (!Directory(projectFolder).existsSync()) return;
-                  if (mounted) setState(() {});
-                },
-                leading: const Icon(Icons.folder_copy_sharp),
-                title: const Text("Pick a folder"),
-                subtitle: projectFolder.isEmpty ? const InfoText("-") : InfoText(projectFolder.truncate(50, suffix: "...")),
-              ),
-            ),
-            Flexible(
-              fit: FlexFit.loose,
-              child: Column(
-                children: <Widget>[
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (stateFileProcessing == 1) {
-                        stateFileProcessing = 2;
-                        return;
-                      }
-                      stateFileProcessing = 1;
-                      setState(() {});
-                      await loadFiles();
-                      projectAnalyzed = false;
-                      getCode();
-                      setState(() {});
-                    },
-                    child: Text(stateFileProcessing == 0 ? "Generate" : "Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () async {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            content: LoadFromGitWidget(onSelected: (String folder) {
-                              Navigator.of(context).pop();
-                              projectFolder = folder;
-                              if (!Directory(projectFolder).existsSync()) return;
-                              if (mounted) setState(() {});
-                            }),
-                            actions: <Widget>[
-                              ElevatedButton(
-                                  onPressed: () => Navigator.of(context).pop(), child: Text("Cancel", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
-                            ],
-                          );
-                        },
-                      ).then((_) {});
-                      setState(() {});
-                    },
-                    child: const Text("Load from Git"),
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 5),
-          child: Row(
-            children: <Widget>[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10.0),
-                child: Column(
-                  children: <Widget>[],
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: TextInput(
-                    key: UniqueKey(),
-                    hintText: "Separated by ';' ex: cpp;dart;js",
-                    labelText: "Include files with extension",
-                    value: projectIncluded,
-                    onChanged: (String e) {
-                      if (stateFileProcessing != 0) return;
-                      Boxes.updateSettings("projectOverviewIncluded", e);
-                      loadedFiles.clear();
-                      projectIncluded = e;
-                      setState(() {});
-                    }),
-              ),
-              Expanded(
-                flex: 3,
-                child: TextInput(
-                    key: UniqueKey(),
-                    labelText: "Ignore these files/folders",
-                    value: projectExcluded,
-                    onChanged: (String e) {
-                      if (stateFileProcessing != 0) return;
-                      Boxes.updateSettings("projectOverviewExcluded", e);
-                      loadedFiles.clear();
-                      projectExcluded = e;
-                      setState(() {});
-                    }),
-              )
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 20.0),
-          child: SizedBox(
-            width: 130,
-            child: CheckBoxWidget(
-              value: projectUseGitIgnore,
-              onChanged: (bool e) async {
-                projectUseGitIgnore = e;
-                loadedFiles.clear();
-                if (mounted) setState(() {});
-              },
-              text: 'Use .gitignore',
-            ),
-          ),
-        ),
-        if (projectAnalyzed && project.totalLines <= 1) const Center(child: Text("No files found!")),
-        if (projectAnalyzed && project.totalLines > 1)
-          ...List<Widget>.from(
-            <Widget>[
-              Markdown(
-                selectable: true,
-                controller: ScrollController(),
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                data: '''
-This project has a total of ${project.projectFiles.length} files with a total of **${project.totalLines.decimal} lines**, from which:
-- ${project.totalCode.decimal} are code lines
-- ${project.totalNonCde.decimal} are non code lines `()[]{}` 
-- ${project.totalComments.decimal} are comment lines *
-- ${project.totalEmpty.decimal} are empty
-
-Summing **${project.totalChars.decimal}** characters! An average book has 250 characters per page with a total of 400 pages.
-That means this project has **${((project.totalChars / 250).floor()).decimal} pages** divided in **${(project.totalChars / 250 / 400).toStringAsFixed(1)} books**!
-''',
-              ),
-              Container(
-                height: 150,
-                width: 500,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 30,
-                          pieTouchData: PieTouchData(enabled: true),
-                          sections: List<PieChartSectionData>.generate(project.programmingLanguages.length, (int index) {
-                            final double percentage = (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100;
-                            return PieChartSectionData(
-                                title: project.programmingLanguages[index][0],
-                                value: percentage,
-                                color: extColors.containsKey(project.programmingLanguages[index][0]) ? extColors[project.programmingLanguages[index][0]] : Colors.grey,
-                                showTitle: (int.parse(project.programmingLanguages[index][1]) / project.totalLines) * 100 < 10 ? false : true);
-                          }),
-                        ),
-                        swapAnimationDuration: const Duration(milliseconds: 150),
-                        swapAnimationCurve: Curves.linear,
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                          itemCount: project.programmingLanguages.length,
-                          controller: ScrollController(),
-                          itemBuilder: (BuildContext context, int index) {
-                            return InkWell(
-                              onTap: () {},
-                              child: Text("${project.programmingLanguages[index][0]}: ${int.parse(project.programmingLanguages[index][1]).decimal} lines"),
-                            );
-                          }),
-                    )
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const SizedBox(height: 20),
-                    const Align(
-                      alignment: Alignment.centerRight,
-                      child: InfoText("You can sort by column"),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(child: Text(project.projectFiles.length > 150 ? "First 150 files" : "File")),
-                        InkWell(
-                            onTap: () {
-                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.lines > b.total.lines ? -1 : 1);
-                              setState(() {});
-                            },
-                            child: SizedBox(width: 70, child: Text("Lines", style: Theme.of(context).textTheme.labelLarge))),
-                        InkWell(
-                            onTap: () {
-                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.code > b.total.code ? -1 : 1);
-                              setState(() {});
-                            },
-                            child: SizedBox(width: 70, child: Text("Code", style: Theme.of(context).textTheme.labelLarge))),
-                        InkWell(
-                            onTap: () {
-                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.nonCode > b.total.nonCode ? -1 : 1);
-                              setState(() {});
-                            },
-                            child: SizedBox(width: 70, child: Text("NonCode", style: Theme.of(context).textTheme.labelLarge))),
-                        InkWell(
-                          onTap: () {
-                            project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.comments > b.total.comments ? -1 : 1);
-                            setState(() {});
-                          },
-                          child: SizedBox(
-                              width: 70,
-                              child: Tooltip(
-                                  message: "For common programming languages it works well\nIf you have bad comment formats it might break.",
-                                  child: Text("Comm*", style: Theme.of(context).textTheme.labelLarge))),
-                        ),
-                        InkWell(
-                            onTap: () {
-                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.empty > b.total.empty ? -1 : 1);
-                              setState(() {});
-                            },
-                            child: SizedBox(width: 70, child: Text("Empty", style: Theme.of(context).textTheme.labelLarge))),
-                        InkWell(
-                            onTap: () {
-                              project.projectFiles.sort((ProjectFile a, ProjectFile b) => a.total.characters > b.total.characters ? -1 : 1);
-                              setState(() {});
-                            },
-                            child: SizedBox(width: 70, child: Text("Chars", style: Theme.of(context).textTheme.labelLarge))),
-                      ],
-                    ),
-                    ...List<Widget>.generate(
-                      project.projectFiles.length.clamp(0, 150),
-                      (int index) => InkWell(
-                        onTap: () {},
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Row(
-                                      children: <Widget>[
-                                        Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(top: 2.0),
-                                            child: Container(
-                                              width: 10,
-                                              height: 10,
-                                              color: extColors.containsKey(project.projectFiles[index].ext) ? extColors[project.projectFiles[index].ext] : Colors.grey,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Expanded(
-                                          child: Text(
-                                            project.projectFiles[index].name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            // style: const TextStyle(height: 1.001),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.lines.decimal)),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.code.decimal)),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.nonCode.decimal)),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.comments.decimal)),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.empty.decimal)),
-                            SizedBox(width: 70, child: Text(project.projectFiles[index].total.characters.decimal)),
-                          ],
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Future<void> getCode() async {
-    project.programmingLanguages.clear();
-    project.projectFiles.clear();
-    final List<String> auxFiles = <String>[...loadedFiles];
-    Future<bool> getFileInfo(String file) async {
-      final Future<List<String>> futureLines = File(file).readAsLines().catchError((_) {
-        return <String>[];
-      });
-      List<String> fileLines = await futureLines;
-      if (fileLines.isEmpty) {
-        loadedFiles.remove(file);
-        return true;
-      }
-      final String filePath = file.replaceFirst("$projectFolder\\", "");
-      final String fileName = filePath.split(r'\').last;
-      final String fileExtension = filePath.split('.').last;
-      final TotalCode total = TotalCode();
-      total.lines = fileLines.length;
-      bool inComment = false;
-      String commentStart = "/*";
-      String commentEnd = "*/";
-      String comment = "//";
-      if (multiLineComment.keys.contains(fileExtension)) {
-        commentStart = multiLineComment[fileExtension]!.multiCommentStart;
-        commentEnd = multiLineComment[fileExtension]!.multiCommentEnd;
-      }
-
-      if (<String>["py", "ps1", "py", "pyi", "pyc", "pyd", "pyo", "pyw", "pyz", "rb", "ps1", "r"].contains("fileExtension")) comment = "#";
-
-      for (String line in fileLines) {
-        total.characters += line.trim().length;
-        //? comment section
-        if (line.contains(commentStart)) {
-          bool hascode = false;
-          if (line.contains(commentEnd) && RegExp(r'[^\w]+?' + commentStart).hasMatch(line)) {
-            if (!RegExp(r'^\w.*?' + commentStart).hasMatch(line)) {
-              total.comments++;
-              continue;
-            }
-            hascode = true;
-          } else if (!RegExp(r"\w").hasMatch(line)) {
-            total.comments++;
-          } else {
-            total.code++;
-          }
-          if (!hascode) {
-            inComment = true;
-            continue;
-          }
-        } else if (line.contains(commentEnd)) {
-          inComment = false;
-          total.comments++;
-          continue;
-        } else if (inComment) {
-          total.comments++;
-          continue;
-        } else if (line.contains(comment)) {
-          if (line.startsWith('//') || RegExp(r'^[ \t]+?' + comment).hasMatch(line)) {
-            total.comments++;
-            continue;
-          } else {
-            line = line.replaceFirst(RegExp(r'//*.*?$'), '');
-          }
-        }
-        //? code lines
-        if (line.isEmpty) {
-          total.empty++;
-        } else if (RegExp(r'^\s+$', multiLine: true).hasMatch(line)) {
-          total.empty++;
-        } else if (!RegExp(r'\w').hasMatch(line)) {
-          total.nonCode++;
-        } else {
-          total.code++;
-        }
-      }
-      total.empty += total.lines - (total.code + total.comments + total.nonCode + total.empty);
-      project.projectFiles.add(ProjectFile(name: fileName, path: filePath, ext: fileExtension, total: total));
-      return true;
-    }
-
-    final TaskRunner<String, bool> runner = TaskRunner<String, bool>(getFileInfo, maxConcurrentTasks: 30);
-    for (String file in auxFiles) {
-      if (stateFileProcessing == 2) {
-        stateFileProcessing = 0;
-        if (mounted) setState(() {});
-        return;
-      }
-      runner.add(file);
-    }
-    runner.startExecution();
-    int totalProcessed = 0;
-    runner.stream.forEach((bool listOfString) {
-      totalProcessed++;
-      if (totalProcessed >= auxFiles.length) {
-        stateFileProcessing = 0;
-        projectAnalyzed = true;
-        project.projectFiles.sort((ProjectFile a, ProjectFile b) => b.total.lines.compareTo(a.total.lines));
-        project.totalComments = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.comments);
-        project.totalLines = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.lines);
-        project.totalCode = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.code);
-        project.totalEmpty = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.empty);
-        project.totalNonCde = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.nonCode);
-        project.totalChars = project.projectFiles.fold(0, (int previousValue, ProjectFile element) => previousValue + element.total.characters);
-
-        int i = 0;
-        for (List<String> x in project.programmingLanguages) {
-          if (i >= extensionColors.length) break;
-          extColors[x[0]] = Color(extensionColors[i]);
-          i++;
-        }
-        if (mounted) setState(() {});
-      }
-    });
-  }
-
-  Future<void> loadFiles() async {
-    final File gitignoreFile = File("$projectFolder\\.gitignore");
-    final List<String> gitIgnore = <String>[];
-    if (gitignoreFile.existsSync() && projectUseGitIgnore) {
-      final List<String> lines = gitignoreFile.readAsLinesSync();
-      for (String line in lines) {
-        if (line.isEmpty) continue;
-        line = line.trim();
-        if (line[0] == "#") continue;
-        line = line.replaceAll(RegExp(r'#.*?$'), '');
-        line = line.trim();
-        line.replaceAll('**', '*');
-        if (line[0] == "*") {
-          if (line.characters.last != "/") line += "/";
-          line = line.substring(1);
-        } else if (line[0] != '/') {
-          line = "/$line";
-        }
-        line = line.replaceAll('.', r'\.');
-        line = line.replaceAll('*', '.*');
-        line = line.replaceAll('/', r'\\');
-        bool regexWorked = true;
-        try {
-          RegExp(line).hasMatch("ciulama");
-        } catch (e) {
-          regexWorked = false;
-        }
-        if (regexWorked) {
-          gitIgnore.add(line);
-        }
-      }
-    }
-    final List<String> allFiles = <String>[];
-    Stream<FileSystemEntity> stream =
-        Directory(projectFolder).list(recursive: true, followLinks: false).handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
-    await for (FileSystemEntity entity in stream) {
-      bool add = true;
-      for (String gitLine in gitIgnore) {
-        if (RegExp(gitLine).hasMatch(entity.path)) {
-          add = false;
-        }
-      }
-      if (add) {
-        allFiles.add(entity.path);
-      }
-    }
-    final List<String> included = projectIncluded.isNotEmpty ? projectIncluded.split(';') : <String>[];
-    final List<String> excluded = projectExcluded.isNotEmpty ? projectExcluded.split(';') : <String>[];
-    loadedFiles.clear();
-    for (String file in allFiles) {
-      final String fileDirectory = Directory(file).parent.path;
-      final String fileName = file.replaceAll("$fileDirectory\\", "");
-      if (fileName.endsWith(".svg")) continue;
-      if (fileName.endsWith(".lock")) continue;
-      if (fileName.indexOf('.') < 1) continue;
-      bool skip = false;
-
-      for (String exclude in excluded) {
-        if (exclude == "") continue;
-        if (exclude[0] == '^') {
-          exclude = exclude.substring(1);
-          if (file.contains(RegExp(r"\\" + exclude + r"[^\\]*\\", caseSensitive: false))) {
-            skip = true;
-            break;
-          }
-        } else if (exclude[0] == "/" || exclude[0] == r"\\") {
-          exclude = exclude.substring(exclude[0] == "/" ? 1 : 2);
-          if (file.replaceFirst(projectFolder, '').contains(RegExp(r"^\\" + exclude + r"[^\\]*\\", caseSensitive: false))) {
-            skip = true;
-            break;
-          }
-        } else if (file.contains(RegExp(r"[^\\]" + exclude + r"[^\\]*\\", caseSensitive: false))) {
-          skip = true;
-          break;
-        } else {
-          if (RegExp(exclude, caseSensitive: false).hasMatch(file)) {
-            skip = true;
-            break;
-          }
-        }
-      }
-      if (skip) continue;
-
-      if (included.isNotEmpty) {
-        skip = true;
-        for (String include in included) {
-          if (include == "") continue;
-          if (fileName.contains(RegExp("$include\$", caseSensitive: false))) {
-            skip = false;
-          }
-        }
-        if (skip) continue;
-      }
-
-      loadedFiles.add(file);
-    }
-    // return newFileList;
-  }
-}
-
-extension DecimalFormat on int {
-  String get decimal => NumberFormat.decimalPattern().format(this);
+  double get commentDensity => totalLines > 0 ? (totalComments / totalLines) * 100 : 0;
+  double get codeIntensity => totalLines > 0 ? totalChars / totalLines : 0;
+  double get avgLinesPerFile => files.isNotEmpty ? totalLines / files.length : 0;
 }
 
 class TotalCode {
@@ -659,15 +96,920 @@ class MultiLineComment {
 }
 
 Map<String, MultiLineComment> multiLineComment = <String, MultiLineComment>{
-  "htm": MultiLineComment("<!--", "--!>"),
-  "html": MultiLineComment("<!--", "--!>"),
+  "htm": MultiLineComment("<!--", "-->"),
+  "html": MultiLineComment("<!--", "-->"),
   "ruby": MultiLineComment("=begin", "=end"),
   "ps1": MultiLineComment("<#", "#>"),
   "hs": MultiLineComment("{-", "-}"),
   "lhs": MultiLineComment("{-", "-}"),
   "pas": MultiLineComment("(*", "*)"),
+  "cpp": MultiLineComment("/*", "*/"),
+  "dart": MultiLineComment("/*", "*/"),
+  "js": MultiLineComment("/*", "*/"),
+  "css": MultiLineComment("/*", "*/"),
+  "java": MultiLineComment("/*", "*/"),
+  "go": MultiLineComment("/*", "*/"),
+  "rs": MultiLineComment("/*", "*/"),
 };
 
+extension DecimalFormat on int {
+  String get decimal => NumberFormat.decimalPattern().format(this);
+}
+
+// -----------------------------------------
+// ISOLATE FUNCTION
+// -----------------------------------------
+Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) async {
+  final File gitignoreFile = File("${args.folder}\\.gitignore");
+  final List<String> gitIgnore = <String>[];
+  if (args.useGitIgnore && gitignoreFile.existsSync()) {
+    try {
+      final List<String> lines = gitignoreFile.readAsLinesSync();
+      for (String line in lines) {
+        if (line.isEmpty) continue;
+        line = line.trim();
+        if (line.startsWith("#")) continue;
+        line = line.replaceAll(RegExp(r'#.*?$'), '').trim();
+        line = line.replaceAll('**', '*');
+        if (line.startsWith("*")) {
+          if (!line.endsWith("/")) line += "/";
+          line = line.substring(1);
+        } else if (!line.startsWith('/')) {
+          line = "/$line";
+        }
+        line = line.replaceAll('.', r'\.');
+        line = line.replaceAll('*', '.*');
+        line = line.replaceAll('/', r'\\');
+        try {
+          RegExp(line).hasMatch("test");
+          gitIgnore.add(line);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  final List<String> allFiles = <String>[];
+  try {
+    final List<FileSystemEntity> stream = Directory(args.folder).listSync(recursive: true, followLinks: false);
+    for (final FileSystemEntity entity in stream) {
+      if (entity is! File) continue;
+      bool add = true;
+      for (final String gitLine in gitIgnore) {
+        if (RegExp(gitLine).hasMatch(entity.path)) {
+          add = false;
+          break;
+        }
+      }
+      if (add) {
+        allFiles.add(entity.path);
+      }
+    }
+  } catch (_) {}
+
+  final List<String> included = args.included.isNotEmpty ? args.included.split(';') : <String>[];
+  final List<String> excluded = args.excluded.isNotEmpty ? args.excluded.split(';') : <String>[];
+  final List<String> loadedFiles = <String>[];
+
+  for (String file in allFiles) {
+    final String fileDirectory = Directory(file).parent.path;
+    final String fileName = file.replaceAll("$fileDirectory\\", "");
+    final String lowerName = fileName.toLowerCase();
+
+    if (const <String>["svg", "lock", "png", "jpg", "jpeg", "gif", "ico", "exe", "dll", "bin"].any((String ext) => lowerName.endsWith(".$ext"))) continue;
+    if (!fileName.contains('.')) continue;
+
+    bool skip = false;
+    for (String exclude in excluded) {
+      if (exclude.isEmpty) continue;
+      String testExclude = exclude;
+      if (testExclude.startsWith('^')) {
+        testExclude = testExclude.substring(1);
+        if (file.contains(RegExp(r"\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+          skip = true;
+          break;
+        }
+      } else if (testExclude.startsWith("/") || testExclude.startsWith(r"\\")) {
+        testExclude = testExclude.substring(testExclude.startsWith("/") ? 1 : 2);
+        if (file.replaceFirst(args.folder, '').contains(RegExp(r"^\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+          skip = true;
+          break;
+        }
+      } else if (file.contains(RegExp(r"[^\\]" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+        skip = true;
+        break;
+      } else {
+        if (RegExp(testExclude, caseSensitive: false).hasMatch(file)) {
+          skip = true;
+          break;
+        }
+      }
+    }
+    if (skip) continue;
+
+    if (included.isNotEmpty) {
+      skip = true;
+      for (String include in included) {
+        if (include.isEmpty) continue;
+        if (fileName.contains(RegExp("$include\$", caseSensitive: false))) {
+          skip = false;
+          break;
+        }
+      }
+      if (skip) continue;
+    }
+
+    loadedFiles.add(file);
+  }
+
+  List<ProjectFile> projectFiles = <ProjectFile>[];
+  int totalComments = 0;
+  int totalLines = 0;
+  int totalCode = 0;
+  int totalEmpty = 0;
+  int totalNonCode = 0;
+  int totalChars = 0;
+
+  for (String file in loadedFiles) {
+    List<String> fileLines;
+    try {
+      fileLines = File(file).readAsLinesSync();
+    } catch (_) {
+      continue;
+    }
+    if (fileLines.isEmpty) continue;
+
+    final String filePath = file.replaceFirst("${args.folder}\\", "");
+    final String fileName = filePath.split(r'\').last;
+    final String fileExtension = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : "txt";
+
+    final TotalCode total = TotalCode();
+    total.lines = fileLines.length;
+
+    bool inMultiComment = false;
+    String multiStart = "/*";
+    String multiEnd = "*/";
+    String singleComment = "//";
+
+    if (multiLineComment.containsKey(fileExtension)) {
+      multiStart = multiLineComment[fileExtension]!.multiCommentStart;
+      multiEnd = multiLineComment[fileExtension]!.multiCommentEnd;
+    }
+
+    if (const <String>["py", "ps1", "pyi", "pyc", "pyd", "pyo", "pyw", "pyz", "rb", "r", "yaml", "yml", "toml"].contains(fileExtension)) {
+      singleComment = "#";
+    }
+
+    for (String line in fileLines) {
+      final String trimmed = line.trim();
+      total.characters += trimmed.length;
+
+      if (inMultiComment) {
+        total.comments++;
+        if (trimmed.contains(multiEnd)) inMultiComment = false;
+      } else if (trimmed.startsWith(multiStart)) {
+        total.comments++;
+        if (!trimmed.contains(multiEnd)) inMultiComment = true;
+      } else if (trimmed.startsWith(singleComment)) {
+        total.comments++;
+      } else if (trimmed.isEmpty) {
+        total.empty++;
+      } else if (!RegExp(r'\w').hasMatch(trimmed)) {
+        total.nonCode++;
+      } else {
+        total.code++;
+      }
+    }
+
+    int categorized = total.code + total.comments + total.nonCode + total.empty;
+    if (categorized < total.lines) {
+      total.empty += (total.lines - categorized);
+    }
+
+    projectFiles.add(ProjectFile(name: fileName, path: filePath, ext: fileExtension, total: total));
+  }
+
+  projectFiles.sort((ProjectFile a, ProjectFile b) => b.total.lines.compareTo(a.total.lines));
+
+  for (final ProjectFile file in projectFiles) {
+    totalComments += file.total.comments;
+    totalLines += file.total.lines;
+    totalCode += file.total.code;
+    totalEmpty += file.total.empty;
+    totalNonCode += file.total.nonCode;
+    totalChars += file.total.characters;
+  }
+
+  Map<String, int> exts = <String, int>{};
+  for (final ProjectFile file in projectFiles) {
+    if (!exts.containsKey(file.ext)) {
+      exts[file.ext] = file.total.lines;
+    } else {
+      exts[file.ext] = exts[file.ext]! + file.total.lines;
+    }
+  }
+
+  final List<MapEntry<String, int>> extsList = exts.entries.toList();
+  extsList.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
+  List<List<String>> programmingLanguages = extsList.map((MapEntry<String, int> entry) => <String>[entry.key, entry.value.toString()]).toList();
+
+  return ProjectAnalysisResult(
+    files: projectFiles,
+    totalLines: totalLines,
+    totalCode: totalCode,
+    totalComments: totalComments,
+    totalEmpty: totalEmpty,
+    totalNonCode: totalNonCode,
+    totalChars: totalChars,
+    programmingLanguages: programmingLanguages,
+  );
+}
+
+// -----------------------------------------
+// WIDGET
+// -----------------------------------------
+
+class ProjectOverviewWidget extends StatefulWidget {
+  const ProjectOverviewWidget({super.key});
+
+  @override
+  ProjectOverviewWidgetState createState() => ProjectOverviewWidgetState();
+}
+
+class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
+  final TextEditingController _folderController = TextEditingController();
+  final TextEditingController _includeController = TextEditingController();
+  final TextEditingController _excludeController = TextEditingController();
+  final TextEditingController _gitLinkController = TextEditingController();
+
+  final List<int> extensionColors = <int>[0xff34B7FD, 0xffCB4802, 0xffFFA700, 0xffC3732A, 0xffA4DDED, 0xff922724, 0xff43B3AE, 0xffA020F0];
+  Map<String, Color> extColors = <String, Color>{};
+
+  bool showFilters = false;
+  bool showGit = false;
+  bool projectUseGitIgnore = true;
+
+  bool isAnalyzing = false;
+  bool projectAnalyzed = false;
+
+  ProjectAnalysisResult? result;
+
+  int sortColumnIndex = 1; // 1=Lines, 2=Code, 3=Comments, 4=Empty, 5=Chars
+  bool sortAscending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _folderController.text = Boxes.pref.getString("projectOverviewFolder") ?? "";
+    _includeController.text = Boxes.pref.getString("projectOverviewIncluded") ?? "";
+    _excludeController.text = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{4,}$";
+
+    if (globalSettings.args.contains("-wizardly")) {
+      _folderController.text = globalSettings.args[0].replaceAll('"', '');
+    }
+  }
+
+  @override
+  void dispose() {
+    _folderController.dispose();
+    _includeController.dispose();
+    _excludeController.dispose();
+    _gitLinkController.dispose();
+    super.dispose();
+  }
+
+  void _onAnalyzePressed() async {
+    final String folder = _folderController.text;
+    if (folder.isEmpty || !Directory(folder).existsSync()) {
+      popupDialog(context, "Please select a valid folder");
+      return;
+    }
+
+    Boxes.updateSettings("projectOverviewIncluded", _includeController.text);
+    Boxes.updateSettings("projectOverviewExcluded", _excludeController.text);
+
+    setState(() {
+      isAnalyzing = true;
+      projectAnalyzed = false;
+      result = null;
+    });
+
+    final ProjectAnalysisArgs args = ProjectAnalysisArgs(
+      folder: folder,
+      included: _includeController.text,
+      excluded: _excludeController.text,
+      useGitIgnore: projectUseGitIgnore,
+    );
+
+    try {
+      final ProjectAnalysisResult res = await compute(_analyzeProjectIsolate, args);
+
+      int i = 0;
+      extColors.clear();
+      for (List<String> lang in res.programmingLanguages) {
+        if (i >= extensionColors.length) break;
+        extColors[lang[0]] = Color(extensionColors[i++]);
+      }
+
+      setState(() {
+        result = res;
+        projectAnalyzed = true;
+        isAnalyzing = false;
+        sortColumnIndex = 1;
+        sortAscending = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isAnalyzing = false;
+        });
+        popupDialog(context, "Analysis failed: $e");
+      }
+    }
+  }
+
+  void _pickFolder() async {
+    final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select project folder';
+    final Directory? dir = dirPicker.getDirectory();
+    if (dir == null) return;
+    _folderController.text = dir.path;
+    Boxes.updateSettings("projectOverviewFolder", dir.path);
+    if (mounted) setState(() {});
+  }
+
+  void _sortFiles(int columnIndex) {
+    if (result == null) return;
+    setState(() {
+      if (sortColumnIndex == columnIndex) {
+        sortAscending = !sortAscending;
+      } else {
+        sortColumnIndex = columnIndex;
+        sortAscending = false;
+      }
+
+      result!.files.sort((ProjectFile a, ProjectFile b) {
+        dynamic valA, valB;
+        switch (columnIndex) {
+          case 1:
+            valA = a.total.lines;
+            valB = b.total.lines;
+            break;
+          case 2:
+            valA = a.total.code;
+            valB = b.total.code;
+            break;
+          case 3:
+            valA = a.total.comments;
+            valB = b.total.comments;
+            break;
+          case 4:
+            valA = a.total.empty;
+            valB = b.total.empty;
+            break;
+          case 5:
+            valA = a.total.characters;
+            valB = b.total.characters;
+            break;
+          default:
+            valA = a.total.lines;
+            valB = b.total.lines;
+        }
+        return sortAscending ? valA.compareTo(valB) : valB.compareTo(valA);
+      });
+    });
+  }
+
+  Widget _buildLoadingOverlay(Color accent, Color onSurface) {
+    if (!isAnalyzing) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.4),
+      child: Center(
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 5)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 6,
+                      backgroundColor: accent.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text("Analyzing Project", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(
+                "Running background tasks...",
+                style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color background = Color(globalSettings.theme.background);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Stack(
+      children: <Widget>[
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _buildHeader(accent, background, onSurface),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              child: Column(
+                children: <Widget>[
+                  if (showGit) _buildGitSection(accent, onSurface),
+                  if (showFilters) _buildFilterBar(accent, onSurface),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _buildResultsView(accent, onSurface),
+            ),
+          ],
+        ),
+        _buildLoadingOverlay(accent, onSurface),
+      ],
+    );
+  }
+
+  Widget _buildHeader(Color accent, Color background, Color onSurface) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: InkWell(
+              onTap: _pickFolder,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: onSurface.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: onSurface.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.folder_open_rounded, color: accent, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text("Target Folder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text(
+                            _folderController.text.isEmpty ? "No folder selected" : _folderController.text.truncate(60, suffix: "..."),
+                            style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildIconButton(
+            icon: Icons.settings_rounded,
+            isSelected: showFilters,
+            onPressed: () => setState(() => showFilters = !showFilters),
+            tooltip: "Filters & Options",
+            onSurface: onSurface,
+          ),
+          _buildIconButton(
+            icon: Icons.cloud_download_rounded,
+            isSelected: showGit,
+            onPressed: () => setState(() => showGit = !showGit),
+            tooltip: "Load from Git",
+            onSurface: onSurface,
+          ),
+          const SizedBox(width: 8),
+          _buildActionButton(accent, background),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton({required IconData icon, required bool isSelected, required VoidCallback onPressed, required String tooltip, required Color onSurface}) {
+    return IconButton(
+      icon: Icon(icon, size: 20),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        backgroundColor: isSelected ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.1) : Colors.transparent,
+        foregroundColor: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(Color accent, Color background) {
+    return ElevatedButton.icon(
+      icon: isAnalyzing
+          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : Icon(Icons.analytics_rounded, color: background),
+      label: Text(isAnalyzing ? "Scanning" : "Analyze", style: TextStyle(color: background, fontWeight: FontWeight.bold)),
+      onPressed: isAnalyzing ? null : _onAnalyzePressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isAnalyzing ? Colors.grey : accent,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: onSurface.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: onSurface.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(child: _buildFilterInput("Include Extensions", _includeController, "dart;js;css", onSurface)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildFilterInput("Exclude Patterns", _excludeController, "node_modules;build", onSurface)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 200,
+                  child: CheckBoxWidget(
+                    value: projectUseGitIgnore,
+                    onChanged: (bool e) => setState(() => projectUseGitIgnore = e),
+                    text: 'Respect .gitignore',
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterInput(String label, TextEditingController controller, String hint, Color onSurface) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        floatingLabelStyle: TextStyle(color: Color(globalSettings.theme.accentColor)),
+      ),
+    );
+  }
+
+  Widget _buildGitSection(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accent.withValues(alpha: 0.2)),
+        ),
+        child: LoadFromGitWidget(
+          onSelected: (String folder) {
+            _folderController.text = folder;
+            setState(() => showGit = false);
+            _onAnalyzePressed();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultsView(Color accent, Color onSurface) {
+    if (!projectAnalyzed || result == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.insert_chart_outlined_rounded, size: 64, color: onSurface.withValues(alpha: 0.1)),
+            const SizedBox(height: 16),
+            Text("Select a folder to analyze your project", style: TextStyle(color: onSurface.withValues(alpha: 0.4))),
+          ],
+        ),
+      );
+    }
+
+    if (result!.files.isEmpty) {
+      return const Center(child: Text("No files found that match your criteria."));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: <Widget>[
+        _buildStatsDashboard(accent, onSurface),
+        const SizedBox(height: 24),
+        _buildOverviewSummary(onSurface),
+        const SizedBox(height: 24),
+        _buildVisualSection(accent, onSurface),
+        const SizedBox(height: 24),
+        _buildFilesSection(accent, onSurface),
+      ],
+    );
+  }
+
+  Widget _buildOverviewSummary(Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withValues(alpha: 0.1)),
+      ),
+      child: MarkdownBody(
+        selectable: true,
+        data: '''
+**${result!.files.length.decimal}** files found with **${result!.totalLines.decimal}** lines in total, of these, **${result!.totalCode.decimal}** are code lines, **${result!.totalNonCode.decimal}** are non-code lines, **${result!.totalComments.decimal}** are comments, and **${result!.totalEmpty.decimal}** are empty lines.
+
+There is a total of **${result!.totalChars.decimal}** characters.
+*That's roughly **${((result!.totalChars / 250).floor()).decimal} pages** or **${(result!.totalChars / 250 / 400).toStringAsFixed(1)} books**!*
+''',
+        styleSheet: MarkdownStyleSheet(
+          h3: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          p: TextStyle(fontSize: 14, color: onSurface.withValues(alpha: 0.8), height: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsDashboard(Color accent, Color onSurface) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 4,
+      padding: const EdgeInsets.all(0),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 2.2,
+      children: <Widget>[
+        _buildMetricCard("Lines of Code", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
+        _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%", Icons.comment_bank_rounded, Colors.green, onSurface),
+        _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined, Colors.orange, onSurface),
+        _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns", Icons.file_present_rounded, Colors.blue, onSurface),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard(String label, String value, IconData icon, Color color, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: onSurface.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9, color: onSurface.withValues(alpha: 0.5), height: 1.0),
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVisualSection(Color accent, Color onSurface) {
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: onSurface.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: onSurface.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            flex: 2,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 4,
+                centerSpaceRadius: 40,
+                sections: List<PieChartSectionData>.generate(result!.programmingLanguages.length, (int index) {
+                  final String lang = result!.programmingLanguages[index][0];
+                  final double percentage = (int.parse(result!.programmingLanguages[index][1]) / result!.totalLines) * 100;
+                  return PieChartSectionData(
+                    title: percentage > 10 ? "$lang\n${percentage.toStringAsFixed(0)}%" : "",
+                    value: percentage,
+                    color: extColors[lang] ?? Colors.grey,
+                    radius: 50,
+                    titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  );
+                }),
+              ),
+            ),
+          ),
+          const VerticalDivider(width: 40),
+          Expanded(
+            flex: 3,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: result!.programmingLanguages.map((List<String> langData) {
+                final String lang = langData[0];
+                final int lines = int.parse(langData[1]);
+                return _buildLanguageChip(lang, lines, extColors[lang] ?? Colors.grey, onSurface);
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageChip(String lang, int lines, Color color, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text(lang, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(width: 6),
+          Text(lines.decimal, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilesSection(Color accent, Color onSurface) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            const Text("File Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Spacer(),
+            Text("${result!.files.length} files tracked", style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.5))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildFileTableHeader(onSurface),
+
+        // Ensure infinite lists are responsive without restricting to 150 items.
+        // We use shrinkWrap since it's inside a ListView, but ideally,
+        // a large chunk of files should be virtualized properly.
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: result!.files.length,
+          itemBuilder: (BuildContext context, int index) {
+            final ProjectFile file = result!.files[index];
+            return _buildFileRow(file, index, accent, onSurface);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFileTableHeader(Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Expanded(flex: 4, child: Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+          _buildSortableHeader("Lines", 1, 70, onSurface),
+          _buildSortableHeader("Code", 2, 70, onSurface),
+          _buildSortableHeader("Comments", 3, 70, onSurface),
+          _buildSortableHeader("Empty", 4, 70, onSurface),
+          _buildSortableHeader("Chars", 5, 80, onSurface),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSortableHeader(String label, int index, double width, Color onSurface) {
+    final bool isSelected = sortColumnIndex == index;
+    return InkWell(
+      onTap: () => _sortFiles(index),
+      child: SizedBox(
+        width: width,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Text(label,
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.5))),
+            if (isSelected) Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down, size: 16, color: Color(globalSettings.theme.accentColor)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileRow(ProjectFile file, int index, Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: onSurface.withValues(alpha: 0.05))),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            flex: 4,
+            child: Row(
+              children: <Widget>[
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: extColors[file.ext] ?? Colors.grey, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(file.path, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+          ),
+          _buildColText(file.total.lines.decimal, 70, onSurface),
+          _buildColText(file.total.code.decimal, 70, onSurface),
+          _buildColText(file.total.comments.decimal, 70, onSurface, color: Colors.green),
+          _buildColText(file.total.empty.decimal, 70, onSurface, opacity: 0.4),
+          _buildColText(file.total.characters.decimal, 80, onSurface),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColText(String text, double width, Color onSurface, {Color? color, double opacity = 1.0}) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        text,
+        textAlign: TextAlign.end,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: (color ?? onSurface).withValues(alpha: opacity)),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------
+// LoadFromGitWidget
+// -----------------------------------------
 class LoadFromGitWidget extends StatefulWidget {
   final void Function(String folder) onSelected;
   const LoadFromGitWidget({super.key, required this.onSelected});
@@ -676,164 +1018,166 @@ class LoadFromGitWidget extends StatefulWidget {
 }
 
 class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
-  final String dir = "${WinUtils.getTabameSettingsFolder()}\\projectOverview";
-  String downloadMessage = "Download";
-
-  String headerMsg = "Works only with GitHub and GitLab!";
+  final String baseDir = "${WinUtils.getTabameAppDataFolder()}\\projectOverview";
+  String downloadMessage = "Download Project";
+  bool isDownloading = false;
+  String headerMsg = "Fetch repository content from GitHub or GitLab";
   final List<String> allDirs = <String>[];
+  final TextEditingController _linkController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    loadProjects();
+    _loadLocalSaves();
   }
 
   @override
   void dispose() {
+    _linkController.dispose();
     super.dispose();
   }
 
-  void downloadProject(String link) async {
-    downloadMessage = "Downloading";
-    headerMsg = "Works only with GitHub and GitLab!";
-    setState(() {});
-    String repo = "";
-    if (link.contains("github.com")) {
-      final RegExpMatch? reg = RegExp(r'github\.com/(.*?/.*?)$', caseSensitive: false).firstMatch(link);
-      if (reg != null) {
-        repo = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
-      } else {
-        final RegExpMatch? reg = RegExp(r':(.*?/.*?)\.git').firstMatch(link);
-        if (reg != null) {
-          repo = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
-        }
-      }
-    } else if (link.contains("gitlab.com")) {
-      final RegExpMatch? reg = RegExp(r'gitlab\.com/(.*?/.*?)$', caseSensitive: false).firstMatch(link);
-      if (reg != null) {
-        final String repName = reg[1]!.split('/').last;
-        repo = "https://gitlab.com/${reg[1]!}/-/archive/master/$repName.zip";
-      }
-    }
-    if (repo.isEmpty) {
-      downloadMessage = "Download";
-      headerMsg = "Suports only GitHub and GitLab";
-      setState(() {});
-      return;
-    }
-    final String zipFile = "$dir\\archived.zip";
-    downloadFile(repo, zipFile, () async {
-      downloadMessage = "Download";
-      if (!mounted) return;
-      setState(() {});
-      WinUtils.open("powershell.exe", arguments: '-NoExit Expand-Archive -LiteralPath \\"$zipFile\\" -DestinationPath \\"$dir\\" -Force;');
-    });
-
-    return;
-  }
-
-  void loadProjects() {
-    if (!Directory(dir).existsSync()) Directory(dir).createSync();
-    final List<FileSystemEntity> dirs = Directory(dir).listSync(followLinks: false);
+  void _loadLocalSaves() {
+    if (!Directory(baseDir).existsSync()) Directory(baseDir).createSync(recursive: true);
+    final List<FileSystemEntity> dirs = Directory(baseDir).listSync(followLinks: false);
     allDirs.clear();
     for (FileSystemEntity x in dirs) {
-      if (x is! File) allDirs.add(x.path);
+      if (x is Directory) allDirs.add(x.path);
     }
     if (mounted) setState(() {});
   }
 
-  Future<void> downloadFile(String url, String filename, Function callback) async {
-    int downloaded = 0;
-    int skipten = 0;
-    http.Client httpClient = http.Client();
-    http.Request request = http.Request('GET', Uri.parse(url));
-    Future<http.StreamedResponse> response = httpClient.send(request);
+  void _startDownload() async {
+    final String link = _linkController.text.trim();
+    if (link.isEmpty) return;
 
-    List<List<int>> chunks = <List<int>>[];
-    response.asStream().listen((http.StreamedResponse r) {
-      r.stream.listen((List<int> chunk) {
-        chunks.add(chunk);
-        skipten++;
-        if (skipten == 10) {
-          downloadMessage = "${getFileSize(downloaded, 2)}";
-          if (mounted) setState(() {});
-          skipten = 0;
-        }
-        downloaded += chunk.length;
-      }, onDone: () async {
-        File file = File('$filename');
-        final Uint8List bytes = Uint8List(downloaded);
-        int offset = 0;
-        for (List<int> chunk in chunks) {
-          bytes.setRange(offset, offset + chunk.length, chunk);
-          offset += chunk.length;
-        }
-        await file.writeAsBytes(bytes);
-        callback();
-        return;
-      });
+    setState(() {
+      isDownloading = true;
+      downloadMessage = "Connecting...";
     });
+
+    String repoUrl = "";
+    if (link.contains("github.com")) {
+      final RegExpMatch? reg = RegExp(r'github\.com/(.*?/.*?)(?:\.git|/|$)', caseSensitive: false).firstMatch(link);
+      if (reg != null) repoUrl = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
+    } else if (link.contains("gitlab.com")) {
+      final RegExpMatch? reg = RegExp(r'gitlab\.com/(.*?/.*?)(?:\.git|/|$)', caseSensitive: false).firstMatch(link);
+      if (reg != null) {
+        final String repName = reg[1]!.split('/').last;
+        repoUrl = "https://gitlab.com/${reg[1]!}/-/archive/master/$repName.zip";
+      }
+    }
+
+    if (repoUrl.isEmpty) {
+      setState(() {
+        isDownloading = false;
+        headerMsg = "Invalid or unsupported repository link";
+      });
+      return;
+    }
+
+    final String zipFile = "$baseDir\\temp_archive.zip";
+    try {
+      await _downloadFile(repoUrl, zipFile, () async {
+        setState(() => downloadMessage = "Extracting...");
+        WinUtils.open("powershell.exe", arguments: '-Command "Expand-Archive -LiteralPath \'$zipFile\' -DestinationPath \'$baseDir\' -Force; Remove-Item \'$zipFile\'"');
+        await Future<void>.delayed(const Duration(seconds: 2));
+        _loadLocalSaves();
+        setState(() {
+          isDownloading = false;
+          downloadMessage = "Download Project";
+        });
+      });
+    } catch (e) {
+      setState(() {
+        isDownloading = false;
+        headerMsg = "Download failed: $e";
+      });
+    }
   }
 
-  getFileSize(int bytes, int decimals) {
-    if (bytes <= 0) return "0 B";
-    const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-    int i = (log(bytes) / log(1024)).floor();
-    return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
+  Future<void> _downloadFile(String url, String filename, VoidCallback onDone) async {
+    final http.Client client = http.Client();
+    final http.Request request = http.Request('GET', Uri.parse(url));
+    final http.StreamedResponse response = await client.send(request);
+
+    final List<int> bytes = <int>[];
+    int total = 0;
+    response.stream.listen(
+      (List<int> chunk) {
+        bytes.addAll(chunk);
+        total += chunk.length;
+        if (mounted) {
+          setState(() => downloadMessage = "Downloading: ${(total / 1024 / 1024).toStringAsFixed(1)} MB");
+        }
+      },
+      onDone: () async {
+        await File(filename).writeAsBytes(bytes);
+        onDone();
+      },
+    );
   }
 
-  String gitlink = "";
   @override
   Widget build(BuildContext context) {
-    loadProjects();
+    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(headerMsg),
-        TextField(
-          controller: TextEditingController(text: gitlink),
-          onChanged: (String e) => gitlink = e,
-          decoration: const InputDecoration(
-            labelText: "Github/GitLab link",
-          ),
-        ),
+        Text(headerMsg, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6))),
+        const SizedBox(height: 12),
         Row(
           children: <Widget>[
             Expanded(
-                child: ElevatedButton(
-                    onPressed: () => downloadMessage == "Download" ? downloadProject(gitlink) : null,
-                    child: Text(downloadMessage, style: TextStyle(color: Color(globalSettings.theme.background))))),
+              child: TextField(
+                controller: _linkController,
+                decoration: InputDecoration(
+                  hintText: "GitHub or GitLab repository link",
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: isDownloading ? null : _startDownload,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text(downloadMessage, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
-        const SizedBox(height: 20),
-        ListTile(
-          onTap: () {
-            setState(() {});
-            loadProjects();
-          },
-          title: Text("Downloaded Projects:", style: Theme.of(context).textTheme.bodyLarge),
-          trailing: const Icon(Icons.refresh),
-        ),
-        Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List<Widget>.generate(
-                allDirs.length,
-                (int index) => ListTile(
-                      onTap: () => widget.onSelected(allDirs[index]),
-                      title: Text(allDirs[index].split('\\').last),
-                      trailing: Container(
-                        width: 40,
-                        height: double.infinity,
-                        child: InkWell(
-                          onTap: () {
-                            File(allDirs[index]).deleteSync(recursive: true);
-                            loadProjects();
-                          },
-                          child: const Icon(Icons.delete),
-                        ),
-                      ),
-                    ))),
+        if (allDirs.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 16),
+          const Text("Locally Saved Projects", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: allDirs.length,
+              itemBuilder: (BuildContext context, int index) {
+                final String path = allDirs[index];
+                final String name = path.split(r'\').last;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.folder_zip_rounded, size: 16),
+                    label: Text(name, style: const TextStyle(fontSize: 12)),
+                    onPressed: () => widget.onSelected(path),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -32,9 +32,8 @@ Future<bool> interfaceWindowSetup() async {
   await WindowManager.instance.setAlwaysOnTop(true);
   await WindowManager.instance.setSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setPosition(const Offset(-9999, -9999));
-  final int exstyle = GetWindowLong(Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
-  SetWindowLongPtr(
-      Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, exstyle | WINDOW_EX_STYLE.WS_EX_TRANSPARENT | WINDOW_EX_STYLE.WS_EX_LAYERED | WINDOW_EX_STYLE.WS_EX_TOOLWINDOW);
+  final int exstyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
+  SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
   return true;
 }
 
@@ -115,7 +114,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       setMatrix();
       setState(() {});
     });
-    borderColor = Color.fromRGBO(255 - settings.bgColor.red, 255 - settings.bgColor.green, 255 - settings.bgColor.blue, 0.2);
+    borderColor = Color.fromRGBO(
+        255 - settings.bgColor.red8bit, 255 - settings.bgColor.green8bit, 255 - settings.bgColor.blue8bit, 0.2);
     WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
       WindowManager.instance.setPosition(const Offset(-99999, -99999));
     });
@@ -134,8 +134,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
 
   @override
   void dispose() {
-    super.dispose();
     timer?.cancel();
+    super.dispose();
   }
 
   void checker() async {
@@ -155,7 +155,10 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       await WindowManager.instance.setPosition(Offset(monitorData.x.toDouble(), monitorData.y.toDouble()));
       await WindowManager.instance.setSize(Size(monitorData.width.toDouble(), monitorData.height.toDouble()));
     }
-    if (mX != lastX && mY != lastY && mX.isBetweenEqual(monitorData.x, monitorData.length) && mY.isBetweenEqual(monitorData.y, monitorData.wide)) {
+    if (mX != lastX &&
+        mY != lastY &&
+        mX.isBetweenEqual(monitorData.x, monitorData.length) &&
+        mY.isBetweenEqual(monitorData.y, monitorData.wide)) {
       lastX = mX;
       lastY = mY;
       mX = mX - monitorData.x;
@@ -216,6 +219,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       monitorData = monitor;
       // Future<void>.delayed(const Duration(milliseconds: 300), () => WindowManager.instance.setPosition(Offset(monitor.x.toDouble(), monitor.y.toDouble())));
       WindowManager.instance.setPosition(Offset(monitor.x.toDouble(), monitor.y.toDouble()));
+      WindowManager.instance.focus();
       winsSavedPos[this.hWnd] = nowPos.copyWith();
       timer = Timer.periodic(const Duration(milliseconds: 50), (Timer timer) {
         if (!visible) timer.cancel();
@@ -245,8 +249,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       if (!visible) {
         if (!settings.setPreviousSize) return;
         if (winsSavedPos.containsKey(hWnd)) {
-          SetWindowPos(
-              this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
+          SetWindowPos(this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY,
+              SWP_NOMOVE | SWP_NOZORDER);
           winsSavedPos.remove(hWnd);
         }
         this.hWnd = -1;
@@ -271,19 +275,25 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       final Square monitor = Monitor.monitorSizes[Win32.getCursorMonitor()]!;
       int x = monitor.x + spaces.first.x.floor();
       int y = monitor.y + spaces.first.y.floor();
-      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, windowWidth.ceil() + (diffX * 2), windowHeight.ceil() + (diffY * 2), SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
+      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, windowWidth.ceil() + (diffX * 2),
+          windowHeight.ceil() + (diffY * 2), SWP_NOZORDER);
       for (Space e in matrix) {
         e.selected = false;
         e.hovered = false;
       }
       setState(() {});
       // WindowManager.instance.minimize();
-      WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) => Win32.setPosition(const Offset(-99999, -99999)));
+      WidgetsBinding.instance
+          .addPostFrameCallback((Duration timeStamp) => Win32.setPosition(const Offset(-99999, -99999)));
 
       visible = false;
     } else if (action == ViewsAction.switchUp || action == ViewsAction.switchDown) {
-      settings.scaleH = action == ViewsAction.switchDown ? (settings.scaleH - settings.scrollStepH) : (settings.scaleH + settings.scrollStepH);
-      settings.scaleW = action == ViewsAction.switchDown ? (settings.scaleW - settings.scrollStepW) : (settings.scaleW + settings.scrollStepW);
+      settings.scaleH = action == ViewsAction.switchDown
+          ? (settings.scaleH - settings.scrollStepH)
+          : (settings.scaleH + settings.scrollStepH);
+      settings.scaleW = action == ViewsAction.switchDown
+          ? (settings.scaleW - settings.scrollStepW)
+          : (settings.scaleW + settings.scrollStepW);
       settings.scaleH = settings.scaleH.clamp(settings.minH, settings.maxH);
       settings.scaleW = settings.scaleW.clamp(settings.minW, settings.maxW);
       settings.save();
@@ -303,7 +313,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: settings.bgColor.withOpacity(0.7),
+      backgroundColor: settings.bgColor.withValues(alpha: 0.7),
       body: FutureBuilder<bool>(
         future: interfaceWindow,
         builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
@@ -322,21 +332,25 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
                       children: List<Widget>.generate(
                         settings.scaleW,
                         (int rowIndex) {
-                          final int spaceIndex = matrix.indexWhere((Space element) => element.gridX == rowIndex && element.gridY == colIndex);
+                          final int spaceIndex = matrix
+                              .indexWhere((Space element) => element.gridX == rowIndex && element.gridY == colIndex);
                           if (spaceIndex == -1) return Container();
                           final Space space = matrix.elementAt(spaceIndex);
                           Color color = Colors.transparent;
                           if (space.hovered) {
-                            color = borderColor.withOpacity(0.2);
+                            color = borderColor.withValues(alpha: 0.2);
                           }
                           if (space.selected) {
-                            color = borderColor.withOpacity(0.2);
+                            color = borderColor.withValues(alpha: 0.2);
                           }
                           return Container(
                               width: MediaQuery.of(context).size.width / settings.scaleW,
                               height: MediaQuery.of(context).size.height / settings.scaleH,
                               decoration: BoxDecoration(
-                                border: !space.selected ? Border.all(color: borderColor.withOpacity(0.4), style: BorderStyle.solid, width: 0.5) : null,
+                                border: !space.selected
+                                    ? Border.all(
+                                        color: borderColor.withValues(alpha: 0.4), style: BorderStyle.solid, width: 0.5)
+                                    : null,
                                 color: color,
                               )
                               // child: Center(child: Text("$colIndex/$rowIndex")),
@@ -351,8 +365,12 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
                 ...List<Widget>.generate(1, (int index) {
                   final double left = matrix.firstWhere((Space element) => element.selected).x;
                   final double top = matrix.firstWhere((Space element) => element.selected).y;
-                  final double width = matrix.lastWhere((Space element) => element.selected).x + (MediaQuery.of(context).size.width / settings.scaleW) - left;
-                  final double height = matrix.lastWhere((Space element) => element.selected).y + (MediaQuery.of(context).size.height / settings.scaleH) - top;
+                  final double width = matrix.lastWhere((Space element) => element.selected).x +
+                      (MediaQuery.of(context).size.width / settings.scaleW) -
+                      left;
+                  final double height = matrix.lastWhere((Space element) => element.selected).y +
+                      (MediaQuery.of(context).size.height / settings.scaleH) -
+                      top;
                   return Positioned(
                       left: left,
                       top: top,
@@ -363,8 +381,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 25,
-                              color: borderColor.withOpacity(1),
-                              // background: Paint()..color = borderColor.withOpacity(1),
+                              color: borderColor.withValues(alpha: 1),
+                              // background: Paint()..color = borderColor.withValues(alpha: 1),
                             )),
                       ));
                 }),

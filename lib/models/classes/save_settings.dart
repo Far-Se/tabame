@@ -10,7 +10,7 @@ class SaveSettings {
   static const String _prefix = 'flutter.';
   static Completer<SaveSettings>? _completer;
   static SavedStore store = SavedStore();
-  static get _store => store;
+  static SavedStore get _store => store;
 
   static Future<SaveSettings> getInstance() async {
     if (_completer == null) {
@@ -112,7 +112,7 @@ class SavedStore {
   File? _localDataFilePath;
   String? _fileName;
   String get fileName {
-    _fileName ??= "${WinUtils.getTabameSettingsFolder()}\\settings.json";
+    _fileName ??= "${WinUtils.getTabameAppDataFolder(settings: true)}\\settings.json";
     return _fileName!;
   }
 

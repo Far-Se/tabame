@@ -19,6 +19,6 @@ class QuickActionItem extends StatelessWidget {
             children: <Widget>[const SizedBox(width: 5), SizedBox(width: 20, child: icon), const SizedBox(width: 5), Text(message)],
           ));
     }
-    return SizedBox(width: 20, height: double.maxFinite, child: InkWell(child: Tooltip(message: message, child: icon), onTap: () => onTap()));
+    return SizedBox(width: 20, child: InkWell(child: Tooltip(message: message, child: icon), onTap: () => onTap()));
   }
 }

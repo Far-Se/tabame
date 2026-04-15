@@ -35,9 +35,17 @@ class TextInputState extends State<TextInput> {
   }
 
   @override
+  void didUpdateWidget(TextInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value && widget.value != _controller.text) {
+      _controller.text = widget.value ?? "";
+    }
+  }
+
+  @override
   void dispose() {
-    super.dispose();
     _controller.dispose();
+    super.dispose();
   }
 
   bool sent = false;

@@ -85,12 +85,21 @@ class WizardlyState extends State<Wizardly> {
             ),
           ),
         ),
-        currentPage < pages.length
-            ? Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: pages[currentPage].widget,
-              )
-            : Container(),
+        Expanded(
+          child: currentPage < pages.length
+              ? (pages[currentPage].widget is SearchTextWidget || pages[currentPage].widget is ProjectOverviewWidget)
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: pages[currentPage].widget,
+                    )
+                  : SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: pages[currentPage].widget,
+                      ),
+                    )
+              : Container(),
+        ),
       ],
     );
   }

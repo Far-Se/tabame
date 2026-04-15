@@ -25,10 +25,10 @@ namespace tabamewin32
         Tabamewin32Plugin(const Tabamewin32Plugin &) = delete;
         Tabamewin32Plugin &operator=(const Tabamewin32Plugin &) = delete;
 
-    private:
-        bool alreadySetTransparent = false;
+        // Accessible to dispatch handlers within the plugin namespace.
         flutter::PluginRegistrarWindows *registrar_ = nullptr;
-        // ITaskbarList3 *taskbar_ = nullptr;
+
+    private:
         // Called when a method is called on this plugin's channel from Dart.
         void HandleMethodCall(
             const flutter::MethodCall<flutter::EncodableValue> &method_call,

@@ -36,7 +36,6 @@ class HotkeyHandler {
       // NativeHotkey.free();
       if (hotkeyInfo.vk == currentVK) {
         currentVK = -1;
-        NativeHooks.freeHotkeys();
         hotkeyInfo.action = "released";
         for (final TabameListener listener in NativeHooks.listeners) {
           if (!NativeHooks.listenersObv.contains(listener)) return;

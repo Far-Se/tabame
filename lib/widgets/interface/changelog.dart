@@ -40,7 +40,6 @@ class _ChangelogState extends State<Changelog> {
 ### Added new QuickActions:
  - CharMap: You can save custom characters or browse between currency, math characters or language accents.
  - Shut Down Scheduler: You can schedule a shutdown.
- - Case Change: You can change text case to camelCase, PascalCase, snake_case, kebab-case, UPPERCASE, lowercase.
  - Memos: Save your memos.
 
 ## Wizardly Hosts Editor
@@ -76,9 +75,6 @@ Added Persistent Reminders, good for pill reminders
       '1.1': '''
 ## **Added Views**
 With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.
-
-### **Added Workspaces**
-With Workspaces you can save current position and size of specific windows, so you can load them easily from QuickMenu QuickActions
 
 ### **Added Hooks**
 You can hook windows togheter, so when you focus the main one, other will appear on foreground as well. You can access this by right clicking a window in QuickMenu.

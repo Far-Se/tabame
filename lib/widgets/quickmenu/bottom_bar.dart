@@ -7,7 +7,6 @@ import '../itzy/quickmenu/widget_time.dart';
 import '../itzy/quickmenu/widget_time_weather.dart';
 import '../itzy/quickmenu/widget_usage.dart';
 import '../itzy/quickmenu/widget_weather.dart';
-import 'tray_bar.dart';
 
 class BottomBar extends StatelessWidget {
   const BottomBar({super.key});
@@ -17,9 +16,7 @@ class BottomBar extends StatelessWidget {
     Debug.add("QuickMenu: BottomBar");
     Globals.heights.traybar = 30;
     final bool showPowerShell = globalSettings.showPowerShell && Boxes().powerShellScripts.isNotEmpty;
-    if (!showPowerShell &&
-        !globalSettings.showSystemUsage &&
-        ((globalSettings.showTrayBar && globalSettings.quickMenuPinnedWithTrayAtBottom) || !globalSettings.showTrayBar)) {
+    if (!showPowerShell && !globalSettings.showSystemUsage && (globalSettings.showTrayBar || !globalSettings.showTrayBar)) {
       if (!globalSettings.showWeather) {
         return const TimeWidget(inline: true);
       } else {
@@ -48,8 +45,8 @@ class BottomBar extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: Theme(
-            data: Theme.of(context)
-                .copyWith(tooltipTheme: Theme.of(context).tooltipTheme.copyWith(preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface))),
+            data: Theme.of(context).copyWith(
+                tooltipTheme: Theme.of(context).tooltipTheme.copyWith(preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -60,10 +57,6 @@ class BottomBar extends StatelessWidget {
                 if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()),
                 if (showPowerShell) const Expanded(flex: 3, child: PowershellList()),
                 if (showPowerShell) const SizedBox(width: 5),
-                if (!globalSettings.quickMenuPinnedWithTrayAtBottom)
-                  ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: 180 - (showPowerShell ? 65 : 0) - (globalSettings.showSystemUsage ? 40 : 0), minWidth: 50),
-                      child: const TrayBar()),
               ],
             ),
           ),

@@ -34,9 +34,8 @@ Future<bool> interfaceWindowSetup() async {
   await WindowManager.instance.setAlwaysOnTop(true);
   await WindowManager.instance.setSize(Size(Monitor.dpiAdjust(monitor.width.toDouble()), Monitor.dpiAdjust(monitor.height.toDouble())));
   await WindowManager.instance.setPosition(const Offset(-9999, -9999));
-  final int exstyle = GetWindowLong(Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
-  SetWindowLongPtr(
-      Win32.hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, exstyle | WINDOW_EX_STYLE.WS_EX_TRANSPARENT | WINDOW_EX_STYLE.WS_EX_LAYERED | WINDOW_EX_STYLE.WS_EX_TOOLWINDOW);
+  final int exstyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
+  SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
   return true;
 }
 
@@ -91,7 +90,7 @@ class ViewsSettings {
   int scrollStepH = 5;
   ViewsSettings();
   Future<void> load() async {
-    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
     if (!File(file).existsSync()) File(file).createSync();
     String fileData = File(file).readAsStringSync();
     if (fileData.isEmpty) {
@@ -110,7 +109,7 @@ class ViewsSettings {
   }
 
   Future<void> save() async {
-    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
     if (!File(file).existsSync()) File(file).createSync();
     File(file).writeAsStringSync(toJson());
   }
@@ -165,7 +164,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
     currentMonitor = monitor;
     monitorData = Monitor.monitorSizes[monitor]!;
     setMatrix();
-    borderColor = Color.fromRGBO(255 - bgColor.red, 255 - bgColor.green, 255 - bgColor.blue, 0.2);
+    borderColor = Color.fromRGBO(255 - bgColor.red8bit, 255 - bgColor.green8bit, 255 - bgColor.blue8bit, 0.2);
     WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
       WindowManager.instance.setPosition(const Offset(-99999, -99999));
     });
@@ -184,8 +183,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
 
   @override
   void dispose() {
-    super.dispose();
     timer?.cancel();
+    super.dispose();
   }
 
   void checker() async {
@@ -296,8 +295,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
     } else if (action == ViewsAction.moveEnd) {
       if (!visible) {
         if (winsSavedPos.containsKey(hWnd)) {
-          SetWindowPos(
-              this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY, SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
+          SetWindowPos(this.hWnd, NULL, NULL, NULL, winsSavedPos[hWnd]!.gridX, winsSavedPos[hWnd]!.gridY, SWP_NOMOVE | SWP_NOZORDER);
           winsSavedPos.remove(hWnd);
         }
         this.hWnd = -1;
@@ -324,7 +322,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       final int y = (monitor.y + spaces.first.y.floor() / 1).toInt();
       final int sizeX = windowWidth.toInt();
       final int sizeY = windowHeight.toInt();
-      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, sizeX + (diffX * 2), sizeY + (diffY * 2), SET_WINDOW_POS_FLAGS.SWP_NOZORDER);
+      SetWindowPos(this.hWnd, NULL, x - diffX, y - diffY, sizeX + (diffX * 2), sizeY + (diffY * 2), SWP_NOZORDER);
       for (Space e in matrix) {
         e.selected = false;
         e.hovered = false;
@@ -355,7 +353,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor.withOpacity(0.7),
+      backgroundColor: bgColor.withValues(alpha: 0.7),
       body: FutureBuilder<bool>(
         future: interfaceWindow,
         builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
@@ -379,16 +377,16 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
                           final Space space = matrix.elementAt(spaceIndex);
                           Color color = Colors.transparent;
                           if (space.hovered) {
-                            color = borderColor.withOpacity(0.2);
+                            color = borderColor.withValues(alpha: 0.2);
                           }
                           if (space.selected) {
-                            color = borderColor.withOpacity(0.2);
+                            color = borderColor.withValues(alpha: 0.2);
                           }
                           return Container(
                               width: MediaQuery.of(context).size.width / settings.scaleW,
                               height: MediaQuery.of(context).size.height / settings.scaleH,
                               decoration: BoxDecoration(
-                                border: !space.selected ? Border.all(color: borderColor.withOpacity(0.4), style: BorderStyle.solid, width: 0.5) : null,
+                                border: !space.selected ? Border.all(color: borderColor.withValues(alpha: 0.4), style: BorderStyle.solid, width: 0.5) : null,
                                 color: color,
                               )
                               // child: Center(child: Text("$colIndex/$rowIndex")),

@@ -1,0 +1,263 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:intl/intl.dart';
+import '../../win32/win32.dart';
+import '../boxes.dart';
+import '../../settings.dart';
+
+// --------------------------------------------------------------------------
+// Trktivity
+// --------------------------------------------------------------------------
+
+enum TrktivityType { mouse, keys, window, title, idle }
+
+class TrkFilterInfo {
+  String title;
+  String exe;
+  String result;
+  bool hasFilters;
+
+  TrkFilterInfo({
+    required this.title,
+    required this.exe,
+    required this.result,
+    required this.hasFilters,
+  });
+}
+
+class TrktivitySave {
+  int ts;
+  String t;
+  String d;
+
+  int get timestamp => ts;
+  String get type => t;
+  String get data => d;
+  set timestamp(int e) => ts = e;
+  set type(String e) => t = e;
+  set data(String e) => d = e;
+
+  TrktivitySave({this.ts = 0, this.t = "", this.d = ""});
+
+  TrktivitySave copyWith({int? ts, String? t, String? d}) {
+    return TrktivitySave(ts: ts ?? this.ts, t: t ?? this.t, d: d ?? this.d);
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{'ts': ts, 't': t, 'd': d};
+
+  factory TrktivitySave.fromMap(Map<String, dynamic> map) {
+    return TrktivitySave(
+      ts: (map['ts'] ?? 0) as int,
+      t: (map['t'] ?? '') as String,
+      d: (map['d'] ?? '') as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory TrktivitySave.fromJson(String source) => TrktivitySave.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'TrktivitySave(ts: $ts, t: $t, d: $d)';
+
+  @override
+  bool operator ==(covariant TrktivitySave other) {
+    if (identical(this, other)) return true;
+    return other.ts == ts && other.t == t && other.d == d;
+  }
+
+  @override
+  int get hashCode => ts.hashCode ^ t.hashCode ^ d.hashCode;
+}
+
+class TrktivityData {
+  String t;
+  String e;
+  String tl;
+
+  String get type => t;
+  String get exe => e;
+  String get title => tl;
+  set type(String e) => t = e;
+  set exe(String e) => e = e;
+  set title(String e) => tl = e;
+
+  TrktivityData({required this.t, required this.e, required this.tl});
+
+  TrktivityData copyWith({String? t, String? e, String? tl}) {
+    return TrktivityData(t: t ?? this.t, e: e ?? this.e, tl: tl ?? this.tl);
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{'t': t, 'e': e, 'tl': tl};
+
+  factory TrktivityData.fromMap(Map<String, dynamic> map) {
+    return TrktivityData(
+      t: (map['t'] ?? '') as String,
+      e: (map['e'] ?? '') as String,
+      tl: (map['tl'] ?? '') as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory TrktivityData.fromJson(String source) => TrktivityData.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'TrktivityData(t: $t, e: $e, tl: $tl)';
+
+  @override
+  bool operator ==(covariant TrktivityData other) {
+    if (identical(this, other)) return true;
+    return other.t == t && other.e == e && other.tl == tl;
+  }
+
+  @override
+  int get hashCode => t.hashCode ^ e.hashCode ^ tl.hashCode;
+}
+
+class TrktivityFilter {
+  String exe;
+  String titleSearch;
+  String titleReplace;
+
+  TrktivityFilter({
+    required this.exe,
+    required this.titleSearch,
+    required this.titleReplace,
+  });
+
+  TrktivityFilter copyWith({String? exe, String? titleSearch, String? titleReplace}) {
+    return TrktivityFilter(
+      exe: exe ?? this.exe,
+      titleSearch: titleSearch ?? this.titleSearch,
+      titleReplace: titleReplace ?? this.titleReplace,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'exe': exe,
+      'titleSearch': titleSearch,
+      'titleReplace': titleReplace,
+    };
+  }
+
+  factory TrktivityFilter.fromMap(Map<String, dynamic> map) {
+    return TrktivityFilter(
+      exe: (map['exe'] ?? '') as String,
+      titleSearch: (map['titleSearch'] ?? '') as String,
+      titleReplace: (map['titleReplace'] ?? '') as String,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory TrktivityFilter.fromJson(String source) => TrktivityFilter.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'TrktivityFilter(exe: $exe, titleSearch: $titleSearch, titleReplace: $titleReplace)';
+
+  @override
+  bool operator ==(covariant TrktivityFilter other) {
+    if (identical(this, other)) return true;
+    return other.exe == exe && other.titleSearch == titleSearch && other.titleReplace == titleReplace;
+  }
+
+  @override
+  int get hashCode => exe.hashCode ^ titleSearch.hashCode ^ titleReplace.hashCode;
+}
+
+class Trktivity {
+  List<TrktivityFilter> _filters = <TrktivityFilter>[];
+  List<TrktivitySave> saved = <TrktivitySave>[];
+  String folder = "${WinUtils.getTabameAppDataFolder()}\\trktivity";
+
+  set filters(List<TrktivityFilter> list) => _filters = list;
+
+  List<TrktivityFilter> get filters => _filters.isEmpty
+      ? _filters = Boxes.getSavedMap<TrktivityFilter>(
+          TrktivityFilter.fromJson,
+          "trktivityFilter",
+          def: <TrktivityFilter>[
+            TrktivityFilter(
+              exe: "code",
+              titleSearch: r"([\w\. ]+\w)[\W ]+([\w ]+) [\W ]+Visual",
+              titleReplace: r"$2 - $1",
+            ),
+          ],
+        )
+      : _filters;
+
+  void add(TrktivityType type, String value) {
+    if (!globalSettings.trktivityEnabled) return;
+
+    if (type == TrktivityType.idle) {
+      final String data = TrktivityData(e: "idle.exe", t: "w", tl: "Idle").toJson();
+      saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "w", d: data));
+    } else if (type == TrktivityType.title || type == TrktivityType.window) {
+      final TrkFilterInfo filterInfo = fitlerTitle(int.tryParse(value) ?? 0);
+      String title = "";
+      if (filterInfo.hasFilters) {
+        title = filterInfo.result;
+      } else if (globalSettings.trktivitySaveAllTitles) {
+        title = filterInfo.title;
+      } else if (type == TrktivityType.title) {
+        return;
+      }
+      final String data = TrktivityData(
+        e: filterInfo.exe,
+        t: type == TrktivityType.window ? "w" : "t",
+        tl: title,
+      ).toJson();
+      saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "w", d: data));
+    } else if (type == TrktivityType.keys) {
+      saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "k", d: value));
+    } else if (type == TrktivityType.mouse) {
+      if (saved.length > 2 && saved.last.type == "m") {
+        saved.last.data = ((int.tryParse(saved.last.data) ?? 0) + 1).toString();
+        return;
+      }
+      saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "m", d: "1"));
+    }
+
+    if (saved.length > 10) {
+      WinUtils.getTabameAppDataFolder();
+      final String date = DateFormat("yyyy-MM-dd").format(DateTime.now());
+      String output = "";
+      for (TrktivitySave tr in saved) {
+        output += "${tr.toJson()}\n";
+      }
+      File("$folder\\$date.json").writeAsStringSync(output, mode: FileMode.append);
+      saved.clear();
+    }
+  }
+
+  TrkFilterInfo fitlerTitle(int hWnd) {
+    if (!Win32.isWindowOnDesktop(hWnd) && Win32.getTitle(hWnd).isEmpty) {
+      return TrkFilterInfo(exe: "", hasFilters: false, result: "", title: "");
+    }
+
+    final String title = Win32.getTitle(hWnd);
+    final String exe = Win32.getExe(Win32.getWindowExePath(hWnd));
+    String newtitle = title;
+    bool hasFilters = false;
+
+    for (TrktivityFilter filter in filters) {
+      if (filter.titleReplace.isEmpty || filter.titleSearch.isEmpty) continue;
+      if (!RegExp(filter.exe, caseSensitive: false).hasMatch(exe)) continue;
+      final RegExpMatch? match = RegExp(filter.titleSearch, caseSensitive: false).firstMatch(title);
+      if (match != null) {
+        String newString = filter.titleReplace;
+        for (int i = 1; i < match.groupCount + 1; i++) {
+          newString = newString.replaceAll("\$$i", match[i]!);
+        }
+        newtitle = newString;
+        hasFilters = true;
+        break;
+      }
+    }
+
+    return TrkFilterInfo(exe: exe, title: title, result: newtitle, hasFilters: hasFilters);
+  }
+}

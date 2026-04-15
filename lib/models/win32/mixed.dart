@@ -68,6 +68,9 @@ class Monitor {
   static void fetchMonitor() {
     final Map<int, Square> monitorsData = enumMonitors();
     _monitors = monitorsData.keys.toList();
+    if (Set<int>.from(_monitors) != Set<int>.from(_monitorIds.keys)) {
+      //   if (globalSettings.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
+    }
     monitorSizes = monitorsData;
     for (int i = 0; i < _monitors.length; i++) {
       final Pointer<Uint32> dpiX = calloc<Uint32>();

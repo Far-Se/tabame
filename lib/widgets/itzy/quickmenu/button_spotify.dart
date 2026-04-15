@@ -18,17 +18,41 @@ class SpotifyButton extends StatefulWidget {
 
 final GlobalKey spotifyKey = GlobalKey();
 
-class _SpotifyButtonState extends State<SpotifyButton> {
+class _SpotifyButtonState extends State<SpotifyButton> with QuickMenuTriggers {
   int lastAudioCount = 0;
   @override
   void initState() {
     super.initState();
+    QuickMenuFunctions.addListener(this);
     //timer each 1 second
     Timer.periodic(const Duration(milliseconds: 200), (Timer timer) {
       if (lastAudioCount == Caches.audioMixerExes.length) return;
       lastAudioCount = Caches.audioMixerExes.length;
       if (mounted) setState(() {});
     });
+  }
+
+  @override
+  void dispose() {
+    QuickMenuFunctions.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void onQuickActionExecute(String actionName) {
+    if (actionName == "SpotifyButton") {
+      _handleTap();
+    }
+  }
+
+  Future<void> _handleTap() async {
+    final List<int> spotify = WindowWatcher.getSpotify();
+    if (spotify[0] != 0) {
+      if (IsWindow(spotify[0]) != 0) {
+        SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -59,23 +83,10 @@ class _SpotifyButtonState extends State<SpotifyButton> {
           key: spotifyKey,
           onDoubleTap: () {
             if (Boxes.pref.getString("SpotifyLocation") != null) {
-              WinUtils.open(Boxes.pref.getString("SpotifyLocation") ?? "", userpowerShell: true);
+              WinUtils.open(Boxes.pref.getString("SpotifyLocation") ?? "");
             }
           },
-          onTap: () async {
-            final List<int> spotify = WindowWatcher.getSpotify();
-            //bool pressed = false;
-            if (spotify[0] != 0) {
-              if (IsWindow(spotify[0]) != 0) {
-                SendMessage(spotify[0], AppCommand.appCommand, 0, AppCommand.mediaPlayPause);
-                // pressed = true;
-              }
-            }
-            if (mounted) setState(() {});
-            // if (!pressed && Boxes.pref.getString("SpotifyLocation") != null) {
-            //   WinUtils.open(Boxes.pref.getString("SpotifyLocation") ?? "", userpowerShell: true);
-            // }
-          },
+          onTap: _handleTap,
           child: Tooltip(
             message: "Spotify",
             child: SizedBox(

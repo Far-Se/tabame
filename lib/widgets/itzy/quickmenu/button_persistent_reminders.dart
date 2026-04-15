@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
+import '../../../models/win32/win32.dart';
 
 class PersistentRemindersWidget extends StatefulWidget {
   const PersistentRemindersWidget({super.key});
@@ -161,6 +162,9 @@ class TimersWidgetState extends State<TimersWidget> {
                             globalSettings.persistentReminders.length,
                             (int index) => ListTile(
                                   onTap: () {
+                                    if (globalSettings.persistentReminders.elementAt(index).contains("Workout")) {
+                                      WinUtils.open("E:\\Resources\\workout\\index.html");
+                                    }
                                     globalSettings.persistentReminders.removeAt(index);
                                     Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
                                     for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {

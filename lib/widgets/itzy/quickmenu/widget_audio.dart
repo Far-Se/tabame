@@ -8,6 +8,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/panel_header.dart';
 
 class AudioBox extends StatefulWidget {
   const AudioBox({super.key});
@@ -40,9 +41,9 @@ class AudioBoxState extends State<AudioBox> {
   }
 
   void init() {
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (timerMixer != null) timerMixer?.cancel();
-    if (timerData != null) timerMixer?.cancel();
+    if (timerData != null) timerData?.cancel();
 
     fetchData();
     fetchAudioMixerData();
@@ -123,366 +124,530 @@ class AudioBoxState extends State<AudioBox> {
 
   @override
   Widget build(BuildContext context) {
-    if (audioInfo.devices.isEmpty) {
-      return Container();
+    if (audioInfo.devices.isEmpty && micInfo.devices.isEmpty) {
+      return const SizedBox.shrink();
     }
-    Map<int, Widget> output = <int, Widget>{};
 
-    for (AudioDeviceType device in AudioDeviceType.values) {
-      AudioInfo deviceVar = audioInfo;
-      if (device == AudioDeviceType.input) {
-        deviceVar = micInfo;
-      }
-      output[device.index] = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(device.name.toUpperCase(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400)),
-          Flexible(
-            fit: FlexFit.loose,
-            //2 Mute Button and Slider
-            child: Row(
-              children: <Widget>[
-                InkWell(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    child: Icon(
-                      deviceVar.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                      size: 14,
-                    ),
-                  ),
-                  onTap: () {
-                    Audio.setMuteAudioDevice(!deviceVar.isMuted, device);
-                    deviceVar.isMuted = !deviceVar.isMuted;
-                    fetchData();
-                  },
-                ),
-                //3 Slider
-                Container(
-                  width: 100,
-                  child: Slider(
-                    value: deviceVar.volume,
-                    min: 0,
-                    max: 1,
-                    divisions: 25,
-                    onChanged: (double e) async {
-                      Audio.setVolume(e.toDouble(), device);
-                      deviceVar.volume = e;
-                      setState(() {});
-                    },
-                  ),
-                ),
-                //#e
-              ],
-            ),
-          ),
-          //2 Devices
-          Flexible(
-            fit: FlexFit.loose,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox(
-                  height: 10,
-                ),
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: InkWell(
-                    onTap: () {
-                      WinUtils.runPowerShell(<String>["mmsys.cpl"]);
-                      Navigator.pop(context);
-                    },
-                    child: Wrap(
-                      verticalDirection: VerticalDirection.up,
-                      children: <Widget>[
-                        const Icon(Icons.tune, size: 14),
-                        Text("Devices:", style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary)),
-                      ],
-                    ),
-                  ),
-                ),
-                const Divider(
-                  thickness: 1,
-                  height: 5,
-                ),
-                //#h red
-                //3 Devices List
-                Container(
-                  constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: <Widget>[
-                        for (final AudioDevice device in deviceVar.devices)
-                          Material(
-                            type: MaterialType.transparency,
-                            child: InkWell(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                  vertical: 2,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: <Widget>[
-                                    Flexible(
-                                      fit: FlexFit.loose,
-                                      child: deviceVar.icons.containsKey(device.id)
-                                          ? Image.memory(deviceVar.icons[device.id]!,
-                                              width: 18,
-                                              gaplessPlayback: true,
-                                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                                    Icons.check_box_outline_blank,
-                                                    size: 16,
-                                                  ))
-                                          : const Icon(Icons.audiotrack, size: 18),
-                                    ),
-                                    Expanded(
-                                      flex: 4,
-                                      child: Text(
-                                        device.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12, fontWeight: device.id == deviceVar.defaultDevice.id ? FontWeight.w500 : FontWeight.normal),
-                                      ),
-                                    ),
-                                    if (device.id == deviceVar.defaultDevice.id)
-                                      const Flexible(
-                                        fit: FlexFit.loose,
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 4.0),
-                                          child: Icon(Icons.check, size: 18),
-                                        ),
-                                      )
-                                  ],
-                                ),
-                              ),
-                              onTap: () {
-                                Audio.setDefaultDevice(
-                                  device.id,
-                                  console: globalSettings.audioConsole,
-                                  multimedia: globalSettings.audioMultimedia,
-                                  communications: globalSettings.audioCommunications,
-                                );
-                                fetchData();
-                              },
-                            ),
-                          ),
-                        const SizedBox(
-                          height: 5,
-                        )
-                      ],
-                    ),
-                  ),
-                )
-                //#e
-              ],
-            ),
-          ),
-        ],
-      );
-    }
+    final ThemeData theme = Theme.of(context);
+    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color onSurface = theme.colorScheme.onSurface;
+    final bool boldFont = globalSettings.theme.quickMenuBoldFont;
+    final List<Widget> audioCards = <Widget>[
+      if (audioInfo.devices.isNotEmpty)
+        _buildDeviceCard(
+          context: context,
+          type: AudioDeviceType.output,
+          info: audioInfo,
+          accent: accent,
+          onSurface: onSurface,
+        ),
+      if (audioInfo.devices.isNotEmpty && micInfo.devices.isNotEmpty) const SizedBox(height: 8),
+      if (micInfo.devices.isNotEmpty)
+        _buildDeviceCard(
+          context: context,
+          type: AudioDeviceType.input,
+          info: micInfo,
+          accent: accent,
+          onSurface: onSurface,
+        ),
+    ];
 
     return Material(
       type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Container(
-          height: double.infinity,
-          width: 280,
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
-            gradient: LinearGradient(
-              colors: <Color>[
-                Theme.of(context).colorScheme.surface,
-                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).colorScheme.surface,
-              ],
-              stops: <double>[0, 0.4, 1],
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: <BoxShadow>[
-              const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-            ],
-            color: Theme.of(context).colorScheme.surface,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PanelHeader(
+            title: "Audio",
+            accent: accent,
+            boldFont: boldFont,
+            icon: Icons.volume_up_rounded,
+            buttonPressed: () {
+              WinUtils.runPowerShell(<String>["mmsys.cpl"]);
+              Navigator.pop(context);
+            },
+            buttonIcon: Icons.tune_rounded,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
+          Flexible(
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.0),
+                trackShape: CustomTrackShape(),
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 5,
+                  elevation: 0,
+                  pressedElevation: 0,
+                ),
                 overlayShape: SliderComponentShape.noOverlay,
               ),
               child: SingleChildScrollView(
+                controller: ScrollController(),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Flexible(
-                      fit: FlexFit.loose,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          //1 Ouput
-                          (audioInfo.devices.isEmpty)
-                              ? const SizedBox()
-                              : Flexible(
-                                  fit: FlexFit.loose,
-                                  child: output[AudioDeviceType.output.index]!,
-                                ),
-                          //1 Input
-                          (micInfo.devices.isEmpty)
-                              ? const SizedBox()
-                              : Flexible(
-                                  fit: FlexFit.loose,
-                                  child: output[AudioDeviceType.input.index]!,
-                                ),
-                        ],
+                    ...audioCards,
+                    if (audioMixer.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 8),
+                      _buildSectionLabel(
+                        label: "Mixer",
+                        accent: accent,
+                        onSurface: onSurface,
+                        count: audioMixer.length,
+                        icon: Icons.equalizer_rounded,
                       ),
-                    ),
-                    const Divider(
-                      thickness: 1,
-                      height: 5,
-                    ),
-                    //1 Mixer
-                    (audioMixer.isEmpty)
-                        ? const SizedBox()
-                        : Flexible(
-                            fit: FlexFit.loose,
-                            child: Container(
-                              child: Wrap(
-                                children: <Widget>[
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(2),
-                                      child: Text(
-                                        "Mixer:",
-                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-                                      ),
-                                    ),
+                      const SizedBox(height: 6),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 118),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: onSurface.withAlpha(8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: onSurface.withAlpha(16)),
+                        ),
+                        child: ScrollbarTheme(
+                          data: theme.scrollbarTheme.copyWith(
+                            thumbVisibility: WidgetStateProperty.all<bool>(true),
+                            trackVisibility: WidgetStateProperty.all<bool>(false),
+                          ),
+                          child: SingleChildScrollView(
+                            controller: ScrollController(),
+                            child: Column(
+                              children: <Widget>[
+                                for (int i = 0; i < audioMixer.length; i++) ...<Widget>[
+                                  _buildMixerRow(
+                                    context: context,
+                                    mix: audioMixer[i],
+                                    accent: accent,
+                                    onSurface: onSurface,
                                   ),
-                                  Container(
-                                    constraints: const BoxConstraints(minWidth: 280, maxHeight: 80),
-                                    child: ScrollbarTheme(
-                                      data: Theme.of(context).scrollbarTheme.copyWith(
-                                            thumbVisibility: WidgetStateProperty.all<bool>(true),
-                                            trackVisibility: WidgetStateProperty.all<bool>(true),
-                                          ),
-                                      child: SingleChildScrollView(
-                                        controller: ScrollController(),
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(right: 20),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              //#h white
-                                              for (ProcessVolume mix in audioMixer)
-                                                Flexible(
-                                                  fit: FlexFit.loose,
-                                                  child: Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                                    mainAxisAlignment: MainAxisAlignment.start,
-                                                    children: <Widget>[
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(5),
-                                                        child: Tooltip(
-                                                          message: audioMixerNames[mix.processId] ?? "",
-                                                          child: audioMixerIcons.containsKey(mix.processId)
-                                                              ? Image.memory(
-                                                                  audioMixerIcons[mix.processId]!,
-                                                                  width: 18,
-                                                                  gaplessPlayback: true,
-                                                                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                                                    Icons.check_box_outline_blank,
-                                                                    size: 16,
-                                                                  ),
-                                                                )
-                                                              : const Icon(Icons.audiotrack, size: 18),
-                                                        ),
-                                                      ),
-                                                      Flexible(
-                                                        fit: FlexFit.loose,
-                                                        child: Stack(
-                                                          children: <Widget>[
-                                                            Container(
-                                                              height: 20,
-                                                              child: SliderTheme(
-                                                                data: SliderTheme.of(context).copyWith(
-                                                                    thumbShape: const RoundSliderThumbShape(
-                                                                      enabledThumbRadius: 4.0,
-                                                                      elevation: 0,
-                                                                    ),
-                                                                    overlayShape: SliderComponentShape.noOverlay),
-                                                                child: Slider(
-                                                                  value: mix.maxVolume,
-                                                                  min: 0,
-                                                                  max: 1,
-                                                                  divisions: 25,
-                                                                  onChanged: (double e) {
-                                                                    Audio.setAudioMixerVolume(mix.processId, e);
-                                                                    mix.maxVolume = e;
-                                                                    setState(() {});
-                                                                  },
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Positioned(
-                                                              top: 6,
-                                                              child: SliderTheme(
-                                                                data: SliderTheme.of(context).copyWith(
-                                                                    // activeTrackColor: Colors.white,
-                                                                    thumbShape: const RoundSliderThumbShape(
-                                                                      enabledThumbRadius: 4.0,
-                                                                      elevation: 0,
-                                                                    ),
-                                                                    overlayShape: SliderComponentShape.noOverlay),
-                                                                child: IgnorePointer(
-                                                                  child: Slider(
-                                                                    value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
-                                                                    min: 0,
-                                                                    max: 1,
-
-                                                                    // divisions: 25,
-                                                                    activeColor: Colors.blue.shade800,
-                                                                    inactiveColor: Colors.transparent,
-                                                                    thumbColor: Colors.transparent,
-                                                                    onChanged: (double e) {
-                                                                      Audio.setAudioMixerVolume(mix.processId, e);
-                                                                      mix.maxVolume = e;
-                                                                      setState(() {});
-                                                                    },
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      //#e
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
+                                  if (i < audioMixer.length - 1) const SizedBox(height: 4),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel({
+    required String label,
+    required Color accent,
+    required Color onSurface,
+    required int count,
+    required IconData icon,
+  }) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 14, color: accent),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.45,
+            color: onSurface,
+          ),
         ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(28),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            "$count",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: accent.withAlpha(200),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: onSurface.withAlpha(18),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeviceCard({
+    required BuildContext context,
+    required AudioDeviceType type,
+    required AudioInfo info,
+    required Color accent,
+    required Color onSurface,
+  }) {
+    final bool isInput = type == AudioDeviceType.input;
+    final IconData typeIcon = isInput ? Icons.mic_rounded : Icons.speaker_rounded;
+    final String volumeLabel = "${(info.volume * 100).round()}%";
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(typeIcon, size: 14, color: accent),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      type.name.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.55,
+                        color: accent.withAlpha(220),
+                      ),
+                    ),
+                    Text(
+                      info.defaultDevice.name.isEmpty ? "No device selected" : info.defaultDevice.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: onSurface.withAlpha(160),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                volumeLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface.withAlpha(190),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    Audio.setMuteAudioDevice(!info.isMuted, type);
+                    info.isMuted = !info.isMuted;
+                    fetchData();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: info.isMuted ? Colors.red.withAlpha(22) : accent.withAlpha(14),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      info.isMuted ? Icons.volume_off_rounded : (isInput ? Icons.mic_rounded : Icons.volume_up_rounded),
+                      size: 14,
+                      color: info.isMuted ? Colors.redAccent : accent,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 20,
+            child: Slider(
+              value: info.volume.clamp(0, 1),
+              min: 0,
+              max: 1,
+              divisions: 25,
+              onChanged: (double e) {
+                Audio.setVolume(e, type);
+                info.volume = e;
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          _buildSectionLabel(
+            label: "Devices",
+            accent: accent,
+            onSurface: onSurface,
+            count: info.devices.length,
+            icon: Icons.headphones_rounded,
+          ),
+          const SizedBox(height: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 96),
+            child: SingleChildScrollView(
+              controller: ScrollController(),
+              child: Column(
+                children: <Widget>[
+                  for (int i = 0; i < info.devices.length; i++) ...<Widget>[
+                    _buildDeviceRow(
+                      device: info.devices[i],
+                      info: info,
+                      accent: accent,
+                      onSurface: onSurface,
+                    ),
+                    if (i < info.devices.length - 1) const SizedBox(height: 4),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceRow({
+    required AudioDevice device,
+    required AudioInfo info,
+    required Color accent,
+    required Color onSurface,
+  }) {
+    final bool isSelected = device.id == info.defaultDevice.id;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: () {
+          Audio.setDefaultDevice(
+            device.id,
+            console: globalSettings.audioConsole,
+            multimedia: globalSettings.audioMultimedia,
+            communications: globalSettings.audioCommunications,
+          );
+          fetchData();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? accent.withAlpha(18) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: isSelected ? accent.withAlpha(70) : onSurface.withAlpha(12),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: 18,
+                child: info.icons.containsKey(device.id)
+                    ? Image.memory(
+                        info.icons[device.id]!,
+                        width: 18,
+                        gaplessPlayback: true,
+                        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
+                          Icons.audiotrack_rounded,
+                          size: 15,
+                          color: onSurface.withAlpha(150),
+                        ),
+                      )
+                    : Icon(
+                        Icons.audiotrack_rounded,
+                        size: 15,
+                        color: onSurface.withAlpha(150),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  device.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: onSurface,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 140),
+                opacity: isSelected ? 1 : 0,
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 15,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMixerRow({
+    required BuildContext context,
+    required ProcessVolume mix,
+    required Color accent,
+    required Color onSurface,
+  }) {
+    final String name =
+        audioMixerNames[mix.processId] ?? Win32.extractFileNameFromPath(mix.processPath).toUpperCaseFirst();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: <Widget>[
+          Tooltip(
+            message: name,
+            child: SizedBox(
+              width: 18,
+              child: audioMixerIcons.containsKey(mix.processId)
+                  ? Image.memory(
+                      audioMixerIcons[mix.processId]!,
+                      width: 18,
+                      gaplessPlayback: true,
+                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
+                        Icons.audiotrack_rounded,
+                        size: 15,
+                        color: onSurface.withAlpha(150),
+                      ),
+                    )
+                  : Icon(
+                      Icons.audiotrack_rounded,
+                      size: 15,
+                      color: onSurface.withAlpha(150),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "${(mix.maxVolume * 100).round()}%",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface.withAlpha(170),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                SizedBox(
+                  height: 20,
+                  child: Stack(
+                    children: <Widget>[
+                      Container(
+                        height: 20,
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 4.0,
+                                elevation: 0,
+                              ),
+                              overlayShape: SliderComponentShape.noOverlay),
+                          child: Slider(
+                            value: mix.maxVolume,
+                            min: 0,
+                            max: 1,
+                            divisions: 25,
+                            onChanged: (double e) {
+                              if (e == 0.0) e = 0.001;
+                              Audio.setAudioMixerVolume(mix.processId, e);
+                              mix.maxVolume = e;
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                              // activeTrackColor: Colors.white,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 4.0,
+                                elevation: 0,
+                              ),
+                              overlayShape: SliderComponentShape.noOverlay),
+                          child: IgnorePointer(
+                            child: Slider(
+                              value: (mix.peakVolume * mix.maxVolume).clamp(0, 0.9),
+                              min: 0,
+                              max: 1,
+
+                              // divisions: 25,
+                              activeColor: Colors.blue.shade800,
+                              inactiveColor: Colors.transparent,
+                              thumbColor: Colors.transparent,
+                              onChanged: (double e) {
+                                Audio.setAudioMixerVolume(mix.processId, e);
+                                mix.maxVolume = e;
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

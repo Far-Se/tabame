@@ -150,9 +150,10 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
             }
             appendDebugFile(debFile, "EnumAudioDevices GetDefaultAudioEndpoint");
 
-            LPWSTR activeID;
+            LPWSTR activeID = nullptr;
             pActive->GetId(&activeID);
             wstring activeDevID(activeID);
+            CoTaskMemFree(activeID);
 
             pActive->Release();
 
@@ -184,15 +185,13 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
                             DeviceProps device;
                             getDeviceProperty(pDevice, &device);
 
-                            LPWSTR id;
+                            LPWSTR id = nullptr;
                             pDevice->GetId(&id);
                             wstring currentID(id);
+                            CoTaskMemFree(id);
                             device.id = currentID;
 
-                            if (currentID.compare(activeDevID) == 0)
-                                device.isActive = true;
-                            else
-                                device.isActive = false;
+                            device.isActive = (currentID.compare(activeDevID) == 0);
                             output.push_back(device);
                             pDevice->Release();
                         }
@@ -209,8 +208,6 @@ std::vector<DeviceProps> EnumAudioDevices(EDataFlow deviceType = eRender)
 
 DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
 {
-    std::vector<DeviceProps> output;
-
     HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
     if (SUCCEEDED(hr))
     {
@@ -219,9 +216,8 @@ DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
         if (SUCCEEDED(hr))
         {
             IMMDevice *pActive = NULL;
-
-            pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            if (FAILED(hr) || pActive == NULL)
+            HRESULT epHr = pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
+            if (FAILED(epHr) || pActive == NULL)
             {
                 pEnumerator->Release();
                 CoUninitialize();
@@ -229,9 +225,11 @@ DeviceProps getDefaultDevice(EDataFlow deviceType = eRender)
             }
             DeviceProps activeDevice;
             getDeviceProperty(pActive, &activeDevice);
-            LPWSTR aid;
+            LPWSTR aid = nullptr;
             pActive->GetId(&aid);
             activeDevice.id = aid;
+            CoTaskMemFree(aid);
+            pActive->Release();
             pEnumerator->Release();
             CoUninitialize();
 
@@ -296,28 +294,9 @@ float getVolume(EDataFlow deviceType = eRender)
     return 0.0;
 }
 
-bool registerNotificationCallback(EDataFlow deviceType = eRender)
-{
-    std::vector<DeviceProps> output;
-
-    HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
-    if (SUCCEEDED(hr))
-    {
-        IMMDeviceEnumerator *pEnumerator = NULL;
-        hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, reinterpret_cast<void **>(&pEnumerator));
-        if (SUCCEEDED(hr))
-        {
-            IMMDevice *pActive = NULL;
-
-            pEnumerator->GetDefaultAudioEndpoint(deviceType, eMultimedia, &pActive);
-            IMMNotificationClient *pNotify = NULL;
-            pEnumerator->RegisterEndpointNotificationCallback(pNotify);
-            pEnumerator->Release();
-        }
-    }
-    CoUninitialize();
-    return 0.0;
-}
+// registerNotificationCallback was removed — it registered a null callback
+// and returned 0.0 for a bool. Notification callbacks should be implemented
+// properly if needed in the future.
 
 bool setMuteAudioDevice(bool muteState, EDataFlow deviceType = eRender)
 {
@@ -572,72 +551,139 @@ float GetPeakVolumeFromAudioSessionControl(IAudioSessionControl *session)
     return peakVolume;
 }
 
-std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0)
+std::vector<ProcessVolume> GetProcessVolumes(int pID = 0, float volume = 0.0f)
 {
     std::vector<ProcessVolume> volumes;
 
-    HRESULT hr = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
-    if (hr)
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
     {
-        IAudioSessionEnumerator *enumerator = GetAudioSessionEnumerator();
-        int sessionCount;
-        enumerator->GetCount(&sessionCount);
-        for (int index = 0; index < sessionCount; index++)
-        {
-            IAudioSessionControl *session = nullptr;
-            IAudioSessionControl2 *session2 = nullptr;
-            enumerator->GetSession(index, &session);
-            session->QueryInterface(__uuidof(IAudioSessionControl2), (void **)&session2);
+        // COM not available on this thread
+        return volumes;
+    }
 
-            DWORD id = 0;
-            session2->GetProcessId(&id);
-            std::string processPath = "";
-            if ((int)id != 0)
-                processPath = GetProcessNameFromPid(id);
-            else
+    IAudioSessionEnumerator *enumerator = GetAudioSessionEnumerator();
+    if (!enumerator)
+    {
+        if (SUCCEEDED(hr))
+            CoUninitialize();
+        return volumes;
+    }
+
+    int sessionCount = 0;
+    hr = enumerator->GetCount(&sessionCount);
+    if (FAILED(hr))
+    {
+        enumerator->Release();
+        if (SUCCEEDED(hr))
+            CoUninitialize();
+        return volumes;
+    }
+
+    for (int index = 0; index < sessionCount; ++index)
+    {
+        IAudioSessionControl *session = nullptr;
+        hr = enumerator->GetSession(index, &session);
+        if (FAILED(hr) || !session)
+            continue;
+
+        // Skip inactive/expired sessions
+        AudioSessionState state = AudioSessionStateInactive;
+        if (SUCCEEDED(session->GetState(&state)))
+        {
+            if (state != AudioSessionStateActive)
             {
-                session2->Release();
                 session->Release();
                 continue;
             }
-            if (pID == (int)id && volume != 0.00)
-            {
-                // getSetProcessMasterVolume(session, volume);
-                std::vector<ProcessVolume> volumes2;
-                ProcessVolume data;
-                data.processPath = processPath;
-                data.processId = (int)id;
-                data.maxVolume = getSetProcessMasterVolume(session, volume);
-                data.peakVolume = 0;
-                session2->Release();
-                session->Release();
-                volumes2.push_back(data);
-                CoUninitialize();
-                return volumes2;
-                break;
-            }
-            float maxVolume = getSetProcessMasterVolume(session);
-            float peakVolume = GetPeakVolumeFromAudioSessionControl(session);
+        }
 
-            ProcessVolume data;
-            data.processPath = processPath;
-            data.processId = (int)id;
-            data.maxVolume = maxVolume;
-            data.peakVolume = peakVolume;
+        IAudioSessionControl2 *session2 = nullptr;
+        hr = session->QueryInterface(__uuidof(IAudioSessionControl2), (void **)&session2);
+        if (FAILED(hr) || !session2)
+        {
+            session->Release();
+            continue;
+        }
 
-            volumes.push_back(data);
+        // Skip system sounds session if you only want app audio
+        hr = session2->IsSystemSoundsSession(); // S_OK = system sounds, S_FALSE = not
+        if (hr == S_OK)
+        {
             session2->Release();
             session->Release();
+            continue;
         }
-        enumerator->Release();
-        if (volume != 0.00)
+
+        DWORD id = 0;
+        hr = session2->GetProcessId(&id);
+        if (FAILED(hr) || id == 0)
         {
-            return std::vector<ProcessVolume>{};
+            session2->Release();
+            session->Release();
+            continue;
         }
-        CoUninitialize();
-        return volumes;
+
+        std::string processPath = GetProcessNameFromPid(id);
+
+        // Get peak value for this session
+        float peakVolume = 0.0f;
+        IAudioMeterInformation *meter = nullptr;
+        hr = session->QueryInterface(__uuidof(IAudioMeterInformation), (void **)&meter);
+        if (SUCCEEDED(hr) && meter)
+        {
+            float peak = 0.0f;
+            if (SUCCEEDED(meter->GetPeakValue(&peak)))
+            {
+                // Peak is in [0.0, 1.0] representing the last device period.[web:6][web:31]
+                peakVolume = peak;
+            }
+            meter->Release();
+        }
+
+        if (pID == static_cast<int>(id) && volume != 0.0f)
+        {
+            ProcessVolume data;
+            data.processPath = processPath;
+            data.processId = static_cast<int>(id);
+            data.maxVolume = getSetProcessMasterVolume(session, volume);
+            data.peakVolume = peakVolume;
+
+            session2->Release();
+            session->Release();
+            enumerator->Release();
+
+            if (SUCCEEDED(hr))
+                CoUninitialize();
+            return std::vector<ProcessVolume>{data};
+        }
+
+        float maxVolume = getSetProcessMasterVolume(session);
+
+        ProcessVolume data;
+        data.processPath = processPath;
+        data.processId = static_cast<int>(id);
+        data.maxVolume = maxVolume;
+        data.peakVolume = peakVolume;
+
+        volumes.push_back(data);
+
+        session2->Release();
+        session->Release();
     }
-    CoUninitialize();
-    return std::vector<ProcessVolume>{};
+
+    enumerator->Release();
+    if (volume != 0.0f)
+    {
+        // caller asked to modify a specific PID but it was not found
+        if (SUCCEEDED(hr))
+            CoUninitialize();
+        return std::vector<ProcessVolume>{};
+    }
+
+    if (SUCCEEDED(hr))
+        CoUninitialize();
+    return volumes;
 }
+
 #endif

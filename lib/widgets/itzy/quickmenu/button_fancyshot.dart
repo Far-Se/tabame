@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../main.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
@@ -27,7 +26,7 @@ class FancyShotButton extends StatelessWidget {
         Globals.changingPages = true;
         //ignore: invalid_use_of_protected_member
         x?.setState(() {});
-        mainPageViewController.jumpToPage(Pages.interface.index);
+        Globals.mainPageViewController.jumpToPage(Pages.interface.index);
         Globals.changingPages = true;
         PaintingBinding.instance.imageCache.clear();
         PaintingBinding.instance.imageCache.clearLiveImages();

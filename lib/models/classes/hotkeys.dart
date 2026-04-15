@@ -11,14 +11,18 @@ import 'package:win32/win32.dart';
 
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../globals.dart';
 import '../win32/keys.dart';
 import '../settings.dart';
+import '../util/color_picker_controller.dart';
 import '../win32/mixed.dart';
 import '../win32/win32.dart';
 import '../window_watcher.dart';
 import 'boxes.dart';
 
 class Hotkeys {
+  static const List<String> modifierOrder = <String>["CTRL", "ALT", "SHIFT", "WIN"];
+
   String key;
   List<String> modifiers;
   List<KeyMap> keymaps;
@@ -33,23 +37,52 @@ class Hotkeys {
     required this.noopScreenBusy,
   });
 
-  String get hotkey {
-    if (modifiers.isNotEmpty) return '${modifiers.join('+')}+$key'.toUpperCase();
-    if (key.isNotEmpty) return key.toUpperCase();
+  static List<String> normalizeModifiers(Iterable<String> modifiers) {
+    final Set<String> normalized = modifiers.map((String modifier) => modifier.toUpperCase()).toSet();
+    final List<String> ordered = <String>[];
+
+    for (final String modifier in modifierOrder) {
+      if (normalized.remove(modifier)) ordered.add(modifier);
+    }
+
+    if (normalized.isNotEmpty) {
+      final List<String> extras = normalized.toList()..sort();
+      ordered.addAll(extras);
+    }
+
+    return ordered;
+  }
+
+  static String formatHotkey({required String key, Iterable<String> modifiers = const <String>[]}) {
+    final List<String> normalizedModifiers = normalizeModifiers(modifiers);
+    final String normalizedKey = key.toUpperCase();
+
+    if (normalizedModifiers.isNotEmpty) return '${normalizedModifiers.join('+')}+$normalizedKey';
+    if (normalizedKey.isNotEmpty) return normalizedKey;
     return "NoKey";
+  }
+
+  String get hotkey {
+    return formatHotkey(key: key, modifiers: modifiers);
   }
 
   bool get hasDuration => keymaps.any((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled);
   bool get hasDoublePress => keymaps.any((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled);
   bool get hasMouseMovement => keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.enabled);
-  bool get hasMouseMovementTriggers => keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled);
+  bool get hasMouseMovementTriggers =>
+      keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled);
 
   List<KeyMap> get getPress => keymaps.where((KeyMap km) => km.triggerType == TriggerType.press && km.enabled).toList();
-  List<KeyMap> get getDurationKeys => keymaps.where((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled).toList();
-  List<KeyMap> get getDoublePress => keymaps.where((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled).toList();
-  List<KeyMap> get getHotkeysWithMovement => keymaps.where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] != -1 && km.enabled).toList();
-  List<KeyMap> get getHotkeysWithMovementTriggers =>
-      keymaps.where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled).toList();
+  List<KeyMap> get getDurationKeys =>
+      keymaps.where((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled).toList();
+  List<KeyMap> get getDoublePress =>
+      keymaps.where((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled).toList();
+  List<KeyMap> get getHotkeysWithMovement => keymaps
+      .where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] != -1 && km.enabled)
+      .toList();
+  List<KeyMap> get getHotkeysWithMovementTriggers => keymaps
+      .where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled)
+      .toList();
 
   Hotkeys copyWith({
     String? key,
@@ -60,7 +93,7 @@ class Hotkeys {
   }) {
     return Hotkeys(
       key: key ?? this.key,
-      modifiers: modifiers ?? this.modifiers,
+      modifiers: normalizeModifiers(modifiers ?? this.modifiers),
       keymaps: keymaps ?? this.keymaps,
       prohibited: prohibited ?? this.prohibited,
       noopScreenBusy: noopScreenBusy ?? this.noopScreenBusy,
@@ -70,7 +103,7 @@ class Hotkeys {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'key': key,
-      'modifiers': modifiers,
+      'modifiers': normalizeModifiers(modifiers),
       'keymaps': keymaps.map((KeyMap x) => x.toMap()).toList(),
       'prohibited': prohibited,
       'noopScreenBusy': noopScreenBusy,
@@ -80,7 +113,7 @@ class Hotkeys {
   factory Hotkeys.fromMap(Map<String, dynamic> map) {
     return Hotkeys(
       key: (map['key'] ?? '') as String,
-      modifiers: List<String>.from(map['modifiers'] ?? const <String>[]),
+      modifiers: normalizeModifiers(List<String>.from(map['modifiers'] ?? const <String>[])),
       keymaps: List<KeyMap>.from(
         (map['keymaps'] as List<dynamic>).map<KeyMap>(
           (dynamic x) => KeyMap.fromMap(x as Map<String, dynamic>),
@@ -290,10 +323,10 @@ class KeyMap with TabameListener {
         SetCursorPos(x, y);
         Future<void>.delayed(const Duration(milliseconds: 500), () {
           final Pointer<INPUT> input = calloc<INPUT>();
-          input.ref.type = INPUT_TYPE.INPUT_MOUSE;
+          input.ref.type = INPUT_MOUSE;
           // input.ref.mi.dx = x;
           // input.ref.mi.dy = y;
-          input.ref.mi.dwFlags = (MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN | MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP);
+          input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
           input.ref.mi.mouseData = 0;
           input.ref.mi.dwExtraInfo = NULL;
           input.ref.mi.time = 0;
@@ -437,10 +470,24 @@ class HotKeyInfo {
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
     "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
-    "ToggleQuickMenu": () => QuickMenuFunctions.toggleQuickMenu(),
+    "ToggleQuickMenu": () {
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        final Offset position = Win32.getPosition();
+        if (position.dx < -99) return QuickMenuFunctions.toggleQuickMenu(visible: true);
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        if (GetForegroundWindow() == Win32.hWnd) WindowWatcher.focusFirstWindow();
+        return () => <dynamic, dynamic>{};
+      }
+      return QuickMenuFunctions.toggleQuickMenu();
+    },
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
-    "ToggleQuickRun": () => QuickMenuFunctions.toggleQuickMenu(type: 1, center: true),
-    "ToggleQuickActions": () => QuickMenuFunctions.toggleQuickMenu(type: 3),
+    "ToggleQuickActions": () => QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.quickActions),
+    "OpenColorPicker": () async {
+      await ColorPickerController.instance.startPicking();
+      // await QuickMenuFunctions.toggleQuickMenu(visible: true);
+      // await Future<void>.delayed(const Duration(milliseconds: 260));
+      // QuickMenuFunctions.triggerQuickAction(ColorPickerController.quickActionName);
+    },
     "ShowStartMenu": () {
       int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (tray != 0) {
@@ -475,17 +522,33 @@ class HotKeyInfo {
     //   await WinUtils.screenCapture();
     //   FancyShot().quickCapture();
     // },
-    "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: 2, visible: true),
+    "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.audioBox, visible: true),
     "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output,
-        console: globalSettings.audioConsole, multimedia: globalSettings.audioMultimedia, communications: globalSettings.audioCommunications),
+        console: globalSettings.audioConsole,
+        multimedia: globalSettings.audioMultimedia,
+        communications: globalSettings.audioCommunications),
     "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input,
-        console: globalSettings.audioConsole, multimedia: globalSettings.audioMultimedia, communications: globalSettings.audioCommunications),
-    "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input).then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
+        console: globalSettings.audioConsole,
+        multimedia: globalSettings.audioMultimedia,
+        communications: globalSettings.audioCommunications),
+    "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input)
+        .then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
     "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
     "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
+    "ToggleWallpaper": () async {
+      final DesktopBackgroundType state = WinUtils.getDesktopBackgroundType();
+
+      if (state == DesktopBackgroundType.wallpaper) {
+        await toggleMonitorWallpaper(false);
+        // await setWallpaperColor(0x00000000);
+        return;
+      }
+
+      await toggleMonitorWallpaper(true);
+    },
   };
 
   static List<String> tabameFunctions = tabameFunctionsMap.keys.toList();
@@ -759,7 +822,12 @@ class Region {
   bool operator ==(covariant Region other) {
     if (identical(this, other)) return true;
 
-    return other.x1 == x1 && other.y1 == y1 && other.x2 == x2 && other.y2 == y2 && other.asPercentage == asPercentage && other.anchorType == anchorType;
+    return other.x1 == x1 &&
+        other.y1 == y1 &&
+        other.x2 == x2 &&
+        other.y2 == y2 &&
+        other.asPercentage == asPercentage &&
+        other.anchorType == anchorType;
   }
 
   @override

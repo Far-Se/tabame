@@ -89,11 +89,8 @@ const String markdownHomeRight = '''
   You can save folders, files, commands and links to your bookmarks and access them from QuickRun. This comes in handy when you want to open an older project or specific file but don't know the path.
 
 ---
-### **![tasks]() Tasks**
-
-This is a utility that allows you to create tasks such as reminders and Page Watchers.
+### **![tasks]() Reminders**
 
 - Reminders can be one per day or repeating between a specified interval. You can set days when it's enabled and type of notification, either voice notification or toast notification.
-- With Page Watchers you can watch if a whole web page changes or only a specific text. It's good when you make a forum post on some random site, if a blog has new posts or other uses you might find.
 
 ''';

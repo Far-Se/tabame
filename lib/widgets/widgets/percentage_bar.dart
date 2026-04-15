@@ -25,7 +25,7 @@ class PercentageBar extends StatelessWidget {
             height: 10,
             child: Stack(
               children: <Widget>[
-                Container(width: barWidth, height: 30, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.2)),
+                Container(width: barWidth, height: 30, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.2)),
                 Positioned(top: 0, left: 0, child: Container(width: bar, height: 30, color: Theme.of(context).colorScheme.primary)),
               ],
             )),

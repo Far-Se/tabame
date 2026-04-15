@@ -60,9 +60,13 @@ class _TimeWidgetState extends State<TimeWidget> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   Text((snapshot.data as Map<String, String>)["time"] as String,
-                      style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
                   Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                      style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))
                 ],
               ),
             ),
@@ -87,11 +91,17 @@ class _TimeWidgetState extends State<TimeWidget> {
                       Flexible(
                           fit: FlexFit.tight,
                           child: Text((snapshot.data as Map<String, String>)["time"] as String,
-                              style: TextStyle(fontSize: 14, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight:
+                                      globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
                       Flexible(
                           fit: FlexFit.tight,
                           child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                              style: TextStyle(fontSize: 10, fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight:
+                                      globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
                     ],
                   ),
                 ),

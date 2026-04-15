@@ -16,9 +16,4 @@ class TaskManagerButton extends StatelessWidget {
       tooltip: "Open Task Manager",
     );
   }
-  /* Widget build(BuildContext context) {
-    final taskManagerPath = WinUtils().getTaskManagerPath();
-    if (taskManagerPath == "") return const SizedBox();
-    return WindowsAppButton(path: taskManagerPath);
-  } */
 }

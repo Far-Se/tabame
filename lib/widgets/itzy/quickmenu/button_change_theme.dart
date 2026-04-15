@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../main.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../widgets/quick_actions_item.dart';
 
@@ -17,7 +17,7 @@ class ChangeThemeButton extends StatelessWidget {
       onTap: () {
         if (globalSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark) globalSettings.themeType = ThemeType.dark;
         globalSettings.themeType = globalSettings.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
-        themeChangeNotifier.value = !themeChangeNotifier.value;
+        Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
       },
     );
   }

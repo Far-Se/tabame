@@ -41,8 +41,8 @@ class SystemUsageWidgetState extends State<SystemUsageWidget> {
 
   @override
   void dispose() {
-    super.dispose();
     timer.cancel();
+    super.dispose();
   }
 
   @override

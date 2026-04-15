@@ -2,16 +2,13 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 
-import '../main.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
@@ -25,12 +22,13 @@ import '../widgets/interface/home.dart';
 import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/bookmarks.dart';
-import '../widgets/interface/quickmenu_full.dart';
+import '../widgets/interface/quickmenu_settings.dart';
 import '../widgets/interface/tasks.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
-import '../widgets/interface/views_interface.dart';
 import '../widgets/interface/wizardly.dart';
+import '../widgets/widgets/mouse_scroll_widget.dart';
+import '../widgets/widgets/windows_scroll.dart';
 
 class PageClass {
   String? title;
@@ -54,6 +52,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setResizable(true);
   await WindowManager.instance.setAlwaysOnTop(false);
   await WindowManager.instance.setAspectRatio(1);
+  if (kDebugMode) await WindowManager.instance.setTitle("Tabame - Interface");
   await WindowManager.instance.setSize(Size(monitor.width / 2.2, monitor.height / 1.4));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
@@ -94,10 +93,9 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
     PageClass(title: 'Audio', icon: Icons.speaker, widget: const AudioInterface()),
     PageClass(title: 'Colors', icon: Icons.theater_comedy, widget: const ThemeSetup()),
-    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const AllQuickMenu()),
+    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
     // PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
-    PageClass(title: 'Views', icon: Icons.view_agenda, widget: const ViewsInterface()),
     PageClass(title: 'Bookmarks', icon: Icons.folder_copy, widget: const BookmarksPage()),
     PageClass(title: 'Reminders', icon: Icons.schedule_rounded, widget: const TasksPage()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
@@ -106,7 +104,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Changelog', icon: Icons.newspaper, widget: const Changelog()),
     PageClass(title: 'FirstRun', icon: Icons.newspaper, widget: const FirstRun()),
   ];
-  final List<String> disableScroll = <String>["Wizardly"];
+  final List<String> disableScroll = <String>["Colors", "Wizardly", "Reminders", "Fancyshot", "FirstRun"];
   final Future<int> interfaceWindow = interfaceWindowSetup();
   int hoveredPage = -1;
 
@@ -118,6 +116,14 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100), () {
+        windowManager.getSize().then((Size value) {
+          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
+          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
+        });
+      });
+    });
     if (globalSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
     } else if (globalSettings.args.contains("-fancyshot")) {
@@ -127,16 +133,16 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     } else if (Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
     }
-    if (currentPage == -1) currentPage = 1;
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+    if (currentPage == -1) currentPage = 0; // Default to Home if-1
+    page = PageController(initialPage: currentPage);
     Globals.changingPages = false;
     final String? sp = Boxes.pref.getString("sponsorLink");
     if (sp != null) {
       sponsor.enabled = true;
       sponsor.url = sp;
-      if (File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png").existsSync()) {
-        sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
-        sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+      if (File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png").existsSync()) {
+        sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
+        sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
       }
     }
     checkForSponsor();
@@ -151,14 +157,6 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         }
       }
     }
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100), () {
-        windowManager.getSize().then((Size value) {
-          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
-          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
-        });
-      });
-    });
   }
 
   bool showBuyMeACoffeePopup = false;
@@ -169,11 +167,12 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   }
 
   Future<void> checkForSponsor() async {
-    if (File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png").existsSync()) {
-      sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
-      sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+    if (File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png").existsSync()) {
+      sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
+      sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
     }
-    final http.Response response = await http.get(Uri.parse("https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json?e=${DateTime.now().hour}"));
+    final http.Response response = await http.get(Uri.parse(
+        "https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json?e=${DateTime.now().hour}"));
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (!json.containsKey("enabled")) return;
@@ -190,11 +189,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       if (((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) || sponsorImageLight == null) {
         Boxes.pref.setString("sponsorName", json["name"]);
         Boxes.pref.setString("sponsorLink", json["url"]);
-        sponsorImageLight = File("${WinUtils.getTabameSettingsFolder()}\\sponsorLight.png");
+        sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
         final http.Response rsp = await http.get(Uri.parse(json["imageLight"]));
         if (rsp.statusCode == 200) sponsorImageLight!.writeAsBytesSync(rsp.bodyBytes);
 
-        sponsorImageDark = File("${WinUtils.getTabameSettingsFolder()}\\sponsorDark.png");
+        sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
         final http.Response rsp2 = await http.get(Uri.parse(json["imageDark"]));
         if (rsp2.statusCode == 200) sponsorImageDark!.writeAsBytesSync(rsp2.bodyBytes);
       }
@@ -252,7 +251,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
         if (!snapshot.hasData) return const SizedBox(width: 10);
         return DragToResizeArea(
-          // resizeEdgeSize: 5,
+          resizeEdgeSize: 5,
           child: Padding(
             padding: const EdgeInsets.all(3) - const EdgeInsets.only(top: 3),
             child: DecoratedBox(
@@ -331,7 +330,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                         onTap: () {
                                           WindowManager.instance.minimize();
                                         },
-                                        child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.minimize, size: 15)),
+                                        child: const Padding(
+                                            padding: EdgeInsets.all(5), child: Icon(Icons.minimize, size: 15)),
                                       ),
                                     ),
                                     //! go to quickmenu
@@ -353,10 +353,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                           } else {
                                             Globals.changingPages = true;
                                             setState(() {});
-                                            mainPageViewController.jumpToPage(Pages.quickmenu.index);
+                                            Globals.mainPageViewController.jumpToPage(Pages.quickmenu.index);
                                           }
                                         },
-                                        child: const Padding(padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
+                                        child: const Padding(
+                                            padding: EdgeInsets.all(5), child: Icon(Icons.close, size: 15)),
                                       ),
                                     ),
                                   ],
@@ -376,7 +377,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                 gradient: LinearGradient(
                                   colors: <Color>[
                                     Theme.of(context).colorScheme.surface,
-                                    Theme.of(context).colorScheme.surface.withAlpha(180),
+                                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
                                     Theme.of(context).colorScheme.surface
                                   ],
                                   stops: <double>[0, 0.4, 1],
@@ -391,23 +392,31 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   //1 Sidebar
                                   //#h green
                                   // if (!globalSettings.args.contains("-wizardly")) //2 commented this
+                                  //1 Sidebar
                                   Material(
                                     type: MaterialType.transparency,
                                     child: Container(
-                                      width: 150,
+                                      width: 220,
                                       height: double.infinity,
-                                      color: Colors.black12.withOpacity(0.1),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surface.withAlpha(150),
+                                        border: Border(
+                                          right: BorderSide(
+                                            color: Theme.of(context).dividerColor.withAlpha(20),
+                                            width: 1,
+                                          ),
+                                        ),
+                                      ),
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         mainAxisSize: MainAxisSize.max,
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
                                         children: <Widget>[
-                                          const SizedBox(height: 10),
+                                          const SizedBox(height: 15),
                                           Flexible(
                                             fit: FlexFit.tight,
-                                            child: SingleChildScrollView(
+                                            child: MouseScrollWidget(
                                               scrollDirection: Axis.vertical,
-                                              controller: ScrollController(),
                                               child: Column(
                                                 mainAxisAlignment: MainAxisAlignment.start,
                                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -418,29 +427,73 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                       scrollDirection: Axis.vertical,
                                                       itemCount: pages.length,
                                                       shrinkWrap: true,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10),
                                                       physics: const ClampingScrollPhysics(),
                                                       itemBuilder: (BuildContext context, int index) {
                                                         final PageClass pageItem = pages[index];
                                                         if (pageItem.title == "FirstRun") return const SizedBox();
-                                                        return DecoratedBox(
-                                                          decoration: BoxDecoration(
-                                                              color: currentPage == index ? Color(globalSettings.theme.textColor).withOpacity(0.1) : Colors.transparent),
+                                                        final bool isActive = currentPage == index;
+                                                        return Container(
+                                                          margin: const EdgeInsets.symmetric(vertical: 2),
                                                           child: InkWell(
-                                                            radius: 0,
                                                             onTap: () {
                                                               setState(() => currentPage = index);
                                                             },
-                                                            child: Padding(
-                                                              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                                                            borderRadius: BorderRadius.circular(8),
+                                                            child: AnimatedContainer(
+                                                              duration: const Duration(milliseconds: 200),
+                                                              padding: const EdgeInsets.symmetric(
+                                                                  vertical: 10, horizontal: 12),
+                                                              decoration: BoxDecoration(
+                                                                color: isActive
+                                                                    ? Theme.of(context)
+                                                                        .colorScheme
+                                                                        .primary
+                                                                        .withAlpha(30)
+                                                                    : Colors.transparent,
+                                                                borderRadius: BorderRadius.circular(8),
+                                                              ),
                                                               child: Row(
                                                                 mainAxisAlignment: MainAxisAlignment.start,
                                                                 crossAxisAlignment: CrossAxisAlignment.center,
                                                                 mainAxisSize: MainAxisSize.min,
                                                                 children: <Widget>[
-                                                                  const SizedBox(width: 5),
-                                                                  Icon(pageItem.icon),
-                                                                  const SizedBox(width: 5),
-                                                                  Text(pageItem.title!),
+                                                                  Icon(
+                                                                    pageItem.icon,
+                                                                    size: 20,
+                                                                    color: isActive
+                                                                        ? Theme.of(context).colorScheme.primary
+                                                                        : Theme.of(context)
+                                                                            .colorScheme
+                                                                            .onSurface
+                                                                            .withAlpha(180),
+                                                                  ),
+                                                                  const SizedBox(width: 12),
+                                                                  Text(
+                                                                    pageItem.title!,
+                                                                    style: TextStyle(
+                                                                      fontSize: 14,
+                                                                      fontWeight:
+                                                                          isActive ? FontWeight.w600 : FontWeight.w400,
+                                                                      color: isActive
+                                                                          ? Theme.of(context).colorScheme.primary
+                                                                          : Theme.of(context)
+                                                                              .colorScheme
+                                                                              .onSurface
+                                                                              .withAlpha(180),
+                                                                    ),
+                                                                  ),
+                                                                  if (isActive) ...<Widget>[
+                                                                    const Spacer(),
+                                                                    Container(
+                                                                      width: 4,
+                                                                      height: 16,
+                                                                      decoration: BoxDecoration(
+                                                                        color: Theme.of(context).colorScheme.primary,
+                                                                        borderRadius: BorderRadius.circular(2),
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ],
                                                               ),
                                                             ),
@@ -449,184 +502,121 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                       },
                                                     ),
                                                   ),
-                                                  //2 Exit
                                                 ],
                                               ),
                                             ),
                                           ),
-                                          const Divider(height: 5, thickness: 1),
-                                          DecoratedBox(
-                                            decoration:
-                                                BoxDecoration(color: hoveredPage == 99 ? Color(globalSettings.theme.textColor).withOpacity(0.06) : Colors.transparent),
-                                            child: MouseRegion(
-                                              onEnter: (PointerEnterEvent v) => setState(() => hoveredPage = 99),
-                                              onExit: (PointerExitEvent v) => setState(() => hoveredPage = -1),
-                                              cursor: SystemMouseCursors.click,
-                                              child: InkWell(
-                                                radius: 0,
-                                                onTap: () => setState(() {
-                                                  showDialog(
+                                          // Bottom Actions
+                                          Padding(
+                                            padding: const EdgeInsets.all(10),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                              children: <Widget>[
+                                                if (sponsor.enabled) ...<Widget>[
+                                                  InkWell(
+                                                    onTap: () => WinUtils.open(sponsor.url),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Column(
+                                                        children: <Widget>[
+                                                          Text(
+                                                            "Sponsored by",
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              fontStyle: FontStyle.italic,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onSurface
+                                                                  .withAlpha(100),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 4),
+                                                          if (sponsorImageLight != null)
+                                                            Image.file(
+                                                              globalSettings.themeType == ThemeType.light
+                                                                  ? sponsorImageLight!
+                                                                  : sponsorImageDark!,
+                                                              height: 40,
+                                                              fit: BoxFit.contain,
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                ],
+                                                InkWell(
+                                                  onTap: () {
+                                                    showDialog(
                                                       context: context,
                                                       builder: (BuildContext context) => AlertDialog(
-                                                            content: Container(
-                                                                height: 50,
-                                                                child: const Center(
-                                                                    child: Text("This will close the whole app, not just Interface, continue?",
-                                                                        style: TextStyle(fontSize: 20)))),
-                                                            actions: <Widget>[
-                                                              ElevatedButton(
-                                                                  onPressed: () {
-                                                                    WinUtils.closeAllTabameExProcesses();
-                                                                    exit(0);
-                                                                  },
-                                                                  child: Text("Full Exit", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
-                                                              ElevatedButton(
-                                                                  onPressed: () => Navigator.of(context).pop(),
-                                                                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).colorScheme.primary))),
-                                                            ],
-                                                          ));
-                                                }),
-                                                child: const Padding(
-                                                  padding: EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.start,
-                                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: <Widget>[
-                                                      SizedBox(width: 5),
-                                                      Icon(Icons.exit_to_app),
-                                                      SizedBox(width: 5),
-                                                      Text("Exit"),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          //2 Donation Box
-                                          SizedBox(
-                                            height: 245,
-                                            child: Padding(
-                                              padding: const EdgeInsets.fromLTRB(5, 0, 2, 5),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.end,
-                                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                children: <Widget>[
-                                                  if (sponsor.enabled)
-                                                    Column(
-                                                      mainAxisAlignment: MainAxisAlignment.start,
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: <Widget>[
-                                                        const Center(
-                                                            child: Text("Sponsored by:", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
-                                                        InkWell(
-                                                            onTap: () {
-                                                              WinUtils.open(sponsor.url, userpowerShell: true);
+                                                        title: const Text("Exit Tabame?"),
+                                                        content: const Text(
+                                                            "This will close the whole application. Continue?"),
+                                                        actions: <Widget>[
+                                                          TextButton(
+                                                            onPressed: () => Navigator.of(context).pop(),
+                                                            child: const Text("Cancel"),
+                                                          ),
+                                                          ElevatedButton(
+                                                            onPressed: () {
+                                                              WinUtils.closeAllTabameExProcesses();
+                                                              exit(0);
                                                             },
-                                                            child: Center(
-                                                                child: sponsorImageLight != null
-                                                                    ? Image.file(
-                                                                        globalSettings.themeType == ThemeType.light ? sponsorImageLight! : sponsorImageDark!,
-                                                                        height: 100,
-                                                                      )
-                                                                    : const SizedBox())),
-                                                        const Divider(height: 5, thickness: 1),
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor:
+                                                                  Theme.of(context).colorScheme.errorContainer,
+                                                              foregroundColor:
+                                                                  Theme.of(context).colorScheme.onErrorContainer,
+                                                            ),
+                                                            child: const Text("Full Exit"),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                          color: Theme.of(context).colorScheme.error.withAlpha(50)),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Row(
+                                                      children: <Widget>[
+                                                        Icon(Icons.power_settings_new_rounded,
+                                                            size: 18, color: Theme.of(context).colorScheme.error),
+                                                        const SizedBox(width: 12),
+                                                        Text(
+                                                          "Exit",
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: Theme.of(context).colorScheme.error,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
-                                                  const Center(
-                                                      child: Text("Coded by Far Se", style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500))),
-                                                  1 + 1 == 2
-                                                      ? const SizedBox()
-                                                      : Column(
-                                                          mainAxisAlignment: MainAxisAlignment.start,
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: <Widget>[
-                                                            const SizedBox(height: 5),
-                                                            const Padding(
-                                                              padding: EdgeInsets.only(left: 5.0),
-                                                              child: Text(
-                                                                "If you find this app useful consider a donation\nit will be appreciated ☺",
-                                                                style: TextStyle(fontSize: 12),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(height: 10),
-                                                            TextButton(
-                                                              onPressed: () {
-                                                                WinUtils.open("https://www.buymeacoffee.com/far.se");
-                                                              },
-                                                              onHover: (bool value) {},
-                                                              child: MouseRegion(
-                                                                onEnter: (PointerEnterEvent e) => setState(() => bmaCoffeHovered = true),
-                                                                onExit: (PointerExitEvent e) => setState(() => bmaCoffeHovered = false),
-                                                                child: Container(
-                                                                  width: double.infinity,
-                                                                  height: 26,
-                                                                  padding: const EdgeInsets.symmetric(vertical: 5),
-                                                                  decoration: BoxDecoration(
-                                                                    color: const Color(0xffCE3F00).withOpacity(0.5),
-                                                                    borderRadius: BorderRadius.circular(20),
-                                                                  ),
-                                                                  child: ClipRRect(
-                                                                    child: Stack(
-                                                                      children: <Widget>[
-                                                                        Center(
-                                                                          child: TweenAnimationBuilder<double>(
-                                                                            duration: const Duration(milliseconds: 400),
-                                                                            tween: Tween<double>(begin: 1.0, end: bmaCoffeHovered ? -30 : 1),
-                                                                            curve: Curves.fastLinearToSlowEaseIn,
-                                                                            builder: (BuildContext context, double value, _) {
-                                                                              return Transform.translate(
-                                                                                offset: Offset(1, value),
-                                                                                child: const Text(
-                                                                                  "Buy me a coffee",
-                                                                                  style: TextStyle(
-                                                                                    color: Colors.white,
-                                                                                    height: 1.001,
-                                                                                    fontSize: 14,
-                                                                                    fontWeight: FontWeight.bold,
-                                                                                  ),
-                                                                                ),
-                                                                              );
-                                                                            },
-                                                                          ),
-                                                                        ),
-                                                                        Center(
-                                                                          child: TweenAnimationBuilder<double>(
-                                                                            duration: const Duration(milliseconds: 400),
-                                                                            tween: Tween<double>(begin: 30.0, end: bmaCoffeHovered ? 0 : 30),
-                                                                            curve: Curves.fastLinearToSlowEaseIn,
-                                                                            builder: (BuildContext context, double value, _) {
-                                                                              return Transform.translate(
-                                                                                offset: Offset(1, value),
-                                                                                child: Transform.rotate(
-                                                                                  angle: value / 10,
-                                                                                  child: const Text(
-                                                                                    "☕",
-                                                                                    style: TextStyle(
-                                                                                      color: Colors.white,
-                                                                                      height: 1,
-                                                                                      fontSize: 17.5,
-                                                                                      fontWeight: FontWeight.bold,
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                              );
-                                                                            },
-                                                                          ),
-                                                                        )
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            const SizedBox(height: 5),
-                                                          ],
-                                                        )
-                                                ],
-                                              ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                                  child: Text(
+                                                    "Coded by Far Se",
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          )
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -635,22 +625,36 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   //1 Pages
                                   //#h white
                                   Expanded(
-                                    child: ClipRect(
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                                        child: Listener(
-                                          onPointerSignal: (PointerSignalEvent pointerSignal) {
-                                            if (pointerSignal is PointerScrollEvent) {
-                                              if (pointerSignal.scrollDelta.dy < 0) {
-                                              } else {}
-                                            }
-                                          },
-                                          child: SingleChildScrollView(
-                                            controller: AdjustableScrollController(40),
-                                            physics: mainScrollEnabled ? const BouncingScrollPhysics(parent: PageScrollPhysics()) : const NeverScrollableScrollPhysics(),
-                                            child: Material(type: MaterialType.transparency, child: pages[currentPage].widget),
-                                          ),
-                                        ),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      transitionBuilder: (Widget child, Animation<double> animation) {
+                                        return FadeTransition(opacity: animation, child: child);
+                                      },
+                                      child: SizedBox.expand(
+                                        key: ValueKey<int>(currentPage),
+                                        child: Builder(builder: (BuildContext context) {
+                                          final bool scrollDisabled = disableScroll.contains(pages[currentPage].title);
+                                          final Widget pageWidget = Material(
+                                              type: MaterialType.transparency, child: pages[currentPage].widget);
+                                          if (scrollDisabled) {
+                                            return pageWidget;
+                                          }
+                                          if (pages[currentPage].title == "Trktivity") {
+                                            return MouseScrollWidget(
+                                              child: pageWidget,
+                                              scrollDirection: Axis.vertical,
+                                              // physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+                                              physics: const NeverScrollableScrollPhysics(),
+                                            );
+                                          }
+                                          return WindowsScrollView(
+                                            scrollDirection: Axis.vertical,
+                                            friction: 0.76,
+                                            scrollSpeed: 12,
+                                            // physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+                                            child: pageWidget,
+                                          );
+                                        }),
                                       ),
                                     ),
                                   ),

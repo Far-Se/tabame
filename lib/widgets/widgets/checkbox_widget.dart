@@ -33,14 +33,24 @@ class CheckBoxWidgetState extends State<CheckBoxWidget> {
         checked = !checked;
         widget.onChanged(checked);
       },
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: widget.padding,
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            SizedBox(width: 25, child: Icon(checked ? Icons.check_box : Icons.check_box_outline_blank, size: 18)),
-            Expanded(child: Text(widget.text, style: const TextStyle(fontSize: 15))),
+            SizedBox(width: 25, child: Icon(checked ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded, size: 18, color: Theme.of(context).colorScheme.primary)),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                widget.text,
+                style: const TextStyle(fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),

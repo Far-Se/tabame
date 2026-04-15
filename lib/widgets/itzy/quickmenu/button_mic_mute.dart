@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 
 class MicMuteButton extends StatefulWidget {
@@ -20,7 +21,13 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
   }
 
   @override
-  Future<void> onQuickMenuShown(int type) async {
+  void dispose() {
+    QuickMenuFunctions.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  Future<void> onQuickMenuShown(QuickMenuPage type) async {
     if (mounted) setState(() {});
   }
 

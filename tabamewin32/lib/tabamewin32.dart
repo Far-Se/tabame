@@ -32,7 +32,12 @@ class AudioDevice {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is AudioDevice && other.id == id && other.name == name && other.iconPath == iconPath && other.iconID == iconID && other.isActive == isActive;
+    return other is AudioDevice &&
+        other.id == id &&
+        other.name == name &&
+        other.iconPath == iconPath &&
+        other.iconID == iconID &&
+        other.isActive == isActive;
   }
 
   @override
@@ -66,7 +71,11 @@ class ProcessVolume {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is ProcessVolume && other.processId == processId && other.processPath == processPath && other.maxVolume == maxVolume && other.peakVolume == peakVolume;
+    return other is ProcessVolume &&
+        other.processId == processId &&
+        other.processPath == processPath &&
+        other.maxVolume == maxVolume &&
+        other.peakVolume == peakVolume;
   }
 
   @override
@@ -124,6 +133,8 @@ class Audio {
     if (!canRunAudioModule) {
       return AudioDevice();
     }
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return AudioDevice();
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('getDefaultDevice', arguments);
     final AudioDevice audioDevice = AudioDevice();
@@ -138,7 +149,8 @@ class Audio {
 
   /// Sets the default audio device.
   /// The type is specified by the [AudioDeviceType] enum.
-  static Future<int> setDefaultDevice(String deviceID, {required bool console, required bool multimedia, required bool communications}) async {
+  static Future<int> setDefaultDevice(String deviceID,
+      {required bool console, required bool multimedia, required bool communications}) async {
     if (!canRunAudioModule) {
       return 0;
     }
@@ -159,6 +171,9 @@ class Audio {
     if (!canRunAudioModule) {
       return 0;
     }
+
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return 0;
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
     final double? result = await audioMethodChannel.invokeMethod<double>('getAudioVolume', arguments);
     return result as double;
@@ -172,7 +187,13 @@ class Audio {
       return 0;
     }
     if (volume > 1) volume = (volume / 100).toDouble();
-    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'volumeLevel': volume};
+
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return 0;
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'deviceType': audioDeviceType.index,
+      'volumeLevel': volume
+    };
     final int? result = await audioMethodChannel.invokeMethod<int>('setAudioVolume', arguments);
     return result as int;
   }
@@ -181,7 +202,12 @@ class Audio {
     if (!canRunAudioModule) {
       return 0;
     }
-    final Map<String, dynamic> arguments = <String, dynamic>{'deviceType': audioDeviceType.index, 'muteState': muteState};
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return 0;
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'deviceType': audioDeviceType.index,
+      'muteState': muteState
+    };
     final int? result = await audioMethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
     return result as int;
   }
@@ -190,6 +216,9 @@ class Audio {
     if (!canRunAudioModule) {
       return false;
     }
+
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return false;
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceType': audioDeviceType.index,
     };
@@ -198,7 +227,8 @@ class Audio {
   }
 
   /// This function switches the audio device to the specified type. The type is specified by the [AudioDeviceType] enum.
-  static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType, {required bool console, required bool multimedia, required bool communications}) async {
+  static Future<bool> switchDefaultDevice(AudioDeviceType audioDeviceType,
+      {required bool console, required bool multimedia, required bool communications}) async {
     if (!canRunAudioModule) {
       return false;
     }
@@ -208,6 +238,8 @@ class Audio {
       'multimedia': multimedia,
       'communications': communications,
     };
+    final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
+    if (hasDevices.isEmpty) return false;
     final bool? result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
     return result as bool;
   }
@@ -253,7 +285,7 @@ class Audio {
   }
 }
 
-resizeImage(Uint8List data) {
+void resizeImage(Uint8List data) {
   ui.decodeImageFromList(data, (ui.Image image) {});
 }
 
@@ -264,7 +296,9 @@ resizeImage(Uint8List data) {
 Map<String, Uint8List> ___kCacheIcons = <String, Uint8List>{};
 Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) async {
   // return Uint8List.fromList([0]);
-  if (___kCacheIcons.containsKey(iconLocation) && iconID == 0) return ___kCacheIcons[iconLocation];
+  if (___kCacheIcons.containsKey(iconLocation) && iconID == 0) {
+    return ___kCacheIcons[iconLocation];
+  }
   final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconLocation, 'iconID': iconID};
   final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
   ___kCacheIcons[iconLocation] = result!;
@@ -319,7 +353,12 @@ class TrayInfo {
 
   @override
   int get hashCode {
-    return toolTip.hashCode ^ isVisible.hashCode ^ processID.hashCode ^ hWnd.hashCode ^ uID.hashCode ^ uCallbackMessage.hashCode;
+    return toolTip.hashCode ^
+        isVisible.hashCode ^
+        processID.hashCode ^
+        hWnd.hashCode ^
+        uID.hashCode ^
+        uCallbackMessage.hashCode;
   }
 }
 
@@ -424,7 +463,8 @@ Future<void> setStartOnSystemStartup(bool enabled, {String? exePath, int showCmd
   return;
 }
 
-Future<void> createShortcut(String exePath, String destPath, {bool create = true, int showCmd = 1, String args = "", String destExe = ""}) async {
+Future<void> createShortcut(String exePath, String destPath,
+    {bool create = true, int showCmd = 1, String args = "", String destExe = ""}) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'exePath': exePath,
     'destPath': destPath,
@@ -494,12 +534,23 @@ Future<void> enableViews(bool enabled) async {
   await audioMethodChannel.invokeMethod('views', arguments);
 }
 
-Future<void> nativeShellOpen(String path, {String arguments = ""}) async {
+Future<void> nativeShellOpen(String path, {String arguments = "", String workingDirectory = ""}) async {
   final Map<String, dynamic> mArgs = <String, dynamic>{
     'path': path,
     'arguments': arguments,
+    'workingDirectory': workingDirectory,
   };
   await audioMethodChannel.invokeMethod('shellOpen', mArgs);
+}
+
+Future<bool> launchWithExplorer(String file, {String? arguments, String workingDirectory = ""}) async {
+  final Map<String, dynamic> mArgs = <String, dynamic>{
+    'file': file,
+    'arguments': arguments ?? "",
+    'workingDirectory': workingDirectory,
+  };
+  final bool? result = await audioMethodChannel.invokeMethod<bool>('launchWithExplorer', mArgs);
+  return result ?? false;
 }
 
 class MousePos {
@@ -593,7 +644,9 @@ class NativeHooks {
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
-    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) return;
+    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) {
+      return;
+    }
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) return;
@@ -625,7 +678,9 @@ class NativeHooks {
     if (call.method == "ViewsEvent") {
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) return;
-        listener.onViewsEvent(ViewsAction.values.firstWhere((ViewsAction element) => element.name == call.arguments["action"]), call.arguments["hwnd"]);
+        listener.onViewsEvent(
+            ViewsAction.values.firstWhere((ViewsAction element) => element.name == call.arguments["action"]),
+            call.arguments["hwnd"]);
       }
     }
     if (call.method == "WinEvent") {
@@ -644,7 +699,7 @@ class NativeHooks {
     }
   }
 
-  static registerCallHandler() {
+  static void registerCallHandler() {
     audioMethodChannel.setMethodCallHandler(_methodCallHandler);
   }
 

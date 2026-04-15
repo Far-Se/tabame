@@ -1,8 +1,6 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../main.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
@@ -54,7 +52,7 @@ class CheckChangelogButtonState extends State<CheckChangelogButton> {
               final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
               Globals.changingPages = true;
               x?.setState(() {});
-              mainPageViewController.jumpToPage(Pages.interface.index);
+              Globals.mainPageViewController.jumpToPage(Pages.interface.index);
               Globals.changingPages = true;
               PaintingBinding.instance.imageCache.clear();
               PaintingBinding.instance.imageCache.clearLiveImages();

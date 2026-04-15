@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../main.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 
 class LogoDragButton extends StatelessWidget {
@@ -12,7 +12,7 @@ class LogoDragButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-      valueListenable: themeChangeNotifier,
+      valueListenable: Globals.themeChangeNotifier,
       builder: (_, bool refreshed, __) => GestureDetector(
         behavior: HitTestBehavior.translucent,
         onPanStart: (DragStartDetails details) {
@@ -20,7 +20,7 @@ class LogoDragButton extends StatelessWidget {
         },
         child: InkWell(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 5).copyWith(right: 2, top: 1),
             child: Align(
                 alignment: Alignment.centerLeft,
                 child: globalSettings.customLogo == "" ? Image.asset(globalSettings.logo, width: 15) : Image.file(File(globalSettings.customLogo), width: 15)),

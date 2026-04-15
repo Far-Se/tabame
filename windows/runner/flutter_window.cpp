@@ -65,6 +65,22 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    case WM_SETFOCUS:
+      if (GetKeyState(VK_MENU) < 0) {
+        // ALT is stuck down, simulate release
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+      }
+      break;
+    case WM_SYSCOMMAND:
+      if ((wparam & 0xFFF0) == SC_KEYMENU) {
+        return 0; // suppress Alt-triggered system/menu activation
+      }
+      break;
+    case WM_SYSCHAR:
+    case WM_SYSDEADCHAR:
+    case WM_SYSKEYUP:
+    case WM_SYSKEYDOWN:
+      return 0;
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);

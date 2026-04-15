@@ -6,18 +6,116 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
-class CustomCharsButton extends StatefulWidget {
+class CustomCharsButton extends StatelessWidget {
   const CustomCharsButton({super.key});
+
   @override
-  CustomCharsButtonState createState() => CustomCharsButtonState();
+  Widget build(BuildContext context) {
+    return QuickActionItem(
+      message: "Custom Chars",
+      icon: const Icon(Icons.format_quote),
+      onTap: () => showQuickMenuModal(
+        context: context,
+        child: const CustomCharsPanel(),
+      ),
+    );
+  }
 }
 
 final Map<String, List<String>> customChars = <String, List<String>>{
-  "Currency": <String>['฿', 'в', '¢', '₡', 'č', '₫', '€', 'ƒ', '₴', '₭', 'ł', 'л', '₼', '£', '₽', '₹', '៛', '﷼', r'$', '₪', '₮', '₺', '₩', '¥', 'z'],
-  "Math": <String>['₀', '⁰', '₁', '¹', '₂', '²', '₃', '³', '₄', '⁴', '₅', '⁵', '₆', '⁶', '₇', '⁷', '₈', '⁸', '₉', '⁹', 'π', 'ú', '≤', '≥', '≠', '≈', '≙', '±', '₊', '⁺'],
-  "French": <String>['à', 'â', 'á', 'ä', 'ã', 'æ', 'ç', 'é', 'è', 'ê', 'ë', '€', 'î', 'ï', 'í', 'ì', 'ô', 'ö', 'ó', 'ò', 'õ', 'œ', 'û', 'ù', 'ü', 'ú', 'ÿ', 'ý'],
+  "Currency": <String>[
+    '฿',
+    'в',
+    '¢',
+    '₡',
+    'č',
+    '₫',
+    '€',
+    'ƒ',
+    '₴',
+    '₭',
+    'ł',
+    'л',
+    '₼',
+    '£',
+    '₽',
+    '₹',
+    '៛',
+    '﷼',
+    r'$',
+    '₪',
+    '₮',
+    '₺',
+    '₩',
+    '¥',
+    'z'
+  ],
+  "Math": <String>[
+    '₀',
+    '⁰',
+    '₁',
+    '¹',
+    '₂',
+    '²',
+    '₃',
+    '³',
+    '₄',
+    '⁴',
+    '₅',
+    '⁵',
+    '₆',
+    '⁶',
+    '₇',
+    '⁷',
+    '₈',
+    '⁸',
+    '₉',
+    '⁹',
+    'π',
+    'ú',
+    '≤',
+    '≥',
+    '≠',
+    '≈',
+    '≙',
+    '±',
+    '₊',
+    '⁺'
+  ],
+  "French": <String>[
+    'à',
+    'â',
+    'á',
+    'ä',
+    'ã',
+    'æ',
+    'ç',
+    'é',
+    'è',
+    'ê',
+    'ë',
+    '€',
+    'î',
+    'ï',
+    'í',
+    'ì',
+    'ô',
+    'ö',
+    'ó',
+    'ò',
+    'õ',
+    'œ',
+    'û',
+    'ù',
+    'ü',
+    'ú',
+    'ÿ',
+    'ý'
+  ],
   "Iceland": <String>['á', 'æ', 'ð', 'é', 'ó', 'ö', 'ú', 'ý', 'þ'],
   "Spain": <String>['á', 'é', '€', 'í', 'ñ', 'ó', 'ú', 'ü', '¿', '?'],
   "Maori": <String>['ā', 'ē', 'ī', 'ō', r'$', 'ū'],
@@ -62,64 +160,145 @@ final Map<String, List<String>> customChars = <String, List<String>>{
   "Hungarian": <String>['á', 'é', 'í', 'ó', 'ő', 'ö', 'ú', 'ű', 'ü'],
   "Romanian": <String>['ă', 'â', 'î', 'ș', 'ț'],
   "Italian": <String>['à', 'è', 'é', '€', 'ì', 'í', 'ò', 'ó', 'ù', 'ú'],
+  "Arrows": <String>[
+    '←',
+    '↑',
+    '→',
+    '↓',
+    '↔',
+    '↕',
+    '↖',
+    '↗',
+    '↘',
+    '↙',
+    '↩',
+    '↪',
+    '⤴',
+    '⤵',
+    '➔',
+    '➜',
+    '➞',
+    '➟',
+    '➠',
+    '➡',
+    '➢',
+    '➣',
+    '➤',
+    '➥',
+    '₢'
+  ],
+  "Greek": <String>[
+    'α',
+    'β',
+    'γ',
+    'δ',
+    'ε',
+    'ζ',
+    'η',
+    'θ',
+    'ι',
+    'κ',
+    'λ',
+    'μ',
+    'ν',
+    'ξ',
+    'ο',
+    'π',
+    'ρ',
+    'σ',
+    'ς',
+    'τ',
+    'υ',
+    'φ',
+    'χ',
+    'ψ',
+    'ω',
+    'Α',
+    'Β',
+    'Γ',
+    'Δ',
+    'Ε',
+    'Ζ',
+    'Η',
+    'Θ',
+    'Ι',
+    'Κ',
+    'Λ',
+    'Μ',
+    'Ν',
+    'Ξ',
+    'Ο',
+    'Π',
+    'Ρ',
+    'Σ',
+    'Τ',
+    'Υ',
+    'Φ',
+    'Χ',
+    'Ψ',
+    'Ω'
+  ],
+  "Shapes": <String>[
+    '■',
+    '□',
+    '▲',
+    '△',
+    '▼',
+    '▽',
+    '◆',
+    '◇',
+    '○',
+    '◎',
+    '●',
+    '◯',
+    '★',
+    '☆',
+    '✦',
+    '✧',
+    '✨',
+    '✔',
+    '✘',
+    '☐',
+    '☑',
+    '☒'
+  ],
+  "Punctuation": <String>[
+    '«',
+    '»',
+    '„',
+    '“',
+    '”',
+    '‘',
+    '’',
+    '—',
+    '–',
+    '…',
+    '¿',
+    '¡',
+    '•',
+    '‣',
+    '◦',
+    '※',
+    '¶',
+    '§',
+    '†',
+    '‡'
+  ],
 };
 
-class CustomCharsButtonState extends State<CustomCharsButton> {
-  @override
-  void initState() {
-    super.initState();
-  }
+class CustomCharsPanel extends StatefulWidget {
+  const CustomCharsPanel({super.key});
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Custom Chars",
-      icon: const Icon(Icons.format_quote),
-      onTap: () async {
-        showModalBottomSheet<void>(
-          context: context,
-          anchorPoint: const Offset(100, 200),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          barrierColor: Colors.transparent,
-          constraints: const BoxConstraints(maxWidth: 280),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          enableDrag: true,
-          isScrollControlled: true,
-          builder: (BuildContext context) {
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: const FractionallySizedBox(
-                heightFactor: 0.85,
-                child: Padding(
-                  padding: EdgeInsets.all(2.0),
-                  child: TimersWidget(),
-                ),
-              ),
-            );
-          },
-        );
-        return;
-      },
-    );
-  }
+  State<CustomCharsPanel> createState() => _CustomCharsPanelState();
 }
 
-class TimersWidget extends StatefulWidget {
-  const TimersWidget({super.key});
-  @override
-  TimersWidgetState createState() => TimersWidgetState();
-}
-
-class TimersWidgetState extends State<TimersWidget> {
+class _CustomCharsPanelState extends State<CustomCharsPanel> {
   final TextEditingController textField = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   List<String> savedChars = <String>[];
   List<String> disabledSets = <String>[];
+
   @override
   void initState() {
     super.initState();
@@ -129,189 +308,424 @@ class TimersWidgetState extends State<TimersWidget> {
 
   @override
   void dispose() {
-    super.dispose();
     textField.dispose();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  bool _resembles(String char, String search) {
+    if (search.isEmpty) return false;
+    final String c = char.toLowerCase();
+    final String s = search.toLowerCase();
+    if (c == s) return true;
+
+    const Map<String, String> map = <String, String>{
+      'a': 'àâáäãæāǎ',
+      'e': 'éèêëēě€',
+      'i': 'ιΙîïíìīǐ',
+      'o': 'οΟôöóòõōǒ',
+      'u': 'ûùüúūǔǖǘǚǜ',
+      'c': 'çćč¢₡',
+      'n': 'ñńň',
+      's': 'σΣςśšşș§₪',
+      'z': 'ζΖżźž',
+      'l': 'λΛłľĺ',
+      'd': 'δΔďð₫',
+      't': 'θΘτΤťț₮₺',
+      'y': 'ÿýψΨ',
+      'r': 'ŕřρΡ',
+      'g': 'γΓğ',
+      'b': '฿βΒ',
+      'p': 'πΠφΦ',
+      'k': '₭κΚ',
+      'w': '₩ωΩ',
+      'x': 'χΧ',
+      'f': 'φΦ',
+      'm': 'μΜ',
+      'v': 'νΝ',
+    };
+    return map[s]?.contains(c) ?? false;
+  }
+
+  void _copyAndClose(String char) {
+    Clipboard.setData(ClipboardData(text: char));
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Copied $char"),
+        behavior: SnackBarBehavior.floating,
+        width: 140,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        duration: const Duration(milliseconds: 1500),
+      ),
+    );
+  }
+
+  void _saveChar() {
+    if (textField.text.isEmpty) return;
+    setState(() {
+      savedChars.add(textField.text);
+      Boxes.pref.setStringList("savedChars", savedChars);
+      textField.clear();
+    });
+  }
+
+  String _getCategoryFor(String char) {
+    final List<String> sources = <String>[];
+    if (savedChars.contains(char)) sources.add("Saved");
+    for (final MapEntry<String, List<String>> entry in customChars.entries) {
+      if (entry.value.contains(char)) sources.add(entry.key);
+    }
+    return sources.isEmpty ? "Unknown" : sources.join(", ");
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Container(
-          height: double.infinity,
-          width: 280,
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            gradient: LinearGradient(
-              colors: <Color>[
-                Theme.of(context).colorScheme.surface,
-                Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
-                Theme.of(context).colorScheme.surface,
-              ],
-              stops: <double>[0, 0.4, 1],
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: <BoxShadow>[
-              const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-            ],
-            color: Theme.of(context).colorScheme.surface,
-          ),
-          child: SingleChildScrollView(
-            controller: ScrollController(),
-            child: Material(
-              type: MaterialType.transparency,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text("Saved", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: TextField(
-                            decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                hintText: "New Character",
-                                hintStyle: TextStyle(fontSize: 12),
-                                border: InputBorder.none),
-                            controller: textField,
+    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        PanelHeader(
+          title: "Characters",
+          accent: accent,
+          boldFont: globalSettings.theme.quickMenuBoldFont,
+          icon: Icons.format_quote,
+        ),
+        Flexible(
+          child: Material(
+            type: MaterialType.transparency,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _buildSearchSection(accent, onSurface),
+                  if (searchController.text.isEmpty) ...<Widget>[
+                    _buildInputSection(accent, onSurface),
+                    if (savedChars.isNotEmpty) ...<Widget>[
+                      _buildSectionHeader("Saved", accent),
+                      _buildGrid(savedChars, accent, onSurface, isSaved: true),
+                    ],
+                    ...customChars.entries
+                        .where((MapEntry<String, List<String>> entry) => !disabledSets.contains(entry.key))
+                        .map(
+                          (MapEntry<String, List<String>> entry) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _buildSectionHeader(
+                                entry.key,
+                                accent,
+                                onToggle: () {
+                                  setState(() {
+                                    disabledSets.add(entry.key);
+                                    Boxes.pref.setStringList("disabledSets", disabledSets);
+                                  });
+                                },
+                              ),
+                              _buildGrid(entry.value, accent, onSurface),
+                            ],
                           ),
                         ),
-                        OutlinedButton.icon(
-                            onPressed: () {
-                              savedChars.add(textField.text);
-                              Boxes.pref.setStringList("savedChars", savedChars);
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text("Save", style: TextStyle(height: 1)))
-                      ],
-                    ),
-                    Wrap(
-                      children: List<Widget>.generate(
-                          savedChars.length,
-                          (int index) => Listener(
-                                onPointerDown: (PointerDownEvent event) {
-                                  if (event.kind == PointerDeviceKind.mouse) {
-                                    if (event.buttons == kSecondaryMouseButton) {
-                                      savedChars.removeAt(index);
-                                      Boxes.pref.setStringList("savedChars", savedChars);
-                                      setState(() {});
-                                    }
-                                  }
-                                },
-                                child: InkWell(
-                                  onTap: () {
-                                    Clipboard.setData(ClipboardData(text: savedChars.elementAt(index)));
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                      content: Text("Copied ${savedChars.elementAt(index)}"),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                      margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height - 70, right: 20, left: 20),
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                                      duration: const Duration(seconds: 1),
-                                    ));
-                                    setState(() {});
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                                    child: Text(savedChars.elementAt(index)),
-                                  ),
-                                ),
-                              )),
-                    ),
-                    const Divider(height: 10, thickness: 1),
-                    ...List<Widget>.generate(
-                      customChars.length,
-                      (int index) {
-                        final String name = customChars.keys.elementAt(index);
-                        if (disabledSets.contains(name)) return Container();
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            InkWell(
-                                onTap: () {
-                                  disabledSets.toggle(name);
-                                  Boxes.pref.setStringList("disabledSets", disabledSets);
-                                  print(disabledSets);
-                                  setState(() {});
-                                },
-                                child: Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
-                            Wrap(
-                              children: List<Widget>.generate(
-                                  customChars.values.elementAt(index).length,
-                                  (int i) => InkWell(
-                                        onTap: () {
-                                          Clipboard.setData(ClipboardData(text: customChars.values.elementAt(index).elementAt(i)));
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                            content: Text("Copied ${customChars.values.elementAt(index).elementAt(i)}"),
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(24),
-                                            ),
-                                            margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height - 70, right: 20, left: 20),
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                                            duration: const Duration(seconds: 1),
-                                          ));
-                                          setState(() {});
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                                          child: Text(customChars.values.elementAt(index).elementAt(i)),
-                                        ),
-                                      )),
-                            )
-                          ],
-                        );
-                      },
-                    ),
-                    if (disabledSets.isNotEmpty)
+                  ] else ...<Widget>[
+                    if (searchController.text.length == 1)
                       Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          const Divider(height: 10, thickness: 1),
-                          const Text("Disabled:", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                          ...List<Widget>.generate(
-                            disabledSets.length,
-                            (int index) {
-                              final String name = disabledSets.elementAt(index);
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  InkWell(
-                                      onTap: () {
-                                        print("xxx");
-                                        disabledSets.toggle(name);
-                                        Boxes.pref.setStringList("disabledSets", disabledSets);
-                                        setState(() {});
-                                      },
-                                      child: Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
-                                ],
+                          _buildSectionHeader("Related Characters", accent),
+                          Builder(
+                            builder: (BuildContext context) {
+                              final List<String> results = <String>{
+                                ...savedChars.where((String c) => _resembles(c, searchController.text)),
+                                ...customChars.values
+                                    .expand((List<String> l) => l)
+                                    .where((String c) => _resembles(c, searchController.text)),
+                              }.toList();
+                              return _buildGrid(
+                                results,
+                                accent,
+                                onSurface,
+                                tooltips: results.map((String c) => _getCategoryFor(c)).toList(),
                               );
                             },
-                          )
+                          ),
                         ],
-                      ),
+                      )
+                    else
+                      ...customChars.entries
+                          .where((MapEntry<String, List<String>> entry) =>
+                              entry.key.toLowerCase().contains(searchController.text.toLowerCase()))
+                          .map(
+                            (MapEntry<String, List<String>> entry) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                _buildSectionHeader(entry.key, accent),
+                                _buildGrid(entry.value, accent, onSurface),
+                              ],
+                            ),
+                          ),
                   ],
+                  if (disabledSets.isNotEmpty) ...<Widget>[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Divider(height: 1),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Text(
+                        "Hidden Sets",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: onSurface.withAlpha(100),
+                        ),
+                      ),
+                    ),
+                    Wrap(
+                      spacing: 4,
+                      children: disabledSets.map((String name) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: ActionChip(
+                            labelPadding: EdgeInsets.zero,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                            label: Text(name, style: const TextStyle(fontSize: 10)),
+                            onPressed: () {
+                              setState(() {
+                                disabledSets.remove(name);
+                                Boxes.pref.setStringList("disabledSets", disabledSets);
+                              });
+                            },
+                            backgroundColor: onSurface.withAlpha(10),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchSection(Color accent, Color onSurface) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: accent.withAlpha(20),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: accent.withAlpha(40)),
+        ),
+        child: Row(
+          children: <Widget>[
+            const SizedBox(width: 8),
+            Icon(Icons.search_rounded, size: 16, color: accent),
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                style: const TextStyle(fontSize: 12),
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: "Search categories or characters...",
+                  hintStyle: TextStyle(fontSize: 12, color: accent.withAlpha(120)),
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
+              ),
+            ),
+            if (searchController.text.isNotEmpty)
+              IconButton(
+                onPressed: () => setState(() => searchController.clear()),
+                icon: Icon(Icons.close_rounded, size: 16, color: accent),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputSection(Color accent, Color onSurface) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: onSurface.withAlpha(10),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: <Widget>[
+            const SizedBox(width: 8),
+            Icon(Icons.add_rounded, size: 16, color: onSurface.withAlpha(150)),
+            Expanded(
+              child: TextField(
+                controller: textField,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: "New char...",
+                  hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(80)),
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                onSubmitted: (_) => _saveChar(),
+              ),
+            ),
+            IconButton(
+              onPressed: _saveChar,
+              icon: Icon(Icons.check_rounded, size: 16, color: accent),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, Color accent, {VoidCallback? onToggle}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+      child: Row(
+        children: <Widget>[
+          Text(
+            title,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const Spacer(),
+          if (onToggle != null)
+            IconButton(
+              onPressed: onToggle,
+              icon: const Icon(Icons.visibility_off_outlined, size: 14),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              tooltip: "Hide set",
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGrid(List<String> chars, Color accent, Color onSurface, {bool isSaved = false, List<String>? tooltips}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: chars.asMap().entries.map((MapEntry<int, String> entry) {
+          final int index = entry.key;
+          final String char = entry.value;
+          return _CharTile(
+            char: char,
+            accent: accent,
+            tooltip: tooltips != null && index < tooltips.length ? tooltips[index] : null,
+            onSurface: onSurface,
+            onTap: () => _copyAndClose(char),
+            onSecondaryTap: isSaved
+                ? () {
+                    setState(() {
+                      savedChars.removeAt(index);
+                      Boxes.pref.setStringList("savedChars", savedChars);
+                    });
+                  }
+                : null,
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _CharTile extends StatefulWidget {
+  const _CharTile({
+    required this.char,
+    required this.accent,
+    required this.onSurface,
+    required this.onTap,
+    this.tooltip,
+    this.onSecondaryTap,
+  });
+
+  final String char;
+  final Color accent;
+  final Color onSurface;
+  final VoidCallback onTap;
+  final String? tooltip;
+  final VoidCallback? onSecondaryTap;
+
+  @override
+  State<_CharTile> createState() => _CharTileState();
+}
+
+class _CharTileState extends State<_CharTile> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tile = MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: Listener(
+        onPointerDown: (PointerDownEvent event) {
+          if (event.kind == PointerDeviceKind.mouse && event.buttons == kSecondaryMouseButton) {
+            widget.onSecondaryTap?.call();
+          }
+        },
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _isHovering ? widget.accent.withAlpha(35) : widget.accent.withAlpha(12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: _isHovering ? widget.accent.withAlpha(80) : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              widget.char,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: _isHovering ? widget.accent : widget.onSurface,
               ),
             ),
           ),
         ),
       ),
     );
+
+    if (widget.tooltip != null) {
+      tile = Tooltip(
+        message: widget.tooltip!,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: widget.accent.withAlpha(50)),
+        ),
+        textStyle: TextStyle(color: widget.accent, fontSize: 10, fontWeight: FontWeight.bold),
+        child: tile,
+      );
+    }
+
+    return tile;
   }
 }

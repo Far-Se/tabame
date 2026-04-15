@@ -1,6 +1,6 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
+import 'classes/boxes.dart';
 import 'win32/window.dart';
 
 void printWarning(String text) {
@@ -25,39 +25,40 @@ class Heights {
 enum Pages {
   quickmenu,
   interface,
-  run,
   views,
-  quickActions,
 }
 
 enum QuickMenuPage {
   quickMenu,
-  quickRun,
+  fileSearch,
   quickActions,
+  audioBox,
 }
 
 class Globals {
+  Globals._();
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
-  static bool debugHooks = false;
-  static bool debugHotkeys = false;
-  static String version = "1.3";
+  static bool debugHooks = true;
+  static bool debugHotkeys = true;
+  static String version = "2.0";
 
   static int virtualDesktop = 0;
 
-  Globals();
   static bool changingPages = false;
   static bool isWindowActive = false;
   static final Heights heights = Heights();
 
   static int lastFocusedWinHWND = 0;
-  static List<int> spotifyTrayHwnd = <int>[0, 0];
-  static List<int> foobarTrayHwnd = <int>[0, 0];
-  static List<int> musicBeeTrayHwnd = <int>[0, 0];
   static bool alwaysAwake = false;
   static bool audioBoxVisible = false;
 
   static bool taskbarVisible = true;
   static GlobalKey quickMenu = GlobalKey();
+  static ValueNotifier<bool> fullLoaded = ValueNotifier<bool>(false);
+  static ValueNotifier<bool> themeChangeNotifier = ValueNotifier<bool>(false);
+  static ValueNotifier<int> quickMenuSearchInputVersion = ValueNotifier<int>(0);
+  static PageController mainPageViewController = PageController();
+  static String _pendingQuickMenuSearchInput = "";
 
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
@@ -67,22 +68,37 @@ class Globals {
     _currentPage = page;
   }
 
-  static Map<String, String> iconsRewrite = <String, String>{
-    "Microsoft VS Code": "resources/code.png",
-    "Edge": "resources/chromium.png",
-  };
+  static void queueQuickMenuSearchInput(String input) {
+    if (input.isEmpty) return;
+    _pendingQuickMenuSearchInput += input;
+    quickMenuSearchInputVersion.value++;
+  }
+
+  static String takeQuickMenuSearchInput() {
+    final String value = _pendingQuickMenuSearchInput;
+    _pendingQuickMenuSearchInput = "";
+    return value;
+  }
+
+  static void clearQuickMenuSearchInput() {
+    _pendingQuickMenuSearchInput = "";
+    quickMenuSearchInputVersion.value++;
+  }
+
   static Map<String, String> titleIconRewrite = <String, String>{
-    "YouTube Music": "resources/youtube_music.png",
     "DevTools": "resources/devtools.png",
   };
+
   static String getIconRewrite(String exePath, {Window? window}) {
     if (window != null) {
       for (final String title in titleIconRewrite.keys) {
         if (window.title.contains(title)) return titleIconRewrite[title] ?? "";
       }
     }
-    final String appName = iconsRewrite.keys.firstWhere((String element) => exePath.contains(element), orElse: () => "");
-    // print(<String>[exePath, appName, iconsRewrite[appName] ?? ""]);
-    return iconsRewrite[appName] ?? "";
+
+    final Map<String, String> currentIconsRewrite = Boxes().iconsRewrite;
+    final String appName = currentIconsRewrite.keys
+        .firstWhere((String element) => exePath.toLowerCase().contains(element.toLowerCase()), orElse: () => "");
+    return currentIconsRewrite[appName] ?? "";
   }
 }

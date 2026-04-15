@@ -60,11 +60,11 @@ final int Function(Pointer<Utf16> lpFileName, int dwFileAttributes) _SetFileAttr
 
 /// [GDI]
 
-final DynamicLibrary _gdi32 = DynamicLibrary.open('gdi32.dll');
+// final DynamicLibrary _gdi32 = DynamicLibrary.open('gdi32.dll');
 
-int CreateRectRgn(int x1, int y1, int x2, int y2) => _CreateRectRgn(x1, y1, x2, y2);
-final int Function(int x1, int y1, int x2, int y2) _CreateRectRgn =
-    _gdi32.lookupFunction<IntPtr Function(Int32 x1, Int32 y1, Int32 x2, Int32 y2), int Function(int x1, int y1, int x2, int y2)>('CreateRectRgn');
+// int CreateRectRgn(int x1, int y1, int x2, int y2) => _CreateRectRgn(x1, y1, x2, y2);
+// final int Function(int x1, int y1, int x2, int y2) _CreateRectRgn =
+//     _gdi32.lookupFunction<IntPtr Function(Int32 x1, Int32 y1, Int32 x2, Int32 y2), int Function(int x1, int y1, int x2, int y2)>('CreateRectRgn');
 
 /// [SHELL]
 final DynamicLibrary _shell32 = DynamicLibrary.open('shell32.dll');
@@ -82,6 +82,14 @@ int ExtractIconEx(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phico
 final int Function(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, int nIcons) _ExtractIconEx =
     _shell32.lookupFunction<Uint32 Function(Pointer<Utf16> lpszFile, Int32 nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, Uint32 nIcons),
         int Function(Pointer<Utf16> lpszFile, int nIconIndex, Pointer<IntPtr> phiconLarge, Pointer<IntPtr> phiconSmall, int nIcons)>('ExtractIconExW');
+
+/// [COMCTL32]
+final DynamicLibrary _comctl32 = DynamicLibrary.open('comctl32.dll');
+
+int ImageList_GetIcon(int himl, int i, int flags) => _ImageList_GetIcon(himl, i, flags);
+final int Function(int himl, int i, int flags) _ImageList_GetIcon =
+    _comctl32.lookupFunction<IntPtr Function(IntPtr himl, Int32 i, Uint32 flags), int Function(int himl, int i, int flags)>(
+        'ImageList_GetIcon');
 
 // #endregion
 

@@ -3,9 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 // ignore: depend_on_referenced_packages
-import 'package:collection/collection.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
@@ -17,55 +15,19 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_widget.dart';
-import '../widgets/mouse_scroll_widget.dart';
+
+import 'trktivity/trktivity_activity_chart.dart';
+import 'trktivity/trktivity_daily_stats.dart';
+import 'trktivity/trktivity_filter_set.dart';
+import 'trktivity/trktivity_focus_tables.dart';
+import 'trktivity/trktivity_heat_map.dart';
+import 'trktivity/trktivity_models.dart';
+import 'trktivity/trktivity_timeline.dart';
 
 class TrktivityPage extends StatefulWidget {
   const TrktivityPage({super.key});
   @override
   TrktivityPageState createState() => TrktivityPageState();
-}
-
-String timeFormat(int time) {
-  final Duration dur = Duration(seconds: time);
-  return "${dur.inHours.toString().numberFormat()}:${dur.inMinutes.remainder(60).toString().numberFormat()}:${dur.inSeconds.remainder(60).toString().numberFormat()}";
-}
-
-class MTrack {
-  int mouse;
-  int keyboard;
-  int time;
-  String get timeFormat {
-    final Duration dur = Duration(seconds: time);
-    return "${dur.inHours.toString().numberFormat()}:${dur.inMinutes.remainder(60).toString().numberFormat()}:${dur.inSeconds.remainder(60).toString().numberFormat()}";
-  }
-
-  MTrack({required this.mouse, required this.keyboard, this.time = 0});
-
-  @override
-  String toString() => '\nMTrack(mouse: $mouse, keyboard: $keyboard, time: ${time.formatTime()})';
-}
-
-class DMTRack extends MTrack {
-  int idleTime;
-  DMTRack({
-    required super.mouse,
-    required super.keyboard,
-    required super.time,
-    required this.idleTime,
-  });
-}
-
-class TTrack {
-  int from;
-  int to;
-  int get diff => to - from;
-  TTrack({
-    required this.from,
-    required this.to,
-  });
-
-  @override
-  String toString() => '\nTTrack(from: $from, to: $to)';
 }
 
 class TrktivityPageState extends State<TrktivityPage> {
@@ -82,7 +44,10 @@ class TrktivityPageState extends State<TrktivityPage> {
   @override
   void initState() {
     super.initState();
-    allDates.addAll(Directory(trk.folder).listSync().map((FileSystemEntity e) => e.path.substring(e.path.lastIndexOf('\\') + 1).replaceAll(".json", "")));
+    allDates.addAll(Directory(trk.folder)
+        .listSync()
+        .where((FileSystemEntity e) => e.path.contains("-"))
+        .map((FileSystemEntity e) => e.path.substring(e.path.lastIndexOf('\\') + 1).replaceAll(".json", "")));
 
     if (allDates.isNotEmpty) {
       allDates.sort((String a, String b) => DateTime.parse(a).isBefore(DateTime.parse(b)) ? 1 : -1);
@@ -313,210 +278,249 @@ class TrktivityPageState extends State<TrktivityPage> {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        CheckboxListTile(
-          onChanged: (bool? e) => setState(() {
-            globalSettings.trktivityEnabled = !globalSettings.trktivityEnabled;
-            Boxes.updateSettings("trktivityEnabled", globalSettings.trktivityEnabled);
-            enableTrcktivity(globalSettings.trktivityEnabled);
-          }),
-          controlAffinity: ListTileControlAffinity.leading,
-          value: globalSettings.trktivityEnabled,
-          title: Text(
-            "Trktivity",
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          secondary: InfoWidget("Press to open folder with saved data", onTap: () {
-            WinUtils.open("${WinUtils.getTabameSettingsFolder()}\\trktivity");
-          }),
-        ),
-        !globalSettings.trktivityEnabled
-            ? const Markdown(
-                shrinkWrap: true,
-                data: '''
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              flex: 4,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  CheckboxListTile(
+                    onChanged: (bool? e) => setState(() {
+                      globalSettings.trktivityEnabled = !globalSettings.trktivityEnabled;
+                      Boxes.updateSettings("trktivityEnabled", globalSettings.trktivityEnabled);
+                      enableTrcktivity(globalSettings.trktivityEnabled);
+                    }),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: globalSettings.trktivityEnabled,
+                    title: Text(
+                      "Trktivity",
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    secondary: InfoWidget("Press to open folder with saved data", onTap: () {
+                      WinUtils.open("${WinUtils.getTabameAppDataFolder()}\\trktivity");
+                    }),
+                  ),
+                  !globalSettings.trktivityEnabled
+                      ? const Markdown(
+                          shrinkWrap: true,
+                          data: '''
 With Trktivity you can track your activity per minute/hour/day/week. 
 
 It records keystrokes, mouse movement and active Window.
 ''',
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  ListTile(
-                    onTap: () {
-                      setState(() => showFilters = !showFilters);
-                    },
-                    title: const Text("Filters"),
-                    leading: Icon(showFilters ? Icons.expand_less : Icons.expand_more),
-                  ),
-                  if (showFilters)
-                    Column(
-                      children: <Widget>[
-                        CheckBoxWidget(
-                          onChanged: (bool e) {},
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          value: globalSettings.trktivitySaveAllTitles,
-                          text: "Save all All Window titles",
-                        ),
-                        Row(
+                        )
+                      : Column(
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            // Modern Filter Toolbar
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Row(
                                 children: <Widget>[
-                                  ListTile(
-                                    leading: const Icon(Icons.add),
-                                    minLeadingWidth: 20,
-                                    title: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        const Text("Add Title Filter"),
-                                        const SizedBox(width: 10),
-                                        InfoWidget("To remove leave exe empty", onTap: () {})
-                                      ],
+                                  InkWell(
+                                    onTap: () => setState(() => showFilters = !showFilters),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Icon(
+                                            showFilters ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                            size: 20,
+                                            color: Theme.of(context).colorScheme.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Filters & Privacy",
+                                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    onTap: () {
+                                  ),
+                                  const Spacer(),
+                                  CheckBoxWidget(
+                                    onChanged: (bool e) {
+                                      globalSettings.trktivitySaveAllTitles = e;
+                                      Boxes.updateSettings("trktivitySaveAllTitles", e);
+                                      setState(() {});
+                                    },
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    value: globalSettings.trktivitySaveAllTitles,
+                                    text: "Save All Window Titles",
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () {
                                       trk.filters.add(TrktivityFilter(
                                         exe: "exe",
                                         titleSearch: r"",
                                         titleReplace: r"",
                                       ));
                                       Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                      setState(() {});
+                                      setState(() => showFilters = true);
                                     },
-                                  ),
-                                  SizedBox(
-                                    height: 200,
-                                    child: MouseScrollWidget(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.start,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: List<Widget>.generate(
-                                            trk.filters.length,
-                                            (int index) => Container(
-                                              width: 200,
-                                              child: TrktivityFilterSet(
-                                                key: UniqueKey(),
-                                                filter: trk.filters[index],
-                                                onSaved: (TrktivityFilter filter) {
-                                                  if (filter.exe.isEmpty) {
-                                                    trk.filters.removeAt(index);
-                                                    Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                                    setState(() {});
-                                                    return;
-                                                  }
-                                                  trk.filters[index] = filter;
-                                                  Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                                  setState(() {});
-                                                },
-                                              ),
-                                            ),
-                                          ),
-                                        )),
+                                    icon: const Icon(Icons.add_rounded, size: 18),
+                                    label: const Text("Add Rule", style: TextStyle(fontSize: 12)),
                                   ),
                                 ],
                               ),
                             ),
+                            if (showFilters)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.02),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: List<Widget>.generate(
+                                      trk.filters.length,
+                                      (int index) => TrktivityFilterSet(
+                                        key: UniqueKey(),
+                                        filter: trk.filters[index],
+                                        onSaved: (TrktivityFilter filter) {
+                                          if (filter.exe.isEmpty) {
+                                            trk.filters.removeAt(index);
+                                            Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                            setState(() {});
+                                            return;
+                                          }
+                                          trk.filters[index] = filter;
+                                          Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                          setState(() {});
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            TrktivityHeatMap(
+                              allDates: allDates,
+                              folder: trk.folder,
+                            ),
                           ],
                         ),
-                      ],
+                  if (allDates.isEmpty)
+                    const Text("  There is no file to analyze. Close Interface, do some activity and come back to see it saved!")
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                // Day Selector
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Icon(Icons.today, size: 18, color: Theme.of(context).colorScheme.primary),
+                                      const SizedBox(width: 8),
+                                      DropdownButtonHideUnderline(
+                                        child: DropdownButton2<String>(
+                                          isDense: true,
+                                          buttonStyleData: const ButtonStyleData(
+                                            padding: EdgeInsets.zero,
+                                            height: 35,
+                                            width: 120,
+                                          ),
+                                          menuItemStyleData: const MenuItemStyleData(height: 35),
+                                          dropdownStyleData: DropdownStyleData(
+                                            padding: const EdgeInsets.all(4),
+                                            offset: const Offset(0, -4),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            maxHeight: 250,
+                                          ),
+                                          value: selectedDay,
+                                          items: allDates
+                                              .take(30)
+                                              .map<DropdownMenuItem<String>>((String e) => DropdownMenuItem<String>(
+                                                    value: e,
+                                                    child: Text(e, style: const TextStyle(fontSize: 13)),
+                                                  ))
+                                              .toList(),
+                                          onMenuStateChange: (bool e) {
+                                            if (!e) return;
+                                            dataAnalyzed = false;
+                                            setState(() {});
+                                          },
+                                          onChanged: (String? e) {
+                                            dataAnalyzed = false;
+                                            selectedDay = e ?? allDates.first;
+                                            pickText = "Pick Range";
+                                            startDate = "";
+                                            endDate = "";
+                                            showReport();
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                VerticalDivider(
+                                  width: 1,
+                                  indent: 8,
+                                  endIndent: 8,
+                                  color: Theme.of(context).colorScheme.outlineVariant,
+                                ),
+                                // Range Selector
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      showDateRangePicker(
+                                        context: context,
+                                        firstDate: DateTime.parse(allDates.last),
+                                        lastDate: DateTime.parse(allDates.first),
+                                      ).then((DateTimeRange? value) {
+                                        if (value == null) return;
+                                        dataAnalyzed = false;
+                                        startDate = DateFormat('yyyy-MM-dd').format(value.start);
+                                        endDate = DateFormat('yyyy-MM-dd').format(value.end);
+                                        pickText = startDate == endDate ? startDate : "$startDate → $endDate";
+                                        showReport();
+                                        setState(() {});
+                                      });
+                                    },
+                                    icon: Icon(Icons.date_range, size: 18, color: Theme.of(context).colorScheme.primary),
+                                    label: Text(
+                                      pickText == "Pick Dates" ? "Pick Range" : pickText,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
-        if (allDates.isEmpty)
-          const Text("  There is no file to analyze. Close Interface, do some activity and come back to see it saved!")
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          const Flexible(child: Text("Pick a date: ")),
-                          Flexible(
-                            // width: 130,
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton2<String>(
-                                alignment: Alignment.center,
-                                isDense: true,
-                                isExpanded: true,
-                                buttonStyleData: const ButtonStyleData(padding: EdgeInsets.symmetric(horizontal: 5), height: 40, width: 140),
-                                menuItemStyleData: const MenuItemStyleData(height: 30),
-                                dropdownStyleData: const DropdownStyleData(padding: EdgeInsets.all(1), offset: Offset(0, 30), maxHeight: 200),
-                                value: selectedDay,
-                                items: allDates
-                                    .take(30)
-                                    .map<DropdownMenuItem<String>>(
-                                        (String e) => DropdownMenuItem<String>(value: e, child: Center(child: Text(e)), alignment: Alignment.center))
-                                    .toList(),
-                                onMenuStateChange: (bool e) {
-                                  if (!e) return;
-                                  dataAnalyzed = false;
-                                  setState(() {});
-                                },
-                                onChanged: (String? e) {
-                                  dataAnalyzed = false;
-                                  setState(() {});
-                                  selectedDay = e ?? allDates.first;
-                                  pickText = "Pick Dates";
-                                  startDate = "";
-                                  endDate = "";
-                                  showReport();
-                                  setState(() {});
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          const Flexible(child: Text("Pick a Date Range: ")),
-                          OutlinedButton(
-                            onPressed: () {
-                              showDateRangePicker(
-                                context: context,
-                                firstDate: DateTime.parse(allDates.last),
-                                lastDate: DateTime.parse(allDates.first),
-                              ).then((DateTimeRange? value) {
-                                dataAnalyzed = false;
-                                setState(() {});
-                                if (value == null) return;
-                                startDate = DateFormat('yyyy-MM-dd').format(value.start);
-                                endDate = DateFormat('yyyy-MM-dd').format(value.end);
-                                pickText = "$startDate\n$endDate";
-                                showReport();
-                                setState(() {});
-                              });
-                            },
-                            child: Text(pickText),
-                          )
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
+          ],
+        ),
         if (dataAnalyzed)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -533,554 +537,33 @@ It records keystrokes, mouse movement and active Window.
                 ),
                 Text("Total Keys pressed: ${uTrack.values.fold(0, (int previousValue, MTrack element) => element.keyboard + previousValue).formatInt()}"),
                 const SizedBox(height: 20),
-                Container(
-                  height: 220,
-                  child: BarChart(
-                    BarChartData(
-                      maxY: uTrackMaxValue,
-                      barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                        // tooltipBgColor: Theme.of(context).colorScheme.surface,
-
-                        tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                        getTooltipItem: (BarChartGroupData a, int b, BarChartRodData c, int d) {
-                          if (a.barRods.isEmpty) return BarTooltipItem("", Theme.of(context).textTheme.labelMedium!);
-                          final String kb = a.barRods.elementAt(0).rodStackItems.elementAt(0).toY.toInt().formatInt();
-                          final String mouse = a.barRods.elementAt(0).rodStackItems.elementAt(1).toY.toInt().formatInt();
-                          return BarTooltipItem("${a.x.formatTime()}\n$kb keys pressed\n$mouse mouse pings", Theme.of(context).textTheme.labelLarge!);
-                        },
-                      )),
-                      barGroups: List<BarChartGroupData>.generate(
-                        48,
-                        (int indx) {
-                          int i = 0;
-                          if (indx % 2 == 0) {
-                            i = indx ~/ 2 * 60;
-                          } else {
-                            i = indx ~/ 2 * 60 + 30;
-                          }
-                          if (uTrack.containsKey(i)) {
-                            return BarChartGroupData(
-                              x: i,
-                              // showingTooltipIndicators: <int>[uTrack[i]!.keyboard, uTrack[i]!.mouse],
-                              barRods: <BarChartRodData>[
-                                BarChartRodData(
-                                    toY: uTrackMaxValue,
-                                    rodStackItems: <BarChartRodStackItem>[
-                                      BarChartRodStackItem(0, uTrack[i]!.keyboard.toDouble(), Colors.red),
-                                      BarChartRodStackItem(0, uTrack[i]!.mouse.toDouble(), Colors.green),
-                                    ],
-                                    color: Colors.transparent),
-                              ],
-                            );
-                          }
-                          return BarChartGroupData(x: i);
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (double value, TitleMeta meta) {
-                              if (value / 60 % 1 == 0) {
-                                return SideTitleWidget(
-                                  axisSide: meta.axisSide,
-                                  space: 16,
-                                  child: Text(
-                                    (value.toInt() ~/ 60).toString(),
-                                    style: const TextStyle(
-                                      color: Color(0xff7589a2),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 0,
-                                child: Container(),
-                              );
-                            },
-                            reservedSize: 42,
-                          ),
-                        ),
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      ),
-                    ),
-                  ),
+                TrktivityActivityChart(
+                  uTrack: uTrack,
+                  uTrackMaxValue: uTrackMaxValue,
                 ),
                 const SizedBox(height: 10),
                 Text("Focus time", style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
-                IntrinsicHeight(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        child: Container(
-                          height: 200,
-                          child: MouseScrollWidget(
-                            scrollDirection: Axis.vertical,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Expanded(child: Text("App", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.labelLarge)),
-                                  ],
-                                ),
-                                InkWell(
-                                  onTap: () {},
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Expanded(
-                                          child: Text(wTrack.containsKey("idle.exe") ? "Idle: ${wTrack["idle.exe"]!.timeFormat}" : "Total",
-                                              style: Theme.of(context).textTheme.labelLarge)),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          timeFormat(
-                                              wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0))),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          wTrackList
-                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.keyboard : 0))
-                                              .formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          wTrackList
-                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.mouse : 0))
-                                              .formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                                ...List<Widget>.generate(
-                                  wTrackList.length,
-                                  (int index) {
-                                    final MapEntry<String, MTrack> track = wTrackList.elementAt(index);
-                                    if (track.key == "idle.exe") return Container();
-                                    return InkWell(
-                                      onTap: () {},
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          Expanded(
-                                              child: Padding(
-                                                  padding: const EdgeInsets.only(right: 5.0),
-                                                  child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false))),
-                                          SizedBox(width: 80, child: Text(track.value.timeFormat)),
-                                          SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
-                                          SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const VerticalDivider(width: 20, thickness: 1),
-                      Expanded(
-                        child: Container(
-                          height: 200,
-                          child: MouseScrollWidget(
-                            scrollDirection: Axis.vertical,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Expanded(child: Text("Title", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 80, child: Text("Time", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 60, child: Text("Keys", style: Theme.of(context).textTheme.labelLarge)),
-                                    SizedBox(width: 60, child: Text("Mouse", style: Theme.of(context).textTheme.labelLarge)),
-                                  ],
-                                ),
-                                InkWell(
-                                  onTap: () {},
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Expanded(child: Text("Total", style: Theme.of(context).textTheme.labelLarge)),
-                                      SizedBox(
-                                        width: 80,
-                                        child: Text(
-                                          timeFormat(
-                                              tTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.time : 0))),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          tTrackList
-                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.keyboard : 0))
-                                              .formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 60,
-                                        child: Text(
-                                          tTrackList
-                                              .fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "Idle" ? element.value.mouse : 0))
-                                              .formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge,
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                                ...List<Widget>.generate(
-                                  tTrackList.length,
-                                  (int index) {
-                                    final MapEntry<String, MTrack> track = tTrackList.elementAt(index);
-                                    if (track.key == "Idle") return Container();
-                                    return InkWell(
-                                      onTap: () {},
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          Expanded(
-                                              child: Padding(
-                                                  padding: const EdgeInsets.only(right: 5.0),
-                                                  child: Text(track.key, maxLines: 1, overflow: TextOverflow.fade, softWrap: false))),
-                                          SizedBox(width: 80, child: Text(track.value.timeFormat)),
-                                          SizedBox(width: 60, child: Text(track.value.keyboard.formatInt())),
-                                          SizedBox(width: 60, child: Text(track.value.mouse.formatInt())),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
+                TrktivityFocusTables(
+                  wTrack: wTrack,
+                  wTrackList: wTrackList,
+                  tTrack: tTrack,
+                  tTrackList: tTrackList,
                 ),
                 if ((startDate.isEmpty && selectedDay.isNotEmpty) || (startDate.isNotEmpty && startDate == endDate))
-                  LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const Divider(height: 20, thickness: 1),
-                          Text("Timeline by App", style: Theme.of(context).textTheme.titleLarge),
-                          const SizedBox(height: 11),
-                          Container(
-                            height: 20,
-                            child: Stack(
-                              children: List<Widget>.generate(
-                                24,
-                                (int index) {
-                                  final double startpercentage = (index * 60 * 60) / (24 * 60 * 60);
-                                  return Positioned(
-                                    left: startpercentage * constraints.maxWidth,
-                                    child: Text("$index"),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          Container(
-                            height: 220,
-                            child: SingleChildScrollView(
-                              controller: ScrollController(),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: List<Widget>.generate(
-                                  wTimeTrackList.length,
-                                  (int index) => Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text(wTimeTrackList[index].key),
-                                      Container(
-                                        height: 20,
-                                        width: constraints.maxWidth,
-                                        child: Stack(
-                                          children: List<Widget>.generate(wTimeTrackList[index].value.length, (int i) {
-                                            final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].from);
-                                            final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(wTimeTrackList[index].value[i].to);
-                                            final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
-                                            final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
-                                            const int secondsInADay = 24 * 60 * 60;
-
-                                            final double startpercentage = startseconds / secondsInADay;
-                                            final double diffPercentage = (endseconds - startseconds) / secondsInADay;
-
-                                            return Positioned(
-                                              left: startpercentage * constraints.maxWidth,
-                                              width: diffPercentage * constraints.maxWidth,
-                                              child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                                      const Divider(height: 5, thickness: 1),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text("Timeline by Title", style: Theme.of(context).textTheme.titleLarge),
-                          const SizedBox(height: 10),
-                          Container(
-                            height: 220,
-                            child: SingleChildScrollView(
-                              controller: ScrollController(),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: List<Widget>.generate(
-                                  tTimeTrackList.length,
-                                  (int index) => Column(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text(tTimeTrackList[index].key),
-                                      Container(
-                                        height: 20,
-                                        width: constraints.maxWidth,
-                                        child: Stack(
-                                          children: List<Widget>.generate(tTimeTrackList[index].value.length, (int i) {
-                                            final DateTime startDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].from);
-                                            final DateTime endDate = DateTime.fromMillisecondsSinceEpoch(tTimeTrackList[index].value[i].to);
-                                            final int startseconds = startDate.hour * 60 * 60 + startDate.minute * 60 + startDate.second;
-                                            final int endseconds = endDate.hour * 60 * 60 + endDate.minute * 60 + endDate.second;
-                                            const int secondsInADay = 24 * 60 * 60;
-
-                                            final double startpercentage = startseconds / secondsInADay;
-                                            final double diffPercentage = (endseconds - startseconds) / secondsInADay;
-
-                                            return Positioned(
-                                              left: startpercentage * constraints.maxWidth,
-                                              width: diffPercentage * constraints.maxWidth,
-                                              child: Container(height: 20, color: Theme.of(context).colorScheme.primary),
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                                      const Divider(height: 5, thickness: 1),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                  TrktivityTimeline(
+                    wTimeTrackList: wTimeTrackList,
+                    tTimeTrackList: tTimeTrackList,
                   ),
                 if (startDate.isNotEmpty && dailyStats.isNotEmpty && startDate != endDate)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const SizedBox(height: 20),
-                            Text("Daily Stats", style: Theme.of(context).textTheme.titleLarge),
-                            const Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Expanded(child: Text("Day")),
-                                SizedBox(width: 80, child: Text("Active")),
-                                SizedBox(width: 80, child: Text("Idle")),
-                                SizedBox(width: 80, child: Text("Keys")),
-                                SizedBox(width: 80, child: Text("Mouse")),
-                              ],
-                            ),
-                            InkWell(
-                              onTap: () {},
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Expanded(child: Text("Total", style: Theme.of(context).textTheme.labelLarge)),
-                                  SizedBox(
-                                      width: 80,
-                                      child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
-                                          style: Theme.of(context).textTheme.labelLarge)),
-                                  SizedBox(
-                                      width: 80,
-                                      child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
-                                          style: Theme.of(context).textTheme.labelLarge)),
-                                  SizedBox(
-                                      width: 80,
-                                      child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard).formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge)),
-                                  SizedBox(
-                                      width: 80,
-                                      child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse).formatInt(),
-                                          style: Theme.of(context).textTheme.labelLarge)),
-                                ],
-                              ),
-                            ),
-                            ...List<Widget>.generate(dailyStats.keys.length, (int index) {
-                              return InkWell(
-                                onTap: () {},
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Expanded(
-                                        child: Padding(
-                                      padding: const EdgeInsets.only(right: 5.0),
-                                      child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))),
-                                          maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
-                                    )),
-                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).timeFormat)),
-                                    SizedBox(width: 80, child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),
-                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).keyboard.formatInt())),
-                                    SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).mouse.formatInt())),
-                                  ],
-                                ),
-                              );
-                            })
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                          flex: 1,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              const SizedBox(height: 20),
-                              Text("Daily Average", style: Theme.of(context).textTheme.titleLarge),
-                              Text("Active hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.time).average.toInt())}",
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
-                              Text("Idle hours: ${timeFormat(dailyStats.values.map((DMTRack e) => e.idleTime).average.toInt())}",
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
-                              Text("Key Strokes: ${dailyStats.values.map((DMTRack e) => e.keyboard).average.toInt().formatInt()}",
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
-                              Text("Mouse Pings: ${dailyStats.values.map((DMTRack e) => e.mouse).average.toInt().formatInt()}",
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(height: 2)),
-                            ],
-                          ))
-                    ],
+                  TrktivityDailyStats(
+                    dailyStats: dailyStats,
                   )
               ],
             ),
           ),
         const SizedBox(height: 50)
       ],
-    );
-  }
-}
-
-class TrktivityFilterSet extends StatefulWidget {
-  final TrktivityFilter filter;
-  final Function(TrktivityFilter filter) onSaved;
-  const TrktivityFilterSet({
-    super.key,
-    required this.filter,
-    required this.onSaved,
-  });
-  @override
-  TrktivityFilterSetState createState() => TrktivityFilterSetState();
-}
-
-class TrktivityFilterSetState extends State<TrktivityFilterSet> {
-  final TextEditingController exeController = TextEditingController();
-  final TextEditingController searchController = TextEditingController();
-  final TextEditingController replaceController = TextEditingController();
-  late TrktivityFilter filter;
-  @override
-  void initState() {
-    super.initState();
-    filter = widget.filter.copyWith();
-    exeController.text = filter.exe;
-    searchController.text = filter.titleSearch;
-    replaceController.text = filter.titleReplace;
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-      child: Focus(
-        onFocusChange: (bool f) {
-          if (!f) {
-            filter.exe = exeController.text;
-            filter.titleSearch = searchController.text;
-            filter.titleReplace = replaceController.text;
-            widget.onSaved(filter);
-          }
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            TextField(
-              decoration: const InputDecoration(labelText: "Match exe (regex):"),
-              controller: exeController,
-            ),
-            TextField(
-              decoration: const InputDecoration(labelText: "Search for (regex):"),
-              controller: searchController,
-            ),
-            TextField(
-              decoration: const InputDecoration(labelText: "Replace with:"),
-              controller: replaceController,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

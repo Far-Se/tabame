@@ -33,29 +33,17 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     fetching = false;
     // if (listEquals(Tray.trayList, tray)) return;
     tray = <TrayBarInfo>[...Tray.trayList.where((TrayBarInfo element) => element.isVisible)];
-    final List<TrayBarInfo> spotify = tray.where((TrayBarInfo element) => element.processExe == "Spotify.exe").toList();
-    if (spotify.isNotEmpty) {
-      Globals.spotifyTrayHwnd = <int>[spotify[0].hWnd, spotify[0].processID];
-    } else {
-      Globals.spotifyTrayHwnd = <int>[0, 0];
-    }
-    final List<TrayBarInfo> foobar = tray.where((TrayBarInfo element) => element.processExe == "foobar2000.exe").toList();
-    if (foobar.isNotEmpty) {
-      Globals.foobarTrayHwnd = <int>[foobar[0].hWnd, foobar[0].processID];
-    } else {
-      Globals.foobarTrayHwnd = <int>[0, 0];
-    }
-    final List<TrayBarInfo> musicBee = tray.where((TrayBarInfo element) => element.processExe == "MusicBee.exe").toList();
+    /* final List<TrayBarInfo> musicBee = tray.where((TrayBarInfo element) => element.processExe == "MusicBee.exe").toList();
     if (musicBee.isNotEmpty) {
-      Globals.musicBeeTrayHwnd = <int>[musicBee[0].hWnd, musicBee[0].processID];
+      Globals.musicBeeTrayHwnd = <int>[musicBee[0].hWnd, musicBee[0].processID, musicBee[0].uCallbackMessage, musicBee[0].uID];
     } else {
-      Globals.musicBeeTrayHwnd = <int>[0, 0];
-    }
+      Globals.musicBeeTrayHwnd = <int>[0, 0, 0, 0];
+    } */
     if (mounted) setState(() {});
   }
 
   void init() {
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     QuickMenuFunctions.addListener(this);
     fetchTray();
     mainTimer = Timer.periodic(const Duration(milliseconds: 600), (Timer timer) async {
@@ -69,8 +57,8 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   }
 
   @override
-  Future<void> onQuickMenuToggled(bool visible, int type) async {
-    if (type != 0) return;
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (type != QuickMenuPage.quickMenu) return;
     if (visible) {
       fetchTray();
     } else {}
@@ -86,6 +74,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   @override
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
+    QuickMenuFunctions.removeListener(this);
     _scrollController.dispose();
     mainTimer.cancel();
     super.dispose();
@@ -94,11 +83,96 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     if (tray.isEmpty || !globalSettings.showTrayBar) return Container();
-
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      child: Row(
+        children: <Widget>[
+          for (final TrayBarInfo info in tray)
+            Listener(
+              onPointerDown: (PointerDownEvent event) async {
+                if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                if (event.kind == PointerDeviceKind.mouse) {
+                  if (event.buttons == kSecondaryMouseButton) {
+                    if (info.clickOpensExe) {
+                      if (info.processPath.isNotEmpty) {
+                        Win32.closeWindow(info.hWnd);
+                        Future<void>.delayed(
+                            const Duration(milliseconds: 300), () => Win32.forceCloseWindowbyProcess(info.processID));
+                        Future<void>.delayed(
+                            const Duration(milliseconds: 600), () => Win32.forceCloseWindowbyPath(info.processPath));
+                      }
+                      return;
+                    }
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                  } else if (event.buttons == kPrimaryMouseButton) {
+                    if (info.clickOpensExe) {
+                      if (info.processPath.isNotEmpty) {
+                        WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
+                      }
+                      return;
+                    }
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                  } else if (event.buttons == kMiddleMouseButton) {
+                    final int hWnd = await findTopWindow(info.processID);
+                    if (hWnd > 0) {
+                      Win32.closeWindow(hWnd, forced: true);
+                    } else {}
+                  }
+                }
+              },
+              onPointerSignal: (PointerSignalEvent pointerSignal) {
+                if (pointerSignal is PointerScrollEvent) {
+                  if (pointerSignal.scrollDelta.dy < 0) {
+                    _scrollController.animateTo(_scrollController.position.minScrollExtent,
+                        duration: const Duration(milliseconds: 500), curve: Curves.ease);
+                  } else {
+                    _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 500), curve: Curves.ease);
+                  }
+                }
+              },
+              child: InkWell(
+                onTap: () {},
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                  child: Tooltip(
+                      message: info.processExe,
+                      constraints: const BoxConstraints(minHeight: 0),
+                      preferBelow: false,
+                      child: Globals.getIconRewrite(info.processPath) != ""
+                          ? Image.asset(Globals.getIconRewrite(info.processPath), width: 20)
+                          : Image.memory(
+                              info.iconData,
+                              fit: BoxFit.scaleDown,
+                              gaplessPlayback: true,
+                              width: 16,
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                Icons.check_box_outline_blank,
+                                size: 16,
+                              ),
+                            )),
+                ),
+              ),
+            ),
+          const SizedBox(width: 5.1),
+        ],
+      ),
+    );
+    // ignore: dead_code
     return Padding(
       padding: const EdgeInsets.only(right: 3),
       child: SizedBox(
-        height: Globals.heights.traybar - 10,
+        height: Globals.heights.traybar - 10.1,
         width: tray.length * 20.4,
         child: ShaderMask(
           shaderCallback: (Rect rect) {
@@ -125,8 +199,10 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                           if (info.clickOpensExe) {
                             if (info.processPath.isNotEmpty) {
                               Win32.closeWindow(info.hWnd);
-                              Future<void>.delayed(const Duration(milliseconds: 300), () => Win32.forceCloseWindowbyProcess(info.processID));
-                              Future<void>.delayed(const Duration(milliseconds: 600), () => Win32.forceCloseWindowbyPath(info.processPath));
+                              Future<void>.delayed(const Duration(milliseconds: 300),
+                                  () => Win32.forceCloseWindowbyProcess(info.processID));
+                              Future<void>.delayed(const Duration(milliseconds: 600),
+                                  () => Win32.forceCloseWindowbyPath(info.processPath));
                             }
                             return;
                           }
@@ -158,9 +234,11 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                     onPointerSignal: (PointerSignalEvent pointerSignal) {
                       if (pointerSignal is PointerScrollEvent) {
                         if (pointerSignal.scrollDelta.dy < 0) {
-                          _scrollController.animateTo(_scrollController.position.minScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
+                          _scrollController.animateTo(_scrollController.position.minScrollExtent,
+                              duration: const Duration(milliseconds: 500), curve: Curves.ease);
                         } else {
-                          _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.ease);
+                          _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+                              duration: const Duration(milliseconds: 500), curve: Curves.ease);
                         }
                       }
                     },
@@ -170,7 +248,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                         padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
                         child: Tooltip(
                             message: info.processExe,
-                            height: 0,
+                            constraints: const BoxConstraints(minHeight: 0),
                             preferBelow: false,
                             child: Globals.getIconRewrite(info.processPath) != ""
                                 ? Image.asset(Globals.getIconRewrite(info.processPath), width: 20)
@@ -179,7 +257,8 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                                     fit: BoxFit.scaleDown,
                                     gaplessPlayback: true,
                                     width: 16,
-                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
+                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                        const Icon(
                                       Icons.check_box_outline_blank,
                                       size: 16,
                                     ),
@@ -187,7 +266,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                       ),
                     ),
                   ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 5.1),
               ],
             ),
           ),

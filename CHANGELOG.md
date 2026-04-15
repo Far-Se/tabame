@@ -19,7 +19,6 @@
 
 ## Feature:
 - __CharMap Button__
-- __Case Change Button__
 - __Shutdown Scheduler Button__
 - __Wizardly hosts editor__
 - __QuickActions to include all buttons__

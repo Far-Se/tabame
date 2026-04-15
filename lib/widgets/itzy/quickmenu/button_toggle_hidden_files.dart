@@ -3,8 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
-class ToggleHiddenFilesButton extends StatelessWidget {
+class ToggleHiddenFilesButton extends StatefulWidget {
   const ToggleHiddenFilesButton({super.key});
+
+  @override
+  State<ToggleHiddenFilesButton> createState() => _ToggleHiddenFilesButtonState();
+}
+
+class _ToggleHiddenFilesButtonState extends State<ToggleHiddenFilesButton> {
+  int _visible = WinUtils.areHiddenFilesVisible();
+
+  @override
+  void initState() {
+    super.initState();
+    _visible = WinUtils.areHiddenFilesVisible();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,12 +33,7 @@ class ToggleHiddenFilesButton extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  SizedBox(width: 5),
-                  SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)),
-                  SizedBox(width: 5),
-                  Text("Hide Hidden Files")
-                ],
+                children: <Widget>[SizedBox(width: 5), SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)), SizedBox(width: 5), Text("Hide Hidden Files")],
               ),
             ),
           ),
@@ -36,12 +44,7 @@ class ToggleHiddenFilesButton extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  SizedBox(width: 5),
-                  SizedBox(width: 20, child: Icon(Icons.folder_outlined)),
-                  SizedBox(width: 5),
-                  Text("Show Hidden Files")
-                ],
+                children: <Widget>[SizedBox(width: 5), SizedBox(width: 20, child: Icon(Icons.folder_outlined)), SizedBox(width: 5), Text("Show Hidden Files")],
               ),
             ),
           )
@@ -55,9 +58,13 @@ class ToggleHiddenFilesButton extends StatelessWidget {
         onSecondaryTap: () => WinUtils.toggleHiddenFiles(visible: false),
         onTertiaryTapUp: (TapUpDetails details) => WinUtils.toggleHiddenFiles(visible: true),
         child: InkWell(
-          child: const Tooltip(message: "Toggle Hidden Files", child: Icon(Icons.folder_off_outlined)),
+          child:
+              Tooltip(message: _visible == 1 ? "Hide Hidden Files" : "Show Hidden Files", child: Icon(_visible == 1 ? Icons.folder_outlined : Icons.folder_off_outlined)),
           onTap: () async {
             WinUtils.toggleHiddenFiles();
+            setState(() {
+              if (_visible != -1) _visible = _visible == 1 ? 0 : 1;
+            });
           },
         ),
       ),

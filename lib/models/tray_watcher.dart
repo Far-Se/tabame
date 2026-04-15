@@ -42,68 +42,81 @@ Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
 Map<int, int> __trayIconHandleCache = <int, int>{};
 
 class Tray {
+  Tray._();
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
+  static final Map<int, TrayBarInfo> _trayCache = <int, TrayBarInfo>{};
+
   static Future<bool> fetchTray({bool sort = true}) async {
     final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
     final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
     final List<String> action = Boxes.pref.getStringList("actionTray") ?? <String>[];
     final List<TrayInfo> winTray = await enumTrayIcons();
-    Map<int, int> oldIconHandles = <int, int>{};
-    for (TrayBarInfo element in trayList) {
-      oldIconHandles[element.hWnd] = element.hIcon;
-    }
-    trayList.clear();
+
+    final List<TrayBarInfo> newList = <TrayBarInfo>[];
+    final Set<int> activeHwnds = <int>{};
+
     for (TrayInfo element in winTray) {
-      HwndInfo processPath = HwndPath.getFullPath(GetAncestor(element.hWnd, 2));
+      final int hWnd = element.hWnd;
+      activeHwnds.add(hWnd);
+
+      HwndInfo processPath = HwndPath.getFullPath(GetAncestor(hWnd, 2));
       String exe = Win32.getExe(processPath.path);
-      final TrayBarInfo trayInfo = TrayBarInfo(clickOpensExe: false, processPath: processPath.path, processExe: exe);
+
+      // Skip background/system items that aren't real tray icons or are explorer junk
+      if (processPath.path.contains("explorer.exe") && element.toolTip.isEmpty) continue;
+
+      // Reuse existing object if possible to save memory/allocations
+      TrayBarInfo trayInfo = _trayCache[hWnd] ?? TrayBarInfo(clickOpensExe: false, processPath: processPath.path, processExe: exe);
 
       trayInfo
         ..hIcon = element.hIcon
         ..uID = element.uID
         ..uCallbackMessage = element.uCallbackMessage
-        ..hWnd = element.hWnd
+        ..hWnd = hWnd
         ..processID = element.processID
-        ..isVisible = true // < element.isVisible
-        ..toolTip = element.toolTip;
+        ..isVisible = !hidden.contains(exe) && !processPath.path.contains("explorer.exe")
+        ..toolTip = element.toolTip
+        ..isPinned = pinned.contains(exe)
+        ..clickOpensExe = action.contains(exe);
 
-      if (processPath.path.contains("explorer.exe")) trayInfo.isVisible = false;
-      if (pinned.contains(exe)) trayInfo.isPinned = true;
-      if (hidden.contains(exe)) trayInfo.isVisible = false;
-      if (action.contains(exe)) trayInfo.clickOpensExe = true;
-
-      if (__trayIconCache.containsKey(element.hWnd)) {
-        if (__trayIconHandleCache[element.hWnd] != element.hIcon) {
-          final Uint8List? icon = WinUtils.hIconToBytes(element.hIcon);
-          trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
-          __trayIconCache[element.hWnd] = trayInfo.iconData;
-          __trayIconHandleCache[element.hWnd] = element.hIcon; //? Fetch New
-        } else {
-          trayInfo.iconData = __trayIconCache[element.hWnd]!; //? Cache
+      // Only load/update icon if the item is visible and the icon handle changed
+      if (trayInfo.isVisible) {
+        if (__trayIconHandleCache[hWnd] != element.hIcon || trayInfo.iconData.length <= 1) {
+          try {
+            final Uint8List? icon = WinUtils.hIconToBytes(element.hIcon);
+            trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
+            __trayIconCache[hWnd] = trayInfo.iconData;
+            __trayIconHandleCache[hWnd] = element.hIcon;
+          } catch (e) {
+            // Silently fail for individual icons
+          }
         }
       } else {
-        late Uint8List? icon;
-        try {
-          icon = WinUtils.hIconToBytes(element.hIcon); //? First Fetch
-        } catch (e) {
-          icon = WinUtils.hIconToBytes(0);
-        }
-        trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
-        __trayIconCache[element.hWnd] = trayInfo.iconData;
-        __trayIconHandleCache[element.hWnd] = element.hIcon;
+        // If invisible, clear heavy icon data from the object (keep it in global cache if needed later)
+        trayInfo.iconData = Uint8List.fromList(<int>[0]);
       }
-      trayList.add(trayInfo);
-    }
-    __trayIconCache.removeWhere((int key, Uint8List value) => trayList.where((TrayBarInfo element) => element.hWnd == key).isEmpty);
 
-    if (!sort) return true;
-    trayList.sort((TrayBarInfo a, TrayBarInfo b) {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      if (a.isVisible && !b.isVisible) return -1;
-      if (!a.isVisible && b.isVisible) return 1;
-      return 0;
-    });
+      _trayCache[hWnd] = trayInfo;
+      newList.add(trayInfo);
+    }
+
+    // Efficient cleanup of stale items
+    _trayCache.removeWhere((int key, _) => !activeHwnds.contains(key));
+    __trayIconCache.removeWhere((int key, _) => !activeHwnds.contains(key));
+    __trayIconHandleCache.removeWhere((int key, _) => !activeHwnds.contains(key));
+
+    trayList = newList;
+
+    if (sort) {
+      trayList.sort((TrayBarInfo a, TrayBarInfo b) {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        if (a.isVisible && !b.isVisible) return -1;
+        if (!a.isVisible && b.isVisible) return 1;
+        return 0;
+      });
+    }
+
     return true;
   }
 }

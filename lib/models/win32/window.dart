@@ -35,7 +35,7 @@ class Window {
     }
   }
 
-  getHandles() {
+  void getHandles() {
     final Pointer<Uint32> pId = calloc<Uint32>();
     GetWindowThreadProcessId(hWnd, pId);
     process.mainPID = pId.value;
@@ -48,17 +48,17 @@ class Window {
     process.iconHandle = icon;
   }
 
-  getTitle() {
+  void getTitle() {
     title = Win32.getTitle(hWnd);
   }
 
-  getWorkspace() {
-    monitor = MonitorFromWindow(hWnd, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTOPRIMARY);
-    final int exstyle = GetWindowLong(hWnd, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
-    isPinned = (exstyle & WINDOW_EX_STYLE.WS_EX_TOPMOST) != 0 ? true : false;
+  void getWorkspace() {
+    monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
+    final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    isPinned = (exstyle & WS_EX_TOPMOST) != 0 ? true : false;
   }
 
-  getPath() {
+  void getPath() {
     HwndInfo pathInfo = HwndPath.getFullPath(hWnd);
     process.path = pathInfo.path;
     isAppx = pathInfo.isAppx;
@@ -71,13 +71,13 @@ class Window {
     process.path = process.path.replaceAll(process.exe, "");
   }
 
-  getManifestIcon2() {
+  void getManifestIcon2() {
     String appxLocation = process.path;
     if (!process.exe.contains("exe")) appxLocation += "${process.exe}\\";
     appxIcon = Win32.getManifestIcon(appxLocation);
   }
 
-  getManifestIcon() {
+  void getManifestIcon() {
     String appxLocation = process.path;
     if (!process.exe.contains("exe")) appxLocation += "${process.exe}\\";
     if (File("${appxLocation}AppxManifest.xml").existsSync()) {

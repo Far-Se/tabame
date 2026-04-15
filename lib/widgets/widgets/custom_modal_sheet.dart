@@ -42,7 +42,7 @@ void showCustomModal(BuildContext context, {required Widget child}) {
                     constraints: const BoxConstraints(maxWidth: 280, maxHeight: 350),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(5),
-                      // border: Border.all(color: Theme.of(context).backgroundColor.withOpacity(0.5), width: 1),
+                      // border: Border.all(color: Theme.of(context).backgroundColor.withValues(alpha: 0.5), width: 1),
                       gradient: LinearGradient(
                         colors: <Color>[
                           Theme.of(context).colorScheme.surface,

@@ -9,7 +9,11 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 
+int _weatherLastFetchDate = 0;
 Future<String> fetchWeather([bool showUnit = false]) async {
+  // Check if we have already fetched the weather in the last 15 minutes
+  if (_weatherLastFetchDate + 900000 > DateTime.now().millisecondsSinceEpoch && globalSettings.weatherTemperature.isNotEmpty) return globalSettings.weatherTemperature;
+  _weatherLastFetchDate = DateTime.now().millisecondsSinceEpoch;
   bool failed = false;
   final List<String> latLong = globalSettings.weatherLatLong.split(',');
   if (latLong.length < 2) return "Bad Format.";
@@ -85,48 +89,83 @@ class WeatherWidget extends StatefulWidget {
 }
 
 class _WeatherWidgetState extends State<WeatherWidget> {
-  late Timer refreshWeather;
+  late Timer _refreshTimer;
+
+  /// The cached future — only replaced when the 30-minute timer fires.
+  late Future<String> _weatherFuture;
+
+  /// Last known display text, used while a new fetch is in-flight or on error.
+  String _cachedWeather = "";
+
   @override
   void initState() {
     super.initState();
-    refreshWeather = Timer.periodic(const Duration(minutes: 30), (Timer timer) {
+    // Seed cache from persisted settings so we show something immediately.
+    _cachedWeather = globalSettings.weatherTemperature;
+
+    // Kick off the very first fetch.
+    _triggerFetch();
+
+    // Every 30 minutes, replace the cached future and rebuild.
+    _refreshTimer = Timer.periodic(const Duration(minutes: 30), (_) {
       if (!mounted) return;
-      setState(() {});
+      setState(_triggerFetch);
     });
+  }
+
+  void _triggerFetch() {
+    _weatherFuture = fetchWeather(widget.showUnit);
   }
 
   @override
   void dispose() {
-    refreshWeather.cancel();
+    _refreshTimer.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!globalSettings.showWeather) return const SizedBox();
+    if (!globalSettings.showWeather) {
+      return Container(width: widget.width, height: 30, color: Colors.red);
+    }
+
     return Container(
       width: widget.width,
       height: 30,
-      // height: double.infinity,
       child: FutureBuilder<String>(
-        future: fetchWeather(widget.showUnit),
-        initialData: globalSettings.weatherTemperature,
+        // Re-using the same future instance means no extra network calls on
+        // parent setState — Flutter just delivers the already-resolved value.
+        future: _weatherFuture,
+        initialData: _cachedWeather,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            if (snapshot.hasData) {
-              if ((snapshot.data as String).isNotEmpty) {
-                globalSettings.weatherTemperature = snapshot.data as String;
-                Boxes.updateSettings("weather", globalSettings.weather);
-              }
+            final String result = snapshot.data as String? ?? "";
+            if (result.isNotEmpty) {
+              // Persist the fresh result.
+              _cachedWeather = result;
+              globalSettings.weatherTemperature = result;
+              Boxes.updateSettings("weather", globalSettings.weather);
             }
           }
+
+          // Decide what text to show.
+          final String display;
+          if (snapshot.connectionState == ConnectionState.done) {
+            final String result = snapshot.data as String? ?? "";
+            display = result.isNotEmpty ? result : (_cachedWeather.isNotEmpty ? _cachedWeather : "No Data");
+          } else {
+            // Still loading — show the last known value (or nothing while
+            // the very first fetch is in-flight).
+            display = _cachedWeather.isNotEmpty ? _cachedWeather : "";
+          }
+
           return InkWell(
             onTap: () {
               WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherLatLong}");
             },
             child: Align(
               child: Text(
-                snapshot.data as String,
+                display,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 style: TextStyle(

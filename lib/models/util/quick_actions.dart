@@ -6,8 +6,8 @@ const List<String> quickActionsType = <String>[
   "Set Volume",
   "Run Command",
   "Open",
-  "Volume Slider"
-  // "Send Keys",
+  "Volume Slider",
+  "Send Keys",
 ];
 const List<String> quickActionsList = <String>[
   "Move To Right Desktop",

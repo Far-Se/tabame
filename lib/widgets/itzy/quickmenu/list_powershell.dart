@@ -9,7 +9,7 @@ import 'package:win32/win32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/win32/win32.dart';
-import '../../containers/bar_with_buttons.dart';
+import '../../widgets/bar_with_buttons.dart';
 
 class PowershellList extends StatefulWidget {
   const PowershellList({super.key});
@@ -19,7 +19,8 @@ class PowershellList extends StatefulWidget {
 }
 
 class PowershellListState extends State<PowershellList> {
-  final List<PowerShellScript> scripts = Boxes().powerShellScripts.where((PowerShellScript element) => !element.disabled).toList();
+  final List<PowerShellScript> scripts =
+      Boxes().powerShellScripts.where((PowerShellScript element) => !element.disabled).toList();
   @override
   void initState() {
     super.initState();
@@ -51,8 +52,13 @@ class PowershellListState extends State<PowershellList> {
                     if (!item.showTerminal) {
                       WinUtils.runPowerShell(<String>[item.command]);
                     } else {
-                      ShellExecute(Win32.hWnd, TEXT("open"), TEXT('powershell'), TEXT('-NoExit -executionpolicy bypass -command "${item.command}"'),
-                          Pointer<Utf16>.fromAddress(0), SHOW_WINDOW_CMD.SW_SHOWNORMAL);
+                      ShellExecute(
+                          Win32.hWnd,
+                          TEXT("open"),
+                          TEXT('powershell'),
+                          TEXT('-NoExit -executionpolicy bypass -command "${item.command}"'),
+                          Pointer<Utf16>.fromAddress(0),
+                          SW_SHOWNORMAL);
                     }
                   },
                 ),

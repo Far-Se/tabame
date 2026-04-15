@@ -34,7 +34,7 @@ class _MediaControlButtonState extends State<MediaControlButton> {
                   kMiddleMouseButton: VK.MEDIA_PREV_TRACK,
                 };
                 final Map<int, IconData> iconButton = <int, IconData>{
-                  kPrimaryMouseButton: Icons.skip_next,
+                  kPrimaryMouseButton: Icons.play_circle_outline,
                   kSecondaryMouseButton: Icons.fast_forward,
                   kMiddleMouseButton: Icons.fast_rewind
                 };
@@ -43,13 +43,11 @@ class _MediaControlButtonState extends State<MediaControlButton> {
                   icon = iconButton[event.buttons]!;
                 }
                 timers++;
-                setState(() {});
+                if (mounted) setState(() {});
                 Timer(const Duration(seconds: 1), () {
                   timers--;
                   if (timers > 0) return;
-                  setState(() {
-                    icon = Icons.play_arrow;
-                  });
+                  if (mounted) setState(() => icon = Icons.play_arrow);
                 });
               }
             },
@@ -62,11 +60,9 @@ class _MediaControlButtonState extends State<MediaControlButton> {
                   WinKeys.single(VK.VOLUME_DOWN, KeySentMode.normal);
                   icon = Icons.volume_down;
                 }
-                setState(() {});
+                if (mounted) setState(() {});
                 Timer(const Duration(seconds: 1), () {
-                  setState(() {
-                    icon = Icons.play_arrow;
-                  });
+                  if (mounted) setState(() => icon = Icons.play_arrow);
                 });
               }
             },

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Top Bar Quick Menu"
+  short_description: "Patterns for Tabame quick menu top-bar buttons."
+  default_prompt: "Use $top-bar-quick-menu to add or revise a Tabame quick menu top-bar button that matches the existing modal and panel patterns."

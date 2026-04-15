@@ -8,10 +8,74 @@ import 'package:flutter/foundation.dart';
 
 import '../settings.dart';
 import '../win32/win32.dart';
-import 'boxes.dart';
 
 abstract class SavedMap {
   const SavedMap();
+}
+
+class AppAudioControl extends SavedMap {
+  String name;
+  String exe;
+  String path;
+  String iconPath;
+  int iconCodePoint;
+  String hotkeyForward;
+  String hotkeyRewind;
+  String hotkeyNext;
+  String hotkeyPrev;
+  String hotkeyPause;
+  bool showAnimation;
+
+  AppAudioControl({
+    required this.name,
+    required this.exe,
+    required this.path,
+    required this.iconPath,
+    required this.iconCodePoint,
+    required this.hotkeyForward,
+    required this.hotkeyRewind,
+    required this.hotkeyNext,
+    required this.hotkeyPrev,
+    required this.hotkeyPause,
+    this.showAnimation = true,
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'name': name,
+      'exe': exe,
+      'path': path,
+      'iconPath': iconPath,
+      'iconCodePoint': iconCodePoint,
+      'hotkeyForward': hotkeyForward,
+      'hotkeyRewind': hotkeyRewind,
+      'hotkeyNext': hotkeyNext,
+      'hotkeyPrev': hotkeyPrev,
+      'hotkeyPause': hotkeyPause,
+      'showAnimation': showAnimation,
+    };
+  }
+
+  factory AppAudioControl.fromMap(Map<String, dynamic> map) {
+    return AppAudioControl(
+      name: (map['name'] ?? '') as String,
+      exe: (map['exe'] ?? '') as String,
+      path: (map['path'] ?? '') as String,
+      iconPath: (map['iconPath'] ?? '') as String,
+      iconCodePoint: (map['iconCodePoint'] ?? 0) as int,
+      hotkeyForward: (map['hotkeyForward'] ?? '') as String,
+      hotkeyRewind: (map['hotkeyRewind'] ?? '') as String,
+      hotkeyNext: (map['hotkeyNext'] ?? '') as String,
+      hotkeyPrev: (map['hotkeyPrev'] ?? '') as String,
+      hotkeyPause: (map['hotkeyPause'] ?? '') as String,
+      showAnimation: (map['showAnimation'] ?? true) as bool,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory AppAudioControl.fromJson(String source) =>
+      AppAudioControl.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
 class Reminder extends SavedMap {
@@ -23,6 +87,7 @@ class Reminder extends SavedMap {
   String message;
   bool voiceNotification;
   int voiceVolume;
+  bool persistent;
   Timer? timer;
   List<int> multipleTimes;
 
@@ -36,6 +101,7 @@ class Reminder extends SavedMap {
     required this.message,
     required this.voiceNotification,
     required this.voiceVolume,
+    this.persistent = false,
   });
   String get timeFormat {
     final int hour = (time ~/ 60);
@@ -53,6 +119,7 @@ class Reminder extends SavedMap {
     String? message,
     bool? voiceNotification,
     int? voiceVolume,
+    bool? persistent,
   }) {
     return Reminder(
       enabled: enabled ?? this.enabled,
@@ -64,6 +131,7 @@ class Reminder extends SavedMap {
       message: message ?? this.message,
       voiceNotification: voiceNotification ?? this.voiceNotification,
       voiceVolume: voiceVolume ?? this.voiceVolume,
+      persistent: persistent ?? this.persistent,
     );
   }
 
@@ -78,10 +146,19 @@ class Reminder extends SavedMap {
       'message': message,
       'voiceNotification': voiceNotification,
       'voiceVolume': voiceVolume,
+      'persistent': persistent,
     };
   }
 
   factory Reminder.fromMap(Map<String, dynamic> map) {
+    bool isPersistent = (map['persistent'] ?? false) as bool;
+    String msg = (map['message'] ?? '') as String;
+    
+    if (msg.startsWith('p:')) {
+      isPersistent = true;
+      msg = msg.substring(2);
+    }
+
     return Reminder(
       enabled: (map['enabled'] ?? false) as bool,
       weekDays: List<bool>.from(map['weekDays'] ?? const <bool>[]),
@@ -89,9 +166,10 @@ class Reminder extends SavedMap {
       multipleTimes: List<int>.from(map['multipleTimes'] ?? const <int>[]),
       repetitive: (map['repetitive'] ?? false) as bool,
       interval: List<int>.from(map['interval'] ?? const <int>[]),
-      message: (map['message'] ?? '') as String,
+      message: msg,
       voiceNotification: (map['voiceNotification'] ?? false) as bool,
       voiceVolume: (map['voiceVolume'] ?? 100) as int,
+      persistent: isPersistent,
     );
   }
 
@@ -101,7 +179,7 @@ class Reminder extends SavedMap {
 
   @override
   String toString() {
-    return 'Reminder(enabled: $enabled, weekDays: $weekDays, time: $time, repetitive: $repetitive, interval: $interval, message: $message, voiceNotification: $voiceNotification, voiceVolume: $voiceVolume)';
+    return 'Reminder(enabled: $enabled, weekDays: $weekDays, time: $time, repetitive: $repetitive, interval: $interval, message: $message, voiceNotification: $voiceNotification, voiceVolume: $voiceVolume, persistent: $persistent)';
   }
 
   @override
@@ -116,7 +194,8 @@ class Reminder extends SavedMap {
         listEquals(other.interval, interval) &&
         other.message == message &&
         other.voiceNotification == voiceNotification &&
-        other.voiceVolume == voiceVolume;
+        other.voiceVolume == voiceVolume &&
+        other.persistent == persistent;
   }
 
   @override
@@ -129,96 +208,32 @@ class Reminder extends SavedMap {
         interval.hashCode ^
         message.hashCode ^
         voiceNotification.hashCode ^
-        voiceVolume.hashCode;
+        voiceVolume.hashCode ^
+        persistent.hashCode;
   }
 }
 
-class PageWatcher extends SavedMap {
-  String url;
-  String regex;
-  String lastMatch;
-  bool enabled;
-  int checkPeriod;
-  bool voiceNotification;
-  Timer? timer;
-  PageWatcher({
-    required this.url,
-    required this.regex,
-    required this.lastMatch,
-    required this.enabled,
-    required this.checkPeriod,
-    required this.voiceNotification,
-    this.timer,
+class CliBookItem {
+  String key;
+  String value;
+  String workingDirectory;
+  CliBookItem({
+    required this.key,
+    required this.value,
+    this.workingDirectory = "",
   });
 
-  PageWatcher copyWith({
-    String? url,
-    String? regex,
-    String? lastMatch,
-    bool? enabled,
-    int? checkPeriod,
-    bool? voiceNotification,
-    Timer? timer,
-  }) {
-    return PageWatcher(
-      url: url ?? this.url,
-      regex: regex ?? this.regex,
-      lastMatch: lastMatch ?? this.lastMatch,
-      enabled: enabled ?? this.enabled,
-      checkPeriod: checkPeriod ?? this.checkPeriod,
-      voiceNotification: voiceNotification ?? this.voiceNotification,
-      timer: timer ?? this.timer,
-    );
-  }
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'key': key,
+        'value': value,
+        'workingDirectory': workingDirectory,
+      };
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'url': url,
-      'regex': regex,
-      'lastMatch': lastMatch,
-      'enabled': enabled,
-      'checkPeriod': checkPeriod,
-      'voiceNotification': voiceNotification,
-    };
-  }
-
-  factory PageWatcher.fromMap(Map<String, dynamic> map) {
-    return PageWatcher(
-      url: (map['url'] ?? '') as String,
-      regex: (map['regex'] ?? '') as String,
-      lastMatch: (map['lastMatch'] ?? '') as String,
-      enabled: (map['enabled'] ?? false) as bool,
-      checkPeriod: (map['checkPeriod'] ?? 0) as int,
-      voiceNotification: (map['voiceNotification'] ?? false) as bool,
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory PageWatcher.fromJson(String source) => PageWatcher.fromMap(json.decode(source) as Map<String, dynamic>);
-
-  @override
-  String toString() {
-    return 'PageWatcher(url: $url, regex: $regex, lastMatch: $lastMatch, enabled: $enabled, checkPeriod: $checkPeriod, voiceNotification: $voiceNotification, timer: $timer)';
-  }
-
-  @override
-  bool operator ==(covariant PageWatcher other) {
-    if (identical(this, other)) return true;
-
-    return other.url == url &&
-        other.regex == regex &&
-        other.lastMatch == lastMatch &&
-        other.enabled == enabled &&
-        other.checkPeriod == checkPeriod &&
-        other.voiceNotification == voiceNotification &&
-        other.timer == timer;
-  }
-
-  @override
-  int get hashCode {
-    return url.hashCode ^ regex.hashCode ^ lastMatch.hashCode ^ enabled.hashCode ^ checkPeriod.hashCode ^ voiceNotification.hashCode ^ timer.hashCode;
-  }
+  factory CliBookItem.fromJson(Map<String, dynamic> json) => CliBookItem(
+        key: json['key'] as String,
+        value: json['value'] as String,
+        workingDirectory: (json['workingDirectory'] ?? "") as String,
+      );
 }
 
 class BookmarkGroup extends SavedMap {
@@ -384,7 +399,8 @@ class PowerShellScript extends SavedMap {
 
   String toJson() => json.encode(toMap());
 
-  factory PowerShellScript.fromJson(String source) => PowerShellScript.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory PowerShellScript.fromJson(String source) =>
+      PowerShellScript.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   String toString() {
@@ -395,7 +411,10 @@ class PowerShellScript extends SavedMap {
   bool operator ==(covariant PowerShellScript other) {
     if (identical(this, other)) return true;
 
-    return other.command == command && other.name == name && other.showTerminal == showTerminal && other.disabled == disabled;
+    return other.command == command &&
+        other.name == name &&
+        other.showTerminal == showTerminal &&
+        other.disabled == disabled;
   }
 
   @override
@@ -478,9 +497,65 @@ class ThemeColors {
 
   @override
   int get hashCode {
-    return background.hashCode ^ gradientAlpha.hashCode ^ textColor.hashCode ^ accentColor.hashCode ^ quickMenuBoldFont.hashCode;
+    return background.hashCode ^
+        gradientAlpha.hashCode ^
+        textColor.hashCode ^
+        accentColor.hashCode ^
+        quickMenuBoldFont.hashCode;
   }
 // #endregion
+}
+
+class QuickMenuDesignThemeSet {
+  ThemeColors lightTheme;
+  ThemeColors darkTheme;
+
+  QuickMenuDesignThemeSet({
+    required this.lightTheme,
+    required this.darkTheme,
+  });
+
+  QuickMenuDesignThemeSet copyWith({
+    ThemeColors? lightTheme,
+    ThemeColors? darkTheme,
+  }) {
+    return QuickMenuDesignThemeSet(
+      lightTheme: lightTheme ?? this.lightTheme.copyWith(),
+      darkTheme: darkTheme ?? this.darkTheme.copyWith(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'lightTheme': lightTheme.toMap(),
+      'darkTheme': darkTheme.toMap(),
+    };
+  }
+
+  factory QuickMenuDesignThemeSet.fromMap(Map<String, dynamic> map) {
+    return QuickMenuDesignThemeSet(
+      lightTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['lightTheme'] as Map<dynamic, dynamic>)),
+      darkTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['darkTheme'] as Map<dynamic, dynamic>)),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory QuickMenuDesignThemeSet.fromJson(String source) =>
+      QuickMenuDesignThemeSet.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'QuickMenuDesignThemeSet(lightTheme: $lightTheme, darkTheme: $darkTheme)';
+
+  @override
+  bool operator ==(covariant QuickMenuDesignThemeSet other) {
+    if (identical(this, other)) return true;
+
+    return other.lightTheme == lightTheme && other.darkTheme == darkTheme;
+  }
+
+  @override
+  int get hashCode => lightTheme.hashCode ^ darkTheme.hashCode;
 }
 
 class ApiRequest {
@@ -559,7 +634,13 @@ class ApiRequest {
 
   @override
   int get hashCode {
-    return url.hashCode ^ headers.hashCode ^ data.hashCode ^ toMatch.hashCode ^ matched.hashCode ^ result.hashCode ^ parseAsJson.hashCode;
+    return url.hashCode ^
+        headers.hashCode ^
+        data.hashCode ^
+        toMatch.hashCode ^
+        matched.hashCode ^
+        result.hashCode ^
+        parseAsJson.hashCode;
   }
 }
 
@@ -684,73 +765,15 @@ class RunAPI {
   bool operator ==(covariant RunAPI other) {
     if (identical(this, other)) return true;
 
-    return other.name == name && other.token == token && other.refreshTokenAfterMinutes == refreshTokenAfterMinutes && listEquals(other.queries, queries);
+    return other.name == name &&
+        other.token == token &&
+        other.refreshTokenAfterMinutes == refreshTokenAfterMinutes &&
+        listEquals(other.queries, queries);
   }
 
   @override
   int get hashCode {
     return name.hashCode ^ token.hashCode ^ refreshTokenAfterMinutes.hashCode ^ queries.hashCode;
-  }
-}
-
-class RunCommands {
-  String calculator = r"c ;^[0-9\.\,]+ ?[+\-*/%\|]";
-  String color = r"col ;^(#|0x|rgb)";
-  String unit = r"u ";
-  String currency = r"cur ;\d+ \w{3,4} to \w{3,4}";
-  String shortcut = r"s ;";
-  String bookmarks = r"b ";
-  String timer = r"t ;~";
-  String memo = r"m ;";
-  String regex = r"rgx ;^/";
-  String lorem = r"lorem ;^\>";
-  String encoders = r"enc ;^([\!|\@]|\[[$@])";
-  String setvar = r"v ;^\$";
-  String keys = r"k ;`";
-  String timezones = r"tz ";
-
-  Future<void> save() async {
-    await Boxes.updateSettings("runCommands", jsonEncode(toMap()));
-    return;
-  }
-
-  Future<void> fetch() async {
-    final Map<String, dynamic> output = jsonDecode(Boxes.pref.getString("runCommands") ?? "{}");
-    if (output.isEmpty) return;
-    calculator = output["calculator"] ?? calculator;
-    color = output["color"] ?? color;
-    currency = output["currency"] ?? currency;
-    shortcut = output["shortcut"] ?? shortcut;
-    regex = output["regex"] ?? regex;
-    lorem = output["lorem"] ?? lorem;
-    encoders = output["encoders"] ?? encoders;
-    setvar = output["setvar"] ?? setvar;
-    bookmarks = output["bookmarks"] ?? bookmarks;
-    timer = output["timer"] ?? timer;
-    keys = output["keys"] ?? keys;
-    timezones = output["timezones"] ?? timezones;
-    memo = output["memo"] ?? memo;
-    unit = output["unit"] ?? unit;
-  }
-  // String
-
-  Map<String, String> toMap() {
-    return <String, String>{
-      "calculator": calculator,
-      "unit": unit,
-      "color": color,
-      "currency": currency,
-      "timezones": timezones,
-      "shortcut": shortcut,
-      "bookmarks": bookmarks,
-      "timer": timer,
-      "memo": memo,
-      "regex": regex,
-      "lorem": lorem,
-      "encoders": encoders,
-      "setvar": setvar,
-      "keys": keys,
-    };
   }
 }
 
@@ -823,7 +846,7 @@ class ViewsSettings {
   Color bgColor = const Color(0xff202020);
   ViewsSettings();
   Future<void> load() async {
-    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
     if (!File(file).existsSync()) File(file).createSync();
     String fileData = File(file).readAsStringSync();
     if (fileData.isEmpty) {
@@ -840,11 +863,11 @@ class ViewsSettings {
     scrollStepW = (map['scrollStepW'] ?? 5) as int;
     scrollStepH = (map['scrollStepH'] ?? 5) as int;
     setPreviousSize = (map['setPreviousSize'] ?? setPreviousSize) as bool;
-    bgColor = Color((map['bgColor'] ?? bgColor.value));
+    bgColor = Color((map['bgColor'] ?? bgColor.value32bit));
   }
 
   Future<void> save() async {
-    final String file = "${WinUtils.getTabameSettingsFolder()}\\views.json";
+    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
     if (!File(file).existsSync()) File(file).createSync();
     File(file).writeAsStringSync(toJson());
   }
@@ -859,7 +882,7 @@ class ViewsSettings {
       'scaleH': scaleH,
       'scrollStepW': scrollStepW,
       'scrollStepH': scrollStepH,
-      'bgColor': bgColor.value,
+      'bgColor': bgColor.value32bit,
       'setPreviousSize': setPreviousSize,
     };
   }
@@ -870,154 +893,4 @@ class ViewsSettings {
   String toString() {
     return 'ViewsSettings(minW: $minW, maxW: $maxW, minH: $minH, maxH: $maxH, scaleW: $scaleW, scaleH: $scaleH, scrollStepW: $scrollStepW, scrollStepH: $scrollStepH, bgColor: $bgColor)';
   }
-}
-
-class WorkspaceWindow {
-  String exe;
-  String title;
-  int monitorID;
-  int posX;
-  int posY;
-  int width;
-  int height;
-  WorkspaceWindow({
-    required this.exe,
-    required this.title,
-    required this.monitorID,
-    required this.posX,
-    required this.posY,
-    required this.width,
-    required this.height,
-  });
-
-  WorkspaceWindow copyWith({
-    String? exe,
-    String? title,
-    int? monitorID,
-    int? posX,
-    int? posY,
-    int? width,
-    int? height,
-  }) {
-    return WorkspaceWindow(
-      exe: exe ?? this.exe,
-      title: title ?? this.title,
-      monitorID: monitorID ?? this.monitorID,
-      posX: posX ?? this.posX,
-      posY: posY ?? this.posY,
-      width: width ?? this.width,
-      height: height ?? this.height,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'exe': exe,
-      'title': title,
-      'monitorID': monitorID,
-      'posX': posX,
-      'posY': posY,
-      'width': width,
-      'height': height,
-    };
-  }
-
-  factory WorkspaceWindow.fromMap(Map<String, dynamic> map) {
-    return WorkspaceWindow(
-      exe: (map['exe'] ?? '') as String,
-      title: (map['title'] ?? '') as String,
-      monitorID: (map['monitorID'] ?? 0) as int,
-      posX: (map['posX'] ?? 0) as int,
-      posY: (map['posY'] ?? 0) as int,
-      width: (map['width'] ?? 0) as int,
-      height: (map['height'] ?? 0) as int,
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory WorkspaceWindow.fromJson(String source) => WorkspaceWindow.fromMap(json.decode(source) as Map<String, dynamic>);
-
-  @override
-  String toString() {
-    return 'WorkspaceWindow(exe: $exe, title: $title, monitorID: $monitorID, posX: $posX, posY: $posY, width: $width, height: $height)';
-  }
-
-  @override
-  bool operator ==(covariant WorkspaceWindow other) {
-    if (identical(this, other)) return true;
-
-    return other.exe == exe &&
-        other.title == title &&
-        other.monitorID == monitorID &&
-        other.posX == posX &&
-        other.posY == posY &&
-        other.width == width &&
-        other.height == height;
-  }
-
-  @override
-  int get hashCode {
-    return exe.hashCode ^ title.hashCode ^ monitorID.hashCode ^ posX.hashCode ^ posY.hashCode ^ width.hashCode ^ height.hashCode;
-  }
-}
-
-class Workspaces {
-  String name;
-  List<WorkspaceWindow> windows;
-  Map<int, List<int>> hooks;
-  Workspaces({
-    required this.name,
-    required this.windows,
-    required this.hooks,
-  });
-
-  Workspaces copyWith({
-    String? name,
-    List<WorkspaceWindow>? windows,
-    Map<int, List<int>>? hooks,
-  }) {
-    return Workspaces(
-      name: name ?? this.name,
-      windows: windows ?? this.windows,
-      hooks: hooks ?? this.hooks,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'name': name,
-      'windows': windows.map((WorkspaceWindow x) => x.toMap()).toList(),
-      'hooks': hooks,
-    };
-  }
-
-  factory Workspaces.fromMap(Map<String, dynamic> map) {
-    return Workspaces(
-      name: (map['name'] ?? '') as String,
-      windows: List<WorkspaceWindow>.from(
-        (map['windows'] as List<dynamic>).map<WorkspaceWindow>(
-          (dynamic x) => WorkspaceWindow.fromMap(x as Map<String, dynamic>),
-        ),
-      ),
-      hooks: Map<int, List<int>>.from(map['hooks'] ?? const <int, List<int>>{}),
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory Workspaces.fromJson(String source) => Workspaces.fromMap(json.decode(source) as Map<String, dynamic>);
-
-  @override
-  String toString() => 'Workspaces(name: $name, windows: $windows, hooks: $hooks)';
-
-  @override
-  bool operator ==(covariant Workspaces other) {
-    if (identical(this, other)) return true;
-
-    return other.name == name && listEquals(other.windows, windows) && mapEquals(other.hooks, hooks);
-  }
-
-  @override
-  int get hashCode => name.hashCode ^ windows.hashCode ^ hooks.hashCode;
 }
