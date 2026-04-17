@@ -175,7 +175,10 @@ Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) a
     final String fileName = file.replaceAll("$fileDirectory\\", "");
     final String lowerName = fileName.toLowerCase();
 
-    if (const <String>["svg", "lock", "png", "jpg", "jpeg", "gif", "ico", "exe", "dll", "bin"].any((String ext) => lowerName.endsWith(".$ext"))) continue;
+    if (const <String>["svg", "lock", "png", "jpg", "jpeg", "gif", "ico", "exe", "dll", "bin"]
+        .any((String ext) => lowerName.endsWith(".$ext"))) {
+      continue;
+    }
     if (!fileName.contains('.')) continue;
 
     bool skip = false;
@@ -190,7 +193,9 @@ Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) a
         }
       } else if (testExclude.startsWith("/") || testExclude.startsWith(r"\\")) {
         testExclude = testExclude.substring(testExclude.startsWith("/") ? 1 : 2);
-        if (file.replaceFirst(args.folder, '').contains(RegExp(r"^\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+        if (file
+            .replaceFirst(args.folder, '')
+            .contains(RegExp(r"^\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
           skip = true;
           break;
         }
@@ -255,7 +260,8 @@ Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) a
       multiEnd = multiLineComment[fileExtension]!.multiCommentEnd;
     }
 
-    if (const <String>["py", "ps1", "pyi", "pyc", "pyd", "pyo", "pyw", "pyz", "rb", "r", "yaml", "yml", "toml"].contains(fileExtension)) {
+    if (const <String>["py", "ps1", "pyi", "pyc", "pyd", "pyo", "pyw", "pyz", "rb", "r", "yaml", "yml", "toml"]
+        .contains(fileExtension)) {
       singleComment = "#";
     }
 
@@ -310,7 +316,8 @@ Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) a
 
   final List<MapEntry<String, int>> extsList = exts.entries.toList();
   extsList.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
-  List<List<String>> programmingLanguages = extsList.map((MapEntry<String, int> entry) => <String>[entry.key, entry.value.toString()]).toList();
+  List<List<String>> programmingLanguages =
+      extsList.map((MapEntry<String, int> entry) => <String>[entry.key, entry.value.toString()]).toList();
 
   return ProjectAnalysisResult(
     files: projectFiles,
@@ -341,7 +348,16 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   final TextEditingController _excludeController = TextEditingController();
   final TextEditingController _gitLinkController = TextEditingController();
 
-  final List<int> extensionColors = <int>[0xff34B7FD, 0xffCB4802, 0xffFFA700, 0xffC3732A, 0xffA4DDED, 0xff922724, 0xff43B3AE, 0xffA020F0];
+  final List<int> extensionColors = <int>[
+    0xff34B7FD,
+    0xffCB4802,
+    0xffFFA700,
+    0xffC3732A,
+    0xffA4DDED,
+    0xff922724,
+    0xff43B3AE,
+    0xffA020F0
+  ];
   Map<String, Color> extColors = <String, Color>{};
 
   bool showFilters = false;
@@ -361,7 +377,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     super.initState();
     _folderController.text = Boxes.pref.getString("projectOverviewFolder") ?? "";
     _includeController.text = Boxes.pref.getString("projectOverviewIncluded") ?? "";
-    _excludeController.text = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{4,}$";
+    _excludeController.text =
+        Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{5,}$";
 
     if (globalSettings.args.contains("-wizardly")) {
       _folderController.text = globalSettings.args[0].replaceAll('"', '');
@@ -490,7 +507,9 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 5)],
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 5)
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -581,7 +600,9 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                         children: <Widget>[
                           const Text("Target Folder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           Text(
-                            _folderController.text.isEmpty ? "No folder selected" : _folderController.text.truncate(60, suffix: "..."),
+                            _folderController.text.isEmpty
+                                ? "No folder selected"
+                                : _folderController.text.truncate(60, suffix: "..."),
                             style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -615,13 +636,19 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     );
   }
 
-  Widget _buildIconButton({required IconData icon, required bool isSelected, required VoidCallback onPressed, required String tooltip, required Color onSurface}) {
+  Widget _buildIconButton(
+      {required IconData icon,
+      required bool isSelected,
+      required VoidCallback onPressed,
+      required String tooltip,
+      required Color onSurface}) {
     return IconButton(
       icon: Icon(icon, size: 20),
       onPressed: onPressed,
       tooltip: tooltip,
       style: IconButton.styleFrom(
-        backgroundColor: isSelected ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.1) : Colors.transparent,
+        backgroundColor:
+            isSelected ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.1) : Colors.transparent,
         foregroundColor: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.6),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -633,7 +660,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       icon: isAnalyzing
           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
           : Icon(Icons.analytics_rounded, color: background),
-      label: Text(isAnalyzing ? "Scanning" : "Analyze", style: TextStyle(color: background, fontWeight: FontWeight.bold)),
+      label:
+          Text(isAnalyzing ? "Scanning" : "Analyze", style: TextStyle(color: background, fontWeight: FontWeight.bold)),
       onPressed: isAnalyzing ? null : _onAnalyzePressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: isAnalyzing ? Colors.grey : accent,
@@ -659,7 +687,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
               children: <Widget>[
                 Expanded(child: _buildFilterInput("Include Extensions", _includeController, "dart;js;css", onSurface)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildFilterInput("Exclude Patterns", _excludeController, "node_modules;build", onSurface)),
+                Expanded(
+                    child: _buildFilterInput("Exclude Patterns", _excludeController, "node_modules;build", onSurface)),
               ],
             ),
             const SizedBox(height: 12),
@@ -784,9 +813,12 @@ There is a total of **${result!.totalChars.decimal}** characters.
       childAspectRatio: 2.2,
       children: <Widget>[
         _buildMetricCard("Lines of Code", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
-        _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%", Icons.comment_bank_rounded, Colors.green, onSurface),
-        _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined, Colors.orange, onSurface),
-        _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns", Icons.file_present_rounded, Colors.blue, onSurface),
+        _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%", Icons.comment_bank_rounded,
+            Colors.green, onSurface),
+        _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined,
+            Colors.orange, onSurface),
+        _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns",
+            Icons.file_present_rounded, Colors.blue, onSurface),
       ],
     );
   }
@@ -813,7 +845,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                Text(value,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
                 Text(
                   label,
                   style: TextStyle(fontSize: 9, color: onSurface.withValues(alpha: 0.5), height: 1.0),
@@ -847,7 +880,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
                 centerSpaceRadius: 40,
                 sections: List<PieChartSectionData>.generate(result!.programmingLanguages.length, (int index) {
                   final String lang = result!.programmingLanguages[index][0];
-                  final double percentage = (int.parse(result!.programmingLanguages[index][1]) / result!.totalLines) * 100;
+                  final double percentage =
+                      (int.parse(result!.programmingLanguages[index][1]) / result!.totalLines) * 100;
                   return PieChartSectionData(
                     title: percentage > 10 ? "$lang\n${percentage.toStringAsFixed(0)}%" : "",
                     value: percentage,
@@ -906,7 +940,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
           children: <Widget>[
             const Text("File Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Spacer(),
-            Text("${result!.files.length} files tracked", style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.5))),
+            Text("${result!.files.length} files tracked",
+                style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.5))),
           ],
         ),
         const SizedBox(height: 12),
@@ -937,7 +972,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
       ),
       child: Row(
         children: <Widget>[
-          const Expanded(flex: 4, child: Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+          const Expanded(
+              flex: 4, child: Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
           _buildSortableHeader("Lines", 1, 70, onSurface),
           _buildSortableHeader("Code", 2, 70, onSurface),
           _buildSortableHeader("Comments", 3, 70, onSurface),
@@ -958,9 +994,13 @@ There is a total of **${result!.totalChars.decimal}** characters.
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             Text(label,
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.5))),
-            if (isSelected) Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down, size: 16, color: Color(globalSettings.theme.accentColor)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.5))),
+            if (isSelected)
+              Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                  size: 16, color: Color(globalSettings.theme.accentColor)),
           ],
         ),
       ),
@@ -979,7 +1019,10 @@ There is a total of **${result!.totalChars.decimal}** characters.
             flex: 4,
             child: Row(
               children: <Widget>[
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: extColors[file.ext] ?? Colors.grey, shape: BoxShape.circle)),
+                Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(color: extColors[file.ext] ?? Colors.grey, shape: BoxShape.circle)),
                 const SizedBox(width: 8),
                 Expanded(child: Text(file.path, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
               ],
@@ -1001,7 +1044,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
       child: Text(
         text,
         textAlign: TextAlign.end,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: (color ?? onSurface).withValues(alpha: opacity)),
+        style: TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w500, color: (color ?? onSurface).withValues(alpha: opacity)),
       ),
     );
   }
@@ -1080,7 +1124,9 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     try {
       await _downloadFile(repoUrl, zipFile, () async {
         setState(() => downloadMessage = "Extracting...");
-        WinUtils.open("powershell.exe", arguments: '-Command "Expand-Archive -LiteralPath \'$zipFile\' -DestinationPath \'$baseDir\' -Force; Remove-Item \'$zipFile\'"');
+        WinUtils.open("powershell.exe",
+            arguments:
+                '-Command "Expand-Archive -LiteralPath \'$zipFile\' -DestinationPath \'$baseDir\' -Force; Remove-Item \'$zipFile\'"');
         await Future<void>.delayed(const Duration(seconds: 2));
         _loadLocalSaves();
         setState(() {

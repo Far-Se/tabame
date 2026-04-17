@@ -45,10 +45,10 @@ class AppCategory extends SavedMap {
   AppCategory({
     required this.name,
     this.viewType = AppCategoryViewType.grid,
-    this.items = const <AppItem>[],
+    List<AppItem>? items,
     this.folderPath,
     this.isCollapsed = false,
-  });
+  }) : items = items ?? <AppItem>[];
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{

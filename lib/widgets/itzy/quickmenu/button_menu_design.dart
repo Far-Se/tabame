@@ -4,26 +4,17 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/util/theme_colors.dart';
 import '../../interface/theme_setup.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class SwitchQuickMenuDesignButton extends StatelessWidget {
-  const SwitchQuickMenuDesignButton({super.key});
-
+class QuickMenuDesignButton extends StatelessWidget {
+  const QuickMenuDesignButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "QuickMenu Design",
-      icon: const Icon(Icons.dashboard_customize_outlined),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        backdropFilter: false,
-        child: const _QuickMenuDesignPanel(),
-      ),
-    );
+    return const ModalButton(
+        actionName: "QuickMenu Design", icon: Icon(Icons.palette_rounded), child: _QuickMenuDesignPanel());
   }
 }
 

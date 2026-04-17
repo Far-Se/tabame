@@ -41,18 +41,37 @@ class TrktivityPageState extends State<TrktivityPage> {
   bool dataAnalyzed = false;
 
   double uTrackMaxValue = 0.0;
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
-    allDates.addAll(Directory(trk.folder)
-        .listSync()
-        .where((FileSystemEntity e) => e.path.contains("-"))
-        .map((FileSystemEntity e) => e.path.substring(e.path.lastIndexOf('\\') + 1).replaceAll(".json", "")));
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    final Directory dir = Directory(trk.folder);
+    if (await dir.exists()) {
+      await for (final FileSystemEntity e in dir.list()) {
+        if (e.path.contains("-")) {
+          allDates.add(e.path.substring(e.path.lastIndexOf('\\') + 1).replaceAll(".json", ""));
+        }
+      }
+    }
 
     if (allDates.isNotEmpty) {
       allDates.sort((String a, String b) => DateTime.parse(a).isBefore(DateTime.parse(b)) ? 1 : -1);
       selectedDay = allDates.first;
-      showReport();
+      await showReport();
+    } else {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -75,8 +94,12 @@ class TrktivityPageState extends State<TrktivityPage> {
 
   Map<String, DMTRack> dailyStats = <String, DMTRack>{};
 
-  void showReport() {
-    dataAnalyzed = false;
+  Future<void> showReport() async {
+    setState(() {
+      dataAnalyzed = false;
+      _isLoading = true;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 50)); // Allow UI to update with skeleton
     uTrack.clear();
 
     wTrack.clear();
@@ -91,13 +114,13 @@ class TrktivityPageState extends State<TrktivityPage> {
 
     dailyStats.clear();
     if (startDate.isEmpty && selectedDay.isNotEmpty) {
-      parseTrkFile(selectedDay);
+      await parseTrkFile(selectedDay);
     } else if (startDate.isNotEmpty) {
       final int first = allDates.indexWhere((String element) => element == endDate);
       final int last = allDates.indexWhere((String element) => element == startDate);
       if (first > -1 && last > -1) {
         for (int x = first; x <= last; x++) {
-          parseTrkFile(allDates[x]);
+          await parseTrkFile(allDates[x]);
         }
       }
     }
@@ -140,7 +163,12 @@ class TrktivityPageState extends State<TrktivityPage> {
             ? -1
             : 1);
     tTimeTrackList = tTimeTrackList.take(5).toList();
-    dataAnalyzed = true;
+    if (mounted) {
+      setState(() {
+        dataAnalyzed = true;
+        _isLoading = false;
+      });
+    }
   }
 
   final MTrack _wTrack = MTrack(mouse: 0, keyboard: 0);
@@ -149,12 +177,14 @@ class TrktivityPageState extends State<TrktivityPage> {
   int _startWTime = 0;
   String _lastTitle = "";
   int _startTTime = 0;
-  void parseTrkFile(String file) {
+  Future<void> parseTrkFile(String file) async {
     final File f = File("${trk.folder}\\$file.json");
     if (!f.existsSync()) return;
-    final List<String> lines = f.readAsLinesSync();
+    final List<String> lines = await f.readAsLines();
     dailyStats[file] = DMTRack(idleTime: 0, keyboard: 0, mouse: 0, time: 0);
+    int count = 0;
     for (String line in lines) {
+      if (++count % 500 == 0) await Future<void>.delayed(Duration.zero);
       final Map<String, dynamic> info = jsonDecode(line);
       final DateTime time = DateTime.fromMillisecondsSinceEpoch(info["ts"]);
       final int minute = (time.hour * 60) + (time.minute < 30 ? 0 : 30);
@@ -269,7 +299,8 @@ class TrktivityPageState extends State<TrktivityPage> {
     }
     _lastTitle = "";
     _startTTime = 0;
-    wTrackList.fold(0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0));
+    wTrackList.fold(
+        0, (int p, MapEntry<String, MTrack> element) => p + (element.key != "idle.exe" ? element.value.time : 0));
   }
 
   @override
@@ -337,7 +368,10 @@ It records keystrokes, mouse movement and active Window.
                                           const SizedBox(width: 8),
                                           Text(
                                             "Filters & Privacy",
-                                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(fontWeight: FontWeight.bold),
                                           ),
                                         ],
                                       ),
@@ -408,7 +442,8 @@ It records keystrokes, mouse movement and active Window.
                           ],
                         ),
                   if (allDates.isEmpty)
-                    const Text("  There is no file to analyze. Close Interface, do some activity and come back to see it saved!")
+                    const Text(
+                        "  There is no file to analyze. Close Interface, do some activity and come back to see it saved!")
                   else
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -457,17 +492,14 @@ It records keystrokes, mouse movement and active Window.
                                               .toList(),
                                           onMenuStateChange: (bool e) {
                                             if (!e) return;
-                                            dataAnalyzed = false;
                                             setState(() {});
                                           },
                                           onChanged: (String? e) {
-                                            dataAnalyzed = false;
                                             selectedDay = e ?? allDates.first;
                                             pickText = "Pick Range";
                                             startDate = "";
                                             endDate = "";
                                             showReport();
-                                            setState(() {});
                                           },
                                         ),
                                       ),
@@ -493,17 +525,19 @@ It records keystrokes, mouse movement and active Window.
                                         context: context,
                                         firstDate: DateTime.parse(allDates.last),
                                         lastDate: DateTime.parse(allDates.first),
-                                      ).then((DateTimeRange? value) {
+                                      ).then((DateTimeRange? value) async {
                                         if (value == null) return;
-                                        dataAnalyzed = false;
+                                        setState(() => _isLoading = true);
+                                        await Future<void>.delayed(const Duration(milliseconds: 100));
                                         startDate = DateFormat('yyyy-MM-dd').format(value.start);
                                         endDate = DateFormat('yyyy-MM-dd').format(value.end);
                                         pickText = startDate == endDate ? startDate : "$startDate → $endDate";
                                         showReport();
-                                        setState(() {});
+                                        setState(() => _isLoading = false);
                                       });
                                     },
-                                    icon: Icon(Icons.date_range, size: 18, color: Theme.of(context).colorScheme.primary),
+                                    icon:
+                                        Icon(Icons.date_range, size: 18, color: Theme.of(context).colorScheme.primary),
                                     label: Text(
                                       pickText == "Pick Dates" ? "Pick Range" : pickText,
                                       style: const TextStyle(fontSize: 13),
@@ -521,7 +555,32 @@ It records keystrokes, mouse movement and active Window.
             ),
           ],
         ),
-        if (dataAnalyzed)
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SkeletonLoader(height: 30, width: 220),
+                SizedBox(height: 5),
+                SkeletonLoader(height: 20, width: 140),
+                SizedBox(height: 20),
+                SkeletonLoader(height: 150, width: double.infinity),
+                SizedBox(height: 10),
+                SkeletonLoader(height: 30, width: 120),
+                SizedBox(height: 10),
+                Row(children: <Widget>[
+                  Expanded(child: SkeletonLoader(height: 300, width: double.infinity)),
+                  SizedBox(width: 20),
+                  Expanded(child: SkeletonLoader(height: 300, width: double.infinity)),
+                ]),
+                SizedBox(height: 20),
+                SkeletonLoader(height: 150, width: double.infinity),
+              ],
+            ),
+          )
+        else if (dataAnalyzed)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Column(
@@ -535,7 +594,8 @@ It records keystrokes, mouse movement and active Window.
                           "",
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                Text("Total Keys pressed: ${uTrack.values.fold(0, (int previousValue, MTrack element) => element.keyboard + previousValue).formatInt()}"),
+                Text(
+                    "Total Keys pressed: ${uTrack.values.fold(0, (int previousValue, MTrack element) => element.keyboard + previousValue).formatInt()}"),
                 const SizedBox(height: 20),
                 TrktivityActivityChart(
                   uTrack: uTrack,
@@ -564,6 +624,53 @@ It records keystrokes, mouse movement and active Window.
           ),
         const SizedBox(height: 50)
       ],
+    );
+  }
+}
+
+class SkeletonLoader extends StatefulWidget {
+  final double width;
+  final double height;
+  final BorderRadius? borderRadius;
+
+  const SkeletonLoader({super.key, required this.width, required this.height, this.borderRadius});
+
+  @override
+  State<SkeletonLoader> createState() => _SkeletonLoaderState();
+}
+
+class _SkeletonLoaderState extends State<SkeletonLoader> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (BuildContext context, Widget? child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15 + (_controller.value * 0.2)),
+            borderRadius: widget.borderRadius ?? BorderRadius.circular(8),
+          ),
+        );
+      },
     );
   }
 }

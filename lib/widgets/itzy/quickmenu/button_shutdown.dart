@@ -3,18 +3,18 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../widgets/info_text.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class ShutDownButton extends StatefulWidget {
   const ShutDownButton({super.key});
+
   @override
-  ShutDownButtonState createState() => ShutDownButtonState();
+  State<ShutDownButton> createState() => _ShutDownButtonState();
 }
 
-class ShutDownButtonState extends State<ShutDownButton> with QuickMenuTriggers {
+class _ShutDownButtonState extends State<ShutDownButton> with QuickMenuTriggers {
   @override
   void initState() {
     QuickMenuFunctions.addListener(this);
@@ -29,33 +29,30 @@ class ShutDownButtonState extends State<ShutDownButton> with QuickMenuTriggers {
 
   @override
   void onQuickActionExecute(String actionName) {
-    if (actionName == "RefreshShutDownButton") {
-      setState(() {});
+    if (actionName == "ScheduleShutdown") {
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-        message: "Schedule Shutdown",
+    return ModalButton(
+        actionName: "Shutdown",
         icon: Icon(
           Icons.power_settings_new_rounded,
           color: (Boxes.pref.getBool("isShutDownScheduled") ?? false) ? Colors.red.shade300 : null,
         ),
-        onTap: () => showQuickMenuModal(
-              context: context,
-              child: const TimersWidget(),
-            ));
+        child: const ShutDownWidget());
   }
 }
 
-class TimersWidget extends StatefulWidget {
-  const TimersWidget({super.key});
+class ShutDownWidget extends StatefulWidget {
+  const ShutDownWidget({super.key});
   @override
-  TimersWidgetState createState() => TimersWidgetState();
+  ShutDownWidgetState createState() => ShutDownWidgetState();
 }
 
-class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
+class ShutDownWidgetState extends State<ShutDownWidget> with QuickMenuTriggers {
   bool isShutDownScheduled = false;
   bool isWarningActive = false;
   bool alwaysAtTime = false;
@@ -171,7 +168,8 @@ class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
                               selectedTimerType = "ShutDown in";
                               if (isShutDownScheduled) {
                                 final DateTime scheduledTime = DateTime.fromMillisecondsSinceEpoch(shutDownUnix);
-                                final Duration diff = scheduledTime.difference(DateTime.now());
+                                Duration diff = scheduledTime.difference(DateTime.now());
+                                if (diff.isNegative) diff = Duration.zero;
                                 hoursController.text = diff.inHours.toString().padLeft(2, '0');
                                 minutesController.text = (diff.inMinutes % 60).toString().padLeft(2, '0');
                               }
@@ -342,7 +340,7 @@ class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
                 Boxes.pref.setInt("shutDownUnix", 0);
                 Boxes.shutDownTimer?.cancel();
                 Boxes.shutDownWarningTimer?.cancel();
-                QuickMenuFunctions.triggerQuickAction("RefreshShutDownButton");
+                QuickMenuFunctions.triggerQuickAction("ScheduleShutdown");
               });
             },
             icon: const Icon(Icons.close_rounded),
@@ -459,7 +457,7 @@ class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
               Boxes.pref.setBool("isShutDownScheduled", isShutDownScheduled);
               Boxes.pref.setInt("shutDownUnix", 0);
               Boxes.shutDownTimer?.cancel();
-              QuickMenuFunctions.triggerQuickAction("RefreshShutDownButton");
+              QuickMenuFunctions.triggerQuickAction("ScheduleShutdown");
               setState(() {});
             },
             icon: const Icon(Icons.close_rounded, size: 18),
@@ -484,15 +482,12 @@ class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
       if (duration.inSeconds < 120) return;
       shutDownUnix = DateTime.now().millisecondsSinceEpoch + duration.inMilliseconds;
     } else {
-      DateTime now = DateTime.now();
-      final int nowHour = now.hour;
-      now = now.subtract(Duration(hours: now.hour, minutes: now.minute, seconds: now.second));
-      if (nowHour < hour) {
-        now = now.add(duration);
-      } else {
-        now = now.add(duration).add(const Duration(days: 1));
+      final DateTime now = DateTime.now();
+      DateTime target = DateTime(now.year, now.month, now.day, hour, minute);
+      if (target.isBefore(now)) {
+        target = target.add(const Duration(days: 1));
       }
-      shutDownUnix = now.millisecondsSinceEpoch;
+      shutDownUnix = target.millisecondsSinceEpoch;
     }
 
     isShutDownScheduled = true;
@@ -503,7 +498,7 @@ class TimersWidgetState extends State<TimersWidget> with QuickMenuTriggers {
           "savedShutDownTime", "${hoursController.text.padLeft(2, '0')}:${minutesController.text.padLeft(2, '0')}");
     }
     Boxes.shutDownScheduler();
-    QuickMenuFunctions.triggerQuickAction("RefreshShutDownButton");
+    QuickMenuFunctions.triggerQuickAction("ScheduleShutdown");
     setState(() {});
   }
 }

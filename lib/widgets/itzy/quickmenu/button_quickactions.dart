@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
@@ -19,41 +20,19 @@ import '../../../models/window_watcher.dart';
 import '../../../models/tray_watcher.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/quick_actions_item.dart';
+import '../../widgets/panel_header.dart';
 
-class QuickActionsMenuButton extends StatefulWidget {
+class QuickActionsMenuButton extends StatelessWidget {
   const QuickActionsMenuButton({super.key});
-  @override
-  QuickActionsMenuButtonState createState() => QuickActionsMenuButtonState();
-}
-
-class QuickActionsMenuButtonState extends State<QuickActionsMenuButton> with QuickMenuTriggers {
-  @override
-  void initState() {
-    super.initState();
-    QuickMenuFunctions.addListener(this);
-  }
-
-  @override
-  void dispose() {
-    QuickMenuFunctions.removeListener(this);
-    super.dispose();
-  }
-
-  @override
-  void onQuickActionExecute(String actionName) {
-    if (actionName == "QuickActions") {
-      showQuickMenuModal(context: context, child: const QuickActionWidget(popup: false));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "QuickActions Menu",
-      icon: const Icon(Icons.grid_view),
-      onTap: () async {
-        showQuickMenuModal(context: context, child: const QuickActionWidget(popup: false));
-      },
+      message: "QuickActions",
+      icon: const Icon(Icons.apps),
+      onTap: () => showQuickMenuModal(
+        context: context,
+        child: const QuickActionWidget(popup: false),
+      ),
     );
   }
 }
@@ -606,7 +585,9 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color onSurface = theme.colorScheme.onSurface;
+    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final bool boldFont = globalSettings.theme.quickMenuBoldFont;
+
     final List<QuickActionMenuEntry> entries = buildQuickActionMenuEntries(
       context,
       onStateChanged: () {
@@ -616,57 +597,49 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
       },
     );
 
-    if (entries.isEmpty) {
-      return Container(
-        constraints: const BoxConstraints(maxHeight: 300, minWidth: 260),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Text(
-          "No items yet. Add them from Settings.",
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: onSurface.withValues(alpha: 0.76),
-          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        PanelHeader(
+          title: "Quick Actions",
+          accent: accent,
+          boldFont: boldFont,
+          icon: Icons.grid_view_rounded,
         ),
-      );
-    }
-
-    return MouseRegion(
-      child: SingleChildScrollView(
-        controller: controller,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 0, 2, 6),
-                child: Row(
-                  children: <Widget>[
-                    Text(
-                      "Quick Actions",
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.1,
-                        color: onSurface,
+        Flexible(
+          child: entries.isEmpty
+              ? Container(
+                  constraints: const BoxConstraints(maxHeight: 200, minWidth: 260),
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Icon(Icons.grid_off_rounded, size: 32, color: accent.withAlpha(100)),
+                      const SizedBox(height: 12),
+                      Text(
+                        "No items yet. Add them from Settings.",
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      "${entries.length}",
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: onSurface.withAlpha(120),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
+                    ],
+                  ),
                 ),
-              ),
-              ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
-            ],
-          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -948,7 +921,11 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) {
+          setState(() => _hovered = true);
+        }
+      },
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),

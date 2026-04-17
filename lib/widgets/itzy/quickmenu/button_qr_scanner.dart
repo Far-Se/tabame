@@ -8,26 +8,16 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class QrScannerButton extends StatelessWidget {
   const QrScannerButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "QR Scanner",
-      icon: const Icon(Icons.qr_code_scanner_rounded),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        // maxWidth: 288,
-        heightFactor: 0.93,
-        child: const QrScannerPanel(),
-      ),
-    );
+    return const ModalButton(
+        actionName: "QR Scanner", icon: Icon(Icons.qr_code_scanner_rounded), child: QrScannerPanel());
   }
 }
 

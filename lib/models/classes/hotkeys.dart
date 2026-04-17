@@ -266,7 +266,7 @@ class KeyMap with TabameListener {
     applyActionsForWindow();
   }
 
-  void applyActionsForWindow() {
+  Future<void> applyActionsForWindow() async {
     for (KeyAction action in actions) {
       if (action.type == ActionType.hotkey) {
         final List<String> keys = action.value.split('+');
@@ -288,6 +288,10 @@ class KeyMap with TabameListener {
           SetForegroundWindow(tray);
         }
         WinKeys.send(action.value);
+      } else if (action.type == ActionType.openQuickMenupage) {
+        QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true);
+      } else if (action.type == ActionType.wait) {
+        await Future<void>.delayed(Duration(milliseconds: int.tryParse(action.value) ?? 0));
       } else if (action.type == ActionType.sendClick) {
         int hwnd = GetForegroundWindow();
         final Pointer<POINT> lpPoint = calloc<POINT>();
@@ -456,6 +460,8 @@ enum ActionType {
   tabameFunction,
   setVar,
   sendClick,
+  openQuickMenupage,
+  wait,
 }
 
 class HotKeyInfo {
@@ -468,6 +474,27 @@ class HotKeyInfo {
   };
   static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
+  static const List<String> quickMenuPages = <String>[
+    "Apps",
+    "Search",
+    "Bookmarks",
+    "CurrencyConverter",
+    "Calculator",
+    "Weather",
+    "AudioControl",
+    "ColorPicker",
+    "CliBook",
+    "Vault",
+    "Memo",
+    "Wallpapers",
+    "Authenticator",
+    "QuickActionMenu",
+    "Countdown",
+    "ScheduleShutdown",
+    "QuickMenuDesign",
+    "QrScanner",
+    "TimeZone"
+  ];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
     "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
     "ToggleQuickMenu": () {
@@ -482,12 +509,8 @@ class HotKeyInfo {
     },
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
     "ToggleQuickActions": () => QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.quickActions),
-    "OpenColorPicker": () async {
-      await ColorPickerController.instance.startPicking();
-      // await QuickMenuFunctions.toggleQuickMenu(visible: true);
-      // await Future<void>.delayed(const Duration(milliseconds: 260));
-      // QuickMenuFunctions.triggerQuickAction(ColorPickerController.quickActionName);
-    },
+    "OpenColorPicker": () async => await ColorPickerController.instance.startPicking(),
+
     "ShowStartMenu": () {
       int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (tray != 0) {
@@ -559,6 +582,8 @@ class HotKeyInfo {
     ActionType.sendKeys: Icons.keyboard,
     ActionType.setVar: Icons.tune,
     ActionType.tabameFunction: Icons.functions,
+    ActionType.openQuickMenupage: Icons.apps,
+    ActionType.wait: Icons.timer_sharp,
   };
   static const Map<TriggerType, IconData> triggerTypeIcons = <TriggerType, IconData>{
     TriggerType.press: Icons.touch_app,

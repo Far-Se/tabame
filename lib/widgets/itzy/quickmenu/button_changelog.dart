@@ -5,6 +5,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 import '../../../pages/quickmenu.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class CheckChangelogButton extends StatefulWidget {
   const CheckChangelogButton({super.key});
@@ -27,7 +28,7 @@ class CheckChangelogButtonState extends State<CheckChangelogButton> {
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: Tooltip(
+      child: CustomTooltip(
         message: "See what's new!",
         child: SizedBox(
           width: 20,

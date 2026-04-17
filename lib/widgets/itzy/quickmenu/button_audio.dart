@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -11,6 +8,7 @@ import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/keys.dart';
 import '../../../models/settings.dart';
 import 'widget_audio.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class AudioButton extends StatefulWidget {
   const AudioButton({super.key});
@@ -72,40 +70,11 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
 
   void _showAudioBox() {
     Globals.audioBoxVisible = true;
-    showModalBottomSheet<void>(
+    showQuickMenuModal(
       context: context,
-      anchorPoint: const Offset(100, 200),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.transparent,
-      constraints: const BoxConstraints(maxWidth: 280),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      enableDrag: true,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: FractionallySizedBox(
-            heightFactor: 0.85,
-            child: Listener(
-              onPointerDown: (PointerDownEvent event) {
-                if (event.kind == PointerDeviceKind.mouse) {
-                  if (event.buttons == kSecondaryMouseButton) {
-                    Navigator.pop(context);
-                  }
-                }
-              },
-              child: const Padding(
-                padding: EdgeInsets.all(2.0),
-                child: AudioBox(),
-              ),
-            ),
-          ),
-        );
-      },
-    ).whenComplete(() {
-      Globals.audioBoxVisible = false;
-    });
+      child: const AudioBox(),
+      whenComplete: () => Globals.audioBoxVisible = false,
+    );
   }
 
   @override
@@ -125,7 +94,7 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
 
   @override
   void onQuickActionExecute(String actionName) {
-    if (actionName == "AudioButton") {
+    if (actionName == "AudioControl") {
       _showAudioBox();
     }
   }
@@ -173,7 +142,7 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
                 whenComplete: () => Globals.audioBoxVisible = false,
               );
             },
-            child: Tooltip(
+            child: CustomTooltip(
               message: tooltip,
               child: Icon(displayIcon, size: 16),
             ),

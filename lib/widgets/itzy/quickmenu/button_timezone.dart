@@ -5,26 +5,15 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class TimeZoneButton extends StatelessWidget {
   const TimeZoneButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Time Zone",
-      icon: const Icon(Icons.public_rounded),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        maxWidth: 320,
-        heightFactor: 0.9,
-        child: const TimeZoneWidget(),
-      ),
-    );
+    return const ModalButton(actionName: "Time Zone", icon: Icon(Icons.public_rounded), child: TimeZoneWidget());
   }
 }
 
@@ -58,7 +47,8 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
     super.initState();
     _ensureTimezoneDatabase();
     _selectedZones = _loadSavedZones();
-    _timeController.text = Boxes.pref.getString(_timeInputKey) ?? _formatCompactTime(TimeOfDay.fromDateTime(DateTime.now()));
+    _timeController.text =
+        Boxes.pref.getString(_timeInputKey) ?? _formatCompactTime(TimeOfDay.fromDateTime(DateTime.now()));
     _searchController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -98,7 +88,9 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
             scrollDirection: Axis.vertical,
             child: Material(
               type: MaterialType.transparency,
-              child: _settingsMode ? _buildSettingsView(accent, onSurface) : _buildPlannerView(accent, onSurface, parsedTime),
+              child: _settingsMode
+                  ? _buildSettingsView(accent, onSurface)
+                  : _buildPlannerView(accent, onSurface, parsedTime),
             ),
           ),
         ),
@@ -357,7 +349,8 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
     final DateTime now = DateTime.now();
     final DateTime localTime = DateTime(now.year, now.month, now.day, parsedTime.hour, parsedTime.minute);
     final tz.TZDateTime thereAtMyTime = tz.TZDateTime.from(localTime, location);
-    final tz.TZDateTime theirSameWallClock = tz.TZDateTime(location, now.year, now.month, now.day, parsedTime.hour, parsedTime.minute);
+    final tz.TZDateTime theirSameWallClock =
+        tz.TZDateTime(location, now.year, now.month, now.day, parsedTime.hour, parsedTime.minute);
     final DateTime hereAtTheirTime = theirSameWallClock.toLocal();
     final String myTimeLabel = _formatDateTime(localTime);
     final String thereAtMyTimeLabel = _formatDateTime(thereAtMyTime);

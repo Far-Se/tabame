@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/settings.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class TrktivityHeatMap extends StatefulWidget {
   final List<String> allDates;
@@ -128,6 +129,7 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
     });
     _buildWeeks();
     if (mounted) setState(() {});
+    await Future<void>.delayed(const Duration(milliseconds: 50)); // Allow UI to render loading state
 
     File f = File("${widget.folder}/cumulative.json");
     Map<String, dynamic> cumulative = <String, dynamic>{};
@@ -142,16 +144,20 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
         if (cumulative.containsKey(fileName)) {
           heatData[fileName] = cumulative[fileName];
           if ((cumulative[fileName] as int) > maxKeys) maxKeys = cumulative[fileName];
+        } else if (widget.allDates.contains(fileName)) {
+          heatData[fileName] = -1; // -1 means loading
         } else {
-          heatData[fileName] = 0;
+          heatData[fileName] = 0; // No data exists for this file
         }
       }
     }
+    if (mounted) setState(() {});
 
     // Sort displayDays to load from newest to oldest for better UX (optional, but current logic handles it fine)
+    int filesProcessed = 0;
     for (DateTime day in displayDays.reversed) {
       String fileName = DateFormat("yyyy-MM-dd").format(day);
-      if ((heatData[fileName] ?? 0) != 0) continue;
+      if ((heatData[fileName] ?? 0) != -1) continue;
       await Future<void>.delayed(Duration.zero);
 
       if (widget.allDates.contains(fileName)) {
@@ -159,7 +165,9 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
         if (dayFile.existsSync()) {
           int keys = 0;
           List<String> lines = await dayFile.readAsLines();
+          int lineCount = 0;
           for (String line in lines) {
+            if (++lineCount % 500 == 0) await Future<void>.delayed(Duration.zero);
             if (line.isEmpty) continue;
             try {
               Map<String, dynamic> info = jsonDecode(line);
@@ -178,6 +186,11 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
         }
       } else {
         heatData[fileName] = 0;
+      }
+
+      filesProcessed++;
+      if (filesProcessed % 10 == 0) {
+        if (mounted) setState(() {});
       }
     }
 
@@ -268,8 +281,13 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
     if (day == null) {
       return const SizedBox(width: cellSize, height: cellSize);
     }
-    if (isLoading) {
-      return Container(
+    String dateKey = DateFormat("yyyy-MM-dd").format(day);
+    int keys = heatData[dateKey] ?? 0;
+
+    // -1 indicates the file is currently being processed
+    if (keys == -1 || isLoading && keys == 0 && widget.allDates.contains(dateKey)) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         width: cellSize,
         height: cellSize,
         decoration: BoxDecoration(
@@ -278,11 +296,11 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
         ),
       );
     }
-    String dateKey = DateFormat("yyyy-MM-dd").format(day);
-    int keys = heatData[dateKey] ?? 0;
+
     final bool isFirstOfMonth = day.day == 1;
 
-    Widget cell = Container(
+    Widget cell = AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       width: cellSize,
       height: cellSize,
       decoration: BoxDecoration(
@@ -296,7 +314,10 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
             : null,
       ),
     );
-    return Tooltip(message: "${DateFormat("MMM dd, yyyy").format(day)}\n${keys.formatNum()} keypresses", ignorePointer: true, child: cell);
+    return CustomTooltip(
+        message: "${DateFormat("MMM dd, yyyy").format(day)}\n${keys.formatNum()} keypresses",
+        ignorePointer: true,
+        child: cell);
   }
 
   @override
@@ -321,7 +342,8 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
                 items: <DropdownMenuItem<int?>>[
                   const DropdownMenuItem<int?>(value: 30, child: Text("Last 30 Days", style: TextStyle(fontSize: 12))),
                   const DropdownMenuItem<int?>(value: 90, child: Text("Last 90 Days", style: TextStyle(fontSize: 12))),
-                  const DropdownMenuItem<int?>(value: 180, child: Text("Last 180 Days", style: TextStyle(fontSize: 12))),
+                  const DropdownMenuItem<int?>(
+                      value: 180, child: Text("Last 180 Days", style: TextStyle(fontSize: 12))),
                   const DropdownMenuItem<int?>(value: 365, child: Text("Last Year", style: TextStyle(fontSize: 12))),
                   const DropdownMenuItem<int?>(value: null, child: Text("All Time", style: TextStyle(fontSize: 12))),
                 ],

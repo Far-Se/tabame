@@ -8,6 +8,7 @@ import '../../../models/win32/mixed.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/window_watcher.dart';
 import '../../quickmenu/task_bar.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class SpotifyButton extends StatefulWidget {
   const SpotifyButton({super.key});
@@ -87,11 +88,13 @@ class _SpotifyButtonState extends State<SpotifyButton> with QuickMenuTriggers {
             }
           },
           onTap: _handleTap,
-          child: Tooltip(
+          child: CustomTooltip(
             message: "Spotify",
             child: SizedBox(
                 width: 20,
-                child: Caches.audioMixerExes.contains("Spotify.exe") ? Icon(Icons.multitrack_audio_sharp, color: Colors.amber[700]) : const Icon(Icons.music_note)),
+                child: Caches.audioMixerExes.contains("Spotify.exe")
+                    ? Icon(Icons.multitrack_audio_sharp, color: Colors.amber[700])
+                    : const Icon(Icons.music_note)),
           ),
         ),
       ),

@@ -108,22 +108,69 @@ Now you can set default Volume for apps, for example if you open a game, and usu
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 10),
-          ...List<Widget>.generate(
-            changelog.length.clamp(0, 10),
-            (int index) => Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text("Version ${changelog.keys.elementAt(index)}:", style: Theme.of(context).textTheme.titleLarge),
-                Markdown(
-                  shrinkWrap: true,
-                  data: changelog.values.elementAt(index),
-                ),
-                const Divider(height: 10, thickness: 2)
-              ],
-            ),
-          ),
+          ...changelog.entries.map((MapEntry<String, String> entry) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          "v${entry.key}",
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  MarkdownBody(
+                    shrinkWrap: true,
+                    data: entry.value,
+                    styleSheet: MarkdownStyleSheet(
+                      h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                      h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                      listBullet: TextStyle(color: Theme.of(context).colorScheme.primary),
+                      p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                      strong: const TextStyle(fontWeight: FontWeight.bold),
+                      blockSpacing: 12,
+                      listIndent: 20,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

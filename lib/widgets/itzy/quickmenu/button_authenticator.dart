@@ -12,26 +12,16 @@ import '../../../models/classes/authenticator_manager.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class AuthenticatorButton extends StatelessWidget {
   const AuthenticatorButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Authenticator",
-      icon: const Icon(Icons.shield_outlined),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        maxWidth: 360,
-        heightFactor: 0.88,
-        child: const AuthenticatorPanel(),
-      ),
-    );
+    return const ModalButton(
+        actionName: "Authenticator", icon: Icon(Icons.shield_outlined), child: AuthenticatorPanel());
   }
 }
 

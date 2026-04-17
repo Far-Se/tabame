@@ -1,63 +1,20 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../widgets/quick_actions_item.dart';
+import '../../widgets/modal_button.dart';
 
-class CountdownButton extends StatefulWidget {
+class CountdownButton extends StatelessWidget {
   const CountdownButton({super.key});
   @override
-  CountdownButtonState createState() => CountdownButtonState();
-}
-
-class CountdownButtonState extends State<CountdownButton> {
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Countdown",
-      icon: const Icon(Icons.hourglass_bottom_rounded),
-      onTap: () async {
-        showModalBottomSheet<void>(
-          context: context,
-          anchorPoint: const Offset(100, 200),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          barrierColor: Colors.transparent,
-          constraints: const BoxConstraints(maxWidth: 280),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          enableDrag: true,
-          isScrollControlled: true,
-          builder: (BuildContext context) {
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: FractionallySizedBox(
-                heightFactor: 0.85,
-                child: Listener(
-                  onPointerDown: (PointerDownEvent event) {
-                    if (event.kind == PointerDeviceKind.mouse && event.buttons == kSecondaryMouseButton) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: TimersWidget(),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-        return;
-      },
-    );
+    return const ModalButton(
+        actionName: "Countdown", icon: Icon(Icons.hourglass_bottom_rounded), child: CountDownWidget());
   }
 }
 
@@ -81,13 +38,13 @@ class CountDown {
   factory CountDown.fromJson(String source) => CountDown.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
-class TimersWidget extends StatefulWidget {
-  const TimersWidget({super.key});
+class CountDownWidget extends StatefulWidget {
+  const CountDownWidget({super.key});
   @override
-  TimersWidgetState createState() => TimersWidgetState();
+  CountDownWidgetState createState() => CountDownWidgetState();
 }
 
-class TimersWidgetState extends State<TimersWidget> {
+class CountDownWidgetState extends State<CountDownWidget> {
   List<CountDown> timers = Boxes.getSavedMap<CountDown>(CountDown.fromJson, "countdowns");
 
   final TextEditingController minutesController = TextEditingController(text: "00");
@@ -246,7 +203,8 @@ class TimersWidgetState extends State<TimersWidget> {
                     _buildTimeField(minutesController, "MIN", accent, onSurface),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(":", style: TextStyle(fontSize: 40, fontWeight: FontWeight.w300, color: onSurface.withAlpha(128))),
+                      child: Text(":",
+                          style: TextStyle(fontSize: 40, fontWeight: FontWeight.w300, color: onSurface.withAlpha(128))),
                     ),
                     _buildTimeField(secondsController, "SEC", accent, onSurface),
                   ],
@@ -304,7 +262,8 @@ class TimersWidgetState extends State<TimersWidget> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: TextButton(
                     onPressed: _stopTimer,
-                    child: Text("Cancel Countdown", style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: 12)),
+                    child: Text("Cancel Countdown",
+                        style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: 12)),
                   ),
                 ),
 
@@ -314,7 +273,9 @@ class TimersWidgetState extends State<TimersWidget> {
               if (timers.isNotEmpty && !_isRunning) ...<Widget>[
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Text("Recent", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+                  child: Text("Recent",
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
                 ),
                 Flexible(
                   child: ListView.builder(

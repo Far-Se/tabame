@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/win32/keys.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class MediaControlButton extends StatefulWidget {
   const MediaControlButton({super.key});
@@ -66,7 +67,7 @@ class _MediaControlButtonState extends State<MediaControlButton> {
                 });
               }
             },
-            child: Tooltip(message: "Media Control", child: Icon(icon)),
+            child: CustomTooltip(message: "Media Control", child: Icon(icon)),
           ),
         ),
       ),

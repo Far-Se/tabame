@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/win32/keys.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class SimulateKeyButton extends StatelessWidget {
   final IconData icon;
@@ -30,7 +31,7 @@ class SimulateKeyButton extends StatelessWidget {
           iconSize: size,
           padding: const EdgeInsets.all(0),
           splashRadius: size,
-          icon: Tooltip(
+          icon: CustomTooltip(
             message: tooltip,
             child: Icon(icon),
           ),

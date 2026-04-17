@@ -7,61 +7,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/color_picker_controller.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class ColorPickerButton extends StatefulWidget {
+class ColorPickerButton extends StatelessWidget {
   const ColorPickerButton({super.key});
-
-  @override
-  State<ColorPickerButton> createState() => _ColorPickerButtonState();
-}
-
-class _ColorPickerButtonState extends State<ColorPickerButton> with QuickMenuTriggers {
-  bool _isSheetOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-    QuickMenuFunctions.addListener(this);
-  }
-
-  @override
-  void dispose() {
-    QuickMenuFunctions.removeListener(this);
-    super.dispose();
-  }
-
-  @override
-  void onQuickActionExecute(String actionName) {
-    if (actionName == ColorPickerController.quickActionName) {
-      _openPanel();
-    }
-  }
-
-  Future<void> _openPanel() async {
-    if (!mounted || _isSheetOpen) return;
-    _isSheetOpen = true;
-    await showQuickMenuModal(
-      context: context,
-      // maxWidth: 288,
-      heightFactor: 0.93,
-      child: const _ColorPickerPanel(),
-    );
-    _isSheetOpen = false;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Color Picker",
-      icon: const Icon(Icons.palette_outlined),
-      onTap: _openPanel,
-    );
+    return const ModalButton(
+        actionName: "Color Picker", icon: Icon(Icons.palette_outlined), child: _ColorPickerPanel());
   }
 }
 
@@ -159,7 +115,8 @@ class _ColorPickerPanelState extends State<_ColorPickerPanel> {
                     children: <Widget>[
                       FilledButton.icon(
                         onPressed: _controller.isMonitoring ? null : _controller.startPicking,
-                        icon: Icon(_controller.isMonitoring ? Icons.hourglass_top_rounded : Icons.colorize_rounded, size: 16),
+                        icon: Icon(_controller.isMonitoring ? Icons.hourglass_top_rounded : Icons.colorize_rounded,
+                            size: 16),
                         label: Text(_controller.isMonitoring ? "Picker Running" : "Pick color"),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -212,7 +169,8 @@ class _ColorPickerPanelState extends State<_ColorPickerPanel> {
       }
 
       final Map<String, dynamic> json = (jsonDecode(response.body) as Map<dynamic, dynamic>).cast<String, dynamic>();
-      final Map<String, dynamic> name = (json['name'] as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{}).cast<String, dynamic>();
+      final Map<String, dynamic> name =
+          (json['name'] as Map<dynamic, dynamic>? ?? <dynamic, dynamic>{}).cast<String, dynamic>();
       final String fetchedName = ((name['value'] as String?) ?? '').trim();
       final String resolvedName = fetchedName.isEmpty ? 'Unknown color' : fetchedName;
 
@@ -449,7 +407,9 @@ class _ColorPickerPanelState extends State<_ColorPickerPanel> {
               labelPadding: const EdgeInsets.all(0),
               selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
               side: BorderSide(
-                color: selected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.35) : Theme.of(context).dividerColor.withValues(alpha: 0.16),
+                color: selected
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.35)
+                    : Theme.of(context).dividerColor.withValues(alpha: 0.16),
               ),
               backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.08),
             );

@@ -6,8 +6,8 @@ class WindowsScrollView extends StatefulWidget {
   const WindowsScrollView({
     super.key,
     required this.child,
-    this.scrollSpeed = 100.0,
-    this.friction = 0.92,
+    this.scrollSpeed = 12.0,
+    this.friction = 0.76,
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
     this.padding,
@@ -16,15 +16,8 @@ class WindowsScrollView extends StatefulWidget {
   });
 
   final Widget child;
-
-  /// Pixels scrolled per wheel "line" (one detent on a standard mouse wheel).
   final double scrollSpeed;
-
-  /// Per-frame velocity multiplier. 0.92 ≈ Windows default feel.
-  /// Higher values (0.95+) give a longer, silkier glide.
-  /// Lower values (0.85-) give a quicker stop.
   final double friction;
-
   final Axis scrollDirection;
   final bool reverse;
   final EdgeInsetsGeometry? padding;
@@ -39,9 +32,11 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
   late final ScrollController _scrollController;
   bool _ownsController = false;
 
-  // Current momentum velocity in px/frame.
   double _velocity = 0.0;
   Ticker? _ticker;
+
+  // Track whether a scrollbar drag is in progress.
+  bool _isDraggingScrollbar = false;
 
   @override
   void initState() {
@@ -66,24 +61,40 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
+    // Ignore wheel events while user is dragging the scrollbar thumb.
+    if (_isDraggingScrollbar) return;
 
-    // Ignore events that aren't on the relevant axis.
     final double delta = widget.scrollDirection == Axis.vertical ? event.scrollDelta.dy : event.scrollDelta.dx;
 
     if (delta == 0.0) return;
 
-    // Normalise to "lines" then scale to pixels.
-    // PointerScrollEvent gives raw pixels; divide by a standard line height
-    // (typically 40 px on Windows at 96 dpi) to get lines, then re-scale.
     const double lineHeight = 40.0;
     final double lines = delta / lineHeight;
     final double pixelDelta = lines * widget.scrollSpeed * (widget.reverse ? -1 : 1);
 
-    // Add to existing velocity (allows rapid successive scrolls to accumulate).
-    _velocity += pixelDelta * 0.35; // blend factor keeps it from blowing up
-
+    _velocity += pixelDelta * 0.35;
     _clampVelocity();
     _ensureTickerRunning();
+  }
+
+  // ── Scroll notifications (detect scrollbar drag) ─────────────────────────
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      // DragScrollActivity means the user is dragging (scrollbar or content).
+      if (notification.dragDetails != null) {
+        _isDraggingScrollbar = true;
+        // Kill any momentum so it doesn't fight the drag.
+        _stop();
+        setState(() {}); // rebuild to swap physics
+      }
+    } else if (notification is ScrollEndNotification) {
+      if (_isDraggingScrollbar) {
+        _isDraggingScrollbar = false;
+        setState(() {}); // rebuild to restore NeverScrollable
+      }
+    }
+    return false; // don't absorb the notification
   }
 
   // ── Animation tick ────────────────────────────────────────────────────────
@@ -93,7 +104,6 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
       _stop();
       return;
     }
-
     if (_velocity.abs() < 0.5) {
       _stop();
       return;
@@ -111,11 +121,8 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
     }
 
     _scrollController.jumpTo(target);
-
-    // Decelerate.
     _velocity *= widget.friction;
 
-    // Hard-stop at boundaries.
     if (target == _scrollController.position.minScrollExtent || target == _scrollController.position.maxScrollExtent) {
       _stop();
     }
@@ -124,14 +131,12 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   void _clampVelocity() {
-    const double maxVelocity = 600.0; // px per frame ceiling
+    const double maxVelocity = 600.0;
     _velocity = _velocity.clamp(-maxVelocity, maxVelocity);
   }
 
   void _ensureTickerRunning() {
-    if (!(_ticker?.isTicking ?? false)) {
-      _ticker?.start();
-    }
+    if (!(_ticker?.isTicking ?? false)) _ticker?.start();
   }
 
   void _stop() {
@@ -143,32 +148,37 @@ class _WindowsScrollViewState extends State<WindowsScrollView> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    // We wrap with a Listener so we capture pointer signals BEFORE Flutter's
-    // default scroll machinery can interfere.
-    return Listener(
-      onPointerSignal: _handlePointerSignal,
-      // Absorb wheel events so they don't bubble to parent scrollables.
-      child: ScrollConfiguration(
-        // Disable all built-in scroll physics / behaviour for this subtree.
-        behavior: const MaterialScrollBehavior().copyWith(
-          dragDevices: <PointerDeviceKind>{
-            /*Add this*/
-            PointerDeviceKind.mouse,
-            PointerDeviceKind.touch,
-            PointerDeviceKind.stylus,
-            PointerDeviceKind.unknown,
-          },
-        ),
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          scrollDirection: widget.scrollDirection,
-          reverse: widget.reverse,
-          padding: widget.padding,
-          clipBehavior: widget.clipBehavior,
-          // NeverScrollableScrollPhysics prevents any touch/drag scrolling;
-          // remove this line if you also need touch support.
-          physics: const NeverScrollableScrollPhysics(),
-          child: widget.child,
+    // While the scrollbar is being dragged use normal clamping physics so the
+    // thumb can actually move the scroll position. The rest of the time lock
+    // it to NeverScrollable so only our ticker drives the position.
+    final ScrollPhysics physics =
+        _isDraggingScrollbar ? const ClampingScrollPhysics() : const NeverScrollableScrollPhysics();
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: ScrollConfiguration(
+          behavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: <PointerDeviceKind>{
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.touch,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.unknown,
+            },
+          ),
+          child: Scrollbar(
+            controller: _scrollController,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: widget.scrollDirection,
+              reverse: widget.reverse,
+              padding: widget.padding,
+              clipBehavior: widget.clipBehavior,
+              physics: physics,
+              child: widget.child,
+            ),
+          ),
         ),
       ),
     );

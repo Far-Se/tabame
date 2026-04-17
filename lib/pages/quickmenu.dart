@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -18,10 +19,7 @@ import 'package:window_manager/window_manager.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/globals.dart';
-import '../widgets/quickmenu/bottom_bar.dart';
-import '../widgets/quickmenu/list_pinned_tray.dart';
-import '../widgets/quickmenu/task_bar.dart';
-import '../widgets/quickmenu/top_bar.dart';
+import 'quickmenu_designs/designs.dart';
 
 class QuickMenu extends StatefulWidget {
   const QuickMenu({super.key});
@@ -30,20 +28,20 @@ class QuickMenu extends StatefulWidget {
 }
 
 Future<int> quickMenuWindowSetup() async {
-  Globals.currentPage = Pages.quickmenu;
-
   if (Globals.lastPage != Pages.quickmenu) {
-    await WindowManager.instance.setMinimumSize(const Size(299, 150));
+    await WindowManager.instance.setMinimumSize(const Size(299, 540));
     await WindowManager.instance.setSize(const Size(299, 540));
+    await WindowManager.instance.setMaximumSize(const Size(1200, 539));
     await WindowManager.instance.setSkipTaskbar(true);
     await WindowManager.instance.setResizable(true);
     await WindowManager.instance.setAlwaysOnTop(true);
     if (kDebugMode) await WindowManager.instance.setTitle("Tabame - Debug");
-    await WindowManager.instance.setAspectRatio(1);
+    // await WindowManager.instance.setAspectRatio(1);
     await Win32.setMainWindowToMousePos();
   } else {
     await Win32.setMainWindowToMousePos();
   }
+  Globals.currentPage = Pages.quickmenu;
   Debug.add("QuickMenu: setup");
   return 1;
 }
@@ -80,13 +78,16 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
       Timer(const Duration(milliseconds: 2000), () async {
         final Size size = await windowManager.getSize();
         if (size.width > 400) {
-          await WindowManager.instance.setMinimumSize(const Size(299, 150));
-          await WindowManager.instance.setSize(const Size(299, 540));
+          List<double> size = Boxes.quickMenuSize;
+          if (size.length != 2) size = <double>[299, 539];
+          await WindowManager.instance.setMinimumSize(const Size(299, 540));
+          await WindowManager.instance.setMaximumSize(const Size(1200, 539));
+          await WindowManager.instance.setSize(Size(size[0], size[1]));
           await WindowManager.instance.setSkipTaskbar(true);
           await WindowManager.instance.setResizable(true);
           await WindowManager.instance.setAlwaysOnTop(true);
           if (kDebugMode) await WindowManager.instance.setTitle("Tabame - Debug");
-          await WindowManager.instance.setAspectRatio(1);
+          // await WindowManager.instance.setAspectRatio(1);
           await Win32.setMainWindowToMousePos();
         }
       });
@@ -102,11 +103,6 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
     QuickMenuFunctions.removeListener(this);
     focusNode.dispose();
     super.dispose();
-  }
-
-  @override
-  void refreshQuickMenu() {
-    if (mounted) setState(() {});
   }
 
   int unixVisible = 0;
@@ -132,7 +128,7 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
       } else if (Globals.quickMenuPage == QuickMenuPage.audioBox) {
         await QuickMenuFunctions.toggleQuickMenu(visible: true);
         await Future<void>.delayed(const Duration(milliseconds: 260));
-        QuickMenuFunctions.triggerQuickAction("AudioButton");
+        QuickMenuFunctions.triggerQuickAction("AudioControl");
       }
     } else {
       Globals.quickMenuPage = QuickMenuPage.quickMenu;
@@ -159,6 +155,21 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
   void onWindowFocus() {
     FocusScope.of(context).requestFocus(focusNode);
     setState(() {});
+  }
+
+  @override
+  void onWindowResized() async {
+    // save the new size to settings
+    final Size size = await windowManager.getSize();
+    Boxes.quickMenuSize = <double>[size.width, size.height];
+    Boxes.updateSettings("quickMenuSize", jsonEncode(Boxes.quickMenuSize));
+  }
+
+  @override
+  void onQuickActionExecute(String actionName) {
+    if (actionName == "refreshQuickMenu") {
+      if (mounted) setState(() {});
+    }
   }
 
   @override
@@ -212,7 +223,8 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
     }
     if (globalSettings.hideTabameOnUnfocus &&
         QuickMenuFunctions.isQuickMenuVisible &&
-        Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+        Globals.quickMenuPage == QuickMenuPage.quickMenu &&
+        !QuickMenuFunctions.keepOpen) {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.toggleQuickMenu(visible: false));
     }
@@ -387,18 +399,18 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
                     Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
                   Padding(
                     padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                    child: GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        key: Globals.quickMenu,
-                        color: Colors.transparent,
-                        child: Globals.quickMenuPage == QuickMenuPage.fileSearch
-                            ? const FileSearch()
-                            : switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
-                                QuickMenuDesigns.classic => const MainMenuClassicWidget(),
-                                QuickMenuDesigns.interface => const MainMenuInterfaceWidget(),
-                                QuickMenuDesigns.modern => const MainMenuModernWidget(),
-                              },
+                    child: DragToResizeArea(
+                      resizeEdgeSize: 5,
+                      enableResizeEdges: <ResizeEdge>[ResizeEdge.left, ResizeEdge.right],
+                      child: GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          key: Globals.quickMenu,
+                          color: Colors.transparent,
+                          child: Globals.quickMenuPage == QuickMenuPage.fileSearch
+                              ? const FileSearch()
+                              : const LoadQuickMenuDesign(),
+                        ),
                       ),
                     ),
                   ),
@@ -424,199 +436,5 @@ class QuickMenuState extends State<QuickMenu> with TabameListener, WindowListene
       return null;
     }
     return character;
-  }
-}
-
-class MainMenuModernWidget extends StatelessWidget {
-  const MainMenuModernWidget({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
-    final Color surface = theme.colorScheme.surface;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 203, maxHeight: 540),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              surface.withAlpha(245),
-              Color.alphaBlend(
-                  accent.withAlpha((globalSettings.themeColors.gradientAlpha * 24 / 100).toInt()), surface),
-              Color.alphaBlend(
-                  accent.withAlpha((globalSettings.themeColors.gradientAlpha * 10 / 100).toInt()), surface),
-            ],
-          ),
-          border: Border.all(color: accent.withAlpha(28)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(18),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: surface.withAlpha(235),
-              border: Border.all(color: accent.withAlpha(18)),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[
-                  Colors.white.withAlpha(14),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                const TopBar(),
-                const TaskBar(),
-                Divider(thickness: 1, height: 1, color: accent.withAlpha(28)),
-                const PinnedAndTrayList(),
-                const BottomBar(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class MainMenuClassicWidget extends StatelessWidget {
-  const MainMenuClassicWidget({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 203, maxHeight: 540),
-        child: Container(
-            decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                gradient: LinearGradient(
-                  colors: <Color>[
-                    Theme.of(context).colorScheme.surface,
-                    Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
-                    Theme.of(context).colorScheme.surface,
-                  ],
-                  stops: <double>[0, 0.4, 1],
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: <BoxShadow>[
-                  const BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-                ]),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                TopBar(),
-                TaskBar(),
-                Divider(thickness: 1, height: 1),
-                Flexible(child: PinnedAndTrayList()),
-                BottomBar(),
-              ],
-            )));
-  }
-}
-
-class MainMenuInterfaceWidget extends StatelessWidget {
-  const MainMenuInterfaceWidget({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
-    final Color surface = theme.colorScheme.surface;
-    final double gradientStrength = (globalSettings.themeColors.gradientAlpha.clamp(1, 100)) / 100;
-    final double outerAccentAlpha = 0.04 + (gradientStrength * 0.08);
-    final double innerAccentAlpha = 0.05 + (gradientStrength * 0.10);
-    final double headerAccentAlpha =
-        globalSettings.themeColors.gradientAlpha == 0 ? 0 : 0.04 + (gradientStrength * 0.12);
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 203, maxHeight: 540),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              Color.alphaBlend(accent.withValues(alpha: outerAccentAlpha), surface.withValues(alpha: 0.98)),
-              surface.withValues(alpha: 0.95),
-            ],
-          ),
-          border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.10),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: surface.withValues(alpha: 0.90),
-              border: Border.all(color: accent.withValues(alpha: innerAccentAlpha)),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[
-                  theme.colorScheme.surface.withAlpha(245),
-                  Color.alphaBlend(accent.withValues(alpha: headerAccentAlpha + headerAccentAlpha * 0.24),
-                      theme.colorScheme.surface),
-                  Color.alphaBlend(accent.withValues(alpha: headerAccentAlpha + headerAccentAlpha * 0.10),
-                      theme.colorScheme.surface),
-                  // accent.withValues(alpha: headerAccentAlpha),
-                  // Colors.transparent,
-                ],
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Container(padding: const EdgeInsets.fromLTRB(0, 5, 10, 6), child: const TopBar()),
-                Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
-                const TaskBar(),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
-                ),
-                const Flexible(child: PinnedAndTrayList()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
-                ),
-                Container(padding: const EdgeInsets.fromLTRB(0, 6, 2, 10), child: const BottomBar()),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

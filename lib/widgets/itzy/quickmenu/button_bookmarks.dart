@@ -3,28 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class BookmarksButton extends StatefulWidget {
+class BookmarksButton extends StatelessWidget {
   const BookmarksButton({super.key});
   @override
-  BookmarksButtonState createState() => BookmarksButtonState();
-}
-
-class BookmarksButtonState extends State<BookmarksButton> {
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Bookmarks",
-      icon: const Icon(Icons.folder_copy_outlined),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const BookmarksPanel(),
-      ),
-    );
+    return const ModalButton(actionName: "Bookmarks", icon: Icon(Icons.folder_copy_outlined), child: BookmarksPanel());
   }
 }
 

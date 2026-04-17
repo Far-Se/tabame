@@ -1,11 +1,42 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-class MouseScrollWidget extends StatefulWidget {
+import 'windows_scroll.dart';
+
+class MouseScrollWidget extends StatelessWidget {
   final Widget child;
   final Axis scrollDirection;
   final ScrollPhysics? physics;
+  final bool useClassicOne;
   const MouseScrollWidget({
+    super.key,
+    required this.child,
+    this.scrollDirection = Axis.vertical,
+    this.physics,
+    this.useClassicOne = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (useClassicOne) {
+      return MouseScrollWidget2(
+        child: child,
+        scrollDirection: scrollDirection,
+        physics: physics,
+      );
+    }
+    return WindowsScrollView(
+      child: child,
+      scrollDirection: scrollDirection,
+    );
+  }
+}
+
+class MouseScrollWidget2 extends StatefulWidget {
+  final Widget child;
+  final Axis scrollDirection;
+  final ScrollPhysics? physics;
+  const MouseScrollWidget2({
     super.key,
     required this.child,
     this.scrollDirection = Axis.vertical,
@@ -16,7 +47,7 @@ class MouseScrollWidget extends StatefulWidget {
   MouseScrollWidgetState createState() => MouseScrollWidgetState();
 }
 
-class MouseScrollWidgetState extends State<MouseScrollWidget> {
+class MouseScrollWidgetState extends State<MouseScrollWidget2> {
   ScrollController controller = ScrollController();
   static String? _lastEventSignature;
 
@@ -48,9 +79,8 @@ class MouseScrollWidgetState extends State<MouseScrollWidget> {
           // If we have no room to scroll, let the event pass to parent
           if (!controller.hasClients || controller.position.maxScrollExtent <= 0) return;
 
-          final double delta = widget.scrollDirection == Axis.vertical 
-              ? pointerSignal.scrollDelta.dy 
-              : pointerSignal.scrollDelta.dx;
+          final double delta =
+              widget.scrollDirection == Axis.vertical ? pointerSignal.scrollDelta.dy : pointerSignal.scrollDelta.dx;
           if (delta == 0) return;
 
           // Claim the event fingerprint so parents don't handle it
@@ -79,11 +109,14 @@ class MouseScrollWidgetState extends State<MouseScrollWidget> {
           },
           scrollbars: true,
         ),
-        child: SingleChildScrollView(
+        child: Scrollbar(
           controller: controller,
-          physics: widget.physics ?? const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-          scrollDirection: widget.scrollDirection,
-          child: widget.child,
+          child: SingleChildScrollView(
+            controller: controller,
+            physics: widget.physics ?? const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+            scrollDirection: widget.scrollDirection,
+            child: widget.child,
+          ),
         ),
       ),
     );

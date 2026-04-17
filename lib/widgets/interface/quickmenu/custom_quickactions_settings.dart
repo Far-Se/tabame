@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import '../../../models/classes/boxes.dart';
+import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quick_actions.dart';
 import '../../widgets/info_text.dart';
 import '../../widgets/text_input.dart';
@@ -17,20 +19,58 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool isWide = constraints.maxWidth > 800;
+        final double horizontalPadding = isWide ? 16 : 8;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _buildNotice(context),
-          const SizedBox(height: 20),
-          _buildAddButton(context),
-          const SizedBox(height: 12),
-          _buildActionsList(context),
-        ],
-      ),
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _buildNotice(context),
+                    const SizedBox(height: 20),
+                    _buildControlsHeader(context),
+                    const SizedBox(height: 12),
+                    _buildActionsList(context),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildControlsHeader(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                "Action Library",
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                "Manage and reorder your custom quick actions",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                    ),
+              ),
+            ],
+          ),
+        ),
+        _buildAddButton(context),
+      ],
     );
   }
 
@@ -41,17 +81,24 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.12)),
+        color: scheme.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.info_outline_rounded, color: scheme.primary),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.bolt_rounded, size: 18, color: scheme.primary),
+          ),
           const SizedBox(width: 16),
           const Expanded(
             child: InfoText(
-              "You can bind QuickActions Menu to a specific HotKey or an Hotkey Trigger in the Hotkeys tab.",
+              "Bind these actions to Hotkeys or Triggers in the main Hotkeys configuration panel.",
             ),
           ),
         ],
@@ -67,11 +114,11 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
         setState(() {});
         _editAction(quickActions.length - 1);
       },
-      icon: const Icon(Icons.add_rounded),
-      label: const Text("Add New Quick Action"),
+      icon: const Icon(Icons.add_rounded, size: 18),
+      label: const Text("New Action"),
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -82,18 +129,38 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
 
     if (quickActions.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(48),
         decoration: BoxDecoration(
+          color: theme.cardColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.1)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: AppOpacity.border)),
         ),
         child: Column(
           children: <Widget>[
-            Icon(Icons.bolt_outlined, size: 48, color: scheme.onSurface.withValues(alpha: 0.2)),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withValues(alpha: 0.03),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.bolt_outlined, size: 32, color: scheme.onSurface.withValues(alpha: 0.2)),
+            ),
+            const SizedBox(height: 16),
             Text(
-              "No custom actions yet",
-              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface.withValues(alpha: 0.5)),
+              "No custom actions defined",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Create your first action to get started",
+              style: TextStyle(
+                fontSize: 11,
+                color: scheme.onSurface.withValues(alpha: 0.3),
+              ),
             ),
           ],
         ),
@@ -127,65 +194,75 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
     return ReorderableDragStartListener(
       index: index,
       key: ValueKey<int>(index),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Material(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => _editAction(index),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: scheme.outline.withValues(alpha: 0.1)),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
-                leading: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Icon(Icons.drag_indicator_rounded, size: 20, color: scheme.onSurface.withValues(alpha: 0.4)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: scheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: theme.cardColor.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.dividerColor.withValues(alpha: AppOpacity.border),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _editAction(index),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.drag_indicator_rounded,
+                  size: 20,
+                  color: scheme.onSurface.withValues(alpha: 0.25),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _QuickmenuQuickActionEditState._getStaticIconForType(action.type),
+                    size: 18,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        action.name,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
-                      child: Icon(Icons.bolt_rounded, size: 20, color: scheme.primary),
-                    ),
-                  ],
+                      Text(
+                        action.type,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                title: Text(
-                  action.name,
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  onPressed: () => _editAction(index),
+                  visualDensity: VisualDensity.compact,
                 ),
-                subtitle: Text(
-                  action.type,
-                  style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurface.withValues(alpha: 0.6)),
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, size: 18, color: scheme.error.withValues(alpha: 0.7)),
+                  onPressed: () async {
+                    quickActions.removeAt(index);
+                    await Boxes.updateSettings("quickActions", jsonEncode(quickActions));
+                    if (mounted) setState(() {});
+                  },
+                  visualDensity: VisualDensity.compact,
                 ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    IconButton(
-                      icon: const Icon(Icons.edit_note_rounded, size: 22),
-                      tooltip: "Edit",
-                      onPressed: () => _editAction(index),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete_outline_rounded, size: 22, color: scheme.error.withValues(alpha: 0.8)),
-                      tooltip: "Remove",
-                      onPressed: () async {
-                        quickActions.removeAt(index);
-                        await Boxes.updateSettings("quickActions", jsonEncode(quickActions));
-                        if (mounted) setState(() {});
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),
@@ -197,18 +274,24 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text("Edit Quick Action"),
-          content: SizedBox(
-            width: 440,
-            child: QuickmenuQuickActionEdit(
-              leAction: quickActions.elementAt(index).copyWith(),
-              onSaved: (QuickActions n) {
-                quickActions[index] = n.copyWith();
-                Boxes.updateSettings("quickActions", jsonEncode(quickActions));
-                setState(() {});
-              },
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: AppOpacity.border)),
+              ),
+              child: QuickmenuQuickActionEdit(
+                leAction: quickActions.elementAt(index).copyWith(),
+                onSaved: (QuickActions n) {
+                  quickActions[index] = n.copyWith();
+                  Boxes.updateSettings("quickActions", jsonEncode(quickActions));
+                  setState(() {});
+                },
+              ),
             ),
           ),
         );
@@ -230,7 +313,7 @@ class QuickmenuQuickActionEdit extends StatefulWidget {
 }
 
 class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
-  IconData _getIconForType(String type) {
+  static IconData _getStaticIconForType(String type) {
     switch (type) {
       case "Spotify Controls":
         return Icons.music_note_rounded;
@@ -251,6 +334,8 @@ class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
         return Icons.bolt_rounded;
     }
   }
+
+  IconData _getIconForType(String type) => _getStaticIconForType(type);
 
   String _getHintForType(String type) {
     switch (type) {
@@ -273,109 +358,87 @@ class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
     final ColorScheme scheme = theme.colorScheme;
     final IconData currentIcon = _getIconForType(widget.leAction.type);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        // Visual Header
-        Container(
-          height: 100,
-          margin: const EdgeInsets.only(bottom: 24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[
-                scheme.primary.withValues(alpha: 0.15),
-                scheme.primary.withValues(alpha: 0.02),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: scheme.primary.withValues(alpha: 0.1)),
-          ),
-          child: Stack(
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
             children: <Widget>[
-              Positioned(
-                right: -10,
-                bottom: -10,
-                child: Icon(
-                  currentIcon,
-                  size: 100,
-                  color: scheme.primary.withValues(alpha: 0.05),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Icon(Icons.bolt_rounded, size: 20, color: scheme.primary),
               ),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: scheme.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
-                      ),
-                      child: Icon(currentIcon, color: scheme.primary, size: 28),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 16),
+              const Text(
+                "Edit Quick Action",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-        ),
-
-        TextInput(
-          labelText: "Display Name",
-          onChanged: (String v) {
-            widget.leAction.name = v;
-            setState(() {});
-          },
-          value: widget.leAction.name,
-        ),
-        const SizedBox(height: 24),
-        _buildLabel(context, "Action Type"),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              value: widget.leAction.type,
+          const SizedBox(height: 24),
+          // Visual Header
+          Container(
+            height: 80,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[
+                  scheme.primary.withValues(alpha: 0.1),
+                  scheme.primary.withValues(alpha: 0.02),
+                ],
+              ),
               borderRadius: BorderRadius.circular(16),
-              icon: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.primary),
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              onChanged: (String? newValue) {
-                widget.leAction.type = newValue ?? quickActionsType.first;
-                if (widget.leAction.type != quickActionsType.first) {
-                  widget.leAction.value = "";
-                } else {
-                  widget.leAction.value = "0";
-                }
-                setState(() {});
-              },
-              items: quickActionsType.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Row(
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.15)),
+            ),
+            child: Stack(
+              children: <Widget>[
+                Positioned(
+                  right: -10,
+                  bottom: -10,
+                  child: Icon(
+                    currentIcon,
+                    size: 80,
+                    color: scheme.primary.withValues(alpha: 0.05),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      Icon(_getIconForType(value), size: 18, color: scheme.onSurface.withValues(alpha: 0.6)),
-                      const SizedBox(width: 12),
-                      Text(value),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Icon(currentIcon, color: scheme.primary, size: 24),
+                      ),
                     ],
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        if (widget.leAction.type == quickActionsType.first) ...<Widget>[
-          _buildLabel(context, "Select Built-in Action"),
+
+          TextInput(
+            labelText: "Display Name",
+            onChanged: (String v) {
+              widget.leAction.name = v;
+              setState(() {});
+            },
+            value: widget.leAction.name,
+          ),
+          const SizedBox(height: 24),
+          _buildLabel(context, "Action Type"),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -384,73 +447,117 @@ class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
               border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
             ),
             child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
+              child: DropdownButton<String>(
                 isExpanded: true,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                value: int.tryParse(widget.leAction.value) ?? 0,
+                value: widget.leAction.type,
                 borderRadius: BorderRadius.circular(16),
                 icon: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.primary),
-                onChanged: (int? newValue) {
-                  widget.leAction.value = newValue.toString();
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                onChanged: (String? newValue) {
+                  widget.leAction.type = newValue ?? quickActionsType.first;
+                  if (widget.leAction.type != quickActionsType.first) {
+                    widget.leAction.value = "";
+                  } else {
+                    widget.leAction.value = "0";
+                  }
                   setState(() {});
                 },
-                items: quickActionsList.map<DropdownMenuItem<int>>((String value) {
-                  return DropdownMenuItem<int>(
-                    value: quickActionsList.indexOf(value),
-                    child: Text(value),
+                items: quickActionsType.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Row(
+                      children: <Widget>[
+                        Icon(_getIconForType(value), size: 18, color: scheme.onSurface.withValues(alpha: 0.6)),
+                        const SizedBox(width: 12),
+                        Text(value),
+                      ],
+                    ),
                   );
                 }).toList(),
               ),
             ),
           ),
-        ] else if (<int>[4, 5, 6, 8, 9].any((int e) => e == quickActionsType.indexOf(widget.leAction.type))) ...<Widget>[
-          TextInput(
-            labelText: "Action Value",
-            hintText: _getHintForType(widget.leAction.type),
-            onChanged: (String e) {
-              widget.leAction.value = e;
-              setState(() {});
-            },
-            value: widget.leAction.value,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              "Define how the selected action should behave.",
-              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurface.withValues(alpha: 0.4)),
-            ),
-          ),
-        ],
-        const SizedBox(height: 36),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: 24),
+          if (widget.leAction.type == quickActionsType.first) ...<Widget>[
+            _buildLabel(context, "Select Built-in Action"),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
               ),
-              child: const Text("Cancel"),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  isExpanded: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  value: int.tryParse(widget.leAction.value) ?? 0,
+                  borderRadius: BorderRadius.circular(16),
+                  icon: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.primary),
+                  onChanged: (int? newValue) {
+                    widget.leAction.value = newValue.toString();
+                    setState(() {});
+                  },
+                  items: quickActionsList.map<DropdownMenuItem<int>>((String value) {
+                    return DropdownMenuItem<int>(
+                      value: quickActionsList.indexOf(value),
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: () {
-                widget.onSaved(widget.leAction);
-                Navigator.of(context).pop();
+          ] else if (<int>[4, 5, 6, 8, 9]
+              .any((int e) => e == quickActionsType.indexOf(widget.leAction.type))) ...<Widget>[
+            TextInput(
+              labelText: "Action Value",
+              hintText: _getHintForType(widget.leAction.type),
+              onChanged: (String e) {
+                widget.leAction.value = e;
+                setState(() {});
               },
-              icon: const Icon(Icons.check_rounded, size: 18),
-              label: const Text("Save Action"),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
+              value: widget.leAction.value,
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                "Define how the selected action should behave.",
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurface.withValues(alpha: 0.4)),
               ),
             ),
           ],
-        ),
-      ],
+          const SizedBox(height: 36),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Cancel"),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: () {
+                  widget.onSaved(widget.leAction);
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: const Text("Save Action"),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

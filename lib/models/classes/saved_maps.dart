@@ -153,7 +153,7 @@ class Reminder extends SavedMap {
   factory Reminder.fromMap(Map<String, dynamic> map) {
     bool isPersistent = (map['persistent'] ?? false) as bool;
     String msg = (map['message'] ?? '') as String;
-    
+
     if (msg.startsWith('p:')) {
       isPersistent = true;
       msg = msg.substring(2);
@@ -831,6 +831,169 @@ class DefaultVolume {
 
   @override
   int get hashCode => type.hashCode ^ match.hashCode ^ volume.hashCode;
+}
+
+// ---------------------------------------------------------------------------
+// QuickGrids – FancyZones-style custom window zones
+// ---------------------------------------------------------------------------
+
+/// Layout type for how zones are arranged inside a QuickGrid.
+enum QuickGridLayoutType {
+  horizontal,
+  vertical,
+  freestyle;
+
+  String get label {
+    switch (this) {
+      case QuickGridLayoutType.horizontal:
+        return 'Horizontal';
+      case QuickGridLayoutType.vertical:
+        return 'Vertical';
+      case QuickGridLayoutType.freestyle:
+        return 'Freestyle';
+    }
+  }
+
+  String toJson() => name;
+  static QuickGridLayoutType fromJson(String s) => QuickGridLayoutType.values.firstWhere(
+        (QuickGridLayoutType v) => v.name == s,
+        orElse: () {
+          if (s == 'grid') return QuickGridLayoutType.freestyle; // legacy migration
+          return QuickGridLayoutType.horizontal;
+        },
+      );
+}
+
+/// A single rectangular zone expressed as fractions of the screen (0.0–1.0).
+class QuickGridRect {
+  double left;
+  double top;
+  double right;
+  double bottom;
+
+  QuickGridRect({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
+
+  QuickGridRect copyWith({double? left, double? top, double? right, double? bottom}) {
+    return QuickGridRect(
+      left: left ?? this.left,
+      top: top ?? this.top,
+      right: right ?? this.right,
+      bottom: bottom ?? this.bottom,
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'left': left,
+        'top': top,
+        'right': right,
+        'bottom': bottom,
+      };
+
+  factory QuickGridRect.fromMap(Map<String, dynamic> map) => QuickGridRect(
+        left: (map['left'] as num?)?.toDouble() ?? 0.0,
+        top: (map['top'] as num?)?.toDouble() ?? 0.0,
+        right: (map['right'] as num?)?.toDouble() ?? 1.0,
+        bottom: (map['bottom'] as num?)?.toDouble() ?? 1.0,
+      );
+
+  @override
+  String toString() => 'Rect($left,$top → $right,$bottom)';
+}
+
+/// A named collection of zones (a "QuickGrid preset").
+class QuickGrid {
+  String id;
+  String name;
+  QuickGridLayoutType layoutType;
+
+  /// Gap between zones in screen pixels when applied.
+  int gap;
+
+  /// Each entry is one rectangular zone expressed in screen fractions.
+  List<QuickGridRect> zones;
+
+  QuickGrid({
+    required this.id,
+    required this.name,
+    this.layoutType = QuickGridLayoutType.horizontal,
+    this.gap = 0,
+    List<QuickGridRect>? zones,
+  }) : zones = zones ?? <QuickGridRect>[];
+
+  QuickGrid copyWith({
+    String? id,
+    String? name,
+    QuickGridLayoutType? layoutType,
+    int? gap,
+    List<QuickGridRect>? zones,
+  }) {
+    return QuickGrid(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      layoutType: layoutType ?? this.layoutType,
+      gap: gap ?? this.gap,
+      zones: zones ?? this.zones.map((QuickGridRect r) => r.copyWith()).toList(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'layoutType': layoutType.toJson(),
+        'gap': gap,
+        'zones': zones.map((QuickGridRect r) => r.toMap()).toList(),
+      };
+
+  factory QuickGrid.fromMap(Map<String, dynamic> map) => QuickGrid(
+        id: (map['id'] ?? '') as String,
+        name: (map['name'] ?? 'Zone') as String,
+        layoutType: QuickGridLayoutType.fromJson((map['layoutType'] ?? 'horizontal') as String),
+        gap: (map['gap'] as num?)?.toInt() ?? 0,
+        zones: (map['zones'] as List<dynamic>? ?? <dynamic>[])
+            .map((dynamic e) => QuickGridRect.fromMap(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+  String toJson() => json.encode(toMap());
+  factory QuickGrid.fromJson(String source) => QuickGrid.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  /// Build an equally-divided default layout based on [layoutType].
+  static List<QuickGridRect> buildDefault(QuickGridLayoutType type, int count) {
+    if (count <= 0) return <QuickGridRect>[];
+    final List<QuickGridRect> rects = <QuickGridRect>[];
+    for (int i = 0; i < count; i++) {
+      switch (type) {
+        case QuickGridLayoutType.horizontal:
+          rects.add(QuickGridRect(
+            left: i / count,
+            top: 0,
+            right: (i + 1) / count,
+            bottom: 1,
+          ));
+        case QuickGridLayoutType.vertical:
+          rects.add(QuickGridRect(
+            left: 0,
+            top: i / count,
+            right: 1,
+            bottom: (i + 1) / count,
+          ));
+        case QuickGridLayoutType.freestyle:
+          // Default freestyle: equal side-by-side columns
+          rects.add(QuickGridRect(
+            left: i / count,
+            top: 0,
+            right: (i + 1) / count,
+            bottom: 1,
+          ));
+      }
+    }
+    return rects;
+  }
 }
 
 class ViewsSettings {

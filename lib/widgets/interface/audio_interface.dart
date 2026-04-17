@@ -5,7 +5,10 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
+import '../../models/util/app_opacity.dart';
 import '../../models/win32/win32.dart';
+import '../../pages/interface.dart';
+import 'interface_quickmenu.dart';
 
 class AudioInterface extends StatefulWidget {
   const AudioInterface({super.key});
@@ -49,7 +52,8 @@ class AudioInterfaceState extends State<AudioInterface> {
             ),
           ),
 
-          if (!Audio.canRunAudioModule) _buildWarningCard(context, "Audio Module unavailable on this Windows install. Investigating..."),
+          if (!Audio.canRunAudioModule)
+            _buildWarningCard(context, "Audio Module unavailable on this Windows install. Investigating..."),
 
           // --- Default Device Targeting ---
           _buildSectionCard(
@@ -83,6 +87,52 @@ class AudioInterfaceState extends State<AudioInterface> {
                   Boxes.updateSettings("audio", globalSettings.audio);
                   setState(() {});
                 },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // --- Create custom Quick Action for Media players ---
+          _buildSectionCard(
+            context,
+            "Custom Media Controls",
+            Icons.ads_click_rounded,
+            <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Text(
+                      "Need specialized controls for non-standard media players? Create isolated interfaces with custom hotkeys.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () {
+                        final InterfaceState? state = context.findAncestorStateOfType<InterfaceState>();
+                        if (state != null) {
+                          QuickmenuSettings.pendingPage = 7; // App Audio index in QuickmenuSettings
+                          final int qmIndex =
+                              state.pages.indexWhere((PageClass p) => p.title?.toLowerCase() == "quickmenu");
+                          state.setState(() {
+                            state.currentPage = qmIndex != -1 ? qmIndex : 4;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.settings_input_component_rounded, size: 18),
+                      label: const Text("Create custom Quick Action for Media players"),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -148,7 +198,8 @@ class AudioInterfaceState extends State<AudioInterface> {
                       if (e.trim().isEmpty) {
                         Boxes.mediaControls = <String>[];
                       } else {
-                        Boxes.mediaControls = e.split(",").map((String s) => s.trim()).where((String s) => s.isNotEmpty).toList();
+                        Boxes.mediaControls =
+                            e.split(",").map((String s) => s.trim()).where((String s) => s.isNotEmpty).toList();
                       }
                       Boxes.updateSettings("mediaControls", Boxes.mediaControls);
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Media apps saved")));
@@ -198,11 +249,12 @@ class AudioInterfaceState extends State<AudioInterface> {
   Widget _buildSectionCard(BuildContext context, String title, IconData icon, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withAlpha(80),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: AppOpacity.surfaceOverlay),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _accent.withAlpha(20), width: 1),
+        border: Border.all(color: _accent.withValues(alpha: AppOpacity.border), width: 1),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: AppOpacity.subtle), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -252,9 +304,9 @@ class AudioInterfaceState extends State<AudioInterface> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer.withAlpha(50),
+        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: AppOpacity.accentFaint),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.error.withAlpha(100)),
+        border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: AppOpacity.surfaceOverlay)),
       ),
       child: Row(
         children: <Widget>[
@@ -272,13 +324,17 @@ class AudioInterfaceState extends State<AudioInterface> {
       hintText: label,
       prefixIcon: icon != null ? Icon(icon, size: 18, color: accent) : null,
       filled: true,
-      fillColor: accent.withAlpha(10),
+      fillColor: accent.withValues(alpha: AppOpacity.subtle),
       isDense: true,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent.withAlpha(25), width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent, width: 1.5)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: accent.withValues(alpha: AppOpacity.border), width: 1)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent, width: 1.5)),
       contentPadding: EdgeInsets.symmetric(horizontal: icon != null ? 0 : 16, vertical: 14),
-      labelStyle: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
+      labelStyle: TextStyle(
+          fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: AppOpacity.textSecondary)),
     );
   }
 }
@@ -300,11 +356,12 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withAlpha(80),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: AppOpacity.surfaceOverlay),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.accent.withAlpha(20), width: 1),
+        border: Border.all(color: widget.accent.withValues(alpha: AppOpacity.border), width: 1),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: AppOpacity.subtle), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -350,7 +407,9 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
           if (volumes.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24.0),
-              child: Center(child: Text("No automated rules yet.", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))),
+              child: Center(
+                  child: Text("No automated rules yet.",
+                      style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))),
             )
           else
             ListView.separated(
@@ -360,20 +419,20 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
               separatorBuilder: (BuildContext ctx, int idx) => const Divider(height: 1),
               itemBuilder: (BuildContext ctx, int index) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Row(
                     children: <Widget>[
                       // Match Type
                       SizedBox(
-                        width: 90,
+                        width: 100,
                         child: DropdownButtonFormField<String>(
                           initialValue: volumes[index].type,
-                          decoration: _miniDecoration("By"),
-                          style: TextStyle(fontSize: 12, color: onSurface),
+                          decoration: _miniDecoration("Match By"),
+                          style: TextStyle(fontSize: 12, color: onSurface, fontWeight: FontWeight.bold),
                           items: const <DropdownMenuItem<String>>[
-                            DropdownMenuItem<String>(value: "exe", child: Text("EXE")),
-                            DropdownMenuItem<String>(value: "class", child: Text("Class")),
-                            DropdownMenuItem<String>(value: "title", child: Text("Title")),
+                            DropdownMenuItem<String>(value: "exe", child: Text("EXE File")),
+                            DropdownMenuItem<String>(value: "class", child: Text("Win Class")),
+                            DropdownMenuItem<String>(value: "title", child: Text("Win Title")),
                           ],
                           onChanged: (String? v) {
                             if (v != null) {
@@ -384,7 +443,7 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       // Regex Match
                       Expanded(
                         child: TextField(
@@ -393,15 +452,15 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
                             volumes[index].match = v;
                             Boxes.updateSettings("defaultVolume", jsonEncode(volumes));
                           },
-                          decoration: _miniDecoration("Match (Regex)"),
-                          style: const TextStyle(fontSize: 12),
+                          decoration: _miniDecoration("Match (Regex)").copyWith(hintText: "^Spotify.*"),
+                          style: const TextStyle(fontSize: 12, fontFamily: 'Consolas'),
                           controller: TextEditingController(text: volumes[index].match),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       // Volume
                       SizedBox(
-                        width: 60,
+                        width: 70,
                         child: TextField(
                           keyboardType: TextInputType.number,
                           onChanged: (String v) {
@@ -411,20 +470,21 @@ class _AutomatedVolumeCardState extends State<_AutomatedVolumeCard> {
                               Boxes.updateSettings("defaultVolume", jsonEncode(volumes));
                             }
                           },
-                          decoration: _miniDecoration("Vol"),
-                          style: const TextStyle(fontSize: 12),
+                          decoration: _miniDecoration("Vol").copyWith(suffixText: "%"),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           controller: TextEditingController(text: volumes[index].volume.toString()),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       IconButton(
                         onPressed: () {
                           volumes.removeAt(index);
                           Boxes.updateSettings("defaultVolume", jsonEncode(volumes));
                           setState(() {});
                         },
-                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
-                        splashRadius: 20,
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 20, color: Colors.grey),
+                        splashRadius: 24,
+                        tooltip: "Remove rule",
                       )
                     ],
                   ),

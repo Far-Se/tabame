@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class ToggleHiddenFilesButton extends StatefulWidget {
   const ToggleHiddenFilesButton({super.key});
@@ -33,7 +34,12 @@ class _ToggleHiddenFilesButtonState extends State<ToggleHiddenFilesButton> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[SizedBox(width: 5), SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)), SizedBox(width: 5), Text("Hide Hidden Files")],
+                children: <Widget>[
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.folder_off_outlined)),
+                  SizedBox(width: 5),
+                  Text("Hide Hidden Files")
+                ],
               ),
             ),
           ),
@@ -44,7 +50,12 @@ class _ToggleHiddenFilesButtonState extends State<ToggleHiddenFilesButton> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[SizedBox(width: 5), SizedBox(width: 20, child: Icon(Icons.folder_outlined)), SizedBox(width: 5), Text("Show Hidden Files")],
+                children: <Widget>[
+                  SizedBox(width: 5),
+                  SizedBox(width: 20, child: Icon(Icons.folder_outlined)),
+                  SizedBox(width: 5),
+                  Text("Show Hidden Files")
+                ],
               ),
             ),
           )
@@ -58,8 +69,9 @@ class _ToggleHiddenFilesButtonState extends State<ToggleHiddenFilesButton> {
         onSecondaryTap: () => WinUtils.toggleHiddenFiles(visible: false),
         onTertiaryTapUp: (TapUpDetails details) => WinUtils.toggleHiddenFiles(visible: true),
         child: InkWell(
-          child:
-              Tooltip(message: _visible == 1 ? "Hide Hidden Files" : "Show Hidden Files", child: Icon(_visible == 1 ? Icons.folder_outlined : Icons.folder_off_outlined)),
+          child: CustomTooltip(
+              message: _visible == 1 ? "Hide Hidden Files" : "Show Hidden Files",
+              child: Icon(_visible == 1 ? Icons.folder_outlined : Icons.folder_off_outlined)),
           onTap: () async {
             WinUtils.toggleHiddenFiles();
             setState(() {

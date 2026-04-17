@@ -4,12 +4,11 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
-// ignore: unused_import
-
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/win32/win32.dart';
 import '../../widgets/bar_with_buttons.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class PowershellList extends StatefulWidget {
   const PowershellList({super.key});
@@ -38,7 +37,7 @@ class PowershellListState extends State<PowershellList> {
               constraints: const BoxConstraints(maxWidth: 20, minWidth: 20, minHeight: 20),
               margin: const EdgeInsets.only(right: 2),
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black12),
-              child: Tooltip(
+              child: CustomTooltip(
                 message: item.name,
                 child: InkWell(
                   child: Center(

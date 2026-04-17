@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, dead_code
 import 'dart:convert';
 
-import 'package:animated_button_bar/animated_button_bar.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -66,8 +65,8 @@ class TasksRemindersState extends State<TasksReminders> {
     showDialog<void>(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
-        title: const Text("Delete Reminder"),
-        content: Text("Are you sure you want to delete '${reminder.message}'?"),
+        title: const Text("Delete Reminder?"),
+        content: Text("Permanently delete '${reminder.message}'? This action is irreversible."),
         actions: <Widget>[
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           FilledButton(
@@ -78,7 +77,7 @@ class TasksRemindersState extends State<TasksReminders> {
               if (context.mounted) Navigator.pop(ctx);
             },
             style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text("Delete"),
+            child: const Text("Delete Permanently"),
           ),
         ],
       ),
@@ -131,37 +130,40 @@ class TasksRemindersState extends State<TasksReminders> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.notifications_active_outlined,
-                size: 80, color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
-            const SizedBox(height: 24),
-            Text(
-              "Active Reminders",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Use reminders to stay on track. You can schedule them at specific times of the day or set repetitive intervals.\n\n"
-              "Enable Persistent Mode to keep notifications on-screen until you dismiss them, perfect for important tasks like taking meds or standing up.",
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    height: 1.5,
-                  ),
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: _addNewReminder,
-              icon: const Icon(Icons.add_circle_outline_rounded),
-              label: const Text("Create First Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.notifications_active_outlined,
+                  size: 80, color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+              const SizedBox(height: 24),
+              Text(
+                "Active Reminders",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                "Use reminders to stay on track. You can schedule them at specific times of the day or set repetitive intervals.\n\n"
+                "Enable Persistent Mode to keep notifications on-screen until you dismiss them, perfect for important tasks like taking meds or standing up.",
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      height: 1.5,
+                    ),
+              ),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: _addNewReminder,
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                label: const Text("Create First Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 140),
+            ],
+          ),
         ),
       ),
     );
@@ -177,9 +179,8 @@ class TasksRemindersState extends State<TasksReminders> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: ReminderEditor(
-                key: UniqueKey(),
                 remindersIndex: index,
                 onDeleted: () async {
                   Boxes.reminders.removeAt(index);
@@ -383,21 +384,20 @@ class ReminderEditorState extends State<ReminderEditor> {
   final TextEditingController intervalDaysController = TextEditingController();
   bool persistent = false;
 
-  final AnimatedButtonController perDayType = AnimatedButtonController();
-  final AnimatedButtonController repetitiveController = AnimatedButtonController();
-  final AnimatedButtonController typeNotification = AnimatedButtonController();
-
   @override
   void initState() {
     reminder = Boxes.reminders[widget.remindersIndex].copyWith();
     messageTextController = TextEditingController(text: reminder.message);
     intervalDaysController.text = reminder.interval[1].toString();
     persistent = reminder.persistent;
-
-    if (reminder.interval[0] <= -1) perDayType.index = 1;
-    if (reminder.voiceNotification) typeNotification.index = 1;
-    if (!reminder.repetitive) repetitiveController.index = 1;
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    messageTextController.dispose();
+    intervalDaysController.dispose();
+    super.dispose();
   }
 
   @override
@@ -409,28 +409,22 @@ class ReminderEditorState extends State<ReminderEditor> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _buildHeader(theme),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         _buildMessageInput(theme),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildNotificationSection(theme),
-        const Divider(height: 32),
+        const SizedBox(height: 12),
         _buildScheduleSection(theme),
-        const SizedBox(height: 32),
+        const SizedBox(height: 12),
         _buildActionButtons(theme),
       ],
     );
   }
 
   Widget _buildHeader(ThemeData theme) {
-    return Row(
-      children: <Widget>[
-        Icon(Icons.edit_calendar_rounded, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Text(
-          "Edit Reminder",
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
+    return Text(
+      "Reminder Properties",
+      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 
@@ -440,20 +434,22 @@ class ReminderEditorState extends State<ReminderEditor> {
       children: <Widget>[
         TextField(
           controller: messageTextController,
-          style: theme.textTheme.titleMedium,
-          decoration: InputDecoration(
-            labelText: "Message",
-            hintText: "What should I remind you about?",
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            prefixIcon: const Icon(Icons.message_outlined),
-          ),
+          style: theme.textTheme.bodyLarge,
+          decoration: _modernInputDecoration(context, "Reminder Message", theme.colorScheme.primary),
         ),
         const SizedBox(height: 8),
         SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text("Persistent Notification"),
-          subtitle: const Text("Keep the warning visible until dismissed"),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+          tileColor: persistent ? theme.colorScheme.errorContainer.withValues(alpha: 0.1) : null,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: Text("Persistent Notification",
+              style:
+                  TextStyle(fontSize: 14, color: persistent ? theme.colorScheme.error : theme.colorScheme.onSurface)),
+          subtitle:
+              const Text("Adds a warning to QuickMenu that must be manually dismissed", style: TextStyle(fontSize: 12)),
           value: persistent,
+          activeThumbColor: theme.colorScheme.error,
           onChanged: (bool value) => setState(() => persistent = value),
         ),
       ],
@@ -464,40 +460,44 @@ class ReminderEditorState extends State<ReminderEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text("Notification Method", style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        AnimatedButtonBar(
-          radius: 12.0,
-          curve: Curves.easeOutCirc,
-          padding: EdgeInsets.zero,
-          controller: typeNotification,
-          invertedSelection: true,
-          children: <ButtonBarEntry>[
-            ButtonBarEntry(
-              child: const Text("Visual (Toast)"),
-              onTap: () => setState(() => reminder.voiceNotification = false),
-            ),
-            ButtonBarEntry(
-              child: const Text("Voice Announcement"),
-              onTap: () => setState(() => reminder.voiceNotification = true),
-            ),
+        Text("Type", style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 6),
+        _SegmentedSelector<bool>(
+          value: reminder.voiceNotification,
+          onChanged: (bool v) => setState(() => reminder.voiceNotification = v),
+          items: const <SegmentItem<bool>>[
+            SegmentItem<bool>(value: false, label: "Visual (Toast)", icon: Icons.visibility_rounded),
+            SegmentItem<bool>(value: true, label: "Voice Announcement", icon: Icons.record_voice_over_rounded),
           ],
         ),
         if (reminder.voiceNotification) ...<Widget>[
           const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              const Icon(Icons.volume_up_rounded, size: 20),
-              Expanded(
-                child: Slider(
-                  min: 0,
-                  max: 100,
-                  value: reminder.voiceVolume.toDouble(),
-                  onChanged: (double v) => setState(() => reminder.voiceVolume = v.round()),
-                ),
-              ),
-              Text("${reminder.voiceVolume}%", style: theme.textTheme.bodySmall),
-            ],
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setSliderState) {
+              return Row(
+                children: <Widget>[
+                  const Icon(Icons.volume_up_rounded, size: 20),
+                  Expanded(
+                    child: Slider(
+                      min: 0,
+                      max: 100,
+                      value: reminder.voiceVolume.toDouble(),
+                      onChanged: (double v) {
+                        setSliderState(() => reminder.voiceVolume = v.round());
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      "${reminder.voiceVolume}%",
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ],
@@ -508,8 +508,8 @@ class ReminderEditorState extends State<ReminderEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text("Schedule", style: theme.textTheme.titleSmall),
-        const SizedBox(height: 12),
+        Text("Schedule", style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 6),
         _buildDaySelector(theme),
         const SizedBox(height: 16),
         _buildTypeAndInterval(theme),
@@ -543,17 +543,17 @@ class ReminderEditorState extends State<ReminderEditor> {
 
     final List<String> days = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     return ToggleButtons(
-      borderRadius: BorderRadius.circular(12),
-      constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+      borderRadius: BorderRadius.circular(8),
+      constraints: const BoxConstraints(minHeight: 32, minWidth: 32),
       isSelected: reminder.weekDays,
       onPressed: (int index) => setState(() => reminder.weekDays[index] = !reminder.weekDays[index]),
-      // Modern styling with clear contrast
-      fillColor: theme.colorScheme.primary,
-      selectedColor: theme.colorScheme.onPrimary,
-      selectedBorderColor: theme.colorScheme.primary,
-      color: theme.colorScheme.onSurfaceVariant,
-      borderColor: theme.colorScheme.outlineVariant,
-      splashColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+      // Softer, less strident selection styling
+      fillColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+      selectedColor: theme.colorScheme.primary,
+      selectedBorderColor: theme.colorScheme.primary.withValues(alpha: 0.4),
+      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+      borderColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+      splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
       children: days
           .map((String d) => Text(
                 d,
@@ -566,30 +566,42 @@ class ReminderEditorState extends State<ReminderEditor> {
   Widget _buildTypeAndInterval(ThemeData theme) {
     return Column(
       children: <Widget>[
-        AnimatedButtonBar(
-          radius: 12.0,
-          controller: repetitiveController,
-          invertedSelection: true,
-          padding: EdgeInsets.zero,
-          children: <ButtonBarEntry>[
-            ButtonBarEntry(
-              child: const Text("Repetitive (Interval)"),
-              onTap: () => setState(() => reminder.repetitive = true),
-            ),
-            ButtonBarEntry(
-              child: const Text("Daily (Specific Times)"),
-              onTap: () => setState(() => reminder.repetitive = false),
-            ),
+        _SegmentedSelector<bool>(
+          value: reminder.repetitive,
+          onChanged: (bool v) => setState(() => reminder.repetitive = v),
+          items: const <SegmentItem<bool>>[
+            SegmentItem<bool>(value: true, label: "Repetitive (Interval)", icon: Icons.repeat_rounded),
+            SegmentItem<bool>(value: false, label: "Daily (Specific)", icon: Icons.today_rounded),
           ],
         ),
         const SizedBox(height: 12),
-        if (reminder.repetitive) _buildRepetitiveInputs(theme) else _buildDailyInputs(theme),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, 0.05),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: reminder.repetitive
+              ? _buildRepetitiveInputs(theme, key: const ValueKey<String>('repetitive'))
+              : _buildDailyInputs(theme, key: const ValueKey<String>('daily')),
+        ),
       ],
     );
   }
 
-  Widget _buildRepetitiveInputs(ThemeData theme) {
+  Widget _buildRepetitiveInputs(ThemeData theme, {Key? key}) {
     return Column(
+      key: key,
       children: <Widget>[
         InkWell(
           onTap: () async {
@@ -598,27 +610,27 @@ class ReminderEditorState extends State<ReminderEditor> {
           },
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
               ),
             ),
             child: Row(
               children: <Widget>[
-                Icon(Icons.timer_outlined, color: theme.colorScheme.primary),
-                const SizedBox(width: 12),
+                Icon(Icons.timer_outlined, color: theme.colorScheme.primary, size: 18),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text("Repeat Interval",
-                          style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary)),
+                          style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontSize: 10)),
                       Text(
                         "Every ${reminder.time} minutes",
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
@@ -626,7 +638,7 @@ class ReminderEditorState extends State<ReminderEditor> {
                     ],
                   ),
                 ),
-                Icon(Icons.edit_rounded, size: 18, color: theme.colorScheme.primary),
+                Icon(Icons.edit_rounded, size: 14, color: theme.colorScheme.primary),
               ],
             ),
           ),
@@ -655,8 +667,9 @@ class ReminderEditorState extends State<ReminderEditor> {
     );
   }
 
-  Widget _buildDailyInputs(ThemeData theme) {
+  Widget _buildDailyInputs(ThemeData theme, {Key? key}) {
     return Column(
+      key: key,
       children: <Widget>[
         _TimeTile(
           label: "Main Reminder",
@@ -677,13 +690,13 @@ class ReminderEditorState extends State<ReminderEditor> {
             ),
           );
         }),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: <Widget>[
             if (reminder.multipleTimes.every((int t) => t >= 0))
               Expanded(
                 child: OutlinedButton.icon(
-                  icon: const Icon(Icons.more_time_rounded),
+                  icon: const Icon(Icons.more_time_rounded, size: 18),
                   label: const Text("Add Time"),
                   onPressed: () {
                     setState(() => reminder.multipleTimes.add(DateTime.now().hour * 60 + DateTime.now().minute));
@@ -694,7 +707,7 @@ class ReminderEditorState extends State<ReminderEditor> {
             if (reminder.multipleTimes.every((int t) => t < 0))
               Expanded(
                 child: OutlinedButton.icon(
-                  icon: const Icon(Icons.event_note_rounded),
+                  icon: const Icon(Icons.event_note_rounded, size: 18),
                   label: const Text("Add Date"),
                   onPressed: () {
                     setState(() => reminder.multipleTimes.add(-DateTime.now().day));
@@ -716,18 +729,25 @@ class ReminderEditorState extends State<ReminderEditor> {
           label: Text("Delete", style: TextStyle(color: theme.colorScheme.error)),
         ),
         const Spacer(),
-        ElevatedButton.icon(
+        ElevatedButton(
           onPressed: () {
             reminder.message = messageTextController.text;
             reminder.persistent = persistent;
             widget.onSaved(reminder);
           },
-          icon: const Icon(Icons.save_rounded),
-          label: const Text("Save Changes"),
           style: ElevatedButton.styleFrom(
+            backgroundColor: theme.colorScheme.primaryContainer,
+            foregroundColor: theme.colorScheme.onPrimaryContainer,
+            elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+            ),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.all(theme.colorScheme.primary.withValues(alpha: 0.1)),
           ),
+          child: const Text("Apply", style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -843,6 +863,133 @@ class ReminderEditorState extends State<ReminderEditor> {
       ),
     );
   }
+
+  InputDecoration _modernInputDecoration(BuildContext context, String label, Color accent) {
+    return InputDecoration(
+      labelText: label,
+      isDense: true,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: accent.withAlpha(20), width: 1)),
+      focusedBorder:
+          OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: accent, width: 1.2)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      labelStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
+    );
+  }
+}
+
+class SegmentItem<T> {
+  final T value;
+  final String label;
+  final IconData? icon;
+  const SegmentItem({required this.value, required this.label, this.icon});
+}
+
+class _SegmentedSelector<T> extends StatelessWidget {
+  final T value;
+  final List<SegmentItem<T>> items;
+  final ValueChanged<T> onChanged;
+
+  const _SegmentedSelector({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: items.map((SegmentItem<T> item) {
+          final bool isSelected = item.value == value;
+          return Expanded(
+            child: _SegmentButton<T>(
+              item: item,
+              isSelected: isSelected,
+              onTap: () => onChanged(item.value),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _SegmentButton<T> extends StatefulWidget {
+  final SegmentItem<T> item;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SegmentButton({
+    required this.item,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_SegmentButton<T>> createState() => _SegmentButtonState<T>();
+}
+
+class _SegmentButtonState<T> extends State<_SegmentButton<T>> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? colors.primary.withValues(alpha: 0.18)
+                : (_isHovered ? colors.primary.withValues(alpha: 0.08) : Colors.transparent),
+            borderRadius: BorderRadius.circular(7),
+            border: widget.isSelected
+                ? Border.all(color: colors.primary.withValues(alpha: 0.25))
+                : Border.all(color: Colors.transparent),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (widget.item.icon != null) ...<Widget>[
+                Icon(
+                  widget.item.icon,
+                  size: 16,
+                  color: widget.isSelected ? colors.primary : colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                widget.item.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: widget.isSelected ? colors.primary : colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TimeTile extends StatelessWidget {
@@ -863,26 +1010,43 @@ class _TimeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        dense: true,
-        onTap: onTap,
-        visualDensity: VisualDensity.compact,
-        title: Text(label, style: theme.textTheme.labelSmall),
-        subtitle: Text(
-          customText ?? (time >= 0 ? time.formatTime() : "--:--"),
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
         ),
-        trailing: onDelete != null
-            ? IconButton(
-                icon: const Icon(Icons.remove_circle_outline, size: 20),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(label, style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, height: 1)),
+                  const SizedBox(height: 2),
+                  Text(
+                    customText ?? (time >= 0 ? time.formatTime() : "--:--"),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+            if (onDelete != null)
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                icon: Icon(Icons.close_rounded, size: 16, color: theme.colorScheme.error),
                 onPressed: onDelete,
               )
-            : const Icon(Icons.edit_rounded, size: 16),
+            else
+              Icon(Icons.edit_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+          ],
+        ),
       ),
     );
   }

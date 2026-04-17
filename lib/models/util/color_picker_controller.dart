@@ -67,7 +67,7 @@ class ColorPickerCapture {
 class ColorPickerController extends ChangeNotifier {
   ColorPickerController._();
 
-  static const String quickActionName = 'ColorPickerButton';
+  static const String quickActionName = 'ColorPicker';
   static const String pickerWindowTitle = 'Color Picker';
   static final ColorPickerController instance = ColorPickerController._();
 

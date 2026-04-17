@@ -4,6 +4,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class MicMuteButton extends StatefulWidget {
   const MicMuteButton({super.key});
@@ -62,10 +63,12 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
                 await Audio.setMuteAudioDevice(!(snapshot.data!), AudioDeviceType.input);
                 setState(() {});
               },
-              child: Tooltip(
+              child: CustomTooltip(
                 message: "Toggle Mic Mute",
                 child: Icon(
-                  switchedDefaultDevice ? Icons.published_with_changes : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
+                  switchedDefaultDevice
+                      ? Icons.published_with_changes
+                      : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
                   color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
                 ),
               ),

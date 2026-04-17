@@ -13,6 +13,7 @@ import '../../models/globals.dart';
 import '../../models/tray_watcher.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class TrayBar extends StatefulWidget {
   const TrayBar({super.key});
@@ -145,12 +146,12 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                 onTap: () {},
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                  child: Tooltip(
+                  child: CustomTooltip(
                       message: info.processExe,
                       constraints: const BoxConstraints(minHeight: 0),
                       preferBelow: false,
-                      child: Globals.getIconRewrite(info.processPath) != ""
-                          ? Image.asset(Globals.getIconRewrite(info.processPath), width: 20)
+                      child: Boxes.getIconRewrite(info.processPath) != ""
+                          ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
                           : Image.memory(
                               info.iconData,
                               fit: BoxFit.scaleDown,
@@ -246,12 +247,12 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                       onTap: () {},
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                        child: Tooltip(
+                        child: CustomTooltip(
                             message: info.processExe,
                             constraints: const BoxConstraints(minHeight: 0),
                             preferBelow: false,
-                            child: Globals.getIconRewrite(info.processPath) != ""
-                                ? Image.asset(Globals.getIconRewrite(info.processPath), width: 20)
+                            child: Boxes.getIconRewrite(info.processPath) != ""
+                                ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
                                 : Image.memory(
                                     info.iconData,
                                     fit: BoxFit.scaleDown,

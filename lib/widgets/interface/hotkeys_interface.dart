@@ -250,17 +250,17 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   void _addAction(int index) {
     setState(() {
       remap[index].keymaps.add(KeyMap(
-        enabled: true,
-        windowUnderMouse: false,
-        name: "New Action Step",
-        windowsInfo: <String>["any"],
-        boundToRegion: false,
-        region: Region(),
-        triggerType: TriggerType.press,
-        triggerInfo: <int>[],
-        actions: <KeyAction>[],
-        variableCheck: <String>["", ""],
-      ));
+            enabled: true,
+            windowUnderMouse: false,
+            name: "New Action Step",
+            windowsInfo: <String>["any"],
+            boundToRegion: false,
+            region: Region(),
+            triggerType: TriggerType.press,
+            triggerInfo: <int>[],
+            actions: <KeyAction>[],
+            variableCheck: <String>["", ""],
+          ));
     });
     Boxes.updateSettings("remap", jsonEncode(remap));
     _editAction(index, remap[index].keymaps.length - 1);
@@ -328,150 +328,156 @@ class _HotkeyCardState extends State<_HotkeyCard> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: widget.colors.surface.withAlpha(80),
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: widget.onToggleExpand,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: accent.withAlpha(widget.isExpanded ? 60 : 20), width: 1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: <Widget>[
-                // Header
-                MouseRegion(
-                  onEnter: (_) => setState(() => _isHovering = true),
-                  onExit: (_) => setState(() => _isHovering = false),
+      child: Container(
+        decoration: BoxDecoration(
+          color: widget.colors.surface.withAlpha(80),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accent.withAlpha(widget.isExpanded ? 60 : 20), width: 1),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: <Widget>[
+              // Header
+              Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: widget.onToggleExpand,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: widget.isExpanded
-                          ? accent.withAlpha(15)
-                          : (_isHovering ? accent.withAlpha(8) : Colors.transparent),
-                      border: Border(bottom: BorderSide(color: accent.withAlpha(widget.isExpanded ? 40 : 0), width: 1)),
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        // Drag Handle
-                        ReorderableDragStartListener(
-                          index: widget.index,
-                          child: Container(
-                            padding: const EdgeInsets.only(right: 12.0),
-                            child: Icon(Icons.drag_indicator_rounded,
-                                size: 20, color: widget.colors.onSurface.withAlpha(100)),
-                          ),
+                    // Header
+                    child: MouseRegion(
+                      onEnter: (_) => setState(() => _isHovering = true),
+                      onExit: (_) => setState(() => _isHovering = false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: widget.isExpanded
+                              ? accent.withAlpha(15)
+                              : (_isHovering ? accent.withAlpha(8) : Colors.transparent),
+                          border:
+                              Border(bottom: BorderSide(color: accent.withAlpha(widget.isExpanded ? 40 : 0), width: 1)),
                         ),
-                        // Visual Icon
-                        _buildHotkeyVisual(),
-                        const SizedBox(width: 12),
-                        // Trigger Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                widget.keymap.hotkey.isEmpty
-                                    ? "No Trigger Defined"
-                                    : widget.keymap.hotkey.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                  color: widget.isExpanded ? accent : widget.colors.onSurface,
-                                ),
+                        child: Row(
+                          children: <Widget>[
+                            // Drag Handle
+                            ReorderableDragStartListener(
+                              index: widget.index,
+                              child: Container(
+                                padding: const EdgeInsets.only(right: 12.0),
+                                child: Icon(Icons.drag_indicator_rounded,
+                                    size: 20, color: widget.colors.onSurface.withAlpha(100)),
                               ),
-                              widget.keymap.keymaps.length == 1
-                                  ? Text(
-                                      "${widget.keymap.keymaps[0].name}",
-                                      style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
-                                    )
-                                  : Text(
-                                      "${widget.keymap.keymaps.length} automated actions",
-                                      style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
+                            ),
+                            // Visual Icon
+                            _buildHotkeyVisual(),
+                            const SizedBox(width: 12),
+                            // Trigger Info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    widget.keymap.hotkey.isEmpty
+                                        ? "No Trigger Defined"
+                                        : widget.keymap.hotkey.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                      color: widget.isExpanded ? accent : widget.colors.onSurface,
                                     ),
-                            ],
-                          ),
+                                  ),
+                                  widget.keymap.keymaps.length == 1
+                                      ? Text(
+                                          "${widget.keymap.keymaps[0].name}",
+                                          style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
+                                        )
+                                      : Text(
+                                          "${widget.keymap.keymaps.length} automated actions",
+                                          style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
+                                        ),
+                                ],
+                              ),
+                            ),
+                            // Quick Actions
+                            IconButton(
+                              tooltip: "Settings",
+                              icon: Icon(Icons.tune_rounded, size: 18, color: widget.colors.onSurface.withAlpha(180)),
+                              onPressed: widget.onOpenSettings,
+                              splashRadius: 20,
+                            ),
+                            IconButton(
+                              tooltip: "Delete Hotkey",
+                              icon: Icon(Icons.delete_outline_rounded,
+                                  size: 18, color: widget.colors.error.withAlpha(200)),
+                              onPressed: widget.onDeleteHotkey,
+                              splashRadius: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accent.withAlpha(30),
+                                foregroundColor: accent,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                              ),
+                              icon: const Icon(Icons.add_rounded, size: 16),
+                              label: const Text("Action", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                              onPressed: widget.onAddAction,
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              widget.isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              color: widget.colors.onSurface.withAlpha(150),
+                            ),
+                          ],
                         ),
-                        // Quick Actions
-                        IconButton(
-                          tooltip: "Settings",
-                          icon: Icon(Icons.tune_rounded, size: 18, color: widget.colors.onSurface.withAlpha(180)),
-                          onPressed: widget.onOpenSettings,
-                          splashRadius: 20,
-                        ),
-                        IconButton(
-                          tooltip: "Delete Hotkey",
-                          icon: Icon(Icons.delete_outline_rounded, size: 18, color: widget.colors.error.withAlpha(200)),
-                          onPressed: widget.onDeleteHotkey,
-                          splashRadius: 20,
-                        ),
-                        const SizedBox(width: 6),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accent.withAlpha(30),
-                            foregroundColor: accent,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                          ),
-                          icon: const Icon(Icons.add_rounded, size: 16),
-                          label: const Text("Action", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                          onPressed: widget.onAddAction,
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          widget.isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                          color: widget.colors.onSurface.withAlpha(150),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-                // Actions List
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  child: widget.isExpanded
-                      ? Container(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                          color: widget.colors.surface.withAlpha(80),
-                          child: widget.keymap.keymaps.isEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Center(
-                                    child: Text("No actions defined for this hotkey.",
-                                        style: TextStyle(
-                                            color: widget.colors.onSurface.withAlpha(100),
-                                            fontStyle: FontStyle.italic)),
-                                  ),
-                                )
-                              : ReorderableListView.builder(
-                                  shrinkWrap: true,
-                                  buildDefaultDragHandles: false,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: widget.keymap.keymaps.length,
-                                  itemBuilder: (BuildContext context, int actionIndex) {
-                                    final KeyMap keyInfo = widget.keymap.keymaps[actionIndex];
-                                    return _HotkeyActionRow(
-                                      key: ValueKey<String>("${widget.index}_$actionIndex"),
-                                      index: actionIndex,
-                                      keyInfo: keyInfo,
-                                      accent: accent,
-                                      onSurface: widget.colors.onSurface,
-                                      colors: widget.colors,
-                                      onEdit: () => widget.onEditAction(actionIndex),
-                                      onDelete: () => widget.onDeleteAction(actionIndex),
-                                    );
-                                  },
-                                  onReorder: widget.onReorderActions,
+              ),
+              // Actions List
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: widget.isExpanded
+                    ? Container(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        color: widget.colors.surface.withAlpha(80),
+                        child: widget.keymap.keymaps.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Center(
+                                  child: Text("No actions defined for this hotkey.",
+                                      style: TextStyle(
+                                          color: widget.colors.onSurface.withAlpha(100), fontStyle: FontStyle.italic)),
                                 ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
+                              )
+                            : ReorderableListView.builder(
+                                shrinkWrap: true,
+                                buildDefaultDragHandles: false,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget.keymap.keymaps.length,
+                                itemBuilder: (BuildContext context, int actionIndex) {
+                                  final KeyMap keyInfo = widget.keymap.keymaps[actionIndex];
+                                  return _HotkeyActionRow(
+                                    key: ValueKey<String>("${widget.index}_$actionIndex"),
+                                    index: actionIndex,
+                                    keyInfo: keyInfo,
+                                    accent: accent,
+                                    onSurface: widget.colors.onSurface,
+                                    colors: widget.colors,
+                                    onEdit: () => widget.onEditAction(actionIndex),
+                                    onDelete: () => widget.onDeleteAction(actionIndex),
+                                  );
+                                },
+                                onReorder: widget.onReorderActions,
+                              ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
         ),
       ),
@@ -531,78 +537,73 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Material(
-          color: _hovered ? widget.accent.withAlpha(12) : widget.onSurface.withAlpha(5),
-          borderRadius: BorderRadius.circular(8),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: widget.onEdit,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: _hovered ? widget.accent.withAlpha(40) : Colors.transparent),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: <Widget>[
-                    // Drag Handle
-                    ReorderableDragStartListener(
-                      index: widget.index,
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                        child: Icon(Icons.drag_indicator_rounded, size: 16, color: widget.onSurface.withAlpha(80)),
-                      ),
-                    ),
-                    // Action Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            widget.keyInfo.name,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: widget.keyInfo.enabled
-                                  ? (_hovered ? widget.accent : widget.onSurface)
-                                  : widget.onSurface.withAlpha(120),
-                            ),
-                          ),
-                          _buildActionBadges(widget.keyInfo, widget.colors),
-                        ],
-                      ),
-                    ),
-                    // Hover Actions
-                    AnimatedOpacity(
-                      duration: const Duration(milliseconds: 150),
-                      opacity: _hovered ? 1.0 : 0.0,
-                      child: Row(
-                        children: <Widget>[
-                          IconButton(
-                            tooltip: "Edit Action",
-                            icon: Icon(Icons.settings_rounded, size: 16, color: widget.onSurface.withAlpha(200)),
-                            onPressed: widget.onEdit,
-                            splashRadius: 18,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                            padding: EdgeInsets.zero,
-                          ),
-                          IconButton(
-                            tooltip: "Delete Action",
-                            icon: Icon(Icons.close_rounded, size: 16, color: widget.colors.error.withAlpha(200)),
-                            onPressed: widget.onDelete,
-                            splashRadius: 18,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 44),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+      child: GestureDetector(
+        onTap: widget.onEdit,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          decoration: BoxDecoration(
+            color: _hovered ? widget.accent.withAlpha(12) : widget.onSurface.withAlpha(5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _hovered ? widget.accent.withAlpha(40) : Colors.transparent),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                // Drag Handle
+                ReorderableDragStartListener(
+                  index: widget.index,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                    color: Colors.transparent,
+                    child: Icon(Icons.drag_indicator_rounded, size: 16, color: widget.onSurface.withAlpha(80)),
+                  ),
                 ),
-              ),
+                // Action Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        widget.keyInfo.name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: widget.keyInfo.enabled
+                              ? (_hovered ? widget.accent : widget.onSurface)
+                              : widget.onSurface.withAlpha(120),
+                        ),
+                      ),
+                      _buildActionBadges(widget.keyInfo, widget.colors),
+                    ],
+                  ),
+                ),
+                // Hover Actions
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _hovered ? 1.0 : 0.0,
+                  child: Row(
+                    children: <Widget>[
+                      IconButton(
+                        tooltip: "Edit Action",
+                        icon: Icon(Icons.settings_rounded, size: 16, color: widget.onSurface.withAlpha(200)),
+                        onPressed: widget.onEdit,
+                        splashRadius: 18,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                      IconButton(
+                        tooltip: "Delete Action",
+                        icon: Icon(Icons.close_rounded, size: 16, color: widget.colors.error.withAlpha(200)),
+                        onPressed: widget.onDelete,
+                        splashRadius: 18,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 44),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

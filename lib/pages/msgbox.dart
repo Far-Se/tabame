@@ -77,14 +77,14 @@ class _MessageBoxWindowState extends State<MessageBoxWindow> with WindowListener
     windowManager.addListener(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
-      if (_message.speak) {
+      if (_message.speak.isNotEmpty) {
         Process.run(
           'powershell',
           <String>[
             '-WindowStyle',
             'Hidden',
             '-Command',
-            "(New-Object -ComObject SAPI.SpVoice).Speak('${_message.message.replaceAll("'", "''")}')",
+            "(New-Object -ComObject SAPI.SpVoice).Speak('${_message.speak.replaceAll("'", "''")}')",
           ],
         );
       }
@@ -297,13 +297,13 @@ class _MessageArguments {
 
   final String title;
   final String message;
-  final bool speak;
+  final String speak;
 
   factory _MessageArguments.fromArgs(List<String> args) {
     return _MessageArguments(
       title: _readValue(args, '-title', fallback: 'Tabame'),
       message: _readValue(args, '-message', fallback: 'No message provided.'),
-      speak: args.contains('-speak'),
+      speak: _readValue(args, '-speak', fallback: ''),
     );
   }
 

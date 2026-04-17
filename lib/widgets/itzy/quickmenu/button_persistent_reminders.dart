@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class PersistentRemindersWidget extends StatefulWidget {
   const PersistentRemindersWidget({super.key});
@@ -49,7 +50,7 @@ class PersistentRemindersWidgetState extends State<PersistentRemindersWidget> {
             }
             setState(() {});
           },
-          child: Tooltip(
+          child: CustomTooltip(
             message: "Reminders",
             child: globalSettings.persistentReminders.length > 1
                 ? Padding(
@@ -157,29 +158,34 @@ class TimersWidgetState extends State<TimersWidget> {
                 padding: const EdgeInsets.all(8.0),
                 child: globalSettings.persistentReminders.isEmpty
                     ? const InkWell(child: Text("You have no reminders"))
-                    : Column(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-                        ...List<Widget>.generate(
-                            globalSettings.persistentReminders.length,
-                            (int index) => ListTile(
-                                  onTap: () {
-                                    if (globalSettings.persistentReminders.elementAt(index).contains("Workout")) {
-                                      WinUtils.open("E:\\Resources\\workout\\index.html");
-                                    }
-                                    globalSettings.persistentReminders.removeAt(index);
-                                    Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
-                                    for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
-                                      if (!QuickMenuFunctions.listeners.contains(listener)) return;
-                                      listener.refreshQuickMenu();
-                                    }
-                                    setState(() {});
-                                  },
-                                  title: Text(" ${globalSettings.persistentReminders.elementAt(index)}", style: const TextStyle(fontSize: 16)),
-                                  trailing: const Icon(Icons.delete),
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 5),
-                                  minVerticalPadding: 0,
-                                ))
-                      ]),
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                            ...List<Widget>.generate(
+                                globalSettings.persistentReminders.length,
+                                (int index) => ListTile(
+                                      onTap: () {
+                                        if (globalSettings.persistentReminders.elementAt(index).contains("Workout")) {
+                                          WinUtils.open("E:\\Resources\\workout\\index.html");
+                                        }
+                                        globalSettings.persistentReminders.removeAt(index);
+                                        Boxes.pref
+                                            .setStringList("persistentReminders", globalSettings.persistentReminders);
+                                        for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
+                                          if (!QuickMenuFunctions.listeners.contains(listener)) return;
+                                          listener.refreshQuickMenu();
+                                        }
+                                        setState(() {});
+                                      },
+                                      title: Text(" ${globalSettings.persistentReminders.elementAt(index)}",
+                                          style: const TextStyle(fontSize: 16)),
+                                      trailing: const Icon(Icons.delete),
+                                      dense: true,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 5),
+                                      minVerticalPadding: 0,
+                                    ))
+                          ]),
               ),
             ),
           ),

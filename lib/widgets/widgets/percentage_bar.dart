@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class PercentageBar extends StatelessWidget {
   const PercentageBar({
@@ -18,15 +19,21 @@ class PercentageBar extends StatelessWidget {
     if (bar.isNaN || bar.isNegative) bar = 0;
     return Padding(
       padding: const EdgeInsets.only(right: 10),
-      child: Tooltip(
+      child: CustomTooltip(
         message: "${percent2.toStringAsFixed(2)}%",
         child: SizedBox(
             width: barWidth,
             height: 10,
             child: Stack(
               children: <Widget>[
-                Container(width: barWidth, height: 30, color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.2)),
-                Positioned(top: 0, left: 0, child: Container(width: bar, height: 30, color: Theme.of(context).colorScheme.primary)),
+                Container(
+                    width: barWidth,
+                    height: 30,
+                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.2)),
+                Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Container(width: bar, height: 30, color: Theme.of(context).colorScheme.primary)),
               ],
             )),
       ),

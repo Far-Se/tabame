@@ -272,6 +272,25 @@ class Win32 {
     return output;
   }
 
+  static ({int width, int height}) getSize({int? hwnd}) {
+    hwnd ??= hWnd;
+    final Pointer<RECT> rect = calloc<RECT>();
+
+    try {
+      final int result = GetWindowRect(hwnd, rect);
+      if (result == 0) {
+        throw WindowsException(HRESULT_FROM_WIN32(GetLastError()));
+      }
+
+      final int width = rect.ref.right - rect.ref.left;
+      final int height = rect.ref.bottom - rect.ref.top;
+
+      return (width: width, height: height);
+    } finally {
+      calloc.free(rect);
+    }
+  }
+
   static void setPosition(Offset position, {int? monitor, int? hwnd}) {
     hwnd ??= hWnd;
     final Square rect = getWindowRect(hwnd: hwnd);
@@ -471,6 +490,64 @@ class Win32 {
     } else {
       SetWindowPos(hWnd, HWND_TOP, x, y, width, height, SWP_NOACTIVATE);
     }
+  }
+
+  /// Returns the invisible border (shadow/gutter) widths for [hWnd].
+  ///
+  /// On Windows 10/11, `GetWindowRect` includes an invisible resize handle border
+  /// (~8 px on left/right/bottom) that is NOT visually rendered. This causes
+  /// apparent gaps between adjacent snapped windows even at gap=0.
+  ///
+  /// Internally compares `GetWindowRect` with `DWMWA_EXTENDED_FRAME_BOUNDS`
+  /// (the actual painted bounds). Falls back to zeros if DWM fails.
+  static ({int left, int top, int right, int bottom}) getInvisibleBorder(int hWnd) {
+    final Pointer<RECT> winRect = calloc<RECT>();
+    final Pointer<RECT> frameRect = calloc<RECT>();
+    try {
+      GetWindowRect(hWnd, winRect);
+      // DWMWA_EXTENDED_FRAME_BOUNDS = 9
+      final int hr = DwmGetWindowAttribute(hWnd, 9, frameRect, sizeOf<RECT>());
+      if (hr != 0) {
+        // DWM call failed (e.g. minimised / WS_EX_NOREDIRECTIONBITMAP)
+        return (left: 0, top: 0, right: 0, bottom: 0);
+      }
+      return (
+        left: frameRect.ref.left - winRect.ref.left,
+        top: frameRect.ref.top - winRect.ref.top,
+        right: winRect.ref.right - frameRect.ref.right,
+        bottom: winRect.ref.bottom - frameRect.ref.bottom,
+      );
+    } finally {
+      free(winRect);
+      free(frameRect);
+    }
+  }
+
+  static void restoreIfMaximized(int hWnd) {
+    // 1. Prepare the WINDOWPLACEMENT structure
+    final Pointer<WINDOWPLACEMENT> placement = calloc<WINDOWPLACEMENT>();
+    placement.ref.length = sizeOf<WINDOWPLACEMENT>();
+
+    // 2. Get the current placement state of the window
+    final int result = GetWindowPlacement(hWnd, placement);
+
+    if (result != 0) {
+      // Check if the showCmd is SW_SHOWMAXIMIZED (value of 3)
+      if (placement.ref.showCmd == SW_SHOWMAXIMIZED) {
+        print('Window is maximized. Restoring...');
+
+        // 3. Unmaximize (Restore) the window
+        // SW_SHOWNORMAL (1) or SW_RESTORE (9) will return it to its previous size
+        ShowWindow(hWnd, SW_RESTORE);
+      } else {
+        print('Window is not maximized.');
+      }
+    } else {
+      print('Failed to get window placement. Error: ${GetLastError()}');
+    }
+
+    // Always free allocated memory
+    free(placement);
   }
 }
 
@@ -676,6 +753,9 @@ class WinUtils {
     if (path == "") {
       path = "${getLocalAppData()}\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned";
     }
+    if (!Directory(path).existsSync()) {
+      return <String>[];
+    }
     final Iterable<io.FileSystemEntity> items =
         Directory("$path\\TaskBar").listSync().where((io.FileSystemEntity event) => event.path.endsWith(".lnk"));
     for (io.FileSystemEntity element in items) {
@@ -714,6 +794,9 @@ class WinUtils {
       path = "${getLocalAppData()}\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned";
     }
     path += "\\Taskbar";
+    if (!Directory(path).existsSync()) {
+      return <String>[];
+    }
     final int allContents =
         await Directory(path).list().where((io.FileSystemEntity event) => event.path.endsWith(".lnk")).length;
     List<String> commands = <String>[
@@ -1075,12 +1158,14 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
     free(ppfi);
   }
 
-  static void msgBox(String text, String title) {
+  static void msgBox(String title, String text, {String? speak}) {
+    speak ??= text;
     WinUtils.startTabame(
-      arguments: '-msgbox -title "${title.replaceAll('"', '\\"')}" -message "${text.replaceAll('"', '\\"')}" -speak',
+      arguments: '-msgbox -title "${title.replaceAll('"', '\\"')}" '
+          '-message "${text.replaceAll('"', '\\"')}" '
+          '-speak "${speak.replaceAll('"', '\\"')}"',
       closeCurrent: false,
     );
-    // runScript(Scripts.msgBox, arguments: '"Tabame: $title" "${text.replaceAll('"', '\\"')}"');
   }
 
   static void startTabame({bool closeCurrent = false, String? arguments}) {
@@ -1303,6 +1388,10 @@ Call objShell.ShellExecute("${out.group(1)}", "${out.group(2)!.replaceAll('"', '
       iconResult = GetClassLongPtr(hWnd, -14); // GCLP_HICON - Microsoft Win Apps
     }
     return hIconToBytes(iconResult);
+  }
+
+  static Future<Uint8List?> getIconPng(int hIcon) async {
+    return await getIconPng(hIcon);
   }
 
   static Uint8List? hIconToBytes(int hIcon, {int nColorBits = 32}) {

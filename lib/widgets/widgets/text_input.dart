@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class TextInput extends StatefulWidget {
   final String labelText;
@@ -10,6 +11,7 @@ class TextInput extends StatefulWidget {
   final void Function(String val)? onSubmitted;
   final void Function(String val)? onUpdated;
   final bool multiline;
+  final TextInputType keyboardType;
   const TextInput({
     super.key,
     required this.labelText,
@@ -19,6 +21,7 @@ class TextInput extends StatefulWidget {
     this.onSubmitted,
     this.onUpdated,
     this.multiline = false,
+    this.keyboardType = TextInputType.text,
     this.decoration,
   });
 
@@ -63,13 +66,17 @@ class TextInputState extends State<TextInput> {
         }
       },
       child: TextField(
+        keyboardType: widget.keyboardType,
+        inputFormatters: widget.keyboardType == TextInputType.number
+            ? <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly]
+            : null,
         maxLines: widget.multiline ? null : 1,
         decoration: widget.decoration ??
             InputDecoration(
-              labelText: widget.labelText,
-              hintText: widget.hintText ?? widget.labelText,
+              labelText: widget.labelText.isEmpty ? null : widget.labelText,
+              hintText: widget.hintText ?? (widget.labelText.isEmpty ? null : widget.labelText),
               border: InputBorder.none,
-              isDense: false,
+              isDense: true,
             ),
         controller: _controller,
         style: const TextStyle(fontSize: 14),

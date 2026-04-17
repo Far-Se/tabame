@@ -10,24 +10,18 @@ import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class CurrencyConverterButton extends StatelessWidget {
   const CurrencyConverterButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Currency Converter",
-      icon: const Icon(Icons.currency_exchange_rounded),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const CurrencyConverterWidget(),
-      ),
-    );
+    return const ModalButton(
+        actionName: "Currency Converter",
+        icon: Icon(Icons.currency_exchange_rounded),
+        child: CurrencyConverterWidget());
   }
 }
 
@@ -44,7 +38,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   static const String _toKey = "currencyConverterTo";
   static const int _historyWindowDays = 30;
   static const String _historyFileName = "currency_history.json";
-  static const String _primaryBaseTemplate = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies";
+  static const String _primaryBaseTemplate =
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies";
   static const String _fallbackBaseTemplate = "https://{date}.currency-api.pages.dev/v1/currencies";
 
   final TextEditingController _amountController = TextEditingController();
@@ -80,7 +75,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     final String savedQuery = (Boxes.pref.getString(_amountKey) ?? "").trim();
     _fromCurrency = savedFrom;
     _toCurrency = savedTo;
-    _amountController.text = savedQuery.isEmpty ? "1 ${savedFrom.toUpperCase()} to ${savedTo.toUpperCase()}" : savedQuery;
+    _amountController.text =
+        savedQuery.isEmpty ? "1 ${savedFrom.toUpperCase()} to ${savedTo.toUpperCase()}" : savedQuery;
     _amountController.selection = const TextSelection.collapsed(offset: 0);
     _amountListener = () {
       Boxes.updateSettings(_amountKey, _amountController.text.trim());
@@ -272,7 +268,9 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                   const SizedBox(height: 10),
                   Center(
                     child: Text(
-                      rate == null ? " " : "1 ${_fromCurrency.toUpperCase()} = ${_formatNumber(rate)} ${_toCurrency.toUpperCase()}",
+                      rate == null
+                          ? " "
+                          : "1 ${_fromCurrency.toUpperCase()} = ${_formatNumber(rate)} ${_toCurrency.toUpperCase()}",
                       style: TextStyle(
                         fontSize: 12,
                         color: onSurface.withValues(alpha: 0.5),
@@ -359,7 +357,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     final List<double> values = _historyPoints.map((_HistoryPoint a) => a.value).toList(growable: false);
     final double minValue = values.reduce(math.min);
     final double maxValue = values.reduce(math.max);
-    final double verticalPadding = (maxValue - minValue).abs() < 0.001 ? math.max(0.05, maxValue.abs() * 0.02) : (maxValue - minValue) * 0.18;
+    final double verticalPadding =
+        (maxValue - minValue).abs() < 0.001 ? math.max(0.05, maxValue.abs() * 0.02) : (maxValue - minValue) * 0.18;
 
     return SizedBox(
       height: 170,
@@ -412,7 +411,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                     return const SizedBox.shrink();
                   }
 
-                  final bool showLabel = index == 0 || index == _historyPoints.length ~/ 2 || index == _historyPoints.length - 1;
+                  final bool showLabel =
+                      index == 0 || index == _historyPoints.length ~/ 2 || index == _historyPoints.length - 1;
                   if (!showLabel) {
                     return const SizedBox.shrink();
                   }
@@ -1058,7 +1058,9 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   }
 
   String _catalogUrl({bool fallback = false}) {
-    final String base = fallback ? _fallbackBaseTemplate.replaceFirst("{date}", "latest") : _primaryBaseTemplate.replaceFirst("{date}", "latest");
+    final String base = fallback
+        ? _fallbackBaseTemplate.replaceFirst("{date}", "latest")
+        : _primaryBaseTemplate.replaceFirst("{date}", "latest");
     return "$base.min.json";
   }
 
@@ -1067,7 +1069,9 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     String date = "latest",
     bool fallback = false,
   }) {
-    final String base = fallback ? _fallbackBaseTemplate.replaceFirst("{date}", date) : _primaryBaseTemplate.replaceFirst("{date}", date);
+    final String base = fallback
+        ? _fallbackBaseTemplate.replaceFirst("{date}", date)
+        : _primaryBaseTemplate.replaceFirst("{date}", date);
     return "$base/${baseCurrency.toLowerCase()}.min.json";
   }
 

@@ -8,39 +8,16 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class CliBookButton extends StatefulWidget {
+class CliBookButton extends StatelessWidget {
   const CliBookButton({super.key});
   @override
-  CliBookButtonState createState() => CliBookButtonState();
-}
-
-class CliBookButtonState extends State<CliBookButton> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Cli Book",
-      icon: const Icon(Icons.terminal_rounded),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const CliBookWidget(),
-      ),
-    );
+    return const ModalButton(actionName: "Cli Book", icon: Icon(Icons.terminal_rounded), child: CliBookWidget());
   }
 }
 

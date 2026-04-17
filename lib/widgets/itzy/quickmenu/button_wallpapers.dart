@@ -10,21 +10,15 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class WallpapersButton extends StatelessWidget {
   const WallpapersButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Wallpapers",
-      icon: const Icon(Icons.photo_library_outlined),
-      onTap: () {
-        openWallpapersPicker(context);
-      },
-    );
+    return const ModalButton(
+        actionName: "Wallpapers", icon: Icon(Icons.photo_library_outlined), child: WallpapersPanel());
   }
 }
 

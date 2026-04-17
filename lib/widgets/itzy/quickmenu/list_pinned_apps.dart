@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/keys.dart';
 import '../../widgets/bar_with_buttons.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class PinnedApps extends StatelessWidget {
   const PinnedApps({super.key});
@@ -41,7 +41,7 @@ class _PinnedAppButton extends StatelessWidget {
     final double size = Theme.of(context).iconTheme.size ?? 15;
     if (!File(path).existsSync()) return const SizedBox();
     // print(path);
-    final String customIconPath = Globals.getIconRewrite(path);
+    final String customIconPath = Boxes.getIconRewrite(path);
 
     if (customIconPath != "") {
       return SizedBox(
@@ -54,7 +54,7 @@ class _PinnedAppButton extends StatelessWidget {
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2.0),
-            child: Tooltip(
+            child: CustomTooltip(
               message: path.substring(path.lastIndexOf('\\') + 1),
               child: RepaintBoundary(
                 child: Image.file(File(customIconPath), width: 20),
@@ -78,7 +78,7 @@ class _PinnedAppButton extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2.0),
               child: snapshot.hasData
-                  ? Tooltip(
+                  ? CustomTooltip(
                       message: path.substring(path.lastIndexOf('\\') + 1),
                       child: RepaintBoundary(
                         child: Image.memory(
@@ -102,7 +102,7 @@ class _PinnedAppButton extends StatelessWidget {
   }
 
   Future<Uint8List?> _loadIconBytes(String path) async {
-    final String customIconPath = Globals.getIconRewrite(path);
+    final String customIconPath = Boxes.getIconRewrite(path);
     if (customIconPath.isNotEmpty) {
       final ByteData bytes = await rootBundle.load(customIconPath);
       return bytes.buffer.asUint8List();

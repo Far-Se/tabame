@@ -11,6 +11,16 @@ import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+
+class _AppOpacity {
+  static const double subtle = 0.06;
+  static const double border = 0.08;
+  static const double borderEmphasis = 0.15;
+  static const double surfaceOverlay = 0.31; // ~80/255
+  static const double accentFaint = 0.14;
+  static const double textSecondary = 0.65;
+}
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -33,41 +43,85 @@ class SettingsPageState extends State<SettingsPage> {
     final Color background = Color(globalSettings.theme.background);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final bool stacked = constraints.maxWidth < 950;
-          return Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: <Widget>[
-              SizedBox(
-                width: stacked ? double.infinity : (constraints.maxWidth - 12) / 2,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool stacked = constraints.maxWidth < 950;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // --- HERO: Status & Updates ---
+                _buildSectionTitle("System Status"),
+                _buildUpdateCard(accent, background, onSurface),
+                const SizedBox(height: 24),
+
+                // --- MAIN GRID ---
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
                   children: <Widget>[
-                    _buildUpdateCard(accent, background, onSurface),
-                    const SizedBox(height: 12),
-                    _buildGeneralCard(runOnStartup, accent, onSurface),
+                    _responsiveCard(
+                      stacked,
+                      constraints,
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _buildSectionTitle("Configuration"),
+                          _buildGeneralCard(runOnStartup, accent, onSurface),
+                          const SizedBox(height: 16),
+                          _buildSectionTitle("Shell Integrations"),
+                          _buildWizardlyCard(accent, onSurface),
+                        ],
+                      ),
+                    ),
+                    _responsiveCard(
+                      stacked,
+                      constraints,
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _buildSectionTitle("Visuals & Theme"),
+                          _buildThemeCard(accent, onSurface),
+                          const SizedBox(height: 16),
+                          _buildSectionTitle("Data & Tools"),
+                          _buildMaintenanceCard(accent, onSurface),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              SizedBox(
-                width: stacked ? double.infinity : (constraints.maxWidth - 12) / 2,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _buildThemeCard(accent, onSurface),
-                    const SizedBox(height: 12),
-                    _buildMaintenanceCard(accent, onSurface),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+                const SizedBox(height: 80),
+              ],
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.1,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: _AppOpacity.textSecondary),
+        ),
+      ),
+    );
+  }
+
+  Widget _responsiveCard(bool stacked, BoxConstraints constraints, Widget child) {
+    return SizedBox(
+      width: stacked ? double.infinity : (constraints.maxWidth - 16) / 2,
+      child: child,
     );
   }
 
@@ -81,7 +135,7 @@ class SettingsPageState extends State<SettingsPage> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withAlpha(80),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: _AppOpacity.surfaceOverlay),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -90,10 +144,15 @@ class SettingsPageState extends State<SettingsPage> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.14),
+                    color: accent.withValues(alpha: _AppOpacity.accentFaint),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.system_update_rounded, color: accent, size: 18),
+                  child: Icon(
+                    Icons.system_update_rounded,
+                    color: accent,
+                    size: 18,
+                    semanticLabel: "Update Status",
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -103,7 +162,9 @@ class SettingsPageState extends State<SettingsPage> {
                       Text("Current Version: v${Globals.version}",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 2),
-                      Text(updateResponse, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.7))),
+                      Text(updateResponse,
+                          style:
+                              TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                     ],
                   ),
                 ),
@@ -116,7 +177,7 @@ class SettingsPageState extends State<SettingsPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text("Check"),
+                  label: const Text("Check for Updates"),
                 ),
               ],
             ),
@@ -126,9 +187,9 @@ class SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.08),
+                color: accent.withValues(alpha: _AppOpacity.subtle),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withValues(alpha: 0.15)),
+                border: Border.all(color: accent.withValues(alpha: _AppOpacity.borderEmphasis)),
               ),
               child: Row(
                 children: <Widget>[
@@ -158,7 +219,7 @@ class SettingsPageState extends State<SettingsPage> {
                         side: BorderSide(color: onSurface.withValues(alpha: 0.2)),
                       ),
                       icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                      label: const Text("Download from Releases"),
+                      label: const Text("View on GitHub"),
                     ),
                   ),
                 ],
@@ -195,8 +256,8 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         children: <Widget>[
           _toggleTile(
-            title: "Run on Startup",
-            subtitle: "Launch Tabame automatically when Windows starts.",
+            title: "Launch at Startup",
+            subtitle: "Start Tabame automatically when you log in to Windows.",
             value: runOnStartup,
             onChanged: (bool value) async {
               if (value) {
@@ -218,7 +279,7 @@ class SettingsPageState extends State<SettingsPage> {
               value: globalSettings.runAsAdministrator,
               trailing: !globalSettings.runAsAdministrator || WinUtils.isAdministrator()
                   ? null
-                  : Tooltip(
+                  : CustomTooltip(
                       message: "Restart as Admin",
                       child: InkWell(
                         onTap: () {
@@ -232,7 +293,7 @@ class SettingsPageState extends State<SettingsPage> {
                           width: 30,
                           height: 30,
                           decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.1),
+                            color: accent.withValues(alpha: _AppOpacity.subtle),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(Icons.replay_outlined, size: 16, color: accent),
@@ -285,9 +346,9 @@ class SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.06),
+                  color: accent.withValues(alpha: _AppOpacity.subtle),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accent.withValues(alpha: 0.12)),
+                  border: Border.all(color: accent.withValues(alpha: _AppOpacity.border)),
                 ),
                 child: Row(
                   children: <Widget>[
@@ -310,21 +371,10 @@ class SettingsPageState extends State<SettingsPage> {
       subtitle: "Manage shell integration and locate your data quickly.",
       child: Column(
         children: <Widget>[
-          _toggleTile(
-            title: "Add Wizardly in Folder Context Menu",
-            subtitle: "Show Wizardly directly from the Windows folder menu.",
-            value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
-            onChanged: (bool value) async {
-              wizardlyContextMenu.toggleWizardlyToContextMenu();
-              if (!mounted) return;
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 12),
           _markdownCard(
             onSurface,
             '''
-To export settings, open [this](this) folder and copy *settings.json*. To import, exit Tabame and replace that file with your saved copy.
+To export settings, copy *settings.json* from [this folder](data). To import, exit Tabame and replace the file with your copy.
 ''',
             () {
               final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);
@@ -335,11 +385,10 @@ To export settings, open [this](this) folder and copy *settings.json*. To import
           _markdownCard(
             onSurface,
             '''
-To uninstall, open [this](this) folder and delete it. No other app data is stored elsewhere.
+To uninstall, open [this folder](uninstall) and delete it. No other app data is stored elsewhere.
 ''',
             () {
-              final String exePath = Platform.resolvedExecutable;
-              final String exeFolder = exePath.substring(0, exePath.lastIndexOf("\\"));
+              final String exeFolder = File(Platform.resolvedExecutable).parent.path;
               WinUtils.open(exeFolder, parseParamaters: true);
             },
           ),
@@ -348,23 +397,47 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
     );
   }
 
-  Widget _settingsCard({required String title, required String subtitle, required Widget child}) {
+  Widget _buildWizardlyCard(Color accent, Color onSurface) {
+    return _settingsCard(
+      title: "Wizardly",
+      subtitle: "Windows Explorer right-click integration.",
+      child: Column(
+        children: <Widget>[
+          _toggleTile(
+            title: "Wizardly in Explorer Menu",
+            subtitle: "Access Wizardly directly from the Windows right-click folder menu.",
+            value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
+            onChanged: (bool value) async {
+              wizardlyContextMenu.toggleWizardlyToContextMenu();
+              setState(() {});
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _settingsCard({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withAlpha(80),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: _AppOpacity.surfaceOverlay),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: onSurface.withValues(alpha: 0.08)),
+        border: Border.all(color: onSurface.withValues(alpha: _AppOpacity.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.4)),
           const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.65))),
-          const SizedBox(height: 14),
+          Text(subtitle, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -384,7 +457,7 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+        border: Border.all(color: onSurface.withValues(alpha: _AppOpacity.subtle)),
       ),
       child: Row(
         children: <Widget>[
@@ -394,7 +467,8 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
               children: <Widget>[
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                Text(subtitle,
+                    style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
               ],
             ),
           ),
@@ -415,13 +489,13 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
     return Container(
       decoration: BoxDecoration(
         color: selected
-            ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.06)
+            ? Color(globalSettings.theme.accentColor).withValues(alpha: _AppOpacity.subtle)
             : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: selected
-              ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.16)
-              : onSurface.withValues(alpha: 0.06),
+              ? Color(globalSettings.theme.accentColor).withValues(alpha: _AppOpacity.borderEmphasis)
+              : onSurface.withValues(alpha: _AppOpacity.subtle),
         ),
       ),
       child: RadioListTile<ThemeType>(
@@ -444,7 +518,7 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accent.withValues(alpha: 0.12)),
+          border: Border.all(color: accent.withValues(alpha: _AppOpacity.border)),
         ),
         child: Row(
           children: <Widget>[
@@ -454,7 +528,8 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(label, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                  Text(label,
+                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                   Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ],
               ),
@@ -472,7 +547,7 @@ To uninstall, open [this](this) folder and delete it. No other app data is store
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+        border: Border.all(color: onSurface.withValues(alpha: _AppOpacity.subtle)),
       ),
       child: MarkdownBody(
         shrinkWrap: true,

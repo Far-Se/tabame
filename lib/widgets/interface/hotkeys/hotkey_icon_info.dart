@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class IconInfo extends StatelessWidget {
   final IconData icon;
@@ -15,7 +16,7 @@ class IconInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return CustomTooltip(
       message: name,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),

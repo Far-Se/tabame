@@ -16,22 +16,28 @@ class BottomBar extends StatelessWidget {
     Debug.add("QuickMenu: BottomBar");
     Globals.heights.traybar = 30;
     final bool showPowerShell = globalSettings.showPowerShell && Boxes().powerShellScripts.isNotEmpty;
-    if (!showPowerShell && !globalSettings.showSystemUsage && (globalSettings.showTrayBar || !globalSettings.showTrayBar)) {
+    if (!showPowerShell &&
+        !globalSettings.showSystemUsage &&
+        (globalSettings.showTrayBar || !globalSettings.showTrayBar)) {
       if (!globalSettings.showWeather) {
         return const TimeWidget(inline: true);
       } else {
         return LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
-              constraints:
-                  BoxConstraints(minWidth: constraints.minWidth, minHeight: constraints.minHeight, maxWidth: constraints.maxWidth, maxHeight: constraints.maxHeight),
+              constraints: BoxConstraints(
+                  minWidth: constraints.minWidth,
+                  minHeight: constraints.minHeight,
+                  maxWidth: constraints.maxWidth,
+                  maxHeight: constraints.maxHeight),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 verticalDirection: VerticalDirection.down,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Expanded(child: TimeWidget(inline: true)),
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: WeatherWidget(width: 80, showUnit: true)),
+                  TimeWidget(inline: true),
+                  Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10), child: WeatherWidget(width: 80, showUnit: true)),
                 ],
               )),
         );
@@ -46,7 +52,8 @@ class BottomBar extends StatelessWidget {
           type: MaterialType.transparency,
           child: Theme(
             data: Theme.of(context).copyWith(
-                tooltipTheme: Theme.of(context).tooltipTheme.copyWith(preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface))),
+                tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
+                    preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,

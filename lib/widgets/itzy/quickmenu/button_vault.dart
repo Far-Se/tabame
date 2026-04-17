@@ -6,27 +6,15 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/vault_item.dart';
 import '../../../models/classes/vault_manager.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class VaultButton extends StatefulWidget {
-  const VaultButton({super.key});
-  @override
-  VaultButtonState createState() => VaultButtonState();
-}
-
-class VaultButtonState extends State<VaultButton> {
+class VaultsButton extends StatelessWidget {
+  const VaultsButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Vault",
-      icon: const Icon(Icons.lock_rounded),
-      onTap: () async {
-        showQuickMenuModal(context: context, child: const VaultsWidget());
-      },
-    );
+    return const ModalButton(actionName: "Vaults", icon: Icon(Icons.lock_rounded), child: VaultsWidget());
   }
 }
 

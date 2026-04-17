@@ -1,146 +1,186 @@
 import 'dart:async';
-import 'dart:collection';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
+import 'dart:isolate';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-import '../../../models/classes/boxes.dart';
-import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
 
-class _QueuedIconRequest {
-  _QueuedIconRequest({
-    required this.path,
-    required this.completer,
-  });
+// ── Messages ─────────────────────────────────────────────────────────────────
 
+class _IconRequest {
+  final int id;
   final String path;
-  final Completer<Uint8List?> completer;
+  const _IconRequest({required this.id, required this.path});
 }
+
+class _IconResponse {
+  final int id;
+  final Uint8List? data;
+  const _IconResponse({required this.id, required this.data});
+}
+
+// ── Worker entry point ────────────────────────────────────────────────────────
+
+void _iconWorkerEntry(SendPort mainSendPort) {
+  final ReceivePort workerPort = ReceivePort();
+  mainSendPort.send(workerPort.sendPort);
+
+  workerPort.listen((dynamic message) {
+    if (message is _IconRequest) {
+      try {
+        final Uint8List? data = WinUtils.extractIcon(message.path);
+        mainSendPort.send(_IconResponse(id: message.id, data: data));
+      } catch (e, st) {
+        // Log the real error so you can see why null is returned.
+        debugPrint('Worker error for ${message.path}: $e');
+        debugPrint('$st');
+        mainSendPort.send(_IconResponse(id: message.id, data: null));
+      }
+    }
+  });
+}
+
+// ── Worker pool ───────────────────────────────────────────────────────────────
+
+class _WorkerHandle {
+  final ReceivePort responsePort;
+  final Completer<SendPort> ready = Completer<SendPort>();
+
+  _WorkerHandle(this.responsePort);
+}
+
+class _IconWorkerPool {
+  _IconWorkerPool._();
+  static final _IconWorkerPool instance = _IconWorkerPool._();
+
+  static const int _poolSize = 3;
+
+  final List<SendPort> _workerSendPorts = <SendPort>[];
+  final Map<int, Completer<Uint8List?>> _pending = <int, Completer<Uint8List?>>{};
+  int _nextId = 0;
+  int _rrIndex = 0;
+
+  Future<void>? _initFuture;
+
+  Future<void> _ensureInitialized() {
+    _initFuture ??= _spawnAll();
+    return _initFuture!;
+  }
+
+  Future<void> _spawnAll() async {
+    for (int i = 0; i < _poolSize; i++) {
+      final ReceivePort responsePort = ReceivePort();
+      final _WorkerHandle handle = _WorkerHandle(responsePort);
+
+      responsePort.listen((dynamic message) {
+        if (message is SendPort) {
+          if (!handle.ready.isCompleted) {
+            handle.ready.complete(message);
+          }
+          return;
+        }
+
+        if (message is _IconResponse) {
+          _pending.remove(message.id)?.complete(message.data);
+        }
+      });
+
+      await Isolate.spawn(_iconWorkerEntry, responsePort.sendPort);
+
+      final SendPort workerSendPort = await handle.ready.future;
+      _workerSendPorts.add(workerSendPort);
+    }
+  }
+
+  Future<Uint8List?> extractIcon(String path) async {
+    await _ensureInitialized();
+
+    final int id = _nextId++;
+    final Completer<Uint8List?> completer = Completer<Uint8List?>();
+    _pending[id] = completer;
+
+    final SendPort port = _workerSendPorts[_rrIndex++ % _poolSize];
+    port.send(_IconRequest(id: id, path: path));
+
+    return completer.future;
+  }
+}
+
+// ── Widget ────────────────────────────────────────────────────────────────────
 
 class WindowsAppButton extends StatefulWidget {
   static final Map<String, Future<Uint8List?>> _iconFutureCache = <String, Future<Uint8List?>>{};
-  static final Queue<_QueuedIconRequest> _iconLoadQueue = Queue<_QueuedIconRequest>();
-  static const int _maxConcurrentIconLoads = 10;
-  static int _activeIconLoads = 0;
 
   final String path;
   final String? arguments;
   final VoidCallback? onTap;
   final Widget? placeholder;
-  const WindowsAppButton({super.key, required this.path, this.arguments, this.onTap, this.placeholder});
+
+  const WindowsAppButton({
+    super.key,
+    required this.path,
+    this.arguments,
+    this.onTap,
+    this.placeholder,
+  });
+
+  static Future<Uint8List?> getIcon(String path) {
+    return _iconFutureCache.putIfAbsent(
+      path,
+      () => _IconWorkerPool.instance.extractIcon(path),
+    );
+  }
 
   @override
   State<WindowsAppButton> createState() => _WindowsAppButtonState();
-
-  static Future<Uint8List?> enqueueIconLoad(String path) {
-    final Completer<Uint8List?> completer = Completer<Uint8List?>();
-    _iconLoadQueue.add(
-      _QueuedIconRequest(
-        path: path,
-        completer: completer,
-      ),
-    );
-    _pumpIconQueue();
-    return completer.future;
-  }
-
-  static void _pumpIconQueue() {
-    while (_activeIconLoads < _maxConcurrentIconLoads && _iconLoadQueue.isNotEmpty) {
-      final _QueuedIconRequest request = _iconLoadQueue.removeFirst();
-      _activeIconLoads += 1;
-
-      Future<Uint8List?>(
-        () => WinUtils.extractIcon(request.path),
-      ).then(request.completer.complete).catchError(request.completer.completeError).whenComplete(() {
-        _activeIconLoads -= 1;
-        _pumpIconQueue();
-      });
-    }
-  }
 }
 
 class _WindowsAppButtonState extends State<WindowsAppButton> {
-  Future<Uint8List?>? _iconFuture;
+  late Future<Uint8List?> _iconFuture;
 
   @override
   void initState() {
     super.initState();
-    _scheduleIconLoad();
+    _iconFuture = WindowsAppButton.getIcon(widget.path);
   }
 
   @override
   void didUpdateWidget(covariant WindowsAppButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.path != widget.path) {
-      _iconFuture = null;
-      _scheduleIconLoad();
+      _iconFuture = WindowsAppButton.getIcon(widget.path);
     }
-  }
-
-  void _scheduleIconLoad() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _iconFuture != null || !File(widget.path).existsSync()) return;
-
-      setState(() {
-        _iconFuture = WindowsAppButton._iconFutureCache.putIfAbsent(
-          widget.path,
-          _loadIconBytes,
-        );
-      });
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final double size = Theme.of(context).iconTheme.size ?? 15;
-    if (!File(widget.path).existsSync()) return const SizedBox();
-    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 7;
-
-    return SizedBox(
-      width: size + 6,
-      height: size + 6,
+    return GestureDetector(
+      onTap: widget.onTap,
       child: FutureBuilder<Uint8List?>(
         future: _iconFuture,
-        builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
-          return InkWell(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0),
-              child: snapshot.data is Uint8List
-                  ? Tooltip(
-                      message: widget.path.substring(widget.path.lastIndexOf('\\') + 1),
-                      child: Image.memory(
-                        snapshot.data! as Uint8List,
-                        fit: BoxFit.scaleDown,
-                        width: size,
-                        gaplessPlayback: true,
-                        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                          Icons.check_box_outline_blank,
-                          size: 16,
-                        ),
-                      ),
-                    )
-                  : widget.placeholder ?? Icon(Icons.circle_outlined, size: size),
-            ),
-            onTap: widget.onTap ??
-                () {
-                  WinUtils.open(widget.path, arguments: widget.arguments);
-                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
-                },
+        builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return widget.placeholder ?? const SizedBox(width: 32, height: 32);
+          }
+
+          if (snapshot.hasError) {
+            debugPrint('FutureBuilder error: ${snapshot.error}');
+            return widget.placeholder ?? const SizedBox(width: 32, height: 32);
+          }
+
+          if (snapshot.data == null) {
+            debugPrint('Icon bytes are null for path: ${widget.path}');
+            return widget.placeholder ?? const SizedBox(width: 32, height: 32);
+          }
+
+          return Image.memory(
+            snapshot.data!,
+            width: 32,
+            height: 32,
+            gaplessPlayback: true,
           );
         },
       ),
     );
-  }
-
-  Future<Uint8List?> _loadIconBytes() async {
-    if (Globals.getIconRewrite(widget.path) != "") {
-      final String x = Globals.getIconRewrite(widget.path);
-      final ByteData bytes = await rootBundle.load(x);
-      return bytes.buffer.asUint8List();
-    }
-    return WindowsAppButton.enqueueIconLoad(widget.path);
   }
 }

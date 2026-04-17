@@ -4,6 +4,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class VirtualDesktopButton extends StatelessWidget {
   const VirtualDesktopButton({super.key});
@@ -18,7 +19,8 @@ class VirtualDesktopButton extends StatelessWidget {
           InkWell(
             onTap: () async {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
-              Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
+              Future<void>.delayed(
+                  const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
             },
             child: const SizedBox(
               height: 25,
@@ -37,7 +39,8 @@ class VirtualDesktopButton extends StatelessWidget {
           InkWell(
             onTap: () async {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
-              Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
+              Future<void>.delayed(
+                  const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
             },
             child: const SizedBox(
               height: 25,
@@ -66,13 +69,15 @@ class VirtualDesktopButton extends StatelessWidget {
           child: GestureDetector(
             onTap: () async {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
-              Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
+              Future<void>.delayed(
+                  const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
             },
             onSecondaryTap: () async {
               await QuickMenuFunctions.toggleQuickMenu(visible: false);
-              Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
+              Future<void>.delayed(
+                  const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
             },
-            child: const Tooltip(message: "Move Desktop", child: Icon(Icons.display_settings_outlined)),
+            child: const CustomTooltip(message: "Move Desktop", child: Icon(Icons.display_settings_outlined)),
           ),
         ),
       ),

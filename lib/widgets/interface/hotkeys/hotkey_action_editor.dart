@@ -9,7 +9,9 @@ import '../../widgets/checkbox_widget.dart';
 import '../../widgets/modern_dropdown.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/text_input.dart';
+import '../../widgets/windows_scroll.dart';
 import 'mouse_info_panel.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class HotKeyAction extends StatefulWidget {
   final KeyMap hotkey;
@@ -61,30 +63,33 @@ class HotKeyActionState extends State<HotKeyAction> {
 
                 // Scrollable Content
                 Expanded(
-                  child: MouseScrollWidget(
+                  child: WindowsScrollView(
+                    scrollDirection: Axis.vertical,
+                    friction: 0.76,
+                    scrollSpeed: 12,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          // Section 1: Context & Conditions
+                          // Section 1: Conditions
                           _buildSectionHeader("Conditions", Icons.radar_rounded, colorScheme, textTheme),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           _buildContextCard(colorScheme),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 32),
 
-                          // Section 2: Trigger Timing & Rules
+                          // Section 2: Execution Logic
                           _buildSectionHeader(
                               "Execution Logic", Icons.auto_awesome_motion_rounded, colorScheme, textTheme),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           _buildTriggerRulesCard(colorScheme),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 32),
 
-                          // Section 3: The Workflow
+                          // Section 3: Action Sequence
                           _buildSectionHeader("Action Sequence", Icons.account_tree_rounded, colorScheme, textTheme),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           _buildActionsTimeline(colorScheme, textTheme),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
@@ -94,9 +99,9 @@ class HotKeyActionState extends State<HotKeyAction> {
                 // Persistent Footer
                 const Divider(height: 1),
                 Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: SizedBox(
-                    height: 56,
+                    height: 50,
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: () {
@@ -104,12 +109,12 @@ class HotKeyActionState extends State<HotKeyAction> {
                         Navigator.of(context).pop();
                       },
                       style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.check_circle_rounded),
+                      icon: const Icon(Icons.check_circle_rounded, size: 20),
                       label: const Text("SAVE AND FINISH",
-                          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1.2, fontSize: 13)),
                     ),
                   ),
                 ),
@@ -121,13 +126,13 @@ class HotKeyActionState extends State<HotKeyAction> {
           if (_showUtilities) ...<Widget>[
             const VerticalDivider(width: 1),
             Container(
-              width: 320,
+              width: 280,
               color: colorScheme.surfaceContainerLowest,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 1),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
@@ -136,15 +141,22 @@ class HotKeyActionState extends State<HotKeyAction> {
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 2.0,
+                              fontSize: 11,
                             )),
+                        const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.close_fullscreen_rounded, size: 20),
+                          icon: const Icon(Icons.close_fullscreen_rounded, size: 18),
                           onPressed: () => setState(() => _showUtilities = false),
                         ),
+                        _HotKeyHeaderButton(
+                          tooltip: "Close",
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icons.close_rounded,
+                        )
                       ],
                     ),
                   ),
-                  const Divider(),
+                  const Divider(height: 1),
                   Expanded(
                     child: MouseScrollWidget(
                       child: MouseInfoWidget(
@@ -178,62 +190,54 @@ class HotKeyActionState extends State<HotKeyAction> {
 
   Widget _buildPinnedHeader(ColorScheme colors, TextTheme texts) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: colors.surface.withAlpha(200),
+        color: colors.surface.withValues(alpha: 0.94),
+        border: Border(bottom: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.12))),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          // Enabled Switch with Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: widget.hotkey.enabled ? colors.primary.withAlpha(20) : colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
+          // Enabled Toggle - Minimal
+          SizedBox(
+            height: 20,
+            width: 32,
+            child: Switch(
+              value: widget.hotkey.enabled,
+              onChanged: (bool e) => setState(() => widget.hotkey.enabled = e),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                SizedBox(
-                  height: 24,
-                  width: 38,
-                  child: Switch(
-                    value: widget.hotkey.enabled,
-                    onChanged: (bool e) => setState(() => widget.hotkey.enabled = e),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.hotkey.enabled ? "ACTIVE" : "DISABLED",
-                  style: texts.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: widget.hotkey.enabled ? colors.primary : colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(width: 12),
+          Text(
+            widget.hotkey.enabled ? "ACTIVE" : "OFF",
+            style: texts.labelSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+              letterSpacing: 0.5,
+              color: widget.hotkey.enabled ? colors.primary : colors.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(width: 24),
-          // Name Input
+          // Name Input - Technical
           Expanded(
             child: TextInput(
-              labelText: "Workflow Label",
+              labelText: "",
               value: widget.hotkey.name,
               onChanged: (String e) => setState(() => widget.hotkey.name = e),
             ),
           ),
-          const SizedBox(width: 16),
-          // Tool Toggle
-          IconButton.filledTonal(
+          const SizedBox(width: 12),
+          _HotKeyHeaderButton(
             tooltip: "Mouse Utilities",
             onPressed: () => setState(() => _showUtilities = !_showUtilities),
-            icon: Icon(_showUtilities ? Icons.visibility_off_rounded : Icons.mouse_rounded, size: 20),
+            icon: _showUtilities ? Icons.visibility_off_rounded : Icons.mouse_rounded,
+            isActive: _showUtilities,
           ),
-          const SizedBox(width: 8),
-          IconButton(
+          const SizedBox(width: 4),
+          _HotKeyHeaderButton(
             tooltip: "Close",
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
+            icon: Icons.close_rounded,
           ),
         ],
       ),
@@ -241,21 +245,17 @@ class HotKeyActionState extends State<HotKeyAction> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon, ColorScheme colors, TextTheme texts) {
-    return Row(
-      children: <Widget>[
-        Icon(icon, size: 18, color: colors.primary.withAlpha(180)),
-        const SizedBox(width: 12),
-        Text(
-          title.toUpperCase(),
-          style: texts.labelLarge?.copyWith(
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            color: colors.primary.withAlpha(200),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: texts.labelLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.1,
+          fontSize: 9,
+          color: colors.primary.withValues(alpha: 0.6),
         ),
-        const SizedBox(width: 16),
-        Expanded(child: Divider(color: colors.outlineVariant.withAlpha(100))),
-      ],
+      ),
     );
   }
 
@@ -268,7 +268,7 @@ class HotKeyActionState extends State<HotKeyAction> {
           _buildActionItem(
             icon: Icons.mouse_rounded,
             title: "Focus Mouse",
-            subtitle: "Automatically activate the window precisely under the cursor position.",
+            subtitle: "Activate window under cursor",
             trailing: Switch(
               value: widget.hotkey.windowUnderMouse,
               onChanged: (bool e) => setState(() => widget.hotkey.windowUnderMouse = e),
@@ -298,40 +298,13 @@ class HotKeyActionState extends State<HotKeyAction> {
 
   Widget _buildCompactCard({required Widget child, required ColorScheme colors}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.outlineVariant.withAlpha(120)),
+        color: colors.surfaceContainerLow.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.08)),
       ),
       child: child,
-    );
-  }
-
-  Widget _buildActionItem(
-      {required IconData icon, required String title, required String subtitle, required Widget trailing}) {
-    return Row(
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withAlpha(20),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-        trailing,
-      ],
     );
   }
 
@@ -342,27 +315,34 @@ class HotKeyActionState extends State<HotKeyAction> {
           _buildEmptySteps(colors)
         else
           ...List<Widget>.generate(widget.hotkey.actions.length, (int index) {
+            final KeyAction action = widget.hotkey.actions[index];
             return Column(
+              key: ValueKey<KeyAction>(action),
               children: <Widget>[
-                _buildActionStep(index, colors, texts),
+                _ActionStepCard(
+                  index: index,
+                  action: action,
+                  onDelete: () => setState(() => widget.hotkey.actions.removeAt(index)),
+                  onChanged: () => setState(() {}),
+                ),
                 if (index < widget.hotkey.actions.length - 1)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Container(height: 20, width: 2, color: colors.primary.withAlpha(50)),
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Container(height: 12, width: 1.5, color: colors.primary.withValues(alpha: 0.1)),
                   ),
               ],
             );
           }),
         const SizedBox(height: 16),
-        OutlinedButton.icon(
+        TextButton.icon(
           onPressed: () =>
               setState(() => widget.hotkey.actions.add(KeyAction(type: ActionType.hotkey, value: "ALT+SHIFT+F"))),
-          icon: const Icon(Icons.add_task_rounded, size: 18),
-          label: const Text("ADD NEW STEP"),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            side: BorderSide(color: colors.primary.withAlpha(80)),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text("ADD ACTION STEP"),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(double.infinity, 44),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            foregroundColor: colors.primary,
           ),
         ),
       ],
@@ -371,110 +351,18 @@ class HotKeyActionState extends State<HotKeyAction> {
 
   Widget _buildEmptySteps(ColorScheme colors) {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant.withAlpha(100), style: BorderStyle.none),
+        color: colors.surfaceContainerLowest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(Icons.format_list_bulleted_rounded, color: colors.outline.withAlpha(100), size: 32),
-          const SizedBox(height: 12),
-          Text("Assign actions to this hotkey", style: TextStyle(color: colors.onSurfaceVariant)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionStep(int index, ColorScheme colors, TextTheme texts) {
-    final KeyAction action = widget.hotkey.actions[index];
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.1)),
-      ),
-      child: Stack(
-        children: <Widget>[
-          // Sidebar Background Stretch
-          Positioned.fill(
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: colors.primary.withAlpha(15),
-                    borderRadius:
-                        const BorderRadius.only(topLeft: Radius.circular(16), bottomLeft: Radius.circular(16)),
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-          // Content Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Step Number Indicator
-              SizedBox(
-                width: 50,
-                height: 56, // Fixed height area for the number to center it at the top
-                child: Center(
-                  child: Text("${index + 1}",
-                      style: TextStyle(fontWeight: FontWeight.w900, color: colors.primary, fontSize: 18)),
-                ),
-              ),
-              // Content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: ModernDropdown<String>(
-                              value: action.type.index.toString(),
-                              onChanged: (String? newValue) => setState(() {
-                                action.type = ActionType.values[int.tryParse(newValue ?? "0") ?? 0];
-                                // Initial values logic...
-                                if (action.type == ActionType.sendClick) {
-                                  action.value =
-                                      ClickAction(anchorType: AnchorType.topLeft, currentWindow: true, x: 50, y: 50)
-                                          .toJson();
-                                } else if (action.type == ActionType.setVar) {
-                                  action.value = jsonEncode(<String>["var", "value"]);
-                                } else if (action.type == ActionType.hotkey) {
-                                  action.value = "ALT+F";
-                                } else if (action.type == ActionType.sendKeys) {
-                                  action.value = "{#CTRL}A{^CTRL}deleted";
-                                } else if (action.type == ActionType.tabameFunction) {
-                                  action.value = HotKeyInfo.tabameFunctions[0];
-                                }
-                              }),
-                              items: ActionType.values.map((ActionType v) {
-                                return ModernDropdownItem<String>(
-                                  value: v.index.toString(),
-                                  label: v.name.splitAndUpcase,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => setState(() => widget.hotkey.actions.removeAt(index)),
-                            icon: Icon(Icons.delete_sweep_rounded, color: colors.error.withAlpha(200), size: 22),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      _buildActionContent(action, colors),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          Icon(Icons.info_outline_rounded, color: colors.primary.withValues(alpha: 0.4), size: 16),
+          const SizedBox(width: 8),
+          Text("No actions defined yet",
+              style: TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 12)),
         ],
       ),
     );
@@ -529,79 +417,92 @@ class HotKeyActionState extends State<HotKeyAction> {
         _buildActionItem(
           icon: Icons.fullscreen_exit_rounded,
           title: "Screen Region",
-          subtitle: "Restrict this hotkey to a specific area of the screen.",
+          subtitle: "Restrict hotkey to area",
           trailing: Switch(
             onChanged: (bool e) => setState(() => widget.hotkey.boundToRegion = !widget.hotkey.boundToRegion),
             value: widget.hotkey.boundToRegion,
           ),
         ),
-        if (widget.hotkey.boundToRegion)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Column(
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: ModernDropdown<String>(
-                        labelText: "Anchor Point",
-                        value: widget.hotkey.region.anchorType.name,
-                        onChanged: (String? newValue) => setState(() => widget.hotkey.region.anchorType =
-                            AnchorType.values.firstWhere((AnchorType element) => element.name == newValue)),
-                        items: AnchorType.values.map((AnchorType v) {
-                          return ModernDropdownItem<String>(
-                            value: v.name,
-                            label: v.name,
-                          );
-                        }).toList(),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.fastOutSlowIn,
+          child: widget.hotkey.boundToRegion
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Column(
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: ModernDropdown<String>(
+                              labelText: "Anchor Point",
+                              value: widget.hotkey.region.anchorType.name,
+                              onChanged: (String? newValue) => setState(() => widget.hotkey.region.anchorType =
+                                  AnchorType.values.firstWhere((AnchorType element) => element.name == newValue)),
+                              items: AnchorType.values.map((AnchorType v) {
+                                return ModernDropdownItem<String>(
+                                  value: v.name,
+                                  label: v.name,
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            children: <Widget>[
+                              _buildLabel(context, "Unit"),
+                              CheckBoxWidget(
+                                key: UniqueKey(),
+                                onChanged: (bool e) => setState(
+                                    () => widget.hotkey.region.asPercentage = !widget.hotkey.region.asPercentage),
+                                value: widget.hotkey.region.asPercentage,
+                                text: "% Pos",
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      children: <Widget>[
-                        _buildLabel(context, "Unit"),
-                        CheckBoxWidget(
-                          key: UniqueKey(),
-                          onChanged: (bool e) =>
-                              setState(() => widget.hotkey.region.asPercentage = !widget.hotkey.region.asPercentage),
-                          value: widget.hotkey.region.asPercentage,
-                          text: "% Pos",
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                        child: TextInput(
-                            labelText: "X1",
-                            value: widget.hotkey.region.x1.toString(),
-                            onChanged: (String e) => setState(() => widget.hotkey.region.x1 = int.tryParse(e) ?? 0))),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: TextInput(
-                            labelText: "Y1",
-                            value: widget.hotkey.region.y1.toString(),
-                            onChanged: (String e) => setState(() => widget.hotkey.region.y1 = int.tryParse(e) ?? 0))),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: TextInput(
-                            labelText: "X2",
-                            value: widget.hotkey.region.x2.toString(),
-                            onChanged: (String e) => setState(() => widget.hotkey.region.x2 = int.tryParse(e) ?? 0))),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: TextInput(
-                            labelText: "Y2",
-                            value: widget.hotkey.region.y2.toString(),
-                            onChanged: (String e) => setState(() => widget.hotkey.region.y2 = int.tryParse(e) ?? 0))),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                              child: TextInput(
+                                  labelText: "X1",
+                                  value: widget.hotkey.region.x1.toString(),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (String e) =>
+                                      setState(() => widget.hotkey.region.x1 = int.tryParse(e) ?? 0))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: TextInput(
+                                  labelText: "Y1",
+                                  value: widget.hotkey.region.y1.toString(),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (String e) =>
+                                      setState(() => widget.hotkey.region.y1 = int.tryParse(e) ?? 0))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: TextInput(
+                                  labelText: "X2",
+                                  value: widget.hotkey.region.x2.toString(),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (String e) =>
+                                      setState(() => widget.hotkey.region.x2 = int.tryParse(e) ?? 0))),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: TextInput(
+                                  labelText: "Y2",
+                                  value: widget.hotkey.region.y2.toString(),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (String e) =>
+                                      setState(() => widget.hotkey.region.y2 = int.tryParse(e) ?? 0))),
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -610,33 +511,38 @@ class HotKeyActionState extends State<HotKeyAction> {
     return Column(
       children: <Widget>[
         _buildActionItem(
-          icon: Icons.vibration_rounded,
+          icon: Icons.tune_rounded,
           title: "Variable Dependency",
-          subtitle: "Only trigger if a specific system variable matches a value.",
+          subtitle: "Trigger if variable matches",
           trailing: Switch(
             onChanged: (bool e) => setState(() => variableCheck = e),
             value: variableCheck,
           ),
         ),
-        if (variableCheck)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                    child: TextInput(
-                        labelText: "Var Name",
-                        value: widget.hotkey.variableCheck[0],
-                        onChanged: (String e) => widget.hotkey.variableCheck[0] = e)),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: TextInput(
-                        labelText: "Target Value",
-                        value: widget.hotkey.variableCheck[1],
-                        onChanged: (String e) => widget.hotkey.variableCheck[1] = e)),
-              ],
-            ),
-          ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.fastOutSlowIn,
+          child: variableCheck
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                          child: TextInput(
+                              labelText: "Var Name",
+                              value: widget.hotkey.variableCheck[0],
+                              onChanged: (String e) => widget.hotkey.variableCheck[0] = e)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: TextInput(
+                              labelText: "Target Value",
+                              value: widget.hotkey.variableCheck[1],
+                              onChanged: (String e) => widget.hotkey.variableCheck[1] = e)),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -667,12 +573,14 @@ class HotKeyActionState extends State<HotKeyAction> {
                     child: TextInput(
                         labelText: "Min Delay (ms)",
                         value: widget.hotkey.triggerInfo[0].toString(),
+                        keyboardType: TextInputType.number,
                         onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[0] = int.tryParse(e) ?? 0))),
                 const SizedBox(width: 12),
                 Expanded(
                     child: TextInput(
                         labelText: "Max Duration (ms)",
                         value: widget.hotkey.triggerInfo[1].toString(),
+                        keyboardType: TextInputType.number,
                         onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0))),
               ],
             ),
@@ -698,7 +606,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                 _buildActionItem(
                   icon: Icons.gesture_rounded,
                   title: "Real-time Tracking",
-                  subtitle: "Execute actions continuously as the mouse moves.",
+                  subtitle: "Execute continuously on movement",
                   trailing: Switch(
                     onChanged: (bool e) => setState(() => widget.hotkey.triggerInfo[2] = e ? -1 : 0),
                     value: widget.hotkey.triggerInfo[2] == -1,
@@ -712,6 +620,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                           child: TextInput(
                               labelText: "Min Distance (px)",
                               value: widget.hotkey.triggerInfo[1].toString(),
+                              keyboardType: TextInputType.number,
                               onChanged: (String e) =>
                                   setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0))),
                       const SizedBox(width: 12),
@@ -719,6 +628,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                           child: TextInput(
                               labelText: "Max Threshold (px)",
                               value: widget.hotkey.triggerInfo[2].toString(),
+                              keyboardType: TextInputType.number,
                               onChanged: (String e) =>
                                   setState(() => widget.hotkey.triggerInfo[2] = int.tryParse(e) ?? 0))),
                     ],
@@ -727,6 +637,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                   TextInput(
                       labelText: "Target Distance (px)",
                       value: widget.hotkey.triggerInfo[1].toString(),
+                      keyboardType: TextInputType.number,
                       onChanged: (String e) => setState(() => widget.hotkey.triggerInfo[1] = int.tryParse(e) ?? 0)),
               ],
             ),
@@ -782,6 +693,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                   child: TextInput(
                       labelText: "X offset",
                       value: click.x.toString(),
+                      keyboardType: TextInputType.number,
                       onChanged: (String v) {
                         click.x = int.tryParse(v) ?? 0;
                         action.value = click.toJson();
@@ -791,6 +703,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                   child: TextInput(
                       labelText: "Y offset",
                       value: click.y.toString(),
+                      keyboardType: TextInputType.number,
                       onChanged: (String v) {
                         click.y = int.tryParse(v) ?? 0;
                         action.value = click.toJson();
@@ -860,8 +773,7 @@ class HotKeyActionState extends State<HotKeyAction> {
         subtitle: const Text("Click to record sequence...", style: TextStyle(fontSize: 10)),
         onTap: () => FocusScope.of(context).requestFocus(focusNode),
       );
-    }
-    if (action.type == ActionType.tabameFunction) {
+    } else if (action.type == ActionType.tabameFunction) {
       return ModernDropdown<String>(
         value: HotKeyInfo.tabameFunctions.contains(action.value) ? action.value : HotKeyInfo.tabameFunctions[0],
         onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.tabameFunctions[0]),
@@ -872,8 +784,303 @@ class HotKeyActionState extends State<HotKeyAction> {
           );
         }).toList(),
       );
+    } else if (action.type == ActionType.openQuickMenupage) {
+      return ModernDropdown<String>(
+        value: HotKeyInfo.quickMenuPages.contains(action.value) ? action.value : HotKeyInfo.quickMenuPages[0],
+        onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.quickMenuPages[0]),
+        items: HotKeyInfo.quickMenuPages.map((String v) {
+          return ModernDropdownItem<String>(
+            value: v,
+            label: v.splitAndUpcase,
+          );
+        }).toList(),
+      );
+    } else if (action.type == ActionType.wait) {
+      return TextInput(
+        labelText: "Wait (ms)",
+        value: action.value,
+        onChanged: (String v) => action.value = v,
+        keyboardType: TextInputType.number,
+      );
     }
     return TextInput(
         labelText: "Parameter / Path / Command", value: action.value, onChanged: (String v) => action.value = v);
+  }
+
+  Widget _buildActionItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+  }) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final TextTheme texts = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 16, color: colors.primary.withValues(alpha: 0.8)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
+                if (subtitle != null && subtitle.isNotEmpty)
+                  Text(subtitle,
+                      style: texts.labelSmall
+                          ?.copyWith(color: colors.onSurfaceVariant.withValues(alpha: 0.5), height: 1.2)),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _HotKeyHeaderButton extends StatefulWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool isActive;
+
+  const _HotKeyHeaderButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.isActive = false,
+  });
+
+  @override
+  State<_HotKeyHeaderButton> createState() => _HotKeyHeaderButtonState();
+}
+
+class _HotKeyHeaderButtonState extends State<_HotKeyHeaderButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool active = widget.isActive || _isHovered;
+
+    return CustomTooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: active ? colors.primary.withValues(alpha: 0.08) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              widget.icon,
+              size: 20,
+              color: active ? colors.primary : colors.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionStepCard extends StatefulWidget {
+  final int index;
+  final KeyAction action;
+  final VoidCallback onDelete;
+  final VoidCallback onChanged;
+
+  const _ActionStepCard({
+    required this.index,
+    required this.action,
+    required this.onDelete,
+    required this.onChanged,
+  });
+
+  @override
+  State<_ActionStepCard> createState() => _ActionStepCardState();
+}
+
+class _ActionStepCardState extends State<_ActionStepCard> with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late final AnimationController _entranceController;
+  late final Animation<double> _entranceOpacity;
+  late final Animation<double> _entranceSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 400 + (widget.index * 60).clamp(0, 400)),
+    );
+
+    _entranceOpacity = Tween<double>(begin: 0.9, end: 1.0).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
+    ));
+
+    _entranceSlide = Tween<double>(begin: 1.0, end: 0.0).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic),
+    ));
+
+    _entranceController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return AnimatedBuilder(
+      animation: _entranceController,
+      builder: (BuildContext context, Widget? child) {
+        // Base opacity from entrance animation (0.9 -> 1.0)
+        // Multiplied by hover state (Dimmed 0.85 if not hovered, 1.0 if hovered)
+        final double currentTargetOpacity = _isHovered ? 1.0 : 0.85;
+        final double finalOpacity = _entranceOpacity.value * currentTargetOpacity;
+
+        return Opacity(
+          opacity: finalOpacity,
+          child: Transform.translate(
+            offset: Offset(0, 15 * _entranceSlide.value),
+            child: child,
+          ),
+        );
+      },
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _isHovered ? colors.surfaceContainerHigh : colors.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _isHovered ? colors.primary.withValues(alpha: 0.2) : colors.outlineVariant.withValues(alpha: 0.12),
+            ),
+            boxShadow: <BoxShadow>[
+              if (_isHovered)
+                BoxShadow(
+                  color: colors.shadow.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: <Widget>[
+                // Step Indicator Strip
+                Positioned.fill(
+                  right: null,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 44,
+                    color: _isHovered ? colors.primary.withValues(alpha: 0.12) : colors.primary.withValues(alpha: 0.08),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 18),
+                      child: Text(
+                        "${widget.index + 1}",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: _isHovered ? colors.primary : colors.primary.withValues(alpha: 0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Content Row
+                Row(
+                  children: <Widget>[
+                    const SizedBox(width: 44),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: Column(
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ModernDropdown<String>(
+                                    value: widget.action.type.index.toString(),
+                                    onChanged: (String? newValue) {
+                                      widget.action.type = ActionType.values[int.tryParse(newValue ?? "0") ?? 0];
+                                      if (widget.action.type == ActionType.sendClick) {
+                                        widget.action.value = ClickAction(
+                                                anchorType: AnchorType.topLeft, currentWindow: true, x: 50, y: 50)
+                                            .toJson();
+                                      } else if (widget.action.type == ActionType.setVar) {
+                                        widget.action.value = jsonEncode(<String>["var", "value"]);
+                                      } else if (widget.action.type == ActionType.hotkey) {
+                                        widget.action.value = "ALT+F";
+                                      } else if (widget.action.type == ActionType.sendKeys) {
+                                        widget.action.value = "{#CTRL}A{^CTRL}deleted";
+                                      } else if (widget.action.type == ActionType.tabameFunction) {
+                                        widget.action.value = HotKeyInfo.tabameFunctions[0];
+                                      } else if (widget.action.type == ActionType.openQuickMenupage) {
+                                        widget.action.value = HotKeyInfo.quickMenuPages[0];
+                                      } else if (widget.action.type == ActionType.wait) {
+                                        widget.action.value = "1000";
+                                      }
+                                      widget.onChanged();
+                                    },
+                                    items: ActionType.values.map((ActionType v) {
+                                      return ModernDropdownItem<String>(
+                                        value: v.index.toString(),
+                                        label: v.name.splitAndUpcase,
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: widget.onDelete,
+                                  icon: Icon(Icons.delete_sweep_rounded,
+                                      color: colors.error.withValues(alpha: 0.8), size: 20),
+                                  tooltip: "Delete Step",
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Builder(builder: (BuildContext context) {
+                              return (context
+                                  .findAncestorStateOfType<HotKeyActionState>()!
+                                  ._buildActionContent(widget.action, colors));
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

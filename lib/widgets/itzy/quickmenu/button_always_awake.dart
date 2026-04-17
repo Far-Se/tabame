@@ -18,7 +18,8 @@ class _AlwaysAwakeButtonState extends State<AlwaysAwakeButton> {
   Widget build(BuildContext context) {
     return QuickActionItem(
       message: "Always awake",
-      icon: Icon(Icons.running_with_errors, color: Globals.alwaysAwake ? Colors.red : Theme.of(context).iconTheme.color),
+      icon:
+          Icon(Icons.running_with_errors, color: Globals.alwaysAwake ? Colors.red : Theme.of(context).iconTheme.color),
       onTap: () async {
         Globals.alwaysAwake = !Globals.alwaysAwake;
         WinUtils.alwaysAwakeRun(Globals.alwaysAwake);

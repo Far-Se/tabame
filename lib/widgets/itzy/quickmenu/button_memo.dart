@@ -3,27 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
-import '../../widgets/quick_actions_item.dart';
 
-class MemosButton extends StatefulWidget {
+class MemosButton extends StatelessWidget {
   const MemosButton({super.key});
   @override
-  MemosButtonState createState() => MemosButtonState();
-}
-
-class MemosButtonState extends State<MemosButton> {
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Memos",
-      icon: const Icon(Icons.note_alt_outlined),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const MemosWidget(),
-      ),
-    );
+    return const ModalButton(actionName: "Memos", icon: Icon(Icons.note_alt_outlined), child: MemosWidget());
   }
 }
 

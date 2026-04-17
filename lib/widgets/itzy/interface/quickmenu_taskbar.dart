@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/window_watcher.dart';
+import '../../../models/util/app_opacity.dart';
 
 class QuickmenuTaskbar extends StatefulWidget {
   const QuickmenuTaskbar({super.key});
@@ -23,9 +24,31 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
   List<MapEntry<String, String>> appIconRewrites = Boxes().iconsRewrite.entries.toList();
   final List<TextEditingController> appIconSearchController = <TextEditingController>[];
   final List<TextEditingController> appIconPathController = <TextEditingController>[];
+
   @override
   void initState() {
     super.initState();
+    _syncControllers();
+  }
+
+  void _syncControllers() {
+    for (TextEditingController c in reWriteSearchController) {
+      c.dispose();
+    }
+    for (TextEditingController c in reWriteReplaceController) {
+      c.dispose();
+    }
+    for (TextEditingController c in appIconSearchController) {
+      c.dispose();
+    }
+    for (TextEditingController c in appIconPathController) {
+      c.dispose();
+    }
+    reWriteSearchController.clear();
+    reWriteReplaceController.clear();
+    appIconSearchController.clear();
+    appIconPathController.clear();
+
     taskbarRewrites = Boxes().taskBarRewrites.entries.toList();
     for (MapEntry<String, String> item in taskbarRewrites) {
       reWriteSearchController.add(TextEditingController(text: item.key));
@@ -60,26 +83,169 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       controller: ScrollController(),
-      child: ListTileTheme(
-        data: Theme.of(context).listTileTheme.copyWith(
-              dense: true,
-              style: ListTileStyle.drawer,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              minVerticalPadding: 0,
-              visualDensity: VisualDensity.compact,
-              horizontalTitleGap: 0,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _buildTaskbarSettingsCard(),
+          const SizedBox(height: 20),
+          _buildTaskbarRewritesCard(),
+          const SizedBox(height: 20),
+          _buildAppIconRewritesCard(),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskbarSettingsCard() {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: AppOpacity.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _buildPanelHeader(
+            icon: Icons.compress_rounded,
+            title: "TASKBAR ENGINE",
+            subtitle: "Global taskbar behavior and display logic",
+          ),
+          const Divider(height: 1),
+          _buildToggleTile(
+            title: "Taskbar Level Positioning",
+            subtitle: "Maintain QuickMenu alignment with taskbar height",
+            value: globalSettings.showQuickMenuAtTaskbarLevel,
+            onChanged: (bool v) async {
+              globalSettings.showQuickMenuAtTaskbarLevel = v;
+              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", globalSettings.showQuickMenuAtTaskbarLevel);
+              if (!mounted) return;
+              setState(() {});
+            },
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "DISPLAY PREFERENCE",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: scheme.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildStyleSelector(),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStyleSelector() {
+    return Column(
+      children: TaskBarAppsStyle.values.map((TaskBarAppsStyle style) => _buildStyleTile(style)).toList(),
+    );
+  }
+
+  Widget _buildStyleTile(TaskBarAppsStyle style) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool isSelected = globalSettings.taskBarAppsStyle == style;
+
+    String title = "";
+    String subtitle = "";
+    IconData icon = Icons.circle_outlined;
+
+    switch (style) {
+      case TaskBarAppsStyle.onlyActiveMonitor:
+        title = "Dynamic Isolation";
+        subtitle = "Show icons only on the active monitor";
+        icon = Icons.monitor_rounded;
+        break;
+      case TaskBarAppsStyle.activeMonitorFirst:
+        title = "Smart Sequence";
+        subtitle = "Prioritize active monitor in global sequence";
+        icon = Icons.reorder_rounded;
+        break;
+      case TaskBarAppsStyle.orderByActivity:
+        title = "Activity Stream";
+        subtitle = "Order by most frequently used across monitors";
+        icon = Icons.history_rounded;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? scheme.primary.withValues(alpha: 0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? scheme.primary.withValues(alpha: 0.2) : theme.dividerColor.withValues(alpha: 0.05),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () async {
+          globalSettings.taskBarAppsStyle = style;
+          await Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
+          if (!mounted) return;
+          setState(() {});
+        },
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          padding: const EdgeInsets.all(12),
+          child: Row(
             children: <Widget>[
-              _buildTaskbarSettingsCard(),
-              const SizedBox(height: 20),
-              _buildTaskbarRewritesCard(),
-              const SizedBox(height: 20),
-              _buildAppIconRewritesCard(),
-              const SizedBox(height: 100),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isSelected ? scheme.primary.withValues(alpha: 0.12) : theme.hintColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected ? scheme.primary : theme.hintColor,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.hintColor.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle_rounded, size: 20, color: scheme.primary)
+              else
+                Icon(Icons.circle_outlined, size: 20, color: theme.hintColor.withValues(alpha: 0.2)),
             ],
           ),
         ),
@@ -87,217 +253,309 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
     );
   }
 
-  Widget _buildTaskbarSettingsCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+  Widget _buildTaskbarRewritesCard() {
+    final ThemeData theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: AppOpacity.border)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: <Widget>[
-            const ListTile(
-              contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              minLeadingWidth: 28,
-              horizontalTitleGap: 14,
-              leading: Icon(Icons.view_list_outlined),
-              title: Text("Taskbar Settings", style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("Configure taskbar visibility and app ordering"),
-            ),
-            const Divider(),
-            SwitchListTile(
-              title: const Text("Show QuickMenu at Taskbar Level"),
-              subtitle: const Text("Display the quick menu controls directly from the taskbar"),
-              secondary: const Icon(Icons.dock_outlined, size: 20),
-              value: globalSettings.showQuickMenuAtTaskbarLevel,
-              onChanged: (bool newValue) async {
-                globalSettings.showQuickMenuAtTaskbarLevel = newValue;
-                await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", globalSettings.showQuickMenuAtTaskbarLevel);
-                if (!mounted) return;
+      child: Column(
+        children: <Widget>[
+          _buildPanelHeader(
+            icon: Icons.find_replace_outlined,
+            title: "LABEL REWRITES",
+            subtitle: "Regex-based title transformation engine",
+            trailing: FilledButton.tonalIcon(
+              onPressed: () {
+                taskbarRewrites.insert(0, const MapEntry<String, String>("", ""));
+                reWriteSearchController.insert(0, TextEditingController());
+                reWriteReplaceController.insert(0, TextEditingController());
                 setState(() {});
               },
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text("Add Rule"),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: RadioGroup<TaskBarAppsStyle>(
-                  onChanged: (TaskBarAppsStyle? value) async {
-                    globalSettings.taskBarAppsStyle = value ?? TaskBarAppsStyle.activeMonitorFirst;
-                    await Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
-                    if (!mounted) return;
-                    setState(() {});
-                  },
-                  groupValue: globalSettings.taskBarAppsStyle,
-                  child: RadioTheme(
-                    data: Theme.of(context).radioTheme.copyWith(
-                          visualDensity: VisualDensity.compact,
-                          splashRadius: 20,
-                        ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-                          child: Text("Taskbar Order", style: Theme.of(context).textTheme.labelLarge),
-                        ),
-                        const RadioListTile<TaskBarAppsStyle>(
-                          title: Text('Active Monitor First'),
-                          subtitle: Text("Prioritize windows on the active monitor"),
-                          value: TaskBarAppsStyle.activeMonitorFirst,
-                        ),
-                        const RadioListTile<TaskBarAppsStyle>(
-                          title: Text('Only Active Monitor'),
-                          subtitle: Text("Show taskbar apps from the active monitor only"),
-                          value: TaskBarAppsStyle.onlyActiveMonitor,
-                        ),
-                        const RadioListTile<TaskBarAppsStyle>(
-                          title: Text('Order by Activity'),
-                          subtitle: Text("Keep the most recently active apps first"),
-                          value: TaskBarAppsStyle.orderByActivity,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          ),
+          const Divider(height: 1),
+          if (taskbarRewrites.isEmpty)
+            _buildEmptyState(
+              icon: Icons.auto_fix_off_rounded,
+              message: "No active label rewrites provisioned.",
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(12),
+              itemCount: taskbarRewrites.length,
+              separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 8),
+              itemBuilder: (BuildContext context, int index) => _buildRewriteItem(index),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskbarRewritesCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: <Widget>[
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              minLeadingWidth: 28,
-              horizontalTitleGap: 14,
-              leading: const Icon(Icons.find_replace_outlined),
-              title: const Text("Taskbar Rewrites", style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text("Create regex-aware label replacements for taskbar items"),
-              trailing: IconButton(
-                onPressed: () {
-                  taskbarRewrites.insert(0, const MapEntry<String, String>("find", "replace"));
-                  reWriteSearchController.insert(0, TextEditingController(text: "find"));
-                  reWriteReplaceController.insert(0, TextEditingController(text: "replace"));
-                  setState(() {});
-                },
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: "Add rewrite",
-              ),
-            ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Row(
-                children: <Widget>[
-                  Text("Regex Tool", style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Search expressions are applied to taskbar labels and replaced inline.",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (taskbarRewrites.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    "No rewrites yet. Add a search and replacement rule to clean up taskbar titles.",
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              )
-            else
-              FocusTraversalGroup(
-                policy: OrderedTraversalPolicy(),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: taskbarRewrites.length,
-                  separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 8),
-                  itemBuilder: (BuildContext context, int index) => _buildRewriteItem(index),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildRewriteItem(int index) {
-    final Color borderColor = Theme.of(context).dividerColor.withValues(alpha: 0.18);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: borderColor),
+        color: theme.cardColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildRewriteField(
+                  controller: reWriteSearchController[index],
+                  labelText: "Pattern (Regex)",
+                  onSaved: () => saveTaskBarRewrite(index),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Icon(Icons.arrow_forward_rounded, size: 16, color: theme.hintColor.withValues(alpha: 0.3)),
+              ),
+              Expanded(
+                child: _buildRewriteField(
+                  controller: reWriteReplaceController[index],
+                  labelText: "Replacement",
+                  onSaved: () => saveTaskBarRewrite(index),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: scheme.error.withValues(alpha: 0.7)),
+                onPressed: () async {
+                  taskbarRewrites.removeAt(index);
+                  reWriteSearchController.removeAt(index).dispose();
+                  reWriteReplaceController.removeAt(index).dispose();
+                  await _persistTaskbarRewrites();
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppIconRewritesCard() {
+    final ThemeData theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: AppOpacity.border)),
+      ),
+      child: Column(
+        children: <Widget>[
+          _buildPanelHeader(
+            icon: Icons.image_search_rounded,
+            title: "ASSET OVERRIDES",
+            subtitle: "Custom path mappings for application icons",
+            trailing: FilledButton.tonalIcon(
+              onPressed: () {
+                appIconRewrites.insert(0, const MapEntry<String, String>("", ""));
+                appIconSearchController.insert(0, TextEditingController());
+                appIconPathController.insert(0, TextEditingController());
+                setState(() {});
+              },
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text("Add Rule"),
+            ),
+          ),
+          const Divider(height: 1),
+          if (appIconRewrites.isEmpty)
+            _buildEmptyState(
+              icon: Icons.image_not_supported_rounded,
+              message: "No custom asset overrides provisioned.",
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(12),
+              itemCount: appIconRewrites.length,
+              separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 8),
+              itemBuilder: (BuildContext context, int index) => _buildAppIconRewriteItem(index),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppIconRewriteItem(int index) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final String iconPath = appIconPathController[index].text;
+    final bool hasValidIcon = iconPath.isNotEmpty && File(iconPath).existsSync();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: <Widget>[
-          Expanded(
-            child: _buildRewriteField(
-              controller: reWriteSearchController[index],
-              labelText: "Find",
-              onSaved: () => saveTaskBarRewrite(index),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
             ),
+            child: hasValidIcon
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(File(iconPath), fit: BoxFit.contain),
+                  )
+                : Icon(Icons.image_outlined, size: 20, color: theme.hintColor.withValues(alpha: 0.3)),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Icon(
-              Icons.arrow_forward_rounded,
-              size: 18,
-              color: Theme.of(context).hintColor,
-            ),
-          ),
+          const SizedBox(width: 12),
           Expanded(
+            flex: 3,
             child: _buildRewriteField(
-              controller: reWriteReplaceController[index],
-              labelText: "Replace",
-              onSaved: () => saveTaskBarRewrite(index),
+              controller: appIconSearchController[index],
+              labelText: "Executable Path / Match",
+              onSaved: () => saveAppIconRewrite(index),
             ),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-            tooltip: "Delete Rewrite",
-            onPressed: () async {
-              taskbarRewrites.removeAt(index);
-              reWriteSearchController.removeAt(index);
-              reWriteReplaceController.removeAt(index);
-              await _persistTaskbarRewrites();
-              if (!mounted) return;
-              setState(() {});
-            },
+          Expanded(
+            flex: 4,
+            child: _buildRewriteField(
+              controller: appIconPathController[index],
+              labelText: "Target Asset Path",
+              onSaved: () => saveAppIconRewrite(index),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            children: <Widget>[
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.folder_open_rounded, size: 18),
+                onPressed: () => _pickIconForRewrite(index),
+              ),
+              const SizedBox(height: 4),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: scheme.error.withValues(alpha: 0.7)),
+                onPressed: () async {
+                  appIconRewrites.removeAt(index);
+                  appIconSearchController.removeAt(index).dispose();
+                  appIconPathController.removeAt(index).dispose();
+                  await _persistAppIconRewrites();
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPanelHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.6)),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  Text(subtitle, style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.6))),
+                ],
+              ),
+            ),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: value,
+                onChanged: onChanged,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({required IconData icon, required String message}) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: <Widget>[
+          Icon(icon, size: 32, color: theme.hintColor.withValues(alpha: 0.2)),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: theme.hintColor.withValues(alpha: 0.5), fontSize: 12),
           ),
         ],
       ),
@@ -309,57 +567,62 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
     required String labelText,
     required Future<bool> Function() onSaved,
   }) {
+    final ThemeData theme = Theme.of(context);
+
     return Focus(
       onFocusChange: (bool hasFocus) async {
         if (!hasFocus) {
-          final bool saved = await onSaved();
-          if (!saved && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: const Text("Error: Regex failed or search is empty."),
-              duration: const Duration(seconds: 2),
-              backgroundColor: Colors.red.shade200,
-            ));
-          }
+          await onSaved();
           if (mounted) setState(() {});
         }
       },
       child: TextField(
         controller: controller,
-        style: const TextStyle(fontSize: 14),
+        style: const TextStyle(fontSize: 13),
         decoration: InputDecoration(
           labelText: labelText,
+          labelStyle: TextStyle(fontSize: 12, color: theme.hintColor),
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
           ),
         ),
       ),
     );
   }
 
+  Future<void> _pickIconForRewrite(int index) async {
+    final OpenFilePicker file = OpenFilePicker()
+      ..filterSpecification = <String, String>{'Image files (*.png; *.jpg; *.jpeg; *.ico)': '*.png;*.jpg;*.jpeg;*.ico'}
+      ..defaultFilterIndex = 0
+      ..title = 'Select an icon image';
+    final File? result = file.getFile();
+    if (result != null) {
+      appIconPathController[index].text = result.path;
+      await saveAppIconRewrite(index);
+      setState(() {});
+    }
+  }
+
   Future<bool> saveTaskBarRewrite(int index) async {
     if (reWriteSearchController[index].text.isEmpty) return false;
     try {
-      RegExp(reWriteSearchController[index].text, caseSensitive: false).hasMatch("ciulama");
+      RegExp(reWriteSearchController[index].text, caseSensitive: false).hasMatch("test");
     } catch (_) {
       return false;
     }
-    if (reWriteReplaceController[index].text.isNotEmpty) {
-      taskbarRewrites[index] =
-          MapEntry<String, String>(reWriteSearchController[index].text, reWriteReplaceController[index].text);
-    } else {
-      taskbarRewrites[index] = MapEntry<String, String>(reWriteSearchController[index].text, " ");
-    }
+    taskbarRewrites[index] =
+        MapEntry<String, String>(reWriteSearchController[index].text, reWriteReplaceController[index].text);
     await _persistTaskbarRewrites();
     return true;
   }
@@ -371,174 +634,6 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
     }
     await Boxes.updateSettings("taskBarRewrites", jsonEncode(reWrites));
     WindowWatcher.taskBarRewrites = reWrites;
-  }
-
-  Widget _buildAppIconRewritesCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: <Widget>[
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              minLeadingWidth: 28,
-              horizontalTitleGap: 14,
-              leading: const Icon(Icons.image_outlined),
-              title: const Text("App Icon Rewrites", style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text("Replace application icons based on executable path"),
-              trailing: IconButton(
-                onPressed: () {
-                  appIconRewrites.insert(0, const MapEntry<String, String>("exe name or path", ""));
-                  appIconSearchController.insert(0, TextEditingController(text: "exe name or path"));
-                  appIconPathController.insert(0, TextEditingController(text: ""));
-                  setState(() {});
-                },
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: "Add rewrite",
-              ),
-            ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Row(
-                children: <Widget>[
-                  Text("Match & Pick", style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Enter part of the exe path (e.g. 'Code.exe') and pick a new image.",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (appIconRewrites.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    "No rewrites yet. Add a rule to change app icons.",
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              )
-            else
-              FocusTraversalGroup(
-                policy: OrderedTraversalPolicy(),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: appIconRewrites.length,
-                  separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 8),
-                  itemBuilder: (BuildContext context, int index) => _buildAppIconRewriteItem(index),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppIconRewriteItem(int index) {
-    final Color borderColor = Theme.of(context).dividerColor.withValues(alpha: 0.18);
-    final String iconPath = appIconPathController[index].text;
-    final bool hasValidIcon = iconPath.isNotEmpty && File(iconPath).existsSync();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 2,
-            child: _buildRewriteField(
-              controller: appIconSearchController[index],
-              labelText: "Match Path",
-              onSaved: () => saveAppIconRewrite(index),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Icon(
-              Icons.arrow_forward_rounded,
-              size: 18,
-              color: Theme.of(context).hintColor,
-            ),
-          ),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
-            ),
-            child: hasValidIcon
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
-                    child: Image.file(File(iconPath), fit: BoxFit.contain, filterQuality: FilterQuality.high),
-                  )
-                : const Icon(Icons.image_not_supported_outlined, size: 16),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 3,
-            child: _buildRewriteField(
-              controller: appIconPathController[index],
-              labelText: "Icon Path",
-              onSaved: () => saveAppIconRewrite(index),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.folder_open_rounded, size: 20),
-            tooltip: "Pick Image",
-            onPressed: () async {
-              final OpenFilePicker file = OpenFilePicker()
-                ..filterSpecification = <String, String>{
-                  'Image files (*.png; *.jpg; *.jpeg; *.ico)': '*.png;*.jpg;*.jpeg;*.ico'
-                }
-                ..defaultFilterIndex = 0
-                ..title = 'Select an icon image';
-              final File? result = file.getFile();
-              if (result != null) {
-                appIconPathController[index].text = result.path;
-                await saveAppIconRewrite(index);
-                setState(() {});
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-            tooltip: "Delete Rewrite",
-            onPressed: () async {
-              appIconRewrites.removeAt(index);
-              appIconSearchController.removeAt(index);
-              appIconPathController.removeAt(index);
-              await _persistAppIconRewrites();
-              if (!mounted) return;
-              setState(() {});
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   Future<bool> saveAppIconRewrite(int index) async {

@@ -135,7 +135,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "VaultButton": QuickAction(
     name: "VaultButton",
     icon: Icons.lock_rounded,
-    widget: const VaultButton(),
+    widget: const VaultsButton(),
   ),
   "MemosButton": QuickAction(
     name: "MemosButton",
@@ -242,9 +242,9 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.visibility,
     widget: const CloseOnFocusLossButton(),
   ),
-  "SwitchQuickMenuDesignButton": QuickAction(
-    name: "SwitchQuickMenuDesignButton",
-    icon: Icons.dashboard_customize_outlined,
-    widget: const SwitchQuickMenuDesignButton(),
+  "QuickMenuDesignButton": QuickAction(
+    name: "QuickMenuDesignButton",
+    icon: Icons.palette_rounded,
+    widget: const QuickMenuDesignButton(),
   ),
 };

@@ -382,8 +382,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                       width: 5,
                                     ),
                                     //2 Icon
-                                    Globals.getIconRewrite(window.process.exePath, window: window) != ""
-                                        ? Image.asset(Globals.getIconRewrite(window.process.exePath, window: window),
+                                    Boxes.getIconRewrite(window.process.exePath, window: window) != ""
+                                        ? Image.asset(Boxes.getIconRewrite(window.process.exePath, window: window),
                                             width: 20)
                                         : SizedBox(
                                             width: 20,

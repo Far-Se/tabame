@@ -5,6 +5,7 @@ import 'package:win32/win32.dart';
 
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class HostsEditor extends StatefulWidget {
   const HostsEditor({super.key});
@@ -215,7 +216,8 @@ class HostsEditorState extends State<HostsEditor> {
                   children: <Widget>[
                     Text("Entries", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     SizedBox(height: 4),
-                    Text("Edit address, host, and comment fields directly. Changes save automatically when allowed.", style: TextStyle(fontSize: 12)),
+                    Text("Edit address, host, and comment fields directly. Changes save automatically when allowed.",
+                        style: TextStyle(fontSize: 12)),
                   ],
                 ),
               ),
@@ -230,14 +232,16 @@ class HostsEditorState extends State<HostsEditor> {
               onDelete: () {
                 hostsList.removeAt(index);
                 if (canSaveHosts) {
-                  File(hostFile).writeAsStringSync(hostsList.where((String line) => line.trim().isNotEmpty).join("\r\n"));
+                  File(hostFile)
+                      .writeAsStringSync(hostsList.where((String line) => line.trim().isNotEmpty).join("\r\n"));
                 }
                 setState(() {});
               },
               onChanged: (String newLine) {
                 hostsList[index] = newLine;
                 if (canSaveHosts) {
-                  File(hostFile).writeAsStringSync(hostsList.where((String line) => line.trim().isNotEmpty).join("\r\n"));
+                  File(hostFile)
+                      .writeAsStringSync(hostsList.where((String line) => line.trim().isNotEmpty).join("\r\n"));
                 }
                 setState(() {});
               },
@@ -325,7 +329,8 @@ class _HostRowState extends State<HostRow> {
                     color: enabled ? accent.withValues(alpha: 0.12) : onSurface.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(enabled ? Icons.check_rounded : Icons.block_rounded, size: 16, color: enabled ? accent : onSurface.withValues(alpha: 0.6)),
+                  child: Icon(enabled ? Icons.check_rounded : Icons.block_rounded,
+                      size: 16, color: enabled ? accent : onSurface.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -377,7 +382,8 @@ class _HostRowState extends State<HostRow> {
                       },
                       child: TextField(
                         enabled: widget.canSaveHosts,
-                        decoration: const InputDecoration(labelText: "Address", hintText: "Address", isDense: true, border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: "Address", hintText: "Address", isDense: true, border: OutlineInputBorder()),
                         controller: addressController,
                       ),
                     ),
@@ -400,7 +406,8 @@ class _HostRowState extends State<HostRow> {
                       },
                       child: TextField(
                         enabled: widget.canSaveHosts,
-                        decoration: const InputDecoration(labelText: "Host", hintText: "Host", isDense: true, border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: "Host", hintText: "Host", isDense: true, border: OutlineInputBorder()),
                         controller: hostsController,
                       ),
                     ),
@@ -423,7 +430,8 @@ class _HostRowState extends State<HostRow> {
                     },
                     child: TextField(
                       enabled: widget.canSaveHosts,
-                      decoration: const InputDecoration(labelText: "Comment", hintText: "Comment", isDense: true, border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                          labelText: "Comment", hintText: "Comment", isDense: true, border: OutlineInputBorder()),
                       controller: commentController,
                     ),
                   ),
@@ -452,7 +460,7 @@ class _ToolbarIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return CustomTooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'trktivity_models.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class TrktivityTimeline extends StatelessWidget {
   final List<MapEntry<String, List<TTrack>>> wTimeTrackList;
@@ -171,7 +172,7 @@ class TrktivityTimeline extends StatelessWidget {
                 return Positioned(
                   left: startP * totalWidth,
                   width: (widthP * totalWidth).clamp(2.0, totalWidth),
-                  child: Tooltip(
+                  child: CustomTooltip(
                     message: "${entry.key}\n${_formatTime(startDate)} - ${_formatTime(endDate)}",
                     child: Container(
                       height: 14,

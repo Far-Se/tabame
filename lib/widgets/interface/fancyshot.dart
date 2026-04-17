@@ -15,7 +15,7 @@ import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:win32/win32.dart';
-// import 'package:win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
@@ -948,7 +948,7 @@ class _ToolbarActionState extends State<_ToolbarAction> with SingleTickerProvide
         setState(() => _isHovered = false);
         _controller.reverse();
       },
-      child: Tooltip(
+      child: CustomTooltip(
         message: widget.tooltip,
         child: ScaleTransition(
           scale: _scaleAnimation,

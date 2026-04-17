@@ -9,6 +9,7 @@ import 'package:win32/win32.dart';
 import '../../../models/classes/hotkeys.dart';
 import '../../../models/win32/win32.dart';
 import '../../widgets/checkbox_widget.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class MouseInfoWidget extends StatefulWidget {
   final Function(AnchorType anchor) onAnchorTypeChanged;
@@ -129,24 +130,32 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Tooltip(
+                      CustomTooltip(
                           message: AnchorType.topLeft.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.topLeft, onChanged: (bool? e) => onAnchorChanged(AnchorType.topLeft))),
-                      Tooltip(
+                          child: Checkbox(
+                              value: anchor == AnchorType.topLeft,
+                              onChanged: (bool? e) => onAnchorChanged(AnchorType.topLeft))),
+                      CustomTooltip(
                           message: AnchorType.topRight.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.topRight, onChanged: (bool? e) => onAnchorChanged(AnchorType.topRight))),
+                          child: Checkbox(
+                              value: anchor == AnchorType.topRight,
+                              onChanged: (bool? e) => onAnchorChanged(AnchorType.topRight))),
                     ],
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Tooltip(
+                      CustomTooltip(
                           message: AnchorType.bottomLeft.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.bottomLeft, onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomLeft))),
-                      Tooltip(
+                          child: Checkbox(
+                              value: anchor == AnchorType.bottomLeft,
+                              onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomLeft))),
+                      CustomTooltip(
                           message: AnchorType.bottomRight.name.toString(),
-                          child: Checkbox(value: anchor == AnchorType.bottomRight, onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomRight))),
+                          child: Checkbox(
+                              value: anchor == AnchorType.bottomRight,
+                              onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomRight))),
                     ],
                   ),
                 ],

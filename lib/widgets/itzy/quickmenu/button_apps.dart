@@ -4,29 +4,18 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
+import 'package:window_manager/window_manager.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
+import '../../widgets/modal_button.dart';
 import 'button_window_app.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
-class AppsButton extends StatefulWidget {
+class AppsButton extends StatelessWidget {
   const AppsButton({super.key});
   @override
-  AppsButtonState createState() => AppsButtonState();
-}
-
-class AppsButtonState extends State<AppsButton> {
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Apps",
-      icon: const Icon(Icons.apps),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const QuickMenuApps(),
-      ),
-    );
+    return const ModalButton(actionName: "Apps", icon: Icon(Icons.apps), child: QuickMenuApps());
   }
 }
 
@@ -111,7 +100,10 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[for (final AppCategory category in categories) _buildCategory(category), const SizedBox(height: 10)],
+          children: <Widget>[
+            for (final AppCategory category in categories) _buildCategory(category),
+            const SizedBox(height: 10)
+          ],
         ),
       ),
     );
@@ -124,10 +116,13 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
       if (dir.existsSync()) {
         final List<FileSystemEntity> files = dir.listSync();
         for (final FileSystemEntity file in files) {
-          if (file is File && (file.path.endsWith(".exe") || file.path.endsWith(".lnk") || file.path.endsWith(".url"))) {
+          if (file is File &&
+              (file.path.endsWith(".exe") || file.path.endsWith(".lnk") || file.path.endsWith(".url"))) {
             if (category.items.any((AppItem a) => a.path == file.path)) continue;
             items.add(AppItem(
-              name: file.path.substring(file.path.lastIndexOf('\\') + 1).replaceFirst(RegExp(r'\.(exe|lnk|url)$', caseSensitive: false), ""),
+              name: file.path
+                  .substring(file.path.lastIndexOf('\\') + 1)
+                  .replaceFirst(RegExp(r'\.(exe|lnk|url)$', caseSensitive: false), ""),
               path: file.path,
             ));
           }
@@ -162,10 +157,16 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
                   AnimatedRotation(
                     turns: category.isCollapsed ? -0.25 : 0,
                     duration: const Duration(milliseconds: 160),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onPanStart: (DragStartDetails details) {
+                        windowManager.startDragging();
+                      },
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -214,8 +215,8 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
                     child: GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 60,
                         mainAxisSpacing: 6,
                         crossAxisSpacing: 6,
                         childAspectRatio: 0.92,
@@ -260,7 +261,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
         onTap: () => _launchApp(item),
       );
     }
-    return Tooltip(
+    return CustomTooltip(
       message: item.name,
       verticalOffset: 26,
       preferBelow: false,

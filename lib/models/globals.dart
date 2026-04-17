@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'classes/boxes.dart';
-import 'win32/window.dart';
-
 void printWarning(String text) {
   print('\x1B[33m$text\x1B[0m');
 }
@@ -59,6 +56,7 @@ class Globals {
   static ValueNotifier<int> quickMenuSearchInputVersion = ValueNotifier<int>(0);
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
+  static String lastQuickSnapZoneId = "";
 
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
@@ -83,22 +81,5 @@ class Globals {
   static void clearQuickMenuSearchInput() {
     _pendingQuickMenuSearchInput = "";
     quickMenuSearchInputVersion.value++;
-  }
-
-  static Map<String, String> titleIconRewrite = <String, String>{
-    "DevTools": "resources/devtools.png",
-  };
-
-  static String getIconRewrite(String exePath, {Window? window}) {
-    if (window != null) {
-      for (final String title in titleIconRewrite.keys) {
-        if (window.title.contains(title)) return titleIconRewrite[title] ?? "";
-      }
-    }
-
-    final Map<String, String> currentIconsRewrite = Boxes().iconsRewrite;
-    final String appName = currentIconsRewrite.keys
-        .firstWhere((String element) => exePath.toLowerCase().contains(element.toLowerCase()), orElse: () => "");
-    return currentIconsRewrite[appName] ?? "";
   }
 }

@@ -1,61 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:math_parser/math_parser.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../widgets/quick_actions_item.dart';
+import '../../widgets/modal_button.dart';
 
-class CalculatorButton extends StatefulWidget {
+class CalculatorButton extends StatelessWidget {
   const CalculatorButton({super.key});
   @override
-  CalculatorButtonState createState() => CalculatorButtonState();
-}
-
-class CalculatorButtonState extends State<CalculatorButton> {
-  @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Calculator",
-      icon: const Icon(Icons.functions),
-      onTap: () async {
-        showModalBottomSheet<void>(
-          context: context,
-          anchorPoint: const Offset(100, 200),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          barrierColor: Colors.transparent,
-          constraints: const BoxConstraints(maxWidth: 320),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          enableDrag: true,
-          isScrollControlled: true,
-          builder: (BuildContext context) {
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: FractionallySizedBox(
-                heightFactor: 0.85,
-                child: Listener(
-                  onPointerDown: (PointerDownEvent event) {
-                    if (event.kind == PointerDeviceKind.mouse && event.buttons == kSecondaryMouseButton) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CalculatorWidget(),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    return const ModalButton(actionName: "Calculator", icon: Icon(Icons.functions), child: CalculatorWidget());
   }
 }
 

@@ -13,6 +13,7 @@ import '../../../models/win32/win32.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
 import '../../quickmenu/task_bar.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class AppAudioButton extends StatefulWidget {
   final int index;
@@ -217,7 +218,7 @@ class _AppAudioButtonState extends State<AppAudioButton> {
         child: InkWell(
           onDoubleTap: _launchApp,
           onTap: _handlePlayPause,
-          child: Tooltip(
+          child: CustomTooltip(
             message: ctl.name,
             child: SizedBox(
               width: 20,

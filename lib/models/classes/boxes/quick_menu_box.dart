@@ -94,4 +94,10 @@ class QuickMenuFunctions {
       hidTime = DateTime.now().millisecondsSinceEpoch;
     }
   }
+
+  static Future<void> openQuickMenuWithAction(String actionName, {bool center = false}) async {
+    await toggleQuickMenu(visible: true, center: center);
+    await Future<void>.delayed(const Duration(milliseconds: 260));
+    triggerQuickAction(actionName);
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/globals.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class QuickActionItem extends StatelessWidget {
   final String message;
@@ -16,9 +17,15 @@ class QuickActionItem extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[const SizedBox(width: 5), SizedBox(width: 20, child: icon), const SizedBox(width: 5), Text(message)],
+            children: <Widget>[
+              const SizedBox(width: 5),
+              SizedBox(width: 20, child: icon),
+              const SizedBox(width: 5),
+              Text(message)
+            ],
           ));
     }
-    return SizedBox(width: 20, child: InkWell(child: Tooltip(message: message, child: icon), onTap: () => onTap()));
+    return SizedBox(
+        width: 20, child: InkWell(child: CustomTooltip(message: message, child: icon), onTap: () => onTap()));
   }
 }

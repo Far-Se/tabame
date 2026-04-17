@@ -10,6 +10,7 @@ import '../../models/settings.dart';
 import '../../pages/interface.dart';
 import '../widgets/mouse_scroll_widget.dart';
 import '../widgets/text_input.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class FileNameWidget extends StatefulWidget {
   const FileNameWidget({super.key});
@@ -95,7 +96,9 @@ class FileNameWidgetState extends State<FileNameWidget> {
                         children: <Widget>[
                           const Text("Target Folder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           Text(
-                            currentFolder.isEmpty ? "Pick a folder to preview file renames" : currentFolder.truncate(70, suffix: "..."),
+                            currentFolder.isEmpty
+                                ? "Pick a folder to preview file renames"
+                                : currentFolder.truncate(70, suffix: "..."),
                             style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -225,7 +228,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
                 style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.55)),
               ),
             ),
-          ...List<Widget>.generate(filters.length, (int index) => _buildFilterCard(index, filters[index], accent, onSurface)),
+          ...List<Widget>.generate(
+              filters.length, (int index) => _buildFilterCard(index, filters[index], accent, onSurface)),
         ],
       ),
     );
@@ -239,7 +243,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: filtersError.contains(index) ? Colors.orange.withValues(alpha: 0.45) : onSurface.withValues(alpha: 0.08),
+          color:
+              filtersError.contains(index) ? Colors.orange.withValues(alpha: 0.45) : onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Column(
@@ -255,7 +260,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
-                  child: Text("${index + 1}", style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 12)),
+                  child:
+                      Text("${index + 1}", style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -267,7 +273,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
               if (filtersError.contains(index))
                 const Padding(
                   padding: EdgeInsets.only(right: 8),
-                  child: Tooltip(message: "Regex Error", child: Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange)),
+                  child: CustomTooltip(
+                      message: "Regex Error", child: Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange)),
                 ),
               _buildTinyIconButton(
                 icon: Icons.text_fields_rounded,
@@ -415,7 +422,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
     totalMatched = 0;
     final List<_RenamePreview> previews = loadedFiles.reversed.map(_previewForFile).toList();
     final int changedCount = previews.where((_RenamePreview preview) => preview.oldName != preview.newName).length;
-    final int selectedCount = previews.where((_RenamePreview preview) => preview.isSelected && preview.oldName != preview.newName).length;
+    final int selectedCount =
+        previews.where((_RenamePreview preview) => preview.isSelected && preview.oldName != preview.newName).length;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -482,10 +490,14 @@ class FileNameWidgetState extends State<FileNameWidget> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: Text("Current Name", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
+                  child: Text("Current Name",
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
                 ),
                 Expanded(
-                  child: Text("Preview Name", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
+                  child: Text("Preview Name",
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
                 ),
                 const SizedBox(width: 104),
               ],
@@ -554,7 +566,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
     bool active = false,
   }) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Tooltip(
+    return CustomTooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,
@@ -565,7 +577,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
           decoration: BoxDecoration(
             color: active && accent != null ? accent.withValues(alpha: 0.12) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: active && accent != null ? accent.withValues(alpha: 0.2) : onSurface.withValues(alpha: 0.08)),
+            border: Border.all(
+                color: active && accent != null ? accent.withValues(alpha: 0.2) : onSurface.withValues(alpha: 0.08)),
           ),
           child: Icon(icon, size: 16, color: active && accent != null ? accent : onSurface.withValues(alpha: 0.7)),
         ),
@@ -591,8 +604,9 @@ class FileNameWidgetState extends State<FileNameWidget> {
     loadedFiles.clear();
     excludedFiles.clear();
 
-    final Stream<FileSystemEntity> stream =
-        Directory(currentFolder).list(recursive: recursiveFolder, followLinks: false).handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
+    final Stream<FileSystemEntity> stream = Directory(currentFolder)
+        .list(recursive: recursiveFolder, followLinks: false)
+        .handleError((dynamic e) => null, test: (dynamic e) => e is FileSystemException);
     await for (FileSystemEntity entity in stream) {
       loadedFiles.add(entity.path);
     }
@@ -666,7 +680,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
             if (filter.listReplace) {
               newString = match[0]!;
               for (int i = 1; i < match.groupCount + 1; i++) {
-                final Iterable<List<String>> e = filter.replaceList.where((List<String> element) => element[0] == match[i]);
+                final Iterable<List<String>> e =
+                    filter.replaceList.where((List<String> element) => element[0] == match[i]);
                 if (e.isNotEmpty) {
                   final String replaced = e.first[1];
                   newString = newString.replaceAll(match[1]!, replaced);
@@ -736,7 +751,9 @@ class ListTileFileState extends State<ListTileFile> {
         child: Row(
           children: <Widget>[
             SizedBox(
-              child: Checkbox(value: unchanged ? false : widget.checkbox, onChanged: (bool? e) => widget.onCheckPressed(e ?? false)),
+              child: Checkbox(
+                  value: unchanged ? false : widget.checkbox,
+                  onChanged: (bool? e) => widget.onCheckPressed(e ?? false)),
             ),
             Expanded(
               child: Text(

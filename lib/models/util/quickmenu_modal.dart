@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../globals.dart';
 import '../settings.dart';
 import '../theme.dart';
+import '../win32/win32.dart';
 
 /// Standardized modal bottom sheet for QuickMenu buttons.
 /// Provides a blurred background and standard layout constraints.
@@ -14,10 +15,13 @@ Future<void> showQuickMenuModal({
   bool backdropFilter = true,
   double sigmaX = 3,
   double sigmaY = 3,
-  double maxWidth = 280,
+  double? maxWidth,
   double heightFactor = 0.85,
   VoidCallback? whenComplete,
 }) async {
+  final ({int height, int width}) size = Win32.getSize();
+  maxWidth ??= size.width * 0.80;
+  if (maxWidth < 280) maxWidth = 280;
   return showModalBottomSheet<void>(
     context: context,
     anchorPoint: const Offset(100, 200),

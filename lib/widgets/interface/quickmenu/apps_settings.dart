@@ -8,6 +8,7 @@ import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
 import '../../itzy/quickmenu/button_window_app.dart';
 import 'apps_category_editor.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class QuickmenuAppsSettings extends StatefulWidget {
   const QuickmenuAppsSettings({super.key});
@@ -203,6 +204,15 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     _save();
   }
 
+  void _onCategoriesReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (oldIndex < newIndex) newIndex -= 1;
+      final AppCategory item = categories.removeAt(oldIndex);
+      categories.insert(newIndex, item);
+      _save();
+    });
+  }
+
   Future<void> _openCategoryEditor(int categoryIndex) async {
     await showDialog<bool>(
       context: context,
@@ -223,75 +233,50 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double availableHeight = constraints.maxHeight.isFinite && constraints.maxHeight > 0 ? constraints.maxHeight : MediaQuery.sizeOf(context).height - 180;
-
-        return ListTileTheme(
-          data: Theme.of(context).listTileTheme.copyWith(
-                dense: true,
-                visualDensity: VisualDensity.compact,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Staging Deck (Source)
+              Expanded(
+                flex: 13,
+                child: _buildStagingDeck(context),
               ),
-          child: SizedBox(
-            height: availableHeight,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Expanded(flex: 7, child: _buildSourceSection(context)),
-                  const SizedBox(width: 8),
-                  Expanded(flex: 4, child: _buildCategoriesSection(context)),
-                ],
+              // const SizedBox(width: 5), // Increased separation for better panel distinction
+              // Category Buckets (Targets)
+              Expanded(
+                flex: 7,
+                child: _buildCategoryBuckets(context),
               ),
-            ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildSourceSection(BuildContext context) {
+  Widget _buildStagingDeck(BuildContext context) {
     return StreamBuilder<List<AppItem>>(
       stream: _sourceController.stream,
       initialData: listOfApps,
       builder: (BuildContext context, AsyncSnapshot<List<AppItem>> snapshot) {
         final List<AppItem> items = snapshot.data ?? listOfApps;
 
-        return _buildSection(
+        return _buildPanel(
           context: context,
-          title: "Source",
-          subtitle: categories.isEmpty ? "Create a category first" : "Select a destination from Add in",
+          title: "STAGING DECK",
+          subtitle: "Discovered apps ready for curation",
+          actions: <Widget>[
+            _buildDeckAction(context, "SCAN START", Icons.refresh_rounded, _scanStartMenu),
+            _buildDeckAction(context, "ADD FOLDER", Icons.folder_open_rounded, _addFolder),
+            _buildDeckAction(context, "CLEAR", Icons.delete_sweep_rounded, _clearList, isDanger: true),
+          ],
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: _buildSearchField(context),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: _isSourceLoading ? null : _scanStartMenu,
-                        icon: const Icon(Icons.refresh_rounded, size: 18),
-                        label: const Text("Scan Start Menu"),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    TextButton.icon(
-                      onPressed: _isSourceLoading ? null : _addFolder,
-                      icon: const Icon(Icons.folder_open_rounded, size: 18),
-                      label: const Text("Add Folder"),
-                    ),
-                    const SizedBox(width: 4),
-                    TextButton.icon(
-                      onPressed: listOfApps.isEmpty || _isSourceLoading ? null : _clearList,
-                      icon: const Icon(Icons.clear_all_rounded, size: 18),
-                      label: const Text("Clear"),
-                    ),
-                  ],
-                ),
               ),
               Expanded(
                 child: _isSourceLoading
@@ -299,33 +284,30 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
                     : ValueListenableBuilder<String>(
                         valueListenable: _searchNotifier,
                         builder: (BuildContext context, String searchQuery, _) {
-                          final List<AppItem> filtered = items
-                              .where(
-                                (AppItem app) => app.name.toLowerCase().contains(searchQuery),
-                              )
-                              .toList();
+                          final List<AppItem> filtered =
+                              items.where((AppItem app) => app.name.toLowerCase().contains(searchQuery)).toList();
 
                           if (filtered.isEmpty) {
                             return _buildEmptyState(
                               context,
                               icon: Icons.inventory_2_outlined,
-                              title: searchQuery.isEmpty ? "No source apps yet" : "No matching apps",
-                              message: searchQuery.isEmpty ? "Scan the Start Menu or add files manually." : "Try a different search term.",
+                              title: searchQuery.isEmpty ? "DECK EMPTY" : "NO MATCHES",
+                              message: searchQuery.isEmpty
+                                  ? "Scan your Start Menu or add folders to populate the deck."
+                                  : "Try a broader search term.",
                             );
                           }
 
-                          return Scrollbar(
-                            controller: _sourceScrollController,
-                            thumbVisibility: true,
-                            child: ListView.builder(
-                              controller: _sourceScrollController,
-                              primary: false,
-                              padding: const EdgeInsets.fromLTRB(8, 2, 8, 18),
-                              itemCount: filtered.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                return _buildSourceTile(context, filtered[index]);
-                              },
+                          return GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 180,
+                              mainAxisExtent: 64,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
                             ),
+                            itemCount: filtered.length,
+                            itemBuilder: (BuildContext context, int index) => _buildAppTile(context, filtered[index]),
                           );
                         },
                       ),
@@ -337,73 +319,75 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     );
   }
 
-  Widget _buildCategoriesSection(BuildContext context) {
+  Widget _buildCategoryBuckets(BuildContext context) {
     return StreamBuilder<List<AppCategory>>(
       stream: _categoriesController.stream,
       initialData: categories,
       builder: (BuildContext context, AsyncSnapshot<List<AppCategory>> snapshot) {
         final List<AppCategory> categoryItems = snapshot.data ?? categories;
-        final int totalApps = categoryItems.fold<int>(
-          0,
-          (int total, AppCategory category) => total + category.items.length,
-        );
+        final int totalApps = categoryItems.fold<int>(0, (int total, AppCategory c) => total + c.items.length);
 
-        return _buildSection(
+        return _buildPanel(
           context: context,
-          title: "Categories",
-          subtitle: "${categoryItems.length} groups - $totalApps apps",
-          trailing: IconButton(
-            onPressed: _addCategory,
-            icon: const Icon(Icons.add_rounded, size: 20),
-            tooltip: "Add Category",
-          ),
+          title: "TARGET BUCKETS",
+          subtitle: "${categoryItems.length} categories • $totalApps apps",
+          isLandingZone: true,
+          actions: <Widget>[
+            _buildDeckAction(context, "NEW BUCKET", Icons.add_rounded, _addCategory),
+          ],
           child: categoryItems.isEmpty
               ? _buildEmptyState(
                   context,
                   icon: Icons.dashboard_customize_outlined,
-                  title: "No categories yet",
-                  message: "Create one on the right, then start placing apps from Source.",
+                  title: "NO TARGETS",
+                  message: "Create your first category bucket here, then drag apps from the deck.",
                 )
-              : Scrollbar(
-                  controller: _categoriesScrollController,
-                  thumbVisibility: true,
-                  child: ListView.builder(
-                    controller: _categoriesScrollController,
-                    primary: false,
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 18),
-                    itemCount: categoryItems.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return _buildCategoryTile(
-                        context,
-                        categoryItems[index],
-                        index,
-                      );
-                    },
-                  ),
+              : ReorderableListView.builder(
+                  onReorder: _onCategoriesReorder,
+                  buildDefaultDragHandles: false,
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                  itemCount: categoryItems.length,
+                  itemBuilder: (BuildContext context, int index) =>
+                      _buildDropZoneTile(context, categoryItems[index], index),
                 ),
         );
       },
     );
   }
 
-  Widget _buildSection({
+  Widget _buildPanel({
     required BuildContext context,
     required String title,
     required String subtitle,
-    Widget? trailing,
+    required List<Widget> actions,
     required Widget child,
+    bool isLandingZone = false,
   }) {
     final ThemeData theme = Theme.of(context);
+    final Color onSurface = theme.colorScheme.onSurface;
+
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(12),
+        color: isLandingZone ? onSurface.withValues(alpha: 0.04) : onSurface.withValues(alpha: 0.02),
+        borderRadius: isLandingZone
+            ? const BorderRadius.only(topRight: Radius.circular(24), bottomRight: Radius.circular(24))
+            : const BorderRadius.only(topLeft: Radius.circular(24), bottomLeft: Radius.circular(24)),
+        border: isLandingZone
+            ? Border(
+                top: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15), width: 1.5),
+                right: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15), width: 1.5),
+                bottom: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15), width: 1.5),
+              )
+            : Border.all(
+                color: onSurface.withValues(alpha: 0.08),
+                width: 1.5,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+            padding: const EdgeInsets.fromLTRB(20, 18, 16, 18), // Gracious header spacing
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -412,25 +396,76 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
                     children: <Widget>[
                       Text(
                         title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 1.2,
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(subtitle, style: theme.textTheme.bodySmall),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: onSurface.withValues(alpha: 0.35),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                if (trailing != null) trailing,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    for (int i = 0; i < actions.length; i++) ...<Widget>[
+                      actions[i],
+                      if (i < actions.length - 1) const SizedBox(height: 6),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
-          Divider(
-            height: 1,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-          ),
+          Divider(height: 1, color: onSurface.withValues(alpha: 0.08)),
           Expanded(child: child),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDeckAction(BuildContext context, String label, IconData icon, VoidCallback? onPressed,
+      {bool isDanger = false}) {
+    final ThemeData theme = Theme.of(context);
+    final Color color = isDanger ? theme.colorScheme.error : theme.colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -459,167 +494,90 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     );
   }
 
-  Widget _buildSourceTile(BuildContext context, AppItem app) {
+  Widget _buildAppTile(BuildContext context, AppItem app) {
     final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        dense: true,
-        minVerticalPadding: 7,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        leading: RepaintBoundary(child: WindowsAppButton(path: app.path)),
-        title: Text(
-          app.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          app.path,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.78),
+    return Draggable<AppItem>(
+      data: app,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: primary, width: 2),
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: primary.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              SizedBox(width: 24, height: 24, child: WindowsAppButton(path: app.path)),
+              const SizedBox(width: 10),
+              Text(
+                app.name,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
         ),
-        trailing: _buildAddInButton(context, app),
       ),
+      child: _AppTileContent(app: app),
     );
   }
 
-  Widget _buildAddInButton(BuildContext context, AppItem app) {
-    final ThemeData theme = Theme.of(context);
-
-    return PopupMenuButton<int>(
-      enabled: categories.isNotEmpty,
-      tooltip: categories.isEmpty ? "Create a category first" : "Add to category",
-      position: PopupMenuPosition.under,
-      offset: const Offset(0, 6),
-      elevation: 10,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.96),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
-        ),
-      ),
-      constraints: const BoxConstraints(minWidth: 180, maxWidth: 240),
-      onSelected: (int categoryIndex) => _assignAppToCategory(app, categoryIndex),
-      itemBuilder: (BuildContext context) {
-        return List<PopupMenuEntry<int>>.generate(
-          categories.length,
-          (int index) => PopupMenuItem<int>(
-            value: index,
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  Icons.folder_open_rounded,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    categories[index].name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _buildDropZoneTile(BuildContext context, AppCategory category, int index) {
+    return DragTarget<AppItem>(
+      key: ValueKey<AppCategory>(category),
+      onWillAcceptWithDetails: (DragTargetDetails<AppItem> details) =>
+          !category.items.any((AppItem i) => i.path == details.data.path),
+      onAcceptWithDetails: (DragTargetDetails<AppItem> details) => _assignAppToCategory(details.data, index),
+      builder: (BuildContext context, List<AppItem?> candidateData, List<dynamic> rejectedData) {
+        final bool isHovered = candidateData.isNotEmpty;
+        return _BucketTile(
+          category: category,
+          index: index,
+          isDropTarget: isHovered,
+          onTap: () => _openCategoryEditor(index),
         );
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: categories.isEmpty
-              ? theme.colorScheme.surface.withValues(alpha: 0.22)
-              : theme.colorScheme.primary.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: categories.isEmpty
-                ? theme.colorScheme.outlineVariant.withValues(alpha: 0.2)
-                : theme.colorScheme.primary.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              categories.isEmpty ? Icons.lock_outline_rounded : Icons.add_rounded,
-              size: 14,
-              color: categories.isEmpty ? theme.disabledColor : theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              categories.isEmpty ? "No category" : "Add to",
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: categories.isEmpty ? theme.disabledColor : theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 16,
-              color: categories.isEmpty ? theme.disabledColor : theme.colorScheme.primary,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildCategoryTile(
-    BuildContext context,
-    AppCategory category,
-    int index,
-  ) {
+  InputDecoration _compactInputDecoration(
+    BuildContext context, {
+    required String hintText,
+    Widget? prefixIcon,
+    Widget? suffixIcon,
+  }) {
     final ThemeData theme = Theme.of(context);
-    final String subtitle = category.folderPath == null || category.folderPath!.isEmpty
-        ? "${category.items.length} apps - ${category.viewType == AppCategoryViewType.grid ? "Grid" : "List"}"
-        : "${category.items.length} apps - ${category.folderPath!}";
+    final Color onSurface = theme.colorScheme.onSurface;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.3)),
+      prefixIcon:
+          prefixIcon != null ? Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: prefixIcon) : null,
+      prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      suffixIcon: suffixIcon,
+      suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      filled: true,
+      fillColor: onSurface.withValues(alpha: 0.04),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: onSurface.withValues(alpha: 0.08), width: 1.5),
       ),
-      child: ListTile(
-        dense: true,
-        minVerticalPadding: 7,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        leading: Icon(
-          category.viewType == AppCategoryViewType.grid ? Icons.grid_view_rounded : Icons.view_agenda_rounded,
-          color: theme.colorScheme.primary,
-        ),
-        title: Text(
-          category.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall,
-        ),
-        onTap: () => _openCategoryEditor(index),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: onSurface.withValues(alpha: 0.08), width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
       ),
     );
   }
@@ -777,62 +735,204 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     required double opacity,
   }) {
     final ThemeData theme = Theme.of(context);
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: opacity),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.55, end: 1),
-      duration: const Duration(milliseconds: 950),
-      curve: Curves.easeInOut,
-      builder: (BuildContext context, double value, Widget? child) {
-        return Opacity(
-          opacity: 0.55 + (value * 0.3),
-          child: child,
-        );
-      },
-      onEnd: () {
-        if (mounted && _isSourceLoading) {
-          setState(() {});
-        }
-      },
-      child: Container(
-        width: width,
-        height: height,
+class _AppTileContent extends StatefulWidget {
+  const _AppTileContent({required this.app});
+  final AppItem app;
+
+  @override
+  State<_AppTileContent> createState() => _AppTileContentState();
+}
+
+class _AppTileContentState extends State<_AppTileContent> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.grab,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onSurface.withValues(alpha: opacity),
-          borderRadius: BorderRadius.circular(radius),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _isHovered
+                ? <Color>[
+                    primary.withValues(alpha: 0.08),
+                    primary.withValues(alpha: 0.15),
+                    primary.withValues(alpha: 0.20),
+                    primary.withValues(alpha: 0.20)
+                  ]
+                : <Color>[onSurface.withValues(alpha: 0.03), onSurface.withValues(alpha: 0.08)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _isHovered ? primary.withValues(alpha: 0.3) : onSurface.withValues(alpha: 0.08),
+            width: 1.5,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: RepaintBoundary(child: WindowsAppButton(path: widget.app.path)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.app.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _isHovered ? primary : onSurface,
+                      ),
+                    ),
+                    if (_isHovered)
+                      Text(
+                        widget.app.path,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 8, color: onSurface.withValues(alpha: 0.4)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  InputDecoration _compactInputDecoration(
-    BuildContext context, {
-    required String hintText,
-    Widget? prefixIcon,
-    Widget? suffixIcon,
-  }) {
+class _BucketTile extends StatefulWidget {
+  const _BucketTile({
+    required this.category,
+    required this.index,
+    required this.isDropTarget,
+    required this.onTap,
+  });
+
+  final AppCategory category;
+  final int index;
+  final bool isDropTarget;
+  final VoidCallback onTap;
+
+  @override
+  State<_BucketTile> createState() => _BucketTileState();
+}
+
+class _BucketTileState extends State<_BucketTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return InputDecoration(
-      hintText: hintText,
-      isDense: true,
-      filled: true,
-      fillColor: theme.colorScheme.surface.withValues(alpha: 0.34),
-      prefixIcon: prefixIcon,
-      suffixIcon: suffixIcon,
-      prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-      suffixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: theme.colorScheme.primary.withValues(alpha: 0.45),
+    final Color primary = theme.colorScheme.primary;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    final bool isFolderSync = widget.category.folderPath != null && widget.category.folderPath!.isNotEmpty;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: widget.isDropTarget
+                ? <Color>[primary.withValues(alpha: 0.15), primary.withValues(alpha: 0.3)]
+                : (_isHovered
+                    ? <Color>[
+                        primary.withValues(alpha: 0.08),
+                        primary.withValues(alpha: 0.15),
+                        primary.withValues(alpha: 0.20),
+                        primary.withValues(alpha: 0.20)
+                      ]
+                    : <Color>[onSurface.withValues(alpha: 0.03), onSurface.withValues(alpha: 0.08)]),
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color:
+                (widget.isDropTarget || _isHovered) ? primary.withValues(alpha: 0.4) : onSurface.withValues(alpha: 0.1),
+            width: 1.5,
+          ),
+          boxShadow: <BoxShadow>[
+            if (widget.isDropTarget) BoxShadow(color: primary.withValues(alpha: 0.2), blurRadius: 15, spreadRadius: 2)
+          ],
+        ),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: ReorderableDragStartListener(
+            index: widget.index,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.drag_indicator_rounded,
+                    size: 18,
+                    color: onSurface.withValues(alpha: 0.2),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          widget.category.name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: (widget.isDropTarget || _isHovered) ? primary : onSurface,
+                          ),
+                        ),
+                        Text(
+                          "${widget.category.items.length} items • ${widget.category.viewType.name.toUpperCase()}",
+                          style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.4)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isFolderSync)
+                    CustomTooltip(
+                      message: "Synced to: ${widget.category.folderPath}",
+                      child: Icon(Icons.link_rounded, size: 14, color: primary.withValues(alpha: 0.6)),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

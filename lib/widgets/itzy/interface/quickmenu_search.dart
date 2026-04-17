@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:filepicker_windows/filepicker_windows.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
@@ -15,6 +13,8 @@ class QuickmenuSearchSettings extends StatefulWidget {
 
 class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
   List<SearchFolder> _folders = <SearchFolder>[];
+  int? _editingIndex;
+  bool _isAdding = false;
 
   @override
   void initState() {
@@ -24,120 +24,158 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
 
   void _save() {
     Boxes.searchFolders = _folders;
-    Boxes.updateSettings("searchFolders", jsonEncode(_folders.map((SearchFolder e) => e.toMap()).toList()));
+    Boxes.updateSettings("searchFolders", _folders);
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _buildHeader(context),
-          const SizedBox(height: 8),
-          ReorderableListView.builder(
-            buildDefaultDragHandles: false,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-            itemCount: _folders.length,
-            onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                if (oldIndex < newIndex) newIndex -= 1;
-                final SearchFolder item = _folders.removeAt(oldIndex);
-                _folders.insert(newIndex, item);
-                _save();
-              });
-            },
-            proxyDecorator: (Widget child, int index, Animation<double> animation) {
-              return Material(
-                color: Colors.transparent,
-                child: child,
-              );
-            },
-            itemBuilder: (BuildContext context, int index) {
-              final SearchFolder folder = _folders[index];
-              return _SearchFolderTile(
-                key: ValueKey<String>("${folder.path}_$index"),
-                folder: folder,
-                index: index,
-                onTap: () => _showEditor(context, index),
-                onDelete: () => _confirmDelete(context, index),
-              );
-            },
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _buildHeader(context),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+            child: Column(
+              children: <Widget>[
+                if (_isAdding)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SearchFolderEditor(
+                      onSaved: (SearchFolder folder) {
+                        setState(() {
+                          _folders.add(folder);
+                          _isAdding = false;
+                          _save();
+                        });
+                      },
+                      onCancel: () => setState(() => _isAdding = false),
+                    ),
+                  ),
+                ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _folders.length,
+                  onReorder: (int oldIndex, int newIndex) {
+                    setState(() {
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      final SearchFolder item = _folders.removeAt(oldIndex);
+                      _folders.insert(newIndex, item);
+                      _save();
+                    });
+                  },
+                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: Opacity(opacity: 0.8, child: child),
+                    );
+                  },
+                  itemBuilder: (BuildContext context, int index) {
+                    final SearchFolder folder = _folders[index];
+                    final bool isEditing = _editingIndex == index;
+
+                    if (isEditing) {
+                      return Padding(
+                        key: ValueKey<String>("edit_${folder.path}_$index"),
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: SearchFolderEditor(
+                          initialFolder: folder,
+                          onSaved: (SearchFolder updated) {
+                            setState(() {
+                              _folders[index] = updated;
+                              _editingIndex = null;
+                              _save();
+                            });
+                          },
+                          onCancel: () => setState(() => _editingIndex = null),
+                        ),
+                      );
+                    }
+
+                    return _SearchFolderTile(
+                      key: ValueKey<String>("${folder.path}_$index"),
+                      folder: folder,
+                      index: index,
+                      isDimmed: _editingIndex != null || _isAdding,
+                      onTap: () => setState(() {
+                        _editingIndex = index;
+                        _isAdding = false;
+                      }),
+                      onDelete: () => _confirmDelete(context, index),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildHeader(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
-          Text(
-            "Search Folders",
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "SEARCH INDEX",
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -1,
+                  ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  "Prioritize folders for faster discovery",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: theme.hintColor.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
           ),
-          IconButton(
-            onPressed: () => _showEditor(context),
-            icon: const Icon(Icons.add_rounded),
-            tooltip: "Add Search Folder",
+          FilledButton.icon(
+            onPressed: () => setState(() {
+              _isAdding = true;
+              _editingIndex = null;
+            }),
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+            label: const Text("Add Source", style: TextStyle(fontWeight: FontWeight.w600)),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showEditor(BuildContext context, [int? index]) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: SearchFolderEditor(
-                key: UniqueKey(),
-                folderIndex: index,
-                onSaved: (SearchFolder folder) {
-                  setState(() {
-                    if (index != null) {
-                      _folders[index] = folder;
-                    } else {
-                      _folders.add(folder);
-                    }
-                    _save();
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
   void _confirmDelete(BuildContext context, int index) {
     final SearchFolder folder = _folders[index];
+    final ThemeData theme = Theme.of(context);
     showDialog<void>(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
-        title: const Text("Remove Search Folder"),
-        content: Text("Are you sure you want to stop searching in '${folder.path}'?"),
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Remove Search Source?"),
+        content: Text("Tabame will no longer index contents from:\n\n'${folder.path}'"),
         actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Keep it")),
           FilledButton(
             onPressed: () {
               setState(() {
@@ -146,8 +184,11 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
               });
               Navigator.pop(ctx);
             },
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text("Remove"),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Confirm Removal"),
           ),
         ],
       ),
@@ -158,6 +199,7 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
 class _SearchFolderTile extends StatefulWidget {
   final SearchFolder folder;
   final int index;
+  final bool isDimmed;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
@@ -165,6 +207,7 @@ class _SearchFolderTile extends StatefulWidget {
     required super.key,
     required this.folder,
     required this.index,
+    required this.isDimmed,
     required this.onTap,
     required this.onDelete,
   });
@@ -179,117 +222,111 @@ class _SearchFolderTileState extends State<_SearchFolderTile> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
+    final Color onSurface = theme.colorScheme.onSurface;
+    final Color primary = theme.colorScheme.primary;
 
-    return MouseRegion(
-      onEnter: (PointerEnterEvent _) => setState(() => _isHovered = true),
-      onExit: (PointerExitEvent _) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withAlpha(80),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: colorScheme.primary.withAlpha(_isHovered ? 60 : 20),
-            width: 1,
-          ),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(10),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: _isHovered ? colorScheme.primary.withAlpha(8) : Colors.transparent,
-              ),
-              child: Row(
-                children: <Widget>[
-                  // Drag Handle
-                  ReorderableDragStartListener(
-                    index: widget.index,
-                    child: Container(
-                      padding: const EdgeInsets.only(right: 12.0),
-                      child: Icon(Icons.drag_indicator_rounded, size: 20, color: colorScheme.onSurface.withAlpha(100)),
-                    ),
+    return Opacity(
+      opacity: widget.isDimmed ? 0.4 : 1.0,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 1.01 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            child: InkWell(
+              onTap: widget.isDimmed ? null : widget.onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _isHovered ? primary.withValues(alpha: 0.1) : onSurface.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isHovered ? primary.withValues(alpha: 0.3) : onSurface.withValues(alpha: 0.08),
+                    width: 1.5,
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.folder_rounded, color: colorScheme.primary, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          widget.folder.path,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: _isHovered ? colorScheme.primary : colorScheme.onSurface,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    // Order Badge / Drag Handle
+                    ReorderableDragStartListener(
+                      index: widget.index,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: _isHovered ? primary.withValues(alpha: 0.2) : onSurface.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            "${widget.index + 1}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: _isHovered ? primary : onSurface.withValues(alpha: 0.5),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Wrap(
-                          spacing: 8,
-                          children: <Widget>[
-                            _buildMiniTag(
-                              context,
-                              "${widget.folder.includeFolders ? 'Folders' : ''}${widget.folder.includeFolders && widget.folder.includeFiles ? ' & ' : ''}${widget.folder.includeFiles ? 'Files' : ''}",
-                              Icons.category_outlined,
-                            ),
-                            if (widget.folder.allowedExtensions.isNotEmpty)
-                              _buildMiniTag(
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            widget.folder.path,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: <Widget>[
+                              _buildTag(
                                 context,
-                                widget.folder.allowedExtensions.join(", "),
-                                Icons.extension_outlined,
+                                widget.folder.includeFiles && widget.folder.includeFolders
+                                    ? "Full"
+                                    : (widget.folder.includeFiles ? "Files Only" : "Folders Only"),
+                                Icons.category_rounded,
                               ),
-                            if (widget.folder.maxDepth != null)
-                              _buildMiniTag(
-                                context,
-                                "Depth: ${widget.folder.maxDepth}",
-                                Icons.unfold_more_rounded,
-                              ),
-                          ],
+                              if (widget.folder.allowedExtensions.isNotEmpty)
+                                _buildTag(
+                                  context,
+                                  widget.folder.allowedExtensions.join(", "),
+                                  Icons.extension_rounded,
+                                ),
+                              if (widget.folder.maxDepth != null)
+                                _buildTag(
+                                  context,
+                                  "Depth: ${widget.folder.maxDepth}",
+                                  Icons.unfold_more_rounded,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Actions
+                    if (_isHovered)
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: theme.colorScheme.error),
+                        onPressed: widget.onDelete,
+                        style: IconButton.styleFrom(
+                          backgroundColor: theme.colorScheme.error.withValues(alpha: 0.1),
                         ),
-                      ],
-                    ),
-                  ),
-                  // Hover Actions
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 150),
-                    opacity: _isHovered ? 1.0 : 0.0,
-                    child: IconButton(
-                      tooltip: "Remove",
-                      icon: Icon(Icons.delete_outline_rounded, size: 18, color: colorScheme.error.withAlpha(200)),
-                      onPressed: widget.onDelete,
-                      splashRadius: 20,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: _isHovered ? colorScheme.primary : colorScheme.onSurface.withAlpha(80),
-                  ),
-                ],
+                      )
+                    else
+                      Icon(Icons.chevron_right_rounded, color: onSurface.withValues(alpha: 0.2)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -298,30 +335,39 @@ class _SearchFolderTileState extends State<_SearchFolderTile> {
     );
   }
 
-  Widget _buildMiniTag(BuildContext context, String text, IconData icon) {
-    final Color color = Theme.of(context).colorScheme.onSurface.withAlpha(120);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color, fontSize: 11),
-        ),
-      ],
+  Widget _buildTag(BuildContext context, String label, IconData icon) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class SearchFolderEditor extends StatefulWidget {
-  final int? folderIndex;
+  final SearchFolder? initialFolder;
   final void Function(SearchFolder folder) onSaved;
+  final VoidCallback onCancel;
 
   const SearchFolderEditor({
     super.key,
-    this.folderIndex,
+    this.initialFolder,
     required this.onSaved,
+    required this.onCancel,
   });
 
   @override
@@ -329,206 +375,228 @@ class SearchFolderEditor extends StatefulWidget {
 }
 
 class _SearchFolderEditorState extends State<SearchFolderEditor> {
-  late SearchFolder folder;
-  late TextEditingController pathController;
-  late TextEditingController extensionsController;
-  late TextEditingController depthController;
+  late SearchFolder _folder;
+  late TextEditingController _pathController;
+  late TextEditingController _extensionsController;
+  late TextEditingController _depthController;
 
   @override
   void initState() {
     super.initState();
-    if (widget.folderIndex != null) {
-      folder = Boxes.searchFolders[widget.folderIndex!].copyWith();
-    } else {
-      folder = SearchFolder(path: "", includeFolders: true, includeFiles: true, allowedExtensions: <String>[]);
-    }
-    pathController = TextEditingController(text: folder.path);
-    extensionsController = TextEditingController(text: folder.allowedExtensions.join(", "));
-    depthController = TextEditingController(text: folder.maxDepth?.toString() ?? "");
+    _folder = widget.initialFolder?.copyWith() ??
+        SearchFolder(path: "", includeFolders: true, includeFiles: true, allowedExtensions: <String>[]);
+    _pathController = TextEditingController(text: _folder.path);
+    _extensionsController = TextEditingController(text: _folder.allowedExtensions.join(", "));
+    _depthController = TextEditingController(text: _folder.maxDepth?.toString() ?? "");
+  }
+
+  void _setExtensions(String extList) {
+    final String combined = "${_extensionsController.text},$extList";
+    final List<String> parts = combined
+        .split(",")
+        .map((String e) => e.trim().replaceAll(" ", ""))
+        .where((String e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+
+    _extensionsController.text = parts.join(",");
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _buildHeader(theme),
-        const SizedBox(height: 24),
-        _buildPathInput(theme),
-        const SizedBox(height: 16),
-        _buildIncludeSwitches(theme),
-        const SizedBox(height: 16),
-        _buildExtensionsInput(theme),
-        const SizedBox(height: 16),
-        _buildDepthInput(theme),
-        const SizedBox(height: 32),
-        _buildActionButtons(theme),
-      ],
-    );
-  }
-
-  Widget _buildHeader(ThemeData theme) {
-    return Row(
-      children: <Widget>[
-        Icon(Icons.create_new_folder_outlined, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Text(
-          widget.folderIndex != null ? "Edit Folder" : "Add Folder",
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPathInput(ThemeData theme) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: TextField(
-            controller: pathController,
-            decoration: InputDecoration(
-              labelText: "Folder Path",
-              hintText: "C:\\Users\\...",
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-              ),
-              prefixIcon: const Icon(Icons.folder_outlined),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filledTonal(
-          onPressed: () {
-            final DirectoryPicker picker = DirectoryPicker()..title = "Select Search Folder";
-            final Directory? result = picker.getDirectory();
-            if (result != null) {
-              setState(() => pathController.text = result.path);
-            }
-          },
-          icon: const Icon(Icons.folder_open_rounded),
-          tooltip: "Browse",
-          style: IconButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            minimumSize: const Size(56, 56),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIncludeSwitches(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
-        borderRadius: BorderRadius.circular(12),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primary.withValues(alpha: 0.5), width: 2),
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: primary.withValues(alpha: 0.1), blurRadius: 20, spreadRadius: 2),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          SwitchListTile(
-            title: const Text("Include Subfolders"),
-            secondary: const Icon(Icons.folder_shared_outlined),
-            value: folder.includeFolders,
-            onChanged: (bool v) => setState(() => folder = folder.copyWith(includeFolders: v)),
+          Text(
+            widget.initialFolder == null ? "ADD SEARCH SOURCE" : "EDIT SEARCH SOURCE",
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.5),
           ),
-          const Divider(height: 1),
-          SwitchListTile(
-            title: const Text("Include Files"),
-            secondary: const Icon(Icons.description_outlined),
-            value: folder.includeFiles,
-            onChanged: (bool v) => setState(() => folder = folder.copyWith(includeFiles: v)),
+          const SizedBox(height: 16),
+          // Path
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _pathController,
+                  decoration: InputDecoration(
+                    labelText: "Folder Path",
+                    filled: true,
+                    fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.folder_open_rounded, size: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton.filledTonal(
+                onPressed: () {
+                  final DirectoryPicker picker = DirectoryPicker()..title = "Select Source Folder";
+                  final Directory? result = picker.getDirectory();
+                  if (result != null) setState(() => _pathController.text = result.path);
+                },
+                icon: const Icon(Icons.add_home_work_rounded),
+                style: IconButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(54, 54),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Switches
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildToggle(
+                  "Include Files",
+                  Icons.description_rounded,
+                  _folder.includeFiles,
+                  (bool v) => setState(() => _folder = _folder.copyWith(includeFiles: v)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildToggle(
+                  "Include Folders",
+                  Icons.folder_shared_rounded,
+                  _folder.includeFolders,
+                  (bool v) => setState(() => _folder = _folder.copyWith(includeFolders: v)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Extensions
+          TextField(
+            controller: _extensionsController,
+            decoration: InputDecoration(
+              labelText: "File Extensions (comma separated)",
+              hintText: ".exe, .lnk, .dart",
+              filled: true,
+              fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              prefixIcon: const Icon(Icons.extension_rounded, size: 18),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Presets
+          Wrap(
+            spacing: 8,
+            children: <Widget>[
+              _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif"),
+              _presetChip("⚙️ Apps", ".exe,.msi,.bat,.ps1,.lnk"),
+              _presetChip("📄 Docs", ".pdf,.docx,.txt,.md,.rtf"),
+              _presetChip("🎬 Video", ".mp4,.mkv,.avi,.mov"),
+              _presetChip("💻 Code", ".dart,.js,.py,.cpp,.html"),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Depth
+          TextField(
+            controller: _depthController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: "Search Depth (Empty = Recursive)",
+              hintText: "1 = This folder only",
+              filled: true,
+              fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              prefixIcon: const Icon(Icons.layers_rounded, size: 18),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Footer
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TextButton(onPressed: widget.onCancel, child: const Text("Discard")),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: () {
+                  if (_pathController.text.isEmpty) return;
+                  final List<String> exts = _extensionsController.text
+                      .split(",")
+                      .map((String e) => e.trim())
+                      .where((String e) => e.isNotEmpty)
+                      .toList();
+                  widget.onSaved(_folder.copyWith(
+                    path: _pathController.text,
+                    allowedExtensions: exts,
+                    maxDepth: int.tryParse(_depthController.text),
+                  ));
+                },
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text("Save Priority Source", style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExtensionsInput(ThemeData theme) {
-    return TextField(
-      controller: extensionsController,
-      decoration: InputDecoration(
-        labelText: "File Extensions",
-        hintText: ".exe, .lnk (leave empty for all)",
-        helperText: "Comma separated list with dots",
-        filled: true,
-        fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-        ),
-        prefixIcon: const Icon(Icons.extension_rounded),
-      ),
+  Widget _presetChip(String label, String exts) {
+    return ActionChip(
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      onPressed: () => _setExtensions(exts),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
     );
   }
 
-  Widget _buildDepthInput(ThemeData theme) {
-    return TextField(
-      controller: depthController,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: "Search Depth",
-        hintText: "Empty for recursive",
-        helperText: "1 = this folder only, 2 = one subfolder level",
-        filled: true,
-        fillColor: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
-        border: OutlineInputBorder(
+  Widget _buildToggle(String label, IconData icon, bool value, Function(bool) onChanged) {
+    final ThemeData theme = Theme.of(context);
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: value
+              ? theme.colorScheme.primary.withValues(alpha: 0.15)
+              : theme.colorScheme.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-        ),
-        prefixIcon: const Icon(Icons.layers_outlined),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton.icon(
-          onPressed: () {
-            if (pathController.text.isEmpty) return;
-            final List<String> exts = extensionsController.text
-                .split(",")
-                .map((String e) => e.trim())
-                .where((String e) => e.isNotEmpty)
-                .toList();
-            widget.onSaved(folder.copyWith(
-              path: pathController.text,
-              allowedExtensions: exts,
-              maxDepth: int.tryParse(depthController.text),
-            ));
-          },
-          icon: const Icon(Icons.check_rounded),
-          label: Text(widget.folderIndex != null ? "Save Changes" : "Add Folder"),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          border: Border.all(
+            color: value ? theme.colorScheme.primary.withValues(alpha: 0.5) : Colors.transparent,
           ),
         ),
-      ],
+        child: Row(
+          children: <Widget>[
+            Icon(icon,
+                size: 16,
+                color: value ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: value ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
+            if (value) Icon(Icons.check_circle_rounded, size: 14, color: theme.colorScheme.primary),
+          ],
+        ),
+      ),
     );
   }
 }

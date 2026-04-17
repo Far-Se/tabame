@@ -6,23 +6,16 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class CustomCharsButton extends StatelessWidget {
   const CustomCharsButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Custom Chars",
-      icon: const Icon(Icons.format_quote),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const CustomCharsPanel(),
-      ),
-    );
+    return const ModalButton(actionName: "Custom Chars", icon: Icon(Icons.format_quote), child: CustomCharsPanel());
   }
 }
 
@@ -298,6 +291,7 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
   final TextEditingController searchController = TextEditingController();
   List<String> savedChars = <String>[];
   List<String> disabledSets = <String>[];
+  final Set<String> expandedSets = <String>{};
 
   @override
   void initState() {
@@ -367,6 +361,8 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
       savedChars.add(textField.text);
       Boxes.pref.setStringList("savedChars", savedChars);
       textField.clear();
+      // Auto expand saved if it was folded
+      expandedSets.add("Saved");
     });
   }
 
@@ -406,29 +402,59 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
                   if (searchController.text.isEmpty) ...<Widget>[
                     _buildInputSection(accent, onSurface),
                     if (savedChars.isNotEmpty) ...<Widget>[
-                      _buildSectionHeader("Saved", accent),
-                      _buildGrid(savedChars, accent, onSurface, isSaved: true),
+                      _buildSectionHeader(
+                        "Saved",
+                        accent,
+                        canExpand: true,
+                        isExpanded: expandedSets.contains("Saved"),
+                        onExpand: () => setState(() {
+                          if (!expandedSets.add("Saved")) expandedSets.remove("Saved");
+                        }),
+                      ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.topCenter,
+                        child: expandedSets.contains("Saved")
+                            ? _buildGrid(savedChars, accent, onSurface, isSaved: true)
+                            : const SizedBox(width: double.infinity),
+                      ),
                     ],
                     ...customChars.entries
                         .where((MapEntry<String, List<String>> entry) => !disabledSets.contains(entry.key))
                         .map(
-                          (MapEntry<String, List<String>> entry) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              _buildSectionHeader(
-                                entry.key,
-                                accent,
-                                onToggle: () {
-                                  setState(() {
-                                    disabledSets.add(entry.key);
-                                    Boxes.pref.setStringList("disabledSets", disabledSets);
-                                  });
-                                },
-                              ),
-                              _buildGrid(entry.value, accent, onSurface),
-                            ],
-                          ),
-                        ),
+                      (MapEntry<String, List<String>> entry) {
+                        final bool isExpanded = expandedSets.contains(entry.key);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _buildSectionHeader(
+                              entry.key,
+                              accent,
+                              canExpand: true,
+                              isExpanded: isExpanded,
+                              onExpand: () => setState(() {
+                                if (!expandedSets.add(entry.key)) expandedSets.remove(entry.key);
+                              }),
+                              onToggle: () {
+                                setState(() {
+                                  disabledSets.add(entry.key);
+                                  Boxes.pref.setStringList("disabledSets", disabledSets);
+                                });
+                              },
+                            ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              alignment: Alignment.topCenter,
+                              child: isExpanded
+                                  ? _buildGrid(entry.value, accent, onSurface)
+                                  : const SizedBox(width: double.infinity),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ] else ...<Widget>[
                     if (searchController.text.length == 1)
                       Column(
@@ -596,25 +622,45 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
     );
   }
 
-  Widget _buildSectionHeader(String title, Color accent, {VoidCallback? onToggle}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-      child: Row(
-        children: <Widget>[
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          if (onToggle != null)
-            IconButton(
-              onPressed: onToggle,
-              icon: const Icon(Icons.visibility_off_outlined, size: 14),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-              tooltip: "Hide set",
+  Widget _buildSectionHeader(
+    String title,
+    Color accent, {
+    VoidCallback? onToggle,
+    bool canExpand = false,
+    bool isExpanded = false,
+    VoidCallback? onExpand,
+  }) {
+    return InkWell(
+      onTap: canExpand ? onExpand : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+        child: Row(
+          children: <Widget>[
+            if (canExpand)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: AnimatedRotation(
+                  turns: isExpanded ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.chevron_right_rounded, size: 14, color: accent),
+                ),
+              ),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
-        ],
+            const Spacer(),
+            if (onToggle != null)
+              IconButton(
+                onPressed: onToggle,
+                icon: const Icon(Icons.visibility_off_outlined, size: 14),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                tooltip: "Hide set",
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -714,7 +760,7 @@ class _CharTileState extends State<_CharTile> {
     );
 
     if (widget.tooltip != null) {
-      tile = Tooltip(
+      tile = CustomTooltip(
         message: widget.tooltip!,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHigh,

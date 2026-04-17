@@ -42,6 +42,38 @@ Follow this split:
 - Prefer `StatelessWidget` for the launcher unless the button itself owns transient state.
 - Use `showQuickMenuModal()` for most buttons. Pass `maxWidth` or `heightFactor` only when the interaction clearly needs it, like timezone.
 
+## Global Registration
+
+Every new quick menu button **must** be registered in two global files to enable hotkey mapping and action discovery:
+
+### 1. Register for Hotkeys
+Add your unique page key (e.g., `"Example"`) to the `quickMenuPages` list in `lib/models/classes/hotkeys.dart`:
+
+```dart
+static const List<String> quickMenuPages = <String>[
+  ...
+  "Example", // Add here
+];
+```
+
+### 2. Register for Action Map
+Import your launcher button and add an entry to the `quickActionsMap` in `lib/models/util/quick_action_list.dart`:
+
+```dart
+// 1. Add import at the top
+import '../../widgets/itzy/quickmenu/button_example.dart';
+
+// 2. Add to quickActionsMap
+final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
+  ...
+  "ExampleButton": QuickAction(
+    name: "ExampleButton",
+    icon: Icons.extension_rounded,
+    widget: const ExampleButton(),
+  ),
+};
+```
+
 ## Panel Structure
 
 Build the panel as a vertical layout with a strong header and one flexible content area:
@@ -180,6 +212,9 @@ Before finishing a new quick menu button:
 8. Confirm empty, loading, and error states exist where relevant.
 9. Confirm the panel closes the quick menu after external execution if that matches the feature type.
 10. Confirm the result still feels like a desktop utility tool, not a generic mobile card stack.
+11. Confirm the page key is added to `quickMenuPages` in `lib/models/classes/hotkeys.dart`.
+12. Confirm the button is added to `quickActionsMap` in `lib/models/util/quick_action_list.dart`.
+
 
 ## Practical Defaults
 

@@ -59,14 +59,19 @@ class _TimeWidgetState extends State<TimeWidget> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text((snapshot.data as Map<String, String>)["time"] as String,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
-                  Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 60, maxWidth: 100),
+                    child: Text((snapshot.data as Map<String, String>)["time"] as String,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
+                  ),
+                  Container(
+                      constraints: const BoxConstraints(minWidth: 60, maxWidth: 100),
+                      child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
                 ],
               ),
             ),
@@ -75,7 +80,6 @@ class _TimeWidgetState extends State<TimeWidget> {
         return Padding(
           padding: const EdgeInsets.only(left: 2),
           child: Container(
-            width: 60,
             child: InkWell(
               onTap: () {
                 globalSettings.noopKeyListener = true;

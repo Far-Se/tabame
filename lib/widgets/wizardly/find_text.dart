@@ -10,6 +10,7 @@ import '../../models/win32/win32.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/popup_dialog.dart';
 import '../widgets/text_input.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class SearchTextWidget extends StatefulWidget {
   const SearchTextWidget({super.key});
@@ -101,7 +102,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                       ],
                     ),
                   ),
-                  if (infoText.isNotEmpty) _buildStatPill("Status", infoText, Icons.info_outline_rounded, accent, onSurface),
+                  if (infoText.isNotEmpty)
+                    _buildStatPill("Status", infoText, Icons.info_outline_rounded, accent, onSurface),
                 ],
               ),
             ),
@@ -109,7 +111,9 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
 
           // Results Content
           if (searchState == 1 && groupedResults.isEmpty)
-            const SliverFillRemaining(hasScrollBody: false, child: Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())))
+            const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())))
           else if (searchFinished && groupedResults.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -160,7 +164,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                               right: BorderSide(color: onSurface.withValues(alpha: 0.08)),
                               bottom: isLast ? BorderSide(color: onSurface.withValues(alpha: 0.08)) : BorderSide.none,
                             ),
-                            borderRadius: isLast ? const BorderRadius.vertical(bottom: Radius.circular(14)) : BorderRadius.zero,
+                            borderRadius:
+                                isLast ? const BorderRadius.vertical(bottom: Radius.circular(14)) : BorderRadius.zero,
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           child: _FileResultCard(
@@ -212,7 +217,9 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                         children: <Widget>[
                           const Text("Source Directory", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           Text(
-                            searchFolder.isEmpty ? "Pick a folder to search within" : searchFolder.truncate(70, suffix: "..."),
+                            searchFolder.isEmpty
+                                ? "Pick a folder to search within"
+                                : searchFolder.truncate(70, suffix: "..."),
                             style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -235,9 +242,11 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
               elevation: 0,
             ),
             icon: isSearching
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.search_rounded, size: 20),
-            label: Text(isSearching ? "CANCEL" : "SEARCH", style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+            label: Text(isSearching ? "CANCEL" : "SEARCH",
+                style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.8)),
           ),
         ],
       ),
@@ -257,9 +266,18 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
         runSpacing: 4,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          CheckBoxWidget(text: "Subfolders", value: searchRecursively, onChanged: (bool v) => setState(() => searchRecursively = v)),
-          CheckBoxWidget(text: "Case Sensitive", value: searchCaseSensitive, onChanged: (bool v) => setState(() => searchCaseSensitive = v)),
-          CheckBoxWidget(text: "Whole Word", value: searchMatchWholeWordOnly, onChanged: (bool v) => setState(() => searchMatchWholeWordOnly = v)),
+          CheckBoxWidget(
+              text: "Subfolders",
+              value: searchRecursively,
+              onChanged: (bool v) => setState(() => searchRecursively = v)),
+          CheckBoxWidget(
+              text: "Case Sensitive",
+              value: searchCaseSensitive,
+              onChanged: (bool v) => setState(() => searchCaseSensitive = v)),
+          CheckBoxWidget(
+              text: "Whole Word",
+              value: searchMatchWholeWordOnly,
+              onChanged: (bool v) => setState(() => searchMatchWholeWordOnly = v)),
           CheckBoxWidget(
             text: "Open in VSCode",
             value: openInCode,
@@ -296,10 +314,14 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                   ],
                 ),
               ),
-              CheckBoxWidget(text: "Use Regex", value: searchUseRegex, onChanged: (bool v) => setState(() => searchUseRegex = v)),
+              CheckBoxWidget(
+                  text: "Use Regex", value: searchUseRegex, onChanged: (bool v) => setState(() => searchUseRegex = v)),
               if (searchUseRegex) ...<Widget>[
                 const SizedBox(width: 12),
-                CheckBoxWidget(text: "Dot Match All", value: searchRegexNewLine, onChanged: (bool v) => setState(() => searchRegexNewLine = v)),
+                CheckBoxWidget(
+                    text: "Dot Match All",
+                    value: searchRegexNewLine,
+                    onChanged: (bool v) => setState(() => searchRegexNewLine = v)),
               ],
             ],
           ),
@@ -521,7 +543,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
       return;
     }
 
-    Stream<FileSystemEntity> stream = Directory(searchFolder).list(recursive: searchRecursively, followLinks: false).handleError((dynamic e) => null);
+    Stream<FileSystemEntity> stream =
+        Directory(searchFolder).list(recursive: searchRecursively, followLinks: false).handleError((dynamic e) => null);
 
     await for (FileSystemEntity entity in stream) {
       if (entity is File) {
@@ -594,21 +617,25 @@ class _FileResultCardState extends State<_FileResultCard> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: <Widget>[
-                  Icon(_isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded, color: onSurface.withValues(alpha: 0.4)),
+                  Icon(_isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                      color: onSurface.withValues(alpha: 0.4)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(fileName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        Text(parentDir.truncate(80, suffix: "..."), style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5))),
+                        Text(parentDir.truncate(80, suffix: "..."),
+                            style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5))),
                       ],
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: widget.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Text("${widget.matches.length} matches", style: TextStyle(color: widget.accent, fontSize: 10, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(
+                        color: widget.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                    child: Text("${widget.matches.length} matches",
+                        style: TextStyle(color: widget.accent, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 8),
                   _buildTinyIconButton(
@@ -646,9 +673,16 @@ class _FileResultCardState extends State<_FileResultCard> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Text("LINE ${o.line}", style: TextStyle(fontSize: 9, color: widget.accent, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                Text("LINE ${o.line}",
+                    style:
+                        TextStyle(fontSize: 9, color: widget.accent, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 const SizedBox(width: 8),
-                Text("COL ${o.col}", style: TextStyle(fontSize: 9, color: onSurface.withValues(alpha: 0.4), fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                Text("COL ${o.col}",
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: onSurface.withValues(alpha: 0.4),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
               ],
             ),
             const SizedBox(height: 6),
@@ -679,7 +713,7 @@ class _FileResultCardState extends State<_FileResultCard> {
     required VoidCallback onTap,
   }) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Tooltip(
+    return CustomTooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,

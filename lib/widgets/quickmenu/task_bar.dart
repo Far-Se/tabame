@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +13,10 @@ import '../../models/win32/win32.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../models/win32/keys.dart';
 import '../../models/globals.dart';
+import '../../models/util/quickmenu_modal.dart';
 import '../widgets/zoomed_button.dart';
+import 'context_menu.dart';
+import 'quick_grid_picker.dart';
 
 // --- CONSTANTS ---
 const double kTaskBarItemHeight = 26.4;
@@ -411,79 +413,98 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine width for action buttons (play, close, etc.)
-    double hoverButtonsWidth = 25;
-    final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
-    final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
-
-    if (globalSettings.showMediaControlForApp) {
-      if (hasMediaControls || isAudioSource) {
-        hoverButtonsWidth = 50;
-      }
-    }
-
-    return SizedBox(
-      width: kTaskBarWidth,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: Stack(
-          children: <Widget>[
-            // Background & Main Interaction
-            Container(
-              width: kTaskBarWidth,
-              decoration: BoxDecoration(
-                color: (widget.isSelected || _isHovered) ? _hoverColor : Colors.transparent,
-                border: widget.isSelected
-                    ? Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2))
-                    : null,
-              ),
-              child: _buildMainContent(),
-            ),
-
-            // Hover Action Buttons (Right side)
-            if (_isHovered)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                width: hoverButtonsWidth,
-                child: _buildHoverActions(hoverButtonsWidth, hasMediaControls, isAudioSource),
-              ),
-          ],
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        height: kTaskBarItemHeight,
+        decoration: BoxDecoration(
+          color: (widget.isSelected || _isHovered) ? _hoverColor : Colors.transparent,
+          border: widget.isSelected
+              ? Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2))
+              : null,
         ),
+        child: _buildMainContent(),
       ),
     );
   }
 
   Widget _buildMainContent() {
+    final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
+    final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
+
     return GestureDetector(
       onTap: _activateWindow,
       onVerticalDragEnd: (_) => _activateWindow(),
       onSecondaryTapUp: (TapUpDetails details) => _showContextMenu(context),
+      onTertiaryTapUp: (_) => _showZonesPicker(context),
       onLongPress: () => Win32.forceActivateWindow(widget.window.hWnd),
       onHorizontalDragUpdate: (DragUpdateDetails details) => _dragMovement += details.delta.dx,
       onHorizontalDragEnd: _handleHorizontalDragEnd,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3.0),
-        child: Wrap(
-          spacing: 0,
-          clipBehavior: Clip.hardEdge,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Row(
           children: <Widget>[
-            const SizedBox(width: 5),
-            _buildIcon(),
-            _buildStatusIndicators(),
-            _buildTitle(),
+            SizedBox(
+              width: 25,
+              height: kTaskBarItemHeight,
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: <Widget>[
+                  _buildIcon(),
+                  Positioned(
+                    left: 18,
+                    bottom: 3,
+                    child: _buildStatusIndicators(),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildTitle()),
+            if (_isHovered) ...<Widget>[
+              if (globalSettings.showMediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
+              _buildCloseButton(),
+            ],
           ],
         ),
       ),
     );
   }
 
+  Widget _buildMediaButton() {
+    return InkWell(
+      hoverColor: _hoverColor,
+      onTap: () => WindowWatcher.mediaControl(widget.index),
+      child: GestureDetector(
+        onSecondaryTap: () => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaNexttrack),
+        onTertiaryTapUp: (_) => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaPrevioustrack),
+        child: const SizedBox(
+          width: kMediaButtonWidth,
+          height: kTaskBarItemHeight,
+          child: Icon(Icons.play_arrow_rounded, size: 18),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCloseButton() {
+    return InkWell(
+      hoverColor: _hoverColor,
+      onTap: () => widget.onClose(widget.index, widget.window),
+      onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true),
+      child: const SizedBox(
+        width: kMediaButtonWidth,
+        height: kTaskBarItemHeight,
+        child: Icon(Icons.close_rounded, size: 18),
+      ),
+    );
+  }
+
   Widget _buildIcon() {
-    final String customIconPath = Globals.getIconRewrite(widget.window.process.exePath, window: widget.window);
+    final String customIconPath = Boxes.getIconRewrite(widget.window.process.exePath, window: widget.window);
 
     if (customIconPath != "") {
-      return Image.file(File(customIconPath), width: 20);
+      return Image.file(File(customIconPath), width: 20, height: 20);
     }
 
     if (WindowWatcher.icons.containsKey(widget.window.hWnd)) {
@@ -508,25 +529,13 @@ class _TaskBarItemState extends State<TaskBarItem> {
         Caches.audioMixer.contains(widget.window.process.mainPID) ||
         Caches.audioMixerExes.contains(widget.window.process.exe);
 
-    return Transform.translate(
-      offset: const Offset(0, 0),
-      child: SizedBox(
-        width: 5,
-        child: Column(
-          verticalDirection: VerticalDirection.down,
-          children: <Widget>[
-            const SizedBox(height: 2),
-            const Text("", style: TextStyle(fontSize: 8, height: 1)), // Monitor indicator placeholder
-            SizedBox(
-              width: 10,
-              height: 10,
-              child: isPinned
-                  ? const Icon(Icons.bookmark, size: 8, color: Colors.grey)
-                  : (isActiveAudio ? _buildMuteButton() : const SizedBox()),
-            )
-          ],
-        ),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        if (isActiveAudio) _buildMuteButton(),
+        if (isPinned) const Icon(Icons.push_pin_rounded, size: 8, color: Colors.grey),
+      ],
     );
   }
 
@@ -549,51 +558,16 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildTitle() {
-    // Calculate available width based on hover state
-    double maxWidth = _isHovered ? 215 : 240; // Approx logic from original
-
-    return SizedBox(
-      width: maxWidth,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Text(
-          widget.window.title,
-          overflow: TextOverflow.fade,
-          maxLines: 1,
-          softWrap: false,
-          style: TextStyle(fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHoverActions(double width, bool hasMedia, bool isAudio) {
-    return Container(
-      constraints: BoxConstraints(minWidth: width, maxWidth: width, minHeight: kTaskBarItemHeight),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Wrap(
-          children: <Widget>[
-            if (globalSettings.showMediaControlForApp && (hasMedia || isAudio))
-              InkWell(
-                hoverColor: _hoverColor,
-                onTap: () => WindowWatcher.mediaControl(widget.index),
-                child: GestureDetector(
-                  onSecondaryTap: () => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaNexttrack),
-                  onTertiaryTapUp: (_) =>
-                      WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaPrevioustrack),
-                  child: const SizedBox(
-                      width: kMediaButtonWidth, height: kTaskBarItemHeight, child: Icon(Icons.play_arrow, size: 15)),
-                ),
-              ),
-            InkWell(
-              hoverColor: _hoverColor,
-              onTap: () => widget.onClose(widget.index, widget.window),
-              onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true),
-              child: const SizedBox(
-                  width: kMediaButtonWidth, height: kTaskBarItemHeight, child: Icon(Icons.close, size: 15)),
-            ),
-          ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        widget.window.title,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400,
+          fontSize: 13,
         ),
       ),
     );
@@ -622,314 +596,18 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   void _showContextMenu(BuildContext context) {
-    showModalBottomSheet<void>(
+    showQuickMenuModal(
       context: context,
-      anchorPoint: const Offset(100, 200),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.transparent,
-      constraints: const BoxConstraints(maxWidth: 280),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      enableDrag: true,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: FractionallySizedBox(
-            heightFactor: 0.85,
-            child: ContextMenuWidget(hWnd: widget.window.hWnd),
-          ),
-        );
-      },
+      maxWidth: 450,
+      child: ContextMenuWidget(hWnd: widget.window.hWnd),
+    );
+  }
+
+  void _showZonesPicker(BuildContext context) {
+    showQuickMenuModal(
+      context: context,
+      maxWidth: 450,
+      child: QuickGridsPicker(hWnd: widget.window.hWnd),
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// SEPARATE WIDGET: CONTEXT MENU
-// -----------------------------------------------------------------------------
-
-class ContextMenuWidget extends StatefulWidget {
-  final int hWnd;
-  const ContextMenuWidget({super.key, required this.hWnd});
-
-  @override
-  ContextMenuWidgetState createState() => ContextMenuWidgetState();
-}
-
-class ContextMenuWidgetState extends State<ContextMenuWidget> {
-  late Window window;
-
-  @override
-  void initState() {
-    super.initState();
-    window = Window(widget.hWnd);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-
-    return Material(
-      type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Container(
-          height: double.infinity,
-          width: 280,
-          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 350),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            gradient: LinearGradient(
-              colors: <Color>[
-                theme.colorScheme.surface,
-                theme.colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
-                theme.colorScheme.surface,
-              ],
-              stops: const <double>[0, 0.4, 1],
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(color: Colors.black26, offset: Offset(3, 5), blurStyle: BlurStyle.inner),
-            ],
-            color: theme.colorScheme.surface,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SizedBox(
-              height: 350,
-              child: Theme(
-                data: theme.copyWith(
-                  hoverColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _buildHeader(),
-                      const Divider(height: 10, thickness: 1),
-                      _buildActions(context),
-                      const Divider(height: 10, thickness: 1),
-                      Expanded(child: _buildFooter(context)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          width: 30,
-          child: WindowWatcher.icons[window.hWnd] != null
-              ? Image.memory(WindowWatcher.icons[window.hWnd]!, width: 20, height: 20, gaplessPlayback: true)
-              : const Icon(Icons.web_asset_sharp, size: 20),
-        ),
-        Expanded(
-          child: Text(
-            window.title,
-            maxLines: 1,
-            overflow: TextOverflow.fade,
-            softWrap: false,
-            style: TextStyle(
-              fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400,
-              fontSize: 16,
-              height: 1,
-            ),
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildActions(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _ContextMenuItem(
-                icon: Icons.keyboard_double_arrow_left,
-                label: "Left Desktop",
-                onTap: () async {
-                  await QuickMenuFunctions.toggleQuickMenu(visible: false);
-                  Future<void>.delayed(const Duration(milliseconds: 200),
-                      () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false));
-                },
-              ),
-            ),
-            Expanded(
-              child: _ContextMenuItem(
-                icon: Icons.keyboard_double_arrow_right,
-                label: "Right Desktop",
-                isRightAligned: true,
-                onTap: () async {
-                  await QuickMenuFunctions.toggleQuickMenu(visible: false);
-                  Future<void>.delayed(const Duration(milliseconds: 200),
-                      () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false));
-                },
-              ),
-            ),
-          ],
-        ),
-        _ContextMenuItem(
-          icon: Icons.pin_end_outlined,
-          label: window.isPinned ? "Unpin" : 'Set Always on Top',
-          onTap: () {
-            Win32.setAlwaysOnTop(window.hWnd);
-            Navigator.pop(context);
-          },
-        ),
-        _ContextMenuItem(
-          icon: Icons.volume_up_outlined,
-          label: "(Un)Mute",
-          onTap: () async {
-            // Reusing the mute logic
-            final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
-            if (mixers != null) {
-              for (ProcessVolume m in mixers) {
-                if (m.processPath == window.process.exePath) {
-                  Audio.setAudioMixerVolume(m.processId, m.maxVolume < 0.01 ? 1 : 0.001);
-                }
-              }
-            }
-          },
-        ),
-        _ContextMenuItem(
-          icon: Icons.highlight_off,
-          label: "Force Close",
-          onTap: () {
-            Win32.forceCloseWindowbyProcess(window.process.pId);
-            Navigator.pop(context);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFooter(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text("  Hook window with:", style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 5),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: WindowWatcher.list.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final Window win = WindowWatcher.list.elementAt(index);
-                    if (win.hWnd == widget.hWnd) return const SizedBox();
-
-                    final bool isHooked = (globalSettings.hookedWins[widget.hWnd] ?? <int>[]).contains(win.hWnd);
-
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          globalSettings.hookedWins[widget.hWnd] ??= <int>[];
-                          globalSettings.hookedWins[widget.hWnd]!.toggle(win.hWnd);
-                          if (globalSettings.hookedWins[widget.hWnd]!.isEmpty) {
-                            globalSettings.hookedWins.remove(widget.hWnd);
-                          }
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: <Widget>[
-                            SizedBox(
-                              width: 25,
-                              child: ((WindowWatcher.icons.containsKey(win.hWnd))
-                                  ? Image.memory(
-                                      WindowWatcher.icons[win.hWnd] ?? Uint8List(0),
-                                      width: 16,
-                                      height: 16,
-                                      gaplessPlayback: true,
-                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                          const Icon(
-                                        Icons.check_box_outline_blank,
-                                        size: 16,
-                                      ),
-                                    )
-                                  : const Icon(Icons.web_asset_sharp, size: 20)),
-                            ), // Simplification for brevity
-                            Expanded(child: Text(win.title, maxLines: 1, overflow: TextOverflow.fade)),
-                            if (isHooked) const Icon(Icons.phishing, size: 16),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// Helper Widget for Context Menu Items
-class _ContextMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isRightAligned;
-
-  const _ContextMenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isRightAligned = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color? iconColor = theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6);
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: isRightAligned
-              ? <Widget>[
-                  Expanded(child: Text(label, style: theme.textTheme.labelLarge?.copyWith(height: 1))),
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: Icon(icon, color: iconColor, size: 18)),
-                ]
-              : <Widget>[
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: Icon(icon, color: iconColor, size: 18)),
-                  Expanded(child: Text(label, style: theme.textTheme.labelLarge?.copyWith(height: 1))),
-                ],
-        ),
-      ),
-    );
-  }
-}
-
-// extension ListToggle<T> on List<T> {
-//   void toggle(T element) {
-//     if (contains(element)) {
-//       remove(element);
-//     } else {
-//       add(element);
-//     }
-//   }
-// }

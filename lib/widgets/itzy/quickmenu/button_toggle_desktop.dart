@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/win32/keys.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class ToggleDesktopButton extends StatelessWidget {
   const ToggleDesktopButton({super.key});
@@ -16,7 +17,7 @@ class ToggleDesktopButton extends StatelessWidget {
           iconSize: 16,
           padding: const EdgeInsets.all(0),
           splashRadius: 16,
-          icon: const Tooltip(
+          icon: const CustomTooltip(
             message: "Show Desktop",
             child: Icon(Icons.desktop_windows_rounded),
           ),

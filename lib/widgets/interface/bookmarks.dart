@@ -10,6 +10,7 @@ import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
+import '../widgets/emoji_picker_modal.dart';
 
 class BookmarksPage extends StatefulWidget {
   const BookmarksPage({super.key});
@@ -46,7 +47,8 @@ class BookmarksPageState extends State<BookmarksPage> {
                 onPressed: () async {
                   final List<String> emojis = <String>["✨", "📂", "💼", "🏢", "🏠", "🌟", "🛠️"];
                   final String randomEmoji = emojis[Random().nextInt(emojis.length)];
-                  bookmarks.add(BookmarkGroup(title: "New Project Group", emoji: randomEmoji, bookmarks: <BookmarkInfo>[]));
+                  bookmarks
+                      .add(BookmarkGroup(title: "New Project Group", emoji: randomEmoji, bookmarks: <BookmarkInfo>[]));
                   _expandedGroups.add(bookmarks.last.title); // Expand by default
                   await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                   setState(() {});
@@ -69,7 +71,10 @@ class BookmarksPageState extends State<BookmarksPage> {
                 const SizedBox(height: 20),
                 Text(
                   "Organize with Bookmarks",
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: onSurface.withAlpha(220)),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold, color: onSurface.withAlpha(220)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -92,7 +97,8 @@ class BookmarksPageState extends State<BookmarksPage> {
                   onPressed: () async {
                     final List<String> emojis = <String>["✨", "📂", "💼", "🏢", "🏠", "🌟", "🛠️"];
                     final String randomEmoji = emojis[Random().nextInt(emojis.length)];
-                    bookmarks.add(BookmarkGroup(title: "New Project Group", emoji: randomEmoji, bookmarks: <BookmarkInfo>[]));
+                    bookmarks.add(
+                        BookmarkGroup(title: "New Project Group", emoji: randomEmoji, bookmarks: <BookmarkInfo>[]));
                     _expandedGroups.add(bookmarks.last.title); // Expand by default
                     await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                     setState(() {});
@@ -134,7 +140,8 @@ class BookmarksPageState extends State<BookmarksPage> {
                 onAddBookmark: () async {
                   final List<String> emojis = <String>["🎀", "🌟", "🚀", "🎨", "🎬", "📚", "🎮"];
                   final String randomEmoji = emojis[Random().nextInt(emojis.length)];
-                  project.bookmarks.add(BookmarkInfo(emoji: randomEmoji, title: "New Project", stringToExecute: "C:\\"));
+                  project.bookmarks
+                      .add(BookmarkInfo(emoji: randomEmoji, title: "New Project", stringToExecute: "C:\\"));
                   _expandedGroups.add(groupKey);
                   await Boxes.updateSettings("projects", jsonEncode(bookmarks));
                   setState(() {});
@@ -188,21 +195,28 @@ class BookmarksPageState extends State<BookmarksPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Edit Bookmark Group", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text("Group Properties", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: SizedBox(
             width: 350,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                TextField(
-                  controller: emojiCtrl,
-                  decoration: _modernInputDecoration(context, "Emoji (Win+.)", accent, Icons.emoji_emotions_outlined),
+                SizedBox(
+                  width: 100,
+                  child: EmojiPickerTextField(
+                    controller: emojiCtrl,
+                    textAlign: TextAlign.center,
+                    dialogTitle: "Choose Group Emoji",
+                    decoration: _modernInputDecoration(context, "Symbol", accent, null),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: titleCtrl,
-                  autofocus: true,
-                  decoration: _modernInputDecoration(context, "Group Title", accent, Icons.title_rounded),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: titleCtrl,
+                    autofocus: true,
+                    decoration: _modernInputDecoration(context, "Label", accent, null),
+                  ),
                 ),
               ],
             ),
@@ -226,7 +240,7 @@ class BookmarksPageState extends State<BookmarksPage> {
                 setState(() {});
                 if (context.mounted) Navigator.of(context).pop();
               },
-              child: const Text("Save Changes"),
+              child: const Text("Apply"),
             ),
           ],
         );
@@ -246,7 +260,7 @@ class BookmarksPageState extends State<BookmarksPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Edit Bookmark", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text("Bookmark Properties", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: SizedBox(
             width: 450,
             child: Column(
@@ -257,9 +271,11 @@ class BookmarksPageState extends State<BookmarksPage> {
                   children: <Widget>[
                     SizedBox(
                       width: 120,
-                      child: TextField(
+                      child: EmojiPickerTextField(
                         controller: emojiCtrl,
-                        decoration: _modernInputDecoration(context, "Emoji", accent, null),
+                        textAlign: TextAlign.center,
+                        dialogTitle: "Choose Bookmark Emoji",
+                        decoration: _modernInputDecoration(context, "Symbol", accent, null),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -267,7 +283,7 @@ class BookmarksPageState extends State<BookmarksPage> {
                       child: TextField(
                         controller: titleCtrl,
                         autofocus: true,
-                        decoration: _modernInputDecoration(context, "Title", accent, Icons.label_outline),
+                        decoration: _modernInputDecoration(context, "Label", accent, null),
                       ),
                     ),
                   ],
@@ -278,14 +294,16 @@ class BookmarksPageState extends State<BookmarksPage> {
                     Expanded(
                       child: TextField(
                         controller: pathCtrl,
-                        decoration: _modernInputDecoration(context, "Execution Path / URL", accent, Icons.link_rounded),
+                        decoration: _modernInputDecoration(context, "Target", accent, null),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Tooltip(
-                      message: "Pick File (exe, etc)",
+                    SizedBox(
+                      width: 32,
+                      height: 32,
                       child: IconButton(
-                        icon: Icon(Icons.file_open_rounded, color: accent),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.file_open_rounded, size: 18, color: accent),
                         onPressed: () {
                           final OpenFilePicker file = OpenFilePicker()
                             ..filterSpecification = <String, String>{'All Files': '*.*'}
@@ -299,10 +317,13 @@ class BookmarksPageState extends State<BookmarksPage> {
                         },
                       ),
                     ),
-                    Tooltip(
-                      message: "Pick Folder",
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
                       child: IconButton(
-                        icon: Icon(Icons.folder_open_rounded, color: accent),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.folder_open_rounded, size: 18, color: accent),
                         onPressed: () {
                           final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select any folder';
                           final Directory? dir = dirPicker.getDirectory();
@@ -315,20 +336,15 @@ class BookmarksPageState extends State<BookmarksPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: accent.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                  child: Row(
-                    children: <Widget>[
-                      Icon(Icons.info_outline, size: 16, color: accent),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Path can be a file, folder, web URL, or an execution string like 'code C:\\somepath\\'.",
-                          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(160)),
-                        ),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    "Paths, URLs, or command strings (e.g. 'code .')",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontFamily: "monospace",
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                    ),
                   ),
                 ),
               ],
@@ -354,7 +370,7 @@ class BookmarksPageState extends State<BookmarksPage> {
                 setState(() {});
                 if (context.mounted) Navigator.of(context).pop();
               },
-              child: const Text("Save Changes"),
+              child: const Text("Apply"),
             ),
           ],
         );
@@ -366,16 +382,14 @@ class BookmarksPageState extends State<BookmarksPage> {
   InputDecoration _modernInputDecoration(BuildContext context, String label, Color accent, IconData? icon) {
     return InputDecoration(
       labelText: label,
-      hintText: label,
-      prefixIcon: icon != null ? Icon(icon, size: 18) : null,
-      filled: true,
-      fillColor: accent.withAlpha(10),
       isDense: true,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent.withAlpha(25), width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: accent, width: 1.5)),
-      contentPadding: EdgeInsets.symmetric(horizontal: icon != null ? 0 : 16, vertical: 14),
-      labelStyle: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: accent.withAlpha(20), width: 1)),
+      focusedBorder:
+          OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: accent, width: 1.2)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      labelStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
     );
   }
 }
@@ -451,11 +465,15 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
               onExit: (_) => setState(() => _isHovering = false),
               child: InkWell(
                 onTap: widget.onToggleExpand,
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: widget.isExpanded ? widget.accent.withAlpha(15) : (_isHovering ? widget.accent.withAlpha(8) : Colors.transparent),
-                    border: Border(bottom: BorderSide(color: widget.accent.withAlpha(widget.isExpanded ? 40 : 0), width: 1)),
+                    color: widget.isExpanded
+                        ? widget.accent.withAlpha(15)
+                        : (_isHovering ? widget.accent.withAlpha(8) : Colors.transparent),
+                    border: Border(
+                        bottom: BorderSide(color: widget.accent.withAlpha(widget.isExpanded ? 40 : 0), width: 1)),
                   ),
                   child: Row(
                     children: <Widget>[
@@ -499,8 +517,10 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                       ),
                       IconButton(
                         tooltip: "Delete Group",
-                        icon: Icon(Icons.delete_outline_rounded, size: 18, color: Theme.of(context).colorScheme.error.withAlpha(200)),
-                        onPressed: () => _confirmDelete(context, widget.onDeleteGroup, "Group '${widget.project.title}'"),
+                        icon: Icon(Icons.delete_outline_rounded,
+                            size: 18, color: Theme.of(context).colorScheme.error.withAlpha(200)),
+                        onPressed: () =>
+                            _confirmDelete(context, widget.onDeleteGroup, "Group '${widget.project.title}'"),
                         splashRadius: 20,
                       ),
                       const SizedBox(width: 6),
@@ -539,7 +559,9 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                           ? Padding(
                               padding: const EdgeInsets.all(16.0),
                               child: Center(
-                                child: Text("No bookmarks inside this group yet.", style: TextStyle(color: widget.onSurface.withAlpha(100), fontStyle: FontStyle.italic)),
+                                child: Text("No bookmarks inside this group yet.",
+                                    style:
+                                        TextStyle(color: widget.onSurface.withAlpha(100), fontStyle: FontStyle.italic)),
                               ),
                             )
                           : ReorderableListView.builder(
@@ -556,7 +578,8 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                                   onSurface: widget.onSurface,
                                   index: itemIndex,
                                   onEdit: () => widget.onEditBookmark(itemIndex),
-                                  onDelete: () => _confirmDelete(context, () => widget.onDeleteBookmark(itemIndex), "Bookmark '${item.title}'"),
+                                  onDelete: () => _confirmDelete(
+                                      context, () => widget.onDeleteBookmark(itemIndex), "Bookmark '${item.title}'"),
                                   onExecute: () => widget.onExecuteBookmark(item),
                                 );
                               },
@@ -576,16 +599,17 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
         title: const Text("Confirm Deletion"),
-        content: Text("Are you sure you want to delete the $name? This action cannot be undone."),
+        content: Text("Permanently delete '$name'? This action cannot be undone."),
         actions: <Widget>[
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(ctx);
               onConfirm();
             },
-            child: const Text("Delete"),
+            child: const Text("Delete Permanently"),
           ),
         ],
       ),
@@ -697,7 +721,8 @@ class _BookmarkItemRowState extends State<_BookmarkItemRow> {
                       ),
                       IconButton(
                         tooltip: "Delete",
-                        icon: Icon(Icons.close_rounded, size: 16, color: Theme.of(context).colorScheme.error.withAlpha(200)),
+                        icon: Icon(Icons.close_rounded,
+                            size: 16, color: Theme.of(context).colorScheme.error.withAlpha(200)),
                         onPressed: widget.onDelete,
                         splashRadius: 18,
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

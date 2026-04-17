@@ -11,8 +11,8 @@ import '../../models/util/task_runner.dart';
 import '../../models/win32/win32.dart';
 import '../widgets/mouse_scroll_widget.dart';
 import '../widgets/percentage_bar.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
-// vscode-fold=2
 class FileSizeWidget extends StatefulWidget {
   const FileSizeWidget({super.key});
 
@@ -754,7 +754,7 @@ class _ActionIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return CustomTooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,

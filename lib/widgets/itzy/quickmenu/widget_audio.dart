@@ -9,6 +9,7 @@ import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 import '../../widgets/panel_header.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class AudioBox extends StatefulWidget {
   const AudioBox({super.key});
@@ -531,7 +532,7 @@ class AudioBoxState extends State<AudioBox> {
       ),
       child: Row(
         children: <Widget>[
-          Tooltip(
+          CustomTooltip(
             message: name,
             child: SizedBox(
               width: 18,

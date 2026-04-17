@@ -659,7 +659,7 @@ class FileSearchState extends State<FileSearch> {
       return a.title.toLowerCase().compareTo(b.title.toLowerCase());
     });
 
-    return matches;
+    return matches.take(5).toList();
   }
 
   _SearchMode _getSearchMode(String query) {
@@ -1031,7 +1031,11 @@ class FileSearchState extends State<FileSearch> {
     final bool showSplash = _quickActionSplashId == quickAction.id;
 
     return MouseRegion(
-      onEnter: (_) => _activeIndexNotifier.value = index,
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) {
+          _activeIndexNotifier.value = index;
+        }
+      },
       child: Container(
         key: ValueKey<String>(quickAction.id),
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1156,9 +1160,11 @@ class _FileSearchListItemState extends State<_FileSearchListItem> {
     final bool highlighted = _hovered || widget.isSelected;
 
     return MouseRegion(
-      onEnter: (_) {
-        setState(() => _hovered = true);
-        widget.onHover();
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) {
+          setState(() => _hovered = true);
+          widget.onHover();
+        }
       },
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
@@ -1288,9 +1294,11 @@ class _WindowSearchListItemState extends State<_WindowSearchListItem> {
     final String processName = widget.window.process.exe.replaceFirst('.exe', '');
 
     return MouseRegion(
-      onEnter: (_) {
-        setState(() => _hovered = true);
-        widget.onHover();
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) {
+          setState(() => _hovered = true);
+          widget.onHover();
+        }
       },
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(

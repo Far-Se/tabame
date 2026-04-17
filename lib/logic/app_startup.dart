@@ -114,7 +114,7 @@ class AppStartup {
         title = "Interface";
       }
       windowOptions = WindowOptions(
-        size: const Size(700, 600),
+        size: const Size(980, 600),
         center: false,
         backgroundColor: Colors.transparent,
         skipTaskbar: false,
@@ -122,13 +122,17 @@ class AppStartup {
         title: "Tabame - $title",
       );
     } else {
-      windowOptions = const WindowOptions(
-        size: Size(299, 540),
+      List<double> size = Boxes.quickMenuSize;
+      if (size.length != 2) size = <double>[299, 539];
+      windowOptions = WindowOptions(
+        size: Size(size[0], size[1]),
+        minimumSize: const Size(298, 539),
+        maximumSize: const Size(1200, 539),
         center: false,
         backgroundColor: Colors.transparent,
         skipTaskbar: true,
         alwaysOnTop: true,
-        title: "Tabame",
+        title: kDebugMode ? "Tabame - Debug" : "Tabame",
       );
     }
     Debug.add("Setting windowOptions");

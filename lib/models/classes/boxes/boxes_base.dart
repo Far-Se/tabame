@@ -12,6 +12,7 @@ import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
 import '../../win32/win32.dart';
+import '../../win32/window.dart';
 import '../hotkeys.dart';
 import '../save_settings.dart';
 import '../saved_maps.dart';
@@ -321,11 +322,13 @@ class Boxes {
       final int warningDiff = diff - 60000;
       if (warningDiff > 0) {
         shutDownWarningTimer = Timer(Duration(milliseconds: warningDiff), () {
-          QuickMenuFunctions.triggerQuickAction("ShutDownScheduler");
+          WinUtils.msgBox("Shutting Down", "Your PC will close in 1 minute.\nYou can cancel it from the Quick Menu.",
+              speak: "Shutting Down Alert");
         });
       } else if (diff > 0 && diff <= 60000) {
         // Already within the 1-minute window
-        QuickMenuFunctions.triggerQuickAction("ShutDownScheduler");
+        WinUtils.msgBox("Shutting Down", "Your PC will close in 1 minute.\nYou can cancel it from the Quick Menu.",
+            speak: "Shutting Down Alert");
       }
 
       // Final shutdown timer
@@ -335,6 +338,8 @@ class Boxes {
         pref.setInt("shutDownUnix", 0);
         if (kReleaseMode) {
           WinUtils.runPowerShell(<String>["shutdown /s /t 0"]);
+        } else {
+          WinUtils.msgBox("Shutting Down", "Shut Down Timer Kicked in.");
         }
       });
     }
@@ -353,6 +358,8 @@ class Boxes {
       await pref.setString(key, value);
     } else if (value is List<String>) {
       await pref.setStringList(key, value);
+    } else if (value is List<dynamic>) {
+      await pref.setString(key, jsonEncode(value));
     } else if (value is Map) {
       await pref.setString(key, jsonEncode(value));
     } else {
@@ -397,7 +404,12 @@ class Boxes {
   static List<T> getSavedMap<T>(T Function(String json) fromJson, String key, {List<T>? def}) {
     final String savedString = pref.getString(key) ?? '';
     if (savedString.isEmpty) return def ?? <T>[];
-    return (jsonDecode(savedString) as List<dynamic>).cast<String>().map(fromJson).toList();
+    try {
+      return (jsonDecode(savedString) as List<dynamic>).cast<String>().map(fromJson).toList();
+    } catch (e) {
+      pref.setString(key, "");
+      return def ?? <T>[];
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -415,12 +427,25 @@ class Boxes {
   Map<String, String> get iconsRewrite {
     final String rewrites = pref.getString("iconsRewrite") ?? "";
     if (rewrites == "") {
-      return <String, String>{
-        "Microsoft VS Code": "resources/code.png",
-        "Edge": "resources/chromium.png",
-      };
+      return <String, String>{};
     }
     return Map<String, String>.from(json.decode(rewrites));
+  }
+
+  static Map<String, String> titleIconRewrite = <String, String>{
+    "DevTools": "resources/devtools.png",
+  };
+  static String getIconRewrite(String exePath, {Window? window}) {
+    if (window != null) {
+      for (final String title in titleIconRewrite.keys) {
+        if (window.title.contains(title)) return titleIconRewrite[title] ?? "";
+      }
+    }
+
+    final Map<String, String> currentIconsRewrite = Boxes().iconsRewrite;
+    final String appName = currentIconsRewrite.keys
+        .firstWhere((String element) => exePath.toLowerCase().contains(element.toLowerCase()), orElse: () => "");
+    return currentIconsRewrite[appName] ?? "";
   }
 
   List<List<String>> _runShortcuts = <List<String>>[];
@@ -521,6 +546,20 @@ class Boxes {
   }
 
   List<String> get pinnedApps => pref.getStringList("pinnedApps") ?? <String>[];
+
+  static List<double> _quickMenuSize = <double>[];
+  static set quickMenuSize(List<double> list) => _quickMenuSize = list;
+  static List<double> get quickMenuSize {
+    if (_quickMenuSize.isNotEmpty) return _quickMenuSize;
+    _quickMenuSize = (jsonDecode(pref.getString("quickMenuSize") ?? "[299.0, 539.0]") as List<dynamic>)
+        .map((dynamic x) => x as double)
+        .toList();
+    if (_quickMenuSize.length != 2) {
+      _quickMenuSize = <double>[299.0, 539.0];
+    }
+    return _quickMenuSize;
+  }
+
   List<PowerShellScript> get powerShellScripts =>
       getSavedMap<PowerShellScript>(PowerShellScript.fromJson, "powerShellScripts");
   List<BookmarkGroup> get bookmarks => getSavedMap<BookmarkGroup>(BookmarkGroup.fromJson, "projects");
@@ -644,8 +683,50 @@ class Boxes {
       _appCategories = (jsonDecode(savedString) as List<dynamic>)
           .map((dynamic item) => AppCategory.fromMap(item as Map<String, dynamic>))
           .toList();
+    } else {
+      _appCategories.add(AppCategory(
+          name: "Games",
+          items: <AppItem>[],
+          folderPath: "${Platform.environment['APPDATA']}\\Microsoft\\Windows\\Start Menu\\Programs\\Steam"));
     }
     return _appCategories;
+  }
+
+  static List<QuickGrid> _quickGrids = <QuickGrid>[];
+  static set quickGrids(List<QuickGrid> list) {
+    _quickGrids = list;
+    Boxes.updateSettings('QuickGrids', jsonEncode(list.map((QuickGrid e) => e.toMap()).toList()));
+  }
+
+  static List<QuickGrid> get quickGrids {
+    if (_quickGrids.isNotEmpty) return _quickGrids;
+    final String savedString = pref.getString('QuickGrids') ?? '';
+    if (savedString.isNotEmpty) {
+      try {
+        _quickGrids = (jsonDecode(savedString) as List<dynamic>)
+            .map((dynamic item) => QuickGrid.fromMap(item as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        _quickGrids = <QuickGrid>[];
+      }
+    } else {
+      return <QuickGrid>[
+        QuickGrid(
+            id: "1776274379994",
+            name: "DevGrid",
+            layoutType: QuickGridLayoutType.freestyle,
+            gap: 0,
+            zones: <QuickGridRect>[
+              QuickGridRect(left: 0.0, top: 0.0, right: 0.3279483037156705, bottom: 0.5),
+              QuickGridRect(left: 0.0, top: 0.5, right: 0.3279483037156705, bottom: 1.0),
+              QuickGridRect(left: 0.3279483037156705, top: 0.0, right: 0.7835218093699515, bottom: 0.5),
+              QuickGridRect(left: 0.7835218093699515, top: 0.0, right: 1.0, bottom: 1.0),
+              QuickGridRect(left: 0.3279483037156705, top: 0.5, right: 0.6284329563812602, bottom: 1.0),
+              QuickGridRect(left: 0.6284329563812602, top: 0.5, right: 0.7835218093699515, bottom: 1.0),
+            ])
+      ];
+    }
+    return _quickGrids;
   }
 
   // --------------------------------------------------------------------------
@@ -712,7 +793,7 @@ class Boxes {
       if (quick.type == 0) {
         WinUtils.textToSpeech(quick.name, repeat: -1);
       } else if (quick.type == 1) {
-        WinUtils.msgBox(quick.name, "Tabame Quick Timer");
+        WinUtils.msgBox("Tabame Quick Timer", quick.name);
       } else if (quick.type == 2) {
         WinUtils.showWindowsNotification(
           title: "Tabame Quick Timer",

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class HideDesktopFilesButton extends StatelessWidget {
   const HideDesktopFilesButton({super.key});
@@ -57,7 +58,7 @@ class HideDesktopFilesButton extends StatelessWidget {
         child: GestureDetector(
           onSecondaryTap: () => WinUtils.toggleDesktopFiles(visible: false),
           onTertiaryTapUp: (TapUpDetails details) => WinUtils.toggleDesktopFiles(visible: true),
-          child: const Tooltip(message: "Toggle Desktop Files", child: Icon(Icons.hide_image_outlined)),
+          child: const CustomTooltip(message: "Toggle Desktop Files", child: Icon(Icons.hide_image_outlined)),
         ),
       ),
     );

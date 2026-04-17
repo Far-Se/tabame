@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class PanelHeader extends StatelessWidget {
   const PanelHeader(
@@ -53,20 +54,21 @@ class PanelHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: boldFont ? FontWeight.w600 : FontWeight.w400,
-              letterSpacing: 0.3,
-              color: Theme.of(context).colorScheme.onSurface,
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: boldFont ? FontWeight.w600 : FontWeight.w400,
+                letterSpacing: 0.3,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
-          if ((secondaryButtonPressed != null && secondaryButtonIcon != null) ||
-              (buttonPressed != null && buttonIcon != null))
-            const Spacer(),
           if (secondaryButtonPressed != null && secondaryButtonIcon != null) ...<Widget>[
-            Tooltip(
+            CustomTooltip(
               message: secondaryButtonTooltip ?? '',
               child: IconButton(
                 onPressed: secondaryButtonPressed,
@@ -78,7 +80,7 @@ class PanelHeader extends StatelessWidget {
             ),
           ],
           if (buttonPressed != null && buttonIcon != null) ...<Widget>[
-            Tooltip(
+            CustomTooltip(
               message: buttonTooltip ?? '',
               child: IconButton(
                 onPressed: buttonPressed,
