@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:math_parser/math_parser.dart';
@@ -12,7 +13,8 @@ class CalculatorButton extends StatelessWidget {
   const CalculatorButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Calculator", icon: Icon(Icons.functions), child: CalculatorWidget());
+    return ModalButton(
+        actionName: "Calculator", icon: const Icon(Icons.functions), child: () => const CalculatorWidget());
   }
 }
 
@@ -55,8 +57,17 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     super.initState();
     _loadHistory();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _focusNode.requestFocus();
     });
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _loadHistory() {
@@ -150,6 +161,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
           _controller.clear();
           _evaluatePreview("");
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
             _focusNode.requestFocus();
           });
           return;
@@ -172,6 +184,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       _controller.clear();
       _evaluatePreview("");
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         _focusNode.requestFocus();
       });
     } catch (e) {
@@ -186,6 +199,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       _history.clear();
       _saveHistory();
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         _focusNode.requestFocus();
       });
     });
@@ -210,7 +224,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return Material(
       type: MaterialType.transparency,
@@ -401,9 +415,10 @@ class _HistoryTileState extends State<_HistoryTile> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: _isHovered ? widget.accent.withAlpha(20) : widget.onSurface.withAlpha(10),
+          color: _isHovered ? globalSettings.themeColors.accentColor.withAlpha(20) : widget.onSurface.withAlpha(10),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _isHovered ? widget.accent.withAlpha(40) : Colors.transparent),
+          border:
+              Border.all(color: _isHovered ? globalSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent),
         ),
         child: Row(
           children: <Widget>[
@@ -411,12 +426,13 @@ class _HistoryTileState extends State<_HistoryTile> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: widget.accent.withAlpha(40),
+                color: globalSettings.themeColors.accentColor.withAlpha(40),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 widget.entry.name,
-                style: TextStyle(color: widget.accent, fontWeight: FontWeight.bold, fontSize: 13),
+                style:
+                    TextStyle(color: globalSettings.themeColors.accentColor, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
             const SizedBox(width: 8),
@@ -454,7 +470,8 @@ class _HistoryTileState extends State<_HistoryTile> {
                             ),
                             if (_isHovered) ...<Widget>[
                               const SizedBox(width: 6),
-                              Icon(Icons.edit_rounded, size: 10, color: widget.accent.withAlpha(150)),
+                              Icon(Icons.edit_rounded,
+                                  size: 10, color: globalSettings.themeColors.accentColor.withAlpha(150)),
                             ],
                           ],
                         ),

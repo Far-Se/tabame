@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../models/settings.dart';
 import 'trktivity_models.dart';
 
@@ -46,19 +47,29 @@ class TrktivityDailyStats extends StatelessWidget {
                     Expanded(child: Text("Total", style: Theme.of(context).textTheme.labelLarge)),
                     SizedBox(
                         width: 80,
-                        child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
+                        child: Text(
+                            timeFormat(dailyStats.values
+                                .fold(0, (int previousValue, DMTRack element) => previousValue + element.time)),
                             style: Theme.of(context).textTheme.labelLarge)),
                     SizedBox(
                         width: 80,
-                        child: Text(timeFormat(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
+                        child: Text(
+                            timeFormat(dailyStats.values
+                                .fold(0, (int previousValue, DMTRack element) => previousValue + element.idleTime)),
                             style: Theme.of(context).textTheme.labelLarge)),
                     SizedBox(
                         width: 80,
-                        child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard).formatInt(),
+                        child: Text(
+                            dailyStats.values
+                                .fold(0, (int previousValue, DMTRack element) => previousValue + element.keyboard)
+                                .formatInt(),
                             style: Theme.of(context).textTheme.labelLarge)),
                     SizedBox(
                         width: 80,
-                        child: Text(dailyStats.values.fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse).formatInt(),
+                        child: Text(
+                            dailyStats.values
+                                .fold(0, (int previousValue, DMTRack element) => previousValue + element.mouse)
+                                .formatInt(),
                             style: Theme.of(context).textTheme.labelLarge)),
                   ],
                 ),
@@ -73,8 +84,11 @@ class TrktivityDailyStats extends StatelessWidget {
                       Expanded(
                           child: Padding(
                         padding: const EdgeInsets.only(right: 5.0),
-                        child: Text(DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))),
-                            maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
+                        child: Text(
+                            DateFormat("EE, dd MMMM, yyyy").format(DateTime.parse(dailyStats.keys.elementAt(index))),
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            softWrap: false),
                       )),
                       SizedBox(width: 80, child: Text(dailyStats.values.elementAt(index).timeFormat)),
                       SizedBox(width: 80, child: Text(timeFormat(dailyStats.values.elementAt(index).idleTime))),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class ToggleWallpaperModeButton extends StatelessWidget {
@@ -16,12 +15,11 @@ class ToggleWallpaperModeButton extends StatelessWidget {
         final DesktopBackgroundType state = WinUtils.getDesktopBackgroundType();
 
         if (state == DesktopBackgroundType.wallpaper) {
-          await toggleMonitorWallpaper(false);
-          // await setWallpaperColor(0x00000000);
+          await WinUtils.toggleDesktopWallpaper(false);
           return;
         }
 
-        await toggleMonitorWallpaper(true);
+        await WinUtils.toggleDesktopWallpaper(true);
       },
     );
   }

@@ -19,6 +19,21 @@
 // ---------------------------------------------------------------------------
 // Desktop shell automation (launch as explorer)
 // ---------------------------------------------------------------------------
+#include <windows.h>
+#include <atlbase.h>
+#include <atlcom.h>
+#include <shldisp.h>
+#include <shlobj.h>
+#include <tlhelp32.h>
+#include <set>
+#include <string>
+#include <vector>
+#include <thread>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Your original helpers (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
+
 namespace
 {
     void FindDesktopFolderView(REFIID riid, void **ppv)
@@ -78,12 +93,122 @@ namespace
     }
 } // anonymous namespace
 
-bool ShellExecuteFromExplorer(
+// ─────────────────────────────────────────────────────────────────────────────
+// Window focusing (runs on a background thread)
+// ─────────────────────────────────────────────────────────────────────────────
+
+namespace
+{
+    struct FindWindowData
+    {
+        DWORD pid;
+        HWND  hwnd;
+    };
+
+    BOOL CALLBACK FindMainWindow(HWND wnd, LPARAM lParam)
+    {
+        auto* data = reinterpret_cast<FindWindowData*>(lParam);
+        DWORD wndPid = 0;
+        GetWindowThreadProcessId(wnd, &wndPid);
+
+        if (wndPid == data->pid
+            && IsWindowVisible(wnd)
+            && GetWindow(wnd, GW_OWNER) == nullptr)
+        {
+            data->hwnd = wnd;
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    HWND WaitForProcessWindow(DWORD pid, DWORD timeoutMs = 5000)
+    {
+        FindWindowData data{ pid, nullptr };
+        DWORD elapsed = 0;
+
+        while (elapsed < timeoutMs)
+        {
+            EnumWindows(FindMainWindow, reinterpret_cast<LPARAM>(&data));
+            if (data.hwnd)
+                return data.hwnd;
+            Sleep(100);
+            elapsed += 100;
+        }
+        return nullptr;
+    }
+
+    void FocusWindowAsync(DWORD pid)
+    {
+        // Detached thread — waits for the window without blocking the caller
+        std::thread([pid]()
+        {
+            HWND hwnd = WaitForProcessWindow(pid, 5000);
+            if (!hwnd)
+                return;
+
+            if (IsIconic(hwnd))
+                ShowWindow(hwnd, SW_RESTORE);
+            else
+                ShowWindow(hwnd, SW_SHOW);
+
+            SetForegroundWindow(hwnd);
+        }).detach();
+    }
+
+    // For ShellExecute path: we don't have a PID, so diff the process list
+    void FocusNewProcessAsync(std::set<DWORD> pidsBefore)
+    {
+        std::thread([pidsBefore = std::move(pidsBefore)]()
+        {
+            // Give the shell a moment to spawn
+            Sleep(500);
+
+            HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (snap == INVALID_HANDLE_VALUE)
+                return;
+
+            PROCESSENTRY32W pe{ sizeof(pe) };
+            DWORD newPid = 0;
+
+            if (Process32FirstW(snap, &pe))
+            {
+                do {
+                    if (pidsBefore.find(pe.th32ProcessID) == pidsBefore.end())
+                    {
+                        newPid = pe.th32ProcessID;
+                        break;
+                    }
+                } while (Process32NextW(snap, &pe));
+            }
+            CloseHandle(snap);
+
+            if (!newPid)
+                return;
+
+            HWND hwnd = WaitForProcessWindow(newPid, 5000);
+            if (!hwnd)
+                return;
+
+            if (IsIconic(hwnd))
+                ShowWindow(hwnd, SW_RESTORE);
+            else
+                ShowWindow(hwnd, SW_SHOW);
+
+            SetForegroundWindow(hwnd);
+        }).detach();
+    }
+} // anonymous namespace
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core launch functions
+// ─────────────────────────────────────────────────────────────────────────────
+
+static bool ShellExecuteFromExplorer(
     PCWSTR pszFile,
     PCWSTR pszParameters = nullptr,
-    PCWSTR pszDirectory = nullptr,
-    PCWSTR pszOperation = nullptr,
-    int nShowCmd = SW_SHOWNORMAL)
+    PCWSTR pszDirectory  = nullptr,
+    PCWSTR pszOperation  = nullptr,
+    int    nShowCmd      = SW_SHOWNORMAL)
 {
     CComPtr<IShellFolderViewDual> spFolderView;
     GetDesktopAutomationObject(IID_PPV_ARGS(&spFolderView));
@@ -99,18 +224,41 @@ bool ShellExecuteFromExplorer(
     if (!shell)
         return false;
 
-    hr = shell->ShellExecute(CComBSTR(pszFile),
-                             CComVariant(pszParameters ? pszParameters : L""),
-                             CComVariant(pszDirectory ? pszDirectory : L""),
-                             CComVariant(pszOperation ? pszOperation : L""),
-                             CComVariant(nShowCmd));
-    return SUCCEEDED(hr);
+    // Snapshot PIDs before launch so FocusNewProcessAsync can diff them
+    std::set<DWORD> pidsBefore;
+    {
+        HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snap != INVALID_HANDLE_VALUE)
+        {
+            PROCESSENTRY32W pe{ sizeof(pe) };
+            if (Process32FirstW(snap, &pe))
+                do { pidsBefore.insert(pe.th32ProcessID); }
+                while (Process32NextW(snap, &pe));
+            CloseHandle(snap);
+        }
+    }
+
+    AllowSetForegroundWindow(ASFW_ANY);
+
+    hr = shell->ShellExecute(
+        CComBSTR(pszFile),
+        CComVariant(pszParameters ? pszParameters : L""),
+        CComVariant(pszDirectory  ? pszDirectory  : L""),
+        CComVariant(pszOperation  ? pszOperation  : L""),
+        CComVariant(nShowCmd));
+
+    if (FAILED(hr))
+        return false;
+
+    // Focus happens in the background — caller returns immediately
+    FocusNewProcessAsync(std::move(pidsBefore));
+    return true;
 }
 
-bool LaunchWithExplorerToken(
-    const std::wstring &file,
-    const std::wstring &arguments = L"",
-    const std::wstring &workingDirectory = L"")
+static bool LaunchWithExplorerToken(
+    const std::wstring& file,
+    const std::wstring& arguments        = L"",
+    const std::wstring& workingDirectory = L"")
 {
     DWORD explorerPid = GetExplorerPid();
     if (explorerPid == 0)
@@ -120,13 +268,15 @@ bool LaunchWithExplorerToken(
     if (!explorerProcess)
         return false;
 
-    HANDLE explorerToken = nullptr;
+    HANDLE explorerToken   = nullptr;
     HANDLE duplicatedToken = nullptr;
-    bool launched = false;
+    bool   launched        = false;
 
     do
     {
-        if (!OpenProcessToken(explorerProcess, TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY, &explorerToken))
+        if (!OpenProcessToken(explorerProcess,
+                              TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY,
+                              &explorerToken))
             break;
 
         if (!DuplicateTokenEx(explorerToken,
@@ -137,111 +287,69 @@ bool LaunchWithExplorerToken(
                               &duplicatedToken))
             break;
 
-        STARTUPINFOW startupInfo = {};
-        startupInfo.cb = sizeof(startupInfo);
-        startupInfo.dwFlags = STARTF_USESHOWWINDOW;
-        startupInfo.wShowWindow = SW_SHOWNORMAL;
+        STARTUPINFOW si = {};
+        si.cb           = sizeof(si);
+        si.dwFlags      = STARTF_USESHOWWINDOW;
+        si.wShowWindow  = SW_SHOWNORMAL;
 
-        PROCESS_INFORMATION processInfo = {};
+        PROCESS_INFORMATION pi = {};
 
         std::wstring commandLine = L"\"" + file + L"\"";
         if (!arguments.empty())
             commandLine += L" " + arguments;
 
-        std::vector<wchar_t> commandLineBuffer(commandLine.begin(), commandLine.end());
-        commandLineBuffer.push_back(L'\0');
+        std::vector<wchar_t> buf(commandLine.begin(), commandLine.end());
+        buf.push_back(L'\0');
+
+        AllowSetForegroundWindow(ASFW_ANY);
 
         launched = CreateProcessWithTokenW(
             duplicatedToken,
             LOGON_WITH_PROFILE,
             nullptr,
-            commandLineBuffer.data(),
+            buf.data(),
             CREATE_NEW_CONSOLE,
             nullptr,
             workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
-            &startupInfo,
-            &processInfo) != FALSE;
+            &si,
+            &pi) != FALSE;
 
         if (launched)
         {
-            CloseHandle(processInfo.hProcess);
-            CloseHandle(processInfo.hThread);
-        }
-    } while (false);
+            // Focus on background thread — no blocking here
+            FocusWindowAsync(pi.dwProcessId);
 
-    if (explorerToken)
-        CloseHandle(explorerToken);
-    if (duplicatedToken)
-        CloseHandle(duplicatedToken);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
+    }
+    while (false);
+
+    if (explorerToken)   CloseHandle(explorerToken);
+    if (duplicatedToken) CloseHandle(duplicatedToken);
     CloseHandle(explorerProcess);
 
     return launched;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Public entry point
+// ─────────────────────────────────────────────────────────────────────────────
+
 bool LaunchWithExplorer(
-    const std::wstring &file,
-    const std::wstring &arguments = L"",
-    const std::wstring &workingDirectory = L"")
+    const std::wstring& file,
+    const std::wstring& arguments        = L"",
+    const std::wstring& workingDirectory = L"")
 {
     if (LaunchWithExplorerToken(file, arguments, workingDirectory))
         return true;
 
-    return ShellExecuteFromExplorer(file.c_str(),
-                                    arguments.empty() ? nullptr : arguments.c_str(),
-                                    workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
-                                    nullptr,
-                                    SW_SHOWNORMAL);
-}
-
-// ---------------------------------------------------------------------------
-// Launch a process parented under explorer.exe (non-elevated)
-// Bug fixes: off-by-one in char copy, missing null terminator, memory leak
-// ---------------------------------------------------------------------------
-void LaunchProcessAsExplorer(const std::wstring &file)
-{
-    HWND hwnd = GetShellWindow();
-    DWORD pid = 0;
-    GetWindowThreadProcessId(hwnd, &pid);
-
-    HANDLE process = OpenProcess(PROCESS_CREATE_PROCESS, FALSE, pid);
-    if (!process)
-        return;
-
-    SIZE_T size = 0;
-    InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
-    std::vector<char> attrBuf(size);
-    auto pAttrList = reinterpret_cast<PPROC_THREAD_ATTRIBUTE_LIST>(attrBuf.data());
-
-    if (!InitializeProcThreadAttributeList(pAttrList, 1, 0, &size))
-    {
-        CloseHandle(process);
-        return;
-    }
-
-    UpdateProcThreadAttribute(pAttrList, 0,
-                              PROC_THREAD_ATTRIBUTE_PARENT_PROCESS,
-                              &process, sizeof(process),
-                              nullptr, nullptr);
-
-    // CreateProcessW needs a mutable buffer
-    std::vector<wchar_t> cmdBuf(file.begin(), file.end());
-    cmdBuf.push_back(L'\0');
-
-    STARTUPINFOEX siex = {};
-    siex.lpAttributeList = pAttrList;
-    siex.StartupInfo.cb = sizeof(siex);
-    PROCESS_INFORMATION pi = {};
-
-    if (CreateProcessW(cmdBuf.data(), cmdBuf.data(), nullptr, nullptr, FALSE,
-                       CREATE_NEW_CONSOLE | EXTENDED_STARTUPINFO_PRESENT,
-                       nullptr, nullptr, &siex.StartupInfo, &pi))
-    {
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-    }
-
-    DeleteProcThreadAttributeList(pAttrList);
-    CloseHandle(process);
+    return ShellExecuteFromExplorer(
+        file.c_str(),
+        arguments.empty()        ? nullptr : arguments.c_str(),
+        workingDirectory.empty() ? nullptr : workingDirectory.c_str(),
+        nullptr,
+        SW_SHOWNORMAL);
 }
 
 // ---------------------------------------------------------------------------

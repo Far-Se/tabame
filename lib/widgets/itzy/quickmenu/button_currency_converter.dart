@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -18,10 +18,294 @@ class CurrencyConverterButton extends StatelessWidget {
   const CurrencyConverterButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
+    return ModalButton(
         actionName: "Currency Converter",
-        icon: Icon(Icons.currency_exchange_rounded),
-        child: CurrencyConverterWidget());
+        icon: const Icon(Icons.currency_exchange_rounded),
+        child: () => const CurrencyConverterWidget());
+  }
+}
+
+class CurrencyConversionResult {
+  const CurrencyConversionResult({
+    required this.amount,
+    required this.convertedAmount,
+    required this.rate,
+    required this.fromCurrency,
+    required this.toCurrency,
+    required this.fromName,
+    required this.toName,
+    required this.date,
+  });
+
+  final double amount;
+  final double convertedAmount;
+  final double rate;
+  final String fromCurrency;
+  final String toCurrency;
+  final String fromName;
+  final String toName;
+  final String date;
+
+  String get convertedLabel => '${CurrencyConverterService.formatNumber(convertedAmount)} ${toCurrency.toUpperCase()}';
+
+  String get rateLabel =>
+      '1 ${fromCurrency.toUpperCase()} = ${CurrencyConverterService.formatNumber(rate)} ${toCurrency.toUpperCase()}';
+}
+
+class CurrencyConverterService {
+  static const String amountKey = "currencyConverterAmount";
+  static const String fromKey = "currencyConverterFrom";
+  static const String toKey = "currencyConverterTo";
+  static const String _primaryBaseTemplate =
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies";
+  static const String _fallbackBaseTemplate = "https://{date}.currency-api.pages.dev/v1/currencies";
+
+  static Map<String, String>? _currencyCatalogCache;
+
+  Future<CurrencyConversionResult> convert(
+    String rawInput, {
+    String? defaultTargetCurrency,
+  }) async {
+    final Map<String, String> currencies = await _loadCurrencies();
+    final Map<String, String> aliases = buildCurrencyAliases(currencies);
+    final ParsedConversionInput parsed = parseConversionInput(
+      rawInput,
+      currencies: currencies,
+      aliases: aliases,
+      defaultTargetCurrency: defaultTargetCurrency,
+    );
+
+    if (parsed.query == null) {
+      throw FormatException(parsed.message ?? "Use a format like 1 usd to eur.");
+    }
+
+    final ConversionQuery query = parsed.query!;
+    final double rate =
+        query.fromCurrency == query.toCurrency ? 1 : await _fetchRate(query.fromCurrency, query.toCurrency);
+    final String fromName = currencies[query.fromCurrency] ?? query.fromCurrency.toUpperCase();
+    final String toName = currencies[query.toCurrency] ?? query.toCurrency.toUpperCase();
+
+    return CurrencyConversionResult(
+      amount: query.amount,
+      convertedAmount: query.amount * rate,
+      rate: rate,
+      fromCurrency: query.fromCurrency,
+      toCurrency: query.toCurrency,
+      fromName: fromName,
+      toName: toName,
+      date: DateTime.now().toIso8601String().split('T').first,
+    );
+  }
+
+  static ParsedConversionInput parseConversionInput(
+    String rawInput, {
+    required Map<String, String> currencies,
+    required Map<String, String> aliases,
+    String? defaultTargetCurrency,
+  }) {
+    if (currencies.isEmpty) {
+      return const ParsedConversionInput(message: "Loading currencies...");
+    }
+
+    String normalized = normalizeAlias(rawInput);
+    if (normalized.isEmpty) {
+      return const ParsedConversionInput(
+        message: "Type something like 1 usd to ron.",
+      );
+    }
+
+    final String? defaultTarget =
+        defaultTargetCurrency == null ? null : resolveCurrencyAlias(defaultTargetCurrency, aliases: aliases);
+    if (defaultTarget != null && !RegExp(r'\s+(?:to|in|into|=|->)\s+').hasMatch(normalized)) {
+      normalized = '$normalized to $defaultTarget';
+    }
+
+    final RegExpMatch? amountMatch = RegExp(
+      r'^(?:(\d+(?:[.,]\d+)?)\s+)?(.+)$',
+    ).firstMatch(normalized);
+    if (amountMatch == null) {
+      return const ParsedConversionInput(
+        message: "Use a format like 1 usd to ron.",
+      );
+    }
+
+    final double amount = double.tryParse((amountMatch.group(1) ?? "1").replaceAll(',', '.')) ?? 1;
+    final String remainder = (amountMatch.group(2) ?? "").trim();
+    final List<String> parts = remainder.split(RegExp(r'\s+(?:to|in|into|=|->)\s+'));
+
+    if (parts.length != 2) {
+      return const ParsedConversionInput(
+        message: "Use a format like 1 usd to ron.",
+      );
+    }
+
+    final String? fromCode = resolveCurrencyAlias(parts[0], aliases: aliases);
+    if (fromCode == null) {
+      return ParsedConversionInput(
+        message: "I couldn't recognize `${parts[0].trim()}`.",
+      );
+    }
+
+    final String? toCode = resolveCurrencyAlias(parts[1], aliases: aliases);
+    if (toCode == null) {
+      return ParsedConversionInput(
+        message: "I couldn't recognize `${parts[1].trim()}`.",
+      );
+    }
+
+    final String fromName = currencies[fromCode] ?? fromCode.toUpperCase();
+    final String toName = currencies[toCode] ?? toCode.toUpperCase();
+
+    return ParsedConversionInput(
+      query: ConversionQuery(
+        amount: amount,
+        fromCurrency: fromCode,
+        toCurrency: toCode,
+      ),
+      message: "${fromCode.toUpperCase()} ($fromName) to ${toCode.toUpperCase()} ($toName)",
+    );
+  }
+
+  static String? resolveCurrencyAlias(
+    String rawAlias, {
+    required Map<String, String> aliases,
+  }) {
+    final String normalized = normalizeAlias(rawAlias);
+    if (normalized.isEmpty) return null;
+    return aliases[normalized];
+  }
+
+  static Map<String, String> buildCurrencyAliases(Map<String, String> currencies) {
+    final Map<String, String> aliases = <String, String>{};
+
+    void register(String alias, String code) {
+      final String normalized = normalizeAlias(alias);
+      if (normalized.isEmpty) return;
+      aliases.putIfAbsent(normalized, () => code);
+    }
+
+    currencies.forEach((String code, String name) {
+      register(code, code);
+      register(name, code);
+    });
+
+    const Map<String, List<String>> manualAliases = <String, List<String>>{
+      "usd": <String>[
+        "us dollar",
+        "us dollars",
+        "american dollar",
+        "american dollars",
+      ],
+      "eur": <String>["euro", "euros"],
+      "gbp": <String>["british pound", "british pounds", "quid"],
+      "ron": <String>["leu", "lei", "romanian leu", "romanian lei"],
+      "jpy": <String>["yen", "japanese yen"],
+      "cny": <String>["yuan", "renminbi", "chinese yuan"],
+      "inr": <String>["rupee", "rupees", "indian rupee", "indian rupees"],
+      "try": <String>["turkish lira"],
+      "cad": <String>["canadian dollar", "canadian dollars"],
+      "aud": <String>["australian dollar", "australian dollars"],
+      "brl": <String>["brazilian real", "brazilian reais"],
+      "aed": <String>["uae dirham", "emirati dirham"],
+      "mxn": <String>["mexican peso", "mexican pesos"],
+      "rub": <String>["ruble", "rubles", "rouble", "roubles"],
+    };
+
+    manualAliases.forEach((String code, List<String> values) {
+      if (!currencies.containsKey(code)) return;
+      for (final String alias in values) {
+        register(alias, code);
+      }
+    });
+
+    return aliases;
+  }
+
+  static String normalizeAlias(String value) {
+    final String normalized = value
+        .toLowerCase()
+        .replaceAll('\u0103', 'a')
+        .replaceAll('\u00e2', 'a')
+        .replaceAll('\u00ee', 'i')
+        .replaceAll('\u0219', 's')
+        .replaceAll('\u015f', 's')
+        .replaceAll('\u021b', 't')
+        .replaceAll('\u0163', 't')
+        .replaceAll('Äƒ', 'a')
+        .replaceAll('Ã¢', 'a')
+        .replaceAll('Ã®', 'i')
+        .replaceAll('È™', 's')
+        .replaceAll('ÅŸ', 's')
+        .replaceAll('È›', 't')
+        .replaceAll('Å£', 't');
+
+    return normalized.replaceAll(RegExp(r'[^a-z0-9\s.,-]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static String formatNumber(double value) {
+    if (value.abs() >= 1000) return value.formatNum2();
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(3).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  Future<Map<String, String>> _loadCurrencies() async {
+    if (_currencyCatalogCache != null) return _currencyCatalogCache!;
+
+    final Map<String, dynamic> jsonMap = await fetchJsonWithFallback(
+      catalogUrl(),
+      catalogUrl(fallback: true),
+    );
+    _currencyCatalogCache = jsonMap.map(
+      (String key, dynamic value) => MapEntry<String, String>(key.toLowerCase(), (value ?? '').toString()),
+    );
+    return _currencyCatalogCache!;
+  }
+
+  Future<double> _fetchRate(String fromCurrency, String toCurrency) async {
+    final String base = fromCurrency.toLowerCase();
+    final String target = toCurrency.toLowerCase();
+    final Map<String, dynamic> jsonMap = await fetchJsonWithFallback(
+      baseRatesUrl(base),
+      baseRatesUrl(base, fallback: true),
+    );
+    final Map<String, dynamic> baseMap = Map<String, dynamic>.from(
+      (jsonMap[base] as Map<String, dynamic>?) ?? <String, dynamic>{},
+    );
+    final dynamic value = baseMap[target];
+    if (value is num) return value.toDouble();
+    throw Exception("Could not fetch live exchange rates.");
+  }
+
+  static Future<Map<String, dynamic>> fetchJsonWithFallback(String primaryUrl, String fallbackUrl) async {
+    final http.Response primary = await http.get(Uri.parse(primaryUrl));
+    if (primary.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(primary.body) as Map<String, dynamic>);
+    }
+
+    final http.Response fallback = await http.get(Uri.parse(fallbackUrl));
+    if (fallback.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(fallback.body) as Map<String, dynamic>);
+    }
+
+    throw Exception("Request failed");
+  }
+
+  static String catalogUrl({bool fallback = false}) {
+    final String base = fallback
+        ? _fallbackBaseTemplate.replaceFirst("{date}", "latest")
+        : _primaryBaseTemplate.replaceFirst("{date}", "latest");
+    return "$base.min.json";
+  }
+
+  static String baseRatesUrl(
+    String baseCurrency, {
+    String date = "latest",
+    bool fallback = false,
+  }) {
+    final String base = fallback
+        ? _fallbackBaseTemplate.replaceFirst("{date}", date)
+        : _primaryBaseTemplate.replaceFirst("{date}", date);
+    return "$base/${baseCurrency.toLowerCase()}.min.json";
   }
 }
 
@@ -43,6 +327,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   static const String _fallbackBaseTemplate = "https://{date}.currency-api.pages.dev/v1/currencies";
 
   final TextEditingController _amountController = TextEditingController();
+  final FocusNode _amountFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
   late final VoidCallback _amountListener;
   int _ratesRequestToken = 0;
@@ -82,6 +367,11 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       Boxes.updateSettings(_amountKey, _amountController.text.trim());
       unawaited(_handleQueryChanged());
     };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _amountFocus.requestFocus();
+      _amountController.selection = const TextSelection.collapsed(offset: 0);
+    });
     _amountController.addListener(_amountListener);
     unawaited(_initialize());
   }
@@ -104,7 +394,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
     final double amount = _parsedAmount;
     final double? rate = _currentRate;
@@ -124,7 +414,6 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
             PanelHeader(
               title: "Currency Converter",
               accent: accent,
-              boldFont: true,
               icon: Icons.currency_exchange_rounded,
               buttonPressed: _refreshRates,
               buttonIcon: Icons.refresh_rounded,
@@ -171,11 +460,14 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                       ),
                     ],
                     const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: <Widget>[
-                        _buildInfoChip("Base: ${_fromCurrency.toUpperCase()}", accent, onSurface),
-                        if (_ratesDate != null) _buildInfoChip("Updated $_ratesDate", accent, onSurface),
+                        _buildInfoChip("Base: ${_fromCurrency.toUpperCase()}"),
+                        if (_ratesDate != null) _buildInfoChip("Updated $_ratesDate"),
+                        _buildInfoChip("@fawazahmed0/currency-api"),
                       ],
                     ),
                   ],
@@ -203,6 +495,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
         const SizedBox(height: 6),
         TextField(
           controller: _amountController,
+          focusNode: _amountFocus,
           keyboardType: TextInputType.text,
           autofocus: true,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
@@ -296,7 +589,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   }
 
   Widget _buildHistorySection(Color accent, Color onSurface) {
-    final _ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
+    final ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -568,25 +861,25 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     );
   }
 
-  Widget _buildInfoChip(String label, Color accent, Color onSurface) {
+  Widget _buildInfoChip(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: accent.withAlpha(12),
+        color: globalSettings.themeColors.accentColor.withAlpha(12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
-          color: onSurface.withAlpha(165),
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(165),
         ),
       ),
     );
   }
 
   double get _parsedAmount {
-    final _ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
+    final ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
     return parsed.query?.amount ?? 1;
   }
 
@@ -890,7 +1183,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   }
 
   Future<void> _handleQueryChanged() async {
-    final _ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
+    final ParsedConversionInput parsed = _parseConversionInput(_amountController.text);
     final String previousBase = _fromCurrency;
 
     if (!mounted) return;
@@ -926,14 +1219,14 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     }
   }
 
-  _ParsedConversionInput _parseConversionInput(String rawInput) {
+  ParsedConversionInput _parseConversionInput(String rawInput) {
     if (_currencies.isEmpty) {
-      return const _ParsedConversionInput(message: "Loading currencies...");
+      return const ParsedConversionInput(message: "Loading currencies...");
     }
 
     final String normalized = _normalizeAlias(rawInput);
     if (normalized.isEmpty) {
-      return const _ParsedConversionInput(
+      return const ParsedConversionInput(
         message: "Type something like 1 usd to ron.",
       );
     }
@@ -942,7 +1235,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       r'^(?:(\d+(?:[.,]\d+)?)\s+)?(.+)$',
     ).firstMatch(normalized);
     if (amountMatch == null) {
-      return const _ParsedConversionInput(
+      return const ParsedConversionInput(
         message: "Use a format like 1 usd to ron.",
       );
     }
@@ -952,21 +1245,21 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     final List<String> parts = remainder.split(RegExp(r'\s+(?:to|in|into|=|->)\s+'));
 
     if (parts.length != 2) {
-      return const _ParsedConversionInput(
+      return const ParsedConversionInput(
         message: "Use a format like 1 usd to ron.",
       );
     }
 
     final String? fromCode = _resolveCurrencyAlias(parts[0]);
     if (fromCode == null) {
-      return _ParsedConversionInput(
+      return ParsedConversionInput(
         message: "I couldn't recognize `${parts[0].trim()}`.",
       );
     }
 
     final String? toCode = _resolveCurrencyAlias(parts[1]);
     if (toCode == null) {
-      return _ParsedConversionInput(
+      return ParsedConversionInput(
         message: "I couldn't recognize `${parts[1].trim()}`.",
       );
     }
@@ -974,8 +1267,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     final String fromName = _currencies[fromCode] ?? fromCode.toUpperCase();
     final String toName = _currencies[toCode] ?? toCode.toUpperCase();
 
-    return _ParsedConversionInput(
-      query: _ConversionQuery(
+    return ParsedConversionInput(
+      query: ConversionQuery(
         amount: amount,
         fromCurrency: fromCode,
         toCurrency: toCode,
@@ -1112,8 +1405,8 @@ class _RatesResponse {
   final Map<String, double> rates;
 }
 
-class _ConversionQuery {
-  const _ConversionQuery({
+class ConversionQuery {
+  const ConversionQuery({
     required this.amount,
     required this.fromCurrency,
     required this.toCurrency,
@@ -1124,13 +1417,13 @@ class _ConversionQuery {
   final String toCurrency;
 }
 
-class _ParsedConversionInput {
-  const _ParsedConversionInput({
+class ParsedConversionInput {
+  const ParsedConversionInput({
     this.query,
     this.message,
   });
 
-  final _ConversionQuery? query;
+  final ConversionQuery? query;
   final String? message;
 }
 

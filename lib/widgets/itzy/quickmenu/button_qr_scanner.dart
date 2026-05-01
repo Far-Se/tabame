@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -16,8 +16,8 @@ class QrScannerButton extends StatelessWidget {
   const QrScannerButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
-        actionName: "QR Scanner", icon: Icon(Icons.qr_code_scanner_rounded), child: QrScannerPanel());
+    return ModalButton(
+        actionName: "QR Scanner", icon: const Icon(Icons.qr_code_scanner_rounded), child: () => const QrScannerPanel());
   }
 }
 
@@ -122,7 +122,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -132,7 +132,6 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
         PanelHeader(
           title: "QR Scanner",
           accent: accent,
-          boldFont: globalSettings.theme.quickMenuBoldFont,
           icon: Icons.qr_code_scanner_rounded,
           buttonPressed: _busy ? null : _scanQrCode,
           buttonIcon: Icons.screenshot_monitor_rounded,

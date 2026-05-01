@@ -12,7 +12,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_widget.dart';
 
@@ -31,7 +31,7 @@ class TrktivityPage extends StatefulWidget {
 }
 
 class TrktivityPageState extends State<TrktivityPage> {
-  final Trktivity trk = Trktivity();
+  final Trktivity trk = Trktivity.instance;
   final List<String> allDates = <String>[];
   String selectedDay = "";
   String startDate = "";
@@ -438,6 +438,15 @@ It records keystrokes, mouse movement and active Window.
                             TrktivityHeatMap(
                               allDates: allDates,
                               folder: trk.folder,
+                              onDaySelected: (String date) {
+                                setState(() {
+                                  selectedDay = date;
+                                  pickText = "Pick Range";
+                                  startDate = "";
+                                  endDate = "";
+                                  showReport();
+                                });
+                              },
                             ),
                           ],
                         ),

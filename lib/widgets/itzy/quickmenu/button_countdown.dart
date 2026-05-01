@@ -1,41 +1,25 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:win32/win32.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/countdown_manager.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
+import '../../widgets/panel_header.dart';
 
 class CountdownButton extends StatelessWidget {
   const CountdownButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
-        actionName: "Countdown", icon: Icon(Icons.hourglass_bottom_rounded), child: CountDownWidget());
+    return ModalButton(
+        actionName: "Countdown",
+        icon: const Icon(Icons.hourglass_bottom_rounded),
+        child: () => const CountDownWidget());
   }
-}
-
-class CountDown {
-  int minutes;
-  int seconds;
-  CountDown({required this.minutes, required this.seconds});
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{'minute': minutes, 'second': seconds};
-  }
-
-  factory CountDown.fromMap(Map<String, dynamic> map) {
-    return CountDown(
-      minutes: (map['minute'] ?? 0) as int,
-      seconds: (map['second'] ?? 0) as int,
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-  factory CountDown.fromJson(String source) => CountDown.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
 class CountDownWidget extends StatefulWidget {
@@ -50,18 +34,27 @@ class CountDownWidgetState extends State<CountDownWidget> {
   final TextEditingController minutesController = TextEditingController(text: "00");
   final TextEditingController secondsController = TextEditingController(text: "00");
 
-  Timer? _countDownTimer;
-  int _totalSecondsRemaining = 0;
-  int _initialTotalSeconds = 0;
-  bool _isPaused = false;
-  bool _isRunning = false;
+  @override
+  void initState() {
+    super.initState();
+    Globals.countdownManager.addListener(_onManagerUpdate);
+    _updateControllers();
+  }
 
   @override
   void dispose() {
-    _countDownTimer?.cancel();
+    Globals.countdownManager.removeListener(_onManagerUpdate);
     minutesController.dispose();
     secondsController.dispose();
     super.dispose();
+  }
+
+  void _onManagerUpdate() {
+    if (mounted) {
+      setState(() {
+        _updateControllers();
+      });
+    }
   }
 
   void _startTimer() {
@@ -76,76 +69,34 @@ class CountDownWidgetState extends State<CountDownWidget> {
     if (timers.length > 5) timers.removeRange(5, timers.length);
     Boxes.updateSettings("countdowns", jsonEncode(timers.map((CountDown t) => t.toJson()).toList()));
 
-    _initialTotalSeconds = min * 60 + sec;
-    _totalSecondsRemaining = _initialTotalSeconds;
-    _isRunning = true;
-    _isPaused = false;
-    _createTicker();
-    setState(() {});
-  }
-
-  void _createTicker() {
-    _countDownTimer?.cancel();
-    _countDownTimer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_totalSecondsRemaining > 0) {
-        setState(() {
-          _totalSecondsRemaining--;
-          _updateControllers();
-        });
-      } else {
-        _stopTimer();
-        _onFinished();
-      }
-    });
+    Globals.countdownManager.start(min * 60 + sec);
   }
 
   void _updateControllers() {
-    minutesController.text = (_totalSecondsRemaining ~/ 60).toString().padLeft(2, '0');
-    secondsController.text = (_totalSecondsRemaining % 60).toString().padLeft(2, '0');
+    if (Globals.countdownManager.isRunning || Globals.countdownManager.isPaused) {
+      minutesController.text = (Globals.countdownManager.totalSecondsRemaining ~/ 60).toString().padLeft(2, '0');
+      secondsController.text = (Globals.countdownManager.totalSecondsRemaining % 60).toString().padLeft(2, '0');
+    }
   }
 
   void _pauseTimer() {
-    _countDownTimer?.cancel();
-    setState(() {
-      _isPaused = true;
-    });
+    Globals.countdownManager.pause();
   }
 
   void _resumeTimer() {
-    setState(() {
-      _isPaused = false;
-    });
-    _createTicker();
+    Globals.countdownManager.resume();
   }
 
   void _stopTimer() {
-    _countDownTimer?.cancel();
-    _countDownTimer = null;
-    setState(() {
-      _isRunning = false;
-      _isPaused = false;
-      _totalSecondsRemaining = 0;
-    });
+    Globals.countdownManager.reset();
   }
 
   void _resetTimer() {
-    _stopTimer();
+    final int initialSeconds = Globals.countdownManager.initialTotalSeconds;
+    Globals.countdownManager.reset();
     setState(() {
-      minutesController.text = (_initialTotalSeconds ~/ 60).toString().padLeft(2, '0');
-      secondsController.text = (_initialTotalSeconds % 60).toString().padLeft(2, '0');
-    });
-  }
-
-  void _onFinished() {
-    Future<void>.delayed(const Duration(milliseconds: 100), () {
-      Beep(100, 200);
-      Beep(500, 200);
-      Beep(1000, 200);
-      Beep(500, 200);
+      minutesController.text = (initialSeconds ~/ 60).toString().padLeft(2, '0');
+      secondsController.text = (initialSeconds % 60).toString().padLeft(2, '0');
     });
   }
 
@@ -158,151 +109,123 @@ class CountDownWidgetState extends State<CountDownWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          width: 280,
-          constraints: const BoxConstraints(maxHeight: 500),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: surface.withAlpha(216),
-            border: Border.all(color: onSurface.withAlpha(25), width: 1),
-            boxShadow: <BoxShadow>[
-              BoxShadow(color: Colors.black.withAlpha(51), blurRadius: 20, offset: const Offset(0, 10)),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        PanelHeader(
+          title: "Countdown",
+          accent: accent,
+          icon: Icons.timer_outlined,
+        ),
+
+        // Time Picker / Display
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _buildTimeField(minutesController, "MIN", accent, onSurface),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(":",
+                    style: TextStyle(fontSize: 40, fontWeight: FontWeight.w300, color: onSurface.withAlpha(128))),
+              ),
+              _buildTimeField(secondsController, "SEC", accent, onSurface),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        ),
+
+        // Controls
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
             children: <Widget>[
-              // Header
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.timer_outlined, size: 20),
-                    SizedBox(width: 10),
-                    Text("Countdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-
-              // Time Picker / Display
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    _buildTimeField(minutesController, "MIN", accent, onSurface),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(":",
-                          style: TextStyle(fontSize: 40, fontWeight: FontWeight.w300, color: onSurface.withAlpha(128))),
-                    ),
-                    _buildTimeField(secondsController, "SEC", accent, onSurface),
-                  ],
-                ),
-              ),
-
-              // Controls
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: <Widget>[
-                    if (!_isRunning)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _startTimer,
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: const Text("Start"),
-                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                backgroundColor: WidgetStateProperty.all(accent),
-                                foregroundColor: WidgetStateProperty.all(Colors.white),
-                              ),
+              if (!Globals.countdownManager.isRunning && !Globals.countdownManager.isPaused)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _startTimer,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text("Start"),
+                    style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                          backgroundColor: WidgetStateProperty.all(accent),
+                          foregroundColor: WidgetStateProperty.all(Colors.white),
                         ),
-                      )
-                    else ...<Widget>[
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _isPaused ? _resumeTimer : _pauseTimer,
-                          icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
-                          label: Text(_isPaused ? "Resume" : "Pause"),
-                          style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
-                                backgroundColor: WidgetStateProperty.all(accent.withAlpha(200)),
-                                foregroundColor: WidgetStateProperty.all(Colors.white),
-                              ),
+                  ),
+                )
+              else ...<Widget>[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: Globals.countdownManager.isPaused ? _resumeTimer : _pauseTimer,
+                    icon: Icon(Globals.countdownManager.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                    label: Text(Globals.countdownManager.isPaused ? "Resume" : "Pause"),
+                    style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                          backgroundColor: WidgetStateProperty.all(accent.withAlpha(200)),
+                          foregroundColor: WidgetStateProperty.all(Colors.white),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextButton.icon(
-                          onPressed: _resetTimer,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text("Reset"),
-                          style: TextButton.styleFrom(
-                            foregroundColor: onSurface.withAlpha(178),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              if (_isRunning)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: TextButton(
-                    onPressed: _stopTimer,
-                    child: Text("Cancel Countdown",
-                        style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: 12)),
                   ),
                 ),
-
-              const Divider(height: 24),
-
-              // History List
-              if (timers.isNotEmpty && !_isRunning) ...<Widget>[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Text("Recent",
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
-                ),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                    itemCount: timers.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return _HistoryTimerTile(
-                        timer: timers[index],
-                        accent: accent,
-                        onSurface: onSurface,
-                        onTap: () {
-                          minutesController.text = timers[index].minutes.toString().padLeft(2, '0');
-                          secondsController.text = timers[index].seconds.toString().padLeft(2, '0');
-                          // start the countdown
-                          _startTimer();
-                        },
-                        onDelete: () => _deleteHistoryItem(index),
-                      );
-                    },
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: _resetTimer,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text("Reset"),
+                    style: TextButton.styleFrom(
+                      foregroundColor: onSurface.withAlpha(178),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
               ],
             ],
           ),
         ),
-      ),
+
+        if (Globals.countdownManager.isRunning || Globals.countdownManager.isPaused)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextButton(
+              onPressed: _stopTimer,
+              child: Text("Cancel Countdown", style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: 12)),
+            ),
+          ),
+
+        const Divider(height: 24),
+
+        // History List
+        if (timers.isNotEmpty && !Globals.countdownManager.isRunning && !Globals.countdownManager.isPaused) ...<Widget>[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text("Recent",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+          ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              itemCount: timers.length,
+              itemBuilder: (BuildContext context, int index) {
+                return _HistoryTimerTile(
+                  timer: timers[index],
+                  accent: accent,
+                  onSurface: onSurface,
+                  onTap: () {
+                    minutesController.text = timers[index].minutes.toString().padLeft(2, '0');
+                    secondsController.text = timers[index].seconds.toString().padLeft(2, '0');
+                    // start the countdown
+                    _startTimer();
+                  },
+                  onDelete: () => _deleteHistoryItem(index),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -312,7 +235,7 @@ class CountDownWidgetState extends State<CountDownWidget> {
         Container(
           width: 80,
           decoration: BoxDecoration(
-            color: onSurface.withAlpha(10),
+            color: onSurface.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: TextField(
@@ -329,11 +252,12 @@ class CountDownWidgetState extends State<CountDownWidget> {
               contentPadding: EdgeInsets.symmetric(vertical: 8),
               isDense: true,
             ),
-            readOnly: _isRunning && !_isPaused,
+            readOnly: Globals.countdownManager.isRunning && !Globals.countdownManager.isPaused,
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: onSurface.withAlpha(100))),
+        Text(label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.4))),
       ],
     );
   }
@@ -370,7 +294,7 @@ class _HistoryTimerTileState extends State<_HistoryTimerTile> {
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
-          color: _isHovered ? widget.accent.withAlpha(60) : widget.onSurface.withAlpha(10),
+          color: _isHovered ? globalSettings.themeColors.accentColor.withValues(alpha: 0.25) : widget.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(10),
         ),
         child: InkWell(
@@ -380,7 +304,7 @@ class _HistoryTimerTileState extends State<_HistoryTimerTile> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: <Widget>[
-                Icon(Icons.history_rounded, size: 14, color: widget.onSurface.withAlpha(128)),
+                Icon(Icons.history_rounded, size: 14, color: widget.onSurface.withValues(alpha: 0.5)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -395,7 +319,7 @@ class _HistoryTimerTileState extends State<_HistoryTimerTile> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     splashRadius: 16,
-                    color: Colors.redAccent.withAlpha(178),
+                    color: Colors.redAccent.withValues(alpha: 0.7),
                   ),
               ],
             ),

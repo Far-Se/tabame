@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/popup_dialog.dart';
 import '../widgets/text_input.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class SearchTextWidget extends StatefulWidget {
   const SearchTextWidget({super.key});
@@ -60,8 +60,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final List<String> filesWithMatches = groupedResults.keys.toList();
 
@@ -326,7 +326,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          TextInput(
+          CustomTextInput(
             labelText: "Find text...",
             hintText: "Enter the text or pattern you are looking for",
             value: searchString,
@@ -337,7 +337,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           Row(
             children: <Widget>[
               Expanded(
-                child: TextInput(
+                child: CustomTextInput(
                   labelText: "Included Extensions",
                   hintText: "e.g., .dart; .js (leave empty for all)",
                   value: includedString,
@@ -349,7 +349,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextInput(
+                child: CustomTextInput(
                   labelText: "Excluded Paths",
                   hintText: "e.g., node_modules; build",
                   value: excludedString,
@@ -633,9 +633,11 @@ class _FileResultCardState extends State<_FileResultCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                        color: widget.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                        color: globalSettings.themeColors.accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12)),
                     child: Text("${widget.matches.length} matches",
-                        style: TextStyle(color: widget.accent, fontSize: 10, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: globalSettings.themeColors.accentColor, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 8),
                   _buildTinyIconButton(
@@ -674,8 +676,11 @@ class _FileResultCardState extends State<_FileResultCard> {
             Row(
               children: <Widget>[
                 Text("LINE ${o.line}",
-                    style:
-                        TextStyle(fontSize: 9, color: widget.accent, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    style: TextStyle(
+                        fontSize: 9,
+                        color: globalSettings.themeColors.accentColor,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5)),
                 const SizedBox(width: 8),
                 Text("COL ${o.col}",
                     style: TextStyle(

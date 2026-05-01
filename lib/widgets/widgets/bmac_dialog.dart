@@ -1,8 +1,10 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
+
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import 'panel_header.dart';
 
 class BMACDialog extends StatelessWidget {
@@ -10,7 +12,7 @@ class BMACDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final ThemeData theme = Theme.of(context);
     final Color surface = theme.colorScheme.surface;
 
@@ -40,7 +42,6 @@ class BMACDialog extends StatelessWidget {
                 PanelHeader(
                   title: "Support Tabame",
                   accent: accent,
-                  boldFont: globalSettings.theme.quickMenuBoldFont,
                   icon: Icons.favorite_rounded,
                 ),
                 Padding(

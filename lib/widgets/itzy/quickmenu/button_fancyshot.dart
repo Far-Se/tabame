@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../pages/quickmenu.dart';
 import '../../widgets/quick_actions_item.dart';
 

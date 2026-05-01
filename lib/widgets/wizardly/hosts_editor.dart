@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/custom_tooltip.dart';
 
 class HostsEditor extends StatefulWidget {
   const HostsEditor({super.key});
@@ -53,8 +53,8 @@ class HostsEditorState extends State<HostsEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     if (!canAccessHosts) {
@@ -307,7 +307,7 @@ class _HostRowState extends State<HostRow> {
   Widget build(BuildContext context) {
     if (badLine) return Container();
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../../win32/win32.dart';
+import '../../settings.dart';
+import '../../win32/win_utils.dart';
 import '../boxes.dart';
 import '../saved_maps.dart';
-import '../../settings.dart';
 
 // --------------------------------------------------------------------------
 // Tasks
@@ -37,7 +37,10 @@ class Tasks {
           if (!reminder.enabled) continue;
 
           if (reminder.repetitive) {
-            if (!(nowInMinutes.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday - 1])) continue;
+            if (!(nowInMinutes.isBetweenEqual(reminder.interval[0], reminder.interval[1]) &&
+                reminder.weekDays[DateTime.now().weekday - 1])) {
+              continue;
+            }
 
             int timerInMinutes = 0;
             while (timerInMinutes < nowInMinutes) {
@@ -91,10 +94,7 @@ class Tasks {
         "${reminder.message} ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}",
       );
       Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
-      for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
-        if (!QuickMenuFunctions.listeners.contains(listener)) return;
-        listener.refreshQuickMenu();
-      }
+      QuickMenuFunctions.refreshQuickMenu();
     }
   }
 
@@ -102,7 +102,8 @@ class Tasks {
     if (!reminder.enabled) return;
     final int now = DateTime.now().hour * 60 + DateTime.now().minute;
 
-    if (now.isBetweenEqual(reminder.interval[0], reminder.interval[1]) && reminder.weekDays[DateTime.now().weekday - 1]) {
+    if (now.isBetweenEqual(reminder.interval[0], reminder.interval[1]) &&
+        reminder.weekDays[DateTime.now().weekday - 1]) {
       if (reminder.voiceNotification) {
         WinUtils.textToSpeech(reminder.message, repeat: -1, volume: reminder.voiceVolume);
       } else {
@@ -117,10 +118,7 @@ class Tasks {
           "${reminder.message} ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}",
         );
         Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
-        for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
-          if (!QuickMenuFunctions.listeners.contains(listener)) return;
-          listener.refreshQuickMenu();
-        }
+        QuickMenuFunctions.refreshQuickMenu();
       }
     }
 
@@ -158,10 +156,7 @@ class Tasks {
       if (reminder.persistent) {
         globalSettings.persistentReminders.add("${reminder.message} at ${reminder.time.formatTime()}");
         Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
-        for (final QuickMenuTriggers listener in QuickMenuFunctions.listeners) {
-          if (!QuickMenuFunctions.listeners.contains(listener)) return;
-          listener.refreshQuickMenu();
-        }
+        QuickMenuFunctions.refreshQuickMenu();
       }
     }
 

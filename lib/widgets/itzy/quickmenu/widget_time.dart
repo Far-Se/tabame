@@ -8,10 +8,10 @@ import '../../../models/win32/keys.dart';
 import '../../../models/settings.dart';
 
 class TimeWidget extends StatefulWidget {
-  final bool? inline;
+  final bool inline;
   const TimeWidget({
     super.key,
-    this.inline,
+    this.inline = false,
   });
 
   @override
@@ -19,101 +19,98 @@ class TimeWidget extends StatefulWidget {
 }
 
 class _TimeWidgetState extends State<TimeWidget> {
+  late Timer _timer;
+  late DateTime _now;
+
   @override
   void initState() {
     super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _timer.cancel();
     super.dispose();
+  }
+
+  void _onTap() {
+    globalSettings.noopKeyListener = true;
+    WinKeys.send("{#LWIN}C");
+    Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool inline2 = widget.inline ?? false;
-    return StreamBuilder<Map<String, String>>(
-      initialData: <String, String>{
-        "time": DateFormat('hh:mm:ss').format(DateTime.now()),
-        "date": DateFormat('dd MMM').format(DateTime.now()),
-        "day": DateFormat('EE').format(DateTime.now()),
-      },
-      stream: Stream<Map<String, String>>.periodic(const Duration(milliseconds: 500), (int timer) {
-        final DateTime now = DateTime.now();
-        return <String, String>{
-          "time": DateFormat('hh:mm:ss').format(now),
-          "date": DateFormat('dd MMM').format(now),
-          "day": DateFormat('EE').format(now),
-        };
-      }),
-      builder: (BuildContext context, AsyncSnapshot<Map<dynamic, dynamic>> snapshot) {
-        if (inline2) {
-          return InkWell(
-            onTap: () {
-              globalSettings.noopKeyListener = true;
-              WinKeys.send("{#LWIN}C");
-              Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 60, maxWidth: 100),
-                    child: Text((snapshot.data as Map<String, String>)["time"] as String,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)),
-                  ),
-                  Container(
-                      constraints: const BoxConstraints(minWidth: 60, maxWidth: 100),
-                      child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
-                ],
-              ),
-            ),
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.only(left: 2),
-          child: Container(
-            child: InkWell(
-              onTap: () {
-                globalSettings.noopKeyListener = true;
-                WinKeys.send("{#LWIN}C");
-                Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
-              },
-              child: Align(
-                alignment: Alignment.center,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 0, maxWidth: 100),
-                  child: Column(
-                    children: <Widget>[
-                      Flexible(
-                          fit: FlexFit.tight,
-                          child: Text((snapshot.data as Map<String, String>)["time"] as String,
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight:
-                                      globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400))),
-                      Flexible(
-                          fit: FlexFit.tight,
-                          child: Text("${snapshot.data!["day"]} ${snapshot.data!["date"]}",
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight:
-                                      globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400)))
-                    ],
-                  ),
+    final String timeStr = DateFormat('hh:mm:ss').format(_now);
+    final String dateStr = DateFormat('dd MMM').format(_now);
+    final String dayStr = DateFormat('EE').format(_now);
+    final FontWeight fontWeight = FontWeight(globalSettings.theme.uiFontWeight);
+
+    if (widget.inline) {
+      return InkWell(
+        onTap: _onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _buildText(timeStr, 14, fontWeight, minWidth: 70, maxWidth: 100),
+              _buildText("$dayStr $dateStr", 14, fontWeight, minWidth: 60, maxWidth: 100),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: _onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: Align(
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 100),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Flexible(
+                  fit: FlexFit.tight,
+                  child: Center(child: _buildText(timeStr, 14, fontWeight)),
                 ),
-              ),
+                Flexible(
+                  fit: FlexFit.tight,
+                  child: Center(child: _buildText("$dayStr $dateStr", 10, fontWeight)),
+                )
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  Widget _buildText(String text, double fontSize, FontWeight weight, {double? minWidth, double? maxWidth}) {
+    Widget child = Text(
+      text,
+      style: TextStyle(fontSize: fontSize, fontWeight: weight),
+      overflow: TextOverflow.ellipsis,
+    );
+
+    if (minWidth != null || maxWidth != null) {
+      child = Container(
+        constraints: BoxConstraints(minWidth: minWidth ?? 0, maxWidth: maxWidth ?? double.infinity),
+        child: child,
+      );
+    }
+    return child;
   }
 }

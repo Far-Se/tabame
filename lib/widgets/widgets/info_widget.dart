@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+
+import 'custom_tooltip.dart';
 
 class InfoWidget extends StatelessWidget {
   final Function() onTap;

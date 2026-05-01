@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
-import '../../models/util/markdown_text.dart';
 import '../../models/settings.dart';
+import '../../models/util/markdown_text.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -14,7 +14,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return SingleChildScrollView(
@@ -147,7 +147,8 @@ class _HomeState extends State<Home> {
             selectable: true,
             styleSheet: MarkdownStyleSheet(
               h2: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: onSurface, height: 2),
-              h3: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.9), height: 1.8),
+              h3: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.9), height: 1.8),
               h5: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color, letterSpacing: 0.5),
               p: TextStyle(fontSize: 13, color: onSurface.withValues(alpha: 0.7), height: 1.5),
               strong: TextStyle(fontWeight: FontWeight.bold, color: onSurface),

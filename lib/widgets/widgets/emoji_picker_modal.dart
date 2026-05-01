@@ -16,11 +16,12 @@ Future<String?> showEmojiPickerModal(
   BuildContext context, {
   String title = 'Pick Emoji',
   String initialValue = '',
+  Color? barrierColor,
 }) {
   return showDialog<String>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.16),
+    barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.16),
     builder: (BuildContext context) {
       return Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -53,7 +54,7 @@ class EmojiPickerTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return TextField(
       controller: controller,
@@ -101,6 +102,7 @@ class EmojiPickerModal extends StatefulWidget {
 class _EmojiPickerModalState extends State<EmojiPickerModal> {
   late final TextEditingController _searchController;
   late final TextEditingController _customController;
+  late final ScrollController _scrollController;
   late final Future<List<_EmojiEntry>> _emojiFuture;
 
   int _selectedCategoryIndex = 0;
@@ -110,6 +112,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     super.initState();
     _searchController = TextEditingController();
     _customController = TextEditingController(text: widget.initialValue);
+    _scrollController = ScrollController();
     _emojiFuture = _loadEmojiEntries();
     _syncCategoryFromInitialValue();
   }
@@ -118,6 +121,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
   void dispose() {
     _searchController.dispose();
     _customController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -147,7 +151,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color borderColor = scheme.onSurface.withValues(alpha: 0.1);
 
     return ConstrainedBox(
@@ -166,7 +170,6 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
               PanelHeader(
                 title: widget.title,
                 accent: accent,
-                boldFont: globalSettings.theme.quickMenuBoldFont,
                 icon: Icons.emoji_emotions_outlined,
                 buttonPressed: () => Navigator.of(context).pop(),
                 buttonIcon: Icons.close_rounded,
@@ -365,6 +368,9 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 setState(() {
                   _selectedCategoryIndex = index;
                 });
+                if (_scrollController.hasClients) {
+                  _scrollController.jumpTo(0);
+                }
               },
               borderRadius: BorderRadius.circular(999),
               child: AnimatedContainer(
@@ -504,8 +510,10 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
 
   Widget _buildEmojiGrid(List<_EmojiEntry> entries, Color accent, ColorScheme scheme) {
     return Scrollbar(
+      controller: _scrollController,
       thumbVisibility: true,
       child: GridView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.only(right: 4),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 48,
@@ -583,17 +591,21 @@ class _EmojiTileState extends State<_EmojiTile> {
             duration: const Duration(milliseconds: 130),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _hovering ? widget.accent.withValues(alpha: 0.14) : widget.accent.withValues(alpha: 0.06),
+              color: _hovering
+                  ? globalSettings.themeColors.accentColor.withValues(alpha: 0.14)
+                  : globalSettings.themeColors.accentColor.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: _hovering ? widget.accent.withValues(alpha: 0.34) : widget.accent.withValues(alpha: 0.10),
+                color: _hovering
+                    ? globalSettings.themeColors.accentColor.withValues(alpha: 0.34)
+                    : globalSettings.themeColors.accentColor.withValues(alpha: 0.10),
               ),
             ),
             child: Text(
               widget.entry.char,
               style: TextStyle(
                 fontSize: 20,
-                color: _hovering ? widget.accent : widget.onSurface,
+                color: _hovering ? globalSettings.themeColors.accentColor : widget.onSurface,
               ),
             ),
           ),

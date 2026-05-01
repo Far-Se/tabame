@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
+
 import '../../models/classes/boxes/boxes_base.dart';
+import '../../models/classes/saved_maps.dart';
 import '../../models/util/app_opacity.dart';
 import '../../models/win32/mixed.dart';
 import '../itzy/interface/quickmenu_bottom_bar.dart';
-import '../itzy/interface/quickmenu_taskbar.dart';
-import '../itzy/interface/quickmenu_quickactions.dart';
-import '../itzy/interface/quickmenu_search.dart';
-import 'quickmenu/quickmenu_settings.dart';
-import 'quickmenu/custom_quickactions_settings.dart';
+import 'grid_settings.dart';
 import 'quickmenu/appaudio_settings.dart';
 import 'quickmenu/apps_settings.dart';
-import 'quickmenu/quick_grid_settings.dart';
-import 'grid_settings.dart';
+import 'quickmenu/audio_settings.dart';
+import 'quickmenu/bookmarks_settings.dart';
+import 'quickmenu/custom_quickactions_settings.dart';
+import 'quickmenu/launcher_settings.dart';
+import 'quickmenu/quick_snap_settings.dart';
+import 'quickmenu/quickactions_settings.dart';
+import 'quickmenu/quickmenu_settings.dart';
+import 'quickmenu/quickmenu_taskbar.dart';
+import 'quickmenu/reminders_settings.dart';
+import 'quickmenu/workspaces_settings.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for a settings sub-page entry
@@ -58,6 +64,10 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
 
   String _searchQuery = "";
 
+  void openPage(int index) {
+    setState(() => _selectedPage = index);
+  }
+
   late final List<_SettingsPage> _pages = <_SettingsPage>[
     _SettingsPage(
       title: "General",
@@ -85,22 +95,10 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
       builder: () => const QuickmenuBottomBarSettings(),
     ),
     _SettingsPage(
-      title: "File Search",
-      subtitle: "Index & Logic",
-      icon: Icons.search_rounded,
-      builder: () => const QuickmenuFileSearchSettings(),
-    ),
-    _SettingsPage(
-      title: "Grid View",
-      subtitle: "Window Snapping",
-      icon: Icons.view_module_rounded,
-      builder: () => const QuickmenuGridViewSettings(),
-    ),
-    _SettingsPage(
-      title: "Custom Actions",
-      subtitle: "User Macros",
-      icon: Icons.settings_input_component_rounded,
-      builder: () => const QuickmenuCustomQuickActionsSettings(),
+      title: "Audio Settings",
+      subtitle: "Devices, OSD, Rules",
+      icon: Icons.volume_up_rounded,
+      builder: () => const QuickmenuAudioSettings(),
     ),
     _SettingsPage(
       title: "App Audio",
@@ -116,11 +114,45 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
       stats: () => "${Boxes.appCategories.length} Categories",
     ),
     _SettingsPage(
+      title: "Bookmarks",
+      subtitle: "Saved Projects",
+      icon: Icons.bookmarks_rounded,
+      builder: () => const QuickmenuBookmarksSettings(),
+      stats: () => "${Boxes().bookmarks.length} Groups",
+    ),
+    _SettingsPage(
+      title: "Reminders",
+      subtitle: "Tasks & Alerts",
+      icon: Icons.notifications_active_rounded,
+      builder: () => const QuickmenuRemindersSettings(),
+      stats: () => "${Boxes.reminders.where((Reminder r) => r.enabled).length} Active",
+    ),
+    _SettingsPage(
+      title: "Custom Actions",
+      subtitle: "User Macros",
+      icon: Icons.settings_input_component_rounded,
+      builder: () => const QuickmenuCustomQuickActionsSettings(),
+    ),
+    _SettingsPage(
       title: "QuickSnap",
       subtitle: "Precision Layouts",
       icon: Icons.view_quilt_rounded,
       builder: () => const QuickmenuQuickGridsSettings(),
       stats: () => "${Boxes.quickGrids.length} Presets",
+    ),
+    _SettingsPage(
+      title: "Launcher",
+      subtitle: "Files, Windows, Apps",
+      icon: Icons.search_rounded,
+      builder: () => const QuickmenuLauncherSettings(),
+      stats: () => "${Boxes.searchFolders.length} Folders",
+    ),
+    _SettingsPage(
+      title: "Workspaces",
+      subtitle: "Multi-App Orchestration",
+      icon: Icons.dashboard_customize_rounded,
+      builder: () => const WorkspacesSettingsPage(),
+      stats: () => "${Boxes.workspaces.length} Spaces",
     ),
   ];
 
@@ -212,10 +244,26 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                 )
               : SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                  padding: const EdgeInsets.fromLTRB(20, 5, 20, 40),
                   child: LayoutBuilder(
                     builder: (BuildContext context, BoxConstraints constraints) {
-                      final int crossAxisCount = constraints.maxWidth > 600 ? 3 : (constraints.maxWidth > 550 ? 2 : 1);
+                      final double width = constraints.maxWidth;
+
+                      final int crossAxisCount = switch (width) {
+                        > 900 => 4,
+                        > 600 => 3,
+                        > 400 => 2,
+                        _ => 1,
+                      };
+
+                      // Aspect ratio adapts so cards don't get too wide/narrow
+                      final double aspectRatio = switch (width) {
+                        > 900 => 1.6,
+                        > 600 => 1.8,
+                        > 400 => 1.95,
+                        _ => 3.2, // single column → wider, shorter cards
+                      };
+
                       return GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -223,7 +271,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
-                          childAspectRatio: 1.95,
+                          childAspectRatio: aspectRatio,
                         ),
                         itemCount: filtered.length,
                         itemBuilder: (BuildContext context, int index) {
@@ -600,8 +648,8 @@ class QuickmenuBottomBarSettings extends StatelessWidget {
   }
 }
 
-class QuickmenuFileSearchSettings extends StatelessWidget {
-  const QuickmenuFileSearchSettings({super.key});
+class QuickmenuLauncherSettings extends StatelessWidget {
+  const QuickmenuLauncherSettings({super.key});
   @override
   Widget build(BuildContext context) {
     return const Padding(
@@ -629,6 +677,12 @@ class QuickmenuAppAudioSettings extends StatelessWidget {
   Widget build(BuildContext context) => const QuickmenuAppAudioSettingsPage();
 }
 
+class QuickmenuAudioSettings extends StatelessWidget {
+  const QuickmenuAudioSettings({super.key});
+  @override
+  Widget build(BuildContext context) => const QuickmenuAudioSettingsPage();
+}
+
 class QuickmenuAppsSettingsSub extends StatelessWidget {
   const QuickmenuAppsSettingsSub({super.key});
   @override
@@ -638,5 +692,17 @@ class QuickmenuAppsSettingsSub extends StatelessWidget {
 class QuickmenuQuickGridsSettings extends StatelessWidget {
   const QuickmenuQuickGridsSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickGridsSettingsPage();
+  Widget build(BuildContext context) => const QuickSnapSettingsPage();
+}
+
+class QuickmenuBookmarksSettings extends StatelessWidget {
+  const QuickmenuBookmarksSettings({super.key});
+  @override
+  Widget build(BuildContext context) => const QuickmenuBookmarksSettingsPage();
+}
+
+class QuickmenuRemindersSettings extends StatelessWidget {
+  const QuickmenuRemindersSettings({super.key});
+  @override
+  Widget build(BuildContext context) => const QuickmenuRemindersSettingsPage();
 }

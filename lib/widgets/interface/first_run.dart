@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -14,7 +14,9 @@ import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import '../widgets/info_widget.dart';
+import '../widgets/windows_scroll.dart';
 
 class FirstRun extends StatefulWidget {
   const FirstRun({super.key});
@@ -49,7 +51,11 @@ class FirstRunState extends State<FirstRun> {
     "Many more features you can check in Settings -> Hotkeys.",
   ];
 
-  final List<String> mouseButtons = <String>["MouseButton4", "MouseButton5"];
+  final List<String> mouseButtons = <String>[
+    Hotkeys.mouseButton4Key,
+    Hotkeys.mouseButton5Key,
+    Hotkeys.doubleAltKey,
+  ];
   int sizeIncrement = 1;
   @override
   void initState() {
@@ -80,7 +86,7 @@ class FirstRunState extends State<FirstRun> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
@@ -219,7 +225,7 @@ class FirstRunState extends State<FirstRun> {
   }
 
   Widget _buildHotkeyPage(ThemeData theme, Color accent) {
-    return SingleChildScrollView(
+    return WindowsScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,14 +317,16 @@ class FirstRunState extends State<FirstRun> {
                   theme,
                   accent: accent,
                   icon: Icons.mouse_rounded,
-                  title: "Mouse side buttons",
-                  subtitle: "Pick a side button if you prefer a one-hand trigger.",
+                  title: "Special triggers",
+                  subtitle: "Pick a side button or the Double Alt trigger.",
                   selected: _isMouseHotkey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        _isMouseHotkey ? "Current mouse shortcut: $hotkey" : "No mouse button selected",
+                        _isMouseHotkey
+                            ? "Current shortcut: ${Hotkeys.displayKey(hotkey)}"
+                            : "No special trigger selected",
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 6),
@@ -327,16 +335,22 @@ class FirstRunState extends State<FirstRun> {
                         style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: _mouseButtonTile(theme, accent, "MouseButton4"),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _mouseButtonTile(theme, accent, "MouseButton5"),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (BuildContext context, BoxConstraints constraints) {
+                          final double tileWidth = (constraints.maxWidth - 12) / 2;
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: Hotkeys.specialBindingKeys
+                                .map(
+                                  (String binding) => SizedBox(
+                                    width: tileWidth,
+                                    child: _mouseButtonTile(theme, accent, binding),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -363,7 +377,7 @@ class FirstRunState extends State<FirstRun> {
   }
 
   Widget _buildSetupPage(ThemeData theme, Color accent) {
-    return SingleChildScrollView(
+    return WindowsScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,11 +426,12 @@ class FirstRunState extends State<FirstRun> {
                     _toggleCard(
                       theme,
                       accent: accent,
-                      title: "Auto update",
-                      description: "Keep the app current without manually downloading each new version.",
-                      value: globalSettings.autoUpdate,
+                      title: "Auto check for updates",
+                      description:
+                          "Tabame will check for new versions on startup and notify you if an update is available.",
+                      value: globalSettings.autoCheckForUpdates,
                       onChanged: (bool value) async {
-                        globalSettings.autoUpdate = value;
+                        globalSettings.autoCheckForUpdates = value;
                         await Boxes.updateSettings("autoUpdate", value);
                         if (!mounted) return;
                         setState(() {});
@@ -700,10 +715,11 @@ class FirstRunState extends State<FirstRun> {
               Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                   color: selected ? accent : theme.hintColor, size: 20),
               const SizedBox(height: 12),
-              Text(button, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text(Hotkeys.displayKey(button),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(
-                button == "MouseButton4" ? "Usually the back thumb button." : "Usually the forward thumb button.",
+                _specialBindingDescription(button),
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, height: 1.35),
               ),
             ],
@@ -795,10 +811,10 @@ class FirstRunState extends State<FirstRun> {
 
   String get _selectedHotkeyLabel {
     if (hotkey.isEmpty) return "Press here to set your shortcut";
-    return Hotkeys.formatHotkey(key: hotkey, modifiers: modifiers);
+    return Hotkeys.formatHotkeyLabel(key: hotkey, modifiers: modifiers);
   }
 
-  bool get _isMouseHotkey => hotkey == "MouseButton4" || hotkey == "MouseButton5";
+  bool get _isMouseHotkey => Hotkeys.isSpecialBindingKey(hotkey);
 
   void _startHotkeyListening() {
     listeningToHotkey = !listeningToHotkey;
@@ -808,8 +824,7 @@ class FirstRunState extends State<FirstRun> {
 
   void _selectMouseButton(String button) {
     modifiers.clear();
-    if (hotkey == "MouseButton4" && !mouseButtons.contains("MouseButton4")) mouseButtons.add("MouseButton4");
-    if (hotkey == "MouseButton5" && !mouseButtons.contains("MouseButton5")) mouseButtons.add("MouseButton5");
+    _restoreCurrentSpecialBinding();
     hotkey = button;
     mouseButtons.remove(button);
     setState(() {});
@@ -822,8 +837,7 @@ class FirstRunState extends State<FirstRun> {
     if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
     if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
     if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-    if (hotkey == "MouseButton4" && !mouseButtons.contains("MouseButton4")) mouseButtons.add("MouseButton4");
-    if (hotkey == "MouseButton5" && !mouseButtons.contains("MouseButton5")) mouseButtons.add("MouseButton5");
+    _restoreCurrentSpecialBinding();
 
     hotkey = k.logicalKey.keyLabel;
     modifiers = Hotkeys.normalizeModifiers(modifier);
@@ -831,6 +845,25 @@ class FirstRunState extends State<FirstRun> {
     listeningToHotkey = false;
     setState(() {});
     return KeyEventResult.handled;
+  }
+
+  void _restoreCurrentSpecialBinding() {
+    if (Hotkeys.isSpecialBindingKey(hotkey) && !mouseButtons.contains(hotkey)) {
+      mouseButtons.add(hotkey);
+    }
+  }
+
+  String _specialBindingDescription(String binding) {
+    switch (binding) {
+      case Hotkeys.mouseButton4Key:
+        return "Usually the back thumb button.";
+      case Hotkeys.mouseButton5Key:
+        return "Usually the forward thumb button.";
+      case Hotkeys.doubleAltKey:
+        return "Tap Alt once, then press Alt again within 100ms.";
+      default:
+        return "Use this special input as a hotkey.";
+    }
   }
 
   Future<void> _goToStep(int step) async {
@@ -856,6 +889,10 @@ class FirstRunState extends State<FirstRun> {
 
   Future<void> _finishSetup() async {
     if (kReleaseMode) {
+      final List<String> savedModifiers = Hotkeys.normalizeModifiers(modifiers);
+      hokeyObj.first.key = hotkey;
+      hokeyObj.first.modifiers = savedModifiers;
+      Boxes.updateSettings("remap", jsonEncode(hokeyObj));
       WinUtils.reloadTabameQuickMenu();
       Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
     } else {

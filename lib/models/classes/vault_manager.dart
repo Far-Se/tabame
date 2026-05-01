@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 
-import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 import 'vault_item.dart';
 
 class VaultMetadata {
@@ -29,7 +29,8 @@ class VaultManager {
     try {
       final String content = await file.readAsString();
       final Map<String, dynamic> json = jsonDecode(content) as Map<String, dynamic>;
-      return json.map((String key, dynamic value) => MapEntry<String, VaultMetadata>(key, VaultMetadata.fromJson(value as Map<String, dynamic>)));
+      return json.map((String key, dynamic value) =>
+          MapEntry<String, VaultMetadata>(key, VaultMetadata.fromJson(value as Map<String, dynamic>)));
     } catch (e) {
       return <String, VaultMetadata>{};
     }
@@ -46,7 +47,8 @@ class VaultManager {
     currentMetadata[name] = VaultMetadata(iv: iv.base64, data: encrypted.base64);
 
     final File file = File(_filePath);
-    await file.writeAsString(jsonEncode(currentMetadata.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
+    await file.writeAsString(
+        jsonEncode(currentMetadata.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
   }
 
   static Future<VaultData?> decryptVault(String name, String password) async {
@@ -71,7 +73,8 @@ class VaultManager {
     if (currentMetadata.containsKey(name)) {
       currentMetadata.remove(name);
       final File file = File(_filePath);
-      await file.writeAsString(jsonEncode(currentMetadata.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
+      await file.writeAsString(
+          jsonEncode(currentMetadata.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
     }
   }
 

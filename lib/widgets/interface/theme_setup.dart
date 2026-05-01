@@ -1,15 +1,25 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:flutter/gestures.dart';
+import 'package:filepicker_windows/filepicker_windows.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/globals.dart' show Globals;
-import '../../models/util/theme_colors.dart';
 import '../../models/settings.dart';
+import '../../models/theme.dart';
+import '../../models/util/theme_colors.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/color_picker.dart';
+import '../widgets/custom_tooltip.dart';
+import '../widgets/font_picker/models/picker_font.dart';
+import '../widgets/font_picker/ui/font_picker.dart';
+import '../widgets/panel_opacity_gradient_editor.dart';
+import '../widgets/windows_scroll.dart';
 
 class ThemeSetup extends StatefulWidget {
   const ThemeSetup({super.key});
@@ -58,7 +68,6 @@ Map<ColorSwatch<Object>, String> getPredefinedColorSet(List<List<int>> predefine
 }
 
 class ThemeSetupState extends State<ThemeSetup> {
-  final ScrollController mainScrollControl = ScrollController();
   bool changed = false;
 
   ThemeColors savedLightTheme = globalSettings.lightTheme.copyWith();
@@ -86,7 +95,6 @@ class ThemeSetupState extends State<ThemeSetup> {
 
   @override
   void dispose() {
-    mainScrollControl.dispose();
     super.dispose();
   }
 
@@ -103,75 +111,188 @@ class ThemeSetupState extends State<ThemeSetup> {
     setState(() => changed = false);
   }
 
+  Future<void> _exportThemes() async {
+    final Map<String, dynamic> data = jsonDecode(globalSettings.quickMenuDesignThemesToJson());
+    for (final dynamic designEntry in data.values) {
+      if (designEntry is Map<dynamic, dynamic>) {
+        for (final String themeKey in <String>['lightTheme', 'darkTheme']) {
+          if (designEntry[themeKey] != null && designEntry[themeKey] is Map<dynamic, dynamic>) {
+            final Map<String, dynamic> theme =
+                Map<String, dynamic>.from(designEntry[themeKey] as Map<dynamic, dynamic>);
+            theme['backdropImages'] = <String>[];
+            theme['backdropType'] = "";
+            theme['backdropOpacity'] = 0.7;
+            designEntry[themeKey] = theme;
+          }
+        }
+      }
+    }
+
+    final String json = jsonEncode(data);
+    final SaveFilePicker picker = SaveFilePicker()
+      ..title = 'Export Themes'
+      ..defaultExtension = 'json'
+      ..filterSpecification = <String, String>{'JSON Files': '*.json', 'All Files': '*.*'}
+      ..fileName = 'tabame_themes.json';
+
+    final File? file = picker.getFile();
+    if (file != null) {
+      await file.writeAsString(json);
+    }
+  }
+
+  Future<void> _importThemes() async {
+    final OpenFilePicker picker = OpenFilePicker()
+      ..title = 'Import Themes'
+      ..filterSpecification = <String, String>{'JSON Files': '*.json', 'All Files': '*.*'};
+
+    final File? file = picker.getFile();
+    if (file != null) {
+      try {
+        final String content = await file.readAsString();
+        final Map<String, dynamic> data = jsonDecode(content);
+
+        // Sanitize imported data to exclude backdrops
+        for (final dynamic designEntry in data.values) {
+          if (designEntry is Map<dynamic, dynamic>) {
+            for (final String themeKey in <String>['lightTheme', 'darkTheme']) {
+              if (designEntry[themeKey] != null && designEntry[themeKey] is Map<dynamic, dynamic>) {
+                final Map<String, dynamic> theme =
+                    Map<String, dynamic>.from(designEntry[themeKey] as Map<dynamic, dynamic>);
+                theme['backdropImages'] = <String>[];
+                theme['backdropType'] = "";
+                theme['backdropOpacity'] = 0.7;
+                designEntry[themeKey] = theme;
+              }
+            }
+          }
+        }
+
+        globalSettings.loadQuickMenuDesignThemesFromJson(jsonEncode(data));
+        await Boxes.saveActiveQuickMenuThemes(notify: true);
+
+        // Update local state to reflect imported themes for current design
+        final String? lightTheme = Boxes.pref.getString('lightTheme');
+        if (lightTheme != null) savedLightTheme = ThemeColors.fromJson(lightTheme).copyWith();
+
+        final String? darkTheme = Boxes.pref.getString('darkTheme');
+        if (darkTheme != null) savedDarkTheme = ThemeColors.fromJson(darkTheme).copyWith();
+
+        if (mounted) {
+          setState(() {
+            changed = false;
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
         Positioned.fill(
-          child: SingleChildScrollView(
-            controller: mainScrollControl,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            child: Material(
-              type: MaterialType.transparency,
-              child: globalSettings.themeTypeMode == ThemeType.dark
-                  ? ThemeSetupWidget(
-                      title: "Dark Theme",
-                      savedColors: savedDarkTheme,
-                      currentColors: globalSettings.darkTheme,
-                      onChanged: () => setState(() => changed = true),
-                      onGradientChanged: (double e) {
-                        globalSettings.darkTheme.gradientAlpha = e.toInt();
-                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
-                      },
-                      quickMenuBoldChanged: (bool e) {
-                        globalSettings.darkTheme.quickMenuBoldFont = e;
-                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
-                      },
-                      onColorChanged: (Color color, int i) {
-                        if (i == 0) globalSettings.darkTheme.background = color.toInt32;
-                        if (i == 1) globalSettings.darkTheme.textColor = color.toInt32;
-                        if (i == 2) globalSettings.darkTheme.accentColor = color.toInt32;
-                        Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                        Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
-                      },
-                      predefinedColors: predefinedColorsDark,
-                      themeOptions: darkThemeOptions,
-                      onDesignChanged: (QuickMenuDesigns design) async {
-                        await Boxes.switchQuickMenuDesign(design);
-                        savedDarkTheme = globalSettings.darkTheme.copyWith();
-                        savedLightTheme = globalSettings.lightTheme.copyWith();
-                        setState(() => changed = false);
-                      },
-                    )
-                  : ThemeSetupWidget(
-                      title: "Light Theme",
-                      savedColors: savedLightTheme,
-                      currentColors: globalSettings.lightTheme,
-                      onChanged: () => setState(() => changed = true),
-                      onGradientChanged: (double e) {
-                        globalSettings.lightTheme.gradientAlpha = e.toInt();
-                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
-                      },
-                      quickMenuBoldChanged: (bool e) {
-                        globalSettings.lightTheme.quickMenuBoldFont = e;
-                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
-                      },
-                      onColorChanged: (Color color, int i) {
-                        if (i == 0) globalSettings.lightTheme.background = color.toInt32;
-                        if (i == 1) globalSettings.lightTheme.textColor = color.toInt32;
-                        if (i == 2) globalSettings.lightTheme.accentColor = color.toInt32;
-                        Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                        Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
-                      },
-                      predefinedColors: predefinedColorsLight,
-                      themeOptions: lightThemeOptions,
-                      onDesignChanged: (QuickMenuDesigns design) async {
-                        await Boxes.switchQuickMenuDesign(design);
-                        savedDarkTheme = globalSettings.darkTheme.copyWith();
-                        savedLightTheme = globalSettings.lightTheme.copyWith();
-                        setState(() => changed = false);
-                      },
-                    ),
+          child: WindowsScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              child: Material(
+                type: MaterialType.transparency,
+                child: globalSettings.themeTypeMode == ThemeType.dark
+                    ? ThemeSetupWidget(
+                        title: "Dark Theme",
+                        savedColors: savedDarkTheme,
+                        currentColors: globalSettings.darkTheme,
+                        onChanged: () => setState(() => changed = true),
+                        onGradientChanged: (double e) {
+                          globalSettings.darkTheme.gradientAlpha = e.toInt();
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        },
+                        onBackdropOpacityChanged: (double e) {
+                          globalSettings.darkTheme.backdropOpacity = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        },
+                        onPanelOpacityPointsChanged: (List<double> e) {
+                          globalSettings.darkTheme.panelOpacityPoints = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onPanelOpacityBeginChanged: (String e) {
+                          globalSettings.darkTheme.panelOpacityBegin = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onPanelOpacityEndChanged: (String e) {
+                          globalSettings.darkTheme.panelOpacityEnd = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onColorChanged: (Color color, int i) {
+                          if (i == 0) globalSettings.darkTheme.background = color;
+                          if (i == 1) globalSettings.darkTheme.textColor = color;
+                          if (i == 2) globalSettings.darkTheme.accentColor = color;
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                        },
+                        predefinedColors: predefinedColorsDark,
+                        themeOptions: darkThemeOptions,
+                        onDesignChanged: (QuickMenuDesigns design) async {
+                          await Boxes.switchQuickMenuDesign(design);
+                          savedDarkTheme = globalSettings.darkTheme.copyWith();
+                          savedLightTheme = globalSettings.lightTheme.copyWith();
+                          setState(() => changed = false);
+                        },
+                        onExport: _exportThemes,
+                        onImport: _importThemes,
+                      )
+                    : ThemeSetupWidget(
+                        title: "Light Theme",
+                        savedColors: savedLightTheme,
+                        currentColors: globalSettings.lightTheme,
+                        onChanged: () => setState(() => changed = true),
+                        onGradientChanged: (double e) {
+                          globalSettings.lightTheme.gradientAlpha = e.toInt();
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        },
+                        onBackdropOpacityChanged: (double e) {
+                          globalSettings.lightTheme.backdropOpacity = e;
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        },
+                        onPanelOpacityPointsChanged: (List<double> e) {
+                          globalSettings.lightTheme.panelOpacityPoints = e;
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onPanelOpacityBeginChanged: (String e) {
+                          globalSettings.lightTheme.panelOpacityBegin = e;
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onPanelOpacityEndChanged: (String e) {
+                          globalSettings.lightTheme.panelOpacityEnd = e;
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                        },
+                        onColorChanged: (Color color, int i) {
+                          if (i == 0) globalSettings.lightTheme.background = color;
+                          if (i == 1) globalSettings.lightTheme.textColor = color;
+                          if (i == 2) globalSettings.lightTheme.accentColor = color;
+                          Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+                        },
+                        predefinedColors: predefinedColorsLight,
+                        themeOptions: lightThemeOptions,
+                        onDesignChanged: (QuickMenuDesigns design) async {
+                          await Boxes.switchQuickMenuDesign(design);
+                          savedDarkTheme = globalSettings.darkTheme.copyWith();
+                          savedLightTheme = globalSettings.lightTheme.copyWith();
+                          setState(() => changed = false);
+                        },
+                        onExport: _exportThemes,
+                        onImport: _importThemes,
+                      ),
+              ),
             ),
           ),
         ),
@@ -234,25 +355,35 @@ class ThemeSetupWidget extends StatefulWidget {
   final String title;
   final VoidCallback onChanged;
   final Function(double) onGradientChanged;
-  final Function(bool) quickMenuBoldChanged;
+  final Function(double) onBackdropOpacityChanged;
+  final Function(List<double>) onPanelOpacityPointsChanged;
+  final Function(String) onPanelOpacityBeginChanged;
+  final Function(String) onPanelOpacityEndChanged;
   final Function(Color, int) onColorChanged;
   final ThemeColors savedColors;
   final ThemeColors currentColors;
   final List<Map<ColorSwatch<Object>, String>> predefinedColors;
   final List<List<int>> themeOptions;
   final Function(QuickMenuDesigns) onDesignChanged;
+  final VoidCallback onExport;
+  final VoidCallback onImport;
   const ThemeSetupWidget({
     super.key,
     required this.title,
     required this.onChanged,
     required this.onGradientChanged,
-    required this.quickMenuBoldChanged,
+    required this.onBackdropOpacityChanged,
     required this.onColorChanged,
     required this.savedColors,
     required this.currentColors,
     required this.predefinedColors,
     required this.themeOptions,
     required this.onDesignChanged,
+    required this.onPanelOpacityPointsChanged,
+    required this.onPanelOpacityBeginChanged,
+    required this.onPanelOpacityEndChanged,
+    required this.onExport,
+    required this.onImport,
   });
 
   @override
@@ -261,22 +392,139 @@ class ThemeSetupWidget extends StatefulWidget {
 
 class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   late TextEditingController gradientController;
+  late TextEditingController backdropOpacityController;
+  bool _isBackdropProcessing = false;
+  int _backdropProcessingTotal = 0;
+  int _backdropProcessingCompleted = 0;
+  int _backdropProcessingConverted = 0;
 
   @override
   void initState() {
     super.initState();
     gradientController = TextEditingController(text: widget.currentColors.gradientAlpha.toString());
+    backdropOpacityController =
+        TextEditingController(text: (widget.currentColors.backdropOpacity * 100).toInt().toString());
   }
 
   @override
   void dispose() {
     gradientController.dispose();
+    backdropOpacityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _setThemeType(ThemeType? value) async {
+    globalSettings.themeType = value ?? ThemeType.system;
+    await Boxes.updateSettings("themeType", globalSettings.themeType.index);
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    setState(() {});
+  }
+
+  Future<void> _pickThemeStart() async {
+    final int hour = (globalSettings.themeScheduleMin ~/ 60);
+    final int minute = (globalSettings.themeScheduleMin % 60);
+    final TimeOfDay? timePicker = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: hour, minute: minute),
+      initialEntryMode: TimePickerEntryMode.dial,
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
+      },
+    );
+    if (timePicker == null) return;
+    globalSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
+    await Boxes.updateSettings("themeScheduleMin", globalSettings.themeScheduleMin);
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    setState(() {});
+  }
+
+  Future<void> _pickThemeEnd() async {
+    final int hour = (globalSettings.themeScheduleMax ~/ 60);
+    final int minute = (globalSettings.themeScheduleMax % 60);
+    final TimeOfDay? timePicker = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: hour, minute: minute),
+      initialEntryMode: TimePickerEntryMode.dial,
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child ?? Container());
+      },
+    );
+    if (timePicker == null) return;
+    final int newTime = (timePicker.hour) * 60 + (timePicker.minute);
+    if (newTime < globalSettings.themeScheduleMin) return;
+    globalSettings.themeScheduleMax = newTime;
+    await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    setState(() {});
+  }
+
+  Future<void> _addBackdropImages() async {
+    if (_isBackdropProcessing) return;
+
+    final OpenFilePicker picker = OpenFilePicker()
+      ..filterSpecification = <String, String>{
+        'Images': '*.jpg;*.jpeg;*.png;*.webp',
+      }
+      ..title = 'Select Backdrop Image';
+    final List<File> results = picker.getFiles();
+    if (results.isEmpty) return;
+
+    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\cache\\backdrops";
+    if (!Directory(backdropsDir).existsSync()) {
+      Directory(backdropsDir).createSync(recursive: true);
+    }
+
+    setState(() {
+      _isBackdropProcessing = true;
+      _backdropProcessingTotal = results.length;
+      _backdropProcessingCompleted = 0;
+      _backdropProcessingConverted = 0;
+    });
+
+    bool changed = false;
+    final int batchStartedAt = DateTime.now().millisecondsSinceEpoch;
+    try {
+      for (int i = 0; i < results.length; i++) {
+        final File result = results[i];
+        final String fileName = result.uri.pathSegments.last;
+        final String targetPath = "$backdropsDir\\${batchStartedAt}_${i}_$fileName";
+        try {
+          await compute(_resizeAndSaveBackdrop, <String, String>{
+            'source': result.path,
+            'target': targetPath,
+          });
+          widget.currentColors.backdropImages = List<String>.from(widget.currentColors.backdropImages)..add(targetPath);
+          changed = true;
+          if (!mounted) return;
+          setState(() {
+            _backdropProcessingConverted++;
+          });
+        } catch (e) {
+          Debug.add("Theme Setup Error processing file [$fileName]: $e");
+        } finally {
+          if (mounted) {
+            setState(() {
+              _backdropProcessingCompleted = i + 1;
+            });
+          }
+        }
+      }
+    } finally {
+      if (mounted) {
+        if (changed) widget.onChanged();
+        setState(() {
+          _isBackdropProcessing = false;
+          _backdropProcessingCompleted = _backdropProcessingTotal;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor).withValues(alpha: 1.0);
+    final Color accent = globalSettings.themeColors.accentColor.withValues(alpha: 1.0);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -289,96 +537,46 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             children: <Widget>[
               Icon(Icons.palette_rounded, size: 28, color: accent),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    widget.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                  ),
-                  Text(
-                    "All changes are applied immediately to the preview but must be committed to be permanent.",
-                    style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                    ),
+                    Text(
+                      "All changes are applied immediately to the preview but must be committed to be permanent.",
+                      style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _ActionButton(
+                icon: Icons.download_rounded,
+                label: "Import",
+                onPressed: widget.onImport,
+                accent: accent,
+              ),
+              const SizedBox(width: 8),
+              _ActionButton(
+                icon: Icons.upload_rounded,
+                label: "Export",
+                onPressed: widget.onExport,
+                accent: accent,
               ),
             ],
           ),
         ),
 
-        // Design Presets
-        _settingsCard(
-          title: "Design Type",
-          subtitle: "Quickly switch between predefined interface styles.",
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: QuickMenuDesigns.values.map((QuickMenuDesigns design) {
-                  final bool selected = globalSettings.currentQuickMenuDesign == design;
-                  return ChoiceChip(
-                    label: Text(design.name),
-                    selected: selected,
-                    onSelected: (bool val) {
-                      if (val && !selected) {
-                        widget.onDesignChanged(design);
-                        setState(() {});
-                      }
-                    },
-                    showCheckmark: false,
-                    selectedColor: accent.withValues(alpha: 0.15),
-                    backgroundColor: onSurface.withValues(alpha: 0.05),
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      color: selected ? accent : onSurface,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(
-                        color: selected ? accent.withValues(alpha: 0.5) : onSurface.withValues(alpha: 0.1),
-                        width: selected ? 1.5 : 1.0,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
+        _buildAppearanceCard(accent, onSurface),
         const SizedBox(height: 16),
 
-        _settingsCard(
-          title: "QuickMenu Configuration",
-          subtitle: "Fine-tune the appearance of the main interface.",
-          child: Column(
-            children: <Widget>[
-              _buildSwitchTile(
-                "Bold Application Titles",
-                "Uses a stronger font weight for app names in the menu.",
-                widget.currentColors.quickMenuBoldFont,
-                (bool v) {
-                  widget.onChanged();
-                  widget.quickMenuBoldChanged(v);
-                  setState(() {});
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildSliderTile(
-                "Gradient Opacity",
-                "Adjust the visible strength of the theme background.",
-                accent,
-                onSurface,
-              ),
-            ],
-          ),
-        ),
+        _buildTypographySection(accent, onSurface),
 
         const SizedBox(height: 16),
 
@@ -386,8 +584,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           "Background",
           "The primary background color for all interfaces.",
           0,
-          Color(widget.savedColors.background),
-          Color(widget.currentColors.background),
+          widget.savedColors.background,
+          widget.currentColors.background,
           widget.predefinedColors[0],
         ),
 
@@ -397,8 +595,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           "Primary Text",
           "Used for titles, labels, and general content.",
           1,
-          Color(widget.savedColors.textColor),
-          Color(widget.currentColors.textColor),
+          widget.savedColors.textColor,
+          widget.currentColors.textColor,
           widget.predefinedColors[1],
         ),
 
@@ -408,11 +606,176 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           "Accent Highlight",
           "Used for buttons, switches, and active states.",
           2,
-          Color(widget.savedColors.accentColor),
-          Color(widget.currentColors.accentColor),
+          widget.savedColors.accentColor,
+          widget.currentColors.accentColor,
           widget.predefinedColors[2],
         ),
+        const SizedBox(height: 16),
+        _buildSliderTile(
+          "Accent Gradient Opacity/Tint",
+          "Adjust the visible strength of the theme background and accent.",
+          accent,
+          onSurface,
+          widget.currentColors.gradientAlpha.toDouble(),
+          255,
+          gradientController,
+          (double v) {
+            widget.onChanged();
+            widget.onGradientChanged(v);
+          },
+          min: 0,
+        ),
+        const SizedBox(height: 16),
+
+        _buildBackdropSection(accent, onSurface),
+        const SizedBox(height: 16),
+        _settingsCard(
+          title: "Interface Transparency Gradient",
+          subtitle: "Define a multi-stop gradient for the overall panel transparency.",
+          child: PanelOpacityGradientEditor(
+            points: widget.currentColors.panelOpacityPoints,
+            begin: widget.currentColors.panelOpacityBegin,
+            end: widget.currentColors.panelOpacityEnd,
+            onChanged: (List<double> points) {
+              widget.onChanged();
+              widget.onPanelOpacityPointsChanged(points);
+            },
+            onBeginChanged: (String val) {
+              widget.onChanged();
+              widget.onPanelOpacityBeginChanged(val);
+            },
+            onEndChanged: (String val) {
+              widget.onChanged();
+              widget.onPanelOpacityEndChanged(val);
+            },
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildTypographySection(Color accent, Color onSurface) {
+    return _settingsCard(
+      title: "Typography",
+      subtitle: "Custom fonts for general UI and data entries.",
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(
+              child: _fontPreviewTile(
+                "UI Font",
+                "Sets the main font used across the application.",
+                widget.currentColors.uiFontFamily,
+                widget.currentColors.uiFontWeight,
+                widget.currentColors.uiFontItalic,
+                (PickerFont font) {
+                  widget.onChanged();
+                  widget.currentColors.uiFontFamily = font.fontFamily;
+                  widget.currentColors.uiFontWeight = font.fontWeight.value;
+                  widget.currentColors.uiFontItalic = font.fontStyle == FontStyle.italic;
+                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                  setState(() {});
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _fontPreviewTile(
+                "Entry Font",
+                "Overrides typography for taskbar items and headers.",
+                widget.currentColors.entryFontFamily,
+                widget.currentColors.entryFontWeight,
+                widget.currentColors.entryFontItalic,
+                (PickerFont font) {
+                  widget.onChanged();
+                  widget.currentColors.entryFontFamily = font.fontFamily;
+                  widget.currentColors.entryFontWeight = font.fontWeight.value;
+                  widget.currentColors.entryFontItalic = font.fontStyle == FontStyle.italic;
+                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                  setState(() {});
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fontPreviewTile(
+      String title, String subtitle, String family, int weight, bool italic, ValueChanged<PickerFont> onFontChanged) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                const SizedBox(height: 10),
+                Text(
+                  "Preview text using $family",
+                  style: TextStyle(
+                    fontFamily: family,
+                    fontWeight: AppTheme.getFontWeight(weight),
+                    fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+                    fontSize: 15,
+                    color: onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () => _openFontPicker(family, onFontChanged),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              minimumSize: Size.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text("Change", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openFontPicker(String initialFamily, ValueChanged<PickerFont> onFontChanged) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          content: SizedBox(
+            width: 400,
+            height: 500,
+            child: Theme(
+              data: Theme.of(context).copyWith(),
+              child: FontPicker(
+                initialFontFamily: initialFamily,
+                showInDialog: true,
+                onFontChanged: (PickerFont font) {
+                  onFontChanged(font);
+                  // Navigator.of(context).pop();
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -565,12 +928,15 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _buildDesignTile(
+      String title, String subtitle, QuickMenuDesigns current, ValueChanged<QuickMenuDesigns> onSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final Color accent = globalSettings.themeColors.accentColor.withValues(alpha: 1.0);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: onSurface.withValues(alpha: 0.06)),
       ),
@@ -579,6 +945,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
@@ -587,17 +954,65 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             ),
           ),
           const SizedBox(width: 10),
-          Switch(value: value, onChanged: onChanged),
+          Theme(
+            data: Theme.of(context).copyWith(
+              hoverColor: accent.withValues(alpha: 0.05),
+            ),
+            child: PopupMenuButton<QuickMenuDesigns>(
+              initialValue: current,
+              tooltip: "Select Design",
+              onSelected: onSelected,
+              offset: const Offset(0, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              itemBuilder: (BuildContext context) => QuickMenuDesigns.values.map((QuickMenuDesigns design) {
+                return PopupMenuItem<QuickMenuDesigns>(
+                  value: design,
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        design == current ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                        size: 16,
+                        color: design == current ? accent : onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(design.name, style: const TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                );
+              }).toList(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accent.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      current.name,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accent),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: accent),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSliderTile(String title, String subtitle, Color accent, Color onSurface) {
+  Widget _buildSliderTile(String title, String subtitle, Color accent, Color onSurface, double value, double max,
+      TextEditingController controller, Function(double) onChanged,
+      {double min = 0.0}) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: onSurface.withValues(alpha: 0.06)),
       ),
@@ -618,14 +1033,14 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                         thumbColor: accent,
                       ),
                   child: Slider(
-                    min: 0,
-                    max: 255,
-                    value: widget.currentColors.gradientAlpha.toDouble(),
+                    min: min,
+                    max: max,
+                    value: value.clamp(min, max),
                     onChanged: (double e) {
-                      widget.onChanged();
-                      widget.onGradientChanged(e);
-                      if (int.tryParse(gradientController.text) != e.toInt()) {
-                        gradientController.text = e.toInt().toString();
+                      onChanged(e);
+                      final String newVal = max == 1.0 ? (e * 100).toInt().toString() : e.toInt().toString();
+                      if (controller.text != newVal) {
+                        controller.text = newVal;
                       }
                       setState(() {});
                     },
@@ -636,7 +1051,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               SizedBox(
                 width: 44,
                 child: TextField(
-                  controller: gradientController,
+                  controller: controller,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
@@ -649,21 +1064,450 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
                   ),
                   onChanged: (String v) {
-                    int? val = int.tryParse(v);
+                    double? val = double.tryParse(v);
                     if (val != null) {
-                      if (val > 255) {
-                        val = 255;
-                        gradientController.text = "255";
-                        gradientController.selection = TextSelection.fromPosition(const TextPosition(offset: 3));
+                      if (max == 1.0) {
+                        if (val < (min * 100)) val = (min * 100);
+                        if (val > 100) {
+                          val = 100;
+                          controller.text = "100";
+                        }
+                        onChanged(val / 100.0);
+                      } else {
+                        if (val < min) val = min;
+                        if (val > max) {
+                          val = max;
+                          controller.text = max.toInt().toString();
+                        }
+                        onChanged(val);
                       }
-                      widget.onChanged();
-                      widget.onGradientChanged(val.toDouble());
                       setState(() {});
                     }
                   },
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppearanceCard(Color accent, Color onSurface) {
+    return _settingsCard(
+      title: "Global Appearance",
+      subtitle: "Define the core behavior of Tabame's dark/light modes.",
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: _buildThemeModeSelector(accent, onSurface),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDesignTile(
+                "Design Type",
+                "Quickly switch between predefined interface styles.",
+                globalSettings.currentQuickMenuDesign,
+                (QuickMenuDesigns design) {
+                  widget.onDesignChanged(design);
+                  setState(() {});
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeModeSelector(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      const Text("Theme Mode", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 3),
+                      Text(
+                        switch (globalSettings.themeType) {
+                          ThemeType.system => "Following Windows settings",
+                          ThemeType.light => "Always use light theme",
+                          ThemeType.dark => "Always use dark theme",
+                          ThemeType.schedule => "Switching at custom hours",
+                        },
+                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Align(
+                  alignment: Alignment.center,
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      hoverColor: accent.withValues(alpha: 0.05),
+                    ),
+                    child: PopupMenuButton<ThemeType>(
+                      initialValue: globalSettings.themeType,
+                      tooltip: "Select Theme Mode",
+                      onSelected: _setThemeType,
+                      offset: const Offset(0, 40),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (BuildContext context) => ThemeType.values.map((ThemeType type) {
+                        return PopupMenuItem<ThemeType>(
+                          value: type,
+                          child: Row(
+                            children: <Widget>[
+                              Icon(
+                                type == globalSettings.themeType
+                                    ? Icons.radio_button_checked_rounded
+                                    : Icons.radio_button_off_rounded,
+                                size: 16,
+                                color: type == globalSettings.themeType ? accent : onSurface.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                switch (type) {
+                                  ThemeType.system => "System",
+                                  ThemeType.light => "Light",
+                                  ThemeType.dark => "Dark",
+                                  ThemeType.schedule => "Scheduled",
+                                },
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accent.withValues(alpha: 0.15)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              switch (globalSettings.themeType) {
+                                ThemeType.system => "System",
+                                ThemeType.light => "Light",
+                                ThemeType.dark => "Dark",
+                                ThemeType.schedule => "Scheduled",
+                              },
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accent),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: accent),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (globalSettings.themeType == ThemeType.schedule) ...<Widget>[
+            const SizedBox(height: 8),
+            _buildScheduleTimes(accent, onSurface),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduleTimes(Color accent, Color onSurface) {
+    return Container(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          _timeChipRedesigned("From", globalSettings.themeScheduleMin.formatTime(), _pickThemeStart, accent, onSurface),
+          const SizedBox(width: 16),
+          _timeChipRedesigned("To", globalSettings.themeScheduleMax.formatTime(), _pickThemeEnd, accent, onSurface),
+        ],
+      ),
+    );
+  }
+
+  Widget _timeChipRedesigned(String label, String value, VoidCallback onTap, Color accent, Color onSurface) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: accent.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(label,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.5))),
+            Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: accent)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackdropSection(Color accent, Color onSurface) {
+    return _settingsCard(
+      title: "Backdrop Theme",
+      subtitle: "Customize the randomized background layer.",
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildChoiceTile(
+                  "Source",
+                  "Pick between built-in gradients or custom images.",
+                  widget.currentColors.backdropType,
+                  <String, String>{
+                    '': 'None',
+                    'builtIn': 'Built-in Gradients',
+                    'custom': 'Custom Set',
+                  },
+                  (String val) {
+                    widget.onChanged();
+                    widget.currentColors.backdropType = val;
+                    setState(() {});
+                  },
+                  accent,
+                  onSurface,
+                ),
+              ),
+            ],
+          ),
+          if (widget.currentColors.backdropType == 'custom') ...<Widget>[
+            const SizedBox(height: 16),
+            const Text("Image Set", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+            const SizedBox(height: 8),
+            if (widget.currentColors.backdropImages.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: onSurface.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+                ),
+                child: Center(
+                  child: Column(
+                    children: <Widget>[
+                      Icon(Icons.image_search_rounded, size: 32, color: onSurface.withValues(alpha: 0.2)),
+                      const SizedBox(height: 8),
+                      Text("No custom images added", style: TextStyle(color: onSurface.withValues(alpha: 0.4))),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.5,
+                ),
+                itemCount: widget.currentColors.backdropImages.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String path = widget.currentColors.backdropImages[index];
+                  return Stack(
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(path),
+                            cacheWidth: 230,
+                            fit: BoxFit.cover,
+                            errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Container(
+                              color: Colors.grey.withAlpha(50),
+                              child: const Icon(Icons.broken_image_rounded),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: InkWell(
+                          onTap: () async {
+                            widget.onChanged();
+                            final List<String> newList = List<String>.from(widget.currentColors.backdropImages);
+                            final String removedPath = newList.removeAt(index);
+                            widget.currentColors.backdropImages = newList;
+                            if (File(removedPath).existsSync()) {
+                              try {
+                                await File(removedPath).delete();
+                              } catch (e) {
+                                Debug.add("Theme Setup Error deleting file: $e");
+                              }
+                            }
+                            setState(() {});
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                            child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            const SizedBox(height: 12),
+            if (_isBackdropProcessing) ...<Widget>[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: accent.withValues(alpha: 0.16)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: accent.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Converted backdrops $_backdropProcessingConverted / $_backdropProcessingTotal",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: onSurface.withValues(alpha: 0.82),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: _backdropProcessingTotal == 0 ? null : _backdropProcessingCompleted / _backdropProcessingTotal,
+                minHeight: 3,
+                borderRadius: BorderRadius.circular(999),
+                color: accent,
+                backgroundColor: accent.withValues(alpha: 0.14),
+              ),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isBackdropProcessing ? null : _addBackdropImages,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  side: BorderSide(color: accent.withValues(alpha: 0.3)),
+                ),
+                icon: Icon(
+                  _isBackdropProcessing ? Icons.hourglass_top_rounded : Icons.add_photo_alternate_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  _isBackdropProcessing ? "Converting Images..." : "Add Custom Images",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          if (widget.currentColors.backdropType != '')
+            _buildSliderTile(
+              "Backdrop Opacity",
+              "Adjust the intensity of the background image overlay.",
+              accent,
+              onSurface,
+              widget.currentColors.backdropOpacity,
+              1.0,
+              backdropOpacityController,
+              (double v) {
+                widget.onChanged();
+                widget.onBackdropOpacityChanged(v);
+              },
+              min: 0.0,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceTile(
+    String title,
+    String subtitle,
+    String current,
+    Map<String, String> options,
+    ValueChanged<String> onSelected,
+    Color accent,
+    Color onSurface,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          ToggleButtons(
+            isSelected: options.keys.map((String key) => key == current).toList(),
+            onPressed: (int index) => onSelected(options.keys.elementAt(index)),
+            borderRadius: BorderRadius.circular(8),
+            selectedColor: accent,
+            fillColor: accent.withValues(alpha: 0.1),
+            children: options.values
+                .map((String val) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ))
+                .toList(),
           ),
         ],
       ),
@@ -689,348 +1533,83 @@ class _CustomPickerButton extends StatelessWidget {
   }
 }
 
-class CustomColorPicker extends StatefulWidget {
-  const CustomColorPicker({
-    super.key,
-    required this.startColor,
-    required this.themeOptions,
-    required this.colorIndex,
-    required this.onColorChanged,
-  });
-  final Color startColor;
-  final List<List<int>> themeOptions;
-  final int colorIndex;
-  final Function(Color) onColorChanged;
+Future<void> _resizeAndSaveBackdrop(Map<String, String> args) async {
+  final String sourcePath = args['source']!;
+  final String targetPath = args['target']!;
 
-  @override
-  State<CustomColorPicker> createState() => _CustomColorPickerState();
+  final File sourceFile = File(sourcePath);
+  if (!sourceFile.existsSync()) return;
+
+  try {
+    final Uint8List sourceBytes = await sourceFile.readAsBytes();
+    final img.Image? decoded = img.decodeImage(sourceBytes);
+
+    if (decoded == null) {
+      await sourceFile.copy(targetPath);
+      return;
+    }
+
+    if (decoded.width > 1200) {
+      final img.Image resized = img.copyResize(decoded, width: 1200);
+      final Uint8List encoded = Uint8List.fromList(img.encodeJpg(resized, quality: 90));
+      await File(targetPath).writeAsBytes(encoded);
+    } else {
+      await sourceFile.copy(targetPath);
+    }
+  } catch (e) {
+    Debug.add("Async Backdrop Processor Error: $e");
+    // Fallback to direct copy if image processing fails
+    if (sourceFile.existsSync()) {
+      await sourceFile.copy(targetPath);
+    }
+  }
 }
 
-class _CustomColorPickerState extends State<CustomColorPicker> {
-  late Color currentColor;
-  late TextEditingController rController;
-  late TextEditingController gController;
-  late TextEditingController bController;
-  late TextEditingController hexController;
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color accent;
 
-  @override
-  void initState() {
-    super.initState();
-    currentColor = widget.startColor;
-    rController = TextEditingController(text: currentColor.red8bit.toString());
-    gController = TextEditingController(text: currentColor.green8bit.toString());
-    bController = TextEditingController(text: currentColor.blue8bit.toString());
-    hexController = TextEditingController(text: _colorToHex(currentColor));
-  }
-
-  @override
-  void dispose() {
-    rController.dispose();
-    gController.dispose();
-    bController.dispose();
-    hexController.dispose();
-    super.dispose();
-  }
-
-  String _colorToHex(Color color) {
-    return color.value32bit.toRadixString(16).padLeft(8, '0').toUpperCase().substring(2);
-  }
-
-  void _updateHexFromColor() {
-    final String hex = _colorToHex(currentColor);
-    if (hexController.text.toUpperCase() != hex) {
-      hexController.text = hex;
-    }
-  }
-
-  void _updateColorFromHex(String hex) {
-    hex = hex.replaceAll('#', '');
-    if (hex.length == 6) {
-      final int? val = int.tryParse(hex, radix: 16);
-      if (val != null) {
-        setState(() {
-          currentColor = Color(0xFF000000 | val);
-          _syncRgbControllers();
-          widget.onColorChanged(currentColor);
-        });
-      }
-    }
-  }
-
-  void _syncRgbControllers() {
-    rController.text = currentColor.red8bit.toString();
-    gController.text = currentColor.green8bit.toString();
-    bController.text = currentColor.blue8bit.toString();
-  }
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.accent,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final Set<Color> predefinedColors = <Color>{};
-    for (List<int> list in widget.themeOptions) {
-      if (widget.colorIndex >= 0 && widget.colorIndex < list.length) {
-        predefinedColors.add(Color(list[widget.colorIndex]).withAlpha(255));
-      }
-    }
-    final List<Color> colorsList = predefinedColors.toList();
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-
-    // Sync controllers if currentColor changed from sliders
-    if (int.tryParse(rController.text) != currentColor.red8bit) {
-      rController.text = currentColor.red8bit.toString();
-    }
-    if (int.tryParse(gController.text) != currentColor.green8bit) {
-      gController.text = currentColor.green8bit.toString();
-    }
-    if (int.tryParse(bController.text) != currentColor.blue8bit) {
-      bController.text = currentColor.blue8bit.toString();
-    }
-    _updateHexFromColor();
-
-    return SizedBox(
-        width: 400,
-        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Row(children: <Widget>[
-            Column(
-              children: <Widget>[
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: currentColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: onSurface.withValues(alpha: 0.2)),
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(color: currentColor.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: 90,
-                  child: TextField(
-                    controller: hexController,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
-                    decoration: InputDecoration(
-                      prefixText: "#",
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                      filled: true,
-                      fillColor: onSurface.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    ),
-                    onChanged: _updateColorFromHex,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-                child: Column(children: <Widget>[
-              _buildSlider(currentColor.red8bit.toDouble(), Colors.red, rController, (double v) {
-                setState(() {
-                  currentColor =
-                      Color.fromARGB(currentColor.alpha8bit, v.toInt(), currentColor.green8bit, currentColor.blue8bit);
-                  widget.onColorChanged(currentColor);
-                });
-              }),
-              _buildSlider(currentColor.green8bit.toDouble(), Colors.green, gController, (double v) {
-                setState(() {
-                  currentColor =
-                      Color.fromARGB(currentColor.alpha8bit, currentColor.red8bit, v.toInt(), currentColor.blue8bit);
-                  widget.onColorChanged(currentColor);
-                });
-              }),
-              _buildSlider(currentColor.blue8bit.toDouble(), Colors.blue, bController, (double v) {
-                setState(() {
-                  currentColor =
-                      Color.fromARGB(currentColor.alpha8bit, currentColor.red8bit, currentColor.green8bit, v.toInt());
-                  widget.onColorChanged(currentColor);
-                });
-              })
-            ])),
-          ]),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 12),
-          Text('Theme Palette Sources',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Flexible(
-              child: GridView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 10),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 32,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
-                  itemCount: colorsList.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final Color color = colorsList[index];
-                    return InkWell(
-                        onTap: () {
-                          setState(() {
-                            currentColor = color;
-                            widget.onColorChanged(currentColor);
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                            decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: onSurface.withValues(alpha: 0.15)),
-                        )));
-                  }))
-        ]));
-  }
-
-  Widget _buildSlider(double value, Color activeColor, TextEditingController controller, Function(double) onChanged) {
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-              overlayShape: SliderComponentShape.noOverlay,
-              activeTrackColor: activeColor,
-              thumbColor: activeColor,
-            ),
-            child: Slider(
-              value: value,
-              min: 0,
-              max: 255,
-              onChanged: (double e) {
-                onChanged(e);
-                if (int.tryParse(controller.text) != e.toInt()) {
-                  controller.text = e.toInt().toString();
-                }
-              },
-            ),
+    return CustomTooltip(
+      message: label,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: accent.withValues(alpha: 0.2)),
           ),
-        ),
-        const SizedBox(width: 12),
-        Listener(
-          onPointerSignal: (PointerSignalEvent pointerSignal) {
-            if (pointerSignal is PointerScrollEvent) {
-              controller.text =
-                  ((int.tryParse(controller.text) ?? 0) + (pointerSignal.scrollDelta.dy < 0 ? 10 : -10)).toString();
-              onChanged(double.tryParse(controller.text) ?? 0);
-            }
-          },
-          child: SizedBox(
-            width: 44,
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                filled: true,
-                fillColor: onSurface.withValues(alpha: 0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: onSurface.withValues(alpha: 0.9),
+                ),
               ),
-              onChanged: (String v) {
-                int? val = int.tryParse(v);
-                if (val != null) {
-                  if (val > 255) {
-                    val = 255;
-                    controller.text = "255";
-                    controller.selection = TextSelection.fromPosition(const TextPosition(offset: 3));
-                  }
-                  onChanged(val.toDouble());
-                }
-              },
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
-  }
-}
-
-class ListColors extends StatefulWidget {
-  const ListColors({
-    super.key,
-    required this.colorsNameMap,
-    required this.onColorChanged,
-  });
-
-  final Map<ColorSwatch<Object>, String> colorsNameMap;
-  final Function(Color) onColorChanged;
-
-  @override
-  State<ListColors> createState() => _ListColorsState();
-}
-
-class _ListColorsState extends State<ListColors> {
-  final ScrollController colorScrollController = ScrollController();
-
-  @override
-  void dispose() {
-    colorScrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
-
-    return Listener(
-        onPointerSignal: (PointerSignalEvent pointerSignal) {
-          if (pointerSignal is PointerScrollEvent) {
-            if (pointerSignal.scrollDelta.dy < 0) {
-              colorScrollController.animateTo(colorScrollController.offset - 190,
-                  duration: const Duration(milliseconds: 200), curve: Curves.ease);
-            } else {
-              colorScrollController.animateTo(colorScrollController.offset + 190,
-                  duration: const Duration(milliseconds: 200), curve: Curves.ease);
-            }
-          }
-        },
-        child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: ShaderMask(
-                shaderCallback: (Rect rect) {
-                  return const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-                    stops: <double>[0.0, 0.95, 1.0],
-                  ).createShader(rect);
-                },
-                blendMode: BlendMode.dstOut,
-                child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: colorScrollController,
-                    child: Row(children: <Widget>[
-                      ...widget.colorsNameMap.keys.map((ColorSwatch<Object> color) {
-                        return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: InkWell(
-                                onTap: () => widget.onColorChanged(color),
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      color: color,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: onSurface.withValues(alpha: 0.15)),
-                                      boxShadow: <BoxShadow>[
-                                        BoxShadow(
-                                            color: color.withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2))
-                                      ],
-                                    ))));
-                      }),
-                      const SizedBox(width: 40)
-                    ])))));
   }
 }

@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
 // ============================================================
@@ -49,6 +51,7 @@ class TimersButtonState extends State<TimersButton> {
   Widget build(BuildContext context) {
     return QuickActionItem(
       message: "Timers",
+      hoverColor: Theme.of(context).colorScheme.primary,
       icon: Boxes.quickTimers.isNotEmpty
           ? Align(
               alignment: AlignmentGeometry.center,
@@ -80,11 +83,22 @@ class TimersWidget extends StatefulWidget {
 class TimersWidgetState extends State<TimersWidget> {
   final TextEditingController _msgCtrl = TextEditingController();
   final TextEditingController _durCtrl = TextEditingController();
+  final FocusNode _durFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _durFocus.requestFocus();
+    });
+  }
 
   @override
   void dispose() {
     _msgCtrl.dispose();
     _durCtrl.dispose();
+    _durFocus.dispose();
     super.dispose();
   }
 
@@ -112,22 +126,38 @@ class TimersWidgetState extends State<TimersWidget> {
 
     context.findAncestorStateOfType<TimersButtonState>()?.setState(() {});
     setState(() {});
+    _durFocus.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        PanelHeader(
+          title: "Quick Timers",
+          accent: accent,
+          icon: Icons.timer_outlined,
+          buttonIcon: Boxes.lastQuickTimers.isNotEmpty ? Icons.history_toggle_off_rounded : null,
+          buttonTooltip: "Clear Recent History",
+          buttonPressed: Boxes.lastQuickTimers.isNotEmpty
+              ? () {
+                  Boxes.lastQuickTimers.clear();
+                  Boxes().saveLatestQuickTimers();
+                  setState(() {});
+                }
+              : null,
+        ),
         Container(
           padding: const EdgeInsets.fromLTRB(14, 15, 14, 0),
           child: _CreateTimerForm(
             accent: accent,
             durCtrl: _durCtrl,
             msgCtrl: _msgCtrl,
+            durFocus: _durFocus,
             onChanged: () => setState(() {}),
             onCreate: _createTimer,
           ),
@@ -219,6 +249,7 @@ class _CreateTimerForm extends StatelessWidget {
     required this.accent,
     required this.durCtrl,
     required this.msgCtrl,
+    this.durFocus,
     required this.onChanged,
     required this.onCreate,
   });
@@ -226,6 +257,7 @@ class _CreateTimerForm extends StatelessWidget {
   final Color accent;
   final TextEditingController durCtrl;
   final TextEditingController msgCtrl;
+  final FocusNode? durFocus;
   final VoidCallback onChanged;
   final VoidCallback onCreate;
 
@@ -272,6 +304,7 @@ class _CreateTimerForm extends StatelessWidget {
                 decoration: _inputDec("Min", accent),
                 style: const TextStyle(fontSize: 12),
                 controller: durCtrl,
+                focusNode: durFocus,
                 autofocus: true,
                 onChanged: (_) => onChanged(),
                 onSubmitted: (_) {
@@ -348,7 +381,7 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -372,7 +405,7 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
           onDelete: () {
             qt.timer?.cancel();
             Boxes.quickTimers.removeAt(i);
-            Boxes().saveQuickTimers();
+            Boxes.saveQuickTimers();
             widget.onChanged?.call();
             setState(() {});
           },
@@ -409,7 +442,7 @@ class _ActiveTimerRowState extends State<_ActiveTimerRow> {
 
   @override
   Widget build(BuildContext context) {
-    final Color rowAccent = widget.overdue ? Colors.orange : widget.accent;
+    final Color rowAccent = widget.overdue ? Colors.orange : globalSettings.themeColors.accentColor;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -495,9 +528,8 @@ class ListLatestQuickTimersState extends State<ListLatestQuickTimers> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool boldFont = globalSettings.theme.quickMenuBoldFont;
 
     return Column(
       children: List<Widget>.generate(Boxes.lastQuickTimers.length, (int i) {
@@ -507,7 +539,6 @@ class ListLatestQuickTimersState extends State<ListLatestQuickTimers> {
           minutes: t.minutes,
           accent: accent,
           onSurface: onSurface,
-          boldFont: boldFont,
           onTap: () {
             Boxes().addQuickTimer(t.name, t.minutes, t.type);
             setState(() {});
@@ -535,7 +566,6 @@ class _RecentTimerRow extends StatefulWidget {
     required this.minutes,
     required this.accent,
     required this.onSurface,
-    required this.boldFont,
     required this.onTap,
     required this.onDelete,
   });
@@ -543,7 +573,6 @@ class _RecentTimerRow extends StatefulWidget {
   final int minutes;
   final Color accent;
   final Color onSurface;
-  final bool boldFont;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
@@ -564,7 +593,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(60) : Colors.transparent,
+          color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -581,7 +610,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                   height: 14,
                   margin: EdgeInsets.only(right: _hovered ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: widget.accent,
+                    color: globalSettings.themeColors.accentColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -589,7 +618,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: widget.accent.withAlpha(28),
+                    color: globalSettings.themeColors.accentColor.withAlpha(28),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -597,7 +626,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: widget.accent.withAlpha(200),
+                      color: globalSettings.themeColors.accentColor.withAlpha(200),
                     ),
                   ),
                 ),
@@ -608,7 +637,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                     widget.name,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: widget.boldFont ? FontWeight.w500 : FontWeight.w300,
+                      fontWeight: FontWeight(globalSettings.theme.uiFontWeight),
                       color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -618,7 +647,8 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
                   opacity: _hovered ? 1.0 : 0.0,
-                  child: Icon(Icons.play_arrow_rounded, size: 13, color: widget.accent.withAlpha(170)),
+                  child: Icon(Icons.play_arrow_rounded,
+                      size: 13, color: globalSettings.themeColors.accentColor.withAlpha(170)),
                 ),
                 const SizedBox(width: 2),
                 // Delete

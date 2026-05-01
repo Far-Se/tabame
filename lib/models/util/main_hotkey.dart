@@ -23,7 +23,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "enabled": true,
         "windowUnderMouse": true,
         "name": "Browser Close Tab",
-        "windowsInfo": ["title", "(chrome|firefox)"],
+        "windowsInfo": ["title", "(chrome|firefox|brave|edge)"],
         "boundToRegion": true,
         "region": {"x1": 0, "y1": 0, "x2": 99, "y2": 6, "asPercentage": true, "anchorType": 0},
         "triggerType": 3,
@@ -37,7 +37,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "enabled": true,
         "windowUnderMouse": true,
         "name": "Browser Open Tab",
-        "windowsInfo": ["exe", "(chrome|firefox)"],
+        "windowsInfo": ["exe", "(chrome|firefox|brave|edge)"],
         "boundToRegion": true,
         "region": {"x1": 0, "y1": 0, "x2": 100, "y2": 6, "asPercentage": true, "anchorType": 0},
         "triggerType": 0,
@@ -135,14 +135,14 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
       {
         "enabled": true,
         "windowUnderMouse": false,
-        "name": "Quick Actions Menu",
+        "name": "Open Interface",
         "windowsInfo": ["any", ""],
         "boundToRegion": false,
         "region": {"x1": 0, "y1": 0, "x2": 0, "y2": 0, "asPercentage": false, "anchorType": 0},
         "triggerType": 2,
         "triggerInfo": [1, 100, 400],
         "actions": [
-          {"type": 2, "value": "ToggleQuickActions"}
+          {"type": 5, "value": "Interface"}
         ],
         "variableCheck": ["", ""]
       },
@@ -184,7 +184,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "triggerType": 1,
         "triggerInfo": [0, 0, 0],
         "actions": [
-          {"type": 2, "value": "ShowLastActiveWindow"}
+          {"type": 2, "value": "ShowSecondWindowUnderCursor"}
         ],
         "variableCheck": ["", ""]
       },

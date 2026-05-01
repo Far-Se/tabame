@@ -7,12 +7,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+
 import '../../../models/classes/authenticator_entry.dart';
 import '../../../models/classes/authenticator_manager.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -20,8 +22,8 @@ class AuthenticatorButton extends StatelessWidget {
   const AuthenticatorButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
-        actionName: "Authenticator", icon: Icon(Icons.shield_outlined), child: AuthenticatorPanel());
+    return ModalButton(
+        actionName: "Authenticator", icon: const Icon(Icons.shield_outlined), child: () => const AuthenticatorPanel());
   }
 }
 
@@ -44,6 +46,8 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
   bool _adding = false;
   bool _busy = false;
   bool _copiedExport = false;
+  bool _isEncrypted = false;
+  String? _activePassword;
   String? _errorMessage;
   String? _infoMessage;
   DateTime _now = DateTime.now();
@@ -61,6 +65,10 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         _now = DateTime.now();
       });
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _searchFocusNode.requestFocus();
+    });
   }
 
   @override
@@ -76,12 +84,54 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
   }
 
   Future<void> _loadEntries() async {
-    final List<AuthenticatorEntry> entries = await AuthenticatorManager.loadEntries();
-    if (!mounted) return;
-    setState(() {
-      _entries = entries;
-      _loading = false;
-    });
+    final AuthenticatorStorageInfo storageInfo = await AuthenticatorManager.getStorageInfo();
+    String? password;
+
+    try {
+      if (storageInfo.isEncrypted) {
+        if (storageInfo.requiresPasswordPrompt) {
+          password = await _promptForPassword(
+            title: 'Unlock Authenticator',
+            confirmLabel: 'Unlock',
+            message: 'This authenticator is encrypted. Enter the password to continue.',
+            emptyUsesDefault: false,
+            allowEmpty: false,
+          );
+          if (password == null) {
+            if (!mounted) return;
+            setState(() {
+              _entries = <AuthenticatorEntry>[];
+              _isEncrypted = true;
+              _activePassword = null;
+              _loading = false;
+              _errorMessage = 'Authenticator remains locked until you enter the password.';
+            });
+            return;
+          }
+        } else {
+          password = AuthenticatorManager.defaultEncryptionPassword;
+        }
+      }
+
+      final List<AuthenticatorEntry> entries = await AuthenticatorManager.loadEntries(password: password);
+      if (!mounted) return;
+      setState(() {
+        _entries = entries;
+        _isEncrypted = storageInfo.isEncrypted;
+        _activePassword = storageInfo.isEncrypted ? password : null;
+        _loading = false;
+        _errorMessage = null;
+      });
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _entries = <AuthenticatorEntry>[];
+        _isEncrypted = storageInfo.isEncrypted;
+        _activePassword = null;
+        _loading = false;
+        _errorMessage = e.message;
+      });
+    }
   }
 
   Future<void> _saveUriInput() async {
@@ -206,7 +256,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
       throw const FormatException('No valid authenticator entries could be parsed.');
     }
 
-    final List<AuthenticatorEntry> updated = await AuthenticatorManager.mergeEntries(parsed);
+    final List<AuthenticatorEntry> updated = await AuthenticatorManager.mergeEntries(parsed, password: _activePassword);
     final int addedCount = updated.length - beforeCount;
     if (!mounted) return;
 
@@ -255,13 +305,76 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
 
     if (confirmed != true) return;
 
-    final List<AuthenticatorEntry> updated = await AuthenticatorManager.deleteEntry(entry.id);
+    final List<AuthenticatorEntry> updated =
+        await AuthenticatorManager.deleteEntry(entry.id, password: _activePassword);
     if (!mounted) return;
     setState(() {
       _entries = updated;
       _infoMessage = 'Removed ${entry.title}.';
     });
     _scheduleInfoMessageDismiss();
+  }
+
+  Future<void> _editEntry(AuthenticatorEntry entry) async {
+    final TextEditingController issuerController = TextEditingController(text: entry.issuer);
+    final TextEditingController accountController = TextEditingController(text: entry.accountName);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Edit Authenticator"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: issuerController,
+                decoration: const InputDecoration(labelText: "Issuer (Site Name)"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: accountController,
+                decoration: const InputDecoration(labelText: "Account Name (User)"),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final List<AuthenticatorEntry> current = await AuthenticatorManager.loadEntries(password: _activePassword);
+    final int index = current.indexWhere((AuthenticatorEntry e) => e.id == entry.id);
+    if (index >= 0) {
+      current[index] = AuthenticatorEntry(
+        id: entry.id,
+        issuer: issuerController.text.trim(),
+        accountName: accountController.text.trim(),
+        secret: entry.secret,
+        algorithm: entry.algorithm,
+        digits: entry.digits,
+        period: entry.period,
+      );
+      final List<AuthenticatorEntry> updated =
+          await AuthenticatorManager.saveEntries(current, password: _activePassword);
+      if (!mounted) return;
+      setState(() {
+        _entries = updated;
+        _infoMessage = 'Updated ${current[index].title}.';
+      });
+      _scheduleInfoMessageDismiss();
+    }
   }
 
   void _scheduleInfoMessageDismiss() {
@@ -294,9 +407,82 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
     });
   }
 
+  Future<void> _toggleEncryption() async {
+    final String? password = await _promptForPassword(
+      title: _isEncrypted ? 'Change Authenticator Password' : 'Encrypt Authenticator',
+      confirmLabel: _isEncrypted ? 'Re-encrypt' : 'Encrypt',
+      message: _isEncrypted
+          ? 'Choose a new one-time password. The current encrypted file will be replaced.'
+          : 'Choose a one-time password for the authenticator. You must remember it.',
+      emptyUsesDefault: true,
+      allowEmpty: true,
+      confirmPassword: true,
+    );
+    if (password == null) return;
+
+    setState(() {
+      _busy = true;
+      _errorMessage = null;
+      _infoMessage = null;
+    });
+
+    try {
+      final bool wasEncrypted = _isEncrypted;
+      await AuthenticatorManager.removeStorageFile();
+      final String effectivePassword = password.isEmpty ? AuthenticatorManager.defaultEncryptionPassword : password;
+      await AuthenticatorManager.encryptEntries(_entries, effectivePassword);
+      if (!mounted) return;
+      setState(() {
+        _isEncrypted = true;
+        _activePassword = effectivePassword;
+        _infoMessage = password.isEmpty
+            ? 'Authenticator encrypted with the default password.'
+            : wasEncrypted
+                ? 'Authenticator password updated.'
+                : 'Authenticator encrypted.';
+      });
+      _scheduleInfoMessageDismiss();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Unable to encrypt the authenticator right now.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  Future<String?> _promptForPassword({
+    required String title,
+    required String confirmLabel,
+    required String message,
+    required bool emptyUsesDefault,
+    required bool allowEmpty,
+    bool confirmPassword = false,
+  }) async {
+    return showDialog<String>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return _AuthenticatorPasswordDialog(
+          title: title,
+          confirmLabel: confirmLabel,
+          message: message,
+          emptyUsesDefault: emptyUsesDefault,
+          allowEmpty: allowEmpty,
+          confirmPassword: confirmPassword,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -306,11 +492,37 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         PanelHeader(
           title: _adding ? "Add Authenticator" : "Authenticator",
           accent: accent,
-          boldFont: globalSettings.theme.quickMenuBoldFont,
           icon: _adding ? Icons.qr_code_2_rounded : Icons.shield_outlined,
-          secondaryButtonPressed: _entries.isEmpty ? null : _copyAllEntries,
-          secondaryButtonTooltip: "Copy All Entries",
-          secondaryButtonIcon: _entries.isEmpty ? null : (_copiedExport ? Icons.copy_rounded : Icons.archive),
+          extraActions: <Widget>[
+            CustomTooltip(
+              message: "Encrypt",
+              child: IconButton(
+                onPressed: _busy ? null : _toggleEncryption,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: Icon(
+                  _isEncrypted ? Icons.lock_rounded : Icons.lock_open_rounded,
+                  size: 14,
+                  color: accent,
+                ),
+              ),
+            ),
+            if (_entries.isNotEmpty)
+              CustomTooltip(
+                message: "Copy All Entries",
+                child: IconButton(
+                  onPressed: _copyAllEntries,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                  iconSize: 14,
+                  icon: Icon(_copiedExport ? Icons.copy_rounded : Icons.archive, color: accent),
+                ),
+              ),
+          ],
           buttonTooltip: "Add",
           buttonPressed: () {
             setState(() {
@@ -365,7 +577,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                     onSurface: onSurface,
                     icon: Icons.screenshot_monitor_rounded,
                     title: "Capture QR Code",
-                    subtitle: "Select the QR area from anywhere on screen and import standard or migration payloads.",
+                    subtitle: "Select an area on screen that contains a QR code and import it.",
                     onTap: _busy ? null : _captureQrCode,
                     highlighted: true,
                   ),
@@ -619,7 +831,10 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                     focusNode: _searchFocusNode,
                     autofocus: true,
                     onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => _copyFirstVisibleEntry(visibleEntries),
+                    onSubmitted: (_) {
+                      _copyFirstVisibleEntry(visibleEntries);
+                      _searchFocusNode.requestFocus();
+                    },
                     decoration: InputDecoration(
                       hintText: "Search site or user",
                       isDense: true,
@@ -682,6 +897,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                         onSurface: onSurface,
                         now: _now,
                         onDelete: () => _deleteEntry(entry),
+                        onEdit: () => _editEntry(entry),
                       );
                     },
                   ),
@@ -695,13 +911,27 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
     if (visibleEntries.isEmpty) return;
 
     final GlobalKey<_AuthenticatorTileState>? tileKey = _tileKeys[visibleEntries.first.id];
-    if (tileKey?.currentState != null) {
-      await tileKey!.currentState!.copyCurrentCode();
-      return;
+    if (tileKey?.currentState != null && tileKey!.currentContext != null) {
+      final RenderBox? box = tileKey.currentContext!.findRenderObject() as RenderBox?;
+      if (box != null) {
+        final Offset position = box.localToGlobal(box.size.center(Offset.zero));
+        WidgetsBinding.instance.handlePointerEvent(PointerDownEvent(
+          pointer: 0,
+          position: position,
+        ));
+        WidgetsBinding.instance.handlePointerEvent(PointerUpEvent(
+          pointer: 0,
+          position: position,
+        ));
+        return;
+      }
     }
 
     final String code = AuthenticatorManager.generateCode(visibleEntries.first, now: _now);
     await Clipboard.setData(ClipboardData(text: code));
+    setState(() {
+      _copiedExport = true;
+    });
   }
 
   Widget _buildSharedProgressBar({
@@ -785,6 +1015,115 @@ class _StatusStrip extends StatelessWidget {
   }
 }
 
+class _AuthenticatorPasswordDialog extends StatefulWidget {
+  const _AuthenticatorPasswordDialog({
+    required this.title,
+    required this.confirmLabel,
+    required this.message,
+    required this.emptyUsesDefault,
+    required this.allowEmpty,
+    required this.confirmPassword,
+  });
+
+  final String title;
+  final String confirmLabel;
+  final String message;
+  final bool emptyUsesDefault;
+  final bool allowEmpty;
+  final bool confirmPassword;
+
+  @override
+  State<_AuthenticatorPasswordDialog> createState() => _AuthenticatorPasswordDialogState();
+}
+
+class _AuthenticatorPasswordDialogState extends State<_AuthenticatorPasswordDialog> {
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
+  String? _localError;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      shadowColor: Colors.red,
+      elevation: 5,
+      surfaceTintColor: globalSettings.themeColors.accentColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(widget.message),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText:
+                  widget.allowEmpty && widget.emptyUsesDefault ? 'Password (empty uses "encrypted")' : 'Password',
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+          if (widget.confirmPassword) ...<Widget>[
+            const SizedBox(height: 10),
+            TextField(
+              controller: _confirmController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Confirm Password'),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
+          if (_localError != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              _localError!,
+              style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+            ),
+          ],
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: Text(widget.confirmLabel),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    final String password = _passwordController.text;
+    String? message;
+
+    if (!widget.allowEmpty && password.trim().isEmpty) {
+      message = 'Password is required.';
+    } else if (widget.confirmPassword && password != _confirmController.text) {
+      message = 'Passwords do not match.';
+    }
+
+    if (message != null) {
+      setState(() {
+        _localError = message;
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(password);
+  }
+}
+
 class _AuthenticatorTile extends StatefulWidget {
   const _AuthenticatorTile({
     super.key,
@@ -793,6 +1132,7 @@ class _AuthenticatorTile extends StatefulWidget {
     required this.onSurface,
     required this.now,
     required this.onDelete,
+    required this.onEdit,
   });
 
   final AuthenticatorEntry entry;
@@ -800,6 +1140,7 @@ class _AuthenticatorTile extends StatefulWidget {
   final Color onSurface;
   final DateTime now;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   @override
   State<_AuthenticatorTile> createState() => _AuthenticatorTileState();
@@ -863,17 +1204,19 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(20) : widget.accent.withAlpha(10),
+          color: _hovered
+              ? globalSettings.themeColors.accentColor.withAlpha(20)
+              : globalSettings.themeColors.accentColor.withAlpha(10),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? widget.accent.withAlpha(70) : widget.onSurface.withAlpha(20),
+            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(70) : widget.onSurface.withAlpha(20),
           ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: code == null ? null : () => _copyCode(code!),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -883,7 +1226,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: widget.accent.withAlpha(26),
+                        color: globalSettings.themeColors.accentColor.withAlpha(26),
                         borderRadius: BorderRadius.circular(9),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -907,7 +1250,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: widget.accent,
+                              color: globalSettings.themeColors.accentColor,
                             ),
                           );
                         },
@@ -959,6 +1302,19 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                     ),
                     const SizedBox(width: 6),
                     InkWell(
+                      onTap: widget.onEdit,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 16,
+                          color: _hovered ? globalSettings.themeColors.accentColor : widget.onSurface.withAlpha(120),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
                       onTap: widget.onDelete,
                       borderRadius: BorderRadius.circular(10),
                       child: Padding(
@@ -972,26 +1328,27 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  code == null ? "Invalid secret" : _formatCode(code),
-                  style: TextStyle(
-                    fontSize: 24,
-                    letterSpacing: 1.1,
-                    fontWeight: FontWeight.w700,
-                    color: code == null ? Colors.redAccent : widget.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: <Widget>[
+                    Text(
+                      code == null ? "Invalid secret" : _formatCode(code),
+                      style: TextStyle(
+                        fontSize: 20,
+                        letterSpacing: 1.1,
+                        fontWeight: FontWeight.w700,
+                        color: code == null ? Colors.redAccent : widget.onSurface,
+                      ),
+                    ),
                     const Spacer(),
                     Text(
                       _copied ? "Copied" : "Tap to copy",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: _copied ? widget.accent : widget.onSurface.withAlpha(140),
+                        color: _copied ? globalSettings.themeColors.accentColor : widget.onSurface.withAlpha(140),
                       ),
                     ),
                   ],
@@ -1117,7 +1474,7 @@ class _AuthenticatorLogoStore {
     await file.writeAsString('miss', flush: true);
   }
 
-  String get _logoDirectoryPath => '${WinUtils.getTabameAppDataFolder()}\\authenticator logos';
+  String get _logoDirectoryPath => '${WinUtils.getTabameAppDataFolder()}\\cache\\authenticator logos';
 
   String _logoFilePathForQuery(String query) => '$_logoDirectoryPath\\${_safeName(query)}.png';
 

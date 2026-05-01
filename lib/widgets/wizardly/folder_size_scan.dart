@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/task_runner.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/mouse_scroll_widget.dart';
 import '../widgets/percentage_bar.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class FileSizeWidget extends StatefulWidget {
   const FileSizeWidget({super.key});
@@ -119,8 +119,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -130,6 +130,31 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _buildHeader(accent, background, onSurface),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Text(
+                  "For a more in-depth and professional scanner, use ",
+                  style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.5)),
+                ),
+                InkWell(
+                  onTap: () => WinUtils.open("https://diskanalyzer.com/"),
+                  child: Text(
+                    "Wiztree",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: accent,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                      decorationColor: accent.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _buildOptionsBar(accent, onSurface),
           if (processedFiles.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
@@ -400,7 +425,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: Color(globalSettings.theme.background))),
+                child: Text("Ok", style: TextStyle(color: globalSettings.themeColors.background)),
               ),
             ],
           );
@@ -423,7 +448,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: Color(globalSettings.theme.background))),
+                child: Text("Ok", style: TextStyle(color: globalSettings.themeColors.background)),
               ),
             ],
           );
@@ -494,7 +519,7 @@ class _FolderInfoState extends State<FolderInfo> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     String parentDirectory = widget.directory;
     if (parentDirectory.endsWith("\\")) parentDirectory = parentDirectory.substring(0, parentDirectory.length - 1);
     final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(parentDirectory);
@@ -590,8 +615,7 @@ class _FolderInfoState extends State<FolderInfo> {
                               actions: <Widget>[
                                 ElevatedButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  child:
-                                      Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
+                                  child: Text("Cancel", style: TextStyle(color: globalSettings.themeColors.background)),
                                 ),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -709,7 +733,7 @@ class _FolderInfoState extends State<FolderInfo> {
                                   ElevatedButton(
                                     onPressed: () => Navigator.of(context).pop(),
                                     child:
-                                        Text("Cancel", style: TextStyle(color: Color(globalSettings.theme.background))),
+                                        Text("Cancel", style: TextStyle(color: globalSettings.themeColors.background)),
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -778,8 +802,8 @@ Future<void> listDirectoriesSizes(
     String dirPath, Function(int, int) ping, Function(Map<String, int> items) onDone) async {
   int fileNum = 0;
 
-  dirPath.replaceAll('/', '\\');
-  // if (dirPath.endsWith('\\')) dirPath = dirPath.substring(dirPath.length - 1);
+  dirPath = dirPath.replaceAll('/', '\\');
+  if (dirPath.endsWith('\\')) dirPath = dirPath.substring(0, dirPath.length - 1);
   Directory dir = Directory(dirPath);
   final Map<String, int> totalFiles = <String, int>{};
 
@@ -787,49 +811,80 @@ Future<void> listDirectoriesSizes(
     onDone(<String, int>{"Empty": 0});
     return;
   }
-  Stream<FileSystemEntity> stream = dir
-      .list(recursive: true, followLinks: false)
-      .handleError((dynamic e) => <dynamic, dynamic>{}, test: (dynamic e) => e is FileSystemException);
-  totalFiles[dirPath] = 0;
-  Future<bool> getFileInfo(FileSystemEntity entity) async {
-    if (entity is File) {
-      fileNum++;
-      if (fileNum % 1000 == 0) ping(fileNum, 1);
-      final int fileSize = await entity.length();
-      int ticks = 0;
-      Directory currentPath = entity.parent;
-      do {
-        ticks++;
-        if (ticks > 100) break;
 
-        totalFiles[currentPath.path] = (totalFiles[currentPath.path] ?? 0) + fileSize;
-        if (currentPath.path == dirPath) break;
-        currentPath = currentPath.parent;
-      } while (true);
+  String getParentPath(String path) {
+    final int idx = path.lastIndexOf('\\');
+    if (idx <= 0) return "";
+    return path.substring(0, idx);
+  }
+
+  Future<bool> getFileInfo(FileSystemEntity entity) async {
+    try {
+      if (entity is File) {
+        fileNum++;
+        if (fileNum % 1000 == 0) ping(fileNum, 1);
+        final int fileSize = await entity.length();
+        final String parent = getParentPath(entity.path);
+        if (parent.isNotEmpty) {
+          totalFiles[parent] = (totalFiles[parent] ?? 0) + fileSize;
+        }
+      } else if (entity is Directory) {
+        totalFiles[entity.path] ??= 0;
+      }
+    } catch (_) {
+      // Skip inaccessible files
     }
     return true;
   }
 
   final TaskRunner<FileSystemEntity, bool> runner =
-      TaskRunner<FileSystemEntity, bool>(getFileInfo, maxConcurrentTasks: 30);
-  int total = 0;
-  fileNum = 0;
-  await for (FileSystemEntity entity in stream) {
-    fileNum++;
-    if (fileNum % 1000 == 0) ping(fileNum, 0);
-    runner.add(entity);
-    total++;
-  }
-  fileNum = 0;
-  runner.startExecution();
+      TaskRunner<FileSystemEntity, bool>(getFileInfo, maxConcurrentTasks: 32);
+
+  Stream<FileSystemEntity> stream = dir
+      .list(recursive: true, followLinks: false)
+      .handleError((dynamic e) => <dynamic, dynamic>{}, test: (dynamic e) => e is FileSystemException);
+
+  totalFiles[dirPath] = 0;
+  int totalEncountered = 0;
   int totalProcessed = 0;
-  runner.stream.forEach((bool listOfString) {
-    totalProcessed++;
-    if (totalProcessed >= total) {
+  bool listingDone = false;
+
+  void checkCompletion() {
+    if (listingDone && totalProcessed >= totalEncountered) {
+      // Perform single-pass bubble up
+      final List<String> sortedFolders = totalFiles.keys.toList()
+        ..sort((String a, String b) => b.length.compareTo(a.length));
+      for (final String folder in sortedFolders) {
+        if (folder == dirPath) continue;
+        final String parent = getParentPath(folder);
+        if (parent.isNotEmpty && totalFiles.containsKey(parent)) {
+          totalFiles[parent] = (totalFiles[parent] ?? 0) + totalFiles[folder]!;
+        } else if (parent.isNotEmpty && parent.length >= dirPath.length) {
+          // Ensure parent exists in map even if it was skipped during listing
+          totalFiles[parent] = (totalFiles[parent] ?? 0) + totalFiles[folder]!;
+        }
+      }
       onDone(totalFiles);
-      return;
     }
+  }
+
+  runner.stream.listen((_) {
+    totalProcessed++;
+    checkCompletion();
   });
+
+  await for (FileSystemEntity entity in stream) {
+    totalEncountered++;
+    if (totalEncountered % 1000 == 0) {
+      ping(totalEncountered, 0);
+      runner.startExecution(); // Ensure workers are busy
+    }
+    runner.add(entity);
+  }
+
+  listingDone = true;
+  runner.startExecution();
+  checkCompletion();
 }
 
 Future<Map<String, int>> listFilesSizes(String dirPath) async {

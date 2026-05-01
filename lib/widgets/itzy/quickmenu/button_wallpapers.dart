@@ -5,11 +5,14 @@ import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/mixed.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -17,8 +20,8 @@ class WallpapersButton extends StatelessWidget {
   const WallpapersButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
-        actionName: "Wallpapers", icon: Icon(Icons.photo_library_outlined), child: WallpapersPanel());
+    return ModalButton(
+        actionName: "Wallpapers", icon: const Icon(Icons.photo_library_outlined), child: () => const WallpapersPanel());
   }
 }
 
@@ -106,9 +109,13 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
   String? _currentWallpaperPath;
   final _WallpaperThumbnailQueue _thumbnailQueue = _WallpaperThumbnailQueue.instance;
 
+  WallpaperFillMode _fillMode = WallpaperFillMode.fill;
+  int _monitorCount = 1;
+
   @override
   void initState() {
     super.initState();
+    _monitorCount = Monitor.list.length;
     _folderPath = (widget.initialFolderPath?.trim().isNotEmpty ?? false)
         ? widget.initialFolderPath!.trim()
         : globalSettings.wallpapersFolder;
@@ -116,6 +123,13 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
         ? WinUtils.getDesktopWallpaperPath()
         : null;
     _refreshImages();
+  }
+
+  void _cycleFillMode() {
+    setState(() {
+      final int nextIndex = (_fillMode.index + 1) % WallpaperFillMode.values.length;
+      _fillMode = WallpaperFillMode.values[nextIndex];
+    });
   }
 
   void _refreshImages() {
@@ -162,18 +176,9 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
     _refreshImages();
   }
 
-  Future<void> _setWallpaper(File file) async {
-    final bool ok = WinUtils.setDesktopWallpaper(file.path);
-    if (!ok || !mounted) return;
-    setState(() {
-      _currentWallpaperPath = file.path;
-    });
-    // Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final bool folderExists = _folderPath.trim().isNotEmpty && Directory(_folderPath).existsSync();
 
     return Column(
@@ -182,13 +187,29 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
         PanelHeader(
           title: widget.title,
           accent: accent,
-          boldFont: globalSettings.theme.quickMenuBoldFont,
           icon: Icons.wallpaper_rounded,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
           child: Row(
             children: <Widget>[
+              CustomTooltip(
+                message: "Fill Mode: ${_fillMode.name.toUpperCase()}",
+                child: TextButton.icon(
+                  onPressed: _cycleFillMode,
+                  icon: Icon(_getFillModeIcon(_fillMode), size: 16),
+                  label: Text(_fillMode.name.toUpperCase(),
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: accent.withAlpha(20),
+                    foregroundColor: accent,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   _folderPath.trim().isEmpty ? "No folder selected" : _folderPath,
@@ -233,13 +254,36 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
                           image: image,
                           accent: accent,
                           isCurrent: isCurrent,
-                          onTap: () => _setWallpaper(image),
+                          monitorCount: _monitorCount,
+                          onSet: (int monitor) {
+                            WinUtils.setWallpaper(image, monitor, _fillMode);
+                            setState(() {
+                              _currentWallpaperPath = image.path;
+                            });
+                          },
                         );
                       },
                     ),
         ),
       ],
     );
+  }
+
+  IconData _getFillModeIcon(WallpaperFillMode mode) {
+    switch (mode) {
+      case WallpaperFillMode.center:
+        return Icons.center_focus_strong_rounded;
+      case WallpaperFillMode.tile:
+        return Icons.grid_view_rounded;
+      case WallpaperFillMode.stretch:
+        return Icons.unfold_more_rounded;
+      case WallpaperFillMode.fit:
+        return Icons.fit_screen_rounded;
+      case WallpaperFillMode.fill:
+        return Icons.crop_free_rounded;
+      case WallpaperFillMode.span:
+        return Icons.view_sidebar_rounded;
+    }
   }
 }
 
@@ -282,13 +326,15 @@ class _WallpaperRow extends StatefulWidget {
     required this.image,
     required this.accent,
     required this.isCurrent,
-    required this.onTap,
+    required this.monitorCount,
+    required this.onSet,
   });
 
   final File image;
   final Color accent;
   final bool isCurrent;
-  final VoidCallback onTap;
+  final int monitorCount;
+  final Function(int) onSet;
 
   @override
   State<_WallpaperRow> createState() => _WallpaperRowState();
@@ -296,7 +342,15 @@ class _WallpaperRow extends StatefulWidget {
 
 class _WallpaperRowState extends State<_WallpaperRow> {
   bool _hovered = false;
-  late Future<Uint8List?> _thumbnailFuture;
+  late Future<File?> _thumbnailFuture;
+  OverlayEntry? _previewEntry;
+  int _selectedMonitor = 0;
+
+  @override
+  void dispose() {
+    _hidePreview();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -312,8 +366,134 @@ class _WallpaperRowState extends State<_WallpaperRow> {
     }
   }
 
-  Future<Uint8List?> _getThumbnailFuture() {
+  Future<File?> _getThumbnailFuture() {
     return _WallpaperThumbnailQueue.instance.getThumbnail(widget.image.path);
+  }
+
+  void _showMonitorPicker(BuildContext context) {
+    showQuickMenuModal(
+      context: context,
+      heightFactor: 0.8,
+      child: Container(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.monitor_rounded, size: 18, color: globalSettings.themeColors.accentColor),
+                const SizedBox(width: 8),
+                const Text(
+                  "Select Display",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 180,
+              child: _MonitorLayoutPicker(
+                accent: globalSettings.themeColors.accentColor,
+                onSelect: (int monitorIndex) {
+                  setState(() => _selectedMonitor = monitorIndex);
+                  Navigator.of(context).pop();
+                  widget.onSet(monitorIndex);
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Click a monitor to apply wallpaper",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPreview(BuildContext context) {
+    if (_previewEntry != null) return;
+
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    // Position next to the thumbnail (8px padding + 64px thumb width)
+    const double thumbRelativeRight = 8 + 64;
+    final double thumbRightGlobal = offset.dx + thumbRelativeRight;
+
+    // Remaining width in the popup/row (minus gaps and padding)
+    final double availableWidth = (size.width - thumbRelativeRight - 24).clamp(100.0, 300.0);
+    final double calculatedHeight = availableWidth * 0.625; // Maintain ~1.6 ratio
+
+    _previewEntry = OverlayEntry(
+      builder: (BuildContext context) => Positioned(
+        left: thumbRightGlobal + 12,
+        top: offset.dy - 30,
+        child: Material(
+          elevation: 12,
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(10),
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            width: availableWidth,
+            height: calculatedHeight,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withAlpha(30)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Image.file(
+                  widget.image,
+                  fit: BoxFit.cover,
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: <Color>[
+                          Colors.black.withAlpha(180),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    child: Text(
+                      widget.image.path.split('\\').last,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_previewEntry!);
+  }
+
+  void _hidePreview() {
+    _previewEntry?.remove();
+    _previewEntry = null;
   }
 
   @override
@@ -329,47 +509,53 @@ class _WallpaperRowState extends State<_WallpaperRow> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(20) : Colors.transparent,
+          color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(20) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: widget.isCurrent ? widget.accent.withAlpha(150) : onSurface.withAlpha(18),
+            color: widget.isCurrent ? globalSettings.themeColors.accentColor.withAlpha(150) : onSurface.withAlpha(18),
           ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: widget.onTap,
+          onTap: () => widget.onSet(_selectedMonitor),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: <Widget>[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: FutureBuilder<Uint8List?>(
-                    future: _thumbnailFuture,
-                    builder: (BuildContext context, AsyncSnapshot<Uint8List?> snap) {
-                      final Uint8List? bytes = snap.data;
-                      if (bytes != null && bytes.isNotEmpty) {
-                        return Image.memory(
-                          bytes,
+                MouseRegion(
+                  onEnter: (_) => _showPreview(context),
+                  onExit: (_) => _hidePreview(),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: FutureBuilder<File?>(
+                      future: _thumbnailFuture,
+                      builder: (BuildContext context, AsyncSnapshot<File?> snap) {
+                        final File? bytes = snap.data;
+                        if (bytes != null) {
+                          return Image.file(
+                            bytes,
+                            width: 64,
+                            height: 40,
+                            cacheWidth: 64,
+                            cacheHeight: 40,
+                            gaplessPlayback: true,
+                            fit: BoxFit.cover,
+                          );
+                        }
+
+                        return Container(
                           width: 64,
                           height: 40,
-                          gaplessPlayback: true,
-                          fit: BoxFit.cover,
+                          color: globalSettings.themeColors.accentColor.withAlpha(20),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            snap.hasError ? Icons.broken_image_outlined : Icons.image_outlined,
+                            size: 16,
+                            color: globalSettings.themeColors.accentColor.withAlpha(180),
+                          ),
                         );
-                      }
-
-                      return Container(
-                        width: 64,
-                        height: 40,
-                        color: widget.accent.withAlpha(20),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          snap.hasError ? Icons.broken_image_outlined : Icons.image_outlined,
-                          size: 16,
-                          color: widget.accent.withAlpha(180),
-                        ),
-                      );
-                    },
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -393,20 +579,180 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                         widget.isCurrent ? "Current wallpaper" : "Set as wallpaper",
                         style: TextStyle(
                           fontSize: 10,
-                          color: widget.isCurrent ? widget.accent.withAlpha(220) : onSurface.withAlpha(140),
+                          color: widget.isCurrent
+                              ? globalSettings.themeColors.accentColor.withAlpha(220)
+                              : onSurface.withAlpha(140),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
+                if (widget.monitorCount > 1) ...<Widget>[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _showMonitorPicker(context),
+                    icon: Icon(Icons.monitor_rounded, size: 16, color: onSurface.withAlpha(150)),
+                    tooltip: "Select Monitor",
+                    style: IconButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(32, 32),
+                      backgroundColor: onSurface.withAlpha(10),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
                 Icon(
                   widget.isCurrent ? Icons.check_circle_rounded : Icons.wallpaper_rounded,
                   size: 16,
-                  color: widget.isCurrent ? widget.accent : onSurface.withAlpha(_hovered ? 180 : 120),
+                  color: widget.isCurrent
+                      ? globalSettings.themeColors.accentColor
+                      : onSurface.withAlpha(_hovered ? 180 : 120),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonitorLayoutPicker extends StatelessWidget {
+  const _MonitorLayoutPicker({
+    required this.accent,
+    required this.onSelect,
+  });
+
+  final Color accent;
+  final Function(int) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<int> monitorList = Monitor.list;
+    if (monitorList.isEmpty) return const SizedBox.shrink();
+
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
+
+    final Map<int, Square> sizes = Monitor.monitorSizes;
+    for (final int handle in monitorList) {
+      final Square size = sizes[handle]!;
+      if (size.x < minX) minX = size.x.toDouble();
+      if (size.y < minY) minY = size.y.toDouble();
+      if (size.x + size.width > maxX) maxX = (size.x + size.width).toDouble();
+      if (size.y + size.height > maxY) maxY = (size.y + size.height).toDouble();
+    }
+
+    final double totalWidth = maxX - minX;
+    final double totalHeight = maxY - minY;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double scaleX = constraints.maxWidth / totalWidth;
+        final double scaleY = constraints.maxHeight / totalHeight;
+        final double scale = (scaleX < scaleY ? scaleX : scaleY) * 0.9;
+
+        final double offsetX = (constraints.maxWidth - totalWidth * scale) / 2;
+        final double offsetY = (constraints.maxHeight - totalHeight * scale) / 2;
+
+        return Stack(
+          children: <Widget>[
+            for (int i = 0; i < monitorList.length; i++) ...<Widget>[
+              (() {
+                final int handle = monitorList[i];
+                final Square size = sizes[handle]!;
+                final double left = (size.x - minX) * scale + offsetX;
+                final double top = (size.y - minY) * scale + offsetY;
+                final double width = size.width * scale;
+                final double height = size.height * scale;
+
+                return Positioned(
+                  left: left,
+                  top: top,
+                  width: width,
+                  height: height,
+                  child: _MonitorItem(
+                    index: i,
+                    accent: accent,
+                    onTap: () => onSelect(i),
+                  ),
+                );
+              })(),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MonitorItem extends StatefulWidget {
+  const _MonitorItem({
+    required this.index,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final int index;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  State<_MonitorItem> createState() => _MonitorItemState();
+}
+
+class _MonitorItemState extends State<_MonitorItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(40) : onSurface.withAlpha(15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _hovered ? globalSettings.themeColors.accentColor : onSurface.withAlpha(50),
+              width: _hovered ? 2 : 1,
+            ),
+            boxShadow: _hovered
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: globalSettings.themeColors.accentColor.withAlpha(40),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.monitor_rounded,
+                size: 20,
+                color: _hovered ? globalSettings.themeColors.accentColor : onSurface.withAlpha(180),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "${widget.index + 1}",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: _hovered ? globalSettings.themeColors.accentColor : onSurface.withAlpha(180),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -421,38 +767,29 @@ class _WallpaperThumbnailQueue {
 
   static const int _thumbnailWidth = 64;
   static const int _thumbnailHeight = 40;
-  static const String _thumbnailFolderName = 'wallpaper thumb';
+  static const String _thumbnailFolderName = r'cache\wallpaper thumb';
 
-  final Map<String, Uint8List> _memoryCache = <String, Uint8List>{};
-  final Map<String, Completer<Uint8List?>> _inFlight = <String, Completer<Uint8List?>>{};
+  final Set<String> _inFlight = <String>{};
   final List<String> _queue = <String>[];
   bool _isProcessing = false;
 
-  Future<Uint8List?> getThumbnail(String imagePath) async {
-    final Uint8List? cached = _memoryCache[imagePath];
-    if (cached != null) return cached;
-
-    final Uint8List? persisted = await _readPersistedThumbnailIfFresh(imagePath);
+  Future<File?> getThumbnail(String imagePath) async {
+    final File? persisted = await _readPersistedThumbnailIfFresh(imagePath);
     if (persisted != null) {
-      _memoryCache[imagePath] = persisted;
       return persisted;
     }
 
-    final Completer<Uint8List?>? current = _inFlight[imagePath];
-    if (current != null) return current.future;
-
-    final Completer<Uint8List?> completer = Completer<Uint8List?>();
-    _inFlight[imagePath] = completer;
-    if (!_queue.contains(imagePath)) {
+    if (!_inFlight.contains(imagePath) && !_queue.contains(imagePath)) {
       _queue.add(imagePath);
+      _pumpQueue();
     }
-    _pumpQueue();
-    return completer.future;
+
+    return File(imagePath);
   }
 
   void primeQueue(List<File> images) {
     for (final File image in images) {
-      if (_memoryCache.containsKey(image.path) || _inFlight.containsKey(image.path) || _queue.contains(image.path)) {
+      if (_inFlight.contains(image.path) || _queue.contains(image.path)) {
         continue;
       }
       _queue.add(image.path);
@@ -466,12 +803,12 @@ class _WallpaperThumbnailQueue {
 
     while (_queue.isNotEmpty) {
       final String imagePath = _queue.removeAt(0);
-      final Completer<Uint8List?>? completer = _inFlight[imagePath];
+      _inFlight.add(imagePath);
 
       try {
-        Uint8List? bytes = await _readPersistedThumbnailIfFresh(imagePath);
-        if (bytes == null) {
-          bytes = await compute<Map<String, Object>, Uint8List?>(
+        File? thumbFile = await _readPersistedThumbnailIfFresh(imagePath);
+        if (thumbFile == null) {
+          final Uint8List? bytes = await compute<Map<String, Object>, Uint8List?>(
             _generateWallpaperThumbnail,
             <String, Object>{
               'path': imagePath,
@@ -481,17 +818,13 @@ class _WallpaperThumbnailQueue {
           );
 
           if (bytes != null && bytes.isNotEmpty) {
-            await File(_thumbnailPathFor(imagePath)).writeAsBytes(bytes, flush: true);
+            final String thumbPath = _thumbnailPathFor(imagePath);
+            thumbFile = File(thumbPath);
+            await thumbFile.writeAsBytes(bytes, flush: true);
           }
         }
-
-        if (bytes != null && bytes.isNotEmpty) {
-          _memoryCache[imagePath] = bytes;
-        }
-
-        completer?.complete(bytes);
       } catch (_) {
-        completer?.complete(null);
+        // Silently fail
       } finally {
         _inFlight.remove(imagePath);
       }
@@ -500,22 +833,24 @@ class _WallpaperThumbnailQueue {
     _isProcessing = false;
   }
 
-  Future<Uint8List?> _readPersistedThumbnailIfFresh(String imagePath) async {
-    final File imageFile = File(imagePath);
-    final File thumbFile = File(_thumbnailPathFor(imagePath));
+  Future<File?> _readPersistedThumbnailIfFresh(String imagePath) async {
+    try {
+      final File imageFile = File(imagePath);
+      final File thumbFile = File(_thumbnailPathFor(imagePath));
 
-    if (!await imageFile.exists() || !await thumbFile.exists()) {
+      if (!await imageFile.exists() || !await thumbFile.exists()) {
+        return null;
+      }
+
+      final DateTime imageModified = await imageFile.lastModified();
+      final DateTime thumbModified = await thumbFile.lastModified();
+      if (thumbModified.isBefore(imageModified)) {
+        return null;
+      }
+      return thumbFile;
+    } catch (_) {
       return null;
     }
-
-    final DateTime imageModified = await imageFile.lastModified();
-    final DateTime thumbModified = await thumbFile.lastModified();
-    if (thumbModified.isBefore(imageModified)) {
-      return null;
-    }
-
-    final Uint8List bytes = await thumbFile.readAsBytes();
-    return bytes.isEmpty ? null : bytes;
   }
 
   String _thumbnailPathFor(String imagePath) {

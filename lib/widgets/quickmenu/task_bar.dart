@@ -3,29 +3,36 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
+
 import '../../models/classes/boxes.dart';
+import '../../models/classes/music_server.dart';
+import '../../models/classes/music_server_manager.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
-import '../../models/win32/window.dart';
-import '../../models/window_watcher.dart';
+import '../../models/util/quickmenu_modal.dart';
+import '../../models/win32/keys.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import '../../models/win32/keys.dart';
-import '../../models/globals.dart';
-import '../../models/util/quickmenu_modal.dart';
+import '../../models/win32/win_utils.dart';
+import '../../models/win32/window.dart';
+import '../../models/window_watcher.dart';
+import '../itzy/quickmenu/button_music_player.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/zoomed_button.dart';
 import 'context_menu.dart';
-import 'quick_grid_picker.dart';
+import 'quick_snap_picker.dart';
 
 // --- CONSTANTS ---
-const double kTaskBarItemHeight = 26.4;
+const double kTaskBarItemHeight = 28.0;
+const double kTaskBarItemExpandedHeight = 42.0;
 const double kMediaButtonWidth = 25.0;
 const double kTaskBarWidth = 310.0;
 const Duration kTimerInterval = Duration(milliseconds: 300);
 
 class Caches {
-  static double lastHeight = 0;
   static List<int> audioMixer = <int>[];
   static List<String> audioMixerExes = <String>[];
 }
@@ -44,14 +51,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   Timer? _mainTimer;
   final ScrollController _scrollController = ScrollController();
 
-  // Audio state
-  bool _spotifyWasPaused = false;
-  int _spotifyDelayPlay = 0;
-  bool _audioJumpOneTick = false;
-
   // Window sizing state
-  bool _justToggled = false;
-  int _sizeIncrement = 1;
 
   @override
   void initState() {
@@ -61,13 +61,27 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     // optimize image cache
     // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
 
+    _initializeWindowSize();
     if (mounted) {
       QuickMenuFunctions.addListener(this);
       NativeHooks.addListener(this);
       _fetchWindows();
       _startTimer();
-      _initializeWindowSize();
     }
+  }
+
+  int _sizeIncrement = 1;
+  void _initializeWindowSize() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      WidgetsBinding.instance.reassembleApplication();
+      // await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      if (!mounted) return;
+      final Size size = await WindowManager.instance.getSize();
+      await WindowManager.instance.setSize(Size(size.width + _sizeIncrement, size.height + _sizeIncrement));
+      _sizeIncrement = _sizeIncrement == 1 ? -1 : 1;
+      // await windowManager.setAsFrameless();
+    });
   }
 
   @override
@@ -82,54 +96,13 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   void _startTimer() {
     _mainTimer = Timer.periodic(kTimerInterval, (Timer timer) {
-      if (globalSettings.pauseSpotifyWhenNewSound && !_keepFetching) {
-        if (_audioJumpOneTick) {
-          _audioJumpOneTick = false;
-        } else {
-          _handleAudio();
-          _audioJumpOneTick = true;
-        }
-      }
-
       if (_keepFetching && !_fetching) {
         _fetchWindows();
       }
     });
   }
 
-  void _initializeWindowSize() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
-
-      final Size size = await windowManager.getSize();
-      await windowManager.setSize(Size(size.width + _sizeIncrement, size.height + _sizeIncrement));
-      _sizeIncrement = _sizeIncrement == 1 ? -1 : 1;
-    });
-  }
-
   // --- LOGIC ---
-
-  Future<void> _handleHeight() async {
-    if (Globals.changingPages == true) return;
-
-    double currentHeight = (_windows.length * kTaskBarItemHeight).clamp(100, 400) + 15;
-    Globals.heights.taskbar = currentHeight;
-
-    if (currentHeight != Caches.lastHeight) {
-      // Logic for specific toggle scenarios
-      if (_justToggled && 1 + 1 == 3) {
-        // Note: 1+1==3 is always false in original code, kept for legacy logic preservation if intended
-        final double newHeight = Globals.heights.allSummed + 80;
-        if (Caches.lastHeight != newHeight && mounted) {
-          await windowManager.setSize(Size(300, newHeight));
-          Caches.lastHeight = newHeight;
-        }
-        _justToggled = false;
-      }
-      Caches.lastHeight = currentHeight;
-    }
-  }
 
   Future<void> _handleAudio() async {
     final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
@@ -146,28 +119,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         .where((ProcessVolume e) => e.peakVolume > 0.01)
         .map((ProcessVolume x) => x.processPath.split('\\').last)
         .toList();
-
-    if (globalSettings.pauseSpotifyWhenNewSound) {
-      _manageSpotifyPlayback();
-    }
-  }
-
-  void _manageSpotifyPlayback() {
-    bool hasSpotify = Caches.audioMixerExes.contains("Spotify.exe");
-    bool hasOtherAudio = Caches.audioMixerExes.length > 1;
-
-    if (hasOtherAudio && hasSpotify) {
-      WindowWatcher.triggerSpotify(button: AppCommand.mediaPause);
-      _spotifyWasPaused = true;
-    } else if (_spotifyWasPaused && Caches.audioMixerExes.isEmpty) {
-      if (_spotifyDelayPlay > 2) {
-        WindowWatcher.triggerSpotify(button: AppCommand.mediaPlay);
-        _spotifyWasPaused = false;
-        _spotifyDelayPlay = 0;
-      } else {
-        _spotifyDelayPlay++;
-      }
-    }
   }
 
   Future<void> _fetchWindows({bool updateState = true}) async {
@@ -180,7 +131,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       _windows = List<Window>.from(WindowWatcher.list);
 
       await _handleAudio();
-      await _handleHeight();
 
       if (updateState && mounted) {
         setState(() => _fetching = false);
@@ -197,9 +147,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     if (visible) {
       _keepFetching = true;
       await _fetchWindows();
-      _justToggled = true;
     } else {
-      _justToggled = false;
       _keepFetching = false;
       if (mounted) setState(() {});
     }
@@ -244,12 +192,16 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void _scrollToSelected() {
     if (QuickMenuFunctions.taskBarSelectedIdx == -1) return;
     final double targetOffset = QuickMenuFunctions.taskBarSelectedIdx * kTaskBarItemHeight;
-    final double viewportHeight = Caches.lastHeight;
-    if (targetOffset < _scrollController.offset) {
-      _scrollController.animateTo(targetOffset, duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
-    } else if (targetOffset + kTaskBarItemHeight > _scrollController.offset + viewportHeight) {
-      _scrollController.animateTo(targetOffset - viewportHeight + kTaskBarItemHeight + 20,
-          duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+    // viewportHeight is no longer fixed, using a safe default or checking from context could be better
+    // but for now we'll assume a reasonable visible area.
+    if (_scrollController.hasClients) {
+      final double viewportHeight = _scrollController.position.viewportDimension;
+      if (targetOffset < _scrollController.offset) {
+        _scrollController.animateTo(targetOffset, duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+      } else if (targetOffset + kTaskBarItemHeight > _scrollController.offset + viewportHeight) {
+        _scrollController.animateTo(targetOffset - viewportHeight + kTaskBarItemHeight + 20,
+            duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+      }
     }
   }
 
@@ -277,6 +229,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   @override
   Widget build(BuildContext context) {
+    Globals.heights.taskbar = 150; // Minimum height from constraints
     return MouseRegion(
       onEnter: (_) => setState(() => _keepFetching = true),
       child: Container(
@@ -284,8 +237,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            height: Caches.lastHeight,
-            constraints: const BoxConstraints(minHeight: 100),
+            constraints: const BoxConstraints(minHeight: 150, maxHeight: 320),
             child: ShaderMask(
               shaderCallback: (Rect rect) {
                 return const LinearGradient(
@@ -296,52 +248,69 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 ).createShader(rect);
               },
               blendMode: BlendMode.dstOut,
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                controller: _scrollController,
-                itemCount: _windows.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final Window window = _windows[index];
-                  final bool isSelected = index == QuickMenuFunctions.taskBarSelectedIdx;
+              child: StreamBuilder<SequenceState?>(
+                  stream: MusicServerManager.player.sequenceStateStream,
+                  builder: (BuildContext context, AsyncSnapshot<SequenceState?> snapshot) {
+                    final SequenceState? sequenceState = snapshot.data;
+                    final MusicItem? musicItem = sequenceState?.currentSource?.tag is MusicItem
+                        ? sequenceState!.currentSource!.tag as MusicItem
+                        : null;
 
-                  // Add separator if monitor changes
-                  if (index > 0 && window.monitor != _windows[index - 1].monitor) {
-                    return Column(
-                      children: <Widget>[
-                        _buildMonitorSeparator(context),
-                        TaskBarItem(
+                    int isMusicPlaying = (musicItem != null && globalSettings.showMusicPlayerInTaskbar) ? 1 : 0;
+
+                    // return TaskBarMusicItem(item: item);
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      // physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _windows.length + isMusicPlaying,
+                      itemBuilder: (BuildContext context, int xIndex) {
+                        if (xIndex == 0 && isMusicPlaying != 0) {
+                          return TaskBarMusicItem(item: musicItem!);
+                        }
+                        final int index = xIndex - isMusicPlaying;
+                        final Window window = _windows[index];
+                        final bool isSelected = index == QuickMenuFunctions.taskBarSelectedIdx;
+
+                        // Add separator if monitor changes
+                        if (index > 0 && window.monitor != _windows[index - 1].monitor) {
+                          return Column(
+                            children: <Widget>[
+                              _buildMonitorSeparator(context),
+                              TaskBarItem(
+                                window: window,
+                                index: index,
+                                isSelected: isSelected,
+                                onClose: _handleWindowClose,
+                              ),
+                            ],
+                          );
+                        }
+
+                        // Add padding at bottom
+                        if (_windows.length > 10 && index == _windows.length - 1) {
+                          return Column(
+                            children: <Widget>[
+                              TaskBarItem(
+                                window: window,
+                                index: index,
+                                isSelected: isSelected,
+                                onClose: _handleWindowClose,
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+                          );
+                        }
+
+                        return TaskBarItem(
                           window: window,
                           index: index,
                           isSelected: isSelected,
                           onClose: _handleWindowClose,
-                        ),
-                      ],
+                        );
+                      },
                     );
-                  }
-
-                  // Add padding at bottom
-                  if (_windows.length > 10 && index == _windows.length - 1) {
-                    return Column(
-                      children: <Widget>[
-                        TaskBarItem(
-                          window: window,
-                          index: index,
-                          isSelected: isSelected,
-                          onClose: _handleWindowClose,
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    );
-                  }
-
-                  return TaskBarItem(
-                    window: window,
-                    index: index,
-                    isSelected: isSelected,
-                    onClose: _handleWindowClose,
-                  );
-                },
-              ),
+                  }),
             ),
           ),
         ),
@@ -350,15 +319,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   Widget _buildMonitorSeparator(BuildContext context) {
-    final Color hoverColor = globalSettings.themeTypeMode == ThemeType.dark
-        ? Colors.white12.withValues(alpha: 0.15)
-        : Colors.black12.withValues(alpha: 0.15);
-
+    final Color accent = globalSettings.themeColors.accentColor;
     return Container(
-      margin: const EdgeInsets.only(top: 5),
-      padding: const EdgeInsets.only(bottom: 5),
-      decoration:
-          BoxDecoration(color: Colors.transparent, border: Border(top: BorderSide(width: 2, color: hoverColor))),
+      margin: const EdgeInsets.symmetric(vertical: 1),
+      child: Divider(height: 1, color: accent.withAlpha(40)),
     );
   }
 
@@ -374,7 +338,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     });
 
     await _handleAudio();
-    await _handleHeight();
     _fetchWindows();
 
     if (mounted) setState(() => _fetching = false);
@@ -407,33 +370,49 @@ class _TaskBarItemState extends State<TaskBarItem> {
   bool _isHovered = false;
   double _dragMovement = 0.0;
 
-  bool get _isDark => globalSettings.themeTypeMode == ThemeType.dark;
-
-  Color get _hoverColor => _isDark ? Colors.white12.withValues(alpha: 0.15) : Colors.black12.withValues(alpha: 0.15);
+  // bool get _isDark => globalSettings.themeTypeMode == ThemeType.dark;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final bool isSelected = widget.isSelected;
+    final bool isHovered = _isHovered;
+    final bool expanded = globalSettings.expandedTaskbar;
+    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
-        height: kTaskBarItemHeight,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        height: height,
+        margin: EdgeInsets.symmetric(horizontal: 4, vertical: expanded ? 2 : 1),
         decoration: BoxDecoration(
-          color: (widget.isSelected || _isHovered) ? _hoverColor : Colors.transparent,
-          border: widget.isSelected
-              ? Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2))
-              : null,
+          color: isSelected
+              ? accent.withAlpha(expanded ? 60 : 45)
+              : isHovered
+                  ? accent.withAlpha(expanded ? 40 : 20)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(expanded ? 8 : 9),
+          border: Border.all(
+            color: (isSelected && !expanded) ? accent.withAlpha(100) : Colors.transparent,
+            width: 1,
+          ),
         ),
-        child: _buildMainContent(),
+        child: expanded ? _buildExpandedContent() : _buildMainContent(),
       ),
     );
   }
 
-  Widget _buildMainContent() {
+  Widget _buildExpandedContent() {
     final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
     final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
+    final bool highlighted = widget.isSelected || _isHovered;
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: _activateWindow,
       onVerticalDragEnd: (_) => _activateWindow(),
       onSecondaryTapUp: (TapUpDetails details) => _showContextMenu(context),
@@ -442,7 +421,113 @@ class _TaskBarItemState extends State<TaskBarItem> {
       onHorizontalDragUpdate: (DragUpdateDetails details) => _dragMovement += details.delta.dx,
       onHorizontalDragEnd: _handleHorizontalDragEnd,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        child: Row(
+          children: <Widget>[
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: highlighted ? 2.5 : 0,
+              height: 18,
+              margin: EdgeInsets.only(right: highlighted ? 7 : 0),
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(
+              width: 25,
+              height: 24,
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: <Widget>[
+                  _buildIcon(),
+                  Positioned(
+                    left: 18,
+                    top: 3,
+                    child: _buildHelpBadge(),
+                  ),
+                  if (widget.window.isPinned)
+                    Positioned(
+                      left: 18,
+                      top: 3,
+                      child: Icon(Icons.push_pin_rounded, size: 8, color: accent.withAlpha(140)),
+                    ),
+                  if (Caches.audioMixer.contains(widget.window.process.pId) ||
+                      Caches.audioMixer.contains(widget.window.process.mainPID) ||
+                      Caches.audioMixerExes.contains(widget.window.process.exe))
+                    Positioned(
+                      left: 18,
+                      bottom: 3,
+                      child: _buildMuteButton(),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: _buildExpandedTitle()),
+            if (_isHovered) ...<Widget>[
+              if (globalSettings.showMediaControlForApp && (hasMediaControls || isAudioSource)) ...<Widget>[
+                _buildVolumeButton(),
+                _buildMediaButton()
+              ],
+              _buildCloseButton(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedTitle() {
+    final Color onSurface = globalSettings.themeColors.textColor;
+    final bool highlighted = widget.isSelected || _isHovered;
+    final String processName = widget.window.process.exe.replaceFirst('.exe', '');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          widget.window.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            color: highlighted ? onSurface : onSurface.withAlpha(200),
+            fontFamily: globalSettings.themeColors.entryFontFamily,
+            fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+            fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight(globalSettings.themeColors.entryFontWeight),
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          processName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 10,
+            color: highlighted ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainContent() {
+    final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
+    final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _activateWindow,
+      onVerticalDragEnd: (_) => _activateWindow(),
+      onSecondaryTapUp: (TapUpDetails details) => _showContextMenu(context),
+      onTertiaryTapUp: (_) => _showZonesPicker(context),
+      onLongPress: () => Win32.forceActivateWindow(widget.window.hWnd),
+      onHorizontalDragUpdate: (DragUpdateDetails details) => _dragMovement += details.delta.dx,
+      onHorizontalDragEnd: _handleHorizontalDragEnd,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 8.0),
         child: Row(
           children: <Widget>[
             SizedBox(
@@ -454,15 +539,32 @@ class _TaskBarItemState extends State<TaskBarItem> {
                   _buildIcon(),
                   Positioned(
                     left: 18,
-                    bottom: 3,
-                    child: _buildStatusIndicators(),
+                    top: 3,
+                    child: _buildHelpBadge(),
                   ),
+                  if (widget.window.isPinned)
+                    Positioned(
+                      left: 18,
+                      top: 3,
+                      child: Icon(Icons.push_pin_rounded,
+                          size: 8, color: globalSettings.themeColors.accentColor.withAlpha(140)),
+                    ),
+                  if (Caches.audioMixer.contains(widget.window.process.pId) ||
+                      Caches.audioMixer.contains(widget.window.process.mainPID) ||
+                      Caches.audioMixerExes.contains(widget.window.process.exe))
+                    Positioned(
+                      left: 18,
+                      bottom: 3,
+                      child: _buildMuteButton(),
+                    ),
                 ],
               ),
             ),
+            const SizedBox(width: 4),
             Expanded(child: _buildTitle()),
             if (_isHovered) ...<Widget>[
               if (globalSettings.showMediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
+              if (isAudioSource) _buildVolumeButton(),
               _buildCloseButton(),
             ],
           ],
@@ -472,39 +574,75 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildMediaButton() {
+    final Color accent = globalSettings.themeColors.accentColor;
     return InkWell(
-      hoverColor: _hoverColor,
+      hoverColor: accent.withAlpha(40),
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => _muteWindow(),
+      child: SizedBox(
+        width: kMediaButtonWidth,
+        height: kTaskBarItemHeight,
+        child: Icon(Icons.volume_off_outlined, size: 16, color: accent.withAlpha(200)),
+      ),
+    );
+  }
+
+  Widget _buildVolumeButton() {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return InkWell(
+      hoverColor: accent.withAlpha(40),
+      borderRadius: BorderRadius.circular(6),
       onTap: () => WindowWatcher.mediaControl(widget.index),
       child: GestureDetector(
         onSecondaryTap: () => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaNexttrack),
         onTertiaryTapUp: (_) => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaPrevioustrack),
-        child: const SizedBox(
+        child: SizedBox(
           width: kMediaButtonWidth,
           height: kTaskBarItemHeight,
-          child: Icon(Icons.play_arrow_rounded, size: 18),
+          child: Icon(Icons.play_arrow_rounded, size: 16, color: accent.withAlpha(200)),
         ),
       ),
     );
   }
 
   Widget _buildCloseButton() {
-    return InkWell(
-      hoverColor: _hoverColor,
-      onTap: () => widget.onClose(widget.index, widget.window),
-      onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true),
-      child: const SizedBox(
-        width: kMediaButtonWidth,
-        height: kTaskBarItemHeight,
-        child: Icon(Icons.close_rounded, size: 18),
+    final Color accent = globalSettings.themeColors.accentColor;
+    return Padding(
+      padding: EdgeInsets.only(right: !globalSettings.expandedTaskbar && WindowWatcher.list.length > 10 ? 5.0 : 0),
+      child: InkWell(
+        hoverColor: Colors.red.withAlpha(40),
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => widget.onClose(widget.index, widget.window),
+        onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true),
+        child: SizedBox(
+          width: kMediaButtonWidth,
+          height: kTaskBarItemHeight,
+          child: Icon(Icons.close_rounded, size: 16, color: accent.withAlpha(160)),
+        ),
       ),
     );
   }
 
   Widget _buildIcon() {
-    final String customIconPath = Boxes.getIconRewrite(widget.window.process.exePath, window: widget.window);
+    if (Boxes.getIconRewriteByName(widget.window) != "") {
+      return Image.asset(
+        Boxes.getIconRewriteByName(widget.window),
+        width: 20,
+        height: 20,
+        cacheWidth: 20,
+        cacheHeight: 20,
+      );
+    }
+    final String customIconPath = Boxes.getIconRewrite(widget.window.process.exePath);
 
     if (customIconPath != "") {
-      return Image.file(File(customIconPath), width: 20, height: 20);
+      return Image.file(
+        File(customIconPath),
+        width: 20,
+        height: 20,
+        cacheWidth: 20,
+        cacheHeight: 20,
+      );
     }
 
     if (WindowWatcher.icons.containsKey(widget.window.hWnd)) {
@@ -512,6 +650,8 @@ class _TaskBarItemState extends State<TaskBarItem> {
         WindowWatcher.icons[widget.window.hWnd] ?? Uint8List(0),
         width: 20,
         height: 20,
+        cacheWidth: 20,
+        cacheHeight: 20,
         gaplessPlayback: true,
         errorBuilder: (_, __, ___) => const Icon(Icons.check_box_outline_blank, size: 20),
       );
@@ -523,52 +663,62 @@ class _TaskBarItemState extends State<TaskBarItem> {
     );
   }
 
-  Widget _buildStatusIndicators() {
-    final bool isPinned = widget.window.isPinned;
-    final bool isActiveAudio = Caches.audioMixer.contains(widget.window.process.pId) ||
-        Caches.audioMixer.contains(widget.window.process.mainPID) ||
-        Caches.audioMixerExes.contains(widget.window.process.exe);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        if (isActiveAudio) _buildMuteButton(),
-        if (isPinned) const Icon(Icons.push_pin_rounded, size: 8, color: Colors.grey),
-      ],
+  Widget _buildMuteButton() {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return HoverScaleButton(
+      zoom: 1.8,
+      onTap: _muteWindow,
+      child: Icon(Icons.volume_up_rounded, size: 8, color: accent.withAlpha(180)),
     );
   }
 
-  Widget _buildMuteButton() {
-    return HoverScaleButton(
-      zoom: 1.8,
-      onTap: () async {
-        final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
-        if (mixers == null) return;
+  void _muteWindow() async {
+    final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
+    if (mixers == null) return;
 
-        for (ProcessVolume mixer in mixers) {
-          if (mixer.processPath == widget.window.process.exePath) {
-            double targetVol = mixer.maxVolume < 0.01 ? 1.0 : 0.001;
-            Audio.setAudioMixerVolume(mixer.processId, targetVol);
-          }
-        }
-      },
-      child: const Icon(Icons.volume_up_rounded, size: 8, color: Colors.grey),
+    for (ProcessVolume mixer in mixers) {
+      if (mixer.processPath == widget.window.process.exePath) {
+        double targetVol = mixer.maxVolume < 0.01 ? 1.0 : 0.001;
+        Audio.setAudioMixerVolume(mixer.processId, targetVol);
+      }
+    }
+  }
+
+  Widget _buildHelpBadge() {
+    if (widget.window.helpText.isEmpty) return const SizedBox.shrink();
+    final Color accent = globalSettings.themeColors.accentColor;
+    return CustomTooltip(
+      message: widget.window.helpText,
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: accent,
+          shape: BoxShape.circle,
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: accent.withAlpha(100),
+              blurRadius: 4,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildTitle() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        widget.window.title,
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-        softWrap: false,
-        style: TextStyle(
-          fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400,
-          fontSize: 13,
-        ),
+    return Text(
+      widget.window.title,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+      softWrap: false,
+      style: TextStyle(
+        fontSize: 13,
+        letterSpacing: 0.3,
+        fontFamily: globalSettings.theme.entryFontFamily,
+        fontStyle: globalSettings.theme.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+        fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight(globalSettings.theme.entryFontWeight),
       ),
     );
   }
@@ -607,7 +757,190 @@ class _TaskBarItemState extends State<TaskBarItem> {
     showQuickMenuModal(
       context: context,
       maxWidth: 450,
-      child: QuickGridsPicker(hWnd: widget.window.hWnd),
+      child: QuickSnapPicker(hWnd: widget.window.hWnd),
+    );
+  }
+}
+
+class TaskBarMusicItem extends StatefulWidget {
+  final MusicItem item;
+  const TaskBarMusicItem({super.key, required this.item});
+
+  @override
+  State<TaskBarMusicItem> createState() => _TaskBarMusicItemState();
+}
+
+class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final bool expanded = globalSettings.expandedTaskbar;
+    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        height: height,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(_isHovered ? 30 : 15),
+          borderRadius: BorderRadius.circular(expanded ? 8 : 9),
+          border: Border.all(color: accent.withAlpha(20), width: 1),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: InkWell(
+                onTap: _openMusicPlayer,
+                borderRadius: BorderRadius.circular(expanded ? 8 : 9),
+                hoverColor: Colors.transparent,
+                child: Row(
+                  children: <Widget>[
+                    _buildCoverArt(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            !expanded
+                                ? "${widget.item.artist ?? "Unknown Artist"} - ${widget.item.title}"
+                                : widget.item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: globalSettings.themeColors.textColor,
+                            ),
+                          ),
+                          !expanded
+                              ? const SizedBox.shrink()
+                              : Text(
+                                  widget.item.artist ?? "Unknown Artist",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: globalSettings.themeColors.textColor.withAlpha(160),
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _buildControls(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverArt() {
+    final double size = globalSettings.expandedTaskbar ? 32 : 20;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        color: globalSettings.themeColors.accentColor.withAlpha(20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: widget.item.localArtworkSmallPath != null && File(widget.item.localArtworkSmallPath!).existsSync()
+          ? Image.file(
+              File(widget.item.localArtworkSmallPath!),
+              fit: BoxFit.cover,
+              cacheWidth: 96,
+              errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, size: 18),
+            )
+          : widget.item.coverUrl != null
+              ? Image.network(
+                  widget.item.coverUrl!,
+                  fit: BoxFit.cover,
+                  cacheWidth: 96,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, size: 18),
+                )
+              : const Icon(Icons.music_note_rounded, size: 18),
+    );
+  }
+
+  void _openMusicPlayer() {
+    unawaited(
+      showQuickMenuModal(
+        context: context,
+        child: const MusicServerPanel(),
+      ),
+    );
+  }
+
+  Widget _buildControls() {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _ControlBtn(
+          icon: Icons.skip_previous_rounded,
+          onTap: () => MusicServerManager.player.seekToPrevious(),
+          accent: accent,
+        ),
+        StreamBuilder<bool>(
+          stream: MusicServerManager.player.playingStream,
+          builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+            final bool isPlaying = snapshot.data ?? false;
+            return _ControlBtn(
+              icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              onTap: () => isPlaying ? MusicServerManager.player.pause() : MusicServerManager.player.play(),
+              accent: accent,
+              isMain: true,
+            );
+          },
+        ),
+        _ControlBtn(
+          icon: Icons.skip_next_rounded,
+          onTap: () => MusicServerManager.player.seekToNext(),
+          accent: accent,
+        ),
+      ],
+    );
+  }
+}
+
+class _ControlBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color accent;
+  final bool isMain;
+
+  const _ControlBtn({
+    required this.icon,
+    required this.onTap,
+    required this.accent,
+    this.isMain = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        child: Icon(
+          icon,
+          size: isMain ? 22 : 18,
+          color: accent.withAlpha(200),
+        ),
+      ),
     );
   }
 }

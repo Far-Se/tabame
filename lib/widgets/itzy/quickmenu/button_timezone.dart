@@ -6,14 +6,14 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
-import '../../widgets/mouse_scroll_widget.dart';
-import '../../widgets/panel_header.dart';
+import '../../widgets/quick_menu_panel.dart';
 
 class TimeZoneButton extends StatelessWidget {
   const TimeZoneButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Time Zone", icon: Icon(Icons.public_rounded), child: TimeZoneWidget());
+    return ModalButton(
+        actionName: "Time Zone", icon: const Icon(Icons.public_rounded), child: () => const TimeZoneWidget());
   }
 }
 
@@ -63,38 +63,22 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final TimeOfDay? parsedTime = _parseTimeInput(_timeController.text);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        PanelHeader(
-          title: _settingsMode ? "Time Zone Settings" : "Time Zone",
-          accent: accent,
-          boldFont: true,
-          icon: _settingsMode ? Icons.settings_rounded : Icons.public_rounded,
-          buttonPressed: () {
-            setState(() {
-              _settingsMode = !_settingsMode;
-            });
-          },
-          buttonIcon: _settingsMode ? Icons.schedule_rounded : Icons.settings_outlined,
-        ),
-        Flexible(
-          child: MouseScrollWidget(
-            scrollDirection: Axis.vertical,
-            child: Material(
-              type: MaterialType.transparency,
-              child: _settingsMode
-                  ? _buildSettingsView(accent, onSurface)
-                  : _buildPlannerView(accent, onSurface, parsedTime),
-            ),
-          ),
-        ),
-      ],
+    return QuickMenuPanel(
+      title: _settingsMode ? "Time Zone Settings" : "Time Zone",
+      accent: accent,
+      icon: _settingsMode ? Icons.settings_rounded : Icons.public_rounded,
+      buttonPressed: () {
+        setState(() {
+          _settingsMode = !_settingsMode;
+        });
+      },
+      buttonIcon: _settingsMode ? Icons.schedule_rounded : Icons.settings_outlined,
+      useMouseScroll: true,
+      body: _settingsMode ? _buildSettingsView(accent, onSurface) : _buildPlannerView(accent, onSurface, parsedTime),
     );
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'countdown_manager.dart';
+
 void printWarning(String text) {
   print('\x1B[33m$text\x1B[0m');
 }
@@ -12,11 +14,14 @@ class Heights {
   double taskbar = 0;
   double traybar = 0;
   double topbar = 0;
-  double get allSummed => taskbar + traybar + topbar;
+  double pinnedAndTray = 0;
+  double infoBar = 0;
+  double get allSummed => taskbar + traybar + topbar + pinnedAndTray + infoBar;
   Heights();
 
   @override
-  String toString() => 'Heights(taskbar: $taskbar, traybar: $traybar, topbar: $topbar)';
+  String toString() =>
+      'Heights(taskbar: $taskbar, traybar: $traybar, topbar: $topbar, pinnedAndTray: $pinnedAndTray, infoBar: $infoBar)';
 }
 
 enum Pages {
@@ -27,23 +32,26 @@ enum Pages {
 
 enum QuickMenuPage {
   quickMenu,
-  fileSearch,
-  quickActions,
-  audioBox,
+  launcher,
+  quickSnap,
 }
 
 class Globals {
   Globals._();
+  static ({double width, double height}) quickMenuSize = (width: 355, height: 539);
+  static ({double width, double height}) launcherSize = (width: 715, height: 539);
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = true;
   static bool debugHotkeys = true;
-  static String version = "2.0";
+  static String version = "v2.0";
 
   static int virtualDesktop = 0;
 
   static bool changingPages = false;
   static bool isWindowActive = false;
   static final Heights heights = Heights();
+  static final CountdownManager countdownManager = CountdownManager();
+  static Map<int, List<int>> snappedWindowOriginalSizes = <int, List<int>>{};
 
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;
@@ -56,7 +64,6 @@ class Globals {
   static ValueNotifier<int> quickMenuSearchInputVersion = ValueNotifier<int>(0);
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
-  static String lastQuickSnapZoneId = "";
 
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;

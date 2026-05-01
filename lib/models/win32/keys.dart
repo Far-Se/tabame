@@ -1,8 +1,9 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:ffi';
-import 'package:win32/win32.dart';
+
 import 'package:ffi/ffi.dart';
+import 'package:win32/win32.dart';
 
 import '../settings.dart';
 import 'imports.dart';
@@ -154,11 +155,37 @@ class WinKeys {
     }
     final Pointer<INPUT> input = calloc<INPUT>();
     input.ref.type = INPUT_KEYBOARD;
+    int dwFlags = 0;
     if (mode == KeySentMode.up) {
-      input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
-    } else {
-      input.ref.ki.dwFlags = WM_KEYDOWN;
+      dwFlags |= KEYEVENTF_KEYUP;
     }
+
+    // Add extended key flag for keys that require it
+    final List<int> extendedKeys = <int>[
+      18, // VK_MENU
+      165, // VK_RMENU
+      163, // VK_RCONTROL
+      33, // VK_PRIOR (Page Up)
+      34, // VK_NEXT (Page Down)
+      35, // VK_END
+      36, // VK_HOME
+      37, // VK_LEFT
+      38, // VK_UP
+      39, // VK_RIGHT
+      40, // VK_DOWN
+      45, // VK_INSERT
+      46, // VK_DELETE
+      91, // VK_LWIN
+      92, // VK_RWIN
+      111, // VK_DIVIDE
+      144, // VK_NUMLOCK
+    ];
+
+    if (extendedKeys.contains(keyValue)) {
+      dwFlags |= KEYEVENTF_EXTENDEDKEY;
+    }
+
+    input.ref.ki.dwFlags = dwFlags;
     input.ref.ki.wScan = MapVirtualKey(keyValue, 0);
     // input.ref.ki.dwFlags = 0; // See docs for flags (mm keys may need Extended key flag)
     // input.ref.ki.time = 0;

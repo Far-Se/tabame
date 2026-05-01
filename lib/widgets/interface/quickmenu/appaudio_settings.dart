@@ -117,11 +117,11 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
             runSpacing: 8,
             children: <Widget>[
               _buildStatChip("CAPACITY", "${appAudioControls.length}/$_maxControls"),
-              _buildStatChip(
-                "ENGINE",
-                appAudioControls.any((AppAudioControl e) => e.showAnimation) ? "ANIMATED" : "STATIC",
-              ),
-              _buildStatChip("SEQUENCE", "MANUAL"),
+              _buildStatChip("Play:", "Left Click"),
+              _buildStatChip("Next:", "Right Click"),
+              _buildStatChip("Prev:", "Middle Click"),
+              _buildStatChip("Seek Forward:", "Hold and drag down"),
+              _buildStatChip("Seek Backward:", "Hold and drag left"),
             ],
           ),
         ],
@@ -505,227 +505,234 @@ class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.graphic_eq_rounded, size: 20, color: scheme.primary),
-                ),
-                const SizedBox(width: 16),
-                const Text(
-                  "App Audio Interface",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Visual Header
-            Container(
-              height: 80,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[
-                    scheme.primary.withValues(alpha: 0.1),
-                    scheme.primary.withValues(alpha: 0.02),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: scheme.primary.withValues(alpha: 0.15)),
-              ),
-              child: Stack(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Positioned(
-                    right: -10,
-                    bottom: -10,
-                    child: Icon(
-                      Icons.graphic_eq_rounded,
-                      size: 80,
-                      color: scheme.primary.withValues(alpha: 0.05),
+                  // Visual Header
+                  Container(
+                    height: 80,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[
+                          scheme.primary.withValues(alpha: 0.1),
+                          scheme.primary.withValues(alpha: 0.02),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: scheme.primary.withValues(alpha: 0.15)),
                     ),
-                  ),
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
                       children: <Widget>[
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
-                            boxShadow: <BoxShadow>[
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                        Positioned(
+                          right: -10,
+                          bottom: -10,
+                          child: Icon(
+                            Icons.graphic_eq_rounded,
+                            size: 80,
+                            color: scheme.primary.withValues(alpha: 0.05),
+                          ),
+                        ),
+                        Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: scheme.surface.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: scheme.primary.withValues(alpha: 0.2)),
+                                  boxShadow: <BoxShadow>[
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: widget.control.iconPath.isNotEmpty && File(widget.control.iconPath).existsSync()
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.file(
+                                          File(widget.control.iconPath),
+                                          width: 32,
+                                          height: 32,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : Icon(
+                                        IconData(widget.control.iconCodePoint, fontFamily: 'MaterialIcons'),
+                                        color: scheme.primary,
+                                        size: 28,
+                                      ),
+                              ),
+                              const SizedBox(width: 16),
+                              const Text(
+                                "App Audio Interface",
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
-                          alignment: Alignment.center,
-                          child: widget.control.iconPath.isNotEmpty && File(widget.control.iconPath).existsSync()
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.file(
-                                    File(widget.control.iconPath),
-                                    width: 32,
-                                    height: 32,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Icon(
-                                  IconData(widget.control.iconCodePoint, fontFamily: 'MaterialIcons'),
-                                  color: scheme.primary,
-                                  size: 28,
-                                ),
                         ),
+                      ],
+                    ),
+                  ),
+                  _buildSectionCard(
+                    title: "APP IDENTITY",
+                    child: Column(
+                      children: <Widget>[
+                        CustomTextInput(
+                          labelText: "Display Name",
+                          onChanged: (String value) {
+                            setState(() {
+                              widget.control.name = value;
+                            });
+                          },
+                          value: widget.control.name,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: <Widget>[
+                            Expanded(
+                              child: CustomTextInput(
+                                labelText: "App Path (.exe)",
+                                onChanged: (String value) {
+                                  setState(() {
+                                    widget.control.path = value;
+                                    widget.control.exe = value.split('\\').last;
+                                  });
+                                },
+                                value: widget.control.path,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.tonalIcon(
+                              onPressed: _pickExecutable,
+                              icon: const Icon(Icons.folder_open_rounded, size: 16),
+                              label: const Text("Browse"),
+                              style: FilledButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildToggleRow(
+                          "Show Playing Animation",
+                          "Animate this control while media is playing",
+                          widget.control.showAnimation,
+                          (bool value) {
+                            setState(() {
+                              widget.control.showAnimation = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSectionCard(
+                    title: "ICON CONFIGURATION",
+                    child: Row(
+                      children: <Widget>[
+                        FilledButton.tonalIcon(
+                          onPressed: _pickPngIcon,
+                          icon: const Icon(Icons.image_outlined, size: 16),
+                          label: const Text("Load PNG"),
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton.tonalIcon(
+                          onPressed: _pickMaterialIcon,
+                          icon: const Icon(Icons.grid_view_rounded, size: 16),
+                          label: const Text("Select Icon"),
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSectionCard(
+                    title: "HOTKEY BINDINGS",
+                    child: Column(
+                      children: <Widget>[
+                        _buildDenseField(
+                            "Play / Pause", widget.control.hotkeyPause, (String v) => widget.control.hotkeyPause = v),
+                        const SizedBox(height: 12),
+                        _buildDenseField(
+                            "Next Track", widget.control.hotkeyNext, (String v) => widget.control.hotkeyNext = v),
+                        const SizedBox(height: 12),
+                        _buildDenseField(
+                            "Previous Track", widget.control.hotkeyPrev, (String v) => widget.control.hotkeyPrev = v),
+                        const SizedBox(height: 12),
+                        _buildDenseField(
+                            "Rewind", widget.control.hotkeyRewind, (String v) => widget.control.hotkeyRewind = v),
+                        const SizedBox(height: 12),
+                        _buildDenseField(
+                            "Forward", widget.control.hotkeyForward, (String v) => widget.control.hotkeyForward = v),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            _buildSectionCard(
-              title: "APP IDENTITY",
-              child: Column(
-                children: <Widget>[
-                  TextInput(
-                    labelText: "Display Name",
-                    onChanged: (String value) {
-                      setState(() {
-                        widget.control.name = value;
-                      });
-                    },
-                    value: widget.control.name,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Expanded(
-                        child: TextInput(
-                          labelText: "App Path (.exe)",
-                          onChanged: (String value) {
-                            setState(() {
-                              widget.control.path = value;
-                              widget.control.exe = value.split('\\').last;
-                            });
-                          },
-                          value: widget.control.path,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton.tonalIcon(
-                        onPressed: _pickExecutable,
-                        icon: const Icon(Icons.folder_open_rounded, size: 16),
-                        label: const Text("Browse"),
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildToggleRow(
-                    "Show Playing Animation",
-                    "Animate this control while media is playing",
-                    widget.control.showAnimation,
-                    (bool value) {
-                      setState(() {
-                        widget.control.showAnimation = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildSectionCard(
-              title: "ICON CONFIGURATION",
-              child: Row(
-                children: <Widget>[
-                  FilledButton.tonalIcon(
-                    onPressed: _pickPngIcon,
-                    icon: const Icon(Icons.image_outlined, size: 16),
-                    label: const Text("Load PNG"),
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: _pickMaterialIcon,
-                    icon: const Icon(Icons.grid_view_rounded, size: 16),
-                    label: const Text("Select Icon"),
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildSectionCard(
-              title: "HOTKEY BINDINGS",
-              child: Column(
-                children: <Widget>[
-                  _buildDenseField(
-                      "Play / Pause", widget.control.hotkeyPause, (String v) => widget.control.hotkeyPause = v),
-                  const SizedBox(height: 12),
-                  _buildDenseField(
-                      "Next Track", widget.control.hotkeyNext, (String v) => widget.control.hotkeyNext = v),
-                  const SizedBox(height: 12),
-                  _buildDenseField(
-                      "Previous Track", widget.control.hotkeyPrev, (String v) => widget.control.hotkeyPrev = v),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text("Cancel"),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: () {
-                    widget.onSaved(widget.control);
-                    Navigator.of(context).pop();
-                  },
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: const Text("Apply Interface"),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.05)),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Cancel"),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.icon(
+                onPressed: () {
+                  widget.onSaved(widget.control);
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: const Text("Apply Interface"),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -754,7 +761,7 @@ class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
   }
 
   Widget _buildDenseField(String label, String value, Function(String) onChanged) {
-    return TextInput(
+    return CustomTextInput(
       labelText: label,
       onChanged: onChanged,
       value: value,

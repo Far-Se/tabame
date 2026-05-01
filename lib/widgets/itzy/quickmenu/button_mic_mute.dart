@@ -4,7 +4,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class MicMuteButton extends StatefulWidget {
   const MicMuteButton({super.key});
@@ -28,7 +28,7 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
   }
 
   @override
-  Future<void> onQuickMenuShown(QuickMenuPage type) async {
+  Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {
     if (mounted) setState(() {});
   }
 
@@ -37,44 +37,27 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
     return FutureBuilder<bool>(
       future: Audio.getMuteAudioDevice(AudioDeviceType.input),
       initialData: false,
-      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) => SizedBox(
-        width: 20,
-        height: double.maxFinite,
-        child: Material(
-          type: MaterialType.transparency,
-          child: GestureDetector(
-            onSecondaryTap: () async {
-              await Audio.switchDefaultDevice(
-                AudioDeviceType.input,
-                console: globalSettings.audioConsole,
-                multimedia: globalSettings.audioMultimedia,
-                communications: globalSettings.audioCommunications,
-              );
-              switchedDefaultDevice = true;
-              setState(() {});
-              Future<void>.delayed(const Duration(milliseconds: 1000), () {
-                switchedDefaultDevice = false;
-                if (!mounted) return;
-                setState(() {});
-              });
-            },
-            child: InkWell(
-              onTap: () async {
-                await Audio.setMuteAudioDevice(!(snapshot.data!), AudioDeviceType.input);
-                setState(() {});
-              },
-              child: CustomTooltip(
-                message: "Toggle Mic Mute",
-                child: Icon(
-                  switchedDefaultDevice
-                      ? Icons.published_with_changes
-                      : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
-                  color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
-                ),
-              ),
-            ),
-          ),
+      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) => QuickActionItem(
+        message: "Mic Mute",
+        icon: Icon(
+          switchedDefaultDevice ? Icons.published_with_changes : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
+          color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
         ),
+        onSecondaryTap: () async {
+          await Audio.switchDefaultDevice(
+            AudioDeviceType.input,
+            console: globalSettings.audioConsole,
+            multimedia: globalSettings.audioMultimedia,
+            communications: globalSettings.audioCommunications,
+          );
+          switchedDefaultDevice = true;
+          setState(() {});
+          Future<void>.delayed(const Duration(milliseconds: 1000), () {
+            switchedDefaultDevice = false;
+            if (!mounted) return;
+            setState(() {});
+          });
+        },
       ),
     );
   }

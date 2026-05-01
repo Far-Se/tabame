@@ -37,51 +37,72 @@ class _BarWithButtonsState extends State<BarWithButtons> with QuickMenuTriggers 
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    if (mounted) _buttonBarScrollController.animateTo(0, duration: const Duration(milliseconds: 50), curve: Curves.ease);
+    if (mounted) {
+      _buttonBarScrollController.animateTo(0, duration: const Duration(milliseconds: 50), curve: Curves.ease);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    double middleOffset = 0.93;
-    Widget content = ListChildren(children: widget.children);
+    const double middleOffset = 0.93;
+    final Widget content = _ButtonList(children: widget.children);
 
     if (!widget.withScroll) {
-      return content;
+      return SizedBox(height: widget.height, child: content);
     }
 
-    return ShaderMask(
-      shaderCallback: (Rect rect) {
-        return LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: <Color>[Colors.transparent, Colors.transparent, const Color.fromARGB(255, 0, 0, 0)],
-          stops: <double>[0.0, middleOffset, 1.0],
-        ).createShader(rect);
-      },
-      blendMode: BlendMode.dstOut,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        controller: _buttonBarScrollController,
-        child: Listener(
-          onPointerSignal: (PointerSignalEvent pointerSignal) {
-            if (pointerSignal is PointerScrollEvent) {
-              if (pointerSignal.scrollDelta.dy < 0) {
-                _buttonBarScrollController.animateTo(_buttonBarScrollController.offset - 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
-              } else {
-                _buttonBarScrollController.animateTo(_buttonBarScrollController.offset + 70, duration: const Duration(milliseconds: 200), curve: Curves.ease);
-              }
-            }
-          },
-          child: content,
-        ),
+    return SizedBox(
+      height: widget.height,
+      width: double.infinity,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          return ShaderMask(
+            shaderCallback: (Rect rect) {
+              return const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+                stops: <double>[0.0, middleOffset, 1.0],
+              ).createShader(rect);
+            },
+            blendMode: BlendMode.dstOut,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: _buttonBarScrollController,
+              child: Listener(
+                onPointerSignal: _handlePointerSignal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: content,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  void _handlePointerSignal(PointerSignalEvent pointerSignal) {
+    if (pointerSignal is! PointerScrollEvent) return;
+
+    final double targetOffset = pointerSignal.scrollDelta.dy < 0
+        ? _buttonBarScrollController.offset - 70
+        : _buttonBarScrollController.offset + 70;
+
+    _buttonBarScrollController.animateTo(
+      targetOffset.clamp(0, _buttonBarScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.ease,
     );
   }
 }
 
-class ListChildren extends StatelessWidget {
-  const ListChildren({
-    super.key,
+class _ButtonList extends StatelessWidget {
+  const _ButtonList({
     required this.children,
   });
 
@@ -93,8 +114,8 @@ class ListChildren extends StatelessWidget {
       type: MaterialType.transparency,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         verticalDirection: VerticalDirection.down,
         spacing: 0,
         children: <Widget>[
@@ -108,7 +129,7 @@ class ListChildren extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 6)
+          const SizedBox(width: 6),
         ],
       ),
     );

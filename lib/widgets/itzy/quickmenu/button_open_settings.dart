@@ -7,7 +7,9 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../pages/quickmenu.dart';
+import '../../widgets/custom_tooltip.dart';
 
 class OpenSettingsButton extends StatelessWidget {
   const OpenSettingsButton({super.key});
@@ -18,47 +20,52 @@ class OpenSettingsButton extends StatelessWidget {
       type: MaterialType.transparency,
       child: SizedBox(
         width: 25,
-        child: IconButton(
-          padding: const EdgeInsets.all(0),
-          splashRadius: 25,
-          icon: const Icon(
-            Icons.settings,
-          ),
-          onPressed: () {
-            // if (Boxes.quickTimers.isNotEmpty) {
-            //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");
-            //   return;
-            // }
-            if (kReleaseMode) {
-              QuickMenuFunctions.toggleQuickMenu(visible: false);
-              int hWnd = Win32.findWindow("Tabame - Interface");
-              if (hWnd == 0) {
-                WinUtils.startTabame(closeCurrent: false, arguments: "-interface");
-              } else {
-                Win32.activateWindow(hWnd);
+        child: CustomTooltip(
+          message: globalSettings.autoCheckForUpdates && Globals.version != globalSettings.newVersion
+              ? "New Version Available"
+              : "Settings",
+          child: IconButton(
+            padding: const EdgeInsets.all(0),
+            splashRadius: 25,
+            icon: globalSettings.autoCheckForUpdates && Globals.version != globalSettings.newVersion
+                ? const Icon(Icons.new_releases)
+                : const Icon(Icons.settings),
+            onPressed: () {
+              // if (Boxes.quickTimers.isNotEmpty) {
+              //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");
+              //   return;
+              // }
+              if (kReleaseMode) {
+                QuickMenuFunctions.toggleQuickMenu(visible: false);
+                int hWnd = Win32.findWindow("Tabame - Interface");
+                if (hWnd == 0) {
+                  WinUtils.startTabame(closeCurrent: false, arguments: "-interface");
+                } else {
+                  Win32.activateWindow(hWnd);
+                  return;
+                }
+                bool settingsChanged = globalSettings.settingsChanged;
+                Boxes().watchForSettingsChange();
+                Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
+                  if (settingsChanged != globalSettings.settingsChanged) {
+                    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                    settingsChanged = globalSettings.settingsChanged;
+                  }
+                });
+                // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                 return;
               }
-              bool settingsChanged = globalSettings.settingsChanged;
-              Boxes().watchForSettingsChange();
-              Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
-                if (settingsChanged != globalSettings.settingsChanged) {
-                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                  settingsChanged = globalSettings.settingsChanged;
-                }
-              });
-              // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+              final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
+              Globals.changingPages = true;
+              //ignore: invalid_use_of_protected_member
+              x?.setState(() {});
+              Globals.mainPageViewController.jumpToPage(Pages.interface.index);
+              Globals.changingPages = true;
+              PaintingBinding.instance.imageCache.clear();
+              PaintingBinding.instance.imageCache.clearLiveImages();
               return;
-            }
-            final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
-            Globals.changingPages = true;
-            //ignore: invalid_use_of_protected_member
-            x?.setState(() {});
-            Globals.mainPageViewController.jumpToPage(Pages.interface.index);
-            Globals.changingPages = true;
-            PaintingBinding.instance.imageCache.clear();
-            PaintingBinding.instance.imageCache.clearLiveImages();
-            return;
-          },
+            },
+          ),
         ),
       ),
     );

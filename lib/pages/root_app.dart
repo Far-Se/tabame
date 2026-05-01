@@ -9,7 +9,6 @@ import '../models/settings.dart';
 import '../models/theme.dart';
 import 'interface.dart';
 import 'quickmenu.dart';
-import 'views.dart';
 
 class Tabame extends StatefulWidget {
   const Tabame({super.key});
@@ -63,7 +62,8 @@ class _TabameState extends State<Tabame> {
               if (themeType.index == 3) {
                 scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
               }
-              ThemeMode themeMode = <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
+              ThemeMode themeMode =
+                  <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
 
               return MaterialApp(
                 scrollBehavior: MyCustomScrollBehavior(),
@@ -78,9 +78,6 @@ class _TabameState extends State<Tabame> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (BuildContext context, int index) {
                     Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
-                    if (globalSettings.args.contains('-views')) {
-                      return const ViewsScreen();
-                    }
                     if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
                       return const Interface();
                     }

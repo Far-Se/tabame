@@ -27,7 +27,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -37,7 +37,6 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
         PanelHeader(
           title: window.title,
           accent: accent,
-          boldFont: globalSettings.theme.quickMenuBoldFont,
           icon: Icons.window_rounded,
         ),
         Flexible(
@@ -50,72 +49,82 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                 children: <Widget>[
                   _buildSectionHeader("Window Actions", onSurface),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Expanded(
-                        child: _ContextMenuTile(
-                          icon: Icons.keyboard_double_arrow_left_rounded,
-                          label: "Move Left",
-                          accent: accent,
-                          onTap: () async {
-                            await QuickMenuFunctions.toggleQuickMenu(visible: false);
-                            Future<void>.delayed(
-                                const Duration(milliseconds: 200),
-                                () =>
-                                    Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left, classMethod: false));
-                          },
+                        child: Column(
+                          children: <Widget>[
+                            _ContextMenuTile(
+                              icon: Icons.keyboard_double_arrow_left_rounded,
+                              label: "Move",
+                              accent: accent,
+                              onTap: () async {
+                                await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                Future<void>.delayed(
+                                    const Duration(milliseconds: 200),
+                                    () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left,
+                                        classMethod: false));
+                              },
+                            ),
+                            _ContextMenuTile(
+                              icon: Icons.volume_up_rounded,
+                              label: "Mute",
+                              accent: accent,
+                              onTap: () async {
+                                final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
+                                if (mixers != null) {
+                                  for (ProcessVolume m in mixers) {
+                                    if (m.processPath == window.process.exePath) {
+                                      Audio.setAudioMixerVolume(m.processId, m.maxVolume < 0.01 ? 1 : 0.001);
+                                    }
+                                  }
+                                }
+                                setState(() {});
+                              },
+                            ),
+                            _ContextMenuTile(
+                              icon: Icons.highlight_off_rounded,
+                              label: "Force Close",
+                              accent: accent,
+                              isDestructive: true,
+                              onTap: () {
+                                Win32.forceCloseWindowbyProcess(window.process.pId);
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       Expanded(
-                        child: _ContextMenuTile(
-                          icon: Icons.keyboard_double_arrow_right_rounded,
-                          label: "Move Right",
-                          accent: accent,
-                          isRightAligned: true,
-                          onTap: () async {
-                            await QuickMenuFunctions.toggleQuickMenu(visible: false);
-                            Future<void>.delayed(
-                                const Duration(milliseconds: 200),
-                                () =>
-                                    Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right, classMethod: false));
-                          },
+                        child: Column(
+                          children: <Widget>[
+                            _ContextMenuTile(
+                              icon: Icons.keyboard_double_arrow_right_rounded,
+                              label: "Move Right",
+                              accent: accent,
+                              isRightAligned: true,
+                              onTap: () async {
+                                await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                Future<void>.delayed(
+                                    const Duration(milliseconds: 200),
+                                    () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right,
+                                        classMethod: false));
+                              },
+                            ),
+                            _ContextMenuTile(
+                              icon: window.isPinned ? Icons.pin_end_rounded : Icons.push_pin_outlined,
+                              label: window.isPinned ? "Unpin Window" : 'Always on Top',
+                              accent: accent,
+                              isRightAligned: true,
+                              onTap: () {
+                                Win32.setAlwaysOnTop(window.hWnd);
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  _ContextMenuTile(
-                    icon: window.isPinned ? Icons.pin_end_rounded : Icons.push_pin_outlined,
-                    label: window.isPinned ? "Unpin Window" : 'Always on Top',
-                    accent: accent,
-                    onTap: () {
-                      Win32.setAlwaysOnTop(window.hWnd);
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _ContextMenuTile(
-                    icon: Icons.volume_up_rounded,
-                    label: "Toggle Mute",
-                    accent: accent,
-                    onTap: () async {
-                      final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
-                      if (mixers != null) {
-                        for (ProcessVolume m in mixers) {
-                          if (m.processPath == window.process.exePath) {
-                            Audio.setAudioMixerVolume(m.processId, m.maxVolume < 0.01 ? 1 : 0.001);
-                          }
-                        }
-                      }
-                      setState(() {});
-                    },
-                  ),
-                  _ContextMenuTile(
-                    icon: Icons.highlight_off_rounded,
-                    label: "Force Close",
-                    accent: accent,
-                    isDestructive: true,
-                    onTap: () {
-                      Win32.forceCloseWindowbyProcess(window.process.pId);
-                      Navigator.pop(context);
-                    },
                   ),
                   const SizedBox(height: 8),
                   _buildSectionHeader("Hook Window With", onSurface),

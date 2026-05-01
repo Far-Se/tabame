@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class ToggleTaskbarButton extends StatelessWidget {

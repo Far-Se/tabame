@@ -244,6 +244,37 @@ class Audio {
     return result as bool;
   }
 
+  static Future<bool> setAudioDeviceVolume(String deviceID, double volume) async {
+    if (!canRunAudioModule) {
+      return false;
+    }
+    if (volume > 1) volume = (volume / 100).toDouble();
+    final Map<String, dynamic> arguments = <String, dynamic>{'deviceID': deviceID, 'volumeLevel': volume};
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('setAudioDeviceVolume', arguments);
+    return result ?? false;
+  }
+
+  static Future<double> getAudioDeviceVolume(String deviceID) async {
+    if (!canRunAudioModule) {
+      return 0.0;
+    }
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'deviceID': deviceID,
+    };
+    final double? result = await audioMethodChannel.invokeMethod<double>('getAudioDeviceVolume', arguments);
+    return result ?? 0.0;
+  }
+
+  static Future<bool> setProcessVolumeByPath(String processPath, double volume) async {
+    if (!canRunAudioModule) {
+      return false;
+    }
+    if (volume > 1) volume = (volume / 100).toDouble();
+    final Map<String, dynamic> arguments = <String, dynamic>{'processPath': processPath, 'volumeLevel': volume};
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('setProcessVolumeByPath', arguments);
+    return result ?? false;
+  }
+
   /// Returns a Future with a list of ProcessVolume objects containing information about all audio mixers.
   static Future<List<ProcessVolume>?> enumAudioMixer() async {
     if (!canRunAudioModule) {
@@ -414,6 +445,68 @@ Future<void> setWindowAsTransparent() async {
   await audioMethodChannel.invokeMethod('setTransparent');
 }
 
+class MonitorCapture {
+  const MonitorCapture({
+    required this.pixels,
+    required this.width,
+    required this.height,
+    required this.length,
+  });
+
+  /// Raw BGRA pixels, four bytes per pixel.
+  final Uint8List pixels;
+  final int width;
+  final int height;
+  final int length;
+
+  factory MonitorCapture._fromMap(Map<dynamic, dynamic> map) {
+    final dynamic rawPixels = map['pixels'];
+    final Uint8List pixels =
+        rawPixels is Uint8List ? rawPixels : Uint8List.fromList((rawPixels as List<dynamic>).cast<int>());
+
+    return MonitorCapture(
+      pixels: pixels,
+      width: map['width'] as int? ?? 0,
+      height: map['height'] as int? ?? 0,
+      length: map['length'] as int? ?? pixels.length,
+    );
+  }
+}
+
+Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
+  final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+    'captureMonitor',
+    <String, dynamic>{'monitorIndex': monitorIndex},
+  );
+  if (result == null) return null;
+  return MonitorCapture._fromMap(result);
+}
+
+Future<bool> excludeWindowFromCapture(int hWnd) async {
+  final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    'excludeWindowFromCapture',
+    <String, dynamic>{'hWnd': hWnd},
+  );
+  return result ?? false;
+}
+
+Future<bool> includeWindowFromCapture(int hWnd) async {
+  final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    'includeWindowFromCapture',
+    <String, dynamic>{'hWnd': hWnd},
+  );
+  return result ?? false;
+}
+
+Future<bool> startKeyboardBlocker() async {
+  final bool? result = await audioMethodChannel.invokeMethod<bool>('startKeyboardBlocker');
+  return result ?? false;
+}
+
+Future<void> stopKeyboardBlocker() async {
+  await audioMethodChannel.invokeMethod<void>('stopKeyboardBlocker');
+}
+
 Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirection direction}) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
@@ -432,6 +525,28 @@ Future<bool> moveDesktopMethod(DesktopDirection direction) async {
   };
   final bool result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
   return result;
+}
+
+enum WallpaperFillMode {
+  center,
+  tile,
+  stretch,
+  fit,
+  fill,
+  span,
+}
+
+class Desktop {
+  static Future<bool> setWallpaper(String imagePath, int monitorIndex,
+      {WallpaperFillMode fillMode = WallpaperFillMode.fill}) async {
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'imagePath': imagePath,
+      'monitorIndex': monitorIndex,
+      'fillMode': fillMode.index,
+    };
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('setDesktopWallpaper', arguments);
+    return result ?? false;
+  }
 }
 
 Future<bool> setSkipTaskbar({required int hWnd, required bool skip}) async {
@@ -516,6 +631,14 @@ Future<String> pickFolder() async {
 Future<bool> isWindows11() async {
   final bool result = await audioMethodChannel.invokeMethod<bool>('isWindows11') ?? true;
   return result;
+}
+
+Future<bool> setWindowTheme(int type) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'type': type,
+  };
+  final bool? result = await audioMethodChannel.invokeMethod<bool>('setWindowTheme', arguments);
+  return result ?? false;
 }
 
 //!Hooks
@@ -624,6 +747,45 @@ abstract class TabameListener {
   void onViewsEvent(ViewsAction action, int hWnd) {}
 }
 
+abstract class ClipboardEventListener {
+  void onClipboardUpdate() {}
+}
+
+class ClipboardHooks {
+  static final ObserverList<ClipboardEventListener> listenersObv = ObserverList<ClipboardEventListener>();
+
+  static List<ClipboardEventListener> get listeners => List<ClipboardEventListener>.from(listenersObv);
+
+  static bool get hasListeners {
+    return listenersObv.isNotEmpty;
+  }
+
+  static void addListener(ClipboardEventListener listener) {
+    listenersObv.add(listener);
+  }
+
+  static void removeListener(ClipboardEventListener listener) {
+    listenersObv.remove(listener);
+  }
+
+  static Future<bool> start() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('startClipboardWatcher');
+    return result ?? false;
+  }
+
+  static Future<bool> stop() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('stopClipboardWatcher');
+    return result ?? false;
+  }
+
+  static void _dispatchClipboardUpdate() {
+    for (final ClipboardEventListener listener in listeners) {
+      if (!listenersObv.contains(listener)) return;
+      listener.onClipboardUpdate();
+    }
+  }
+}
+
 /// ? NativeHotkey
 class NativeHooks {
   static final ObserverList<TabameListener> listenersObv = ObserverList<TabameListener>();
@@ -644,8 +806,11 @@ class NativeHooks {
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
-    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent"].contains(call.method)) {
+    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent", "ClipboardUpdate"].contains(call.method)) {
       return;
+    }
+    if (call.method == "ClipboardUpdate") {
+      ClipboardHooks._dispatchClipboardUpdate();
     }
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {
@@ -759,6 +924,335 @@ class WinClipboard {
   }
 }
 
+class ClipboardExtended {
+  ClipboardExtended._();
+
+  static Future<bool> copy(String text) async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+      'clipboardExtendedCopy',
+      <String, dynamic>{'text': text},
+    );
+    return result ?? false;
+  }
+
+  static Future<bool> copyRichText({String text = '', String html = ''}) async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+      'clipboardExtendedCopyRichText',
+      <String, dynamic>{'text': text, 'html': html},
+    );
+    return result ?? false;
+  }
+
+  static Future<bool> copyMultiple({
+    String? text,
+    String? html,
+    Uint8List? pngBytes,
+  }) async {
+    final Map<String, dynamic> formats = <String, dynamic>{};
+    if (text != null) formats['text/plain'] = text;
+    if (html != null) formats['text/html'] = html;
+    if (pngBytes != null) formats['image/png'] = pngBytes.toList(growable: false);
+
+    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+      'clipboardExtendedCopyMultiple',
+      <String, dynamic>{'formats': formats},
+    );
+    return result ?? false;
+  }
+
+  static Future<bool> copyImage(Uint8List imageBytes) async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+      'clipboardExtendedCopyImage',
+      <String, dynamic>{'imageBytes': imageBytes.toList(growable: false)},
+    );
+    return result ?? false;
+  }
+
+  static Future<Map<String, dynamic>> paste() async {
+    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+      'clipboardExtendedPaste',
+    );
+    return Map<String, dynamic>.from(result ?? <dynamic, dynamic>{});
+  }
+
+  static Future<String> pasteText() async {
+    final Map<String, dynamic> data = await paste();
+    return (data['text'] as String?) ?? '';
+  }
+
+  static Future<Map<String, dynamic>> pasteRichText() async {
+    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+      'clipboardExtendedPasteRichText',
+    );
+    return Map<String, dynamic>.from(result ?? <dynamic, dynamic>{});
+  }
+
+  static Future<Uint8List?> pasteImage() async {
+    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+      'clipboardExtendedPasteImage',
+    );
+    final dynamic bytes = result?['imageBytes'];
+    if (bytes is Uint8List) return bytes;
+    if (bytes is List) return Uint8List.fromList(bytes.cast<int>());
+    return null;
+  }
+
+  static Future<String> getContentType() async {
+    final String? result = await audioMethodChannel.invokeMethod<String>('clipboardExtendedGetContentType');
+    return result ?? 'unknown';
+  }
+
+  static Future<bool> hasData() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedHasData');
+    return result ?? false;
+  }
+
+  static Future<bool> clear() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedClear');
+    return result ?? false;
+  }
+
+  static Future<int> getDataSize() async {
+    final int? result = await audioMethodChannel.invokeMethod<int>('clipboardExtendedGetDataSize');
+    return result ?? 0;
+  }
+
+  static Future<bool> startMonitoring() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedStartMonitoring');
+    return result ?? false;
+  }
+
+  static Future<bool> stopMonitoring() async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedStopMonitoring');
+    return result ?? false;
+  }
+}
+
 Future<void> initializeGDI() async {
   await audioMethodChannel.invokeMethod('initializeGDI');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TaskbarUia
+//
+// Thin wrapper around the native UIA taskbar polling functions.
+//
+// Usage pattern (poll while QuickMenu is visible):
+//
+//   Timer.periodic(const Duration(seconds: 1), (_) async {
+//     final items = await TaskbarUia.getButtonInfos();
+//     for (final item in items) {
+//       if (item.hasBadge) print('${item.name}  →  ${item.helpText}  (hWnd: ${item.hWnd})');
+//     }
+//   });
+//
+// Call [shutdown] when polling stops so the native COM objects are released.
+// They are recreated automatically on the next [getButtonInfos] call.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class TaskbarButtonInfo {
+  /// UIA HelpText — badge or tooltip string (e.g. "3 unread", "Downloading 42%").
+  /// Empty if the button carries no badge.
+  final String helpText;
+
+  /// UIA button label (may include "- 2 running windows").
+  final String uiaName;
+
+  const TaskbarButtonInfo({
+    required this.helpText,
+    required this.uiaName,
+  });
+
+  /// Convenience accessor — true when [helpText] is non-empty.
+  bool get hasBadge => helpText.isNotEmpty;
+
+  factory TaskbarButtonInfo._fromMap(Map<Object?, Object?> m) {
+    return TaskbarButtonInfo(helpText: (m['helpText'] as String?) ?? '', uiaName: (m['uiaName'] as String?) ?? '');
+  }
+
+  @override
+  String toString() {
+    return "$uiaName : $helpText";
+  }
+}
+
+class TaskbarUia {
+  TaskbarUia._();
+
+  /// Returns info for every taskbar button currently found by UIA.
+  ///
+  /// An empty list is returned on any error (e.g. COM failure, taskbar not
+  /// found).  Simply retry on the next tick — the native layer will reinitialise.
+  static Future<List<TaskbarButtonInfo>> getButtonInfos() async {
+    final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('getTaskbarItemHelpTexts');
+    if (raw == null) return <TaskbarButtonInfo>[];
+    return raw.cast<Map<Object?, Object?>>().map(TaskbarButtonInfo._fromMap).toList();
+  }
+
+  /// Releases the cached COM objects.  Call when polling stops (e.g. QuickMenu
+  /// closed).  The next [getButtonInfos] call reinitialises transparently.
+  static Future<void> shutdown() async {
+    await audioMethodChannel.invokeMethod<bool>('shutdownTaskbarUia');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WinTray — extended system tray API
+//
+// Covers both the visible system tray AND the hidden overflow tray
+// (the "show hidden icons" popup).
+//
+// Enumerate:
+//   final icons = await WinTray.enumAllIcons();
+//
+// Click (without moving the mouse — works even when the taskbar is hidden):
+//   await WinTray.click(icon);                          // left click
+//   await WinTray.click(icon, clickType: TrayClickType.right);
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TrayClickType {
+  /// UIA InvokePattern::Invoke() — works for Win32, Qt, Electron, Appx/UWP
+  left,
+
+  /// Resolves screen coordinates via UIA then sends a real right-click via SendInput
+  right,
+
+  /// Resolves screen coordinates via UIA then sends a real middle-click via SendInput
+  middle,
+
+  /// UIA InvokePattern::Invoke() called twice with 80ms gap
+  doubleClick,
+}
+
+class ExtendedTrayIcon {
+  /// Tooltip text of the tray icon (may be empty).
+  final String toolTip;
+
+  /// Process ID of the owning application.
+  final int processId;
+
+  /// HWND of the owning application window.
+  final int hWnd;
+
+  /// Icon identifier — wParam of the tray callback message.
+  final int uID;
+
+  /// The private WM_* message registered by the app for tray notifications.
+  final int uCallbackMsg;
+
+  /// GDI HICON handle (as integer).
+  /// Pass to [getIconPng] to retrieve pixel data on demand:
+  ///   final bytes = await getIconPng(icon.hIcon);
+  final int hIcon;
+
+  /// Whether the icon is currently visible in the main tray.
+  final bool isVisible;
+
+  /// True when this icon came from the overflow / "hidden icons" popup tray.
+  final bool isOverflow;
+
+  const ExtendedTrayIcon({
+    required this.toolTip,
+    required this.processId,
+    required this.hWnd,
+    required this.uID,
+    required this.uCallbackMsg,
+    required this.hIcon,
+    required this.isVisible,
+    required this.isOverflow,
+  });
+
+  factory ExtendedTrayIcon._fromMap(Map<Object?, Object?> m) {
+    return ExtendedTrayIcon(
+      toolTip: (m['toolTip'] as String?) ?? '',
+      processId: (m['processId'] as int?) ?? 0,
+      hWnd: (m['hWnd'] as int?) ?? 0,
+      uID: (m['uID'] as int?) ?? 0,
+      uCallbackMsg: (m['uCallbackMsg'] as int?) ?? 0,
+      hIcon: (m['hIcon'] as int?) ?? 0,
+      isVisible: (m['isVisible'] as bool?) ?? false,
+      isOverflow: (m['isOverflow'] as bool?) ?? false,
+    );
+  }
+
+  @override
+  String toString() => 'ExtendedTrayIcon(toolTip: $toolTip, pid: $processId, hWnd: $hWnd, '
+      'uID: $uID, visible: $isVisible, overflow: $isOverflow)';
+}
+
+class WinTray {
+  WinTray._();
+
+  /// Returns all tray icons — visible, hidden-in-main, and overflow.
+  /// Each entry includes tooltip, process ID, HWND, GDI hIcon, etc.
+  /// To get icon pixel data: `await getIconPng(icon.hIcon)`
+  static Future<List<ExtendedTrayIcon>> enumAllIcons() async {
+    final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('enumAllTrayIcons');
+    if (raw == null) return <ExtendedTrayIcon>[];
+    return raw.cast<Map<Object?, Object?>>().map(ExtendedTrayIcon._fromMap).toList();
+  }
+
+  /// Clicks a tray icon using UIAutomation — works for Win32, Qt, Electron,
+  /// and Appx/UWP apps.  No mouse movement required.
+  ///
+  /// - Left / double: UIA `InvokePattern::Invoke()`.
+  /// - Right / middle: UIA resolves the screen rect, then `SendInput` delivers
+  ///   the click to that coordinate (requires the element to have valid screen
+  ///   coordinates — overflow icons always do; main-tray icons need the
+  ///   taskbar to be visible).
+  static Future<bool> click(
+    ExtendedTrayIcon icon, {
+    TrayClickType clickType = TrayClickType.left,
+  }) async {
+    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+      'clickTrayNotifyIcon',
+      <String, dynamic>{
+        'tipName': icon.toolTip,
+        'isOverflow': icon.isOverflow,
+        'clickType': clickType.index,
+      },
+    );
+    return result ?? false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FolderWatch — folder change detection
+//
+// Monitors specific folders for changes (last write time).
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+class FolderWatch {
+  FolderWatch._();
+
+  /// Builds the initial state for a list of paths.
+  /// This is a convenience wrapper around [addFoldersToWatchlist].
+  static Future<void> buildInitialState(List<String> paths) async {
+    await addFoldersToWatchlist(paths);
+  }
+
+  /// Returns the list of folders that have changed since the last check.
+  /// The internal cache is updated automatically.
+  static Future<List<String>> getChangedFolders() async {
+    final List<dynamic>? result = await audioMethodChannel.invokeListMethod<dynamic>('getChangedFolders');
+    return result?.cast<String>() ?? <String>[];
+  }
+
+  /// Adds folders to the internal watchlist.
+  /// Duplicates are ignored.
+  static Future<void> addFoldersToWatchlist(List<String> paths) async {
+    await audioMethodChannel.invokeMethod<void>(
+      'addFoldersToWatchlist',
+      <String, dynamic>{'paths': paths},
+    );
+  }
+
+  /// Removes folders from the internal watchlist.
+  static Future<void> removeFoldersFromWatchlist(List<String> paths) async {
+    await audioMethodChannel.invokeMethod<void>(
+      'removeFoldersFromWatchlist',
+      <String, dynamic>{'paths': paths},
+    );
+  }
 }

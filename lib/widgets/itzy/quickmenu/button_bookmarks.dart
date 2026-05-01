@@ -1,52 +1,270 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import 'bookmarks_editor.dart';
+import 'bookmarks_list.dart';
 
 class BookmarksButton extends StatelessWidget {
   const BookmarksButton({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Bookmarks", icon: Icon(Icons.folder_copy_outlined), child: BookmarksPanel());
+    return ModalButton(
+        actionName: "Bookmarks", icon: const Icon(Icons.folder_copy_outlined), child: () => const BookmarksPanel());
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main panel
-// ---------------------------------------------------------------------------
-
 class BookmarksPanel extends StatefulWidget {
   const BookmarksPanel({super.key});
+
   @override
   State<BookmarksPanel> createState() => _BookmarksPanelState();
 }
 
 class _BookmarksPanelState extends State<BookmarksPanel> {
+  static const List<String> _groupEmojis = <String>["✨", "📂", "💼", "🏢", "🏠", "🌟", "🛠️"];
+  static const List<String> _bookmarkEmojis = <String>["🎀", "🌟", "🚀", "🎨", "🎬", "📚", "🎮"];
+
+  final Random _random = Random();
   final List<BookmarkGroup> bookmarks = Boxes().bookmarks;
+
+  // Editor State
+  BookmarkGroup? _editingGroup;
+  BookmarkInfo? _editingBookmark;
+  BookmarkGroup? _activeParentGroup;
+  bool _isNew = false;
+
+  Future<void> _persistBookmarks() async {
+    await Boxes.updateSettings("projects", jsonEncode(bookmarks));
+    if (mounted) setState(() {});
+  }
+
+  void _openGroupEditor([BookmarkGroup? group]) {
+    setState(() {
+      _editingGroup = group ?? BookmarkGroup(title: "", emoji: _randomGroupEmoji(), bookmarks: <BookmarkInfo>[]);
+      _editingBookmark = null;
+      _activeParentGroup = null;
+      _isNew = group == null;
+    });
+  }
+
+  void _openBookmarkEditor(BookmarkGroup parent, [BookmarkInfo? bookmark]) {
+    setState(() {
+      _activeParentGroup = parent;
+      _editingBookmark = bookmark ?? BookmarkInfo(title: "", emoji: _randomBookmarkEmoji(), stringToExecute: "");
+      _editingGroup = null;
+      _isNew = bookmark == null;
+    });
+  }
+
+  void _closeEditor() {
+    setState(() {
+      _editingGroup = null;
+      _editingBookmark = null;
+      _activeParentGroup = null;
+    });
+  }
+
+  Future<void> _saveGroup(String title, String emoji, String viewMode) async {
+    if (title.trim().isEmpty) return;
+
+    if (_isNew) {
+      bookmarks.add(BookmarkGroup(
+        title: title.trim(),
+        emoji: emoji.trim(),
+        viewMode: viewMode,
+        bookmarks: <BookmarkInfo>[],
+      ));
+    } else {
+      _editingGroup!.title = title.trim();
+      _editingGroup!.emoji = emoji.trim();
+      _editingGroup!.viewMode = viewMode;
+    }
+
+    await _persistBookmarks();
+    _closeEditor();
+  }
+
+  Future<void> _saveBookmark(String title, String emoji, String target, bool preferInputIcon) async {
+    if (title.trim().isEmpty || target.trim().isEmpty) return;
+
+    if (_isNew) {
+      _activeParentGroup!.bookmarks.add(BookmarkInfo(
+        emoji: emoji.trim(),
+        title: title.trim(),
+        stringToExecute: target.trim(),
+        preferInputIcon: preferInputIcon,
+      ));
+    } else {
+      _editingBookmark!.title = title.trim();
+      _editingBookmark!.emoji = emoji.trim();
+      _editingBookmark!.stringToExecute = target.trim();
+      _editingBookmark!.preferInputIcon = preferInputIcon;
+    }
+
+    await _persistBookmarks();
+    _closeEditor();
+  }
+
+  void _deleteGroup(BookmarkGroup group) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text("Delete Category", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to delete '${group.title}'?"),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      bookmarks.remove(group);
+      await _persistBookmarks();
+    }
+  }
+
+  void _deleteBookmark(BookmarkGroup group, BookmarkInfo bookmark) async {
+    group.bookmarks.remove(bookmark);
+    await _persistBookmarks();
+  }
+
+  void _openBookmark(BookmarkInfo mark) {
+    WinUtils.open(mark.stringToExecute, parseParamaters: true);
+    QuickMenuFunctions.toggleQuickMenu(visible: false);
+  }
+
+  String _randomGroupEmoji() => _groupEmojis[_random.nextInt(_groupEmojis.length)];
+  String _randomBookmarkEmoji() => _bookmarkEmojis[_random.nextInt(_bookmarkEmojis.length)];
+
+  void _handleDelete() {
+    if (_editingGroup != null) {
+      _deleteGroup(_editingGroup!);
+    } else if (_editingBookmark != null) {
+      _deleteBookmark(_activeParentGroup!, _editingBookmark!);
+    }
+    _closeEditor();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
-    final bool boldFont = globalSettings.theme.quickMenuBoldFont;
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final bool isEditing = _editingGroup != null || _editingBookmark != null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        // ── Header bar ──────────────────────────────────────────
-        PanelHeader(title: "Bookmarks", accent: accent, boldFont: boldFont, icon: Icons.bookmark_rounded),
-        // ── Scrollable body ─────────────────────────────────────
+        if (isEditing)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: accent.withAlpha(40)))),
+            child: Row(
+              children: <Widget>[
+                InkWell(
+                  onTap: _closeEditor,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.arrow_back_rounded, size: 14, color: accent),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _editingGroup != null
+                        ? (_isNew ? "New Category" : "Edit Category")
+                        : (_isNew ? "New Bookmark" : "Edit Bookmark"),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: onSurface),
+                  ),
+                ),
+                if (!_isNew)
+                  IconButton(
+                    onPressed: _handleDelete,
+                    icon: Icon(Icons.delete_outline_rounded, size: 18, color: onSurface.withAlpha(150)),
+                    splashRadius: 20,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                  ),
+              ],
+            ),
+          )
+        else
+          PanelHeader(
+            title: "Bookmarks",
+            accent: accent,
+            icon: Icons.bookmark_rounded,
+            buttonIcon: Icons.add_rounded,
+            buttonTooltip: "Create Category",
+            buttonPressed: () => _openGroupEditor(),
+          ),
+        const SizedBox(height: 8),
+        Flexible(
+          child: Material(
+            type: MaterialType.transparency,
+            child: isEditing
+                ? BookmarkEditor(
+                    group: _editingGroup,
+                    bookmark: _editingBookmark,
+                    parentGroup: _activeParentGroup,
+                    accent: accent,
+                    isNew: _isNew,
+                    onSaveGroup: _saveGroup,
+                    onSaveBookmark: _saveBookmark,
+                    onCancel: _closeEditor,
+                    onDelete: _handleDelete,
+                  )
+                : body(accent, onSurface),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget body(Color accent, Color onSurface) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
         Flexible(
           child: bookmarks.isEmpty
-              ? _EmptyState(accent: accent)
-              : _BookmarkList(
+              ? _EmptyState(
+                  accent: accent,
+                  onCreateCategory: () => _openGroupEditor(),
+                )
+              : BookmarkList(
                   bookmarks: bookmarks,
                   accent: accent,
-                  boldFont: boldFont,
+                  onAddBookmark: (BookmarkGroup group) => _openBookmarkEditor(group),
+                  onEditGroup: (BookmarkGroup group) => _openGroupEditor(group),
+                  onDeleteGroup: _deleteGroup,
+                  onEditBookmark: (BookmarkGroup group, BookmarkInfo mark) => _openBookmarkEditor(group, mark),
+                  onDeleteBookmark: _deleteBookmark,
+                  onOpenBookmark: _openBookmark,
                 ),
         ),
       ],
@@ -54,254 +272,46 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Header
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.accent});
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(Icons.bookmark_border_rounded, size: 32, color: accent.withAlpha(100)),
-          const SizedBox(height: 8),
-          Text(
-            "No bookmarks yet",
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(120),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Bookmark list
-// ---------------------------------------------------------------------------
-
-class _BookmarkList extends StatelessWidget {
-  const _BookmarkList({
-    required this.bookmarks,
+  const _EmptyState({
     required this.accent,
-    required this.boldFont,
+    required this.onCreateCategory,
   });
-  final List<BookmarkGroup> bookmarks;
+
   final Color accent;
-  final bool boldFont;
+  final VoidCallback onCreateCategory;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: ScrollController(),
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          for (int i = 0; i < bookmarks.length; i++) ...<Widget>[
-            _BookmarkGroup(
-              group: bookmarks[i],
-              accent: accent,
-              boldFont: boldFont,
-            ),
-            if (i < bookmarks.length - 1)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 14,
-                endIndent: 14,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(18),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// A single bookmark group (header + items)
-// ---------------------------------------------------------------------------
-
-class _BookmarkGroup extends StatelessWidget {
-  const _BookmarkGroup({
-    required this.group,
-    required this.accent,
-    required this.boldFont,
-  });
-  final BookmarkGroup group;
-  final Color accent;
-  final bool boldFont;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          // Group header row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: Row(
-              children: <Widget>[
-                // Emoji badge
-                if (group.emoji.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Text(group.emoji, style: const TextStyle(fontSize: 13)),
-                  ),
-                Expanded(
-                  child: Text(
-                    group.title,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                      color: accent.withAlpha(220),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Count pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: accent.withAlpha(28),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    "${group.bookmarks.length}",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: accent.withAlpha(180),
-                    ),
-                  ),
-                ),
-              ],
+          Icon(Icons.bookmark_border_rounded, size: 48, color: onSurface.withAlpha(40)),
+          const SizedBox(height: 16),
+          Text(
+            "No bookmarks folder created yet",
+            style: TextStyle(
+              fontSize: 13,
+              color: onSurface.withAlpha(120),
             ),
           ),
-          // Items
-          ...group.bookmarks.map(
-            (BookmarkInfo mark) => _BookmarkItem(
-              mark: mark,
-              accent: accent,
-              boldFont: boldFont,
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accent.withAlpha(30),
+              foregroundColor: accent,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
+            onPressed: onCreateCategory,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text("Create First Category", style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// A single bookmark row
-// ---------------------------------------------------------------------------
-
-class _BookmarkItem extends StatefulWidget {
-  const _BookmarkItem({
-    required this.mark,
-    required this.accent,
-    required this.boldFont,
-  });
-  final BookmarkInfo mark;
-  final Color accent;
-  final bool boldFont;
-
-  @override
-  State<_BookmarkItem> createState() => _BookmarkItemState();
-}
-
-class _BookmarkItemState extends State<_BookmarkItem> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color textColor = Theme.of(context).colorScheme.onSurface;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-        decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(22) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            WinUtils.open(widget.mark.stringToExecute, parseParamaters: true);
-            QuickMenuFunctions.toggleQuickMenu(visible: false);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              children: <Widget>[
-                // Left accent bar (visible on hover)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: _hovered ? 2.5 : 0,
-                  height: 14,
-                  margin: EdgeInsets.only(right: _hovered ? 8 : 0),
-                  decoration: BoxDecoration(
-                    color: widget.accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                // Emoji
-                if (widget.mark.emoji.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      widget.mark.emoji,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ),
-                // Title
-                Expanded(
-                  child: Text(
-                    widget.mark.title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: widget.boldFont ? FontWeight.w500 : FontWeight.w300,
-                      color: _hovered ? textColor : textColor.withAlpha(200),
-                      height: 1.3,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Arrow icon on hover
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: _hovered ? 1 : 0,
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 9,
-                    color: widget.accent.withAlpha(170),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

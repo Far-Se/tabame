@@ -6,17 +6,16 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart';
-
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 
 import 'classes/boxes.dart';
 import 'globals.dart';
 import 'settings.dart';
-import 'tray_watcher.dart';
 import 'win32/imports.dart';
 import 'win32/mixed.dart';
 import 'win32/win32.dart';
+import 'win32/win_utils.dart';
 import 'win32/window.dart';
 
 class WindowWatcher {
@@ -25,8 +24,9 @@ class WindowWatcher {
   static List<Window> list = <Window>[];
   static Map<int, Uint8List?> icons = <int, Uint8List?>{};
   static Map<int, int> iconsHandles = <int, int>{};
-  static Map<String, String> taskBarRewrites = Boxes().taskBarRewrites;
+  static Map<String, String> taskBarRewrites = Boxes.taskBarRewrites;
   static int _activeWinHandle = 0;
+  static String taskManagerStats = "";
   static Object get active {
     if (list.length > _activeWinHandle) {
       return list[_activeWinHandle];
@@ -59,18 +59,24 @@ class WindowWatcher {
     if (firstEverRun) Debug.add("QuickMenu: adding Win");
     for (int element in allHWNDs) {
       newList.add(Window(element));
-
-      if (newList.last.process.exe == "Spotify.exe") {
-        if (Boxes.pref.getString("SpotifyLocation") == null) {
-          Boxes.pref.setString("SpotifyLocation", newList.last.process.exePath);
-          if (firstEverRun) Debug.add("QuickMenu: Spotify");
-        }
-      }
     }
+
+    List<TaskbarButtonInfo> taskbarItems = <TaskbarButtonInfo>[];
+    if (Boxes.taskbarBadges.isNotEmpty) taskbarItems = await TaskbarUia.getButtonInfos();
 
     for (Window window in newList) {
       if (window.process.path == "" && (window.process.exe == "AccessBlocked.exe" || window.process.exe == "")) {
         window.process.exe = await getHwndName(window.hWnd);
+      }
+      if (window.process.exe == "Taskmgr.exe" && taskManagerStats != "") {
+        window.title = taskManagerStats;
+      }
+      if (Boxes.taskBarRewrites.containsKey(window.process.exe)) {
+        final TaskbarButtonInfo? result = taskbarItems
+            .firstWhereOrNull((TaskbarButtonInfo b) => b.uiaName.contains(Boxes.taskBarRewrites[window.process.exe]!));
+        if (result != null) {
+          window.helpText = Boxes.taskBarRewrites[window.process.exe]!;
+        }
       }
       for (MapEntry<String, String> rewrite in taskBarRewrites.entries) {
         final RegExp re = RegExp(rewrite.key, caseSensitive: false);
@@ -85,6 +91,41 @@ class WindowWatcher {
         }
         if (window.title.contains(rewrite.key)) {
           window.title = window.title.replaceAll(rewrite.key, rewrite.value);
+        }
+      }
+    }
+
+    // Badge Monitoring
+    final Map<String, List<String>> badgeRules = Boxes.taskbarBadges;
+    if (badgeRules.isNotEmpty) {
+      for (final MapEntry<String, List<String>> rule in badgeRules.entries) {
+        if (rule.key.isEmpty || rule.value.isEmpty || rule.value[0].isEmpty) continue;
+        final String targetExe = rule.key.toLowerCase();
+        final String partialTitle = rule.value[0];
+        final String hideRegex = rule.value.length > 1 ? rule.value[1] : "";
+
+        for (Window window in newList) {
+          if (window.process.exe.toLowerCase() == targetExe) {
+            final TaskbarButtonInfo? badgeButton = taskbarItems
+                .firstWhereOrNull((TaskbarButtonInfo b) => b.uiaName.contains(partialTitle) && b.helpText.isNotEmpty);
+            if (badgeButton != null) {
+              bool shouldHide = false;
+              if (hideRegex.isNotEmpty) {
+                try {
+                  final RegExp re = RegExp(hideRegex, caseSensitive: false);
+                  if (re.hasMatch(badgeButton.helpText)) {
+                    shouldHide = true;
+                  }
+                } catch (_) {}
+              }
+
+              if (shouldHide) {
+                window.helpText = "";
+              } else {
+                window.helpText = badgeButton.helpText;
+              }
+            }
+          }
         }
       }
     }
@@ -164,65 +205,8 @@ class WindowWatcher {
     return true;
   }
 
-  static List<int> getSpotify() {
-    int spotifyHwnd = 0;
-    int spotifyPID = 0;
-    final Window? spotify = list.firstWhereOrNull((Window element) => element.process.exe == "Spotify.exe");
-    if (spotify != null) {
-      spotifyHwnd = spotify.hWnd;
-      spotifyPID = spotify.process.pId;
-    } else {
-      final TrayBarInfo? tray =
-          Tray.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == "Spotify.exe");
-      if (tray != null) {
-        spotifyHwnd = tray.hWnd;
-        spotifyPID = tray.processID;
-      }
-    }
-    return <int>[spotifyHwnd, spotifyPID];
-  }
-
   static bool mediaControl(int index, {int button = AppCommand.mediaPlayPause}) {
-    if (!globalSettings.pauseSpotifyWhenPlaying) {
-      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-      return true;
-    }
-    final List<int> spotify = getSpotify();
-    final int spotifyHwnd = spotify[0];
-    final int spotifyPID = spotify[1];
-
-    if (list[index].process.exe == "Spotify.exe") {
-      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-    } else if (spotifyHwnd == 0) {
-      SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-    } else {
-      Audio.enumAudioMixer().then((List<ProcessVolume>? e) async {
-        List<ProcessVolume> elements = e as List<ProcessVolume>;
-        final ProcessVolume spotifyMixer = elements.firstWhere(
-            (ProcessVolume element) => element.processId == spotifyPID,
-            orElse: () => ProcessVolume()..maxVolume = -1);
-
-        final double volume = spotifyMixer.maxVolume;
-        if (spotifyMixer.maxVolume != -1) {
-          await Audio.setAudioMixerVolume(spotifyPID, 0.1);
-        }
-        SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
-        Future<void>.delayed(const Duration(milliseconds: 200), () async {
-          if (button == AppCommand.mediaPlayPause) {
-            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaStop);
-          } else {
-            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaPrevioustrack);
-            SendMessage(spotifyHwnd, AppCommand.appCommand, 0, AppCommand.mediaStop);
-          }
-
-          if (spotifyMixer.maxVolume != -1) {
-            Future<void>.delayed(
-                const Duration(milliseconds: 500), () => Audio.setAudioMixerVolume(spotifyPID, volume));
-          }
-          return;
-        });
-      });
-    }
+    SendMessage(list[index].hWnd, AppCommand.appCommand, 0, button);
     return true;
   }
 
@@ -334,12 +318,5 @@ class WindowWatcher {
         focusSecondWindow();
       }
     });
-  }
-
-  static void triggerSpotify({int button = AppCommand.mediaPlayPause}) {
-    final List<int> sp = getSpotify();
-    if (sp[0] != 0) {
-      SendMessage(sp[0], AppCommand.appCommand, 0, button);
-    }
   }
 }

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../pages/quickmenu.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class CheckChangelogButton extends StatefulWidget {
   const CheckChangelogButton({super.key});
@@ -26,42 +27,30 @@ class CheckChangelogButtonState extends State<CheckChangelogButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: CustomTooltip(
-        message: "See what's new!",
-        child: SizedBox(
-          width: 20,
-          child: IconButton(
-            padding: const EdgeInsets.all(0),
-            splashRadius: 25,
-            icon: const Icon(
-              Icons.newspaper,
-            ),
-            onPressed: () {
-              if (kReleaseMode) {
-                QuickMenuFunctions.toggleQuickMenu(visible: false);
-                int hWnd = Win32.findWindow("Tabame - Interface");
-                if (hWnd == 0) {
-                  WinUtils.startTabame(closeCurrent: false, arguments: "-interface -changelog");
-                } else {
-                  Win32.activateWindow(hWnd);
-                  return;
-                }
-                return;
-              }
-              final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
-              Globals.changingPages = true;
-              x?.setState(() {});
-              Globals.mainPageViewController.jumpToPage(Pages.interface.index);
-              Globals.changingPages = true;
-              PaintingBinding.instance.imageCache.clear();
-              PaintingBinding.instance.imageCache.clearLiveImages();
-              return;
-            },
-          ),
-        ),
-      ),
+    return QuickActionItem(
+      message: "See what's new!",
+      icon: const Icon(Icons.newspaper),
+      onTap: () {
+        if (kReleaseMode) {
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          int hWnd = Win32.findWindow("Tabame - Interface");
+          if (hWnd == 0) {
+            WinUtils.startTabame(closeCurrent: false, arguments: "-interface -changelog");
+          } else {
+            Win32.activateWindow(hWnd);
+            return;
+          }
+          return;
+        }
+        final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
+        Globals.changingPages = true;
+        x?.setState(() {});
+        Globals.mainPageViewController.jumpToPage(Pages.interface.index);
+        Globals.changingPages = true;
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        return;
+      },
     );
   }
 }

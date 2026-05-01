@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 
 class SaveSettings {
   SaveSettings._(this._preferenceCache);

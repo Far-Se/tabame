@@ -5,12 +5,14 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
+import '../../widgets/panel_header.dart';
 
 class MemosButton extends StatelessWidget {
   const MemosButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Memos", icon: Icon(Icons.note_alt_outlined), child: MemosWidget());
+    return ModalButton(
+        actionName: "Memos", icon: const Icon(Icons.note_alt_outlined), child: () => const MemosWidget());
   }
 }
 
@@ -55,75 +57,60 @@ class MemosWidgetState extends State<MemosWidget> {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          width: 280,
-          constraints: const BoxConstraints(maxHeight: 500),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: surface.withAlpha(216), // 0.85 * 255
-            border: Border.all(color: onSurface.withAlpha(25), width: 1), // 0.1 * 255
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withAlpha(51), // 0.2 * 255
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      constraints: const BoxConstraints(maxHeight: 500),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: surface.withAlpha(216), // 0.85 * 255
+        border: Border.all(color: onSurface.withAlpha(25), width: 1), // 0.1 * 255
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withAlpha(51), // 0.2 * 255
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Text(
-                      memoSelected == -1 ? "Memos" : "Edit Memo",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                    if (memoSelected == -1)
-                      IconButton(
-                        onPressed: () {
-                          memos.add(<String>["", ""]);
-                          memoSelected = memos.length - 1;
-                          titleController.text = "";
-                          messageController.text = "";
-                          setState(() {});
-                        },
-                        icon: Icon(Icons.add_circle_outline, color: accent),
-                        tooltip: "Add Memo",
-                      )
-                    else
-                      IconButton(
-                        onPressed: () => setState(() => memoSelected = -1),
-                        icon: const Icon(Icons.close),
-                        tooltip: "Close",
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          // Header
 
-              // Body
-              Flexible(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: memoSelected == -1 ? _buildList(accent, onSurface) : _buildEditor(accent, onSurface),
-                ),
-              ),
-            ],
+          if (memoSelected == -1)
+            PanelHeader(
+                title: "Memos",
+                accent: accent,
+                icon: Icons.notes_rounded,
+                buttonIcon: Icons.add_circle_outline,
+                buttonTooltip: "Add Memo",
+                buttonPressed: () {
+                  memos.add(<String>["", ""]);
+                  memoSelected = memos.length - 1;
+                  titleController.text = "";
+                  messageController.text = "";
+                  setState(() {});
+                })
+          else
+            PanelHeader(
+              title: "Edit Memo",
+              accent: accent,
+              icon: Icons.notes_rounded,
+              buttonIcon: Icons.close_rounded,
+              buttonTooltip: "Close",
+              buttonPressed: () => setState(() => memoSelected = -1),
+            ),
+          // Body
+          Flexible(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: memoSelected == -1 ? _buildList(accent, onSurface) : _buildEditor(accent, onSurface),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -281,10 +268,11 @@ class _MemoCardState extends State<_MemoCard> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _isHovered ? widget.accent.withAlpha(60) : widget.onSurface.withAlpha(10),
+              color: _isHovered ? globalSettings.themeColors.accentColor.withAlpha(60) : widget.onSurface.withAlpha(10),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _isHovered ? widget.accent.withAlpha(150) : widget.onSurface.withAlpha(12),
+                color:
+                    _isHovered ? globalSettings.themeColors.accentColor.withAlpha(150) : widget.onSurface.withAlpha(12),
                 width: 1.5,
               ),
             ),
@@ -293,7 +281,7 @@ class _MemoCardState extends State<_MemoCard> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(Icons.push_pin_outlined, size: 14, color: widget.accent),
+                    Icon(Icons.push_pin_outlined, size: 14, color: globalSettings.themeColors.accentColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

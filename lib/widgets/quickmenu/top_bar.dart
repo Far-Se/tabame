@@ -1,3 +1,4 @@
+// ignore: unused_import
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -9,8 +10,8 @@ import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
 import '../itzy/quickmenu/button_persistent_reminders.dart';
-import '../widgets/bar_with_buttons.dart';
 import '../itzy/quickmenu/button_testing.dart';
+import '../widgets/bar_with_buttons.dart';
 
 class TopBar extends StatefulWidget {
   const TopBar({super.key});
@@ -28,8 +29,8 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
     super.initState();
     QuickMenuFunctions.addListener(this);
     Debug.add("QuickMenu: Topbar");
-    widgets
-        .addAll(quickActionsMap.map((String key, QuickAction value) => MapEntry<String, Widget>("$key", value.widget)));
+    widgets.addAll(
+        quickActionsMap.map((String key, QuickAction value) => MapEntry<String, Widget>("$key", value.widget())));
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
     for (String x in showWidgetsNames) {
       if (x == "Deactivated:") break;
@@ -37,7 +38,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
         showWidgets.add(widgets[x]!);
       }
     }
-    Globals.heights.topbar = 20;
+    Globals.heights.topbar = 25;
   }
 
   @override
@@ -55,52 +56,53 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
+    if (globalSettings.quickActionsAtBottom) return const SizedBox.shrink();
     return Theme(
       data: Theme.of(context).copyWith(
-          iconTheme: const IconThemeData(size: 16),
+          iconTheme: IconThemeData(
+            size: 16,
+            color: Theme.of(context).iconTheme.color,
+          ),
           hoverColor: Colors.grey.withAlpha(50),
           tooltipTheme: Theme.of(context)
               .tooltipTheme
               .copyWith(decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface), preferBelow: false)),
-      child: IconTheme(
-        data: IconThemeData(
-          size: 16,
-          color: Theme.of(context).iconTheme.color,
-        ),
-        child: Container(
-          height: 25,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.max,
-            children: <Widget>[
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
+      child: Container(
+        height: 25,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (!globalSettings.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(width: 4),
                     const LogoDragButton(),
-                    const SizedBox(width: 4),
-                    if (showWidgets.isNotEmpty)
-                      Expanded(
-                        // topBar QuickActions Buttons
-                        child: BarWithButtons(
-                          children: <Widget>[
-                            if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
-                            ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i])
-                          ],
-                        ),
-                      ),
+                    const SizedBox(width: 4)
                   ],
-                ),
+                  if (showWidgets.isNotEmpty)
+                    Expanded(
+                      // topBar QuickActions Buttons
+                      child: BarWithButtons(
+                        height: 25,
+                        children: <Widget>[
+                          if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                          ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i])
+                        ],
+                      ),
+                    ),
+                ],
               ),
-              if (kDebugMode) const TestingButton(),
-              if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
-              const OpenSettingsButton(),
-              const SizedBox(width: 2),
-            ],
-          ),
+            ),
+            if (kDebugMode) const TestingButton(),
+            if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
+            const OpenSettingsButton(),
+            const SizedBox(width: 2),
+          ],
         ),
       ),
     );

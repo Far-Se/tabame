@@ -3,17 +3,18 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/win32/keys.dart';
 import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
 import '../../quickmenu/task_bar.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class AppAudioButton extends StatefulWidget {
   final int index;
@@ -109,19 +110,26 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     return null;
   }
 
-  void _launchApp() {
+  void _launchApp() async {
     final AppAudioControl? ctl = _control;
     if (ctl == null) return;
-
-    final TrayBarInfo? tray = Tray.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
-    if (tray != null) {
-      PostMessage(tray.hWnd, tray.uCallbackMessage, tray.uID, WM_MOUSEACTIVATE);
-      PostMessage(tray.hWnd, tray.uCallbackMessage, tray.uID, WM_LBUTTONDOWN);
-      PostMessage(tray.hWnd, tray.uCallbackMessage, tray.uID, WM_LBUTTONUP);
-      PostMessage(tray.hWnd, tray.uCallbackMessage, tray.uID, WM_LBUTTONDBLCLK);
-      PostMessage(tray.hWnd, tray.uCallbackMessage, tray.uID, WM_LBUTTONUP);
+    await WindowWatcher.fetchWindows();
+    // 1. Check if the app has a regular window open
+    final Window? win = WindowWatcher.list.firstWhereOrNull((Window element) => element.process.exe == ctl.exe);
+    if (win != null) {
+      Win32.activateWindow(win.hWnd);
       return;
     }
+
+    // 2. Check if the app is in the system tray
+    await Tray.fetchTray();
+    final TrayBarInfo? tray = Tray.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
+    if (tray != null) {
+      WinTray.click(tray, clickType: TrayClickType.left);
+      return;
+    }
+
+    // 3. Fallback: Launch the app
     if (ctl.path.isNotEmpty) {
       WinUtils.open(ctl.path);
     }
@@ -206,27 +214,16 @@ class _AppAudioButtonState extends State<AppAudioButton> {
       }
     }
 
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: GestureDetector(
-        onVerticalDragStart: (_) => _lastDragPosition = 0,
-        onVerticalDragEnd: (_) => _lastDragPosition = 0,
-        onVerticalDragUpdate: _handleVolumeDrag,
-        onSecondaryTap: _handleNextTrack,
-        onTertiaryTapDown: (_) => _handlePrevTrack(),
-        child: InkWell(
-          onDoubleTap: _launchApp,
-          onTap: _handlePlayPause,
-          child: CustomTooltip(
-            message: ctl.name,
-            child: SizedBox(
-              width: 20,
-              child: content,
-            ),
-          ),
-        ),
-      ),
+    return QuickActionItem(
+      onVerticalDragStart: (_) => _lastDragPosition = 0,
+      onVerticalDragEnd: (_) => _lastDragPosition = 0,
+      onVerticalDragUpdate: _handleVolumeDrag,
+      onSecondaryTap: _handleNextTrack,
+      onTertiaryTapDown: (_) => _handlePrevTrack(),
+      onTap: _handlePlayPause,
+      onDoubleTap: _launchApp,
+      message: ctl.name,
+      icon: content,
     );
   }
 }

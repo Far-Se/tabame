@@ -7,21 +7,33 @@ import 'dart:math';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
-import 'package:tabamewin32/tabamewin32.dart';
-
 import '../globals.dart';
-import '../win32/keys.dart';
 import '../settings.dart';
-import '../util/color_picker_controller.dart';
+import '../win32/keys.dart';
 import '../win32/mixed.dart';
 import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 import '../window_watcher.dart';
 import 'boxes.dart';
 
 class Hotkeys {
   static const List<String> modifierOrder = <String>["CTRL", "ALT", "SHIFT", "WIN"];
+  static const String mouseButton4Key = "MouseButton4";
+  static const String mouseButton5Key = "MouseButton5";
+  static const String doubleAltKey = "DoubleAlt";
+  static const List<String> specialBindingKeys = <String>[
+    mouseButton4Key,
+    mouseButton5Key,
+    doubleAltKey,
+  ];
+  static const Map<String, String> specialBindingLabels = <String, String>{
+    mouseButton4Key: "Mouse Button 4",
+    mouseButton5Key: "Mouse Button 5",
+    doubleAltKey: "Double Alt",
+  };
 
   String key;
   List<String> modifiers;
@@ -37,20 +49,25 @@ class Hotkeys {
     required this.noopScreenBusy,
   });
 
+  // --------------------------------------------------------------------------
+  // Group: Modifier formatting helpers
+  // Purpose: Normalize modifier order and build display-friendly hotkey labels.
+  // --------------------------------------------------------------------------
+
   static List<String> normalizeModifiers(Iterable<String> modifiers) {
-    final Set<String> normalized = modifiers.map((String modifier) => modifier.toUpperCase()).toSet();
-    final List<String> ordered = <String>[];
+    final Set<String> normalizedModifiers = modifiers.map((String modifier) => modifier.toUpperCase()).toSet();
+    final List<String> orderedModifiers = <String>[];
 
     for (final String modifier in modifierOrder) {
-      if (normalized.remove(modifier)) ordered.add(modifier);
+      if (normalizedModifiers.remove(modifier)) orderedModifiers.add(modifier);
     }
 
-    if (normalized.isNotEmpty) {
-      final List<String> extras = normalized.toList()..sort();
-      ordered.addAll(extras);
+    if (normalizedModifiers.isNotEmpty) {
+      final List<String> extraModifiers = normalizedModifiers.toList()..sort();
+      orderedModifiers.addAll(extraModifiers);
     }
 
-    return ordered;
+    return orderedModifiers;
   }
 
   static String formatHotkey({required String key, Iterable<String> modifiers = const <String>[]}) {
@@ -62,27 +79,56 @@ class Hotkeys {
     return "NoKey";
   }
 
+  static bool isSpecialBindingKey(String key) => specialBindingKeys.contains(key);
+
+  static String displayKey(String key) => specialBindingLabels[key] ?? key;
+
+  static String formatHotkeyLabel({required String key, Iterable<String> modifiers = const <String>[]}) {
+    final List<String> normalizedModifiers = normalizeModifiers(modifiers);
+    if (normalizedModifiers.isEmpty && isSpecialBindingKey(key)) return displayKey(key);
+    return formatHotkey(key: key, modifiers: normalizedModifiers);
+  }
+
+  // --------------------------------------------------------------------------
+  // Group: Derived hotkey state
+  // Purpose: Expose computed state and filtered keymap views for the current hotkey.
+  // --------------------------------------------------------------------------
+
   String get hotkey {
     return formatHotkey(key: key, modifiers: modifiers);
   }
 
-  bool get hasDuration => keymaps.any((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled);
-  bool get hasDoublePress => keymaps.any((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled);
-  bool get hasMouseMovement => keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.enabled);
-  bool get hasMouseMovementTriggers =>
-      keymaps.any((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled);
+  String get displayHotkey {
+    return formatHotkeyLabel(key: key, modifiers: modifiers);
+  }
 
-  List<KeyMap> get getPress => keymaps.where((KeyMap km) => km.triggerType == TriggerType.press && km.enabled).toList();
+  bool get hasDuration => keymaps.any((KeyMap keyMap) => keyMap.triggerType == TriggerType.duration && keyMap.enabled);
+  bool get hasDoublePress =>
+      keymaps.any((KeyMap keyMap) => keyMap.triggerType == TriggerType.doublePress && keyMap.enabled);
+  bool get hasMouseMovement =>
+      keymaps.any((KeyMap keyMap) => keyMap.triggerType == TriggerType.movement && keyMap.enabled);
+  bool get hasMouseMovementTriggers => keymaps.any(
+      (KeyMap keyMap) => keyMap.triggerType == TriggerType.movement && keyMap.triggerInfo[2] == -1 && keyMap.enabled);
+
+  List<KeyMap> get getPress =>
+      keymaps.where((KeyMap keyMap) => keyMap.triggerType == TriggerType.press && keyMap.enabled).toList();
   List<KeyMap> get getDurationKeys =>
-      keymaps.where((KeyMap km) => km.triggerType == TriggerType.duration && km.enabled).toList();
+      keymaps.where((KeyMap keyMap) => keyMap.triggerType == TriggerType.duration && keyMap.enabled).toList();
   List<KeyMap> get getDoublePress =>
-      keymaps.where((KeyMap km) => km.triggerType == TriggerType.doublePress && km.enabled).toList();
+      keymaps.where((KeyMap keyMap) => keyMap.triggerType == TriggerType.doublePress && keyMap.enabled).toList();
   List<KeyMap> get getHotkeysWithMovement => keymaps
-      .where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] != -1 && km.enabled)
+      .where((KeyMap keyMap) =>
+          keyMap.triggerType == TriggerType.movement && keyMap.triggerInfo[2] != -1 && keyMap.enabled)
       .toList();
   List<KeyMap> get getHotkeysWithMovementTriggers => keymaps
-      .where((KeyMap km) => km.triggerType == TriggerType.movement && km.triggerInfo[2] == -1 && km.enabled)
+      .where((KeyMap keyMap) =>
+          keyMap.triggerType == TriggerType.movement && keyMap.triggerInfo[2] == -1 && keyMap.enabled)
       .toList();
+
+  // --------------------------------------------------------------------------
+  // Group: Copy and serialization
+  // Purpose: Clone hotkey models and convert them to and from persisted data.
+  // --------------------------------------------------------------------------
 
   Hotkeys copyWith({
     String? key,
@@ -94,8 +140,8 @@ class Hotkeys {
     return Hotkeys(
       key: key ?? this.key,
       modifiers: normalizeModifiers(modifiers ?? this.modifiers),
-      keymaps: keymaps ?? this.keymaps,
-      prohibited: prohibited ?? this.prohibited,
+      keymaps: keymaps ?? this.keymaps.map((KeyMap km) => km.copyWith()).toList(),
+      prohibited: prohibited ?? List<String>.from(this.prohibited),
       noopScreenBusy: noopScreenBusy ?? this.noopScreenBusy,
     );
   }
@@ -104,7 +150,7 @@ class Hotkeys {
     return <String, dynamic>{
       'key': key,
       'modifiers': normalizeModifiers(modifiers),
-      'keymaps': keymaps.map((KeyMap x) => x.toMap()).toList(),
+      'keymaps': keymaps.map((KeyMap keyMap) => keyMap.toMap()).toList(),
       'prohibited': prohibited,
       'noopScreenBusy': noopScreenBusy,
     };
@@ -116,7 +162,7 @@ class Hotkeys {
       modifiers: normalizeModifiers(List<String>.from(map['modifiers'] ?? const <String>[])),
       keymaps: List<KeyMap>.from(
         (map['keymaps'] as List<dynamic>).map<KeyMap>(
-          (dynamic x) => KeyMap.fromMap(x as Map<String, dynamic>),
+          (dynamic keyMapEntry) => KeyMap.fromMap(keyMapEntry as Map<String, dynamic>),
         ),
       ),
       prohibited: List<String>.from(map['prohibited'] ?? const <String>[]),
@@ -127,6 +173,11 @@ class Hotkeys {
   String toJson() => json.encode(toMap());
 
   factory Hotkeys.fromJson(String source) => Hotkeys.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  // --------------------------------------------------------------------------
+  // Group: Diagnostics and equality
+  // Purpose: Provide debug output and stable value comparison for hotkeys.
+  // --------------------------------------------------------------------------
 
   @override
   String toString() {
@@ -169,15 +220,6 @@ class KeyMap with TabameListener {
   Region region;
   // enum
   TriggerType triggerType;
-  bool get isMouseInRegion {
-    if (!boundToRegion) return true;
-    final Point<int> point = HotKeyInfo.getMouseBounds(windowUnderMouse, region.anchorType, region.asPercentage);
-
-    if (point.x >= region.x1 && point.x <= region.x2 && point.y >= region.y1 && point.y <= region.y2) {
-      return true;
-    }
-    return false;
-  }
 
   /// Press:
   ///
@@ -221,138 +263,206 @@ class KeyMap with TabameListener {
       regionOnScreen = true;
     }
   }
-  void applyActions() {
-    if (variableCheck.isNotEmpty) {
-      if (variableCheck[0].isNotEmpty) {
-        final String xvar = Boxes.pref.getString("k_${variableCheck[0]}") ?? "";
-        if (xvar.isNotEmpty) {
-          if (xvar != variableCheck[1]) {
-            return;
-          }
-        } else {
-          Boxes.pref.setString("k_${variableCheck[0]}", variableCheck[1]);
+
+  // --------------------------------------------------------------------------
+  // Group: Trigger region helpers
+  // Purpose: Evaluate whether a keymap should react for the current mouse position.
+  // --------------------------------------------------------------------------
+
+  bool get isMouseInRegion {
+    if (!boundToRegion) return true;
+
+    final Point<int> mousePoint = HotKeyInfo.getMouseBounds(windowUnderMouse, region.anchorType, region.asPercentage);
+    if (mousePoint.x >= region.x1 &&
+        mousePoint.x <= region.x2 &&
+        mousePoint.y >= region.y1 &&
+        mousePoint.y <= region.y2) {
+      return true;
+    }
+    return false;
+  }
+
+  // --------------------------------------------------------------------------
+  // Group: Action execution
+  // Purpose: Validate runtime conditions and execute the configured keymap actions.
+  // --------------------------------------------------------------------------
+
+  Future<void> applyActions() async {
+    if (variableCheck.isNotEmpty && variableCheck[0].isNotEmpty) {
+      final String storedVariableValue = Boxes.pref.getString("k_${variableCheck[0]}") ?? "";
+      if (storedVariableValue.isNotEmpty) {
+        if (storedVariableValue != variableCheck[1]) {
+          return;
         }
+      } else {
+        Boxes.pref.setString("k_${variableCheck[0]}", variableCheck[1]);
       }
     }
+
+    int targetWindowHandle = GetForegroundWindow();
+
     if (windowUnderMouse) {
-      final Pointer<POINT> lpPoint = calloc<POINT>();
-      GetCursorPos(lpPoint);
-      int hWnd = WindowFromPoint(lpPoint.ref);
-      free(lpPoint);
-      if (GetWindow(hWnd, 4) != 0) {
-        hWnd = GetWindow(hWnd, 4);
-      } else {
-        hWnd = GetAncestor(hWnd, 2);
+      final Pointer<POINT> cursorPointPointer = calloc<POINT>();
+      GetCursorPos(cursorPointPointer);
+      targetWindowHandle = GetAncestor(WindowFromPoint(cursorPointPointer.ref), 3);
+      free(cursorPointPointer);
+    }
+
+    // 1. Check if the target window matches the configured window type and criteria
+    if (windowsInfo[0] != "any") {
+      String valueToCheck = "";
+      switch (windowsInfo[0].toLowerCase()) {
+        case "exe":
+          valueToCheck = Win32.getWindowExePath(targetWindowHandle);
+          break;
+        case "class":
+          valueToCheck = Win32.getClass(targetWindowHandle);
+          break;
+        case "title":
+          valueToCheck = Win32.getTitle(targetWindowHandle);
+          break;
       }
-      int fHwnd = GetForegroundWindow();
-      if (GetWindow(fHwnd, 4) != 0) {
-        fHwnd = GetWindow(fHwnd, 4);
-      } else {
-        fHwnd = GetAncestor(fHwnd, 2);
-      }
-      if (fHwnd != hWnd) {
-        Win32.activateWindow(hWnd);
-        int ticks = 0;
-        Timer.periodic(const Duration(milliseconds: 2), (Timer t) {
-          ticks++;
-          if (ticks >= 200) t.cancel();
-          if (GetForegroundWindow() != hWnd) return;
-          t.cancel();
-          applyActionsForWindow();
-        });
+
+      final RegExp matcher = RegExp(windowsInfo[1], caseSensitive: false);
+      if (!matcher.hasMatch(valueToCheck)) {
         return;
       }
     }
-    applyActionsForWindow();
+
+    // 2. If the window is under mouse but not foreground, activate it before sending keys
+    if (windowUnderMouse && GetForegroundWindow() != targetWindowHandle) {
+      Win32.activateWindow(targetWindowHandle);
+
+      int pollCount = 0;
+      while (pollCount < 200 && GetForegroundWindow() != targetWindowHandle) {
+        pollCount++;
+        await Future<void>.delayed(const Duration(milliseconds: 2));
+      }
+
+      if (GetForegroundWindow() == targetWindowHandle) {
+        await applyActionsForWindow();
+      }
+      return;
+    }
+
+    await applyActionsForWindow();
   }
 
   Future<void> applyActionsForWindow() async {
-    for (KeyAction action in actions) {
-      if (action.type == ActionType.hotkey) {
-        final List<String> keys = action.value.split('+');
-        String sendKey = "";
-        for (String key in keys) {
-          if (key.length > 1) {
-            sendKey += "{#$key}";
-          } else {
-            sendKey += "$key";
+    for (final KeyAction action in actions) {
+      switch (action.type) {
+        case ActionType.hotkey:
+          _processHotkey(action.value);
+          break;
+        case ActionType.sendKeys:
+          if (action.value == "{WIN}") {
+            int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+            if (trayWindowHandle == 0) trayWindowHandle = GetDesktopWindow();
+            SetForegroundWindow(trayWindowHandle);
           }
-        }
-        WinKeys.send(sendKey);
-
-        //
-      } else if (action.type == ActionType.sendKeys) {
-        if (action.value == "{WIN}") {
-          int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-          if (tray == 0) tray = GetDesktopWindow();
-          SetForegroundWindow(tray);
-        }
-        WinKeys.send(action.value);
-      } else if (action.type == ActionType.openQuickMenupage) {
-        QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true);
-      } else if (action.type == ActionType.wait) {
-        await Future<void>.delayed(Duration(milliseconds: int.tryParse(action.value) ?? 0));
-      } else if (action.type == ActionType.sendClick) {
-        int hwnd = GetForegroundWindow();
-        final Pointer<POINT> lpPoint = calloc<POINT>();
-        GetCursorPos(lpPoint);
-        if (windowUnderMouse) {
-          hwnd = WindowFromPoint(lpPoint.ref);
-          hwnd = GetAncestor(hwnd, 2);
-        }
-        final int sX = lpPoint.ref.x;
-        final int sY = lpPoint.ref.y;
-        free(lpPoint);
-        final Pointer<RECT> lpRect = calloc<RECT>();
-        GetWindowRect(hwnd, lpRect);
-
-        final ClickAction click = ClickAction.fromJson(action.value);
-        int x = 0;
-        int y = 0;
-        if (click.anchorType == AnchorType.topLeft) {
-          x = lpRect.ref.left + click.x;
-          y = lpRect.ref.top + click.y;
-        } else if (click.anchorType == AnchorType.topRight) {
-          x = lpRect.ref.right - click.x;
-          y = lpRect.ref.top + click.y;
-        } else if (click.anchorType == AnchorType.bottomLeft) {
-          x = lpRect.ref.left + click.x;
-          y = lpRect.ref.bottom - click.y;
-        } else if (click.anchorType == AnchorType.bottomRight) {
-          x = lpRect.ref.right - click.x;
-          y = lpRect.ref.bottom - click.y;
-        }
-        free(lpRect);
-        //
-        SetCursorPos(x, y);
-        Future<void>.delayed(const Duration(milliseconds: 500), () {
-          final Pointer<INPUT> input = calloc<INPUT>();
-          input.ref.type = INPUT_MOUSE;
-          // input.ref.mi.dx = x;
-          // input.ref.mi.dy = y;
-          input.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
-          input.ref.mi.mouseData = 0;
-          input.ref.mi.dwExtraInfo = NULL;
-          input.ref.mi.time = 0;
-          SendInput(1, input, sizeOf<INPUT>());
-          SetCursorPos(sX, sY);
-          free(input);
-        });
-        //
-      } else if (action.type == ActionType.tabameFunction) {
-        if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
-          HotKeyInfo.tabameFunctionsMap[action.value]!();
-        }
-        //
-      } else if (action.type == ActionType.setVar && action.value.isNotEmpty) {
-        final List<dynamic> split = jsonDecode(action.value);
-        if (split.length == 2) {
-          Boxes.pref.setString("k_${split[0]}", split[1]);
-        }
-        //
+          WinKeys.send(action.value);
+          break;
+        case ActionType.openQuickMenupage:
+          if (HotKeyInfo.quickMenuPopups.contains(action.value)) {
+            if (action.value == "Interface") {
+              QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true);
+            } else {
+              QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true);
+            }
+          }
+          break;
+        case ActionType.wait:
+          await Future<void>.delayed(Duration(milliseconds: int.tryParse(action.value) ?? 0));
+          break;
+        case ActionType.sendClick:
+          _processSendClick(action.value);
+          break;
+        case ActionType.tabameFunction:
+          if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
+            HotKeyInfo.tabameFunctionsMap[action.value]!();
+          }
+          break;
+        case ActionType.setVar:
+          if (action.value.isNotEmpty) _processSetVar(action.value);
+          break;
       }
     }
   }
+
+  void _processHotkey(String value) {
+    final String serialized = value.split('+').map((String p) => p.length > 1 ? "{#$p}" : p).join();
+    WinKeys.send(serialized);
+  }
+
+  void _processSendClick(String value) {
+    int targetWindowHandle = GetForegroundWindow();
+    final Pointer<POINT> cursorPointPointer = calloc<POINT>();
+    GetCursorPos(cursorPointPointer);
+
+    if (windowUnderMouse) {
+      targetWindowHandle = GetAncestor(WindowFromPoint(cursorPointPointer.ref), 2);
+    }
+
+    final int originalCursorX = cursorPointPointer.ref.x;
+    final int originalCursorY = cursorPointPointer.ref.y;
+    free(cursorPointPointer);
+
+    final Pointer<RECT> windowRectPointer = calloc<RECT>();
+    GetWindowRect(targetWindowHandle, windowRectPointer);
+
+    final ClickAction clickAction = ClickAction.fromJson(value);
+    int clickX = 0;
+    int clickY = 0;
+
+    switch (clickAction.anchorType) {
+      case AnchorType.topLeft:
+        clickX = windowRectPointer.ref.left + clickAction.x;
+        clickY = windowRectPointer.ref.top + clickAction.y;
+        break;
+      case AnchorType.topRight:
+        clickX = windowRectPointer.ref.right - clickAction.x;
+        clickY = windowRectPointer.ref.top + clickAction.y;
+        break;
+      case AnchorType.bottomLeft:
+        clickX = windowRectPointer.ref.left + clickAction.x;
+        clickY = windowRectPointer.ref.bottom - clickAction.y;
+        break;
+      case AnchorType.bottomRight:
+        clickX = windowRectPointer.ref.right - clickAction.x;
+        clickY = windowRectPointer.ref.bottom - clickAction.y;
+        break;
+    }
+    free(windowRectPointer);
+
+    SetCursorPos(clickX, clickY);
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      final Pointer<INPUT> inputPointer = calloc<INPUT>();
+      inputPointer.ref.type = INPUT_MOUSE;
+      inputPointer.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
+      inputPointer.ref.mi.mouseData = 0;
+      inputPointer.ref.mi.dwExtraInfo = NULL;
+      inputPointer.ref.mi.time = 0;
+      SendInput(1, inputPointer, sizeOf<INPUT>());
+      SetCursorPos(originalCursorX, originalCursorY);
+      free(inputPointer);
+    });
+  }
+
+  void _processSetVar(String value) {
+    try {
+      final List<dynamic> variableAssignment = jsonDecode(value);
+      if (variableAssignment.length == 2) {
+        Boxes.pref.setString("k_${variableAssignment[0]}", variableAssignment[1].toString());
+      }
+    } catch (e) {
+      Debug.add("Hotkey: Error setting variable $e");
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Group: Copy and serialization
+  // Purpose: Clone keymap models and convert them to and from persisted data.
+  // --------------------------------------------------------------------------
 
   KeyMap copyWith({
     bool? enabled,
@@ -370,13 +480,13 @@ class KeyMap with TabameListener {
       enabled: enabled ?? this.enabled,
       windowUnderMouse: windowUnderMouse ?? this.windowUnderMouse,
       name: name ?? this.name,
-      windowsInfo: windowsInfo ?? this.windowsInfo,
+      windowsInfo: windowsInfo ?? List<String>.from(this.windowsInfo),
       boundToRegion: boundToRegion ?? this.boundToRegion,
-      region: region ?? this.region,
+      region: region ?? this.region.copyWith(),
       triggerType: triggerType ?? this.triggerType,
-      triggerInfo: triggerInfo ?? this.triggerInfo,
-      actions: actions ?? this.actions,
-      variableCheck: variableCheck ?? this.variableCheck,
+      triggerInfo: triggerInfo ?? List<int>.from(this.triggerInfo),
+      actions: actions ?? this.actions.map((KeyAction a) => a.copyWith()).toList(),
+      variableCheck: variableCheck ?? List<String>.from(this.variableCheck),
     );
   }
 
@@ -390,7 +500,7 @@ class KeyMap with TabameListener {
       'region': region.toMap(),
       'triggerType': triggerType.index,
       'triggerInfo': triggerInfo,
-      'actions': actions.map((KeyAction x) => x.toMap()).toList(),
+      'actions': actions.map((KeyAction action) => action.toMap()).toList(),
       'variableCheck': variableCheck,
     };
   }
@@ -407,7 +517,7 @@ class KeyMap with TabameListener {
       triggerInfo: List<int>.from(map['triggerInfo'] ?? const <int>[]),
       actions: List<KeyAction>.from(
         (map['actions'] as List<dynamic>).map<KeyAction>(
-          (dynamic x) => KeyAction.fromMap(x as Map<String, dynamic>),
+          (dynamic actionEntry) => KeyAction.fromMap(actionEntry as Map<String, dynamic>),
         ),
       ),
       variableCheck: List<String>.from(map['variableCheck'] ?? const <String>[]),
@@ -417,6 +527,11 @@ class KeyMap with TabameListener {
   String toJson() => json.encode(toMap());
 
   factory KeyMap.fromJson(String source) => KeyMap.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  // --------------------------------------------------------------------------
+  // Group: Diagnostics and equality
+  // Purpose: Provide debug output and stable value comparison for keymaps.
+  // --------------------------------------------------------------------------
 
   @override
   String toString() {
@@ -474,29 +589,35 @@ class HotKeyInfo {
   };
   static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
   static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
-  static const List<String> quickMenuPages = <String>[
+  static List<String> quickMenuPopups = <String>[
     "Apps",
-    "Search",
-    "Bookmarks",
-    "CurrencyConverter",
-    "Calculator",
-    "Weather",
-    "AudioControl",
-    "ColorPicker",
-    "CliBook",
-    "Vault",
-    "Memo",
-    "Wallpapers",
+    "Audio Control",
     "Authenticator",
-    "QuickActionMenu",
+    "Bookmarks",
+    "Calculator",
+    "Cli Book",
+    "Clear Keyboard",
+    "Clipboard History",
+    "Color Picker",
     "Countdown",
-    "ScheduleShutdown",
-    "QuickMenuDesign",
-    "QrScanner",
-    "TimeZone"
+    "Currency Converter",
+    "Custom Chars",
+    "Disk Cleanup",
+    "Memos",
+    "Notion",
+    "QR Scanner",
+    "Quick Actions",
+    "QuickMenu Design",
+    "Interface",
+    "Shutdown",
+    "Time Zone",
+    "Translator",
+    "Vaults",
+    "Wallpapers",
+    "Weather",
+    "Workspaces",
   ];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
-    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
     "ToggleQuickMenu": () {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         final Offset position = Win32.getPosition();
@@ -508,21 +629,46 @@ class HotKeyInfo {
       return QuickMenuFunctions.toggleQuickMenu();
     },
     "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
-    "ToggleQuickActions": () => QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.quickActions),
-    "OpenColorPicker": () async => await ColorPickerController.instance.startPicking(),
-
+    "OpenLauncher": () {
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        if (Globals.quickMenuPage == QuickMenuPage.launcher) {
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          return () => <dynamic, dynamic>{};
+        }
+      }
+      return QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true, visible: true);
+    },
+    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
+    "OpenColorPicker": () => WinUtils.startTabame(closeCurrent: false, arguments: "-colorPicker"),
+    "OpenScreenDraw": () {
+      final int windowHwnd = Win32.findWindow("Tabame Screen Draw");
+      if (windowHwnd != 0) {
+        Win32.closeWindow(windowHwnd);
+      } else {
+        WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw");
+      }
+    },
+    "OpenSpotlight": () {
+      final int windowHwnd = Win32.findWindow("Tabame Spotlight");
+      if (windowHwnd != 0) {
+        Win32.closeWindow(windowHwnd);
+      } else {
+        WinUtils.startTabame(closeCurrent: false, arguments: "-spotlight");
+      }
+    },
     "ShowStartMenu": () {
-      int tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-      if (tray != 0) {
-        final int mID = Monitor.getMonitorNumber(Monitor.getCursorMonitor());
-        if (mID > 1) tray = FindWindow(TEXT("Shell_SecondaryTrayWnd"), nullptr);
-        if (tray == 0) tray = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-        final int start = FindWindowEx(tray, 0, TEXT("Start"), nullptr);
-        if (start != 0) {
-          SetForegroundWindow(start);
+      int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+      if (trayWindowHandle != 0) {
+        final int monitorId = Monitor.getMonitorNumber(Monitor.getCursorMonitor());
+        if (monitorId > 1) trayWindowHandle = FindWindow(TEXT("Shell_SecondaryTrayWnd"), nullptr);
+        if (trayWindowHandle == 0) trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
+
+        final int startButtonHandle = FindWindowEx(trayWindowHandle, 0, TEXT("Start"), nullptr);
+        if (startButtonHandle != 0) {
+          SetForegroundWindow(startButtonHandle);
           WinKeys.send("{SPACE}");
         } else {
-          SetForegroundWindow(tray);
+          SetForegroundWindow(trayWindowHandle);
           WinKeys.send("{#SHIFT}{TAB}{|}{#SHIFT}{TAB}{|}{SPACE}");
         }
       }
@@ -545,36 +691,39 @@ class HotKeyInfo {
     //   await WinUtils.screenCapture();
     //   FancyShot().quickCapture();
     // },
-    "OpenAudioSettings": () => QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.audioBox, visible: true),
-    "PlayPauseSpotify": () => WindowWatcher.triggerSpotify(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
-    "SwitchAudioOutput": () => Audio.switchDefaultDevice(AudioDeviceType.output,
-        console: globalSettings.audioConsole,
-        multimedia: globalSettings.audioMultimedia,
-        communications: globalSettings.audioCommunications),
-    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(AudioDeviceType.input,
-        console: globalSettings.audioConsole,
-        multimedia: globalSettings.audioMultimedia,
-        communications: globalSettings.audioCommunications),
+    "SwitchAudioOutput": () => Audio.switchDefaultDevice(
+          AudioDeviceType.output,
+          console: globalSettings.audioConsole,
+          multimedia: globalSettings.audioMultimedia,
+          communications: globalSettings.audioCommunications,
+        ),
+    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
+          AudioDeviceType.input,
+          console: globalSettings.audioConsole,
+          multimedia: globalSettings.audioMultimedia,
+          communications: globalSettings.audioCommunications,
+        ),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input)
-        .then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input)),
+        .then((bool isMuted) => Audio.setMuteAudioDevice(!isMuted, AudioDeviceType.input)),
     "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
     "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
     "ToggleWallpaper": () async {
-      final DesktopBackgroundType state = WinUtils.getDesktopBackgroundType();
+      final DesktopBackgroundType currentBackgroundType = WinUtils.getDesktopBackgroundType();
 
-      if (state == DesktopBackgroundType.wallpaper) {
-        await toggleMonitorWallpaper(false);
+      if (currentBackgroundType == DesktopBackgroundType.wallpaper) {
+        await WinUtils.toggleDesktopWallpaper(false);
         // await setWallpaperColor(0x00000000);
         return;
       }
 
-      await toggleMonitorWallpaper(true);
+      await WinUtils.toggleDesktopWallpaper(true);
     },
   };
 
   static List<String> tabameFunctions = tabameFunctionsMap.keys.toList();
+
   //keymap.keymaps[index].actions[0].type
   static const Map<ActionType, IconData> actionTypeIcons = <ActionType, IconData>{
     ActionType.hotkey: Icons.tag,
@@ -592,62 +741,97 @@ class HotKeyInfo {
     TriggerType.movement: Icons.gps_fixed,
   };
 
+  // --------------------------------------------------------------------------
+  // Group: Cursor and window coordinate helpers
+  // Purpose: Resolve mouse position relative to the desktop or the active target window.
+  // --------------------------------------------------------------------------
+
   static Point<int> getMouseBounds(bool windowUnderMouse, AnchorType anchorType, bool asPercentage) {
-    final Pointer<POINT> lpPoint = calloc<POINT>();
-    GetCursorPos(lpPoint);
-    final Pointer<RECT> lpRect = calloc<RECT>();
-    int hwnd = GetForegroundWindow();
+    final Pointer<POINT> cursorPtr = calloc<POINT>();
+    GetCursorPos(cursorPtr);
+    final int cursorX = cursorPtr.ref.x;
+    final int cursorY = cursorPtr.ref.y;
+
+    int refLeft = 0, refTop = 0, refRight = 0, refBottom = 0;
+
     if (!windowUnderMouse) {
-      hwnd = GetDesktopWindow();
-      GetWindowRect(hwnd, lpRect);
-      while (lpPoint.ref.x >= lpRect.ref.right) {
-        lpPoint.ref.x = lpPoint.ref.x - lpRect.ref.right;
-      }
-      while (lpPoint.ref.y >= lpRect.ref.bottom) {
-        lpPoint.ref.y = lpPoint.ref.y - lpRect.ref.right;
+      // ── Desktop / screen-relative mode ─────────────────────────────────────
+      // Use the monitor that the cursor is currently on, not GetDesktopWindow(),
+      // which only covers the primary monitor and breaks multi-monitor setups.
+      final int monitorHandle = MonitorFromPoint(cursorPtr.ref, MONITOR_DEFAULTTONEAREST);
+      free(cursorPtr);
+
+      if (Monitor.monitorSizes.containsKey(monitorHandle)) {
+        final Square sq = Monitor.monitorSizes[monitorHandle]!;
+        refLeft = sq.x;
+        refTop = sq.y;
+        refRight = sq.x + sq.width;
+        refBottom = sq.y + sq.height;
+      } else {
+        // Fallback: refresh monitor list and try again.
+        Monitor.fetchMonitors();
+        if (Monitor.monitorSizes.containsKey(monitorHandle)) {
+          final Square sq = Monitor.monitorSizes[monitorHandle]!;
+          refLeft = sq.x;
+          refTop = sq.y;
+          refRight = sq.x + sq.width;
+          refBottom = sq.y + sq.height;
+        }
       }
     } else {
-      if (windowUnderMouse) {
-        hwnd = WindowFromPoint(lpPoint.ref);
-        hwnd = GetAncestor(hwnd, 2);
-      }
-      GetWindowRect(hwnd, lpRect);
+      // ── Window-relative mode ────────────────────────────────────────────────
+      final Pointer<RECT> rectPtr = calloc<RECT>();
+      final int hWnd = GetAncestor(WindowFromPoint(cursorPtr.ref), 2);
+      free(cursorPtr);
+      GetWindowRect(hWnd, rectPtr);
+      refLeft = rectPtr.ref.left;
+      refTop = rectPtr.ref.top;
+      refRight = rectPtr.ref.right;
+      refBottom = rectPtr.ref.bottom;
+      free(rectPtr);
     }
-    late Point<int> mouse;
-    mouse = Point<int>(lpPoint.ref.x, lpPoint.ref.y);
-    free(lpPoint);
 
-    int x = 0, y = 0;
-    int yTop = mouse.y - lpRect.ref.top;
-    int yBottom = mouse.y - lpRect.ref.bottom;
-    int xLeft = mouse.x - lpRect.ref.left;
-    int xRight = mouse.x - lpRect.ref.right;
-    int width = lpRect.ref.right - lpRect.ref.left;
-    int height = lpRect.ref.bottom - lpRect.ref.top;
-    free(lpRect);
+    final int refWidth = refRight - refLeft;
+    final int refHeight = refBottom - refTop;
 
-    if (anchorType == AnchorType.topLeft) {
-      x = xLeft;
-      y = yTop;
-    } else if (anchorType == AnchorType.topRight) {
-      x = xRight;
-      y = yTop;
-    } else if (anchorType == AnchorType.bottomLeft) {
-      x = xLeft;
-      y = yBottom;
-    } else if (anchorType == AnchorType.bottomRight) {
-      x = xRight;
-      y = yBottom;
+    // Compute distances from each edge.
+    final int fromLeft = cursorX - refLeft;
+    final int fromTop = cursorY - refTop;
+    final int fromRight = cursorX - refRight;
+    final int fromBottom = cursorY - refBottom;
+
+    int resolvedX = 0;
+    int resolvedY = 0;
+
+    switch (anchorType) {
+      case AnchorType.topLeft:
+        resolvedX = fromLeft;
+        resolvedY = fromTop;
+        break;
+      case AnchorType.topRight:
+        resolvedX = fromRight;
+        resolvedY = fromTop;
+        break;
+      case AnchorType.bottomLeft:
+        resolvedX = fromLeft;
+        resolvedY = fromBottom;
+        break;
+      case AnchorType.bottomRight:
+        resolvedX = fromRight;
+        resolvedY = fromBottom;
+        break;
     }
-    x = x.abs();
-    y = y.abs();
-    int percentageX = ((x / width) * 100).ceil();
-    int percentageY = ((y / height) * 100).ceil();
+
+    // Distances are always treated as non-negative magnitudes for region checks.
+    resolvedX = resolvedX.abs();
+    resolvedY = resolvedY.abs();
+
     if (asPercentage) {
-      x = percentageX;
-      y = percentageY;
+      if (refWidth > 0) resolvedX = ((resolvedX / refWidth) * 100).ceil();
+      if (refHeight > 0) resolvedY = ((resolvedY / refHeight) * 100).ceil();
     }
-    return Point<int>(x, y);
+
+    return Point<int>(resolvedX, resolvedY);
   }
 }
 
@@ -655,10 +839,16 @@ class KeyAction {
   //enum
   ActionType type;
   String value;
+
   KeyAction({
     required this.type,
     required this.value,
   });
+
+  // --------------------------------------------------------------------------
+  // Group: Copy and serialization
+  // Purpose: Clone key actions and convert them to and from persisted data.
+  // --------------------------------------------------------------------------
 
   KeyAction copyWith({
     ActionType? type,
@@ -688,6 +878,11 @@ class KeyAction {
 
   factory KeyAction.fromJson(String source) => KeyAction.fromMap(json.decode(source) as Map<String, dynamic>);
 
+  // --------------------------------------------------------------------------
+  // Group: Diagnostics and equality
+  // Purpose: Provide debug output and stable value comparison for key actions.
+  // --------------------------------------------------------------------------
+
   @override
   String toString() => 'KeyAction(type: $type, value: $value)';
 
@@ -708,12 +903,18 @@ class ClickAction {
   bool currentWindow;
   // enum
   AnchorType anchorType;
+
   ClickAction({
     required this.x,
     required this.y,
     required this.currentWindow,
     required this.anchorType,
   });
+
+  // --------------------------------------------------------------------------
+  // Group: Copy and serialization
+  // Purpose: Clone click actions and convert them to and from persisted data.
+  // --------------------------------------------------------------------------
 
   ClickAction copyWith({
     int? x,
@@ -751,6 +952,11 @@ class ClickAction {
 
   factory ClickAction.fromJson(String source) => ClickAction.fromMap(json.decode(source) as Map<String, dynamic>);
 
+  // --------------------------------------------------------------------------
+  // Group: Diagnostics and equality
+  // Purpose: Provide debug output and stable value comparison for click actions.
+  // --------------------------------------------------------------------------
+
   @override
   String toString() {
     return 'ClickAction(x: $x, y: $y, currentWindow: $currentWindow, anchorType: $anchorType)';
@@ -784,6 +990,7 @@ class Region {
   bool asPercentage;
   // enum
   AnchorType anchorType;
+
   Region({
     this.x1 = 0,
     this.y1 = 0,
@@ -792,8 +999,20 @@ class Region {
     this.asPercentage = false,
     this.anchorType = AnchorType.topLeft,
   });
+
+  // --------------------------------------------------------------------------
+  // Group: Derived region metrics
+  // Purpose: Expose simple computed measurements for the current region.
+  // --------------------------------------------------------------------------
+
   int get sum => x1.abs() + x2.abs() + y1.abs() + y1.abs();
   int get area => (x2 - x1) * (y2 - y1);
+
+  // --------------------------------------------------------------------------
+  // Group: Copy and serialization
+  // Purpose: Clone regions and convert them to and from persisted data.
+  // --------------------------------------------------------------------------
+
   Region copyWith({
     int? x1,
     int? y1,
@@ -837,6 +1056,11 @@ class Region {
   String toJson() => json.encode(toMap());
 
   factory Region.fromJson(String source) => Region.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  // --------------------------------------------------------------------------
+  // Group: Diagnostics and equality
+  // Purpose: Provide debug output and stable value comparison for regions.
+  // --------------------------------------------------------------------------
 
   @override
   String toString() {

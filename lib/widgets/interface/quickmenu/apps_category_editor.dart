@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/app_items.dart';
@@ -111,245 +110,486 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
+    final Color onSurface = theme.colorScheme.onSurface;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-            child: Row(
-              children: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, size: 20),
-                  tooltip: "Back to Apps",
-                  onPressed: () => Navigator.of(context).pop(),
+          // Header
+          Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 4),
-                Icon(Icons.edit_outlined, size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Edit Category",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                child: Icon(Icons.settings_suggest_rounded, color: primary, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "CATEGORY PROPERTIES",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: primary,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                )
-              ],
-            ),
+                    Text(
+                      "Configure apps and synchronization rules",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: onSurface.withValues(alpha: 0.45),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          const SizedBox(height: 24),
+
+          // Basic Info
+          Row(
+            children: <Widget>[
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: nameController,
+                  style: theme.textTheme.bodyMedium,
+                  decoration: _modernInputDecoration(context, "Category Name", primary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: onSurface.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: onSurface.withValues(alpha: 0.08)),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      _ViewTypeButton(
+                        icon: Icons.grid_view_rounded,
+                        label: "Grid",
+                        isActive: draft.viewType == AppCategoryViewType.grid,
+                        onTap: () => setState(() => draft.viewType = AppCategoryViewType.grid),
+                      ),
+                      _ViewTypeButton(
+                        icon: Icons.view_agenda_rounded,
+                        label: "List",
+                        isActive: draft.viewType == AppCategoryViewType.list,
+                        onTap: () => setState(() => draft.viewType = AppCategoryViewType.list),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Sync Folder
+          _buildSyncFolderSection(theme),
+          const SizedBox(height: 16),
+
+          // Apps List Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: TextField(
-                          controller: nameController,
-                          decoration: _inputDecoration(
-                            context,
-                            hintText: "Category name",
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        tooltip: draft.viewType == AppCategoryViewType.grid ? "Grid view" : "List view",
-                        onPressed: () {
-                          setState(() {
-                            draft.viewType = draft.viewType == AppCategoryViewType.grid ? AppCategoryViewType.list : AppCategoryViewType.grid;
-                          });
-                        },
-                        icon: Icon(
-                          draft.viewType == AppCategoryViewType.grid ? Icons.grid_view_rounded : Icons.view_agenda_rounded,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    "CURATED ITEMS",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: onSurface.withValues(alpha: 0.4),
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(12),
+                      color: onSurface.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            draft.folderPath == null || draft.folderPath!.isEmpty ? "No sync folder selected" : draft.folderPath!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _pickFolder,
-                          child: const Text("Pick Folder"),
-                        ),
-                        if (draft.folderPath != null && draft.folderPath!.isNotEmpty)
-                          TextButton(
-                            onPressed: () => setState(() => draft.folderPath = null),
-                            child: const Text("Clear"),
-                          ),
-                      ],
+                    child: Text(
+                      "${draft.items.length}",
+                      style:
+                          TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.6)),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          "Apps in Category",
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _addFileToCategory,
-                        icon: const Icon(Icons.file_open_outlined, size: 18),
-                        label: const Text("Pick a file"),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: draft.items.isEmpty
-                        ? Center(
-                            child: Text(
-                              "This category is empty.",
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          )
-                        : ReorderableListView.builder(
-                            itemCount: draft.items.length,
-                            buildDefaultDragHandles: false,
-                            dragStartBehavior: DragStartBehavior.down,
-                            onReorder: (int oldIndex, int newIndex) {
-                              setState(() {
-                                if (newIndex > oldIndex) newIndex -= 1;
-                                final AppItem item = draft.items.removeAt(oldIndex);
-                                draft.items.insert(newIndex, item);
-                              });
-                            },
-                            itemBuilder: (BuildContext context, int index) {
-                              final AppItem item = draft.items[index];
-                              return Container(
-                                key: ValueKey<String>(item.path),
-                                margin: const EdgeInsets.only(bottom: 6),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surface.withValues(alpha: 0.28),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  leading: RepaintBoundary(
-                                    child: WindowsAppButton(path: item.path),
-                                  ),
-                                  title: Text(
-                                    item.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  subtitle: Text(
-                                    item.path,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      ReorderableDragStartListener(
-                                        index: index,
-                                        child: Icon(
-                                          Icons.drag_indicator_rounded,
-                                          size: 18,
-                                          color: theme.hintColor,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        visualDensity: VisualDensity.compact,
-                                        tooltip: "Remove",
-                                        onPressed: () => _removeFromCategory(index),
-                                        icon: const Icon(Icons.close, size: 18),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: <Widget>[
-                      TextButton(
-                        onPressed: _deleteCategory,
-                        child: Text(
-                          "Delete Category",
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text("Cancel"),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () {
-                          _save();
-                          Navigator.of(context).pop(true);
-                        },
-                        child: const Text("Save"),
-                      ),
-                    ],
                   ),
                 ],
               ),
+              TextButton.icon(
+                onPressed: _addFileToCategory,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: primary,
+                ),
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                label: const Text("IMPORT FILE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // Apps List
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: onSurface.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: onSurface.withValues(alpha: 0.05)),
+              ),
+              child: draft.items.isEmpty
+                  ? _buildEmptyAppsState(theme)
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: draft.items.length,
+                      buildDefaultDragHandles: false,
+                      onReorder: (int oldIndex, int newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex -= 1;
+                          final AppItem item = draft.items.removeAt(oldIndex);
+                          draft.items.insert(newIndex, item);
+                        });
+                      },
+                      itemBuilder: (BuildContext context, int index) {
+                        return _AppItemTile(
+                          key: ValueKey<String>("${draft.items[index].path}_$index"),
+                          item: draft.items[index],
+                          index: index,
+                          onRemove: () => _removeFromCategory(index),
+                        );
+                      },
+                    ),
             ),
+          ),
+          const SizedBox(height: 20),
+
+          // Footer
+          Row(
+            children: <Widget>[
+              TextButton.icon(
+                onPressed: _deleteCategory,
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: theme.colorScheme.error),
+                label: Text(
+                  "DELETE CATEGORY",
+                  style: TextStyle(color: theme.colorScheme.error, fontSize: 11, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  "CANCEL",
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: onSurface.withValues(alpha: 0.5)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () {
+                  _save();
+                  Navigator.of(context).pop(true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text("SAVE CHANGES", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDecoration(
-    BuildContext context, {
-    required String hintText,
-  }) {
-    final ThemeData theme = Theme.of(context);
+  Widget _buildSyncFolderSection(ThemeData theme) {
+    final Color onSurface = theme.colorScheme.onSurface;
+    final bool hasFolder = draft.folderPath != null && draft.folderPath!.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: hasFolder ? theme.colorScheme.primary.withValues(alpha: 0.04) : onSurface.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasFolder ? theme.colorScheme.primary.withValues(alpha: 0.15) : onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.folder_shared_outlined,
+                    size: 14,
+                    color: hasFolder ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.45),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "FOLDER SYNC",
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: hasFolder ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.45),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              if (hasFolder)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => draft.folderPath = null),
+                  icon: Icon(Icons.close_rounded, size: 14, color: onSurface.withValues(alpha: 0.3)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  !hasFolder ? "No sync folder assigned" : draft.folderPath!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    color: hasFolder ? onSurface : onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _pickFolder,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: hasFolder
+                            ? theme.colorScheme.primary.withValues(alpha: 0.3)
+                            : onSurface.withValues(alpha: 0.1),
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      hasFolder ? "CHANGE" : "SELECT",
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: hasFolder ? theme.colorScheme.primary : onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAppsState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.layers_clear_outlined, size: 32, color: theme.colorScheme.onSurface.withValues(alpha: 0.15)),
+          const SizedBox(height: 12),
+          Text(
+            "This category is currently empty",
+            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _modernInputDecoration(BuildContext context, String label, Color accent) {
     return InputDecoration(
-      hintText: hintText,
+      labelText: label,
+      labelStyle: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
       isDense: true,
-      filled: true,
-      fillColor: theme.colorScheme.surface.withValues(alpha: 0.34),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
-      ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08), width: 1)),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: theme.colorScheme.primary.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: accent.withValues(alpha: 0.5), width: 1.5)),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.015),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+}
+
+class _ViewTypeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _ViewTypeButton({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 5),
+          decoration: BoxDecoration(
+            color: isActive ? primary.withValues(alpha: 0.12) : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: isActive ? primary.withValues(alpha: 0.2) : Colors.transparent),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon, size: 14, color: isActive ? primary : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w900 : FontWeight.w500,
+                  color: isActive ? primary : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppItemTile extends StatefulWidget {
+  final AppItem item;
+  final int index;
+  final VoidCallback onRemove;
+
+  const _AppItemTile({
+    required super.key,
+    required this.item,
+    required this.index,
+    required this.onRemove,
+  });
+
+  @override
+  State<_AppItemTile> createState() => _AppItemTileState();
+}
+
+class _AppItemTileState extends State<_AppItemTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color primary = theme.colorScheme.primary;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: _hovered ? primary.withValues(alpha: 0.05) : onSurface.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _hovered ? primary.withValues(alpha: 0.3) : onSurface.withValues(alpha: 0.05)),
+        ),
+        child: ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          leading: SizedBox(
+            width: 28,
+            height: 28,
+            child: RepaintBoundary(child: WindowsAppButton(path: widget.item.path)),
+          ),
+          title: Text(
+            widget.item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: _hovered ? primary : onSurface,
+            ),
+          ),
+          subtitle: Text(
+            widget.item.path,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10,
+              fontFamily: "monospace",
+              color: onSurface.withValues(alpha: 0.4),
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (_hovered)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: "Remove",
+                  onPressed: widget.onRemove,
+                  icon: Icon(Icons.close_rounded, size: 16, color: theme.colorScheme.error.withValues(alpha: 0.7)),
+                ),
+              ReorderableDragStartListener(
+                index: widget.index,
+                child: Icon(
+                  Icons.drag_indicator_rounded,
+                  size: 20,
+                  color: _hovered ? primary.withValues(alpha: 0.5) : onSurface.withValues(alpha: 0.1),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

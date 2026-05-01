@@ -1,20 +1,30 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
 import '../../interface/theme_setup.dart';
+import '../../widgets/color_picker.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import '../../widgets/panel_opacity_gradient_editor.dart';
 
 class QuickMenuDesignButton extends StatelessWidget {
   const QuickMenuDesignButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(
-        actionName: "QuickMenu Design", icon: Icon(Icons.palette_rounded), child: _QuickMenuDesignPanel());
+    return ModalButton(
+      actionName: "QuickMenu Design",
+      icon: const Icon(Icons.palette_rounded),
+      child: () => const _QuickMenuDesignPanel(),
+      backdropFilter: false,
+    );
   }
 }
 
@@ -88,6 +98,28 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     setState(() {});
   }
 
+  Future<void> _shuffleBackdrop() async {
+    final ThemeColors currentTheme = _selectedTheme;
+    if (currentTheme.backdropType == 'builtIn') {
+      final int random = math.Random().nextInt(10);
+      globalSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+    } else {
+      final List<String> images = currentTheme.backdropImages;
+      if (images.length < 2) return;
+
+      final String current = globalSettings.activeBackdropPath;
+      final List<String> others = images.where((String path) => path != current).toList();
+
+      final math.Random random = math.Random();
+      final String next = others[random.nextInt(others.length)];
+
+      globalSettings.activeBackdropPath = next;
+    }
+
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    if (mounted) setState(() {});
+  }
+
   Future<void> _resetCurrentPalette() async {
     final QuickMenuDesignThemeSet defaults =
         Settings.createDefaultQuickMenuDesignThemes()[globalSettings.currentQuickMenuDesign.name]!;
@@ -103,20 +135,20 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   Future<void> _updateColor(int index, Color color) async {
     await _updateTheme(() {
       if (index == 0) {
-        _selectedTheme.background = color.toInt32;
+        _selectedTheme.background = color;
       } else if (index == 1) {
-        _selectedTheme.textColor = color.toInt32;
+        _selectedTheme.textColor = color;
       } else {
-        _selectedTheme.accentColor = color.toInt32;
+        _selectedTheme.accentColor = color;
       }
     });
   }
 
   Future<void> _openCustomColorPicker(int index) async {
     final Color startColor = switch (index) {
-      0 => Color(_selectedTheme.background),
-      1 => Color(_selectedTheme.textColor),
-      _ => Color(_selectedTheme.accentColor),
+      0 => _selectedTheme.background,
+      1 => _selectedTheme.textColor,
+      _ => _selectedTheme.accentColor,
     };
     Color pendingColor = startColor;
 
@@ -159,7 +191,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -169,7 +201,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         PanelHeader(
           title: "QuickMenu Design",
           accent: accent,
-          boldFont: globalSettings.theme.quickMenuBoldFont,
           icon: Icons.dashboard_customize_outlined,
           buttonPressed: _resetCurrentPalette,
           buttonIcon: Icons.refresh_rounded,
@@ -184,12 +215,18 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 const SizedBox(height: 8),
                 _buildOpacityCard(accent, onSurface),
                 const SizedBox(height: 8),
+                if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
+                  _buildBackdropOpacityCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                ],
                 ...List<Widget>.generate(_colorTitles.length, (int index) {
                   return Padding(
                     padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
                     child: _buildColorCard(accent, onSurface, index),
                   );
                 }),
+                const SizedBox(height: 8),
+                _buildTransparencyGradientCard(accent, onSurface),
               ],
             ),
           ),
@@ -278,7 +315,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      "Tint Value",
+                      "Panel Tint",
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -306,11 +343,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Slider(
             min: 0,
             max: 255,
-            value: _selectedTheme.gradientAlpha.toDouble(),
+            value: _selectedTheme.gradientAlpha.toDouble().clamp(0, 255),
             activeColor: accent,
             inactiveColor: accent.withAlpha(40),
             onChanged: (double value) {
               setState(() => _selectedTheme.gradientAlpha = value.round());
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
             },
             onChangeEnd: (double value) async {
               _selectedTheme.gradientAlpha = value.round();
@@ -322,11 +360,135 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     );
   }
 
+  Widget _buildBackdropOpacityCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 6),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        if (_selectedTheme.backdropType == 'builtIn' || _selectedTheme.backdropImages.length > 1)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InkWell(
+                              onTap: _shuffleBackdrop,
+                              borderRadius: BorderRadius.circular(4),
+                              child: CustomTooltip(
+                                message: "Random backdrop",
+                                child: Icon(Icons.shuffle_rounded, size: 14, color: accent),
+                              ),
+                            ),
+                          ),
+                        Text(
+                          "Backdrop Intensity",
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Opacity of the background image layer.",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: onSurface.withAlpha(150),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildMetaChip(
+                label: "${(_selectedTheme.backdropOpacity * 100).toInt()}%",
+                background: accent.withAlpha(18),
+                foreground: accent.withAlpha(220),
+              ),
+            ],
+          ),
+          Slider(
+            min: 0.0,
+            max: 1.0,
+            value: _selectedTheme.backdropOpacity.clamp(0.0, 1.0),
+            activeColor: accent,
+            inactiveColor: accent.withAlpha(40),
+            onChanged: (double value) {
+              setState(() => _selectedTheme.backdropOpacity = value);
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+            },
+            onChangeEnd: (double value) async {
+              _selectedTheme.backdropOpacity = value;
+              await _persistThemeChanges();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransparencyGradientCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            "Interface Transparency Gradient",
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            "Overall panel transparency stops.",
+            style: TextStyle(
+              fontSize: 10.5,
+              color: onSurface.withAlpha(150),
+            ),
+          ),
+          const SizedBox(height: 10),
+          PanelOpacityGradientEditor(
+            points: _selectedTheme.panelOpacityPoints,
+            begin: _selectedTheme.panelOpacityBegin,
+            end: _selectedTheme.panelOpacityEnd,
+            onChanged: (List<double> points) async {
+              setState(() => _selectedTheme.panelOpacityPoints = points);
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+              await _persistThemeChanges();
+            },
+            onBeginChanged: (String val) async {
+              setState(() => _selectedTheme.panelOpacityBegin = val);
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+              await _persistThemeChanges();
+            },
+            onEndChanged: (String val) async {
+              setState(() => _selectedTheme.panelOpacityEnd = val);
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+              await _persistThemeChanges();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildColorCard(Color accent, Color onSurface, int index) {
     final Color currentColor = switch (index) {
-      0 => Color(_selectedTheme.background),
-      1 => Color(_selectedTheme.textColor),
-      _ => Color(_selectedTheme.accentColor),
+      0 => _selectedTheme.background,
+      1 => _selectedTheme.textColor,
+      _ => _selectedTheme.accentColor,
     };
 
     return Container(

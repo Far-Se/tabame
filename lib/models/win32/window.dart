@@ -13,6 +13,7 @@ import 'win32.dart';
 class Window {
   int hWnd;
   String title = "";
+  String helpText = "";
   late HProcess process;
   int? monitor;
   bool isPinned = false;
@@ -20,8 +21,12 @@ class Window {
   String appxIcon = "";
   String toJson() {
     JsonEncoder encoder = const JsonEncoder.withIndent("");
-    return encoder
-        .convert(<String, dynamic>{'title': title.toString().truncate(20, suffix: '...'), 'path': process.path, 'exe': process.exe, 'class': process.className});
+    return encoder.convert(<String, dynamic>{
+      'title': title.toString().truncate(20, suffix: '...'),
+      'path': process.path,
+      'exe': process.exe,
+      'class': process.className
+    });
   }
 
   Window(this.hWnd) {
@@ -114,11 +119,21 @@ class Window {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is Window && other.hWnd == hWnd && other.title == title && other.isAppx == isAppx && other.appxIcon == appxIcon && other.process == process;
+    return other is Window &&
+        other.hWnd == hWnd &&
+        other.title == title &&
+        other.isAppx == isAppx &&
+        other.appxIcon == appxIcon &&
+        other.process == process;
   }
 
   @override
   int get hashCode {
     return hWnd.hashCode ^ title.hashCode ^ isAppx.hashCode ^ appxIcon.hashCode ^ process.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'Window{hWnd: $hWnd, title: $title, helpText: $helpText, process: $process, monitor: $monitor, isPinned: $isPinned, isAppx: $isAppx, appxIcon: $appxIcon}';
   }
 }

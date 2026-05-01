@@ -2,16 +2,19 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-
 import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/util/solar_calculator.dart';
 import '../../models/win32/win32.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/custom_tooltip.dart';
+import '../widgets/windows_scroll.dart';
 
 class _AppOpacity {
   static const double subtle = 0.06;
@@ -34,16 +37,17 @@ class SettingsPageState extends State<SettingsPage> {
 
   String updateResponse = "Check for Updates";
   bool showUpdateButtons = false;
+  final Set<String> _expandedCards = <String>{"maintenance"};
 
   @override
   Widget build(BuildContext context) {
     final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
     if (!runOnStartup) globalSettings.runAsAdministrator = false;
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return SingleChildScrollView(
+    return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: LayoutBuilder(
@@ -72,6 +76,9 @@ class SettingsPageState extends State<SettingsPage> {
                           _buildSectionTitle("Configuration"),
                           _buildGeneralCard(runOnStartup, accent, onSurface),
                           const SizedBox(height: 16),
+                          _buildSectionTitle("Light Switch"),
+                          _buildLightSwitchCard(accent, background, onSurface),
+                          const SizedBox(height: 16),
                           _buildSectionTitle("Shell Integrations"),
                           _buildWizardlyCard(accent, onSurface),
                         ],
@@ -84,9 +91,6 @@ class SettingsPageState extends State<SettingsPage> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          _buildSectionTitle("Visuals & Theme"),
-                          _buildThemeCard(accent, onSurface),
-                          const SizedBox(height: 16),
                           _buildSectionTitle("Data & Tools"),
                           _buildMaintenanceCard(accent, onSurface),
                         ],
@@ -128,7 +132,8 @@ class SettingsPageState extends State<SettingsPage> {
   Widget _buildUpdateCard(Color accent, Color background, Color onSurface) {
     return _settingsCard(
       title: "Version & Updates",
-      subtitle: "Keep Tabame current and manage release behavior.",
+      subtitle: "Check the status of Tabame and install the latest improvements.",
+      alwaysExpanded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -159,7 +164,7 @@ class SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text("Current Version: v${Globals.version}",
+                      Text("Current Version: ${Globals.version}",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(updateResponse,
@@ -196,8 +201,8 @@ class SettingsPageState extends State<SettingsPage> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (Boxes.updateDownloadLink != null && Boxes.updateVersion != null) {
-                          Boxes.installUpdate(Boxes.updateDownloadLink!, Boxes.updateVersion!);
+                        if (Boxes.updateDownloadLink != null && globalSettings.newVersion != Globals.version) {
+                          Boxes.installUpdate(Boxes.updateDownloadLink!, globalSettings.newVersion);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -230,10 +235,10 @@ class SettingsPageState extends State<SettingsPage> {
           _toggleTile(
             title: "Auto Update",
             subtitle: "Download new releases automatically when available.",
-            value: globalSettings.autoUpdate,
+            value: globalSettings.autoCheckForUpdates,
             onChanged: (bool value) async {
-              setState(() => globalSettings.autoUpdate = value);
-              Boxes.updateSettings("autoUpdate", globalSettings.autoUpdate);
+              setState(() => globalSettings.autoCheckForUpdates = value);
+              Boxes.updateSettings("autoUpdate", globalSettings.autoCheckForUpdates);
             },
           ),
           const SizedBox(height: 8),
@@ -251,8 +256,9 @@ class SettingsPageState extends State<SettingsPage> {
 
   Widget _buildGeneralCard(bool runOnStartup, Color accent, Color onSurface) {
     return _settingsCard(
-      title: "Startup & System",
-      subtitle: "Control how Tabame launches and interacts with Windows.",
+      id: "general",
+      title: "Configuration",
+      subtitle: "Set up the basic behavior and system level integrations.",
       child: Column(
         children: <Widget>[
           _toggleTile(
@@ -325,48 +331,9 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildThemeCard(Color accent, Color onSurface) {
-    return _settingsCard(
-      title: "Appearance",
-      subtitle: "Pick the theme behavior that feels right for your setup.",
-      child: RadioGroup<ThemeType>(
-        onChanged: setThemeType,
-        groupValue: globalSettings.themeType,
-        child: Column(
-          children: <Widget>[
-            _radioTile("System Theme", ThemeType.system),
-            const SizedBox(height: 8),
-            _radioTile("Light Theme", ThemeType.light),
-            const SizedBox(height: 8),
-            _radioTile("Dark Theme", ThemeType.dark),
-            const SizedBox(height: 8),
-            _radioTile("Schedule Light", ThemeType.schedule),
-            if (globalSettings.themeType == ThemeType.schedule) ...<Widget>[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: _AppOpacity.subtle),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accent.withValues(alpha: _AppOpacity.border)),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(child: _timeChip("From", globalSettings.themeScheduleMin.formatTime(), _pickThemeStart)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _timeChip("To", globalSettings.themeScheduleMax.formatTime(), _pickThemeEnd)),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildMaintenanceCard(Color accent, Color onSurface) {
     return _settingsCard(
+      id: "maintenance",
       title: "Integration & Maintenance",
       subtitle: "Manage shell integration and locate your data quickly.",
       child: Column(
@@ -376,29 +343,114 @@ class SettingsPageState extends State<SettingsPage> {
             '''
 To export settings, copy *settings.json* from [this folder](data). To import, exit Tabame and replace the file with your copy.
 ''',
-            () {
+            ({String? s, String? s2, String? s3}) {
               final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);
               WinUtils.open("$path\\Tabame\\");
             },
           ),
           const SizedBox(height: 10),
-          _markdownCard(
-            onSurface,
-            '''
-To uninstall, open [this folder](uninstall) and delete it. No other app data is stored elsewhere.
-''',
-            () {
-              final String exeFolder = File(Platform.resolvedExecutable).parent.path;
-              WinUtils.open(exeFolder, parseParamaters: true);
-            },
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showUninstallConfirmation(accent, onSurface),
+              icon: const Icon(Icons.delete_forever_rounded, size: 18),
+              label: const Text("UNINSTALL TABAME"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
+  void _showUninstallConfirmation(Color accent, Color onSurface) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text("Uninstall Tabame?", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text("This will permanently remove your settings, local data, and the application itself."),
+            const SizedBox(height: 20),
+            Text("Type 'MeNoGusta' to confirm:",
+                style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6))),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: const TextStyle(fontFamily: 'Consolas'),
+              decoration: InputDecoration(
+                hintText: "MeNoGusta",
+                filled: true,
+                fillColor: onSurface.withValues(alpha: 0.05),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("CANCEL", style: TextStyle(color: onSurface.withValues(alpha: 0.5))),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text == "MeNoGusta") {
+                Navigator.pop(context);
+                _handleUninstall();
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text("CONFIRM UNINSTALL", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleUninstall() async {
+    if (!kReleaseMode) return;
+
+    // 1. Disable startup entries
+    await WinUtils.setStartUpShortcut(false);
+
+    // 2. Remove Wizardly context menu integration
+    if (wizardlyContextMenu.isWizardlyInstalledInContextMenu()) {
+      wizardlyContextMenu.toggleWizardlyToContextMenu();
+    }
+
+    // 3. Launch detached cleanup script
+    final String exeDir = Directory(Platform.resolvedExecutable).parent.path;
+    final String appData = WinUtils.getTabameAppDataFolder();
+    WinUtils.toggleTaskbar(visible: true);
+    final String psCommand =
+        'Start-Sleep -Seconds 2; Remove-Item -Recurse -Force "$appData"; Remove-Item -Recurse -Force "$exeDir" -ErrorAction SilentlyContinue';
+
+    await Process.start(
+      'powershell.exe',
+      <String>['-NoProfile', '-WindowStyle', 'Hidden', '-Command', psCommand],
+      mode: ProcessStartMode.detached,
+    );
+
+    // 4. Close all Tabame windows and exit
+    WinUtils.closeAllTabameExProcesses();
+    exit(0);
+  }
+
   Widget _buildWizardlyCard(Color accent, Color onSurface) {
     return _settingsCard(
+      id: "wizardly",
       title: "Wizardly",
       subtitle: "Windows Explorer right-click integration.",
       child: Column(
@@ -417,15 +469,244 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
     );
   }
 
+  Widget _buildLightSwitchCard(Color accent, Color background, Color onSurface) {
+    return _settingsCard(
+      id: "lightSwitch",
+      title: "Light Switch",
+      subtitle: "Automate system theme transitions based on clock or sun position.",
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          RadioGroup<LightSwitchMode>(
+            onChanged: (LightSwitchMode? val) async {
+              globalSettings.lightSwitchMode = val ?? LightSwitchMode.off;
+              await Boxes.updateSettings("lightSwitchMode", globalSettings.lightSwitchMode.index);
+              if (globalSettings.lightSwitchMode == LightSwitchMode.sunrise) {
+                await SolarCalculator.updateSolarData(force: true);
+              }
+              globalSettings.setScheduleThemeChange();
+              setState(() {});
+            },
+            groupValue: globalSettings.lightSwitchMode,
+            child: Column(
+              children: <Widget>[
+                _radioTileGeneric(
+                    "Off", LightSwitchMode.off, (LightSwitchMode mode) => globalSettings.lightSwitchMode == mode),
+                const SizedBox(height: 8),
+                _radioTileGeneric("Fixed Hours", LightSwitchMode.fixed,
+                    (LightSwitchMode mode) => globalSettings.lightSwitchMode == mode),
+                const SizedBox(height: 8),
+                _radioTileGeneric("Sunrise to Sundown", LightSwitchMode.sunrise,
+                    (LightSwitchMode mode) => globalSettings.lightSwitchMode == mode),
+              ],
+            ),
+          ),
+          if (globalSettings.lightSwitchMode != LightSwitchMode.off) ...<Widget>[
+            const SizedBox(height: 20),
+            if (globalSettings.lightSwitchMode == LightSwitchMode.fixed) ...<Widget>[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: _AppOpacity.subtle),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: accent.withValues(alpha: _AppOpacity.border)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                        child: _timeChip("Light Mode", globalSettings.themeScheduleMin.formatTime(), _pickThemeStart)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: _timeChip("Dark Mode", globalSettings.themeScheduleMax.formatTime(), _pickThemeEnd)),
+                  ],
+                ),
+              ),
+            ],
+            if (globalSettings.lightSwitchMode == LightSwitchMode.sunrise) ...<Widget>[
+              _buildSunCycleVisualizer(accent, onSurface),
+              const SizedBox(height: 16),
+              _buildOffsetSliders(accent, onSurface),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSunCycleVisualizer(Color accent, Color onSurface) {
+    final int sunrise = globalSettings.lightSwitchSunrise + globalSettings.lightSwitchSunriseOffset;
+    final int sunset = globalSettings.lightSwitchSunset + globalSettings.lightSwitchSunsetOffset;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            _miniInfo("SUNRISE", globalSettings.lightSwitchSunrise.formatTime()),
+            _miniInfo("SUNSET", globalSettings.lightSwitchSunset.formatTime()),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 60,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: onSurface.withValues(alpha: 0.05)),
+          ),
+          child: CustomPaint(
+            painter: SunCyclePainter(
+              sunriseMin: sunrise,
+              sunsetMin: sunset,
+              accent: accent,
+              onSurface: onSurface,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOffsetSliders(Color accent, Color onSurface) {
+    return Column(
+      children: <Widget>[
+        _singleOffsetSlider(
+          title: "Morning Offset",
+          icon: Icons.wb_sunny_rounded,
+          value: globalSettings.lightSwitchSunriseOffset,
+          onChanged: (int val) async {
+            setState(() => globalSettings.lightSwitchSunriseOffset = val);
+            await Boxes.updateSettings("lightSwitchSunriseOffset", globalSettings.lightSwitchSunriseOffset);
+            globalSettings.setScheduleThemeChange();
+          },
+          accent: accent,
+          onSurface: onSurface,
+        ),
+        const SizedBox(height: 12),
+        _singleOffsetSlider(
+          title: "Evening Offset",
+          icon: Icons.nights_stay_rounded,
+          value: globalSettings.lightSwitchSunsetOffset,
+          onChanged: (int val) async {
+            setState(() => globalSettings.lightSwitchSunsetOffset = val);
+            await Boxes.updateSettings("lightSwitchSunsetOffset", globalSettings.lightSwitchSunsetOffset);
+            globalSettings.setScheduleThemeChange();
+          },
+          accent: accent,
+          onSurface: onSurface,
+        ),
+      ],
+    );
+  }
+
+  Widget _singleOffsetSlider({
+    required String title,
+    required IconData icon,
+    required int value,
+    required Function(int) onChanged,
+    required Color accent,
+    required Color onSurface,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(icon, size: 14, color: accent.withValues(alpha: 0.7)),
+                  const SizedBox(width: 8),
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.7))),
+                ],
+              ),
+              Text("${value >= 0 ? '+' : ''}$value min",
+                  style: TextStyle(fontSize: 11, fontFamily: 'Consolas', color: accent)),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: value.toDouble(),
+              min: -120,
+              max: 120,
+              divisions: 48,
+              activeColor: accent,
+              inactiveColor: onSurface.withValues(alpha: 0.1),
+              onChanged: (double val) => onChanged(val.toInt()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniInfo(String label, String value) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(label,
+            style: TextStyle(
+                fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: onSurface.withValues(alpha: 0.4))),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Consolas')),
+      ],
+    );
+  }
+
+  Widget _radioTileGeneric<T>(String label, T value, bool Function(T) isSelected) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final bool selected = isSelected(value);
+    final Color accent = globalSettings.themeColors.accentColor;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? accent.withValues(alpha: _AppOpacity.subtle) : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected
+              ? accent.withValues(alpha: _AppOpacity.borderEmphasis)
+              : onSurface.withValues(alpha: _AppOpacity.subtle),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: RadioListTile<T>(
+          dense: true,
+          value: value,
+          title: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          activeColor: accent,
+        ),
+      ),
+    );
+  }
+
   Widget _settingsCard({
+    String? id,
     required String title,
     required String subtitle,
     required Widget child,
+    bool alwaysExpanded = true,
   }) {
+    final bool expanded = alwaysExpanded || (id != null && _expandedCards.contains(id));
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withValues(alpha: _AppOpacity.surfaceOverlay),
         borderRadius: BorderRadius.circular(16),
@@ -434,11 +715,65 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.4)),
-          const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
-          const SizedBox(height: 16),
-          child,
+          InkWell(
+            onTap: alwaysExpanded || id == null
+                ? null
+                : () {
+                    setState(() {
+                      if (_expandedCards.contains(id)) {
+                        _expandedCards.remove(id);
+                      } else {
+                        _expandedCards.add(id);
+                      }
+                    });
+                  },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(title,
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.4)),
+                        if (!expanded) ...<Widget>[
+                          const SizedBox(height: 4),
+                          Text(subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (!alwaysExpanded && id != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    Icon(
+                      expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      color: onSurface.withAlpha(100),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.all(16).copyWith(top: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                  const SizedBox(height: 16),
+                  child,
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -483,32 +818,8 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
     );
   }
 
-  Widget _radioTile(String label, ThemeType value) {
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool selected = globalSettings.themeType == value;
-    return Container(
-      decoration: BoxDecoration(
-        color: selected
-            ? Color(globalSettings.theme.accentColor).withValues(alpha: _AppOpacity.subtle)
-            : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: selected
-              ? Color(globalSettings.theme.accentColor).withValues(alpha: _AppOpacity.borderEmphasis)
-              : onSurface.withValues(alpha: _AppOpacity.subtle),
-        ),
-      ),
-      child: RadioListTile<ThemeType>(
-        dense: true,
-        value: value,
-        title: Text(label, style: const TextStyle(fontSize: 13)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-      ),
-    );
-  }
-
   Widget _timeChip(String label, String value, Future<void> Function() onTap) {
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
@@ -540,7 +851,7 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
     );
   }
 
-  Widget _markdownCard(Color onSurface, String data, VoidCallback onTap) {
+  Widget _markdownCard(Color onSurface, String data, Function({String? s, String? s2, String? s3}) onTap) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -552,7 +863,7 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
       child: MarkdownBody(
         shrinkWrap: true,
         data: data,
-        onTapLink: (String s, String? s2, String s3) => onTap(),
+        onTapLink: (String s, String? s2, String s3) => onTap(s: s, s2: s2, s3: s3),
       ),
     );
   }
@@ -570,7 +881,7 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
       updateResponse = "Latest version installed!";
       showUpdateButtons = false;
     } else {
-      updateResponse = "New version ${Boxes.updateVersion} detected!";
+      updateResponse = "New version ${globalSettings.newVersion} detected!";
       showUpdateButtons = true;
     }
     setState(() {});
@@ -591,6 +902,7 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
     if (timePicker == null) return;
     globalSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
     await Boxes.updateSettings("themeScheduleMin", globalSettings.themeScheduleMin);
+    globalSettings.setScheduleThemeChange();
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
@@ -612,14 +924,76 @@ To uninstall, open [this folder](uninstall) and delete it. No other app data is 
     if (newTime < globalSettings.themeScheduleMin) return;
     globalSettings.themeScheduleMax = newTime;
     await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
+    globalSettings.setScheduleThemeChange();
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
+  }
+}
+
+class SunCyclePainter extends CustomPainter {
+  final int sunriseMin;
+  final int sunsetMin;
+  final Color accent;
+  final Color onSurface;
+
+  SunCyclePainter({
+    required this.sunriseMin,
+    required this.sunsetMin,
+    required this.accent,
+    required this.onSurface,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    // Normalize minutes to width (1440 mins in a day)
+    double x(int mins) => mins * w / 1440;
+
+    final Paint dayPaint = Paint()
+      ..shader = LinearGradient(
+        colors: <Color>[accent.withValues(alpha: 0.05), accent.withValues(alpha: 0.2), accent.withValues(alpha: 0.05)],
+      ).createShader(Rect.fromLTWH(x(sunriseMin), 0, x(sunsetMin) - x(sunriseMin), h));
+
+    final Paint nightPaint = Paint()..color = onSurface.withValues(alpha: 0.03);
+
+    // Draw background zones
+    // Before sunrise (Night)
+    canvas.drawRect(Rect.fromLTWH(0, 0, x(sunriseMin), h), nightPaint);
+    // Between sunrise and sunset (Day)
+    canvas.drawRect(Rect.fromLTWH(x(sunriseMin), 0, x(sunsetMin) - x(sunriseMin), h), dayPaint);
+    // After sunset (Night)
+    canvas.drawRect(Rect.fromLTWH(x(sunsetMin), 0, w - x(sunsetMin), h), nightPaint);
+
+    // Draw Grid (every 6 hours)
+    final Paint gridPaint = Paint()
+      ..color = onSurface.withValues(alpha: 0.05)
+      ..strokeWidth = 1;
+    for (int i = 1; i < 4; i++) {
+      double gx = i * 6 * 60 * w / 1440;
+      canvas.drawLine(Offset(gx, 0), Offset(gx, h), gridPaint);
+    }
+
+    // Draw Solar Markers
+    final Paint markerPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 2;
+    canvas.drawLine(Offset(x(sunriseMin), 0), Offset(x(sunriseMin), h), markerPaint);
+    canvas.drawLine(Offset(x(sunsetMin), 0), Offset(x(sunsetMin), h), markerPaint);
+
+    // Current time indicator
+    final int now = DateTime.now().hour * 60 + DateTime.now().minute;
+    final Paint nowPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..strokeWidth = 2;
+    canvas.drawLine(Offset(x(now), 0), Offset(x(now), h), nowPaint);
+
+    // Circle at top of current time
+    canvas.drawCircle(Offset(x(now), 0), 3, nowPaint);
   }
 
-  Future<void> setThemeType(ThemeType? value) async {
-    globalSettings.themeType = value ?? ThemeType.system;
-    await Boxes.updateSettings("themeType", globalSettings.themeType.index);
-    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-    setState(() {});
-  }
+  @override
+  bool shouldRepaint(covariant SunCyclePainter oldDelegate) =>
+      oldDelegate.sunriseMin != sunriseMin || oldDelegate.sunsetMin != sunsetMin;
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -7,13 +8,11 @@ import '../models/classes/boxes/boxes_base.dart';
 import '../models/settings.dart';
 import '../models/theme.dart';
 
-const Size _messageBoxSize = Size(420, 180);
+const Size _messageBoxSize = Size(420, 280);
 
 Future<void> showMessage(List<String> arguments) async {
   const WindowOptions windowOptions = WindowOptions(
     size: _messageBoxSize,
-    minimumSize: _messageBoxSize,
-    maximumSize: _messageBoxSize,
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: true,
@@ -70,13 +69,17 @@ class MessageBoxWindow extends StatefulWidget {
 class _MessageBoxWindowState extends State<MessageBoxWindow> with WindowListener {
   late final _MessageArguments _message = _MessageArguments.fromArgs(widget.arguments);
   late final FocusNode _focusNode = FocusNode();
+  final GlobalKey _contentKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
+      if (mounted) {
+        _focusNode.requestFocus();
+        _resizeWindow();
+      }
       if (_message.speak.isNotEmpty) {
         Process.run(
           'powershell',
@@ -102,11 +105,15 @@ class _MessageBoxWindowState extends State<MessageBoxWindow> with WindowListener
     windowManager.close();
   }
 
+  Future<void> _resizeWindow() async {
+    // Manual resize disabled to prevent layout breakage with fixed 4-line container
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color panelBase = scheme.surface;
     final Color panelOutline = accent.withValues(alpha: 0.16);
     final Color panelGlow = accent.withValues(alpha: 0.10);
@@ -128,157 +135,171 @@ class _MessageBoxWindowState extends State<MessageBoxWindow> with WindowListener
           }
         },
         child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: _messageBoxSize.width,
-              height: _messageBoxSize.height,
-              // padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.26),
-                    blurRadius: 26,
-                    offset: const Offset(0, 14),
-                  ),
-                  BoxShadow(
-                    color: panelGlow,
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                  ),
-                ],
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[
-                    panelBase.withValues(alpha: 0.98),
-                    Color.alphaBlend(accent.withValues(alpha: 0.08), panelBase.withValues(alpha: 0.96)),
-                  ],
-                ),
-                border: Border.all(color: panelOutline),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: scheme.onSurface.withValues(alpha: 0.08)),
-                  color: panelBase.withValues(alpha: 0.88),
-                ),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onPanStart: (DragStartDetails details) {
-                    windowManager.startDragging();
-                  },
-                  child: Column(
-                    children: <Widget>[
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
-                        decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: <Color>[
-                                headerTint,
-                                Color.alphaBlend(accent.withValues(alpha: 0.04), panelBase.withValues(alpha: 0.94)),
-                              ],
-                            ),
-                            border: Border(bottom: BorderSide(color: scheme.onSurface.withValues(alpha: 0.08)))),
-                        child: Row(
+          child: Semantics(
+            label: 'Alert Dialog',
+            namesRoute: true,
+            scopesRoute: true,
+            explicitChildNodes: true,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double screenWidth = MediaQuery.of(context).size.width;
+                  final double boxWidth = screenWidth < 440 ? screenWidth * 0.94 : 420.0;
+
+                  return Container(
+                    key: _contentKey,
+                    width: boxWidth,
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    // padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: scheme.shadow.withValues(alpha: 0.18),
+                          blurRadius: 32,
+                          offset: const Offset(0, 16),
+                        ),
+                        BoxShadow(
+                          color: panelGlow.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[
+                          panelBase.withValues(alpha: 0.98),
+                          Color.alphaBlend(accent.withValues(alpha: 0.08), panelBase.withValues(alpha: 0.96)),
+                        ],
+                      ),
+                      border: Border.all(color: panelOutline),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: scheme.onSurface.withValues(alpha: 0.08)),
+                        color: panelBase.withValues(alpha: 0.88),
+                      ),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onPanStart: (DragStartDetails details) {
+                          windowManager.startDragging();
+                        },
+                        child: Column(
                           children: <Widget>[
                             Container(
-                              width: 36,
-                              height: 36,
+                              padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
                               decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.13),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: accent.withValues(alpha: 0.22)),
-                              ),
-                              child: Icon(Icons.info_rounded, color: accent, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    _message.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.1,
-                                    ),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: <Color>[
+                                      headerTint,
+                                      Color.alphaBlend(
+                                          accent.withValues(alpha: 0.04), panelBase.withValues(alpha: 0.94)),
+                                    ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Tabame message',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: secondaryText,
-                                      fontWeight: FontWeight.w500,
+                                  border: Border(bottom: BorderSide(color: scheme.onSurface.withValues(alpha: 0.08)))),
+                              child: Row(
+                                children: <Widget>[
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: accent.withValues(alpha: 0.13),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: accent.withValues(alpha: 0.22)),
+                                    ),
+                                    child: Icon(Icons.info_rounded, color: accent, size: 20),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          _message.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.1,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tabame message',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: secondaryText,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        height: 1,
-                        color: scheme.onSurface.withValues(alpha: 0.08),
-                      ),
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
-                          decoration: BoxDecoration(
-                            color: contentTint,
-                            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(17)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                            Container(
+                              height: 1,
+                              color: scheme.onSurface.withValues(alpha: 0.08),
+                            ),
+                            Expanded(
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+                                decoration: BoxDecoration(
+                                  color: contentTint,
+                                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(17)),
+                                ),
+                                child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
-                                    SingleChildScrollView(
-                                      child: SelectableText(
-                                        _message.message,
-                                        style: theme.textTheme.bodyLarge?.copyWith(
-                                          height: 1.45,
-                                          fontSize: 18,
-                                          color: bodyText,
+                                    SizedBox(
+                                      height: 18 * 1.45 * 4, // Exactly 4 lines
+                                      child: Center(
+                                        child: SingleChildScrollView(
+                                          child: SelectableText(
+                                            _message.message,
+                                            textAlign: TextAlign.center,
+                                            style: theme.textTheme.bodyLarge?.copyWith(
+                                              height: 1.45,
+                                              fontSize: 18,
+                                              color: bodyText,
+                                            ),
+                                          ),
                                         ),
                                       ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    FilledButton(
+                                      onPressed: _exit,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: accent,
+                                        foregroundColor: theme.colorScheme.surface,
+                                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                                        elevation: 0,
+                                        textStyle: theme.textTheme.labelLarge?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                      child: const Text('OK'),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: FilledButton(
-                                  onPressed: _exit,
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: accent,
-                                    foregroundColor: theme.colorScheme.surface,
-                                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                                    textStyle: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  child: const Text('OK'),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

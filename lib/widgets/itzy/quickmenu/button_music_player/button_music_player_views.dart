@@ -1,0 +1,1799 @@
+part of '../button_music_player.dart';
+
+// Build methods live in an extension so the main music player state stays small
+// while keeping private fields private to this library. The extension operates
+// on _MusicServerPanelState, so these protected State calls are intentional.
+// ignore_for_file: invalid_use_of_protected_member
+
+extension _MusicServerPanelStateViews on _MusicServerPanelState {
+  Widget _buildPlayerTab(Color accent, Color onSurface) {
+    return StreamBuilder<SequenceState?>(
+      stream: MusicServerManager.player.sequenceStateStream,
+      builder: (BuildContext context, AsyncSnapshot<SequenceState?> sequenceSnapshot) {
+        final SequenceState? sequenceState = sequenceSnapshot.data;
+        final MusicItem? item =
+            sequenceState?.currentSource?.tag is MusicItem ? sequenceState!.currentSource!.tag as MusicItem : null;
+        final int queueLength = sequenceState?.sequence.length ?? 0;
+        final int currentIndex = (sequenceState?.currentIndex ?? 0) + 1;
+
+        if (item == null) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _EmptyState(
+                  icon: Icons.album_outlined,
+                  title: "Nothing playing",
+                  subtitle: "Start with a playlist or indexed folder.",
+                  accent: accent,
+                  onSurface: onSurface,
+                ),
+                if (_savedQueueAvailable) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _buildSavedQueueCard(accent, onSurface),
+                ],
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        }
+
+        return Stack(
+          children: <Widget>[
+            LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: <Color>[
+                            Theme.of(context).colorScheme.surface.withAlpha(245),
+                            Color.alphaBlend(accent.withAlpha(24), Theme.of(context).colorScheme.surface),
+                            Color.alphaBlend(accent.withAlpha(10), Theme.of(context).colorScheme.surface),
+                          ],
+                        ),
+                        border: Border.all(color: accent.withAlpha(28)),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withAlpha(18),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Stack(
+                              children: <Widget>[
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 40),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        AnimatedSwitcher(
+                                          duration: (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
+                                              ? Duration.zero
+                                              : const Duration(milliseconds: 240),
+                                          switchInCurve: Curves.easeOutCubic,
+                                          switchOutCurve: Curves.easeOutCubic,
+                                          child: KeyedSubtree(
+                                            key: ValueKey<String>(item.id),
+                                            child: _CoverArt(item: item, size: 120, accent: accent, onSurface: onSurface),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 30),
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: (constraints.maxWidth - 194).clamp(180.0, constraints.maxWidth),
+                                          ),
+                                          child: AnimatedSwitcher(
+                                            duration: (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
+                                                ? Duration.zero
+                                                : const Duration(milliseconds: 220),
+                                            switchInCurve: Curves.easeOutCubic,
+                                            switchOutCurve: Curves.easeOutCubic,
+                                            child: KeyedSubtree(
+                                              key: ValueKey<String>('meta_${item.id}'),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: <Widget>[
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    item.title,
+                                                    maxLines: 3,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                      fontSize: 19,
+                                                      height: 1.1,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: onSurface,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    item.artist ?? "Unknown artist",
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: accent.withAlpha(200),
+                                                      letterSpacing: 0.3,
+                                                    ),
+                                                  ),
+                                                  if (item.album != null) ...<Widget>[
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      item.album!,
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                        fontSize: 11.5,
+                                                        color: onSurface.withAlpha(140),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: _PlayerTrackMenuButton(
+                                    accent: accent,
+                                    onSurface: onSurface,
+                                    onSelected: (_PlayerTrackMenuAction action) =>
+                                        _handlePlayerTrackMenuAction(action, item),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            _buildTimeline(accent, onSurface, item),
+                            const SizedBox(height: 20),
+                            _buildTransport(accent, onSurface, sequenceState, item),
+                            const SizedBox(height: 30),
+                            _buildQueueButton(accent, onSurface, queueLength, currentIndex),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (_queueVisible) _buildQueuePreview(accent, onSurface, sequenceState),
+            if (_playlistPickerVisible) _buildPlaylistPicker(accent, onSurface, item),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePlayerTrackMenuAction(_PlayerTrackMenuAction action, MusicItem item) async {
+    switch (action) {
+      case _PlayerTrackMenuAction.artist:
+        await _goToCurrentArtist(item);
+      case _PlayerTrackMenuAction.album:
+        await _goToCurrentAlbum(item);
+      case _PlayerTrackMenuAction.folder:
+        await _goToCurrentFolder(item);
+      case _PlayerTrackMenuAction.file:
+        _openCurrentFile(item);
+    }
+  }
+
+  Future<void> _goToCurrentArtist(MusicItem item) async {
+    final String artist = item.artist?.trim() ?? '';
+    if (artist.isEmpty) {
+      _showInfo("Current track has no artist.");
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final List<MusicItem> artists = await MusicServerManager.getArtists();
+      final MusicItem? match = _findExactMusicItem(artists, artist, MusicItemType.artist);
+      if (match == null) {
+        await _search(artist);
+        if (mounted) setState(() => _tabIndex = 1);
+        _showInfo("Showing search results for $artist.");
+        return;
+      }
+
+      final List<MusicItem> albums = await MusicServerManager.getAlbums(match.id);
+      _history.add(_items);
+      _historyPlaylistIds.add(_activePlaylistId);
+      _items = albums;
+      _activePlaylistId = null;
+      _titles.add(match.title);
+      if (mounted) setState(() => _tabIndex = 2);
+    } catch (_) {
+      _showInfo("Could not open artist.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _goToCurrentAlbum(MusicItem item) async {
+    final String album = item.album?.trim() ?? '';
+    if (album.isEmpty) {
+      _showInfo("Current track has no album.");
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final List<MusicItem> results = await MusicServerManager.search(album);
+      final MusicItem match = results.where((MusicItem result) => result.type == MusicItemType.album).firstWhere(
+        (MusicItem result) {
+          final bool sameAlbum = _sameMusicLabel(result.title, album);
+          final String artist = item.artist?.trim() ?? '';
+          return sameAlbum && (artist.isEmpty || _sameMusicLabel(result.artist ?? '', artist));
+        },
+        orElse: () =>
+            _findExactMusicItem(results, album, MusicItemType.album) ??
+            results.firstWhere(
+              (MusicItem result) => result.type == MusicItemType.album,
+              orElse: () => item,
+            ),
+      );
+
+      if (match.type != MusicItemType.album) {
+        await _search(album);
+        if (mounted) setState(() => _tabIndex = 1);
+        _showInfo("Showing search results for $album.");
+        return;
+      }
+
+      final List<MusicItem> songs = await MusicServerManager.getSongs(match.id);
+      _history.add(_items);
+      _historyPlaylistIds.add(_activePlaylistId);
+      _items = songs;
+      _activePlaylistId = null;
+      _titles.add(match.title);
+      if (mounted) setState(() => _tabIndex = 2);
+    } catch (_) {
+      _showInfo("Could not open album.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _goToCurrentFolder(MusicItem item) async {
+    final String folderPath = item.parentPath?.trim() ?? File(item.localPath ?? '').parent.path.trim();
+    if (folderPath.isEmpty || item.localPath == null) {
+      _showInfo("Folder navigation is only available for local tracks.");
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      _folderHistory.add(_folderItems);
+      _folderPathHistory.add(_activeFolderPath);
+      _folderItems = await MusicServerManager.getMusicDirectory(folderPath);
+      _activeFolderPath = folderPath;
+      _folderTitles.add(Directory(folderPath).uri.pathSegments.where((String segment) => segment.isNotEmpty).last);
+      if (mounted) setState(() => _tabIndex = 3);
+    } catch (_) {
+      _showInfo("Could not open folder.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openCurrentFile(MusicItem item) {
+    final String? path = item.localPath;
+    if (path == null || path.trim().isEmpty || !File(path).existsSync()) {
+      _showInfo("Local file is not available.");
+      return;
+    }
+
+    WinUtils.open('explorer.exe', arguments: '/select,"$path"', parseParamaters: false);
+    if (!kDebugMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+  }
+
+  MusicItem? _findExactMusicItem(List<MusicItem> items, String label, MusicItemType type) {
+    for (final MusicItem item in items) {
+      if (item.type == type && _sameMusicLabel(item.title, label)) return item;
+    }
+    return null;
+  }
+
+  bool _sameMusicLabel(String left, String right) => left.trim().toLowerCase() == right.trim().toLowerCase();
+
+  Widget _buildSavedQueueCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _cardDecoration(onSurface),
+      child: Row(
+        children: <Widget>[
+          _IconPill(icon: Icons.queue_music_rounded, accent: accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text("Saved queue", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                const SizedBox(height: 2),
+                Text(
+                  _restoringSavedQueue ? "Fetching tracks..." : "Ready to list in Player.",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _MiniIconButton(
+            icon: Icons.restore_rounded,
+            accent: accent,
+            onSurface: onSurface,
+            onTap: _restoringSavedQueue ? () {} : () => _restoreSavedQueue(),
+          ),
+          _MiniIconButton(
+            icon: Icons.delete_outline_rounded,
+            accent: accent,
+            onSurface: onSurface,
+            onTap: _clearSavedQueue,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeline(Color accent, Color onSurface, MusicItem item) {
+    return StreamBuilder<Duration>(
+      stream: MusicServerManager.player.positionStream,
+      builder: (BuildContext context, AsyncSnapshot<Duration> positionSnapshot) {
+        final Duration position = positionSnapshot.data ?? Duration.zero;
+        return StreamBuilder<Duration?>(
+          stream: MusicServerManager.player.durationStream,
+          builder: (BuildContext context, AsyncSnapshot<Duration?> durationSnapshot) {
+            final Duration? decoderDuration = durationSnapshot.data ?? MusicServerManager.player.duration;
+            final Duration? trustedDuration = _bestTimelineDuration(decoderDuration, item.duration);
+            final Duration duration = trustedDuration ?? Duration.zero;
+            final double max = trustedDuration == null ? 1 : trustedDuration.inMilliseconds.toDouble();
+            final double value = position.inMilliseconds.clamp(0, max.toInt()).toDouble();
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+              child: Row(
+                children: <Widget>[
+                  _TimelineTimeLabel(
+                    label: _formatDuration(position),
+                    onSurface: onSurface,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                        activeTrackColor: accent.withAlpha(220),
+                        inactiveTrackColor: accent.withAlpha(30),
+                        thumbColor: accent,
+                      ),
+                      child: Slider(
+                        min: 0,
+                        max: max,
+                        value: value,
+                        padding: EdgeInsets.zero,
+                        onChanged: trustedDuration == null
+                            ? null
+                            : (double next) {
+                                final int nextMilliseconds = next.round().clamp(0, trustedDuration.inMilliseconds);
+                                MusicServerManager.player.seek(Duration(milliseconds: nextMilliseconds));
+                              },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  _TimelineTimeLabel(
+                    label: trustedDuration == null ? "--:--" : _formatDuration(duration),
+                    onSurface: onSurface,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTransport(Color accent, Color onSurface, SequenceState? sequenceState, MusicItem item) {
+    final bool canPrevious = (sequenceState?.currentIndex ?? 0) > 0;
+    final bool canNext = (sequenceState?.currentIndex ?? 0) < ((sequenceState?.sequence.length ?? 1) - 1);
+    final bool starred = _starredOverrides[item.id] ?? item.starred;
+
+    return StreamBuilder<PlayerState>(
+      stream: MusicServerManager.player.playerStateStream,
+      builder: (BuildContext context, AsyncSnapshot<PlayerState> snapshot) {
+        final PlayerState? state = snapshot.data;
+        final bool buffering =
+            state?.processingState == ProcessingState.loading || state?.processingState == ProcessingState.buffering;
+        final bool playing = state?.playing ?? false;
+
+        return LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double gap = (constraints.maxWidth * 0.018).clamp(3.0, 8.0);
+            final double secondarySize = ((constraints.maxWidth - (gap * 6) - 54) / 6).clamp(30.0, 38.0);
+            final double primarySize = (secondarySize + 12).clamp(42.0, 54.0);
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: <Widget>[
+                    _TransportButton(
+                      icon: starred ? Icons.star_rounded : Icons.star_border_rounded,
+                      active: starred,
+                      accent: accent,
+                      onSurface: onSurface,
+                      size: secondarySize,
+                      onTap: () => _toggleStarred(item, !starred),
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon:
+                          sequenceState?.shuffleModeEnabled == true ? Icons.shuffle_on_rounded : Icons.shuffle_rounded,
+                      active: sequenceState?.shuffleModeEnabled == true,
+                      accent: accent,
+                      onSurface: onSurface,
+                      size: secondarySize,
+                      onTap: () => MusicServerManager.player
+                          .setShuffleModeEnabled(!(sequenceState?.shuffleModeEnabled ?? false)),
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon: Icons.skip_previous_rounded,
+                      accent: accent,
+                      onSurface: onSurface,
+                      enabled: canPrevious,
+                      size: secondarySize,
+                      onTap: MusicServerManager.player.seekToPrevious,
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon: buffering
+                          ? Icons.hourglass_top_rounded
+                          : playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                      active: true,
+                      isPrimary: true,
+                      accent: accent,
+                      onSurface: onSurface,
+                      size: primarySize,
+                      onTap: buffering
+                          ? null
+                          : playing
+                              ? MusicServerManager.player.pause
+                              : MusicServerManager.player.play,
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon: Icons.skip_next_rounded,
+                      accent: accent,
+                      onSurface: onSurface,
+                      enabled: canNext,
+                      size: secondarySize,
+                      onTap: MusicServerManager.player.seekToNext,
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon: sequenceState?.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                      active: sequenceState?.loopMode != LoopMode.off,
+                      accent: accent,
+                      onSurface: onSurface,
+                      size: secondarySize,
+                      onTap: () {
+                        final LoopMode next = sequenceState?.loopMode == LoopMode.off
+                            ? LoopMode.all
+                            : sequenceState?.loopMode == LoopMode.all
+                                ? LoopMode.one
+                                : LoopMode.off;
+                        MusicServerManager.player.setLoopMode(next);
+                      },
+                    ),
+                    SizedBox(width: gap),
+                    _TransportButton(
+                      icon: Icons.playlist_add_rounded,
+                      accent: accent,
+                      onSurface: onSurface,
+                      size: secondarySize,
+                      onTap: () => _openPlaylistPicker(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _toggleStarred(MusicItem item, bool starred) async {
+    setState(() => _loading = true);
+    try {
+      final bool success = await MusicServerManager.setSongStarred(songId: item.id, starred: starred);
+      if (success) {
+        _starredOverrides[item.id] = starred;
+        _showInfo(starred ? "Rated ${item.title}." : "Removed rating from ${item.title}.");
+      } else {
+        _showInfo("Could not update rating.");
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openPlaylistPicker() async {
+    if (_playlists.isEmpty) {
+      setState(() => _loading = true);
+      try {
+        _playlists = await MusicServerManager.getPlaylists();
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
+    }
+    if (mounted) setState(() => _playlistPickerVisible = true);
+  }
+
+  Widget _buildQueueButton(Color accent, Color onSurface, int queueLength, int currentIndex) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        onTap: queueLength == 0 ? null : () => setState(() => _queueVisible = true),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          decoration: BoxDecoration(
+            color: accent.withAlpha(12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withAlpha(30)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.queue_music_rounded, size: 16, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      "Queue",
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: onSurface),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      queueLength == 0 ? "No songs queued" : "Track $currentIndex of $queueLength",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: onSurface.withAlpha(130)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(18),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  "$queueLength",
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, size: 18, color: onSurface.withAlpha(130)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaylistPicker(Color accent, Color onSurface, MusicItem item) {
+    return Positioned.fill(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withAlpha(245),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: onSurface.withAlpha(24)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withAlpha(28),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _SectionLabel(
+                        icon: Icons.playlist_add_rounded,
+                        label: "Add To",
+                        count: _playlists.length,
+                        accent: accent,
+                        onSurface: onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => setState(() => _playlistPickerVisible = false),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(Icons.close_rounded, size: 17, color: onSurface.withAlpha(150)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_playlists.isEmpty)
+                  Expanded(
+                    child: _EmptyState(
+                      icon: Icons.playlist_remove_rounded,
+                      title: "No playlists",
+                      subtitle: "Create a playlist first, then add this song.",
+                      accent: accent,
+                      onSurface: onSurface,
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: _playlists.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (BuildContext context, int index) {
+                        final MusicPlaylist playlist = _playlists[index];
+                        return _PlaylistPickerRow(
+                          playlist: playlist,
+                          accent: accent,
+                          onSurface: onSurface,
+                          onTap: () => _addCurrentSongToPlaylist(playlist, item),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQueuePreview(Color accent, Color onSurface, SequenceState? sequenceState) {
+    final List<IndexedAudioSource> sequence = sequenceState?.sequence ?? <IndexedAudioSource>[];
+    if (sequence.isEmpty) return const SizedBox.shrink();
+    final int currentIndex = sequenceState?.currentIndex ?? 0;
+    final String query = _queueSearchController.text.trim().toLowerCase();
+    final List<_QueueEntry> entries = <_QueueEntry>[
+      for (int index = 0; index < sequence.length; index++)
+        if (sequence[index].tag is MusicItem) _QueueEntry(index: index, item: sequence[index].tag as MusicItem),
+    ];
+    final List<_QueueEntry> visibleEntries =
+        query.isEmpty ? entries : entries.where((_QueueEntry entry) => entry.matches(query)).toList(growable: false);
+
+    return Positioned.fill(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withAlpha(245),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: onSurface.withAlpha(24)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withAlpha(28),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: TextField(
+                          controller: _queueSearchController,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          decoration: _inputDecoration(
+                            hint: "Search queue by artist, album, or title",
+                            icon: Icons.queue_music_rounded,
+                            accent: accent,
+                            onSurface: onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => setState(() => _queueVisible = false),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Icon(Icons.close_rounded, size: 17, color: onSurface.withAlpha(150)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: visibleEntries.isEmpty
+                        ? _EmptyState(
+                            icon: Icons.search_off_rounded,
+                            title: "No queue matches",
+                            subtitle: "Try another artist, album, or title.",
+                            accent: accent,
+                            onSurface: onSurface,
+                          )
+                        : ClipRRect(
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: ListView.builder(
+                                itemCount: visibleEntries.length,
+                                itemExtent: 36,
+                                cacheExtent: 144,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final _QueueEntry entry = visibleEntries[index];
+                                  return _CompactQueueRow(
+                                    item: entry.item,
+                                    active: entry.index == currentIndex,
+                                    accent: accent,
+                                    onSurface: onSurface,
+                                    onTap: () => MusicServerManager.player.seek(Duration.zero, index: entry.index),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchTab(Color accent, Color onSurface) {
+    final List<MusicItem> artistResults =
+        _searchResults.where((MusicItem item) => item.type == MusicItemType.artist).toList(growable: false);
+    final List<MusicItem> albumResults =
+        _searchResults.where((MusicItem item) => item.type == MusicItemType.album).toList(growable: false);
+    final List<MusicItem> songResults =
+        _searchResults.where((MusicItem item) => !item.isFolder).toList(growable: false);
+
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            onSubmitted: (String e) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _searchFocusNode.requestFocus();
+              });
+              _search(e);
+            },
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(
+              hint: "Search artists, albums, or songs",
+              icon: Icons.search_rounded,
+              accent: accent,
+              onSurface: onSurface,
+              suffix: CancelTraversal(
+                child: IconButton(
+                  tooltip: "Search",
+                  onPressed: () {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _searchFocusNode.requestFocus();
+                    });
+                    _search(_searchController.text);
+                  },
+                  icon: Icon(Icons.arrow_forward_rounded, size: 16, color: accent),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _searchResults.isEmpty
+              ? _EmptyState(
+                  icon: _searchController.text.trim().isEmpty ? Icons.search_rounded : Icons.search_off_rounded,
+                  title: _searchController.text.trim().isEmpty
+                      ? (MusicServerManager.isLocalActive ? "Search local music" : "Search your server")
+                      : "No matches",
+                  subtitle: _searchController.text.trim().isEmpty
+                      ? "Type a title, artist, or album."
+                      : "Try a broader query.",
+                  accent: accent,
+                  onSurface: onSurface,
+                )
+              : ClipRRect(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: WindowsScrollView(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          if (artistResults.isNotEmpty) ...<Widget>[
+                            _SectionLabel(
+                              icon: Icons.person_search_rounded,
+                              label: "Artists",
+                              count: artistResults.length,
+                              accent: accent,
+                              onSurface: onSurface,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildItemSection(artistResults, accent, onSurface),
+                            const SizedBox(height: 12),
+                          ],
+                          if (albumResults.isNotEmpty) ...<Widget>[
+                            _SectionLabel(
+                              icon: Icons.album_rounded,
+                              label: "Albums",
+                              count: albumResults.length,
+                              accent: accent,
+                              onSurface: onSurface,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildItemSection(albumResults, accent, onSurface),
+                            const SizedBox(height: 12),
+                          ],
+                          if (songResults.isNotEmpty) ...<Widget>[
+                            _SectionLabel(
+                              icon: Icons.music_note_rounded,
+                              label: "Songs",
+                              count: songResults.length,
+                              accent: accent,
+                              onSurface: onSurface,
+                            ),
+                            const SizedBox(height: 8),
+                            _buildItemSection(songResults, accent, onSurface),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLibraryTab(Color accent, Color onSurface) {
+    if (_items.isEmpty && !_loading) {
+      return _EmptyState(
+        icon: Icons.library_music_outlined,
+        title: MusicServerManager.isConnected
+            ? (MusicServerManager.isLocalActive ? "Local library is empty" : "Library is empty")
+            : "No active music source",
+        subtitle: MusicServerManager.isConnected
+            ? (MusicServerManager.isLocalActive
+                ? "Add a music folder or reindex Local."
+                : "Refresh or check your Subsonic library.")
+            : "Add or activate a source in settings.",
+        accent: accent,
+        onSurface: onSurface,
+        actionLabel: "Refresh",
+        onAction: _refresh,
+      );
+    }
+    return _buildItemList(_items, accent, onSurface, playlistId: _activePlaylistId);
+  }
+
+  Widget _buildItemList(List<MusicItem> items, Color accent, Color onSurface, {String? playlistId}) {
+    return ClipRRect(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 6),
+          itemBuilder: (BuildContext context, int index) {
+            final MusicItem item = items[index];
+            return _MusicRow(
+              item: item,
+              accent: accent,
+              onSurface: onSurface,
+              onTap: () => _onItemTap(item, items, index),
+              trailingActions: <_RowAction>[
+                if (item.isFolder)
+                  _RowAction(
+                    icon: Icons.play_arrow_rounded,
+                    tooltip: "Play",
+                    onTap: () => _playLibraryItem(item),
+                  ),
+                if (item.isFolder)
+                  _RowAction(
+                    icon: Icons.shuffle_rounded,
+                    tooltip: "Shuffle",
+                    onTap: () => _playLibraryItem(item, shuffle: true),
+                  ),
+                if (!item.isFolder && playlistId != null)
+                  _RowAction(
+                    icon: Icons.delete_outline_rounded,
+                    tooltip: "Remove from playlist",
+                    onTap: () => _removeSongFromCurrentPlaylist(item, index),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemSection(List<MusicItem> items, Color accent, Color onSurface) {
+    return Column(
+      children: List<Widget>.generate(items.length, (int index) {
+        final MusicItem item = items[index];
+        return Padding(
+          padding: EdgeInsets.only(bottom: index == items.length - 1 ? 0 : 6),
+          child: _MusicRow(
+            item: item,
+            accent: accent,
+            onSurface: onSurface,
+            onTap: () => _onItemTap(item, items, index),
+            trailingActions: <_RowAction>[
+              if (item.isFolder)
+                _RowAction(
+                  icon: Icons.play_arrow_rounded,
+                  tooltip: "Play",
+                  onTap: () => _playLibraryItem(item),
+                ),
+              if (item.isFolder)
+                _RowAction(
+                  icon: Icons.shuffle_rounded,
+                  tooltip: "Shuffle",
+                  onTap: () => _playLibraryItem(item, shuffle: true),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildFoldersTab(Color accent, Color onSurface) {
+    if (_folderItems.isEmpty && !_loading) {
+      return _EmptyState(
+        icon: Icons.folder_outlined,
+        title: MusicServerManager.isConnected ? "No indexed folders" : "No active music source",
+        subtitle: MusicServerManager.isConnected
+            ? (MusicServerManager.isLocalActive
+                ? "Add a local root folder or reindex Local."
+                : "Refresh or check whether your server exposes Subsonic indexes.")
+            : "Add or activate a source in settings.",
+        accent: accent,
+        onSurface: onSurface,
+        actionLabel: "Refresh",
+        onAction: _refresh,
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+      itemCount: _folderItems.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      itemBuilder: (BuildContext context, int index) {
+        final MusicItem item = _folderItems[index];
+        return _MusicRow(
+          item: item,
+          accent: accent,
+          onSurface: onSurface,
+          onTap: () => _onFolderTap(item, _folderItems, index),
+          trailingActions: <_RowAction>[
+            _RowAction(
+              icon: Icons.play_arrow_rounded,
+              tooltip: item.isFolder ? "Play folder" : "Play track",
+              onTap: () => _playFolder(item),
+            ),
+            if (item.isFolder)
+              _RowAction(
+                icon: Icons.shuffle_rounded,
+                tooltip: "Shuffle folder",
+                onTap: () => _playFolder(item, shuffle: true),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaylistsTab(Color accent, Color onSurface) {
+    const List<_SmartPlaylistCategory> smartCategories = <_SmartPlaylistCategory>[
+      _SmartPlaylistCategory(
+        title: "Top Rated",
+        subtitle: "Starred songs",
+        icon: Icons.star_rounded,
+        type: _SmartPlaylistType.topRated,
+      ),
+      _SmartPlaylistCategory(
+        title: "Most Played",
+        subtitle: "Songs with higher play counts",
+        icon: Icons.local_fire_department_rounded,
+        type: _SmartPlaylistType.mostPlayed,
+      ),
+      _SmartPlaylistCategory(
+        title: "Recently Played",
+        subtitle: "Recently played songs",
+        icon: Icons.history_rounded,
+        type: _SmartPlaylistType.recentlyPlayed,
+      ),
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: _cardDecoration(onSurface),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _playlistNameController,
+                    onSubmitted: (_) => _createPlaylist(),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    decoration: _inputDecoration(
+                      hint: "New playlist name",
+                      icon: Icons.playlist_add_rounded,
+                      accent: accent,
+                      onSurface: onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _createPlaylist,
+                  borderRadius: BorderRadius.circular(9),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(24),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: accent.withAlpha(80)),
+                    ),
+                    child: Icon(Icons.add_rounded, size: 16, color: accent),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SectionLabel(
+            icon: Icons.auto_awesome_rounded,
+            label: MusicServerManager.isLocalActive ? "Local" : "Subsonic",
+            count: smartCategories.length,
+            accent: accent,
+            onSurface: onSurface,
+          ),
+          const SizedBox(height: 8),
+          ...smartCategories.map(
+            (_SmartPlaylistCategory category) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _SmartPlaylistRow(
+                category: category,
+                accent: accent,
+                onSurface: onSurface,
+                onTap: () => _openSmartPlaylist(category),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          _SectionLabel(
+            icon: Icons.playlist_play_rounded,
+            label: "Playlists",
+            count: _playlists.length,
+            accent: accent,
+            onSurface: onSurface,
+          ),
+          const SizedBox(height: 8),
+          if (_playlists.isEmpty && !_loading)
+            _InlinePanel(
+              icon: Icons.playlist_remove_rounded,
+              title: "No saved playlists",
+              subtitle: "Create a playlist above or refresh after creating one on your server.",
+              accent: accent,
+              onSurface: onSurface,
+            )
+          else
+            ..._playlists.map(
+              (MusicPlaylist playlist) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _PlaylistRow(
+                  playlist: playlist,
+                  accent: accent,
+                  onSurface: onSurface,
+                  onTap: () => _openPlaylist(playlist),
+                  trailingActions: <_RowAction>[
+                    _RowAction(
+                        icon: Icons.play_arrow_rounded, tooltip: "Play playlist", onTap: () => _playPlaylist(playlist)),
+                    _RowAction(
+                        icon: Icons.shuffle_rounded,
+                        tooltip: "Shuffle playlist",
+                        onTap: () => _playPlaylist(playlist, shuffle: true)),
+                    _RowAction(
+                        icon: Icons.delete_outline_rounded,
+                        tooltip: "Delete playlist",
+                        onTap: () => _deletePlaylist(playlist)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalSourceCard(Color accent, Color onSurface) {
+    final bool active = MusicServerManager.isLocalActive;
+    final bool indexing = MusicLocalIndexer.instance.isIndexingNotifier.value;
+    final int indexed = MusicLocalIndexer.instance.indexedCount.value;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: active ? accent.withAlpha(20) : onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: active ? accent.withAlpha(80) : onSurface.withAlpha(18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              _IconPill(
+                  icon: active ? Icons.radio_button_checked_rounded : Icons.folder_special_rounded, accent: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text("Local",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                    const SizedBox(height: 2),
+                    Text(
+                      indexing
+                          ? "Indexing $indexed tracks..."
+                          : "${_localRoots.length} folders - $_localSongCount tracks indexed",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                    ),
+                  ],
+                ),
+              ),
+              if (!active)
+                Tooltip(
+                  message: "Activate Local",
+                  child: _MiniIconButton(
+                    icon: Icons.login_rounded,
+                    accent: accent,
+                    onSurface: onSurface,
+                    onTap: _activateLocal,
+                  ),
+                ),
+              Tooltip(
+                message: "Edit folders",
+                child: _MiniIconButton(
+                  icon: Icons.edit_rounded,
+                  accent: accent,
+                  onSurface: onSurface,
+                  onTap: () => setState(() => _localEditorVisible = !_localEditorVisible),
+                ),
+              ),
+              Tooltip(
+                message: "Reindex all",
+                child: _MiniIconButton(
+                  icon: Icons.sync_rounded,
+                  accent: accent,
+                  onSurface: onSurface,
+                  onTap: _reindexLocalAll,
+                ),
+              ),
+            ],
+          ),
+          if (_localEditorVisible) ...<Widget>[
+            const SizedBox(height: 10),
+            _buildLocalRootEditor(accent, onSurface),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalRootEditor(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (_localRoots.isEmpty)
+            _InlinePanel(
+              icon: Icons.folder_off_rounded,
+              title: "No local folders",
+              subtitle: "Add a root folder to index local music.",
+              accent: accent,
+              onSurface: onSurface,
+            )
+          else
+            ..._localRoots.map(
+              (MusicRoot root) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      Directory(root.path).existsSync() ? Icons.folder_rounded : Icons.folder_off_rounded,
+                      size: 16,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        root.path,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: onSurface),
+                      ),
+                    ),
+                    Tooltip(
+                      message: "Reindex folder",
+                      child: _MiniIconButton(
+                        icon: Icons.sync_rounded,
+                        accent: accent,
+                        onSurface: onSurface,
+                        onTap: () async {
+                          setState(() => _loading = true);
+                          try {
+                            final MusicIndexResult result = await MusicServerManager.reindexLocalFolder(root.path);
+                            await _refresh();
+                            _showInfo("Indexed ${result.indexedCount} tracks.");
+                          } finally {
+                            if (mounted) setState(() => _loading = false);
+                          }
+                        },
+                      ),
+                    ),
+                    Tooltip(
+                      message: "Remove folder",
+                      child: _MiniIconButton(
+                        icon: Icons.delete_outline_rounded,
+                        accent: Colors.redAccent,
+                        onSurface: onSurface,
+                        onTap: () => _removeLocalRoot(root),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _addLocalRoot,
+            borderRadius: BorderRadius.circular(9),
+            child: Container(
+              height: 34,
+              decoration: BoxDecoration(
+                color: accent.withAlpha(24),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: accent.withAlpha(80)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.create_new_folder_rounded, size: 16, color: accent),
+                  const SizedBox(width: 6),
+                  Text("Add Music Folder", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab(Color accent, Color onSurface) {
+    final List<MusicServerConfig> configs = MusicServerManager.configs;
+    final String? activeId = MusicServerManager.activeConfigId;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _SectionLabel(
+              icon: Icons.dns_rounded,
+              label: "Servers",
+              count: configs.length + 1,
+              accent: accent,
+              onSurface: onSurface),
+          const SizedBox(height: 8),
+          _buildLocalSourceCard(accent, onSurface),
+          if (configs.isEmpty)
+            _InlinePanel(
+              icon: Icons.cloud_off_rounded,
+              title: "No remote servers configured",
+              subtitle: "Use Local above or add a Subsonic-compatible server below.",
+              accent: accent,
+              onSurface: onSurface,
+            )
+          else
+            ...configs.map((MusicServerConfig config) {
+              final bool active = config.id == activeId;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: active ? accent.withAlpha(20) : onSurface.withAlpha(8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: active ? accent.withAlpha(80) : onSurface.withAlpha(18)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    _IconPill(icon: active ? Icons.radio_button_checked_rounded : Icons.dns_outlined, accent: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(config.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                          const SizedBox(height: 2),
+                          Text(config.url,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130))),
+                        ],
+                      ),
+                    ),
+                    if (!active)
+                      _MiniIconButton(
+                        icon: Icons.login_rounded,
+                        accent: accent,
+                        onSurface: onSurface,
+                        onTap: () => _activateServer(config),
+                      ),
+                    _MiniIconButton(
+                      icon: Icons.sync_rounded,
+                      accent: accent,
+                      onSurface: onSurface,
+                      onTap: () => _testServer(config),
+                    ),
+                    _MiniIconButton(
+                      icon: Icons.delete_outline_rounded,
+                      accent: Colors.redAccent,
+                      onSurface: onSurface,
+                      onTap: () async {
+                        await MusicServerManager.removeServer(config.id);
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
+          const SizedBox(height: 16),
+          _SectionLabel(
+            icon: Icons.settings_suggest_rounded,
+            label: "Preferences",
+            count: 0,
+            accent: accent,
+            onSurface: onSurface,
+            hideCount: true,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: _cardDecoration(onSurface),
+            child: Row(
+              children: <Widget>[
+                _IconPill(icon: Icons.task_rounded, accent: accent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        "Show in Taskbar",
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Display playback controls in the quick menu taskbar.",
+                        style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Switch(
+                  value: globalSettings.showMusicPlayerInTaskbar,
+                  activeThumbColor: accent,
+                  onChanged: (bool val) async {
+                    globalSettings.showMusicPlayerInTaskbar = val;
+                    await Boxes.updateSettings("showMusicPlayerInTaskbar", val);
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SectionLabel(
+              icon: Icons.add_link_rounded,
+              label: "Add Subsonic type Server",
+              count: 0,
+              accent: accent,
+              onSurface: onSurface,
+              hideCount: true),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: _cardDecoration(onSurface),
+            child: Column(
+              children: <Widget>[
+                _buildTextField(_nameController, "Server name", Icons.badge_outlined, accent, onSurface),
+                const SizedBox(height: 8),
+                _buildTextField(_urlController, "Server URL", Icons.link_rounded, accent, onSurface),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                        child: _buildTextField(
+                            _userController, "Username", Icons.person_outline_rounded, accent, onSurface)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: _buildTextField(_passController, "Password", Icons.key_rounded, accent, onSurface,
+                            isPassword: true)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: _addServer,
+                  borderRadius: BorderRadius.circular(9),
+                  child: Container(
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(24),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: accent.withAlpha(80)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(Icons.add_rounded, size: 16, color: accent),
+                        const SizedBox(width: 6),
+                        Text("Add Subsonic type Server",
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _activateServer(MusicServerConfig config) async {
+    setState(() => _loading = true);
+    final bool success = await MusicServerManager.setActiveServer(config);
+    _showInfo(success ? "Switched to ${config.name}." : "Failed to connect to ${config.name}.");
+    if (mounted) setState(() => _loading = false);
+    if (success) unawaited(_refresh());
+  }
+
+  Future<void> _activateLocal() async {
+    setState(() => _loading = true);
+    final bool success = await MusicServerManager.setLocalActive();
+    if (success) {
+      _history.clear();
+      _historyPlaylistIds.clear();
+      _folderHistory.clear();
+      _folderPathHistory.clear();
+      _titles
+        ..clear()
+        ..add("Library");
+      _folderTitles
+        ..clear()
+        ..add("Folders");
+      _activePlaylistId = null;
+      _activeFolderPath = null;
+      _items = <MusicItem>[];
+      _folderItems = <MusicItem>[];
+      _rootFolders = <MusicItem>[];
+      _playlists = <MusicPlaylist>[];
+      _searchResults = <MusicItem>[];
+      await _refresh();
+    }
+    _showInfo(success ? "Switched to Local." : "Could not activate Local.");
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _addLocalRoot() async {
+    final DirectoryPicker picker = DirectoryPicker()..title = 'Select music folder';
+    final Directory? directory = picker.getDirectory();
+    if (directory == null) return;
+
+    setState(() => _loading = true);
+    try {
+      await MusicServerManager.addLocalRoot(directory.path);
+      await _refreshLocalSummary();
+      _showInfo("Indexing ${directory.path}.");
+      final MusicIndexResult result = await MusicServerManager.reindexLocalFolder(directory.path);
+      await _refresh();
+      _showInfo("Indexed ${result.indexedCount} tracks.");
+    } catch (_) {
+      _showInfo("Local folder indexing failed.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _removeLocalRoot(MusicRoot root) async {
+    setState(() => _loading = true);
+    try {
+      await MusicServerManager.removeLocalRoot(root.path);
+      await _refresh();
+      _showInfo("Removed ${root.title}.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _reindexLocalAll() async {
+    if (_localRoots.isEmpty) {
+      _showInfo("Add a local music folder first.");
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      _showInfo("Reindexing local music.");
+      final MusicIndexResult result = await MusicServerManager.reindexLocalAll();
+      await _refresh();
+      _showInfo("Indexed ${result.indexedCount} tracks.");
+    } catch (_) {
+      _showInfo("Local reindex failed.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _reindexCurrentFolder() async {
+    if (!MusicServerManager.isLocalActive) {
+      await _refresh();
+      return;
+    }
+
+    final String? folderPath = _activeFolderPath;
+    if (folderPath == null) {
+      await _reindexLocalAll();
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      _showInfo("Reindexing ${_folderTitles.last}.");
+      final MusicIndexResult result = await MusicServerManager.reindexLocalFolder(folderPath);
+      _folderItems = await MusicServerManager.getMusicDirectory('${MusicLibraryDb.folderIdPrefix}$folderPath');
+      await _refreshLocalSummary();
+      _showInfo("Indexed ${result.indexedCount} tracks.");
+    } catch (_) {
+      _showInfo("Folder reindex failed.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _testServer(MusicServerConfig config) async {
+    setState(() => _loading = true);
+    final bool success = await MusicServerManager.setActiveServer(config);
+    _showInfo(success ? "Connection OK." : "Connection failed.");
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _addServer() async {
+    if (_urlController.text.trim().isEmpty || _userController.text.trim().isEmpty) {
+      _showInfo("Server URL and username are required.");
+      return;
+    }
+
+    final MusicServerConfig config = MusicServerConfig(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _nameController.text.trim().isEmpty ? "Music Server" : _nameController.text.trim(),
+      url: _urlController.text.trim(),
+      username: _userController.text.trim(),
+      password: _passController.text,
+    );
+    await MusicServerManager.addServer(config);
+    _nameController.clear();
+    _urlController.clear();
+    _userController.clear();
+    _passController.clear();
+    _showInfo("Added ${config.name}.");
+    if (mounted) setState(() {});
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    Color accent,
+    Color onSurface, {
+    bool isPassword = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword,
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      decoration: _inputDecoration(hint: label, icon: icon, accent: accent, onSurface: onSurface),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+    required Color accent,
+    required Color onSurface,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      isDense: true,
+      hintText: hint,
+      hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(110)),
+      prefixIcon: Icon(icon, size: 16, color: accent),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: accent.withAlpha(10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: accent.withAlpha(90)),
+      ),
+    );
+  }
+
+  Widget _buildTabBar(Color accent, Color onSurface) {
+    final List<_TabSpec> tabs = <_TabSpec>[
+      const _TabSpec(Icons.graphic_eq_rounded, "Player"),
+      const _TabSpec(Icons.search_rounded, "Search"),
+      const _TabSpec(Icons.library_music_rounded, "Library"),
+      const _TabSpec(Icons.folder_rounded, "Folders"),
+      const _TabSpec(Icons.playlist_play_rounded, "Lists"),
+      const _TabSpec(Icons.settings_rounded, "Servers"),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(4),
+        border: Border(top: BorderSide(color: onSurface.withAlpha(12), width: 1)),
+      ),
+      child: Row(
+        children: tabs.asMap().entries.map((MapEntry<int, _TabSpec> entry) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: _TabButton(
+                icon: entry.value.icon,
+                label: entry.value.label,
+                active: entry.key == _tabIndex,
+                accent: accent,
+                onSurface: onSurface,
+                onTap: () => _setTab(entry.key),
+              ),
+            ),
+          );
+        }).toList(growable: false),
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration(Color onSurface) {
+    return BoxDecoration(
+      color: onSurface.withAlpha(8),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: onSurface.withAlpha(18)),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final int minutes = duration.inMinutes.remainder(60);
+    final int seconds = duration.inSeconds.remainder(60);
+    final int hours = duration.inHours;
+    if (hours > 0) return "$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+    return "$minutes:${seconds.toString().padLeft(2, '0')}";
+  }
+
+  Duration? _bestTimelineDuration(Duration? decoderDuration, Duration? metadataDuration) {
+    if (_isSaneTimelineDuration(decoderDuration)) return decoderDuration;
+    if (_isSaneTimelineDuration(metadataDuration)) return metadataDuration;
+    return null;
+  }
+
+  bool _isSaneTimelineDuration(Duration? duration) {
+    return duration != null && duration > Duration.zero && duration <= const Duration(hours: 24);
+  }
+}

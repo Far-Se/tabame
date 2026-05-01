@@ -6,28 +6,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../models/globals.dart';
+import '../../models/settings.dart';
+import '../../models/theme.dart';
+import '../../models/util/color_picker_controller.dart';
+import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
-import 'win32_helper.dart';
+import '../../models/win32/win_utils.dart';
+import '../../widgets/widgets/color_picker_panel.dart';
 import 'color_picker_painter.dart';
+import 'win32_helper.dart';
 
 // Virtual key codes
 const int _vkEscape = 0x1B;
 const int _vkLButton = 0x01;
 
 class ColorPickerApp extends StatelessWidget {
-  const ColorPickerApp({super.key});
+  const ColorPickerApp({super.key, this.isStandalone = false});
+  final bool isStandalone;
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: ColorPickerWindow(),
+    return ValueListenableBuilder<bool>(
+      valueListenable: Globals.themeChangeNotifier,
+      builder: (BuildContext context, _, __) {
+        ThemeMode scheduled = ThemeMode.system;
+        ThemeType themeType = globalSettings.themeType;
+        if (themeType.index == 3) {
+          scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+        }
+        ThemeMode themeMode =
+            <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.getLightThemeData(),
+          darkTheme: AppTheme.getDarkThemeData(context),
+          themeMode: themeMode,
+          home: ColorPickerWindow(isStandalone: isStandalone),
+        );
+      },
     );
   }
 }
 
 class ColorPickerWindow extends StatefulWidget {
-  const ColorPickerWindow({super.key});
+  const ColorPickerWindow({super.key, this.isStandalone = false});
+  final bool isStandalone;
 
   @override
   State<ColorPickerWindow> createState() => _ColorPickerWindowState();
@@ -55,6 +80,7 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
   bool _lbWasDown = false;
 
   Timer? _ticker;
+  bool _showPanel = false;
 
   // ── Window positioning around the cursor ──────────────────────────────────
   bool _showRight = true;
@@ -66,6 +92,13 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
   void initState() {
     super.initState();
     windowManager.addListener(this);
+
+    if (widget.isStandalone) {
+      // Ensure window resets to picker size on start/hot-restart
+      Win32.setSize(Win32.hWnd, 171, 227);
+      windowManager.setAlwaysOnTop(true);
+    }
+
     // ~60 fps
     _ticker = Timer.periodic(const Duration(milliseconds: 16), _tick);
   }
@@ -80,6 +113,7 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
   // ── Main update loop ──────────────────────────────────────────────────────
 
   void _tick(Timer _) {
+    if (_showPanel) return;
     final CaptureResult capture = Win32Helper.captureGrid();
 
     // ── Escape → exit ──────────────────────────────────────────────────────
@@ -119,8 +153,7 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
 
   // ── Pick colour → clipboard + grid.json + exit ────────────────────────────
 
-  void _onPick(CaptureResult capture) {
-    // if (!reposition) return;
+  void _onPick(CaptureResult capture) async {
     final String hex = capture.center.hex;
     final PixelColor c = capture.center;
 
@@ -138,9 +171,50 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
       _center = capture.center;
     });
 
-    // Brief flash then exit
-    Future<void>.delayed(const Duration(milliseconds: 750), _exit);
-    reposition = false;
+    if (widget.isStandalone || globalSettings.args.contains("-colorPicker")) {
+      final List<List<ColorGridSample>> gridSamples =
+          List<List<ColorGridSample>>.generate(capture.grid.length, (int row) {
+        return List<ColorGridSample>.generate(capture.grid[row].length, (int col) {
+          final PixelColor px = capture.grid[row][col];
+          return ColorGridSample(r: px.r, g: px.g, b: px.b, hex: px.hex);
+        });
+      });
+
+      final ColorPickerCapture captureData = ColorPickerCapture(
+        center: ColorGridSample(r: capture.center.r, g: capture.center.g, b: capture.center.b, hex: capture.center.hex),
+        grid: gridSamples,
+      );
+
+      ColorPickerController.instance.updateCapture(captureData);
+
+      setState(() {
+        _showPanel = true;
+        reposition = false;
+      });
+
+      await windowManager.setSize(const Size(355, 580));
+      await windowManager.setAlwaysOnTop(false);
+      await windowManager.setAlignment(Alignment.center);
+    } else {
+      // Brief flash then exit
+      Future<void>.delayed(const Duration(milliseconds: 750), _exit);
+      reposition = false;
+    }
+  }
+
+  void _onPickRequested() async {
+    final PointXY pos = WinUtils.getMousePos();
+    final int hwnd = Win32.hWnd;
+
+    windowManager.setAlwaysOnTop(true);
+    // Use Win32 helper to resize and move immediately to avoid "dashboard dragging" feel
+    Win32.setPosDPI(hwnd, pos, logicalWidth: 171, logicalHeight: 227);
+
+    setState(() {
+      _showPanel = false;
+      reposition = true;
+      _lbWasDown = true; // Avoid instant pick if button is still held
+    });
   }
 
   // ── Reposition window ─────────────────────────────────────────────────────
@@ -201,6 +275,38 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: _showPanel ? _buildPanel() : _buildPicker(),
+    );
+  }
+
+  Widget _buildPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: ColorPickerPanel(
+          onPickRequested: _onPickRequested,
+          onClose: widget.isStandalone ? _exit : null,
+          isStandalone: widget.isStandalone,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPicker() {
     final EdgeInsets pickerPadding = EdgeInsets.only(
       left: _showRight ? _cursorInset : 0,
       top: _showBelow ? _cursorInset : 0,
@@ -208,34 +314,31 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
       bottom: _showBelow ? 0 : _cursorInset,
     );
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: MouseRegion(
-        onEnter: (_) => reposition = true,
-        child: KeyboardListener(
-          focusNode: FocusNode()..requestFocus(),
-          onKeyEvent: (KeyEvent e) {
-            if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
-              _exit();
-            }
-          },
-          child: SizedBox.expand(
-            child: ColoredBox(
-              color: Colors.transparent,
-              child: Padding(
-                padding: pickerPadding,
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CustomPaint(
-                      painter: ColorPickerPainter(
-                        grid: _grid,
-                        center: _center,
-                        copied: _copied,
-                      ),
-                      size: const Size(_pickerWidth, _pickerHeight),
+    return MouseRegion(
+      onEnter: (_) => reposition = true,
+      child: KeyboardListener(
+        focusNode: FocusNode()..requestFocus(),
+        onKeyEvent: (KeyEvent e) {
+          if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
+            _exit();
+          }
+        },
+        child: SizedBox.expand(
+          child: ColoredBox(
+            color: Colors.transparent,
+            child: Padding(
+              padding: pickerPadding,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CustomPaint(
+                    painter: ColorPickerPainter(
+                      grid: _grid,
+                      center: _center,
+                      copied: _copied,
                     ),
+                    size: const Size(_pickerWidth, _pickerHeight),
                   ),
                 ),
               ),

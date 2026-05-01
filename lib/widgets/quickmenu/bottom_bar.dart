@@ -1,74 +1,153 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../models/classes/boxes.dart';
+
+import '../../models/classes/boxes/boxes_base.dart';
+import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
-import '../itzy/quickmenu/list_powershell.dart';
-import '../itzy/quickmenu/widget_time.dart';
-import '../itzy/quickmenu/widget_time_weather.dart';
-import '../itzy/quickmenu/widget_usage.dart';
-import '../itzy/quickmenu/widget_weather.dart';
+import '../../models/util/quick_action_list.dart';
+import '../itzy/quickmenu/button_changelog.dart';
+import '../itzy/quickmenu/button_logo_drag.dart';
+import '../itzy/quickmenu/button_open_settings.dart';
+import '../itzy/quickmenu/button_persistent_reminders.dart';
+import '../itzy/quickmenu/button_testing.dart';
+import '../itzy/quickmenu/list_pinned_apps.dart';
+import '../widgets/bar_with_buttons.dart';
+import 'tray_bar.dart';
 
-class BottomBar extends StatelessWidget {
-  const BottomBar({super.key});
+class PinnedAndTrayList extends StatelessWidget {
+  const PinnedAndTrayList({super.key});
 
   @override
   Widget build(BuildContext context) {
-    Debug.add("QuickMenu: BottomBar");
-    Globals.heights.traybar = 30;
-    final bool showPowerShell = globalSettings.showPowerShell && Boxes().powerShellScripts.isNotEmpty;
-    if (!showPowerShell &&
-        !globalSettings.showSystemUsage &&
-        (globalSettings.showTrayBar || !globalSettings.showTrayBar)) {
-      if (!globalSettings.showWeather) {
-        return const TimeWidget(inline: true);
-      } else {
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) => ConstrainedBox(
-              constraints: BoxConstraints(
-                  minWidth: constraints.minWidth,
-                  minHeight: constraints.minHeight,
-                  maxWidth: constraints.maxWidth,
-                  maxHeight: constraints.maxHeight),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                verticalDirection: VerticalDirection.down,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  TimeWidget(inline: true),
-                  Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10), child: WeatherWidget(width: 80, showUnit: true)),
-                ],
-              )),
-        );
+    final double height = globalSettings.expandedTaskbar ? 32 : 27;
+    Globals.heights.pinnedAndTray = height;
+    return Container(
+      height: height,
+      width: double.infinity,
+      child: Padding(
+        padding: !globalSettings.expandedTaskbar
+            ? const EdgeInsets.fromLTRB(7, 3, 3, 3)
+            : const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            const Flexible(flex: 4, child: PinnedApps()),
+            if (globalSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
+            const Flexible(flex: 4, child: TrayBar()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class BarWithQuickActions extends StatefulWidget {
+  const BarWithQuickActions({super.key});
+
+  @override
+  State<BarWithQuickActions> createState() => _BarWithQuickActionsState();
+}
+
+class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMenuTriggers {
+  List<Widget> showWidgets = <Widget>[];
+  Map<String, Widget> widgets = <String, Widget>{};
+  OverlayEntry? _logoDragOverlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    QuickMenuFunctions.addListener(this);
+    Debug.add("QuickMenu: Topbar");
+    widgets.addAll(
+        quickActionsMap.map((String key, QuickAction value) => MapEntry<String, Widget>("$key", value.widget())));
+    final List<String> showWidgetsNames = Boxes().topBarWidgets;
+    for (String x in showWidgetsNames) {
+      if (x == "Deactivated:") break;
+      if (widgets.containsKey(x)) {
+        showWidgets.add(widgets[x]!);
       }
     }
-    return Container(
-      width: 280,
-      height: 31,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: Colors.transparent),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Theme(
-            data: Theme.of(context).copyWith(
-                tooltipTheme: Theme.of(context).tooltipTheme.copyWith(
-                    preferBelow: false, decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface))),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              verticalDirection: VerticalDirection.down,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox(width: 100, child: TimeWeatherWidget()),
-                if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()),
-                if (showPowerShell) const Expanded(flex: 3, child: PowershellList()),
-                if (showPowerShell) const SizedBox(width: 5),
-              ],
+    Globals.heights.topbar = 25;
+  }
+
+  @override
+  void dispose() {
+    _removeLogoDragOverlay();
+    QuickMenuFunctions.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void refreshQuickMenu() {
+    if (mounted) {
+      setState(() {});
+    } else {}
+  }
+
+  void _syncLogoDragOverlay() {
+    if (_logoDragOverlayEntry != null) {
+      _logoDragOverlayEntry!.markNeedsBuild();
+      return;
+    }
+
+    final OverlayState overlay = Overlay.of(context, rootOverlay: true);
+
+    _logoDragOverlayEntry = OverlayEntry(
+      builder: (BuildContext context) => Positioned(
+        left: 10,
+        top: 20,
+        width: 28,
+        height: 25.1,
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            iconTheme: IconThemeData(
+              size: 16,
+              color: Theme.of(context).iconTheme.color,
             ),
+            hoverColor: Colors.grey.withAlpha(50),
+          ),
+          child: const Material(
+            color: Colors.transparent,
+            child: LogoDragButton(),
           ),
         ),
       ),
+    );
+    overlay.insert(_logoDragOverlayEntry!);
+  }
+
+  void _removeLogoDragOverlay() {
+    _logoDragOverlayEntry?.remove();
+    _logoDragOverlayEntry = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncLogoDragOverlay();
+    });
+    return Theme(
+      data: Theme.of(context).copyWith(
+        iconTheme: IconThemeData(
+          size: 16,
+          color: Theme.of(context).iconTheme.color,
+        ),
+        hoverColor: Colors.grey.withAlpha(50),
+      ),
+      child: showWidgets.isNotEmpty
+          ? BarWithButtons(
+              height: 25.1,
+              children: <Widget>[
+                if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
+                if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
+                if (kDebugMode) const TestingButton(),
+                const OpenSettingsButton(),
+              ],
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

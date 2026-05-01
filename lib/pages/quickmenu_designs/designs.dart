@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
-import 'main_menu_classic_design.dart';
-import 'main_menu_interface_design.dart';
-import 'main_menu_modern_design.dart';
+import 'design_classic.dart';
+import 'design_interface.dart';
+import 'design_modern.dart';
+import 'design_matrix.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -18,20 +21,42 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
 
   @override
   void onQuickActionExecute(String actionName) {
-    if (actionName == "refreshQuickMenu") {
-      PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
-      if (mounted) {
-        setState(() {
-          _refreshCounter++;
-        });
+    if (actionName == "RefreshQuickMenu") {
+      refreshQuickMenu();
+    }
+  }
+
+  @override
+  void refreshQuickMenu() {
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    _handleWindowSize();
+    if (mounted) {
+      setState(() {
+        _refreshCounter++;
+      });
+    }
+  }
+
+  Future<void> _handleWindowSize() async {
+    final bool isMatrix = QuickMenuDesigns.values[globalSettings.quickMenuDesign] == QuickMenuDesigns.matrix;
+    if (isMatrix) {
+      final Size size = await windowManager.getSize();
+      if (size.width < 340) {
+        await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
+        await windowManager.setSize(Size(Globals.quickMenuSize.width, size.height));
+      } else {
+        await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
       }
+    } else {
+      await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
     }
   }
 
   @override
   void initState() {
     QuickMenuFunctions.addListener(this);
+    _handleWindowSize();
     super.initState();
   }
 
@@ -47,6 +72,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.classic => MainMenuClassicWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.interface => MainMenuInterfaceWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.modern => MainMenuModernWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.matrix => MainMenuMatrixWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

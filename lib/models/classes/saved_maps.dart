@@ -7,7 +7,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../settings.dart';
-import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 
 abstract class SavedMap {
   const SavedMap();
@@ -76,6 +76,11 @@ class AppAudioControl extends SavedMap {
 
   factory AppAudioControl.fromJson(String source) =>
       AppAudioControl.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() {
+    return 'AppAudioControl(name: $name, exe: $exe, path: $path, iconPath: $iconPath, iconCodePoint: $iconCodePoint, hotkeyForward: $hotkeyForward, hotkeyRewind: $hotkeyRewind, hotkeyNext: $hotkeyNext, hotkeyPrev: $hotkeyPrev, hotkeyPause: $hotkeyPause, showAnimation: $showAnimation)';
+  }
 }
 
 class Reminder extends SavedMap {
@@ -236,24 +241,55 @@ class CliBookItem {
       );
 }
 
+class CliBookCategory {
+  String name;
+  List<CliBookItem> items;
+  bool isCollapsed;
+  CliBookCategory({
+    required this.name,
+    required this.items,
+    this.isCollapsed = false,
+  });
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'name': name,
+        'items': items.map((CliBookItem x) => x.toJson()).toList(),
+        'isCollapsed': isCollapsed,
+      };
+
+  factory CliBookCategory.fromJson(Map<String, dynamic> json) => CliBookCategory(
+        name: (json['name'] ?? "") as String,
+        items: List<CliBookItem>.from(
+          (json['items'] as List<dynamic>? ?? <dynamic>[]).map<CliBookItem>(
+            (dynamic x) => CliBookItem.fromJson(x as Map<String, dynamic>),
+          ),
+        ),
+        isCollapsed: (json['isCollapsed'] ?? false) as bool,
+      );
+}
+
 class BookmarkGroup extends SavedMap {
   String title;
   String emoji;
+  String viewMode;
   List<BookmarkInfo> bookmarks;
   BookmarkGroup({
     required this.title,
     required this.emoji,
     required this.bookmarks,
+    this.viewMode = 'list',
   });
 
   BookmarkGroup copyWith({
     String? title,
     String? emoji,
+    String? viewMode,
     List<BookmarkInfo>? bookmarks,
   }) {
     return BookmarkGroup(
       title: title ?? this.title,
       emoji: emoji ?? this.emoji,
+      viewMode: viewMode ?? this.viewMode,
       bookmarks: bookmarks ?? this.bookmarks,
     );
   }
@@ -262,6 +298,7 @@ class BookmarkGroup extends SavedMap {
     return <String, dynamic>{
       'title': title,
       'emoji': emoji,
+      'viewMode': viewMode,
       'projects': bookmarks.map((BookmarkInfo x) => x.toMap()).toList(),
     };
   }
@@ -270,6 +307,7 @@ class BookmarkGroup extends SavedMap {
     return BookmarkGroup(
       title: map['title'] as String,
       emoji: map['emoji'] as String,
+      viewMode: (map['viewMode'] ?? 'list') as String,
       bookmarks: List<BookmarkInfo>.from(
         (map['projects'] as List<dynamic>).map<BookmarkInfo>(
           (dynamic x) => BookmarkInfo.fromMap(x as Map<String, dynamic>),
@@ -283,39 +321,45 @@ class BookmarkGroup extends SavedMap {
   factory BookmarkGroup.fromJson(String source) => BookmarkGroup.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() => 'ProjectGroup(title: $title, emoji: $emoji, projects: $bookmarks)';
+  String toString() => 'ProjectGroup(title: $title, emoji: $emoji, viewMode: $viewMode, projects: $bookmarks)';
 
   @override
   bool operator ==(covariant BookmarkGroup other) {
     if (identical(this, other)) return true;
 
-    return other.title == title && other.emoji == emoji && listEquals(other.bookmarks, bookmarks);
+    return other.title == title &&
+        other.emoji == emoji &&
+        other.viewMode == viewMode &&
+        listEquals(other.bookmarks, bookmarks);
   }
 
   @override
-  int get hashCode => title.hashCode ^ emoji.hashCode ^ bookmarks.hashCode;
+  int get hashCode => title.hashCode ^ emoji.hashCode ^ viewMode.hashCode ^ bookmarks.hashCode;
 }
 
 class BookmarkInfo {
   String emoji;
   String title;
-  // ProjectType type;
   String stringToExecute;
+  bool preferInputIcon;
   BookmarkInfo({
     required this.emoji,
     required this.title,
     required this.stringToExecute,
+    this.preferInputIcon = false,
   });
 
   BookmarkInfo copyWith({
     String? emoji,
     String? title,
     String? stringToExecute,
+    bool? preferInputIcon,
   }) {
     return BookmarkInfo(
       emoji: emoji ?? this.emoji,
       title: title ?? this.title,
       stringToExecute: stringToExecute ?? this.stringToExecute,
+      preferInputIcon: preferInputIcon ?? this.preferInputIcon,
     );
   }
 
@@ -324,6 +368,7 @@ class BookmarkInfo {
       'emoji': emoji,
       'title': title,
       'stringToExecute': stringToExecute,
+      'preferInputIcon': preferInputIcon,
     };
   }
 
@@ -332,6 +377,7 @@ class BookmarkInfo {
       emoji: map['emoji'] as String,
       title: map['title'] as String,
       stringToExecute: map['stringToExecute'] as String,
+      preferInputIcon: (map['preferInputIcon'] ?? false) as bool,
     );
   }
 
@@ -340,138 +386,141 @@ class BookmarkInfo {
   factory BookmarkInfo.fromJson(String source) => BookmarkInfo.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() => 'ProjectInfo(emoji: $emoji, title: $title, stringToExecute: $stringToExecute)';
+  String toString() =>
+      'ProjectInfo(emoji: $emoji, title: $title, stringToExecute: $stringToExecute, preferInputIcon: $preferInputIcon)';
 
   @override
   bool operator ==(covariant BookmarkInfo other) {
     if (identical(this, other)) return true;
 
-    return other.emoji == emoji && other.title == title && other.stringToExecute == stringToExecute;
+    return other.emoji == emoji &&
+        other.title == title &&
+        other.stringToExecute == stringToExecute &&
+        other.preferInputIcon == preferInputIcon;
   }
 
   @override
-  int get hashCode => emoji.hashCode ^ title.hashCode ^ stringToExecute.hashCode;
-}
-
-class PowerShellScript extends SavedMap {
-  String command;
-  String name;
-  bool showTerminal;
-  bool disabled = false;
-  PowerShellScript({
-    required this.command,
-    required this.name,
-    required this.showTerminal,
-    this.disabled = false,
-  });
-
-  PowerShellScript copyWith({
-    String? command,
-    String? name,
-    bool? showTerminal,
-    bool? disabled,
-  }) {
-    return PowerShellScript(
-      command: command ?? this.command,
-      name: name ?? this.name,
-      showTerminal: showTerminal ?? this.showTerminal,
-      disabled: disabled ?? this.disabled,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'command': command,
-      'name': name,
-      'showTerminal': showTerminal,
-      'disabled': disabled,
-    };
-  }
-
-  factory PowerShellScript.fromMap(Map<String, dynamic> map) {
-    return PowerShellScript(
-      command: map['command'] as String,
-      name: map['name'] as String,
-      showTerminal: map['showTerminal'] as bool,
-      disabled: map['disabled'] as bool,
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory PowerShellScript.fromJson(String source) =>
-      PowerShellScript.fromMap(json.decode(source) as Map<String, dynamic>);
-
-  @override
-  String toString() {
-    return 'PowerShellScript(command: $command, name: $name, showTerminal: $showTerminal, disabled: $disabled)';
-  }
-
-  @override
-  bool operator ==(covariant PowerShellScript other) {
-    if (identical(this, other)) return true;
-
-    return other.command == command &&
-        other.name == name &&
-        other.showTerminal == showTerminal &&
-        other.disabled == disabled;
-  }
-
-  @override
-  int get hashCode {
-    return command.hashCode ^ name.hashCode ^ showTerminal.hashCode ^ disabled.hashCode;
-  }
+  int get hashCode => emoji.hashCode ^ title.hashCode ^ stringToExecute.hashCode ^ preferInputIcon.hashCode;
 }
 
 class ThemeColors {
-  int background;
+  Color background;
   int gradientAlpha;
-  int textColor;
-  int accentColor;
-  bool quickMenuBoldFont;
+  Color textColor;
+  Color accentColor;
+  String uiFontFamily;
+  int uiFontWeight;
+  bool uiFontItalic;
+  String entryFontFamily;
+  int entryFontWeight;
+  bool entryFontItalic;
+  List<String> backdropImages;
+  String backdropType;
+  double backdropOpacity;
+  List<double> panelOpacityPoints;
+  String panelOpacityBegin;
+  String panelOpacityEnd;
   ThemeColors({
     required this.background,
     required this.gradientAlpha,
     required this.textColor,
     required this.accentColor,
-    required this.quickMenuBoldFont,
+    this.uiFontFamily = 'Jura',
+    this.uiFontWeight = 400,
+    this.uiFontItalic = false,
+    this.entryFontFamily = 'Jura',
+    this.entryFontWeight = 700,
+    this.entryFontItalic = false,
+    this.backdropImages = const <String>[],
+    this.backdropType = '',
+    this.backdropOpacity = 0.7,
+    this.panelOpacityPoints = const <double>[0.0, 1.0, 1.0, 1.0],
+    this.panelOpacityBegin = 'Top Left',
+    this.panelOpacityEnd = 'Bottom Right',
   });
 
 // #region (collapsed) [ThemeColors]
 
   ThemeColors copyWith({
-    int? background,
+    Color? background,
     int? gradientAlpha,
-    int? textColor,
-    int? accentColor,
+    Color? textColor,
+    Color? accentColor,
     bool? quickMenuBoldFont,
+    String? uiFontFamily,
+    int? uiFontWeight,
+    bool? uiFontItalic,
+    String? entryFontFamily,
+    int? entryFontWeight,
+    bool? entryFontItalic,
+    List<String>? backdropImages,
+    String? backdropType,
+    double? backdropOpacity,
+    List<double>? panelOpacityPoints,
+    String? panelOpacityBegin,
+    String? panelOpacityEnd,
   }) {
     return ThemeColors(
       background: background ?? this.background,
       gradientAlpha: gradientAlpha ?? this.gradientAlpha,
       textColor: textColor ?? this.textColor,
       accentColor: accentColor ?? this.accentColor,
-      quickMenuBoldFont: quickMenuBoldFont ?? this.quickMenuBoldFont,
+      uiFontFamily: uiFontFamily ?? this.uiFontFamily,
+      uiFontWeight: uiFontWeight ?? this.uiFontWeight,
+      uiFontItalic: uiFontItalic ?? this.uiFontItalic,
+      entryFontFamily: entryFontFamily ?? this.entryFontFamily,
+      entryFontWeight: entryFontWeight ?? this.entryFontWeight,
+      entryFontItalic: entryFontItalic ?? this.entryFontItalic,
+      backdropImages: backdropImages ?? this.backdropImages,
+      backdropType: backdropType ?? this.backdropType,
+      backdropOpacity: backdropOpacity ?? this.backdropOpacity,
+      panelOpacityPoints: panelOpacityPoints ?? this.panelOpacityPoints,
+      panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
+      panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
     );
   }
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
-      'background': background,
+      'background': background.value32bit,
       'gradientAlpha': gradientAlpha,
-      'textColor': textColor,
-      'accentColor': accentColor,
-      'quickMenuBoldFont': quickMenuBoldFont,
+      'textColor': textColor.value32bit,
+      'accentColor': accentColor.value32bit,
+      'uiFontFamily': uiFontFamily,
+      'uiFontWeight': uiFontWeight,
+      'uiFontItalic': uiFontItalic,
+      'entryFontFamily': entryFontFamily,
+      'entryFontWeight': entryFontWeight,
+      'entryFontItalic': entryFontItalic,
+      'backdropImages': backdropImages,
+      'backdropType': backdropType,
+      'backdropOpacity': backdropOpacity,
+      'panelOpacityPoints': panelOpacityPoints,
+      'panelOpacityBegin': panelOpacityBegin,
+      'panelOpacityEnd': panelOpacityEnd,
     };
   }
 
   factory ThemeColors.fromMap(Map<String, dynamic> map) {
     return ThemeColors(
-      background: map['background'] as int,
+      background: Color(map['background'] as int),
       gradientAlpha: map['gradientAlpha'] as int,
-      textColor: map['textColor'] as int,
-      accentColor: map['accentColor'] as int,
-      quickMenuBoldFont: map['quickMenuBoldFont'] ?? false,
+      textColor: Color(map['textColor'] as int),
+      accentColor: Color(map['accentColor'] as int),
+      uiFontFamily: (map['uiFontFamily'] ?? 'Jura') as String,
+      uiFontWeight: (map['uiFontWeight'] ?? 400) as int,
+      uiFontItalic: (map['uiFontItalic'] ?? false) as bool,
+      entryFontFamily: (map['entryFontFamily'] ?? 'Jura') as String,
+      entryFontWeight: (map['entryFontWeight'] ?? 700) as int,
+      entryFontItalic: (map['entryFontItalic'] ?? false) as bool,
+      backdropImages: List<String>.from(map['backdropImages'] ?? const <String>[]),
+      backdropType: (map['backdropType'] ?? '') as String,
+      backdropOpacity: (map['backdropOpacity'] ?? 0.7) as double,
+      panelOpacityPoints: List<double>.from(
+          (map['panelOpacityPoints'] as List<dynamic>?)?.map((dynamic e) => (e as num).toDouble()) ??
+              const <double>[0.0, 1.0, 1.0, 1.0]),
+      panelOpacityBegin: (map['panelOpacityBegin'] ?? 'Top Left') as String,
+      panelOpacityEnd: (map['panelOpacityEnd'] ?? 'Bottom Right') as String,
     );
   }
 
@@ -481,7 +530,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, quickMenuBoldFont: $quickMenuBoldFont)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd)';
   }
 
   @override
@@ -492,7 +541,18 @@ class ThemeColors {
         other.gradientAlpha == gradientAlpha &&
         other.textColor == textColor &&
         other.accentColor == accentColor &&
-        other.quickMenuBoldFont == quickMenuBoldFont;
+        other.uiFontFamily == uiFontFamily &&
+        other.uiFontWeight == uiFontWeight &&
+        other.uiFontItalic == uiFontItalic &&
+        other.entryFontFamily == entryFontFamily &&
+        other.entryFontWeight == entryFontWeight &&
+        other.entryFontItalic == entryFontItalic &&
+        listEquals(other.backdropImages, backdropImages) &&
+        other.backdropType == backdropType &&
+        other.backdropOpacity == backdropOpacity &&
+        listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
+        other.panelOpacityBegin == panelOpacityBegin &&
+        other.panelOpacityEnd == panelOpacityEnd;
   }
 
   @override
@@ -501,7 +561,15 @@ class ThemeColors {
         gradientAlpha.hashCode ^
         textColor.hashCode ^
         accentColor.hashCode ^
-        quickMenuBoldFont.hashCode;
+        uiFontFamily.hashCode ^
+        uiFontWeight.hashCode ^
+        uiFontItalic.hashCode ^
+        entryFontFamily.hashCode ^
+        entryFontWeight.hashCode ^
+        entryFontItalic.hashCode ^
+        backdropImages.hashCode ^
+        backdropType.hashCode ^
+        panelOpacityPoints.hashCode;
   }
 // #endregion
 }
@@ -1056,4 +1124,238 @@ class ViewsSettings {
   String toString() {
     return 'ViewsSettings(minW: $minW, maxW: $maxW, minH: $minH, maxH: $maxH, scaleW: $scaleW, scaleH: $scaleH, scrollStepW: $scrollStepW, scrollStepH: $scrollStepH, bgColor: $bgColor)';
   }
+}
+
+class WallpaperSchedule extends SavedMap {
+  String id;
+  String name;
+  bool enabled;
+  int monitorIndex; // -1 for all monitors
+  int startHour;
+  int startMinute;
+  int endHour;
+  int endMinute;
+  List<String> images;
+  String? folderPath;
+  int shuffleDelayMinutes;
+  int lastChangeTimestamp;
+  int currentImageIndex;
+  int fillMode; // WallpaperFillMode.index
+
+  WallpaperSchedule({
+    required this.id,
+    required this.name,
+    this.enabled = true,
+    this.monitorIndex = -1,
+    required this.startHour,
+    required this.startMinute,
+    required this.endHour,
+    required this.endMinute,
+    required this.images,
+    this.folderPath,
+    this.shuffleDelayMinutes = 30,
+    this.lastChangeTimestamp = 0,
+    this.currentImageIndex = 0,
+    this.fillMode = 4, // Default to Fill
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'enabled': enabled,
+      'monitorIndex': monitorIndex,
+      'startHour': startHour,
+      'startMinute': startMinute,
+      'endHour': endHour,
+      'endMinute': endMinute,
+      'images': images,
+      'folderPath': folderPath,
+      'shuffleDelayMinutes': shuffleDelayMinutes,
+      'lastChangeTimestamp': lastChangeTimestamp,
+      'currentImageIndex': currentImageIndex,
+      'fillMode': fillMode,
+    };
+  }
+
+  factory WallpaperSchedule.fromMap(Map<String, dynamic> map) {
+    return WallpaperSchedule(
+      id: (map['id'] ?? '') as String,
+      name: (map['name'] ?? '') as String,
+      enabled: (map['enabled'] ?? true) as bool,
+      monitorIndex: (map['monitorIndex'] ?? -1) as int,
+      startHour: (map['startHour'] ?? 0) as int,
+      startMinute: (map['startMinute'] ?? 0) as int,
+      endHour: (map['endHour'] ?? 0) as int,
+      endMinute: (map['endMinute'] ?? 0) as int,
+      images: List<String>.from(map['images'] ?? <String>[]),
+      folderPath: map['folderPath'] as String?,
+      shuffleDelayMinutes: (map['shuffleDelayMinutes'] ?? 30) as int,
+      lastChangeTimestamp: (map['lastChangeTimestamp'] ?? 0) as int,
+      currentImageIndex: (map['currentImageIndex'] ?? 0) as int,
+      fillMode: (map['fillMode'] ?? 4) as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory WallpaperSchedule.fromJson(String source) =>
+      WallpaperSchedule.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  bool operator ==(covariant WallpaperSchedule other) {
+    if (identical(this, other)) return true;
+
+    return other.id == id &&
+        other.name == name &&
+        other.enabled == enabled &&
+        other.monitorIndex == monitorIndex &&
+        other.startHour == startHour &&
+        other.startMinute == startMinute &&
+        other.endHour == endHour &&
+        other.endMinute == endMinute &&
+        listEquals(other.images, images) &&
+        other.folderPath == folderPath &&
+        other.shuffleDelayMinutes == shuffleDelayMinutes &&
+        other.lastChangeTimestamp == lastChangeTimestamp &&
+        other.currentImageIndex == currentImageIndex &&
+        other.fillMode == fillMode;
+  }
+
+  @override
+  int get hashCode {
+    return id.hashCode ^
+        name.hashCode ^
+        enabled.hashCode ^
+        monitorIndex.hashCode ^
+        startHour.hashCode ^
+        startMinute.hashCode ^
+        endHour.hashCode ^
+        endMinute.hashCode ^
+        images.hashCode ^
+        folderPath.hashCode ^
+        shuffleDelayMinutes.hashCode ^
+        lastChangeTimestamp.hashCode ^
+        currentImageIndex.hashCode ^
+        fillMode.hashCode;
+  }
+}
+
+class WorkspaceArea {
+  double left;
+  double top;
+  double right;
+  double bottom;
+  int monitorNumber;
+  String windowTitle;
+  String executable;
+  String parameters;
+  String hookTo;
+  List<String> hooks;
+
+  WorkspaceArea({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    this.monitorNumber = -1,
+    this.windowTitle = '',
+    this.executable = '',
+    this.parameters = '',
+    this.hookTo = '',
+    List<String>? hooks,
+  }) : hooks = hooks ?? <String>[];
+
+  WorkspaceArea copyWith({
+    double? left,
+    double? top,
+    double? right,
+    double? bottom,
+    int? monitorNumber,
+    String? windowTitle,
+    String? executable,
+    String? parameters,
+    String? hookTo,
+    List<String>? hooks,
+  }) {
+    return WorkspaceArea(
+      left: left ?? this.left,
+      top: top ?? this.top,
+      right: right ?? this.right,
+      bottom: bottom ?? this.bottom,
+      monitorNumber: monitorNumber ?? this.monitorNumber,
+      windowTitle: windowTitle ?? this.windowTitle,
+      executable: executable ?? this.executable,
+      parameters: parameters ?? this.parameters,
+      hookTo: hookTo ?? this.hookTo,
+      hooks: hooks ?? List<String>.from(this.hooks),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'left': left,
+        'top': top,
+        'right': right,
+        'bottom': bottom,
+        'monitorNumber': monitorNumber,
+        'windowTitle': windowTitle,
+        'executable': executable,
+        'parameters': parameters,
+        'hookTo': hookTo,
+        'hooks': hooks,
+      };
+
+  factory WorkspaceArea.fromMap(Map<String, dynamic> map) => WorkspaceArea(
+        left: (map['left'] as num?)?.toDouble() ?? 0.0,
+        top: (map['top'] as num?)?.toDouble() ?? 0.0,
+        right: (map['right'] as num?)?.toDouble() ?? 1.0,
+        bottom: (map['bottom'] as num?)?.toDouble() ?? 1.0,
+        monitorNumber: (map['monitorNumber'] ?? -1) as int,
+        windowTitle: (map['windowTitle'] ?? '') as String,
+        executable: (map['executable'] ?? '') as String,
+        parameters: (map['parameters'] ?? '') as String,
+        hookTo: (map['hookTo'] ?? '') as String,
+        hooks: List<String>.from(map['hooks'] ?? <String>[]),
+      );
+}
+
+class Workspace extends SavedMap {
+  String id;
+  String name;
+  List<WorkspaceArea> areas;
+
+  Workspace({
+    required this.id,
+    required this.name,
+    List<WorkspaceArea>? areas,
+  }) : areas = areas ?? <WorkspaceArea>[];
+
+  Workspace copyWith({
+    String? id,
+    String? name,
+    List<WorkspaceArea>? areas,
+  }) {
+    return Workspace(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      areas: areas ?? this.areas.map((WorkspaceArea a) => a.copyWith()).toList(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'areas': areas.map((WorkspaceArea a) => a.toMap()).toList(),
+      };
+
+  factory Workspace.fromMap(Map<String, dynamic> map) => Workspace(
+        id: (map['id'] ?? '') as String,
+        name: (map['name'] ?? 'Workspace') as String,
+        areas: (map['areas'] as List<dynamic>? ?? <dynamic>[])
+            .map((dynamic e) => WorkspaceArea.fromMap(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+  String toJson() => json.encode(toMap());
+  factory Workspace.fromJson(String source) => Workspace.fromMap(json.decode(source) as Map<String, dynamic>);
 }

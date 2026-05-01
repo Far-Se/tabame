@@ -1,3 +1,16 @@
+import 'package:flutter/widgets.dart';
+
+const Map<String, Alignment> panelAlignmentMap = <String, Alignment>{
+  'Top Left': Alignment.topLeft,
+  'Top Center': Alignment.topCenter,
+  'Top Right': Alignment.topRight,
+  'Center Left': Alignment.centerLeft,
+  'Center Right': Alignment.centerRight,
+  'Bottom Left': Alignment.bottomLeft,
+  'Bottom Center': Alignment.bottomCenter,
+  'Bottom Right': Alignment.bottomRight,
+};
+
 const List<List<int>> lightThemeOptions = <List<int>>[
   //fav
   <int>[0xffD5E0FB, 0xff3A404A, 0xff446EE9],

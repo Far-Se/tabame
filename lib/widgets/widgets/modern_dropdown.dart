@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'custom_tooltip.dart';
+
 class ModernDropdownItem<T> {
   final T value;
   final String label;
@@ -54,86 +56,79 @@ class ModernDropdown<T> extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                hoverColor: colors.primary.withAlpha(20),
-                splashColor: colors.primary.withAlpha(40),
+        Theme(
+          data: Theme.of(context).copyWith(
+            hoverColor: colors.primary.withAlpha(0),
+            splashColor: colors.primary.withAlpha(0),
+          ),
+          child: CustomTooltip(
+            message: labelText ?? "Select option",
+            child: PopupMenuButton<T>(
+              onSelected: onChanged,
+              tooltip: "",
+              offset: const Offset(0, 0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: colors.outlineVariant.withAlpha(100)),
               ),
-              child: PopupMenuButton<T>(
-                tooltip: labelText ?? "Select option",
-                onSelected: onChanged,
-                offset: const Offset(0, 0),
-                constraints: BoxConstraints(
-                  minWidth: constraints.maxWidth,
-                  maxWidth: constraints.maxWidth,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colors.outlineVariant.withAlpha(100)),
-                ),
-                elevation: 8,
-                shadowColor: Colors.black.withAlpha(100),
-                position: PopupMenuPosition.under,
-                itemBuilder: (BuildContext context) => items.map((ModernDropdownItem<T> item) {
-                  final bool isSelected = item.value == value;
-                  return PopupMenuItem<T>(
-                    value: item.value,
-                    height: 40,
-                    child: Row(
-                      children: <Widget>[
-                        if (item.icon != null) ...<Widget>[
-                          Icon(item.icon,
-                              size: 18, color: isSelected ? colors.primary : colors.onSurfaceVariant),
-                          const SizedBox(width: 12),
-                        ],
-                        Text(
-                          item.label,
-                          style: texts.bodyMedium?.copyWith(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? colors.primary : colors.onSurface,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (isSelected)
-                          Icon(Icons.check_rounded, size: 16, color: colors.primary),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colors.outlineVariant.withAlpha(100)),
-                  ),
+              elevation: 8,
+              shadowColor: Colors.black.withAlpha(100),
+              position: PopupMenuPosition.under,
+              itemBuilder: (BuildContext context) => items.map((ModernDropdownItem<T> item) {
+                final bool isSelected = item.value == value;
+                return PopupMenuItem<T>(
+                  value: item.value,
+                  height: 40,
                   child: Row(
                     children: <Widget>[
-                      if (prefixIcon != null) ...<Widget>[
-                        prefixIcon!,
+                      if (item.icon != null) ...<Widget>[
+                        Icon(item.icon, size: 18, color: isSelected ? colors.primary : colors.onSurfaceVariant),
                         const SizedBox(width: 12),
                       ],
-                      if (selectedItem.icon != null && prefixIcon == null) ...<Widget>[
-                        Icon(selectedItem.icon, size: 18, color: colors.primary),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: Text(
-                          selectedItem.label,
-                          style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        item.label,
+                        style: texts.bodyMedium?.copyWith(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? colors.primary : colors.onSurface,
                         ),
                       ),
-                      Icon(Icons.unfold_more_rounded, size: 18, color: colors.onSurfaceVariant),
+                      const Spacer(),
+                      if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
                     ],
                   ),
+                );
+              }).toList(),
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.outlineVariant.withAlpha(100)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    if (prefixIcon != null) ...<Widget>[
+                      prefixIcon!,
+                      const SizedBox(width: 12),
+                    ],
+                    if (selectedItem.icon != null && prefixIcon == null) ...<Widget>[
+                      Icon(selectedItem.icon, size: 18, color: colors.primary),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Text(
+                        selectedItem.label,
+                        style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.unfold_more_rounded, size: 18, color: colors.onSurfaceVariant),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ],
     );

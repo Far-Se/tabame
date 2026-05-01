@@ -7,9 +7,9 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/classes/hotkeys.dart';
+import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
-import '../../widgets/checkbox_widget.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../../models/win32/win_utils.dart';
 
 class MouseInfoWidget extends StatefulWidget {
   final Function(AnchorType anchor) onAnchorTypeChanged;
@@ -105,115 +105,281 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = theme.colorScheme.onSurface;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        CheckBoxWidget(
-          key: UniqueKey(),
-          onChanged: (bool e) => setState(() => trackingEnabled = !trackingEnabled),
-          value: trackingEnabled,
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          text: "Track Mouse Info. Press ALT to pause (${tracking && trackingEnabled ? "Tracking" : "Paused"})",
-        ),
+        // Tracker Control Bar and Anchor Split
         Row(
-          mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            SizedBox(
-              width: 100,
+            Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      CustomTooltip(
-                          message: AnchorType.topLeft.name.toString(),
-                          child: Checkbox(
-                              value: anchor == AnchorType.topLeft,
-                              onChanged: (bool? e) => onAnchorChanged(AnchorType.topLeft))),
-                      CustomTooltip(
-                          message: AnchorType.topRight.name.toString(),
-                          child: Checkbox(
-                              value: anchor == AnchorType.topRight,
-                              onChanged: (bool? e) => onAnchorChanged(AnchorType.topRight))),
-                    ],
+                  Text(
+                    "LIVE TRACKING",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: onSurface.withAlpha(150),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      CustomTooltip(
-                          message: AnchorType.bottomLeft.name.toString(),
-                          child: Checkbox(
-                              value: anchor == AnchorType.bottomLeft,
-                              onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomLeft))),
-                      CustomTooltip(
-                          message: AnchorType.bottomRight.name.toString(),
-                          child: Checkbox(
-                              value: anchor == AnchorType.bottomRight,
-                              onChanged: (bool? e) => onAnchorChanged(AnchorType.bottomRight))),
-                    ],
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () => setState(() => trackingEnabled = !trackingEnabled),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (trackingEnabled && tracking) ? Colors.green.withAlpha(40) : Colors.orange.withAlpha(40),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: (trackingEnabled && tracking)
+                              ? Colors.green.withAlpha(100)
+                              : Colors.orange.withAlpha(100),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(
+                            (trackingEnabled && tracking) ? Icons.play_arrow : Icons.pause,
+                            size: 14,
+                            color: (trackingEnabled && tracking) ? Colors.green : Colors.orange,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            (trackingEnabled && tracking) ? "ACTIVE" : "PAUSED",
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: (trackingEnabled && tracking) ? Colors.green : Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Press ALT to pause/resume",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: onSurface.withAlpha(120),
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),
             ),
-            Expanded(
+            const SizedBox(width: 16),
+            // Visual Anchor Selector
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "ANCHOR",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: onSurface.withAlpha(150),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildAnchorSelector(theme, accent),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Textual Dashboard
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              "TELEMETRY",
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: onSurface.withAlpha(150),
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withAlpha(60),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: onSurface.withAlpha(30)),
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  const Text("Mouse Position:"),
-                  SelectableText(mousePos),
-                  const Text("Position Anchored:"),
-                  SelectableText(mouseAnchor),
-                  const Text("As Percentage:"),
-                  SelectableText(mouseAnchorPercentage),
-                  const Text("Window exe:"),
-                  SelectableText(windowExe, maxLines: null),
-                  const Text("Window class:"),
-                  SelectableText(windowClass, maxLines: null),
-                  const Text("Window title:"),
-                  SelectableText(windowTitle, maxLines: null),
+                  _buildDataRow("Screen Pos", mousePos, theme),
+                  _buildDataRow("Anchored Pos", mouseAnchor, theme),
+                  _buildDataRow("Percentage", mouseAnchorPercentage, theme),
+                  Divider(height: 16, thickness: 1, color: onSurface.withAlpha(20)),
+                  _buildDataRow("Window Title", windowTitle, theme),
+                  _buildDataRow("Executable", windowExe, theme),
+                  _buildDataRow("Win Class", windowClass, theme),
                 ],
               ),
             ),
           ],
         ),
-        Markdown(
-          shrinkWrap: true,
-          selectable: true,
-          data: '''
-## Limit to a window:
-You can limit to a specific window if you change "Any Window" to a filter you want. The match is regex aware.
+        const SizedBox(height: 16),
 
-## Info About Region:
-You can can execute this hotkey if the mouse is in a specific rectangle, either in an window or on Screen.
-You can anchor the points to a position of specific screen,
- for example if you want to execute this only if the mouse is in bottomCorner, 
- you set Anchor Point to BottomRight, then make an rectacle startX,startY:endX,endY as big as you want.
+        // Expandable Documentation
+        Theme(
+          data: theme.copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Row(
+              children: <Widget>[
+                Icon(Icons.help_outline, size: 18, color: onSurface.withAlpha(150)),
+                const SizedBox(width: 8),
+                Text(
+                  "Documentation & Shortcuts",
+                  style: theme.textTheme.titleSmall?.copyWith(color: onSurface.withAlpha(200)),
+                ),
+              ],
+            ),
+            children: <Widget>[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withAlpha(50),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: onSurface.withAlpha(20)),
+                ),
+                child: MarkdownBody(
+                  selectable: true,
+                  data: '''
+**Limit to a window:**
+You can limit the execution to a specific window by setting "Any Window" to your desired filter. Regex is supported.
 
-## Info about sendKeys:
+**Region Targeting:**
+Trigger actions only when the mouse is inside a specific rectangle (on-screen or inside window bounds).
+Anchor to a screen position: For example, to target the bottom corner, set the Anchor Point to `BottomRight` and define a rectangle via `startX,startY:endX,endY`.
 
-You can send multiple hotkeys or keystrokes.Use # to hold a key and ^ to release.
-All Special keys need to be put between {}.To release all previous keys use {|}.
+**Keystroke Commands:**
+Send multiple key presses in a sequence. 
+- Use `#` to hold a key.
+- Use `^` to release a key.
+- Use `{}` to wrap special keys.
+- Use `{|}` to forcibly release all previously held keys.
 
-```{#CTRL}{#SHIFT}{ESCAPE}{|}{#SHIFT}{TAB}{^SHIFT}{RIGHT}```
+*Example:* `{#CTRL}{#SHIFT}{ESCAPE}{|}{#SHIFT}{TAB}{^SHIFT}{RIGHT}`
+Will open Task Manager and navigate tabs.
 
-Will open Task Manager And move to Performance Tab.
+[View all supported special keys](here)
 
-[Here you can find all special keys name](here)
-
-Aditionally, for mouse use {LMB} {MMB} {RMB} {MSU} {MSD}
+*Mouse Commands:* `{LMB}`, `{MMB}`, `{RMB}`, `{MSU}`, `{MSD}`
 ''',
-          onTapLink: (String e, String? e1, String e2) {
-            WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/keys.dart#L188");
-          },
-        )
+                  onTapLink: (String text, String? href, String title) {
+                    WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/win32/keys.dart#L188");
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildAnchorSelector(ThemeData theme, Color accent) {
+    return Container(
+      width: 70,
+      height: 70,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withAlpha(80),
+        border: Border.all(color: theme.colorScheme.onSurface.withAlpha(40)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: <Widget>[
+          Expanded(
+            child: Row(
+              children: <Widget>[
+                _buildAnchorQuadrant(AnchorType.topLeft, accent, const BorderRadius.only(topLeft: Radius.circular(7))),
+                Container(width: 1, color: theme.colorScheme.onSurface.withAlpha(40)),
+                _buildAnchorQuadrant(
+                    AnchorType.topRight, accent, const BorderRadius.only(topRight: Radius.circular(7))),
+              ],
+            ),
+          ),
+          Container(height: 1, color: theme.colorScheme.onSurface.withAlpha(40)),
+          Expanded(
+            child: Row(
+              children: <Widget>[
+                _buildAnchorQuadrant(
+                    AnchorType.bottomLeft, accent, const BorderRadius.only(bottomLeft: Radius.circular(7))),
+                Container(width: 1, color: theme.colorScheme.onSurface.withAlpha(40)),
+                _buildAnchorQuadrant(
+                    AnchorType.bottomRight, accent, const BorderRadius.only(bottomRight: Radius.circular(7))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnchorQuadrant(AnchorType type, Color accent, BorderRadius radius) {
+    final bool isSelected = anchor == type;
+    return Expanded(
+      child: InkWell(
+        onTap: () => onAnchorChanged(type),
+        borderRadius: radius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? accent.withAlpha(70) : Colors.transparent,
+            borderRadius: radius,
+          ),
+          child: Center(
+            child: isSelected ? Icon(Icons.my_location, size: 16, color: accent) : const SizedBox(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDataRow(String label, String value, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withAlpha(130),
+              fontWeight: FontWeight.w700,
+              fontSize: 9,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          SelectableText(
+            value.isEmpty ? "—" : value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withAlpha(240),
+              fontFamily: 'Consolas',
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

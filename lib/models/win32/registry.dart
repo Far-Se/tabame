@@ -8,7 +8,10 @@ import 'package:win32/win32.dart';
 enum AccessRights {
   readOnly,
   writeOnly,
-  allAccess;
+  allAccess,
+  readOnly64,
+  writeOnly64,
+  allAccess64;
 
   int get win32Value {
     switch (this) {
@@ -18,6 +21,12 @@ enum AccessRights {
         return KEY_WRITE;
       case AccessRights.allAccess:
         return KEY_ALL_ACCESS;
+      case AccessRights.readOnly64:
+        return KEY_READ | KEY_WOW64_64KEY;
+      case AccessRights.writeOnly64:
+        return KEY_WRITE | KEY_WOW64_64KEY;
+      case AccessRights.allAccess64:
+        return KEY_ALL_ACCESS | KEY_WOW64_64KEY;
     }
   }
 }
@@ -33,8 +42,16 @@ class RegistryKeyInfo {
   final int securityDescriptorLength;
   final DateTime? lastWriteTime;
 
-  const RegistryKeyInfo(this.className, this.subKeyCount, this.subKeyNameMaxLength, this.subKeyClassNameMaxLength, this.valuesCount, this.valueNameMaxLength,
-      this.valueDataMaxSizeInBytes, this.securityDescriptorLength, this.lastWriteTime);
+  const RegistryKeyInfo(
+      this.className,
+      this.subKeyCount,
+      this.subKeyNameMaxLength,
+      this.subKeyClassNameMaxLength,
+      this.valuesCount,
+      this.valueNameMaxLength,
+      this.valueDataMaxSizeInBytes,
+      this.securityDescriptorLength,
+      this.lastWriteTime);
 }
 
 /// One of the predefined keys that point into one or more hives that Windows
@@ -158,7 +175,8 @@ class RegistryKey {
     final PointerData lpWin32Data = value.toWin32;
 
     try {
-      final int retcode = RegSetValueEx(hkey, lpValueName, NULL, value.type.win32Value, lpWin32Data.data, lpWin32Data.lengthInBytes);
+      final int retcode =
+          RegSetValueEx(hkey, lpValueName, NULL, value.type.win32Value, lpWin32Data.data, lpWin32Data.lengthInBytes);
 
       if (retcode != ERROR_SUCCESS) {
         throw WindowsException(HRESULT_FROM_WIN32(retcode));
@@ -166,6 +184,15 @@ class RegistryKey {
     } finally {
       free(lpValueName);
       free(lpWin32Data.data);
+    }
+  }
+
+  /// Writes pending registry changes to disk.
+  void flush() {
+    final int retcode = RegFlushKey(hkey);
+
+    if (retcode != ERROR_SUCCESS) {
+      throw WindowsException(HRESULT_FROM_WIN32(retcode));
     }
   }
 
@@ -185,7 +212,8 @@ class RegistryKey {
     // Now call for real to get the data we need.
     final Pointer<BYTE> pvData = calloc<BYTE>(pcbData.value);
     retcode = RegGetValue(hkey, lpSubKey, lpValue, flags, pdwType, pvData, pcbData);
-    final RegistryValue registryValue = RegistryValue.fromWin32(lpValue.toDartString(), pdwType.value, pvData, pcbData.value);
+    final RegistryValue registryValue =
+        RegistryValue.fromWin32(lpValue.toDartString(), pdwType.value, pvData, pcbData.value);
 
     free(lpSubKey);
     free(lpValue);
@@ -197,10 +225,12 @@ class RegistryKey {
   }
 
   /// Retrieves the string data for the specified registry value.
-  String? getValueAsString(String valueName, {bool expandPaths = false}) {
-    final RegistryValue? registryValue = getValue(valueName, expandPaths: expandPaths);
+  String? getValueAsString(String valueName, {String path = '', bool expandPaths = false}) {
+    final RegistryValue? registryValue = getValue(valueName, path: path, expandPaths: expandPaths);
 
-    if (registryValue != null && <RegistryValueType>[RegistryValueType.string, RegistryValueType.unexpandedString, RegistryValueType.link].contains(registryValue.type)) {
+    if (registryValue != null &&
+        <RegistryValueType>[RegistryValueType.string, RegistryValueType.unexpandedString, RegistryValueType.link]
+            .contains(registryValue.type)) {
       return registryValue.data as String;
     } else {
       return null;
@@ -208,8 +238,8 @@ class RegistryKey {
   }
 
   /// Retrieves the integer data for the specified registry value.
-  int? getValueAsInt(String valueName) {
-    final RegistryValue? registryValue = getValue(valueName);
+  int? getValueAsInt(String valueName, {String path = ''}) {
+    final RegistryValue? registryValue = getValue(valueName, path: path);
 
     if (registryValue != null &&
         <RegistryValueType>[
@@ -289,8 +319,16 @@ class RegistryKey {
 
       final DateTime? lastWriteTime = convertToDartDateTime(lpftLastWriteTime);
 
-      return RegistryKeyInfo(lpClass.toDartString(), lpcSubKeys.value, lpcbMaxSubKeyLen.value, lpcbMaxClassLen.value, lpcValues.value, lpcbMaxValueNameLen.value,
-          lpcbMaxValueLen.value, lpcbSecurityDescriptor.value, lastWriteTime);
+      return RegistryKeyInfo(
+          lpClass.toDartString(),
+          lpcSubKeys.value,
+          lpcbMaxSubKeyLen.value,
+          lpcbMaxClassLen.value,
+          lpcValues.value,
+          lpcbMaxValueNameLen.value,
+          lpcbMaxValueLen.value,
+          lpcbSecurityDescriptor.value,
+          lastWriteTime);
     });
   }
 
@@ -514,7 +552,8 @@ class RegistryValue {
   }
 
   @override
-  bool operator ==(Object other) => other is RegistryValue && other.name == name && other.type == type && other.data == data;
+  bool operator ==(Object other) =>
+      other is RegistryValue && other.name == name && other.type == type && other.data == data;
 
   @override
   int get hashCode => name.hashCode * data.hashCode;
@@ -547,7 +586,8 @@ class Registry {
   ///
   /// When you are finished with the key, you should close it and release the
   /// handle with the [RegistryKey.close] method.
-  static RegistryKey openPath(RegistryHive hive, {String path = '', AccessRights desiredAccessRights = AccessRights.readOnly}) {
+  static RegistryKey openPath(RegistryHive hive,
+      {String path = '', AccessRights desiredAccessRights = AccessRights.readOnly}) {
     final Pointer<HKEY> phKey = calloc<HKEY>();
     final Pointer<Utf16> lpSubKey = path.toNativeUtf16();
     try {
@@ -582,11 +622,14 @@ class Registry {
     }
   }
 
-  static RegistryKey get localMachine => openPath(RegistryHive.localMachine, desiredAccessRights: AccessRights.readOnly);
+  static RegistryKey get localMachine =>
+      openPath(RegistryHive.localMachine, desiredAccessRights: AccessRights.readOnly);
   static RegistryKey get allUsers => openPath(RegistryHive.allUsers, desiredAccessRights: AccessRights.readOnly);
-  static RegistryKey get performanceData => openPath(RegistryHive.performanceData, desiredAccessRights: AccessRights.readOnly);
+  static RegistryKey get performanceData =>
+      openPath(RegistryHive.performanceData, desiredAccessRights: AccessRights.readOnly);
   static RegistryKey get classesRoot => openPath(RegistryHive.classesRoot, desiredAccessRights: AccessRights.readOnly);
-  static RegistryKey get currentConfig => openPath(RegistryHive.currentConfig, desiredAccessRights: AccessRights.readOnly);
+  static RegistryKey get currentConfig =>
+      openPath(RegistryHive.currentConfig, desiredAccessRights: AccessRights.readOnly);
 }
 
 class PointerData {
@@ -606,8 +649,8 @@ DateTime? convertToDartDateTime(Pointer<FILETIME> lpFileTime) {
     if (result == FALSE) return null;
 
     final SYSTEMTIME systemTime = lpSystemTime.ref;
-    final DateTime dateTime =
-        DateTime.utc(systemTime.wYear, systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds);
+    final DateTime dateTime = DateTime.utc(systemTime.wYear, systemTime.wMonth, systemTime.wDay, systemTime.wHour,
+        systemTime.wMinute, systemTime.wSecond, systemTime.wMilliseconds);
 
     return dateTime;
   } finally {

@@ -18,7 +18,7 @@ The primary purpose of this app is to provide users with a quick and easy way to
 
 This is a window management tool that helps you organize and keep track of all your open windows in one place. It's great for keeping your desktop tidy and making sure you don't lose any important information.
 
-You can pin files and apps for quick access, show System Information and quick-run PowerShell Scripts all in one place. Also you can manage your Tray Icons.
+You can pin files and apps for quick access and show System Information all in one place. Also you can manage your Tray Icons.
 
 Main reason of QuickMenu is to hide taskbar so you can focus on your work: less badges, flashes and notifications.
 
@@ -69,7 +69,6 @@ const String markdownHomeRight = '''
   - Middle Click to Skip to Previous Track.
   - Scroll Wheel to change volume.
 ### **Task Bar Windows**
-  - **If you press play/skip on a window and have Spotify open, it will try to block Spotify from Playing.** It works most of the times...
   - Right click opens a window with Actions.
   - Dragging to left or right moves window to specified Virtual Desktop.
   - You can add media controls for a specific app from QuickMenu Settings.

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -9,10 +10,12 @@ import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
+import '../models/win32/win_utils.dart';
 import 'error_handler.dart';
 
 class AppStartup {
   static Future<void> initialize() async {
+    Debug.register(clean: true);
     if (File("${WinUtils.getTabameAppDataFolder()}\\enable_debug.txt").existsSync()) {
       Debug.register(clean: false);
     }
@@ -40,8 +43,6 @@ class AppStartup {
       globalSettings.args = <String>[...arguments];
       if (argString.contains("interface")) {
         globalSettings.page = TPage.interface;
-      } else if (argString.contains("views")) {
-        globalSettings.page = TPage.views;
       }
     }
     Debug.add("Parsed arguments ${globalSettings.page}");
@@ -75,14 +76,6 @@ class AppStartup {
     if (globalSettings.args.contains("-restarted")) {
       Future<void>.delayed(const Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
     }
-    if (kReleaseMode &&
-        globalSettings.views &&
-        !globalSettings.args.contains('-views') &&
-        !globalSettings.args.contains("-interface")) {
-      Debug.add("Starting Views");
-      Future<void>.delayed(
-          const Duration(seconds: 3), () => WinUtils.startTabame(closeCurrent: false, arguments: "-views"));
-    }
     return false;
   }
 
@@ -95,16 +88,7 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
-    if (arguments.contains('-views')) {
-      windowOptions = const WindowOptions(
-        size: Size(300, 300),
-        center: false,
-        backgroundColor: Colors.transparent,
-        skipTaskbar: true,
-        alwaysOnTop: true,
-        title: "Tabame Views",
-      );
-    } else if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
       late String title;
       if (globalSettings.args.contains("-wizardly")) {
         title = "Wizardly";
@@ -122,12 +106,11 @@ class AppStartup {
         title: "Tabame - $title",
       );
     } else {
-      List<double> size = Boxes.quickMenuSize;
-      if (size.length != 2) size = <double>[299, 539];
+      final double size = Boxes.quickMenuWidth;
       windowOptions = WindowOptions(
-        size: Size(size[0], size[1]),
-        minimumSize: const Size(298, 539),
-        maximumSize: const Size(1200, 539),
+        size: Size(size, Globals.quickMenuSize.height),
+        minimumSize: Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height),
+        maximumSize: const Size(32000, 32000),
         center: false,
         backgroundColor: Colors.transparent,
         skipTaskbar: true,
@@ -143,6 +126,7 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
+      await ClipboardHooks.start();
       Globals.fullLoaded.value = true;
       Debug.add("Set windowOptions");
     });

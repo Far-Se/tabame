@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/vault_item.dart';
 import '../../../models/classes/vault_manager.dart';
 import '../../../models/settings.dart';
+import '../../widgets/mix_widgets.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/panel_header.dart';
@@ -14,7 +16,7 @@ class VaultsButton extends StatelessWidget {
   const VaultsButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Vaults", icon: Icon(Icons.lock_rounded), child: VaultsWidget());
+    return ModalButton(actionName: "Vaults", icon: const Icon(Icons.lock_rounded), child: () => const VaultsWidget());
   }
 }
 
@@ -62,14 +64,14 @@ class VaultsWidgetState extends State<VaultsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _buildHeader(accent, onSurface),
+        CancelTraversal(child: _buildHeader(accent, onSurface)),
         Flexible(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -145,7 +147,6 @@ class VaultsWidgetState extends State<VaultsWidget> {
         title: "New Vault",
         accent: accent,
         icon: Icons.shield_rounded,
-        boldFont: true,
         buttonPressed: () => setState(() {
           _creating = false;
           _errorMessage = null;
@@ -158,7 +159,6 @@ class VaultsWidgetState extends State<VaultsWidget> {
       title: "Vaults",
       accent: accent,
       icon: Icons.lock_outline_rounded,
-      boldFont: true,
       buttonPressed: () => setState(() => _creating = true),
       buttonIcon: Icons.add,
     );
@@ -207,9 +207,11 @@ class VaultsWidgetState extends State<VaultsWidget> {
             return ListTile(
               leading: Icon(Icons.lock_person_rounded, size: 20, color: accent.withAlpha(200)),
               title: Text(name, style: const TextStyle(fontSize: 14)),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                onPressed: () => _confirmDelete(name),
+              trailing: CancelTraversal(
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  onPressed: () => _confirmDelete(name),
+                ),
               ),
               onTap: () async {
                 final VaultData? data = await VaultManager.decryptVault(name, "n0p@s5");
@@ -435,7 +437,7 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
 
           return _VaultItemTile(
             item: item,
-            accent: widget.accent,
+            accent: globalSettings.themeColors.accentColor,
             onSurface: widget.onSurface,
             onEdit: () => setState(() {
               _editingIndex = index;
@@ -456,7 +458,8 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
     return Container(
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(color: widget.accent.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+          color: globalSettings.themeColors.accentColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: <Widget>[
           TextField(
@@ -524,7 +527,8 @@ class _VaultItemTileState extends State<_VaultItemTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-            color: _hovered ? widget.accent.withAlpha(60) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8)),
         child: InkWell(
           onTap: () {
             Clipboard.setData(ClipboardData(text: widget.item.value));
@@ -555,7 +559,9 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                   ),
                 ),
                 if (_copied)
-                  Text("Copied!", style: TextStyle(fontSize: 10, color: widget.accent, fontWeight: FontWeight.bold)),
+                  Text("Copied!",
+                      style: TextStyle(
+                          fontSize: 10, color: globalSettings.themeColors.accentColor, fontWeight: FontWeight.bold)),
                 if (_hovered && !_copied) ...<Widget>[
                   IconButton(
                       onPressed: widget.onEdit,

@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/settings.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/custom_tooltip.dart';
 
 class TrktivityHeatMap extends StatefulWidget {
   final List<String> allDates;
   final String folder;
+  final void Function(String)? onDaySelected;
 
-  const TrktivityHeatMap({super.key, required this.allDates, required this.folder});
+  const TrktivityHeatMap({super.key, required this.allDates, required this.folder, this.onDaySelected});
 
   @override
   TrktivityHeatMapState createState() => TrktivityHeatMapState();
@@ -115,6 +116,7 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
   /// Scroll to the rightmost position so today is visible.
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
@@ -314,10 +316,23 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
             : null,
       ),
     );
-    return CustomTooltip(
-        message: "${DateFormat("MMM dd, yyyy").format(day)}\n${keys.formatNum()} keypresses",
-        ignorePointer: true,
-        child: cell);
+    Widget tooltip = CustomTooltip(
+      message: "${DateFormat("MMM dd, yyyy").format(day)}\n${keys.formatNum()} keypresses",
+      child: cell,
+      verticalOffset: 50,
+    );
+
+    return GestureDetector(
+      onTap: () {
+        if (widget.onDaySelected != null && widget.allDates.contains(dateKey)) {
+          widget.onDaySelected!(dateKey);
+        }
+      },
+      child: MouseRegion(
+        cursor: widget.allDates.contains(dateKey) ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: tooltip,
+      ),
+    );
   }
 
   @override

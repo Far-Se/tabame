@@ -4,16 +4,16 @@ import 'dart:typed_data';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/classes/saved_maps.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/tray_watcher.dart';
 import '../../../models/settings.dart';
+import '../../../models/tray_watcher.dart';
+import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/windows_scroll.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 enum BottomBarSection { all, trayOnly, weatherSystemOnly }
 
@@ -26,10 +26,8 @@ class QuickmenuBottomBar extends StatefulWidget {
 }
 
 class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
-  List<PowerShellScript> powerShellScripts = Boxes().powerShellScripts;
   List<String> pinnedApps = <String>[];
   final Map<String, Uint8List> pinnedAppsIcons = <String, Uint8List>{};
-  final List<TextEditingController> powerShellNameController = <TextEditingController>[];
   late Future<void> pinnedAppsLoader;
 
   final TextEditingController cityLatLong = TextEditingController();
@@ -37,19 +35,12 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
   @override
   void initState() {
     super.initState();
-    pinnedApps = List<String>.from(Boxes().pinnedApps);
+    pinnedApps = List<String>.from(Boxes.pinnedApps);
     pinnedAppsLoader = _loadPinnedAppsIcons();
-
-    for (final PowerShellScript item in powerShellScripts) {
-      powerShellNameController.add(TextEditingController(text: item.name));
-    }
   }
 
   @override
   void dispose() {
-    for (TextEditingController item in powerShellNameController) {
-      item.dispose();
-    }
     cityLatLong.dispose();
     super.dispose();
   }
@@ -70,8 +61,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             const SizedBox(height: 20),
             if (widget.section == BottomBarSection.all || widget.section == BottomBarSection.weatherSystemOnly)
               _buildWeatherCard(),
-            const SizedBox(height: 20),
-            if (widget.section == BottomBarSection.all) _buildPowerShellCard(),
             const SizedBox(height: 100),
           ],
         ),
@@ -323,7 +312,48 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             );
           },
         ),
+        _infoMessageForTray(
+            "You can long press to open .exe if normal click doesn't work. Also double click and Right click might work depends on the app"),
+        const SizedBox(height: 8),
+        _infoMessageForTray(
+            "You need to have \"Always show all icons in the notification area\" enabled in the Windows Taskbar settings"),
+        const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Padding _infoMessageForTray(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -419,25 +449,6 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
           ],
         ),
         const SizedBox(width: 8),
-        ToggleButtons(
-          constraints: const BoxConstraints(minHeight: 28, minWidth: 32),
-          borderRadius: BorderRadius.circular(8),
-          isSelected: <bool>[!item.clickOpensExe, item.clickOpensExe],
-          onPressed: (int index) async {
-            final List<String> action = Boxes.pref.getStringList("actionTray") ?? <String>[];
-            if (index == 1) {
-              if (!action.contains(item.processExe)) action.add(item.processExe);
-            } else {
-              action.remove(item.processExe);
-            }
-            await Boxes.updateSettings("actionTray", action);
-            setState(() {});
-          },
-          children: const <Widget>[
-            CustomTooltip(message: "Simulate Click", child: Icon(Icons.mouse, size: 14)),
-            CustomTooltip(message: "Open / Close executable", child: Icon(Icons.open_in_new, size: 14)),
-          ],
-        ),
       ],
     );
   }
@@ -541,13 +552,11 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                               child: TextField(
                                 controller: cityLatLong,
                                 style: const TextStyle(fontSize: 13),
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                   labelText: "SEARCH BY CITY",
-                                  labelStyle:
-                                      const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                  labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
                                   isDense: true,
-                                  prefixIcon: const Icon(Icons.search, size: 18),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  prefixIcon: Icon(Icons.search, size: 18),
                                 ),
                               ),
                             ),
@@ -641,7 +650,9 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
     final File? result = file.getFile();
     if (result == null || Win32.getExe(result.path).contains(".dll")) return;
 
+    if (pinnedApps.contains(result.path)) return;
     pinnedApps.add(result.path);
+
     final Uint8List? icon = WinUtils.extractIcon(result.path);
     if (icon != null) pinnedAppsIcons[result.path] = icon;
     await Boxes.updateSettings("pinnedApps", pinnedApps);
@@ -671,182 +682,5 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
       final Uint8List? icon = WinUtils.extractIcon(app);
       if (icon != null) pinnedAppsIcons[app] = icon;
     }
-  }
-
-  Widget _buildPowerShellCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: <Widget>[
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              minLeadingWidth: 28,
-              horizontalTitleGap: 14,
-              leading:
-                  Icon(Icons.terminal_outlined, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
-              title: const Text("PowerShell Automation", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              subtitle: const Text("Run custom scripts from the quick menu"),
-              trailing: IconButton(
-                icon: const Icon(Icons.add_circle_outline, size: 22),
-                onPressed: () async {
-                  powerShellScripts.add(PowerShellScript(command: "dir", name: "New Script", showTerminal: true));
-                  powerShellNameController.add(TextEditingController(text: "New Script"));
-                  await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                  if (mounted) setState(() {});
-                },
-              ),
-            ),
-            const Divider(),
-            SwitchListTile(
-              title:
-                  const Text("Enable PowerShell Scripts", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              value: globalSettings.showPowerShell,
-              onChanged: (bool newValue) async {
-                globalSettings.showPowerShell = newValue;
-                await Boxes.updateSettings("showPowerShell", globalSettings.showPowerShell);
-                if (mounted) setState(() {});
-              },
-            ),
-            if (globalSettings.showPowerShell && powerShellScripts.isNotEmpty)
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(12),
-                itemCount: powerShellScripts.length,
-                separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 12),
-                itemBuilder: (BuildContext context, int index) => _buildPowerShellItem(index),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPowerShellItem(int index) {
-    final PowerShellScript script = powerShellScripts[index];
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      final bool isNarrow = constraints.maxWidth < 450;
-      final Color borderColor = Theme.of(context).dividerColor.withValues(alpha: 0.12);
-
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Column(
-                  children: <Widget>[
-                    SizedBox(
-                      height: 32,
-                      width: 32,
-                      child: Checkbox(
-                        value: !script.disabled,
-                        onChanged: (bool? value) async {
-                          script.disabled = !(value ?? true);
-                          await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.terminal,
-                        color: script.showTerminal ? Theme.of(context).colorScheme.primary : Colors.grey.withAlpha(100),
-                        size: 20,
-                      ),
-                      onPressed: () async {
-                        script.showTerminal = !script.showTerminal;
-                        await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                        setState(() {});
-                      },
-                      tooltip: "Show Terminal",
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    children: <Widget>[
-                      TextField(
-                        controller: powerShellNameController[index],
-                        decoration: const InputDecoration(
-                          labelText: "NAME",
-                          labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
-                          isDense: true,
-                          border: UnderlineInputBorder(),
-                        ),
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        onChanged: (String value) => script.name = value,
-                        onSubmitted: (String value) async {
-                          script.name = value;
-                          await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: TextEditingController(text: script.command),
-                        decoration: const InputDecoration(
-                          labelText: "COMMAND",
-                          labelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
-                          isDense: true,
-                          border: InputBorder.none,
-                        ),
-                        maxLines: null,
-                        style: const TextStyle(fontFamily: "monospace", fontSize: 12),
-                        onSubmitted: (String value) async {
-                          script.command = value;
-                          await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                          if (mounted) setState(() {});
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isNarrow)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                    onPressed: () async {
-                      powerShellScripts.removeAt(index);
-                      powerShellNameController.removeAt(index);
-                      await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                      setState(() {});
-                    },
-                  ),
-              ],
-            ),
-            if (isNarrow)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  TextButton.icon(
-                    onPressed: () async {
-                      powerShellScripts.removeAt(index);
-                      powerShellNameController.removeAt(index);
-                      await Boxes.updateSettings("powerShellScripts", jsonEncode(powerShellScripts));
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text("Remove"),
-                    style:
-                        TextButton.styleFrom(foregroundColor: Colors.redAccent, visualDensity: VisualDensity.compact),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      );
-    });
   }
 }

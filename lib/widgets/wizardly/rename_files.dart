@@ -8,9 +8,9 @@ import 'package:intl/intl.dart';
 
 import '../../models/settings.dart';
 import '../../pages/interface.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/mouse_scroll_widget.dart';
 import '../widgets/text_input.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class FileNameWidget extends StatefulWidget {
   const FileNameWidget({super.key});
@@ -47,8 +47,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -331,7 +331,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: TextInput(
+                child: CustomTextInput(
                   labelText: "Search pattern",
                   value: filter.search,
                   onChanged: (String value) => setState(() => filter.search = value),
@@ -342,7 +342,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
               Expanded(
                 child: filter.listReplace
                     ? _buildListReplaceEditor(filter, onSurface)
-                    : TextInput(
+                    : CustomTextInput(
                         labelText: "Replace with",
                         value: filter.replace,
                         onChanged: (String value) => setState(() => filter.replace = value),
@@ -386,7 +386,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   margin: EdgeInsets.only(right: index == filter.replaceList.length - 1 ? 0 : 8),
                   child: Column(
                     children: <Widget>[
-                      TextInput(
+                      CustomTextInput(
                         key: UniqueKey(),
                         labelText: "Equals",
                         value: filter.replaceList[index][0],
@@ -400,7 +400,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
                         },
                       ),
                       const SizedBox(height: 8),
-                      TextInput(
+                      CustomTextInput(
                         key: UniqueKey(),
                         labelText: "Rename to",
                         value: filter.replaceList[index][1],
@@ -731,7 +731,7 @@ class ListTileFileState extends State<ListTileFile> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final bool unchanged = widget.oldName == widget.newName;
 
     return InkWell(

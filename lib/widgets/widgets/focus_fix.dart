@@ -27,7 +27,7 @@ class _FocusFixState extends State<FocusFix> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Forces Flutter to recalc hover states
       WidgetsBinding.instance.handlePointerEvent(
-        const PointerHoverEvent(position: Offset(-1, -1)),
+        const PointerHoverEvent(position: Offset(1, 1)),
       );
     }
   }

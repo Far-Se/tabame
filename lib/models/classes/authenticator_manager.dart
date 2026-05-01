@@ -3,34 +3,108 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart';
 
-import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 import 'authenticator_entry.dart';
 
+class AuthenticatorStorageInfo {
+  const AuthenticatorStorageInfo({
+    required this.exists,
+    required this.isEncrypted,
+    required this.requiresPasswordPrompt,
+  });
+
+  final bool exists;
+  final bool isEncrypted;
+  final bool requiresPasswordPrompt;
+}
+
 class AuthenticatorManager {
+  static const String defaultEncryptionPassword = 'encrypted';
   static String get _filePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\authenticator.json";
 
-  static Future<List<AuthenticatorEntry>> loadEntries() async {
+  static Future<AuthenticatorStorageInfo> getStorageInfo() async {
+    final File file = File(_filePath);
+    if (!file.existsSync()) {
+      return const AuthenticatorStorageInfo(
+        exists: false,
+        isEncrypted: false,
+        requiresPasswordPrompt: false,
+      );
+    }
+
+    try {
+      final String content = await file.readAsString();
+      final Object? decoded = jsonDecode(content);
+      if (decoded is Map<String, dynamic> && decoded['encrypted'] == true) {
+        final List<AuthenticatorEntry>? defaultEntries =
+            await _decryptEncryptedPayload(decoded, defaultEncryptionPassword);
+        return AuthenticatorStorageInfo(
+          exists: true,
+          isEncrypted: true,
+          requiresPasswordPrompt: defaultEntries == null,
+        );
+      }
+    } catch (_) {
+      return const AuthenticatorStorageInfo(
+        exists: true,
+        isEncrypted: false,
+        requiresPasswordPrompt: false,
+      );
+    }
+
+    return const AuthenticatorStorageInfo(
+      exists: true,
+      isEncrypted: false,
+      requiresPasswordPrompt: false,
+    );
+  }
+
+  static Future<List<AuthenticatorEntry>> loadEntries({String? password}) async {
     final File file = File(_filePath);
     if (!file.existsSync()) return <AuthenticatorEntry>[];
 
+    bool encryptedPayload = false;
     try {
       final String content = await file.readAsString();
       if (content.trim().isEmpty) return <AuthenticatorEntry>[];
 
-      final List<dynamic> decoded = jsonDecode(content) as List<dynamic>;
+      final Object? decoded = jsonDecode(content);
+      if (decoded is Map<String, dynamic> && decoded['encrypted'] == true) {
+        encryptedPayload = true;
+        final List<AuthenticatorEntry>? decrypted = await _decryptEncryptedPayload(
+          decoded,
+          password ?? defaultEncryptionPassword,
+        );
+        if (decrypted == null) {
+          throw const FormatException('Incorrect password or corrupt authenticator file.');
+        }
+        _sortEntries(decrypted);
+        return decrypted;
+      }
+
+      if (decoded is! List<dynamic>) {
+        throw const FormatException('Invalid authenticator file format.');
+      }
+
       final List<AuthenticatorEntry> entries = decoded
           .map((dynamic item) => AuthenticatorEntry.fromMap(item as Map<String, dynamic>))
           .where((AuthenticatorEntry item) => item.secret.trim().isNotEmpty)
           .toList();
       _sortEntries(entries);
       return entries;
+    } on FormatException {
+      rethrow;
     } catch (_) {
+      if (encryptedPayload) {
+        throw const FormatException('Incorrect password or corrupt authenticator file.');
+      }
       return <AuthenticatorEntry>[];
     }
   }
 
-  static Future<List<AuthenticatorEntry>> saveEntries(List<AuthenticatorEntry> entries) async {
+  static Future<List<AuthenticatorEntry>> saveEntries(List<AuthenticatorEntry> entries, {String? password}) async {
     _sortEntries(entries);
 
     final File file = File(_filePath);
@@ -38,14 +112,33 @@ class AuthenticatorManager {
       await file.create(recursive: true);
     }
 
-    await file.writeAsString(
-      jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList()),
-    );
+    if (password != null) {
+      final Key key = _deriveKey(password);
+      final IV iv = IV.fromSecureRandom(16);
+      final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
+      final Encrypted encrypted = encrypter.encrypt(
+        jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList()),
+        iv: iv,
+      );
+
+      await file.writeAsString(jsonEncode(<String, dynamic>{
+        'encrypted': true,
+        'iv': iv.base64,
+        'data': encrypted.base64,
+      }));
+    } else {
+      await file.writeAsString(
+        jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList()),
+      );
+    }
     return entries;
   }
 
-  static Future<List<AuthenticatorEntry>> mergeEntries(Iterable<AuthenticatorEntry> newEntries) async {
-    final List<AuthenticatorEntry> current = await loadEntries();
+  static Future<List<AuthenticatorEntry>> mergeEntries(
+    Iterable<AuthenticatorEntry> newEntries, {
+    String? password,
+  }) async {
+    final List<AuthenticatorEntry> current = await loadEntries(password: password);
     final Set<String> fingerprints = current.map((AuthenticatorEntry entry) => entry.fingerprint).toSet();
 
     for (final AuthenticatorEntry entry in newEntries) {
@@ -54,13 +147,29 @@ class AuthenticatorManager {
       }
     }
 
-    return saveEntries(current);
+    return saveEntries(current, password: password);
   }
 
-  static Future<List<AuthenticatorEntry>> deleteEntry(String id) async {
-    final List<AuthenticatorEntry> current = await loadEntries();
+  static Future<List<AuthenticatorEntry>> deleteEntry(String id, {String? password}) async {
+    final List<AuthenticatorEntry> current = await loadEntries(password: password);
     current.removeWhere((AuthenticatorEntry entry) => entry.id == id);
-    return saveEntries(current);
+    return saveEntries(current, password: password);
+  }
+
+  static Future<bool> isEncrypted() async {
+    final AuthenticatorStorageInfo info = await getStorageInfo();
+    return info.isEncrypted;
+  }
+
+  static Future<void> encryptEntries(List<AuthenticatorEntry> entries, String password) async {
+    await saveEntries(entries, password: password.isEmpty ? defaultEncryptionPassword : password);
+  }
+
+  static Future<void> removeStorageFile() async {
+    final File file = File(_filePath);
+    if (file.existsSync()) {
+      await file.delete();
+    }
   }
 
   static AuthenticatorEntry parseOtpAuthUri(String rawUri) {
@@ -254,6 +363,34 @@ class AuthenticatorManager {
 
   static String _decodeOtpComponent(String value) {
     return Uri.decodeComponent(value.replaceAll('+', '%20')).trim();
+  }
+
+  static Future<List<AuthenticatorEntry>?> _decryptEncryptedPayload(
+    Map<String, dynamic> payload,
+    String password,
+  ) async {
+    try {
+      final Key key = _deriveKey(password);
+      final IV iv = IV.fromBase64((payload['iv'] ?? '').toString());
+      final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
+      final String decrypted = encrypter.decrypt(
+        Encrypted.fromBase64((payload['data'] ?? '').toString()),
+        iv: iv,
+      );
+      final List<dynamic> decoded = jsonDecode(decrypted) as List<dynamic>;
+      return decoded
+          .map((dynamic item) => AuthenticatorEntry.fromMap(item as Map<String, dynamic>))
+          .where((AuthenticatorEntry item) => item.secret.trim().isNotEmpty)
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Key _deriveKey(String password) {
+    final List<int> bytes = utf8.encode(password);
+    final Digest digest = sha256.convert(bytes);
+    return Key(Uint8List.fromList(digest.bytes));
   }
 
   static Uint8List _decodeBase32(String input) {

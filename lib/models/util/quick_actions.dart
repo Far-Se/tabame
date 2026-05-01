@@ -1,6 +1,5 @@
 const List<String> quickActionsType = <String>[
   "Quick Action",
-  "Spotify Controls",
   "Audio Output Devices",
   "Audio Input Devices",
   "Set Volume",

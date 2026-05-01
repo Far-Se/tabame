@@ -3,8 +3,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'dart:math' as math;
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -16,8 +18,9 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
+import 'util/solar_calculator.dart';
 import 'win32/mixed.dart';
-import 'win32/win32.dart';
+import 'win32/win_utils.dart';
 
 enum TPage {
   quickmenu,
@@ -26,56 +29,71 @@ enum TPage {
 }
 
 enum QuickMenuDesigns {
-  modern,
   classic,
-  interface;
+  modern,
+  interface,
+  matrix;
 
   String get name {
     return switch (this) {
       QuickMenuDesigns.modern => "Modern",
       QuickMenuDesigns.classic => "Classic",
       QuickMenuDesigns.interface => "Interface",
+      QuickMenuDesigns.matrix => "Matrix",
     };
   }
 }
 
+enum LightSwitchMode { off, fixed, sunrise }
+
 class Settings {
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;
-  bool views = false;
+  bool quickSnapOverlay = true;
+  bool quickSnapGrid = true;
   // int quickRunState = 0;
-  bool autoUpdate = false;
+  bool autoCheckForUpdates = false;
   int quickMenuDesign = QuickMenuDesigns.modern.index;
   bool showTrayBar = true;
   bool showWeather = true;
   bool isWindows10 = false;
   bool previewTheme = false;
   bool volumeSetBack = false;
-  bool showPowerShell = false;
-  bool keepPopupsOpen = false;
+  bool keepPopupsOpen = true;
+  bool expandedTaskbar = true;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool trktivityEnabled = false;
   bool runAsAdministrator = false;
-  bool hideTabameOnUnfocus = true;
+  bool _hideTabameOnUnfocus = true;
+  bool quickActionsAtBottom = false;
+  bool dragPopupsByIconOnly = false;
+  bool get hideTabameOnUnfocus => _hideTabameOnUnfocus;
+  set hideTabameOnUnfocus(bool value) {
+    _hideTabameOnUnfocus = value;
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+  }
+
   bool hideTaskbarOnStartup = true;
+  bool hideDesktopFiles = false;
   bool showMediaControlForApp = true;
+  bool showMusicPlayerInTaskbar = true;
   bool trktivitySaveAllTitles = false;
-  bool pauseSpotifyWhenPlaying = true;
-  bool pauseSpotifyWhenNewSound = false;
   bool showQuickMenuAtTaskbarLevel = true;
-  bool usePowerShellAsToastNotification = false;
   String customLogo = "";
   String customSpash = "";
-  String textFileSearch = "";
+  String launcherSearchText = "";
   String wallpapersFolder = "";
+  String lastQuickSnapZoneId = "";
   String lastChangelog = Globals.version;
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
+  String newVersion = "";
   List<String> persistentReminders = <String>[];
   List<String> audio = <String>["false", "true", "false"];
+  String activeBackdropPath = "";
 
   bool get audioConsole => audio[0] == "false" ? false : true;
   bool get audioMultimedia => audio[1] == "false" ? false : true;
@@ -97,35 +115,53 @@ class Settings {
   ThemeColors get theme => themeColors;
   ThemeType themeType = ThemeType.system;
 
+  // Light Switch
+  LightSwitchMode lightSwitchMode = LightSwitchMode.off;
+  int lightSwitchSunriseOffset = 0;
+  int lightSwitchSunsetOffset = 0;
+  int lightSwitchSunrise = 6 * 60; // 06:00
+  int lightSwitchSunset = 18 * 60; // 18:00
+  int lightSwitchLastFetch = 0;
+
   bool settingsChanged = false;
   ThemeColors lightTheme = Settings._defaultThemeColors(
-    background: 0xffD5E0FB,
-    textColor: 0xff3A404A,
-    accentColor: 0xff446EE9,
+    background: const Color(0xffD5E0FB),
+    textColor: const Color(0xff3A404A),
+    accentColor: const Color(0xff446EE9),
     gradientAlpha: 200,
   );
   ThemeColors darkTheme = Settings._defaultThemeColors(
-    background: 0xFF0A0A0A,
-    textColor: 0xFFFAF9F8,
-    accentColor: 0xFFA7CF3F,
+    background: const Color(0xFF0A0A0A),
+    textColor: const Color(0xFFFAF9F8),
+    accentColor: const Color(0xFFA7CF3F),
     gradientAlpha: 20,
   );
   Map<String, QuickMenuDesignThemeSet> quickMenuDesignThemes = Settings.createDefaultQuickMenuDesignThemes();
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
 
   static ThemeColors _defaultThemeColors({
-    required int background,
-    required int textColor,
-    required int accentColor,
+    required Color background,
+    required Color textColor,
+    required Color accentColor,
     required int gradientAlpha,
-    bool quickMenuBoldFont = true,
+    String uiFontFamily = 'Jura',
+    int uiFontWeight = 400,
+    bool uiFontItalic = false,
+    String entryFontFamily = 'Jura',
+    int entryFontWeight = 700,
+    bool entryFontItalic = false,
   }) {
     return ThemeColors(
       background: background,
       textColor: textColor,
       accentColor: accentColor,
       gradientAlpha: gradientAlpha,
-      quickMenuBoldFont: quickMenuBoldFont,
+      uiFontFamily: uiFontFamily,
+      uiFontWeight: uiFontWeight,
+      uiFontItalic: uiFontItalic,
+      entryFontFamily: entryFontFamily,
+      entryFontWeight: entryFontWeight,
+      entryFontItalic: entryFontItalic,
     );
   }
 
@@ -133,44 +169,84 @@ class Settings {
     return <String, QuickMenuDesignThemeSet>{
       QuickMenuDesigns.modern.name: QuickMenuDesignThemeSet(
         lightTheme: _defaultThemeColors(
-          background: 0xffD5E0FB,
-          textColor: 0xff3A404A,
-          accentColor: 0xff446EE9,
+          background: const Color(0xffD5E0FB),
+          textColor: const Color(0xff3A404A),
+          accentColor: const Color(0xff446EE9),
           gradientAlpha: 200,
+          uiFontFamily: 'Jura',
+          entryFontFamily: 'Jura',
         ),
         darkTheme: _defaultThemeColors(
-          background: 0xFF0A0A0A,
-          textColor: 0xFFFAF9F8,
-          accentColor: 0xFFA7CF3F,
+          background: const Color(0xFF0A0A0A),
+          textColor: const Color(0xFFFAF9F8),
+          accentColor: const Color(0xFFA7CF3F),
           gradientAlpha: 20,
+          uiFontFamily: 'Jura',
+          entryFontFamily: 'Jura',
         ),
       ),
       QuickMenuDesigns.classic.name: QuickMenuDesignThemeSet(
         lightTheme: _defaultThemeColors(
-          background: 0xffECE2D7,
-          textColor: 0xff3D342B,
-          accentColor: 0xffB86F43,
+          background: const Color(0xffECE2D7),
+          textColor: const Color(0xff3D342B),
+          accentColor: const Color(0xffB86F43),
           gradientAlpha: 150,
+          uiFontFamily: 'Jura',
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
         ),
         darkTheme: _defaultThemeColors(
-          background: 0xff171317,
-          textColor: 0xFFF5EFE7,
-          accentColor: 0xFFE4A768,
+          background: const Color(0xff171317),
+          textColor: const Color(0xFFF5EFE7),
+          accentColor: const Color(0xFFE4A768),
           gradientAlpha: 205,
+          uiFontFamily: 'Jura',
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
         ),
       ),
       QuickMenuDesigns.interface.name: QuickMenuDesignThemeSet(
         lightTheme: _defaultThemeColors(
-          background: 0xffEEF4F8,
-          textColor: 0xff223444,
-          accentColor: 0xff2D84B8,
+          background: const Color(0xffEEF4F8),
+          textColor: const Color(0xff223444),
+          accentColor: const Color(0xff2D84B8),
           gradientAlpha: 220,
+          uiFontFamily: 'Jura',
+          uiFontWeight: 500,
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
         ),
         darkTheme: _defaultThemeColors(
-          background: 0xff101923,
-          textColor: 0xFFEAF4FB,
-          accentColor: 0xFF68C9FF,
+          background: const Color(0xff101923),
+          textColor: const Color(0xFFEAF4FB),
+          accentColor: const Color(0xFF68C9FF),
           gradientAlpha: 228,
+          uiFontFamily: 'Jura',
+          uiFontWeight: 500,
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
+        ),
+      ),
+      QuickMenuDesigns.matrix.name: QuickMenuDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF2F2F2),
+          textColor: const Color(0xff003B00),
+          accentColor: const Color(0xff008F11),
+          gradientAlpha: 0,
+          uiFontFamily: 'Jura',
+          uiFontWeight: 500,
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff000000),
+          textColor: const Color(0xff00FF41),
+          accentColor: const Color(0xff008F11),
+          gradientAlpha: 0,
+          uiFontFamily: 'Jura',
+          uiFontWeight: 500,
+          entryFontFamily: 'Jura',
+          entryFontWeight: 700,
         ),
       ),
     };
@@ -251,26 +327,60 @@ class Settings {
       }
       return ThemeType.light;
     } else if (themeType == ThemeType.schedule) {
-      final int minTime = globalSettings.themeScheduleMin;
-      final int maxTime = globalSettings.themeScheduleMax;
+      final int start = lightSwitchMode == LightSwitchMode.sunrise
+          ? (lightSwitchSunrise + lightSwitchSunriseOffset)
+          : themeScheduleMin;
+      final int end =
+          lightSwitchMode == LightSwitchMode.sunrise ? (lightSwitchSunset + lightSwitchSunsetOffset) : themeScheduleMax;
+
       final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
-      ThemeType scheduled;
-      scheduled = now.isBetween(minTime, maxTime) ? ThemeType.light : ThemeType.dark;
-      return scheduled;
+      return now.isBetweenEqual(start, end) ? ThemeType.light : ThemeType.dark;
     }
     return themeType;
   }
 
   String get logo => themeTypeMode == ThemeType.dark ? "resources/logo_light.png" : "resources/logo_dark.png";
+
   Timer? themeScheduleChangeTimer;
   void setScheduleThemeChange() {
     themeScheduleChangeTimer?.cancel();
-    if (themeType != ThemeType.schedule) return;
+    if (globalSettings.lightSwitchMode == LightSwitchMode.off) return;
+
+    final int start =
+        lightSwitchMode == LightSwitchMode.sunrise ? (lightSwitchSunrise + lightSwitchSunriseOffset) : themeScheduleMin;
+    final int end =
+        lightSwitchMode == LightSwitchMode.sunrise ? (lightSwitchSunset + lightSwitchSunsetOffset) : themeScheduleMax;
+
     final int now = (DateTime.now().hour * 60) + DateTime.now().minute;
-    if (now.isBetween(themeScheduleMin, themeScheduleMax)) {
-      themeScheduleChangeTimer = Timer(Duration(minutes: themeScheduleMax - now), () {});
+
+    // Initial sync
+    final bool isLight = now.isBetweenEqual(start, end);
+    WinUtils.setWindowsTheme(isLight ? 1 : 0);
+
+    if (isLight) {
+      // It's day/light time, wait for sunset (end)
+      int minutesToEnd;
+      if (end >= now) {
+        minutesToEnd = end - now;
+      } else {
+        minutesToEnd = (1440 - now) + end;
+      }
+      themeScheduleChangeTimer = Timer(Duration(minutes: minutesToEnd), () {
+        WinUtils.setWindowsTheme(0);
+        setScheduleThemeChange();
+      });
     } else {
-      themeScheduleChangeTimer = Timer(Duration(minutes: 24 - now + themeScheduleMin), () {});
+      // It's night/dark time, calculate minutes to sunrise (start)
+      int minutesToStart;
+      if (start >= now) {
+        minutesToStart = start - now;
+      } else {
+        minutesToStart = (1440 - now) + start;
+      }
+      themeScheduleChangeTimer = Timer(Duration(minutes: minutesToStart), () {
+        WinUtils.setWindowsTheme(1);
+        setScheduleThemeChange();
+      });
     }
   }
 
@@ -287,19 +397,24 @@ Future<void> registerAll() async {
   Debug.add("Registered: Locale");
 
   // ? Monitor Handle
-  Monitor.fetchMonitor();
+  Monitor.fetchMonitors();
   Debug.add("Registered: Monitor");
-  Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitor());
+  Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitors());
+  Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    if (globalSettings.hideDesktopFiles) {
+      WinUtils.toggleDesktopFiles(visible: false);
+    }
+  });
   //register
   await Boxes.registerBoxes();
   Debug.add("Registered: Boxes");
   //Schedule Theme
   globalSettings.setScheduleThemeChange();
-  Debug.add("Registered: ScheduleTheme");
-  if (globalSettings.views && globalSettings.args.contains("-views")) {
-    enableViews(true);
-    Debug.add("Registered: ViewsEnabled");
+  if (globalSettings.lightSwitchMode == LightSwitchMode.sunrise) {
+    SolarCalculator.updateSolarData();
   }
+  Debug.add("Registered: ScheduleTheme");
+  enableViews(true);
   //
 
   await Audio.detectAudioSupport(AudioDeviceType.output);
@@ -378,11 +493,19 @@ extension IntegerExtension on int {
   }
 
   bool isBetween(num from, num to) {
-    return from < this && this < to;
+    if (from <= to) {
+      return from < this && this < to;
+    } else {
+      return this > from || this < to;
+    }
   }
 
   bool isBetweenEqual(num from, num to) {
-    return from <= this && this <= to;
+    if (from <= to) {
+      return from <= this && this <= to;
+    } else {
+      return this >= from || this <= to;
+    }
   }
 }
 
@@ -458,6 +581,7 @@ enum VolumeOSDStyle { normal, media, visible, thin }
 enum ThemeType { system, light, dark, schedule }
 
 class Debug {
+  Debug._();
   static File theFile = File("${WinUtils.getTabameAppDataFolder()}\\debug.log");
   static bool enabled = false;
   static void register({bool clean = true}) {
@@ -467,9 +591,23 @@ class Debug {
         .writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
   }
 
+  static void print(String text) {
+    if (!enabled) return;
+    if (kReleaseMode) {
+      theFile.writeAsStringSync("$text\n", mode: FileMode.append);
+    } else {
+      print(text);
+    }
+  }
+
   static void add(String text) {
     if (!enabled) return;
     theFile.writeAsStringSync("$text\n", mode: FileMode.append);
+  }
+
+  static void error(String text) {
+    if (!theFile.existsSync()) theFile.createSync(recursive: true);
+    theFile.writeAsStringSync("ERROR: $text\n", mode: FileMode.append);
   }
 
   static void methodDebug({bool clean = true}) {

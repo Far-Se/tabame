@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+
+import 'custom_tooltip.dart';
 
 class PercentageBar extends StatelessWidget {
   const PercentageBar({

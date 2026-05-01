@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_string_interpolations
+/* // ignore_for_file: unnecessary_string_interpolations
 
 import 'dart:async';
 import 'dart:ui';
@@ -14,6 +14,7 @@ import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import '../../models/win32/keys.dart';
 import '../../models/globals.dart';
@@ -465,10 +466,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                                           overflow: TextOverflow.fade,
                                           maxLines: 1,
                                           softWrap: false,
-                                          style: TextStyle(
-                                              fontWeight: globalSettings.theme.quickMenuBoldFont
-                                                  ? FontWeight.w500
-                                                  : FontWeight.w400),
+                                          style: TextStyle(fontWeight: FontWeight(globalSettings.theme.uiFontWeight)),
                                         ),
                                       ),
                                     ),
@@ -681,7 +679,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                           overflow: TextOverflow.fade,
                           softWrap: false,
                           style: TextStyle(
-                            fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w400,
+                            fontWeight: FontWeight(globalSettings.theme.entryFontWeight),
                             fontSize: 16,
                             height: 1,
                           ),
@@ -975,3 +973,4 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
     );
   }
 }
+ */

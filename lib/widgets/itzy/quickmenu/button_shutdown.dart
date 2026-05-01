@@ -42,7 +42,7 @@ class _ShutDownButtonState extends State<ShutDownButton> with QuickMenuTriggers 
           Icons.power_settings_new_rounded,
           color: (Boxes.pref.getBool("isShutDownScheduled") ?? false) ? Colors.red.shade300 : null,
         ),
-        child: const ShutDownWidget());
+        child: () => const ShutDownWidget());
   }
 }
 
@@ -120,11 +120,7 @@ class ShutDownWidgetState extends State<ShutDownWidget> with QuickMenuTriggers {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        PanelHeader(
-            title: "Shutdown Scheduler",
-            accent: scheme.primary,
-            boldFont: globalSettings.theme.quickMenuBoldFont,
-            icon: Icons.power_settings_new_rounded),
+        PanelHeader(title: "Shutdown Scheduler", accent: scheme.primary, icon: Icons.power_settings_new_rounded),
         Flexible(
           child: SingleChildScrollView(
             child: Padding(

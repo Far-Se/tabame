@@ -14,7 +14,7 @@ Main purpose of this app is to be a replacement for the Taskbar, but in meanwhil
 - **You can bind the QuickMenu on:**
 - Mouse Side buttons, most mouses have them.
 - Any extra mouse button. Open your mouse software, bind it to something like `CTRL+ALT+SHIFT+F9` then focus Tabame and press the button on field above.
-- If you do not have any extra buttons on your mouse, you can bind it to something simple like `Shift+Win+A`, it's easy for the fingers.
+- If you do not have any extra buttons on your mouse, you can bind it to something simple like `Alt+Shift+A` (or Z), it's easy for the fingers.
 
 ### You can watch a small demo here:
 
@@ -123,7 +123,6 @@ Contains audio control, volume control, quick actions, pinned apps, Desktop Butt
 - Scroll up or down to change volume level.
 
 ### **Quick Actions**
-- Spotify Button  - Sends media control only to Spotify, same buttons as Volume Control.
 - Task Manager Button - Opens Task Manager
 - Virtual Desktop Button - Left Click to move to Right(Next) Desktop, right click for Left(Previous) Desktop
 - Toggle Taskbar Button - Hides or shows taskbar
@@ -213,11 +212,6 @@ You can pick between predefined colors or your own colors.
 # **🎶 Audio**
 A main reason I've made this app is to easily manage Audio. You can easily switch between output devices, change volume from hotkeys by moving your mouse and modify specific app volume.
 
-Another reason is to fix Spotify, that listen to all media trigger and acts upon them, I think this is a marketing strategy of "did you wanted music? we are your music". So I made this functions (that you need to enable from settings):
-- When you play an app, Tabame will try to mute Spotify.
-- When sound comes from other sources, Spotify will pause.
-- A dedicated Button on Quick Actions for Spotify, so if you want to play/pause only Spotify, you can use that.
-
 Each app that makes sound has dedicated media control and you can set default `exe`s that will show them by default.
 
 Also you can modify Volume OSD to hide media, make it thinner or hide it completely.
@@ -252,7 +246,6 @@ Tabame Functions are:
 - Toggle Quick Run
 - Show Last Active Window
 - Open Audio Settings
-- Play Pause Spotify
 - Toggle Hidden Files
 - Toggle Desktop Files
 - Switch Audio Output
@@ -345,7 +338,7 @@ https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-
 
 # **🧰 QuickActionsMenu**
 
-| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, spotify control, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
+| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 
 # **📷 Fancyshot**

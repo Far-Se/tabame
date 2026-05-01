@@ -3,36 +3,30 @@ import 'package:flutter/services.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
-import '../../../models/classes/saved_maps.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/hotkeys.dart';
+import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
+import '../../../models/settings.dart';
+import '../../../models/tray_watcher.dart';
 import '../../../models/util/quick_action_list.dart';
 import '../../../models/util/quick_actions.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/keys.dart';
-import '../../../models/settings.dart';
-import '../../../models/win32/imports.dart';
-import '../../../models/win32/mixed.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
-import '../../../models/tray_watcher.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
-import '../../widgets/quick_actions_item.dart';
-import '../../widgets/panel_header.dart';
+import '../../widgets/quick_menu_panel.dart';
 
 class QuickActionsMenuButton extends StatelessWidget {
   const QuickActionsMenuButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "QuickActions",
-      icon: const Icon(Icons.apps),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const QuickActionWidget(popup: false),
-      ),
+    return ModalButton(
+      actionName: "Quick Actions",
+      icon: const Icon(Icons.app_registration_rounded),
+      child: () => const QuickActionWidget(popup: false),
     );
   }
 }
@@ -75,7 +69,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
   VoidCallback? onStateChanged,
 }) {
   final ThemeData theme = Theme.of(context);
-  final Color accent = Color(globalSettings.themeColors.accentColor);
+  final Color accent = globalSettings.themeColors.accentColor;
   final Color onSurface = theme.colorScheme.onSurface;
   final List<QuickActionMenuEntry> entries = <QuickActionMenuEntry>[];
   for (int index = 0; index < Boxes.quickActions.length; index++) {
@@ -276,38 +270,6 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
         );
       },
     );
-  } else if (item.type == "Spotify Controls") {
-    return QuickActionMenuEntry(
-      id: "custom-$index",
-      title: item.name,
-      searchTerms: <String>[...searchTerms, "spotify", "play", "pause", "music"],
-      onExecute: () => sendSpotifyMediaCommand(AppCommand.mediaPlayPause),
-      builder: (BuildContext context) {
-        return _QuickActionListItem(
-          name: item.name,
-          accent: accent,
-          onSurface: onSurface,
-          leading: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _CompactIconButton(
-                icon: Icons.skip_previous_rounded,
-                onTap: () => sendSpotifyMediaCommand(AppCommand.mediaPrevioustrack),
-              ),
-              _CompactIconButton(
-                icon: Icons.play_arrow_rounded,
-                onTap: () => sendSpotifyMediaCommand(AppCommand.mediaPlayPause),
-              ),
-              _CompactIconButton(
-                icon: Icons.skip_next_rounded,
-                onTap: () => sendSpotifyMediaCommand(AppCommand.mediaNexttrack),
-              ),
-              const SizedBox(width: 6),
-            ],
-          ),
-        );
-      },
-    );
   } else if (item.type == "Audio Output Devices" || item.type == "Audio Input Devices") {
     return QuickActionMenuEntry(
       id: "custom-$index",
@@ -336,7 +298,6 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
   final Map<String, QuickAction> widgets = <String, QuickAction>{}..addAll(quickActionsMap);
   final List<String> showWidgetsNames = Boxes().topBarWidgets;
   final List<String> forbiddenButtons = <String>[
-    "SpotifyButton",
     "QuickActionsMenuButton",
     "AppAudioControl1",
     "AppAudioControl2",
@@ -366,7 +327,7 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
             onSurface: onSurface,
             onTap: () => triggerFirstTappableDescendant(buttonKey.currentContext),
             leading: SizedBox(
-              width: 18,
+              width: 20,
               child: Stack(
                 alignment: Alignment.centerLeft,
                 children: <Widget>[
@@ -374,7 +335,7 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
                     offstage: true,
                     child: KeyedSubtree(
                       key: buttonKey,
-                      child: IgnorePointer(child: action.widget),
+                      child: IgnorePointer(child: action.widget()),
                     ),
                   ),
                   Icon(action.icon, size: 16, color: onSurface.withAlpha(190)),
@@ -501,35 +462,6 @@ void handleAppAudioPlayPause(int index) {
   }
 }
 
-void sendSpotifyMediaCommand(int type) {
-  final List<int> spotify = WindowWatcher.getSpotify();
-  if (spotify[0] != 0) {
-    if (IsWindow(spotify[0]) != 0) {
-      SendMessage(spotify[0], AppCommand.appCommand, 0, type);
-    }
-  } else {
-    final List<int> winHWNDS = enumWindows();
-    final List<int> allHWNDs = <int>[];
-
-    for (int hWnd in winHWNDS) {
-      if (Win32.isWindowOnDesktop(hWnd) &&
-          Win32.getTitle(hWnd).isNotEmpty &&
-          hWnd != Win32.getMainHandle() &&
-          !<String>["PopupHost"].contains(Win32.getTitle(hWnd))) {
-        allHWNDs.add(hWnd);
-      }
-    }
-    for (int element in allHWNDs) {
-      final Window winInfo = Window(element);
-
-      if (winInfo.process.exe == "Spotify.exe") {
-        SendMessage(winInfo.hWnd, AppCommand.appCommand, 0, type);
-        break;
-      }
-    }
-  }
-}
-
 void executeQuickActionValue(int value) {
   switch (value) {
     case 0:
@@ -585,8 +517,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
-    final bool boldFont = globalSettings.theme.quickMenuBoldFont;
+    final Color accent = globalSettings.themeColors.accentColor;
 
     final List<QuickActionMenuEntry> entries = buildQuickActionMenuEntries(
       context,
@@ -597,49 +528,40 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
       },
     );
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        PanelHeader(
-          title: "Quick Actions",
-          accent: accent,
-          boldFont: boldFont,
-          icon: Icons.grid_view_rounded,
-        ),
-        Flexible(
-          child: entries.isEmpty
-              ? Container(
-                  constraints: const BoxConstraints(maxHeight: 200, minWidth: 260),
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Icon(Icons.grid_off_rounded, size: 32, color: accent.withAlpha(100)),
-                      const SizedBox(height: 12),
-                      Text(
-                        "No items yet. Add them from Settings.",
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
+    return QuickMenuPanel(
+      title: "Quick Actions",
+      accent: accent,
+      icon: Icons.grid_view_rounded,
+      body: entries.isEmpty
+          ? Container(
+              constraints: const BoxConstraints(maxHeight: 200, minWidth: 260),
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.grid_off_rounded, size: 32, color: accent.withAlpha(100)),
+                  const SizedBox(height: 12),
+                  Text(
+                    "No items yet. Add them from Settings.",
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
-                )
-              : SingleChildScrollView(
-                  controller: controller,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
-                    ],
-                  ),
-                ),
-        ),
-      ],
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -663,7 +585,6 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
     widgets.addAll(quickActionsMap);
     final List<String> showWidgetsNames = Boxes().topBarWidgets;
     final List<String> forbiddenButtons = <String>[
-      "SpotifyButton",
       "QuickActionsMenuButton",
       "AppAudioControl1",
       "AppAudioControl2",
@@ -699,14 +620,14 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
               final GlobalKey buttonKey = GlobalKey();
               return _QuickActionListItem(
                 name: displayName,
-                accent: widget.accent,
+                accent: globalSettings.themeColors.accentColor,
                 onSurface: widget.onSurface,
                 onTap: () => triggerFirstTappableDescendant(buttonKey.currentContext),
                 leading: Container(
                   constraints: const BoxConstraints(maxWidth: 30, maxHeight: 30),
                   child: KeyedSubtree(
                     key: buttonKey,
-                    child: IgnorePointer(child: action.widget),
+                    child: IgnorePointer(child: action.widget()),
                   ),
                 ),
               );
@@ -748,7 +669,7 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
               ]),
         builder: (BuildContext context, AsyncSnapshot<List<dynamic>> out) {
           if (!out.hasData) return Container();
-          final Color accent = Color(globalSettings.themeColors.accentColor);
+          final Color accent = globalSettings.themeColors.accentColor;
           final Color onSurface = Theme.of(context).colorScheme.onSurface;
           final List<AudioDevice>? devices = out.data![0];
           final AudioDevice defaultDevice = out.data![1];
@@ -818,7 +739,7 @@ class VolumeSliderState extends State<VolumeSlider> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return MouseScrollWidget(
       child: Padding(
@@ -932,42 +853,44 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(60) : Colors.transparent,
+          color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: widget.onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: widget.dense ? 5 : 6),
-            child: Row(
-              children: <Widget>[
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: _hovered ? 2.5 : 0,
-                  height: 14,
-                  margin: EdgeInsets.only(right: _hovered ? 7 : 0),
-                  decoration: BoxDecoration(
-                    color: widget.accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                if (widget.leading != null) ...<Widget>[
-                  widget.leading!,
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    widget.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
+        child: GestureDetector(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: widget.dense ? 5 : 6),
+              child: Row(
+                children: <Widget>[
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: _hovered ? 2.5 : 0,
+                    height: 14,
+                    margin: EdgeInsets.only(right: _hovered ? 7 : 0),
+                    decoration: BoxDecoration(
+                      color: globalSettings.themeColors.accentColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  if (widget.leading != null) ...<Widget>[
+                    widget.leading!,
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      widget.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -987,7 +910,7 @@ class _CompactIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.themeColors.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(

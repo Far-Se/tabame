@@ -1,14 +1,15 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
+import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/keys.dart';
-import '../../../models/settings.dart';
-import 'widget_audio.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/quick_actions_item.dart';
+import 'audio_modal.dart';
 
 class AudioButton extends StatefulWidget {
   const AudioButton({super.key});
@@ -85,7 +86,7 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   }
 
   @override
-  Future<void> onQuickMenuShown(QuickMenuPage type) async {
+  Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {
     muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
     if (mounted) {
       setState(() {});
@@ -94,7 +95,7 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
 
   @override
   void onQuickActionExecute(String actionName) {
-    if (actionName == "AudioControl") {
+    if (actionName == "Audio Control") {
       _showAudioBox();
     }
   }
@@ -109,46 +110,31 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     IconData displayIcon;
-    String tooltip;
 
     if (_feedbackIcon != null) {
       displayIcon = _feedbackIcon!;
-      tooltip = "Volume Control";
     } else if (switchedDefaultDevice) {
       displayIcon = Icons.published_with_changes;
-      tooltip = "Audio Channel Changed";
     } else {
       displayIcon = muteState == false ? Icons.volume_up : Icons.volume_off;
-      tooltip = "Audio Control";
     }
 
-    return SizedBox(
-      width: 20,
-      height: double.maxFinite,
-      child: Material(
-        type: MaterialType.transparency,
-        child: GestureDetector(
-          onVerticalDragStart: (_) => _dragAccumulator = 0,
-          onVerticalDragEnd: (_) => _dragAccumulator = 0,
-          onVerticalDragUpdate: _handleVolumeDrag,
-          onSecondaryTap: _handleSwitchDevice,
-          onTertiaryTapDown: (_) => _handleMute(),
-          child: InkWell(
-            onTap: () {
-              Globals.audioBoxVisible = true;
-              showQuickMenuModal(
-                context: context,
-                child: const AudioBox(),
-                whenComplete: () => Globals.audioBoxVisible = false,
-              );
-            },
-            child: CustomTooltip(
-              message: tooltip,
-              child: Icon(displayIcon, size: 16),
-            ),
-          ),
-        ),
-      ),
+    return QuickActionItem(
+      message: "Audio Control",
+      icon: Icon(displayIcon, size: 16),
+      onTap: () {
+        Globals.audioBoxVisible = true;
+        showQuickMenuModal(
+          context: context,
+          child: const AudioBox(),
+          whenComplete: () => Globals.audioBoxVisible = false,
+        );
+      },
+      onVerticalDragStart: (_) => _dragAccumulator = 0,
+      onVerticalDragEnd: (_) => _dragAccumulator = 0,
+      onVerticalDragUpdate: _handleVolumeDrag,
+      onSecondaryTap: _handleSwitchDevice,
+      onTertiaryTapDown: (_) => _handleMute(),
     );
   }
 }

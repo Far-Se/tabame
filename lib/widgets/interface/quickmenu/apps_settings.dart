@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
 import '../../itzy/quickmenu/button_window_app.dart';
+import '../../widgets/custom_tooltip.dart';
 import 'apps_category_editor.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class QuickmenuAppsSettings extends StatefulWidget {
   const QuickmenuAppsSettings({super.key});
@@ -70,7 +72,7 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
   }
 
   String _displayNameFromPath(String path) {
-    final String filename = path.split('\\').last;
+    final String filename = path.split(RegExp(r'[\\/]')).last;
     return filename.replaceFirst(
       RegExp(r'\.(exe|lnk|url)$', caseSensitive: false),
       "",
@@ -84,12 +86,7 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
   void _addToListOfApps(Iterable<AppItem> items) {
     for (final AppItem item in items) {
       if (_containsPath(listOfApps, item.path)) continue;
-      final bool existsInCategory = categories.any(
-        (AppCategory category) => _containsPath(category.items, item.path),
-      );
-      if (!existsInCategory) {
-        listOfApps.add(item);
-      }
+      listOfApps.add(item);
     }
   }
 
@@ -104,11 +101,15 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
       if (!await dir.exists()) continue;
 
       try {
-        await for (final FileSystemEntity entity in dir.list(recursive: true, followLinks: false)) {
+        final Stream<FileSystemEntity> stream = dir.list(recursive: true, followLinks: false).handleError((Object e) {
+          // Ignore permission denied or other filesystem errors during recursion
+        });
+
+        await for (final FileSystemEntity entity in stream) {
           if (entity is! File) continue;
 
           final String normalizedPath = entity.path.toLowerCase();
-          final bool matchesExtension = extensions.any(normalizedPath.endsWith);
+          final bool matchesExtension = extensions.any((String ext) => normalizedPath.endsWith(ext.toLowerCase()));
           if (!matchesExtension) continue;
 
           foundApps.putIfAbsent(
@@ -120,7 +121,7 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
           );
         }
       } catch (_) {
-        // Ignore access errors for some folders.
+        // Ignore errors for the top-level directory listing itself
       }
     }
 
@@ -217,16 +218,140 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: QuickmenuAppsCategoryEditor(
-          categoryIndex: categoryIndex,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+          child: QuickmenuAppsCategoryEditor(
+            categoryIndex: categoryIndex,
+          ),
         ),
       ),
     );
 
     categories = List<AppCategory>.from(Boxes.appCategories);
     _emitCollections();
+  }
+
+  Future<void> _openAiCategorizeModal() async {
+    if (listOfApps.isEmpty) return;
+
+    final TextEditingController aiOutputController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    "AI Categorization",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "1. Copy the prompt below and paste it into any AI model.\n2. Copy the resulting JSON output and paste it here.\n3. Click Import to auto-categorize your apps.",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text("Copy Prompt for AI"),
+                    onPressed: () {
+                      final Map<String, String> appData = <String, String>{};
+                      for (int i = 0; i < listOfApps.length; i++) {
+                        appData[i.toString()] = listOfApps[i].name;
+                      }
+
+                      final String prompt = '''
+Please group these apps into categories. 
+One VERY important category must be "Others" where you should place apps that no one typically uses manually (like default Windows built-in utilities, background services, or extremely obscure apps).
+Other categories worth mentioning should be Games, Productivity Apps, Editors.
+Your output MUST be ONLY a valid raw JSON object strictly in this format: 
+{"CategoryName": [id_1, id_2], "CategoryName2": [id_3, id_4], "Others": [id_5, id_6]}
+
+Apps data:
+${jsonEncode(appData)}
+''';
+                      Clipboard.setData(ClipboardData(text: prompt));
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: aiOutputController,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      hintText: "Paste AI output JSON here...",
+                      hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: const Text("CANCEL"),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: () {
+                          try {
+                            final Map<String, dynamic> output =
+                                jsonDecode(aiOutputController.text) as Map<String, dynamic>;
+                            for (final String categoryName in output.keys) {
+                              final List<dynamic> ids = output[categoryName] as List<dynamic>;
+
+                              final AppCategory newCategory = AppCategory(name: categoryName);
+
+                              for (final dynamic rowId in ids) {
+                                final int? i = int.tryParse(rowId.toString());
+                                if (i != null && i >= 0 && i < listOfApps.length) {
+                                  final AppItem refApp = listOfApps[i];
+                                  final bool alreadyExists =
+                                      newCategory.items.any((AppItem item) => item.path == refApp.path);
+                                  if (!alreadyExists) {
+                                    newCategory.items.add(
+                                        AppItem(name: refApp.name, path: refApp.path, arguments: refApp.arguments));
+                                  }
+                                }
+                              }
+
+                              if (newCategory.items.isNotEmpty) {
+                                categories.add(newCategory);
+                              }
+                            }
+
+                            _save();
+                            Navigator.of(dialogContext).pop();
+                          } catch (e) {
+                            // Suppress error quietly based on dialog constraint avoiding ScaffoldMessenger, or let it fail gracefully.
+                          }
+                        },
+                        child: const Text("IMPORT"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -268,6 +393,8 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
           title: "STAGING DECK",
           subtitle: "Discovered apps ready for curation",
           actions: <Widget>[
+            if (items.isNotEmpty)
+              _buildDeckAction(context, "AI CATEGORIZE", Icons.auto_awesome_rounded, _openAiCategorizeModal),
             _buildDeckAction(context, "SCAN START", Icons.refresh_rounded, _scanStartMenu),
             _buildDeckAction(context, "ADD FOLDER", Icons.folder_open_rounded, _addFolder),
             _buildDeckAction(context, "CLEAR", Icons.delete_sweep_rounded, _clearList, isDanger: true),
@@ -388,43 +515,42 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 16, 18), // Gracious header spacing
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.primary,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: onSurface.withValues(alpha: 0.35),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    for (int i = 0; i < actions.length; i++) ...<Widget>[
-                      actions[i],
-                      if (i < actions.length - 1) const SizedBox(height: 6),
-                    ],
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: onSurface.withValues(alpha: 0.35),
+                      ),
+                    ),
                   ],
                 ),
+                if (actions.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing:
+                        0, // Using 0 because actions have their own subtle margin/alignment if needed, but best to control here
+                    runSpacing: 8,
+                    alignment: WrapAlignment.start,
+                    children: actions,
+                  ),
+                ],
               ],
             ),
           ),
@@ -440,10 +566,10 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
     final ThemeData theme = Theme.of(context);
     final Color color = isDanger ? theme.colorScheme.error : theme.colorScheme.primary;
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: Material(
-        color: Colors.transparent,
+    return Material(
+      color: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8),
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(8),

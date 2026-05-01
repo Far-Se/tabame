@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
-import '../../win32/win32.dart';
-import '../boxes.dart';
+import 'package:tabamewin32/tabamewin32.dart';
+
 import '../../settings.dart';
+import '../../win32/win32.dart';
+import '../../win32/win_utils.dart';
+import '../boxes.dart';
 
 // --------------------------------------------------------------------------
 // Trktivity
@@ -153,7 +157,8 @@ class TrktivityFilter {
 
   String toJson() => json.encode(toMap());
 
-  factory TrktivityFilter.fromJson(String source) => TrktivityFilter.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory TrktivityFilter.fromJson(String source) =>
+      TrktivityFilter.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   String toString() => 'TrktivityFilter(exe: $exe, titleSearch: $titleSearch, titleReplace: $titleReplace)';
@@ -169,11 +174,62 @@ class TrktivityFilter {
 }
 
 class Trktivity {
+  Trktivity._();
+  static final Trktivity instance = Trktivity._();
+  int lasthWnd = -1;
+  TrktivityType lastTrkType = TrktivityType.window;
+  String lastTitle = "emptytitlehere";
   List<TrktivityFilter> _filters = <TrktivityFilter>[];
   List<TrktivitySave> saved = <TrktivitySave>[];
   String folder = "${WinUtils.getTabameAppDataFolder()}\\trktivity";
 
   set filters(List<TrktivityFilter> list) => _filters = list;
+
+  void onTrktivityEvent(String action, String info) {
+    if (trktivityIdleState == 2) {
+      add(lastTrkType, lasthWnd.toString());
+    }
+    trktivityIdleState = 0;
+    if (action == "Keys") {
+      add(TrktivityType.keys, info);
+    } else if (action == "Movement") {
+      add(TrktivityType.mouse, info);
+    }
+  }
+
+  void onWinEventReceived(int hWnd, WinEventType type) {
+    if (type == WinEventType.nameChange) {
+      final String title = Win32.getTitle(hWnd);
+      if (title.replaceFirst(lastTitle, "").length < 3 || lastTitle.replaceFirst(title, "").length < 3) {
+        lastTitle = title;
+        return;
+      }
+      lastTitle = title;
+      add(TrktivityType.title, hWnd.toString());
+      lasthWnd = hWnd;
+      lastTrkType = TrktivityType.title;
+    } else if (type == WinEventType.foreground) {
+      add(TrktivityType.window, hWnd.toString());
+      lasthWnd = hWnd;
+      lastTrkType = TrktivityType.window;
+    }
+  }
+
+  Timer? _timer;
+  int trktivityIdleState = 0;
+
+  void startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 15), (Timer timer) {
+      if (trktivityIdleState == 0) {
+        trktivityIdleState = 1;
+      } else if (trktivityIdleState == 1) {
+        add(TrktivityType.idle, "");
+        trktivityIdleState = 2;
+      }
+    });
+  }
+
+  void stopTimer() => _timer?.cancel();
 
   List<TrktivityFilter> get filters => _filters.isEmpty
       ? _filters = Boxes.getSavedMap<TrktivityFilter>(

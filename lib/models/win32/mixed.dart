@@ -55,27 +55,36 @@ class Monitor {
   static Map<int, Dpi> dpi = <int, Dpi>{};
   static final Map<int, int> _monitorIds = <int, int>{};
   static Map<int, Square> monitorSizes = <int, Square>{};
+
   static List<int> get list {
-    if (_monitors.isEmpty) fetchMonitor();
+    if (_monitors.isEmpty) fetchMonitors();
     return _monitors;
   }
 
   static Map<int, int> get monitorIds {
-    if (_monitorIds.isEmpty) fetchMonitor();
+    if (_monitorIds.isEmpty) fetchMonitors();
     return _monitorIds;
   }
 
-  static void fetchMonitor() {
+  static void fetchMonitors() {
     final Map<int, Square> monitorsData = enumMonitors();
-    _monitors = monitorsData.keys.toList();
-    if (Set<int>.from(_monitors) != Set<int>.from(_monitorIds.keys)) {
+    final List<int> newMonitors = monitorsData.keys.toList();
+
+    if (Set<int>.from(newMonitors) != Set<int>.from(_monitorIds.keys)) {
       //   if (globalSettings.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     }
+
+    _monitors = newMonitors;
     monitorSizes = monitorsData;
+    // Clear stale cache — monitor handles can be reused by Windows
+    // after a display change, so old DPI values must not linger.
+    dpi.clear();
+    _monitorIds.clear();
+
     for (int i = 0; i < _monitors.length; i++) {
       final Pointer<Uint32> dpiX = calloc<Uint32>();
       final Pointer<Uint32> dpiY = calloc<Uint32>();
-      GetDpiForMonitor(_monitors[i], 0, dpiX, dpiY);
+      GetDpiForMonitor(_monitors[i], 0, dpiX, dpiY); // 0 = MDT_EFFECTIVE_DPI
       final double dpiCoef = dpiX.value / 96.0;
       dpi[_monitors[i]] = Dpi(coef: dpiCoef, x: dpiX.value, y: dpiY.value);
       free(dpiX);
@@ -87,7 +96,8 @@ class Monitor {
   static int getWindowMonitor(int hwnd) {
     final Pointer<RECT> lpPoint = calloc<RECT>();
     GetWindowRect(hwnd, lpPoint);
-    final int monitor = MonitorFromRect(lpPoint, 0);
+    // 2 = MONITOR_DEFAULTTONEAREST: never returns 0 even for off-screen windows.
+    final int monitor = MonitorFromRect(lpPoint, 2);
     free(lpPoint);
     return monitor;
   }
@@ -95,7 +105,8 @@ class Monitor {
   static int getCursorMonitor() {
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
-    final int monitor = MonitorFromPoint(lpPoint.ref, 0);
+    // 2 = MONITOR_DEFAULTTONEAREST: safe even when cursor is between monitors.
+    final int monitor = MonitorFromPoint(lpPoint.ref, 2);
     free(lpPoint);
     return monitor;
   }
@@ -111,26 +122,71 @@ class Monitor {
     final Pointer<POINT> winPoint = calloc<POINT>()
       ..ref.x = point.X
       ..ref.y = point.Y;
-    final int monitor = MonitorFromPoint(winPoint.ref, 0);
+    // 2 = MONITOR_DEFAULTTONEAREST: never returns 0 for any point.
+    final int monitor = MonitorFromPoint(winPoint.ref, 2);
     free(winPoint);
     return monitor;
   }
 
   static PointXY adjustPointToDPI(PointXY point) {
-    PointXY newPoint = PointXY(X: 0, Y: 0);
     final int monitor = getMonitorFromPoint(point);
-    if (!dpi.containsKey(monitor)) return newPoint;
-    final double dpiCoefX = dpi[monitor]!.x / 96.0;
-    final double dpiCoefY = dpi[monitor]!.y / 96.0;
-    newPoint.X = (point.X / dpiCoefX).round();
-    newPoint.Y = (point.Y / dpiCoefY).round();
-
-    return newPoint;
+    // If monitor is unknown, refresh once and retry before giving up.
+    if (!dpi.containsKey(monitor)) {
+      fetchMonitors();
+    }
+    if (!dpi.containsKey(monitor)) {
+      // Truly unknown after refresh — return original point unchanged.
+      return point;
+    }
+    return PointXY(
+      X: (point.X / (dpi[monitor]!.x / 96.0)).round(),
+      Y: (point.Y / (dpi[monitor]!.y / 96.0)).round(),
+    );
   }
 
   static double dpiAdjust(double point, [int monitor = -1]) {
     if (monitor == -1) monitor = getCursorMonitor();
-    return (point / dpi[monitor]!.coef);
+    // Guard against missing monitor (e.g. called before fetchMonitor or after
+    // a display change). Refresh once and fall back to 1.0 scale if still missing.
+    if (!dpi.containsKey(monitor)) {
+      fetchMonitors();
+    }
+    final double coef = dpi[monitor]?.coef ?? 1.0;
+    return point / coef;
+  }
+
+  /// Call this from your Windows message loop when you receive
+  /// WM_DISPLAYCHANGE or WM_DPICHANGED so the cache stays accurate.
+  static void onDisplayChanged() => fetchMonitors();
+
+  /// Places [hwnd] near the cursor, offset by [offsetX]/[offsetY] logical pixels.
+  /// Handles per-monitor DPI so the offset looks the same size on every display.
+  static void placeWindowNearCursor(int hwnd, {int offsetX = 12, int offsetY = 12}) {
+    final Pointer<POINT> pt = calloc<POINT>();
+    GetCursorPos(pt);
+    final int physX = pt.ref.x;
+    final int physY = pt.ref.y;
+    free(pt);
+
+    final int monitor = getCursorMonitor();
+    if (!dpi.containsKey(monitor)) fetchMonitors();
+
+    // Scale the logical offset to physical pixels for this monitor.
+    final double scaleX = dpi[monitor]?.x != null ? dpi[monitor]!.x / 96.0 : 1.0;
+    final double scaleY = dpi[monitor]?.y != null ? dpi[monitor]!.y / 96.0 : 1.0;
+    final int physOffsetX = (offsetX * scaleX).round();
+    final int physOffsetY = (offsetY * scaleY).round();
+
+    // SetWindowPos expects physical pixels in a per-monitor-aware process.
+    SetWindowPos(
+      hwnd,
+      0,
+      physX + physOffsetX,
+      physY + physOffsetY,
+      0,
+      0,
+      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+    );
   }
 }
 
@@ -162,6 +218,12 @@ class PointXY {
     };
   }
 
+  factory PointXY.from(int x, int y) {
+    return PointXY(
+      X: x,
+      Y: y,
+    );
+  }
   factory PointXY.fromMap(Map<String, dynamic> map) {
     return PointXY(
       X: map['X'] as int,

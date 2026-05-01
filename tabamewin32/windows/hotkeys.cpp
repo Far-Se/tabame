@@ -10,6 +10,8 @@
 #include <regex>
 #include <chrono>
 #include <algorithm>
+#include <cstdint>
+#include <atomic>
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -64,6 +66,7 @@ static int hotkeyStartMousePosX = 0;
 static int hotkeyStartMousePosY = 0;
 static bool hotkeyCorrectName = false;
 static std::wstring hotkeyName;
+static std::atomic_bool keyboardBlockerEnabled = false;
 
 // Views
 static HWND foregroundWindow = nullptr;
@@ -82,11 +85,29 @@ static int kbdPressCount = 0;
 // Mouse position tracking during hotkey drag
 static int htMousePosX = 0;
 static int htMousePosY = 0;
+static bool hasHotkeyMouseBaseline = false;
+
+// Double Alt gesture tracking. The first standalone Alt tap primes the gesture;
+// the next Alt press within 100ms becomes the actual hotkey press.
+static constexpr int kDoubleAltPrimeTimeoutMs = 100;
+static constexpr int kDoubleAltChainTimeoutMs = 300;
+static int doubleAltPrimerTimestamp = 0;
+static int doubleAltRecognizedReleaseTimestamp = 0;
+static bool doubleAltCandidateDown = false;
+static bool doubleAltCandidateHadOtherKey = false;
+static bool doubleAltCandidateForwardedAltDown = false;
+static DWORD doubleAltCandidateVk = 0;
+static DWORD doubleAltActiveVk = 0;
 
 // Hook handles for this subsystem
 HHOOK g_KeyboardHook = nullptr;
 HHOOK g_MouseHook = nullptr;
 HWINEVENTHOOK g_EventHook = nullptr;
+
+void SetKeyboardBlockerEnabled(bool enabled)
+{
+    keyboardBlockerEnabled.store(enabled);
+}
 
 enum mouseButtons
 {
@@ -105,6 +126,45 @@ enum mouseButtons
 // ---------------------------------------------------------------------------
 namespace
 {
+    void ResetActiveHotkeyState()
+    {
+        activeHotKey = -1;
+        hotkeyPressed = false;
+        hotkeyCorrectName = false;
+        hotkeyName.clear();
+        hotkeyStartTimestamp = 0;
+        hotkeyStartMousePosX = 0;
+        hotkeyStartMousePosY = 0;
+        htMousePosX = 0;
+        htMousePosY = 0;
+        hasHotkeyMouseBaseline = false;
+        doubleAltActiveVk = 0;
+    }
+
+    void ClearDoubleAltCandidate()
+    {
+        doubleAltCandidateDown = false;
+        doubleAltCandidateHadOtherKey = false;
+        doubleAltCandidateForwardedAltDown = false;
+        doubleAltCandidateVk = 0;
+    }
+
+    void ResetDoubleAltGestureState()
+    {
+        ClearDoubleAltCandidate();
+        doubleAltPrimerTimestamp = 0;
+        doubleAltRecognizedReleaseTimestamp = 0;
+        doubleAltActiveVk = 0;
+    }
+
+    const Hotkey *GetActiveHotkey()
+    {
+        if (activeHotKey < 0 || activeHotKey >= static_cast<int>(hotkeys.size()))
+            return nullptr;
+
+        return &hotkeys[activeHotKey];
+    }
+
     int GetTimestamp()
     {
         return static_cast<int>(
@@ -123,6 +183,7 @@ namespace
         hotkeyStartMousePosX = pos.x;
         hotkeyStartMousePosY = pos.y;
         hotkeyPressed = true;
+        hasHotkeyMouseBaseline = false;
     }
 
     // Retrieve window info (title, exe name, or class) into |windowInfo|.
@@ -176,6 +237,64 @@ namespace
         return vkCode == VK_LWIN || vkCode == VK_RWIN;
     }
 
+    bool IsAltKey(DWORD vkCode)
+    {
+        return vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU;
+    }
+
+    bool IsPlainAltGesture(DWORD vkCode)
+    {
+        if (!IsAltKey(vkCode))
+            return false;
+
+        if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+            return false;
+        if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+            return false;
+        if ((GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000))
+            return false;
+
+        return true;
+    }
+
+    bool IsTimestampWithin(int timestamp, int now, int timeoutMs)
+    {
+        if (timestamp == 0)
+            return false;
+
+        int elapsed = now - timestamp;
+        return elapsed >= 0 && elapsed <= timeoutMs;
+    }
+
+    bool HasRegisteredHotkey(const std::wstring &hotkey)
+    {
+        return std::any_of(hotkeys.begin(), hotkeys.end(),
+                           [&hotkey](const Hotkey &hk)
+                           { return hk.hotkey == hotkey; });
+    }
+
+    bool IsActiveDoubleAltHotkey()
+    {
+        const Hotkey *activeHotkey = GetActiveHotkey();
+        return hotkeyPressed && activeHotkey != nullptr && activeHotkey->hotkey == L"DOUBLEALT";
+    }
+
+    void SendSyntheticAltModifiedKeyDown(const KBDLLHOOKSTRUCT &keyInfo)
+    {
+        INPUT inputs[2] = {};
+
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].ki.wVk = VK_MENU;
+
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].ki.wVk = static_cast<WORD>(keyInfo.vkCode);
+        inputs[1].ki.wScan = static_cast<WORD>(keyInfo.scanCode);
+        if (keyInfo.flags & LLKHF_EXTENDED)
+            inputs[1].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
+
+        SendInput(2, inputs, sizeof(INPUT));
+    }
+
     bool IsModifierKey(DWORD vkCode)
     {
         switch (vkCode)
@@ -199,19 +318,51 @@ namespace
 
     bool ActiveHotkeyUsesWindowsKey()
     {
-        if (activeHotKey < 0 || activeHotKey >= static_cast<int>(hotkeys.size()))
+        const Hotkey *activeHotkey = GetActiveHotkey();
+        if (activeHotkey == nullptr)
             return false;
 
-        return hotkeys[activeHotKey].hotkey.find(L"WIN+") != std::wstring::npos;
+        return activeHotkey->hotkey.find(L"WIN+") != std::wstring::npos;
     }
 
     bool ShouldSuppressActiveHotkeyKeyDown(DWORD vkCode)
     {
-        if (!hotkeyPressed || activeHotKey < 0 || activeHotKey >= static_cast<int>(hotkeys.size()))
+        if (!hotkeyPressed)
             return false;
 
-        const Hotkey &active = hotkeys[activeHotKey];
-        return active.keyVK >= 0 && vkCode == static_cast<DWORD>(active.keyVK);
+        const Hotkey *activeHotkey = GetActiveHotkey();
+        if (activeHotkey == nullptr)
+        {
+            ResetActiveHotkeyState();
+            return false;
+        }
+
+        return activeHotkey->keyVK >= 0 && vkCode == static_cast<DWORD>(activeHotkey->keyVK);
+    }
+
+    bool IsValidRegexMatch(const wchar_t *text, const std::wstring &pattern)
+    {
+        try
+        {
+            return std::regex_search(text, std::wregex(pattern, std::regex_constants::icase));
+        }
+        catch (const std::regex_error &)
+        {
+            return false;
+        }
+    }
+
+    bool IsActiveXButtonHotkey(mouseButtons button)
+    {
+        const Hotkey *activeHotkey = GetActiveHotkey();
+        if (activeHotkey == nullptr)
+            return false;
+
+        if (button == BTN_XBUTTON1)
+            return activeHotkey->hotkey == L"MOUSEBUTTON4";
+        if (button == BTN_XBUTTON2)
+            return activeHotkey->hotkey == L"MOUSEBUTTON5";
+        return false;
     }
 
     void NotifySystemWindowsHotkeyUsed()
@@ -235,9 +386,13 @@ namespace
 // ---------------------------------------------------------------------------
 static bool IsOnProhibitedWindow()
 {
-    HWND hwnd = ResolveTargetWindow(hotkeys[activeHotKey]);
+    const Hotkey *activeHotkey = GetActiveHotkey();
+    if (activeHotkey == nullptr)
+        return false;
 
-    for (const auto &info : hotkeys[activeHotKey].prohibitedWindows)
+    HWND hwnd = ResolveTargetWindow(*activeHotkey);
+
+    for (const auto &info : activeHotkey->prohibitedWindows)
     {
         std::vector<std::string> data;
         std::stringstream ss(info);
@@ -251,7 +406,7 @@ static bool IsOnProhibitedWindow()
             GetWindowInfoByType(hwnd, data[0], windowInfo, 1024);
 
             std::wstring ws(data[1].begin(), data[1].end());
-            if (std::regex_search(windowInfo, std::wregex(ws, std::regex_constants::icase)))
+            if (IsValidRegexMatch(windowInfo, ws))
                 return true;
         }
     }
@@ -278,8 +433,7 @@ static bool CheckForPressedHotKey(const std::wstring &pressedHotkey)
             wchar_t windowInfo[1024] = {};
             GetWindowInfoByType(hwnd, hk.matchWindowBy, windowInfo, 1024);
 
-            bool matched = std::regex_search(windowInfo,
-                                             std::wregex(hk.matchWindowText, std::regex_constants::icase));
+            bool matched = IsValidRegexMatch(windowInfo, hk.matchWindowText);
             if (!matched)
                 continue;
 
@@ -368,9 +522,16 @@ static bool CheckForPressedHotKey(const std::wstring &pressedHotkey)
 // ---------------------------------------------------------------------------
 static void HotKeyEvent(const std::string &name, const std::string &info, int vk = 0)
 {
+    const Hotkey *activeHotkey = GetActiveHotkey();
+    if (activeHotkey == nullptr)
+    {
+        ResetActiveHotkeyState();
+        return;
+    }
+
     flutter::EncodableMap args;
     args[flutter::EncodableValue("name")] = flutter::EncodableValue(hotkeyCorrectName ? name : "");
-    args[flutter::EncodableValue("hotkey")] = flutter::EncodableValue(Encoding::WideToUtf8(hotkeys[activeHotKey].hotkey));
+    args[flutter::EncodableValue("hotkey")] = flutter::EncodableValue(Encoding::WideToUtf8(activeHotkey->hotkey));
     args[flutter::EncodableValue("vk")] = flutter::EncodableValue(vk);
     args[flutter::EncodableValue("info")] = flutter::EncodableValue(info);
     args[flutter::EncodableValue("start")] = flutter::EncodableValue(hotkeyStartTimestamp);
@@ -398,7 +559,7 @@ static void ViewsEvent(const std::string &action, HWND hwnd)
 {
     flutter::EncodableMap args;
     args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue(
-        hwnd != nullptr ? static_cast<int>(reinterpret_cast<DWORD_PTR>(hwnd)) : -1);
+        hwnd != nullptr ? static_cast<int64_t>(reinterpret_cast<intptr_t>(hwnd)) : static_cast<int64_t>(-1));
     args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
     channel->InvokeMethod("ViewsEvent", std::make_unique<flutter::EncodableValue>(args));
 }
@@ -407,7 +568,7 @@ static void WinEvent(const std::string &action, HWND hwnd)
 {
     flutter::EncodableMap args;
     args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue(
-        hwnd != nullptr ? static_cast<int>(reinterpret_cast<DWORD_PTR>(hwnd)) : -1);
+        hwnd != nullptr ? static_cast<int64_t>(reinterpret_cast<intptr_t>(hwnd)) : static_cast<int64_t>(-1));
     args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
     channel->InvokeMethod("WinEvent", std::make_unique<flutter::EncodableValue>(args));
 }
@@ -424,18 +585,160 @@ static bool ShouldSuppressForScreenBusy()
 
 static bool ShouldSuppressHotkey()
 {
-    if (hotkeys[activeHotKey].noopScreenBusy && ShouldSuppressForScreenBusy())
+    const Hotkey *activeHotkey = GetActiveHotkey();
+    if (activeHotkey == nullptr)
     {
-        hotkeyPressed = false;
-        hotkeyCorrectName = false;
+        ResetActiveHotkeyState();
         return true;
     }
-    if (!hotkeys[activeHotKey].prohibitedWindows.empty() && IsOnProhibitedWindow())
+
+    if (activeHotkey->noopScreenBusy && ShouldSuppressForScreenBusy())
     {
-        hotkeyPressed = false;
-        hotkeyCorrectName = false;
+        ResetActiveHotkeyState();
         return true;
     }
+    if (!activeHotkey->prohibitedWindows.empty() && IsOnProhibitedWindow())
+    {
+        ResetActiveHotkeyState();
+        return true;
+    }
+    return false;
+}
+
+static bool TryHandleDoubleAltGesture(WPARAM wParam, const KBDLLHOOKSTRUCT &keyInfo, LRESULT &result)
+{
+    const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+    const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
+    if (!keyDown && !keyUp)
+        return false;
+
+    const bool isAlt = IsAltKey(keyInfo.vkCode);
+
+    if (IsActiveDoubleAltHotkey())
+    {
+        if (isAlt && keyDown)
+        {
+            result = -1;
+            return true;
+        }
+
+        const bool sameActiveKey = doubleAltActiveVk == 0 || doubleAltActiveVk == keyInfo.vkCode ||
+                                   doubleAltActiveVk == VK_MENU || keyInfo.vkCode == VK_MENU;
+        if (isAlt && keyUp && sameActiveKey)
+        {
+            const Hotkey *activeHotkey = GetActiveHotkey();
+            if (activeHotkey != nullptr)
+                HotKeyEvent(activeHotkey->name, "released");
+            ResetActiveHotkeyState();
+            doubleAltRecognizedReleaseTimestamp = GetTimestamp();
+            result = -1;
+            return true;
+        }
+
+        return false;
+    }
+
+    if (doubleAltCandidateDown && keyDown && !isAlt)
+    {
+        if (!doubleAltCandidateForwardedAltDown)
+        {
+            SendSyntheticAltModifiedKeyDown(keyInfo);
+            doubleAltCandidateForwardedAltDown = true;
+            doubleAltCandidateHadOtherKey = true;
+            doubleAltPrimerTimestamp = 0;
+            doubleAltRecognizedReleaseTimestamp = 0;
+            result = -1;
+            return true;
+        }
+        doubleAltCandidateHadOtherKey = true;
+        doubleAltPrimerTimestamp = 0;
+        doubleAltRecognizedReleaseTimestamp = 0;
+        return false;
+    }
+
+    if (!isAlt)
+        return false;
+
+    if (!HasRegisteredHotkey(L"DOUBLEALT"))
+    {
+        ResetDoubleAltGestureState();
+        return false;
+    }
+
+    if (!IsPlainAltGesture(keyInfo.vkCode))
+    {
+        ResetDoubleAltGestureState();
+        return false;
+    }
+
+    if (keyDown)
+    {
+        if (doubleAltCandidateDown)
+        {
+            result = -1;
+            return true;
+        }
+
+        if (hotkeyPressed)
+            return false;
+
+        const int now = GetTimestamp();
+        const bool shouldTrigger =
+            IsTimestampWithin(doubleAltPrimerTimestamp, now, kDoubleAltPrimeTimeoutMs) ||
+            IsTimestampWithin(doubleAltRecognizedReleaseTimestamp, now, kDoubleAltChainTimeoutMs);
+
+        if (shouldTrigger)
+        {
+            ClearDoubleAltCandidate();
+            doubleAltPrimerTimestamp = 0;
+            doubleAltActiveVk = keyInfo.vkCode;
+
+            if (CheckForPressedHotKey(L"DOUBLEALT"))
+            {
+                if (!ShouldSuppressHotkey())
+                {
+                    const Hotkey *activeHotkey = GetActiveHotkey();
+                    if (activeHotkey != nullptr)
+                    {
+                        HotKeyEvent(activeHotkey->name, "pressed");
+                        result = -1;
+                        return true;
+                    }
+                }
+            }
+
+            ResetActiveHotkeyState();
+            doubleAltCandidateDown = true;
+            doubleAltCandidateVk = keyInfo.vkCode;
+            result = -1;
+            return true;
+        }
+
+        doubleAltCandidateDown = true;
+        doubleAltCandidateHadOtherKey = false;
+        doubleAltCandidateForwardedAltDown = false;
+        doubleAltCandidateVk = keyInfo.vkCode;
+        result = -1;
+        return true;
+    }
+
+    if (keyUp && doubleAltCandidateDown)
+    {
+        const bool sameCandidateKey = doubleAltCandidateVk == 0 || doubleAltCandidateVk == keyInfo.vkCode ||
+                                      IsAltKey(doubleAltCandidateVk);
+
+        if (!doubleAltCandidateHadOtherKey && sameCandidateKey)
+        {
+            ClearDoubleAltCandidate();
+            doubleAltPrimerTimestamp = GetTimestamp();
+            result = -1;
+            return true;
+        }
+
+        ClearDoubleAltCandidate();
+        return false;
+    }
+
     return false;
 }
 
@@ -447,10 +750,17 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
     if (nCode < 0)
         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
 
+    if (keyboardBlockerEnabled.load())
+        return 1;
+
     KBDLLHOOKSTRUCT keyInfo = *reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
 
     if (keyInfo.flags & LLKHF_INJECTED)
         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
+
+    LRESULT doubleAltResult = 0;
+    if (TryHandleDoubleAltGesture(wParam, keyInfo, doubleAltResult))
+        return doubleAltResult;
 
     if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && hotkeyPressed)
     {
@@ -486,11 +796,18 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
             if (ShouldSuppressHotkey())
                 return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
+            const Hotkey *activeHotkey = GetActiveHotkey();
+            if (activeHotkey == nullptr)
+            {
+                ResetActiveHotkeyState();
+                return CallNextHookEx(nullptr, nCode, wParam, lParam);
+            }
+
             if (ActiveHotkeyUsesWindowsKey())
                 NotifySystemWindowsHotkeyUsed();
 
             hotkeyName = pressedHotkey;
-            HotKeyEvent(hotkeys[activeHotKey].name, "pressedKbd");
+            HotKeyEvent(activeHotkey->name, "pressedKbd");
             return -1;
         }
         return CallNextHookEx(nullptr, nCode, wParam, lParam);
@@ -518,11 +835,10 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
         // quick re-presses do not race against an async Dart round-trip.
         if (hotkeyPressed && ShouldSuppressActiveHotkeyKeyDown(keyInfo.vkCode))
         {
-            HotKeyEvent(hotkeys[activeHotKey].name, "releaseKbd", keyInfo.vkCode);
-            hotkeyPressed = false;
-            hotkeyCorrectName = false;
-            htMousePosX = 0;
-            htMousePosY = 0;
+            const Hotkey *activeHotkey = GetActiveHotkey();
+            if (activeHotkey != nullptr)
+                HotKeyEvent(activeHotkey->name, "releaseKbd", keyInfo.vkCode);
+            ResetActiveHotkeyState();
             return -1;
         }
     }
@@ -545,21 +861,34 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
     {
         if (hotkeyPressed)
         {
+            if (GetActiveHotkey() == nullptr)
+            {
+                ResetActiveHotkeyState();
+                return CallNextHookEx(nullptr, nCode, wParam, lParam);
+            }
+
             POINT lpPoint;
             GetCursorPos(&lpPoint);
-            if (htMousePosX == 0)
+            if (!hasHotkeyMouseBaseline)
+            {
                 htMousePosX = lpPoint.x;
-            if (htMousePosY == 0)
                 htMousePosY = lpPoint.y;
+                hasHotkeyMouseBaseline = true;
+            }
 
             int diffX = lpPoint.x - htMousePosX;
             int diffY = lpPoint.y - htMousePosY;
 
             if (abs(diffX) > 10 || abs(diffY) > 10)
             {
-                HotKeyEvent(hotkeys[activeHotKey].name, "moved");
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr)
+                    HotKeyEvent(activeHotkey->name, "moved");
+                else
+                    ResetActiveHotkeyState();
                 htMousePosX = 0;
                 htMousePosY = 0;
+                hasHotkeyMouseBaseline = false;
             }
         }
         if (isTrcktivityEnabled)
@@ -660,15 +989,23 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
                     if (ShouldSuppressHotkey())
                         return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
-                    HotKeyEvent(hotkeys[activeHotKey].name, "pressed");
+                    const Hotkey *activeHotkey = GetActiveHotkey();
+                    if (activeHotkey == nullptr)
+                    {
+                        ResetActiveHotkeyState();
+                        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+                    }
+
+                    HotKeyEvent(activeHotkey->name, "pressed");
                     return -1;
                 }
             }
-            else if (hotkeyPressed)
+            else if (hotkeyPressed && IsActiveXButtonHotkey(button))
             {
-                HotKeyEvent(hotkeys[activeHotKey].name, "released");
-                hotkeyPressed = false;
-                hotkeyCorrectName = false;
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr)
+                    HotKeyEvent(activeHotkey->name, "released");
+                ResetActiveHotkeyState();
                 return 1;
             }
         }

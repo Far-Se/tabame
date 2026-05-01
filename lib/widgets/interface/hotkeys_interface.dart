@@ -2,9 +2,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
+import '../../models/classes/screen_draw_hotkeys.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../widgets/info_text.dart';
@@ -23,6 +25,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   FocusNode focusNode = FocusNode();
 
   bool listeningToHotkey = false;
+  bool _showScreenDrawHotkeys = false;
 
   List<int> unfolded = <int>[];
   @override
@@ -43,14 +46,101 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme texts = Theme.of(context).textTheme;
 
-    return Column(
-      children: <Widget>[
-        // Enhanced Header Section
-        _buildInterfaceHeader(context, colors, texts),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: _showScreenDrawHotkeys
+          ? KeyedSubtree(
+              key: const ValueKey<String>("screen-draw-hotkeys"),
+              child: _buildScreenDrawHotkeysSubPage(colors, texts),
+            )
+          : KeyedSubtree(
+              key: const ValueKey<String>("global-hotkeys"),
+              child: _buildGlobalHotkeysPage(colors, texts),
+            ),
+    );
+  }
 
-        // Scrollable List of Hotkeys
-        remap.isEmpty ? _buildEmptyState(colors, texts) : _buildHotkeyContent(colors, texts),
+  Widget _buildGlobalHotkeysPage(ColorScheme colors, TextTheme texts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _buildInterfaceHeader(context, colors, texts),
+        _buildScreenDrawHotkeysTile(colors, texts),
+        Expanded(
+          child: remap.isEmpty ? _buildEmptyState(colors, texts) : _buildHotkeyContent(colors, texts),
+        ),
       ],
+    );
+  }
+
+  Widget _buildScreenDrawHotkeysSubPage(ColorScheme colors, TextTheme texts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _HotkeysSubPageHeader(
+          title: "Misc Hotkeys",
+          subtitle: "Screen Draw and Spotlight runtime bindings",
+          icon: Icons.draw_outlined,
+          onBack: () => setState(() => _showScreenDrawHotkeys = false),
+        ),
+        const Expanded(child: ScreenDrawHotkeysPage()),
+      ],
+    );
+  }
+
+  Widget _buildScreenDrawHotkeysTile(ColorScheme colors, TextTheme texts) {
+    final Color accent = globalSettings.themeColors.accentColor;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      child: InkWell(
+        onTap: _openScreenDrawHotkeys,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: colors.onSurface.withAlpha(8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.onSurface.withAlpha(18)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.draw_outlined, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Misc hotkeys",
+                      style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Screen Draw and Spotlight shortcuts",
+                      style: texts.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 22, color: colors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -80,7 +170,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
               FilledButton.icon(
                 onPressed: _addNewHotkey,
                 icon: const Icon(Icons.add, size: 20),
-                label: const Text("ADD HOTKEY"),
+                label: const Text("ADD HOTKEY", style: TextStyle(fontWeight: FontWeight.bold)),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -120,8 +210,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
 
   Widget _buildHotkeyContent(ColorScheme colors, TextTheme texts) {
     return ReorderableListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const ClampingScrollPhysics(),
       buildDefaultDragHandles: false,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: remap.length,
@@ -222,11 +311,16 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
     );
   }
 
+  void _openScreenDrawHotkeys() {
+    setState(() => _showScreenDrawHotkeys = true);
+  }
+
   void _editAction(int hotkeyIndex, int actionIndex) {
     showDialog(
       context: context,
       builder: (BuildContext context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        constraints: const BoxConstraints(maxWidth: 900, maxHeight: 850),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 40),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: HotKeyAction(
           hotkey: remap[hotkeyIndex].keymaps[actionIndex].copyWith(),
@@ -379,7 +473,7 @@ class _HotkeyCardState extends State<_HotkeyCard> {
                                   Text(
                                     widget.keymap.hotkey.isEmpty
                                         ? "No Trigger Defined"
-                                        : widget.keymap.hotkey.toUpperCase(),
+                                        : widget.keymap.displayHotkey.toUpperCase(),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -493,7 +587,11 @@ class _HotkeyCardState extends State<_HotkeyCard> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
-        widget.keymap.key.startsWith("MouseButton") ? Icons.mouse_rounded : Icons.keyboard_rounded,
+        widget.keymap.key.startsWith("MouseButton")
+            ? Icons.mouse_rounded
+            : widget.keymap.key == Hotkeys.doubleAltKey
+                ? Icons.keyboard_option_key_rounded
+                : Icons.keyboard_rounded,
         color: widget.colors.onPrimaryContainer,
         size: 20,
       ),
@@ -534,6 +632,7 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isEnabled = widget.keyInfo.enabled;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -542,73 +641,135 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
           decoration: BoxDecoration(
-            color: _hovered ? widget.accent.withAlpha(12) : widget.onSurface.withAlpha(5),
+            color: isEnabled
+                ? (_hovered ? globalSettings.themeColors.accentColor.withAlpha(12) : widget.onSurface.withAlpha(5))
+                : widget.onSurface.withAlpha(2),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: _hovered ? widget.accent.withAlpha(40) : Colors.transparent),
+            border: Border.all(
+              color: isEnabled
+                  ? (_hovered ? globalSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent)
+                  : (_hovered ? widget.onSurface.withAlpha(20) : Colors.transparent),
+            ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: <Widget>[
-                // Drag Handle
-                ReorderableDragStartListener(
-                  index: widget.index,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                    color: Colors.transparent,
-                    child: Icon(Icons.drag_indicator_rounded, size: 16, color: widget.onSurface.withAlpha(80)),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: isEnabled ? 1.0 : 0.45,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: <Widget>[
+                  // Drag Handle
+                  ReorderableDragStartListener(
+                    index: widget.index,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                      color: Colors.transparent,
+                      child: Icon(
+                        Icons.drag_indicator_rounded,
+                        size: 16,
+                        color: widget.onSurface.withAlpha(80),
+                      ),
+                    ),
                   ),
-                ),
-                // Action Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        widget.keyInfo.name,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: widget.keyInfo.enabled
-                              ? (_hovered ? widget.accent : widget.onSurface)
-                              : widget.onSurface.withAlpha(120),
+                  // Action Content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            if (!isEnabled)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Icon(
+                                  Icons.visibility_off_outlined,
+                                  size: 14,
+                                  color: widget.onSurface.withAlpha(120),
+                                ),
+                              ),
+                            Expanded(
+                              child: Text(
+                                widget.keyInfo.name + (isEnabled ? "" : " (Disabled)"),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isEnabled ? FontWeight.w500 : FontWeight.w400,
+                                  fontStyle: isEnabled ? FontStyle.normal : FontStyle.italic,
+                                  color: isEnabled
+                                      ? (_hovered ? globalSettings.themeColors.accentColor : widget.onSurface)
+                                      : widget.onSurface.withAlpha(150),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      _buildActionBadges(widget.keyInfo, widget.colors),
-                    ],
+                        _buildActionBadges(widget.keyInfo, widget.colors),
+                      ],
+                    ),
                   ),
-                ),
-                // Hover Actions
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: _hovered ? 1.0 : 0.0,
-                  child: Row(
-                    children: <Widget>[
-                      IconButton(
-                        tooltip: "Edit Action",
-                        icon: Icon(Icons.settings_rounded, size: 16, color: widget.onSurface.withAlpha(200)),
-                        onPressed: widget.onEdit,
-                        splashRadius: 18,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                      IconButton(
-                        tooltip: "Delete Action",
-                        icon: Icon(Icons.close_rounded, size: 16, color: widget.colors.error.withAlpha(200)),
-                        onPressed: widget.onDelete,
-                        splashRadius: 18,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 44),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
+                  // Hover Actions
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 150),
+                    opacity: _hovered ? 1.0 : 0.0,
+                    child: Row(
+                      children: <Widget>[
+                        IconButton(
+                          tooltip: "Edit Action",
+                          icon: Icon(Icons.settings_rounded, size: 16, color: widget.onSurface.withAlpha(200)),
+                          onPressed: widget.onEdit,
+                          splashRadius: 18,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          padding: EdgeInsets.zero,
+                        ),
+                        IconButton(
+                          tooltip: "Delete Action",
+                          icon: Icon(Icons.close_rounded, size: 16, color: widget.colors.error.withAlpha(200)),
+                          onPressed: widget.onDelete,
+                          splashRadius: 18,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 44),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _getActionLabel(KeyAction a) {
+    switch (a.type) {
+      case ActionType.hotkey:
+        return "Hotkey: ${a.value}";
+      case ActionType.sendKeys:
+        return "Keys: ${a.value}";
+      case ActionType.tabameFunction:
+        return "Func: ${a.value}";
+      case ActionType.setVar:
+        try {
+          final List<dynamic> varInfo = jsonDecode(a.value);
+          return "Set: ${varInfo[0]}";
+        } catch (_) {
+          return "Set: ${a.value}";
+        }
+      case ActionType.sendClick:
+        try {
+          final ClickAction click = ClickAction.fromJson(a.value);
+          return "Click: (${click.x}, ${click.y})";
+        } catch (_) {
+          return "Click";
+        }
+      case ActionType.openQuickMenupage:
+        return "Open: ${a.value}";
+      case ActionType.wait:
+        return "Wait: ${a.value}ms";
+      // ignore: unreachable_switch_default
+      default:
+        return a.type.name.splitAndUpcase;
+    }
   }
 
   Widget _buildActionBadges(KeyMap keyInfo, ColorScheme colors) {
@@ -626,7 +787,7 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
           if (keyInfo.boundToRegion) _buildBadge("Region Only", Icons.location_on_rounded, colors),
           ...keyInfo.actions.map((KeyAction a) {
             if (HotKeyInfo.actionTypeIcons.containsKey(a.type)) {
-              return _buildBadge(a.type.name.splitAndUpcase, HotKeyInfo.actionTypeIcons[a.type]!, colors);
+              return _buildBadge(_getActionLabel(a), HotKeyInfo.actionTypeIcons[a.type]!, colors);
             }
             return const SizedBox();
           }),
@@ -647,6 +808,442 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
           const SizedBox(width: 4),
           Text(label, style: TextStyle(fontSize: 9, color: colors.onSurfaceVariant, fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+}
+
+class _HotkeysSubPageHeader extends StatefulWidget {
+  const _HotkeysSubPageHeader({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onBack,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onBack;
+
+  @override
+  State<_HotkeysSubPageHeader> createState() => _HotkeysSubPageHeaderState();
+}
+
+class _HotkeysSubPageHeaderState extends State<_HotkeysSubPageHeader> {
+  bool _backHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color onSurface = theme.colorScheme.onSurface;
+    final Color primary = theme.colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Row(
+        children: <Widget>[
+          MouseRegion(
+            onEnter: (_) => setState(() => _backHovered = true),
+            onExit: (_) => setState(() => _backHovered = false),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: widget.onBack,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _backHovered ? primary.withAlpha(25) : onSurface.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _backHovered ? primary.withAlpha(76) : onSurface.withAlpha(20)),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: _backHovered ? primary : onSurface.withAlpha(150),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            height: 24,
+            width: 1.5,
+            decoration: BoxDecoration(
+              color: onSurface.withAlpha(28),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(widget.icon, size: 18, color: primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Text(
+                      "HOTKEYS / ",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: onSurface.withAlpha(76),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    Text(
+                      widget.title.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: primary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  widget.subtitle,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: onSurface.withAlpha(150)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ScreenDrawHotkeysPage extends StatefulWidget {
+  const ScreenDrawHotkeysPage({super.key});
+
+  @override
+  State<ScreenDrawHotkeysPage> createState() => _ScreenDrawHotkeysPageState();
+}
+
+class _ScreenDrawHotkeysPageState extends State<ScreenDrawHotkeysPage> {
+  late List<ScreenDrawHotkeyBinding> _bindings;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindings = Boxes.screenDrawHotkeys;
+  }
+
+  Future<void> _save() async {
+    Boxes.screenDrawHotkeys = _bindings;
+    await Boxes.updateSettings(
+      "screenDrawHotkeys",
+      jsonEncode(_bindings.map((ScreenDrawHotkeyBinding binding) => binding.toMap()).toList()),
+    );
+  }
+
+  Future<void> _restoreDefaults() async {
+    setState(() => _bindings = ScreenDrawHotkeyBinding.defaults());
+    await _save();
+  }
+
+  void _updateBinding(int index, ScreenDrawHotkeyBinding binding) {
+    setState(() => _bindings[index] = binding);
+    _save();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final TextTheme texts = Theme.of(context).textTheme;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 36),
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: colors.onSurface.withAlpha(8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.onSurface.withAlpha(18)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "MISC HOTKEYS",
+                      style: texts.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: colors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Stored separately from global workflow hotkeys. Spotlight shortcuts work only while Spotlight is running.",
+                      style: texts.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _restoreDefaults,
+                icon: const Icon(Icons.history_rounded, size: 16),
+                label: const Text("Restore default"),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        ...List<Widget>.generate(
+          _bindings.length,
+          (int index) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _ScreenDrawHotkeyRow(
+              binding: _bindings[index],
+              allBindings: _bindings,
+              onChanged: (ScreenDrawHotkeyBinding binding) => _updateBinding(index, binding),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScreenDrawHotkeyRow extends StatefulWidget {
+  const _ScreenDrawHotkeyRow({
+    required this.binding,
+    required this.allBindings,
+    required this.onChanged,
+  });
+
+  final ScreenDrawHotkeyBinding binding;
+  final List<ScreenDrawHotkeyBinding> allBindings;
+  final ValueChanged<ScreenDrawHotkeyBinding> onChanged;
+
+  @override
+  State<_ScreenDrawHotkeyRow> createState() => _ScreenDrawHotkeyRowState();
+}
+
+class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
+  final FocusNode _focusNode = FocusNode();
+  final Set<String> _pressedModifiers = <String>{};
+  bool _listening = false;
+  String? _conflictMessage;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  ScreenDrawHotkeyBinding get _binding => widget.binding;
+
+  String get _actionLabel => _binding.action?.label ?? _binding.actionId;
+
+  void _startListening() {
+    setState(() {
+      _listening = true;
+      _pressedModifiers.clear();
+      _conflictMessage = null;
+    });
+    _focusNode.requestFocus();
+  }
+
+  KeyEventResult _handleHotkeyKeyEvent(FocusNode node, KeyEvent event) {
+    if (!_listening) return KeyEventResult.ignored;
+
+    setState(() {
+      _pressedModifiers.clear();
+      if (HardwareKeyboard.instance.isControlPressed) _pressedModifiers.add("CTRL");
+      if (HardwareKeyboard.instance.isAltPressed) _pressedModifiers.add("ALT");
+      if (HardwareKeyboard.instance.isShiftPressed) _pressedModifiers.add("SHIFT");
+      if (HardwareKeyboard.instance.isMetaPressed) _pressedModifiers.add("WIN");
+    });
+
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        setState(() => _listening = false);
+        return KeyEventResult.handled;
+      }
+
+      if (_isModifier(event.logicalKey)) return KeyEventResult.handled;
+
+      final String keyLabel = event.logicalKey.keyLabel;
+      final List<String> modifiers = Hotkeys.normalizeModifiers(_pressedModifiers);
+      final ScreenDrawHotkeyBinding updated = ScreenDrawHotkeyBinding(
+        actionId: _binding.actionId,
+        key: keyLabel,
+        modifiers: modifiers,
+        enabled: _binding.enabled,
+      );
+
+      setState(() {
+        _listening = false;
+        _conflictMessage = _getConflictMessage(updated);
+      });
+      widget.onChanged(updated);
+      FocusScope.of(context).unfocus();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.handled;
+  }
+
+  bool _isModifier(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.controlLeft ||
+        key == LogicalKeyboardKey.controlRight ||
+        key == LogicalKeyboardKey.altLeft ||
+        key == LogicalKeyboardKey.altRight ||
+        key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight ||
+        key == LogicalKeyboardKey.metaLeft ||
+        key == LogicalKeyboardKey.metaRight;
+  }
+
+  String? _getConflictMessage(ScreenDrawHotkeyBinding updated) {
+    for (final ScreenDrawHotkeyBinding other in widget.allBindings) {
+      if (identical(other, _binding)) continue;
+      if (!other.enabled) continue;
+      if (other.key == updated.key &&
+          Hotkeys.normalizeModifiers(other.modifiers).join("+") == updated.modifiers.join("+")) {
+        return other.action?.label ?? other.actionId;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final TextTheme texts = Theme.of(context).textTheme;
+    final Color accent = globalSettings.themeColors.accentColor;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.onSurface.withAlpha(18)),
+      ),
+      child: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.keyboard_command_key_rounded, size: 18, color: accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(_actionLabel, style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _binding.enabled ? _binding.displayHotkey : "Disabled",
+                        style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _binding.enabled,
+                  onChanged: (bool enabled) {
+                    widget.onChanged(ScreenDrawHotkeyBinding(
+                      actionId: _binding.actionId,
+                      key: _binding.key,
+                      modifiers: _binding.modifiers,
+                      enabled: enabled,
+                    ));
+                  },
+                ),
+                const SizedBox(width: 8),
+                Focus(
+                  focusNode: _focusNode,
+                  onKeyEvent: _handleHotkeyKeyEvent,
+                  child: OutlinedButton.icon(
+                    onPressed: _startListening,
+                    icon: Icon(_listening ? Icons.sensors_rounded : Icons.edit_rounded, size: 16),
+                    label: Text(_listening ? "Listening..." : "Set hotkey"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_listening)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Row(
+                children: <Widget>[
+                  _modifierChip("CTRL", _pressedModifiers.contains("CTRL")),
+                  const SizedBox(width: 6),
+                  _modifierChip("ALT", _pressedModifiers.contains("ALT")),
+                  const SizedBox(width: 6),
+                  _modifierChip("SHIFT", _pressedModifiers.contains("SHIFT")),
+                  const SizedBox(width: 6),
+                  _modifierChip("WIN", _pressedModifiers.contains("WIN")),
+                ],
+              ),
+            ),
+          if (_conflictMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.error.withAlpha(15),
+                border: Border(top: BorderSide(color: colors.error.withAlpha(30))),
+              ),
+              child: Text(
+                "Conflict with $_conflictMessage",
+                style: texts.labelSmall?.copyWith(color: colors.error, fontWeight: FontWeight.w800),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modifierChip(String label, bool active) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final Color accent = globalSettings.themeColors.accentColor;
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? accent.withAlpha(25) : colors.onSurface.withAlpha(10),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: active ? accent.withAlpha(180) : colors.onSurface.withAlpha(12)),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            color: active ? accent : colors.onSurfaceVariant.withAlpha(80),
+          ),
+        ),
       ),
     );
   }

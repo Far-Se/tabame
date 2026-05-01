@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/custom_tooltip.dart';
 import 'trktivity_models.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class TrktivityTimeline extends StatelessWidget {
   final List<MapEntry<String, List<TTrack>>> wTimeTrackList;

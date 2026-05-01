@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+
+import '../../widgets/custom_tooltip.dart';
 
 class IconInfo extends StatelessWidget {
   final IconData icon;

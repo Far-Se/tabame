@@ -1,19 +1,20 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
-import 'dart:ui';
+import 'dart:ffi';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
-import '../../models/tray_watcher.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../models/tray_watcher.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/custom_tooltip.dart';
+import '../widgets/windows_scroll.dart';
 
 class TrayBar extends StatefulWidget {
   const TrayBar({super.key});
@@ -24,7 +25,6 @@ class TrayBar extends StatefulWidget {
 }
 
 class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
-  final ScrollController _scrollController = ScrollController();
   late Timer mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
   bool fetching = false;
@@ -32,14 +32,8 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     fetching = true;
     await Tray.fetchTray();
     fetching = false;
-    // if (listEquals(Tray.trayList, tray)) return;
     tray = <TrayBarInfo>[...Tray.trayList.where((TrayBarInfo element) => element.isVisible)];
-    /* final List<TrayBarInfo> musicBee = tray.where((TrayBarInfo element) => element.processExe == "MusicBee.exe").toList();
-    if (musicBee.isNotEmpty) {
-      Globals.musicBeeTrayHwnd = <int>[musicBee[0].hWnd, musicBee[0].processID, musicBee[0].uCallbackMessage, musicBee[0].uID];
-    } else {
-      Globals.musicBeeTrayHwnd = <int>[0, 0, 0, 0];
-    } */
+
     if (mounted) setState(() {});
   }
 
@@ -47,14 +41,16 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     QuickMenuFunctions.addListener(this);
     fetchTray();
-    mainTimer = Timer.periodic(const Duration(milliseconds: 600), (Timer timer) async {
-      if (!QuickMenuFunctions.isQuickMenuVisible) return;
-      if (Globals.isWindowActive || true) {
-        PaintingBinding.instance.imageCache.clear();
-        if (!fetching) fetchTray();
-      }
-    });
+    mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);
     Debug.add("QuickMenu: Tray");
+  }
+
+  void checkForNewTrayIcons(Timer timer) async {
+    // if (!QuickMenuFunctions.isQuickMenuVisible && kReleaseMode) return;
+    if (Globals.isWindowActive || true) {
+      // PaintingBinding.instance.imageCache.clear();
+      if (!fetching) fetchTray();
+    }
   }
 
   @override
@@ -76,201 +72,102 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     QuickMenuFunctions.removeListener(this);
-    _scrollController.dispose();
     mainTimer.cancel();
     super.dispose();
+  }
+
+  void sendClick(ExtendedTrayIcon element, TrayClickType clickType) async {
+    final Pointer<POINT> point = calloc<POINT>();
+    GetCursorPos(point);
+    final int x = point.ref.x;
+    final int y = point.ref.y;
+    free(point);
+    WinTray.click(element, clickType: TrayClickType.left);
+    // interval 10ms move mosue back to pos
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    SetCursorPos(x, y);
   }
 
   @override
   Widget build(BuildContext context) {
     if (tray.isEmpty || !globalSettings.showTrayBar) return Container();
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      child: Row(
-        children: <Widget>[
-          for (final TrayBarInfo info in tray)
-            Listener(
-              onPointerDown: (PointerDownEvent event) async {
-                if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
-                if (event.kind == PointerDeviceKind.mouse) {
-                  if (event.buttons == kSecondaryMouseButton) {
-                    if (info.clickOpensExe) {
-                      if (info.processPath.isNotEmpty) {
-                        Win32.closeWindow(info.hWnd);
-                        Future<void>.delayed(
-                            const Duration(milliseconds: 300), () => Win32.forceCloseWindowbyProcess(info.processID));
-                        Future<void>.delayed(
-                            const Duration(milliseconds: 600), () => Win32.forceCloseWindowbyPath(info.processPath));
-                      }
-                      return;
-                    }
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                  } else if (event.buttons == kPrimaryMouseButton) {
-                    if (info.clickOpensExe) {
-                      if (info.processPath.isNotEmpty) {
-                        WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
-                      }
-                      return;
-                    }
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                  } else if (event.buttons == kMiddleMouseButton) {
-                    final int hWnd = await findTopWindow(info.processID);
-                    if (hWnd > 0) {
-                      Win32.closeWindow(hWnd, forced: true);
-                    } else {}
-                  }
-                }
-              },
-              onPointerSignal: (PointerSignalEvent pointerSignal) {
-                if (pointerSignal is PointerScrollEvent) {
-                  if (pointerSignal.scrollDelta.dy < 0) {
-                    _scrollController.animateTo(_scrollController.position.minScrollExtent,
-                        duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                  } else {
-                    _scrollController.animateTo(_scrollController.position.maxScrollExtent,
-                        duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                  }
-                }
-              },
-              child: InkWell(
-                onTap: () {},
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                  child: CustomTooltip(
-                      message: info.processExe,
-                      constraints: const BoxConstraints(minHeight: 0),
-                      preferBelow: false,
-                      child: Boxes.getIconRewrite(info.processPath) != ""
-                          ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
-                          : Image.memory(
-                              info.iconData,
-                              fit: BoxFit.scaleDown,
-                              gaplessPlayback: true,
-                              width: 16,
-                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                                Icons.check_box_outline_blank,
-                                size: 16,
-                              ),
-                            )),
+    return ShaderMask(
+      shaderCallback: (Rect rect) {
+        return const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, 0.93, 1.0],
+        ).createShader(rect);
+      },
+      blendMode: BlendMode.dstOut,
+      child: WindowsScrollView(
+        scrollDirection: Axis.horizontal,
+        showScrollbar: false,
+        child: Row(
+          children: <Widget>[
+            for (final TrayBarInfo info in tray)
+              GestureDetector(
+                onSecondaryTap: () async {
+                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  // WinTray.click(info, clickType: TrayClickType.right);
+                  // final List<TrayInfo> icons = await enumTrayIcons();
+                  // final TrayInfo? thisTray = icons.firstWhereOrNull((TrayInfo e) => e.processID == info.processID);
+                  // int hWnd = info.hWnd;
+                  // if (thisTray != null) {
+                  //   // hWnd = thisTray.hWnd;
+                  //   print(<int>{info.uCallbackMessage, thisTray.uCallbackMessage});
+                  //   print(<int>{info.uID, thisTray.uID});
+                  // }
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                },
+                onLongPress: () {
+                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
+                },
+                onSecondaryLongPress: () async {
+                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  WinTray.click(info, clickType: TrayClickType.right);
+                },
+                onTertiaryTapUp: (TapUpDetails e) {
+                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  WinTray.click(info, clickType: TrayClickType.middle);
+                },
+                child: InkWell(
+                  onTap: () async {
+                    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                    sendClick(info, TrayClickType.left);
+                  },
+                  onDoubleTap: () async {
+                    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                    sendClick(info, TrayClickType.doubleClick);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                    child: CustomTooltip(
+                        message: info.processExe,
+                        child: Boxes.getIconRewrite(info.processPath) != ""
+                            ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
+                            : Image.memory(
+                                info.iconData,
+                                fit: BoxFit.scaleDown,
+                                gaplessPlayback: true,
+                                width: 16,
+                                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                    const Icon(
+                                  Icons.check_box_outline_blank,
+                                  size: 16,
+                                ),
+                              )),
+                  ),
                 ),
               ),
-            ),
-          const SizedBox(width: 5.1),
-        ],
-      ),
-    );
-    // ignore: dead_code
-    return Padding(
-      padding: const EdgeInsets.only(right: 3),
-      child: SizedBox(
-        height: Globals.heights.traybar - 10.1,
-        width: tray.length * 20.4,
-        child: ShaderMask(
-          shaderCallback: (Rect rect) {
-            return const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-              stops: <double>[0.0, 0.93, 1.0],
-            ).createShader(rect);
-          },
-          blendMode: BlendMode.dstOut,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.antiAliasWithSaveLayer,
-            child: Row(
-              children: <Widget>[
-                for (final TrayBarInfo info in tray)
-                  Listener(
-                    onPointerDown: (PointerDownEvent event) async {
-                      if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
-                      if (event.kind == PointerDeviceKind.mouse) {
-                        if (event.buttons == kSecondaryMouseButton) {
-                          if (info.clickOpensExe) {
-                            if (info.processPath.isNotEmpty) {
-                              Win32.closeWindow(info.hWnd);
-                              Future<void>.delayed(const Duration(milliseconds: 300),
-                                  () => Win32.forceCloseWindowbyProcess(info.processID));
-                              Future<void>.delayed(const Duration(milliseconds: 600),
-                                  () => Win32.forceCloseWindowbyPath(info.processPath));
-                            }
-                            return;
-                          }
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                        } else if (event.buttons == kPrimaryMouseButton) {
-                          if (info.clickOpensExe) {
-                            if (info.processPath.isNotEmpty) {
-                              WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
-                            }
-                            return;
-                          }
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                          PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                        } else if (event.buttons == kMiddleMouseButton) {
-                          final int hWnd = await findTopWindow(info.processID);
-                          if (hWnd > 0) {
-                            Win32.closeWindow(hWnd, forced: true);
-                          } else {}
-                        }
-                      }
-                    },
-                    onPointerSignal: (PointerSignalEvent pointerSignal) {
-                      if (pointerSignal is PointerScrollEvent) {
-                        if (pointerSignal.scrollDelta.dy < 0) {
-                          _scrollController.animateTo(_scrollController.position.minScrollExtent,
-                              duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                        } else {
-                          _scrollController.animateTo(_scrollController.position.maxScrollExtent,
-                              duration: const Duration(milliseconds: 500), curve: Curves.ease);
-                        }
-                      }
-                    },
-                    child: InkWell(
-                      onTap: () {},
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                        child: CustomTooltip(
-                            message: info.processExe,
-                            constraints: const BoxConstraints(minHeight: 0),
-                            preferBelow: false,
-                            child: Boxes.getIconRewrite(info.processPath) != ""
-                                ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
-                                : Image.memory(
-                                    info.iconData,
-                                    fit: BoxFit.scaleDown,
-                                    gaplessPlayback: true,
-                                    width: 16,
-                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                        const Icon(
-                                      Icons.check_box_outline_blank,
-                                      size: 16,
-                                    ),
-                                  )),
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 5.1),
-              ],
-            ),
-          ),
+            // const SizedBox(width: 5.1),
+          ],
         ),
       ),
     );

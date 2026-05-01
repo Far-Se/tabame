@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'saved_maps.dart';
 
 class AppItem extends SavedMap {
@@ -66,7 +67,7 @@ class AppCategory extends SavedMap {
       viewType: AppCategoryViewType.values[(map['viewType'] ?? 1) as int],
       items: List<AppItem>.from(
         (map['items'] as List<dynamic>? ?? <dynamic>[]).map<AppItem>(
-        (dynamic x) => AppItem.fromMap(x as Map<String, dynamic>),
+          (dynamic x) => AppItem.fromMap(x as Map<String, dynamic>),
         ),
       ),
       folderPath: map['folderPath'] as String?,

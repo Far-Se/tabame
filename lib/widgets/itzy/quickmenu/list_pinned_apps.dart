@@ -5,29 +5,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/win32/win32.dart';
 import '../../../models/win32/keys.dart';
-import '../../widgets/bar_with_buttons.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_tooltip.dart';
+import '../../widgets/windows_scroll.dart';
 
 class PinnedApps extends StatelessWidget {
   const PinnedApps({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<String> pinned = Boxes().pinnedApps;
+    final List<String> pinned = Boxes.pinnedApps;
     if (pinned.isEmpty) return const SizedBox();
-    return BarWithButtons(children: <Widget>[
-      for (String item in pinned)
-        GestureDetector(
-          onSecondaryTap: () {
-            final int x = pinned.indexWhere((String element) => element == item);
-            WinKeys.send("{#WIN}{#ALT}${x + 1}");
-            if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
-          },
-          child: _PinnedAppButton(path: item),
-        )
-    ]);
+    return WindowsScrollView(
+      scrollDirection: Axis.horizontal,
+      showScrollbar: false,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      friction: 0.5,
+      child: Row(children: <Widget>[
+        for (String item in pinned)
+          GestureDetector(
+            onSecondaryTap: () {
+              final int x = pinned.indexWhere((String element) => element == item);
+              WinKeys.send("{#WIN}{#ALT}${x + 1}");
+              if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+            },
+            child: _PinnedAppButton(path: item),
+          )
+      ]),
+    );
   }
 }
 
@@ -40,7 +46,6 @@ class _PinnedAppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final double size = Theme.of(context).iconTheme.size ?? 15;
     if (!File(path).existsSync()) return const SizedBox();
-    // print(path);
     final String customIconPath = Boxes.getIconRewrite(path);
 
     if (customIconPath != "") {

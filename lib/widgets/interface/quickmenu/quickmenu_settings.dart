@@ -74,6 +74,26 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
             setState(() {});
           },
         ),
+        _buildToggleSetting(
+          title: "Drag popups by icon only",
+          subtitle: "Drag around the QuickMenu by Popup header icon only rather than the header.",
+          value: globalSettings.dragPopupsByIconOnly,
+          onChanged: (bool val) async {
+            globalSettings.dragPopupsByIconOnly = val;
+            await Boxes.updateSettings("dragPopupsByIconOnly", val);
+            setState(() {});
+          },
+        ),
+        _buildToggleSetting(
+          title: "Quick Actions at the bottom",
+          subtitle: "Put Quick Action on the bottom, between pinned and tray.",
+          value: globalSettings.quickActionsAtBottom,
+          onChanged: (bool val) async {
+            globalSettings.quickActionsAtBottom = val;
+            await Boxes.updateSettings("quickActionsAtBottom", val);
+            setState(() {});
+          },
+        ),
       ],
     );
   }

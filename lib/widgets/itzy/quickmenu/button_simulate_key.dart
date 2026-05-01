@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/win32/keys.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class SimulateKeyButton extends StatelessWidget {
   final IconData icon;
@@ -22,28 +22,16 @@ class SimulateKeyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double size = iconSize != 0 ? iconSize : Theme.of(context).iconTheme.size ?? 10;
-    return Material(
-      type: MaterialType.transparency,
-      child: SizedBox(
-        width: size + 5,
-        child: IconButton(
-          iconSize: size,
-          padding: const EdgeInsets.all(0),
-          splashRadius: size,
-          icon: CustomTooltip(
-            message: tooltip,
-            child: Icon(icon),
-          ),
-          onPressed: () {
-            if (simulateKeys.isNotEmpty) {
-              WinKeys.send(simulateKeys);
-            } else if (singleKey.isNotEmpty) {
-              WinKeys.single(singleKey, KeySentMode.normal);
-            }
-          },
-        ),
-      ),
+    return QuickActionItem(
+      message: tooltip,
+      icon: Icon(icon),
+      onTap: () {
+        if (simulateKeys.isNotEmpty) {
+          WinKeys.send(simulateKeys);
+        } else if (singleKey.isNotEmpty) {
+          WinKeys.single(singleKey, KeySentMode.normal);
+        }
+      },
     );
   }
 }

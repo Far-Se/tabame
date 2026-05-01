@@ -1,0 +1,1965 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
+
+import '../models/classes/boxes.dart';
+import '../models/converter.dart';
+import '../models/db/file_index_db.dart';
+import '../models/globals.dart';
+import '../models/google_translator.dart';
+import '../models/settings.dart';
+import '../models/theme.dart';
+import '../models/win32/win32.dart';
+import '../models/win32/win_utils.dart';
+import '../models/win32/window.dart';
+import '../models/window_watcher.dart';
+import '../services/file_indexer.dart';
+import '../widgets/itzy/quickmenu/button_currency_converter.dart';
+import '../widgets/itzy/quickmenu/button_notion.dart';
+import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import 'interface/result_item_bookmark.dart';
+import 'interface/result_item_file.dart';
+import 'interface/result_item_window.dart';
+import 'launcher/search/bookmarks_search_handler.dart';
+import 'launcher/search/desktop_search_handler.dart';
+import 'launcher/search/launcher_search_context.dart';
+import 'launcher/search/search_handler.dart';
+import 'launcher/search/search_utils.dart';
+import 'launcher/search/windows_search_handler.dart';
+import 'launcher_search_models.dart';
+
+export 'interface/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
+
+// Constants
+// ---------------------------------------------------------------------------
+
+class _ParsedLauncherTimer {
+  const _ParsedLauncherTimer({
+    required this.minutes,
+    required this.message,
+  });
+
+  final int minutes;
+  final String message;
+}
+
+class _LauncherFunctionCommand {
+  const _LauncherFunctionCommand({
+    required this.name,
+    required this.description,
+    required this.usage,
+    required this.icon,
+    required this.handler,
+    this.aliases = const <String>[],
+    this.debounce = Duration.zero,
+  });
+
+  final String name;
+  final String description;
+  final String usage;
+  final IconData icon;
+  final List<String> aliases;
+  final Duration debounce;
+  final FutureOr<List<LauncherSearchResultItem>> Function(String input) handler;
+
+  bool matchesName(String value) => value == name || aliases.contains(value);
+
+  bool matchesQuery(String query) {
+    final String lower = query.toLowerCase();
+    return name.contains(lower) ||
+        description.toLowerCase().contains(lower) ||
+        usage.toLowerCase().contains(lower) ||
+        aliases.any((String alias) => alias.contains(lower));
+  }
+}
+
+class _ParsedTranslateCommand {
+  const _ParsedTranslateCommand({
+    required this.text,
+    required this.from,
+    required this.targets,
+  });
+
+  final String text;
+  final String from;
+  final List<String> targets;
+}
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Launcher widget
+// ---------------------------------------------------------------------------
+
+class Launcher extends StatefulWidget {
+  const Launcher({super.key});
+
+  @override
+  LauncherState createState() => LauncherState();
+}
+
+class LauncherState extends State<Launcher> with QuickMenuTriggers {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isRepeatingKey = ValueNotifier<bool>(false);
+  final Map<String, GlobalKey> _quickActionKeys = <String, GlobalKey>{};
+  final Map<String, GlobalKey> _resultKeys = <String, GlobalKey>{};
+  String? _quickActionSplashId;
+  bool _mouseSelectionEnabled = true;
+  Offset? _lastMousePosition;
+  Timer? _quickActionSplashTimer;
+  Timer? _keyRepeatTimer;
+  Timer? _launcherFocusRetryTimer;
+  LogicalKeyboardKey? _lastPressedKey;
+
+  List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
+  bool _isSearching = false;
+  bool _canConsumePendingInput = false;
+  LauncherSearchMode _searchMode = LauncherSearchMode.mixed;
+
+  late final List<_LauncherFunctionCommand> _functionCommands = <_LauncherFunctionCommand>[
+    _LauncherFunctionCommand(
+      name: 'timer',
+      description: 'Create a quick timer',
+      usage: r'$timer 1 stretch',
+      icon: Icons.timer_outlined,
+      handler: _buildFunctionTimerResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'clear',
+      description: 'Clear cache folders',
+      usage: r'$clear cache',
+      icon: Icons.cleaning_services_rounded,
+      handler: _buildFunctionClearResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'translate',
+      description: 'Translate text',
+      usage: r'$translate "hello" from en to ro',
+      icon: Icons.translate_rounded,
+      debounce: const Duration(milliseconds: 550),
+      handler: _buildFunctionTranslateResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'reindex',
+      description: 'Reindex launcher files',
+      usage: r'$reindex files',
+      icon: Icons.manage_search_rounded,
+      handler: _buildFunctionReindexResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'unit',
+      description: 'Convert units',
+      usage: r'$unit 10 km to mi',
+      icon: Icons.straighten_rounded,
+      handler: _buildFunctionUnitResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'cur',
+      description: 'Convert currency',
+      usage: r'$cur 1 USD to EUR',
+      icon: Icons.currency_exchange_rounded,
+      aliases: <String>['currency'],
+      handler: _buildFunctionCurrencyResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'c',
+      description: 'Calculate expression',
+      usage: r'$c 1+3/5',
+      icon: Icons.calculate_rounded,
+      aliases: <String>['calc'],
+      handler: _buildFunctionCalculatorResults,
+    ),
+  ];
+
+  late final List<LauncherSearchResultItem> _launcherShortcuts = <LauncherSearchResultItem>[
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: '/',
+      caption: 'Quick Action',
+      prefix: '/',
+      icon: Icons.bolt_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: '.',
+      caption: 'Window Search',
+      prefix: '.',
+      icon: Icons.window_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: "> or ? or space",
+      caption: 'File Search',
+      prefix: ">",
+      icon: Icons.search_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: "'",
+      caption: 'Bookmarks / CLI / Apps',
+      prefix: "'",
+      icon: Icons.bookmark_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'b ',
+      caption: 'Bookmarks',
+      prefix: 'b ',
+      icon: Icons.bookmark_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'cli ',
+      caption: 'CLI Commands',
+      prefix: 'cli ',
+      icon: Icons.terminal_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'app ',
+      caption: 'Apps',
+      prefix: 'app ',
+      icon: Icons.apps_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: ';',
+      caption: 'Desktop Files',
+      prefix: ';',
+      icon: Icons.desktop_windows_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'n ',
+      caption: 'Notion',
+      prefix: 'n ',
+      icon: Icons.description_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: r'$',
+      caption: 'Functions',
+      prefix: r'$',
+      icon: Icons.functions_rounded,
+    )),
+  ];
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      // Escape: go back to quickmenu
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (kReleaseMode) {
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          return KeyEventResult.handled;
+        }
+        Win32.setWindowInvisiblity(true);
+        Timer(const Duration(milliseconds: 100), () {
+          WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
+          Globals.quickMenuPage = QuickMenuPage.quickMenu;
+          globalSettings.launcherSearchText = '';
+          QuickMenuFunctions.refreshQuickMenu();
+          Win32.setWindowInvisiblity(false);
+        });
+        return KeyEventResult.handled;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown || event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        if (_lastPressedKey == event.logicalKey) return KeyEventResult.handled;
+        _lastPressedKey = event.logicalKey;
+
+        _handleKeyStep(event.logicalKey, initial: true);
+
+        _keyRepeatTimer?.cancel();
+        _keyRepeatTimer = Timer(const Duration(milliseconds: 350), () {
+          _isRepeatingKey.value = true;
+          _keyRepeatTimer = Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
+            if (_lastPressedKey == null) {
+              timer.cancel();
+              _isRepeatingKey.value = false;
+              return;
+            }
+            _handleKeyStep(_lastPressedKey!);
+          });
+        });
+        return KeyEventResult.handled;
+      }
+    } else if (event is KeyUpEvent) {
+      if (event.logicalKey == _lastPressedKey) {
+        _lastPressedKey = null;
+        _isRepeatingKey.value = false;
+        _keyRepeatTimer?.cancel();
+      }
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    QuickMenuFunctions.addListener(this);
+
+    _controller.text = globalSettings.launcherSearchText;
+    _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
+    Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
+    FocusManager.instance.addListener(_onFocusManagerChanged);
+    _focusNode.onKeyEvent = _onKeyEvent;
+
+    _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Win32.setWindowInvisiblity(false);
+      _canConsumePendingInput = true;
+      _startWindowRefreshLoop();
+      _consumePendingQuickMenuSearchInput();
+      _focusNode.requestFocus();
+
+      // Initialize and sync file indexer
+      FileIndexer.instance.sync();
+
+      _onSearchChanged(_controller.text);
+    });
+
+    // Re-request focus after the window activation delay settles (the OS
+    // Win32.activateWindow call in onQuickMenuShown fires ~100 ms after show).
+    Future<void>.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        windowManager.focus();
+        _focusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    QuickMenuFunctions.removeListener(this);
+
+    globalSettings.launcherSearchText = '';
+    Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
+    FocusManager.instance.removeListener(_onFocusManagerChanged);
+    _isRepeatingKey.dispose();
+
+    if (!FileIndexer.instance.isIndexing) {
+      FileIndexDb.instance.close();
+    }
+    Globals.clearQuickMenuSearchInput();
+
+    _searchDebounce?.cancel();
+    _quickActionSplashTimer?.cancel();
+    _keyRepeatTimer?.cancel();
+    _windowRefreshTimer?.cancel();
+    _launcherFocusRetryTimer?.cancel();
+    _controller.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
+    _activeIndexNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  void onQuickActionExecute(String actionName) {
+    if (actionName == "page:quickMenu") {
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      if (mounted) setState(() {});
+    }
+  }
+
+  @override
+  void requestQuickMenuFocus() => _requestLauncherFocus(focusWindow: true);
+
+  bool get _canFocusLauncher {
+    if (!mounted) return false;
+    if (!QuickMenuFunctions.isQuickMenuVisible) return false;
+    if (Globals.quickMenuPage != QuickMenuPage.launcher) return false;
+    if (Navigator.of(context).canPop()) return false;
+    return true;
+  }
+
+  void _requestLauncherFocus({bool focusWindow = false}) {
+    void requestFocusIfNeeded() {
+      if (!_canFocusLauncher) return;
+      if (focusWindow) unawaited(windowManager.focus());
+      if (!_focusNode.hasPrimaryFocus) {
+        _focusNode.requestFocus();
+      }
+    }
+
+    requestFocusIfNeeded();
+    WidgetsBinding.instance.addPostFrameCallback((_) => requestFocusIfNeeded());
+    _launcherFocusRetryTimer?.cancel();
+    _launcherFocusRetryTimer = Timer(const Duration(milliseconds: 120), requestFocusIfNeeded);
+  }
+
+  void _onFocusManagerChanged() {
+    if (!_canFocusLauncher || _focusNode.hasPrimaryFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _requestLauncherFocus();
+    });
+  }
+
+  // ignore: unused_element
+  void _flashQuickActionResult(String id) {
+    _quickActionSplashTimer?.cancel();
+    setState(() => _quickActionSplashId = id);
+    _quickActionSplashTimer = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      setState(() => _quickActionSplashId = null);
+    });
+  }
+
+  void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (_activeIndexNotifier.value < _results.length - 1) {
+        _activeIndexNotifier.value++;
+        _scrollToActiveIndex();
+      }
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      if (_activeIndexNotifier.value > 0) {
+        _activeIndexNotifier.value--;
+        _scrollToActiveIndex();
+      }
+    }
+  }
+
+  void _scrollToActiveIndex() {
+    if (!_scrollController.hasClients || _results.isEmpty) return;
+    final int index = _activeIndexNotifier.value;
+    if (index < 0 || index >= _results.length) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients || _results.isEmpty) return;
+      if (index != _activeIndexNotifier.value || index >= _results.length) return;
+
+      final GlobalKey? itemKey = _resultKeys[_resultKeyId(_results[index], index)];
+      final BuildContext? itemContext = itemKey?.currentContext;
+      if (itemContext == null) {
+        _scrollToActiveIndexFallback(index);
+        return;
+      }
+
+      final RenderObject? itemRenderObject = itemContext.findRenderObject();
+      final RenderObject? listRenderObject = _scrollController.position.context.storageContext.findRenderObject();
+      if (itemRenderObject is! RenderBox || listRenderObject is! RenderBox) {
+        _scrollToActiveIndexFallback(index);
+        return;
+      }
+
+      final double itemTop =
+          itemRenderObject.localToGlobal(Offset.zero).dy - listRenderObject.localToGlobal(Offset.zero).dy;
+      final double itemBottom = itemTop + itemRenderObject.size.height;
+      final double viewportHeight = _scrollController.position.viewportDimension;
+      const double edgePadding = 6.0;
+
+      double? nextOffset;
+      if (itemTop < edgePadding) {
+        nextOffset = _scrollController.offset + itemTop - edgePadding;
+      } else if (itemBottom > viewportHeight - edgePadding) {
+        nextOffset = _scrollController.offset + itemBottom - viewportHeight + edgePadding;
+      }
+
+      if (nextOffset == null) return;
+      _moveResultListTo(nextOffset, animated: !_isRepeatingKey.value);
+    });
+  }
+
+  void _scrollToActiveIndexFallback(int index) {
+    const double estimatedItemHeight = 49.0;
+    final double viewportHeight = _scrollController.position.viewportDimension;
+    final double itemTop = index * estimatedItemHeight;
+    final double itemBottom = itemTop + estimatedItemHeight;
+    final double viewTop = _scrollController.offset;
+    final double viewBottom = viewTop + viewportHeight;
+
+    double? nextOffset;
+    if (itemTop < viewTop) {
+      nextOffset = itemTop;
+    } else if (itemBottom > viewBottom) {
+      nextOffset = itemBottom - viewportHeight;
+    }
+
+    if (nextOffset != null) {
+      _moveResultListTo(nextOffset, animated: !_isRepeatingKey.value);
+    }
+  }
+
+  void _moveResultListTo(double offset, {required bool animated}) {
+    final double clampedOffset = offset.clamp(0.0, _scrollController.position.maxScrollExtent);
+    if ((clampedOffset - _scrollController.offset).abs() < 0.5) return;
+
+    if (!animated) {
+      _scrollController.jumpTo(clampedOffset);
+      return;
+    }
+
+    _scrollController.animateTo(
+      clampedOffset,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Timer? _searchDebounce;
+  Timer? _windowRefreshTimer;
+  String _lastWindowSnapshot = '';
+  String _lastScrollResetQuery = '';
+  int _searchRequestId = 0;
+
+  String _buildWindowSnapshot() {
+    return WindowWatcher.list
+        .map((Window window) => '${window.hWnd}|${window.title}|${window.process.exe}|${window.isPinned}')
+        .join('||');
+  }
+
+  void _startWindowRefreshLoop() {
+    _windowRefreshTimer?.cancel();
+    _lastWindowSnapshot = _buildWindowSnapshot();
+    _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
+      if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+
+      final bool updated = await WindowWatcher.fetchWindows();
+      if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+
+      final String nextSnapshot = _buildWindowSnapshot();
+      if (nextSnapshot == _lastWindowSnapshot) return;
+      _lastWindowSnapshot = nextSnapshot;
+
+      _refreshVisibleWindowResults();
+    });
+  }
+
+  void _refreshVisibleWindowResults() {
+    if (_results.isEmpty) return;
+
+    bool changed = false;
+    final Map<int, Window> latestWindows = <int, Window>{
+      for (final Window window in WindowWatcher.list) window.hWnd: window,
+    };
+
+    final List<LauncherSearchResultItem> nextResults = _results.map((LauncherSearchResultItem result) {
+      final Window? currentWindow = result.window;
+      if (currentWindow == null) return result;
+
+      final Window? latestWindow = latestWindows[currentWindow.hWnd];
+      if (latestWindow == null) return result;
+
+      if (latestWindow.title != currentWindow.title ||
+          latestWindow.process.exe != currentWindow.process.exe ||
+          latestWindow.isPinned != currentWindow.isPinned) {
+        changed = true;
+        return LauncherSearchResultItem.window(latestWindow);
+      }
+
+      return result;
+    }).toList(growable: false);
+
+    if (!changed || !mounted) return;
+    _setResults(nextResults, resetSelection: false);
+  }
+
+  void _consumePendingQuickMenuSearchInput() {
+    if (!_canConsumePendingInput) return;
+
+    final String pending = Globals.takeQuickMenuSearchInput();
+    if (pending.isEmpty) return;
+
+    final TextEditingValue currentValue = _controller.value;
+    final TextSelection selection = currentValue.selection.isValid
+        ? currentValue.selection
+        : TextSelection.collapsed(offset: currentValue.text.length);
+    final int start = selection.start < 0 ? currentValue.text.length : selection.start;
+    final int end = selection.end < 0 ? start : selection.end;
+    final String nextText = currentValue.text.replaceRange(start, end, pending);
+    final int caretOffset = start + pending.length;
+
+    _controller.value = currentValue.copyWith(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: caretOffset),
+      composing: TextRange.empty,
+    );
+    _onSearchChanged(nextText);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Search logic
+  // ---------------------------------------------------------------------------
+
+  void _onSearchChanged(String query) {
+    globalSettings.launcherSearchText = query;
+    _scrollResultsToTopForQuery(query);
+    _searchDebounce?.cancel();
+    final int requestId = ++_searchRequestId;
+    setState(() => _searchMode = _getLauncherSearchMode(query));
+    final LauncherSearchMode searchMode = _searchMode;
+    final String normalizedQuery = _getNormalizedQuery(query);
+
+    if (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed)) {
+      _setResults(_launcherShortcuts, isSearching: false);
+      return;
+    }
+
+    _setSearching(true);
+    _searchDebounce = Timer(const Duration(milliseconds: 100), () {
+      if (!_isActiveSearch(requestId, query)) return;
+      _runSearch(requestId, query, normalizedQuery, searchMode);
+    });
+  }
+
+  void _runSearch(int requestId, String query, String normalizedQuery, LauncherSearchMode searchMode) {
+    if (!_isActiveSearch(requestId, query)) return;
+
+    final LauncherSearchContext context = LauncherSearchContext(
+      buildContext: this.context,
+      requestId: requestId,
+      query: query,
+      normalizedQuery: normalizedQuery,
+      lowerQuery: normalizedQuery.toLowerCase(),
+      setSearching: _setSearching,
+      setResults: _setResults,
+      isActiveSearch: _isActiveSearch,
+    );
+
+    switch (searchMode) {
+      case LauncherSearchMode.windowsOnly:
+        WindowsSearchHandler.handle(context);
+        break;
+      case LauncherSearchMode.bookmarksOnly:
+        BookmarksSearchHandler.handle(context);
+        break;
+      case LauncherSearchMode.bookmarkOnly:
+        _handleBookmarkKindSearch(context, BookmarkResultKind.bookmark);
+        break;
+      case LauncherSearchMode.cliOnly:
+        _handleBookmarkKindSearch(context, BookmarkResultKind.cliBook);
+        break;
+      case LauncherSearchMode.appsOnly:
+        _handleBookmarkKindSearch(context, BookmarkResultKind.appItem);
+        break;
+      case LauncherSearchMode.desktopOnly:
+        DesktopSearchHandler.handle(context);
+        break;
+      case LauncherSearchMode.notionOnly:
+        _handleNotionSearch(context);
+        break;
+      case LauncherSearchMode.timerCommand:
+        _handleTimerCommand(context);
+        break;
+      case LauncherSearchMode.functionCommand:
+        _handleFunctionCommand(context);
+        break;
+      default:
+        MixedSearchHandler.handle(context, searchMode);
+        break;
+    }
+  }
+
+  void _handleBookmarkKindSearch(LauncherSearchContext context, BookmarkResultKind kind) {
+    final List<LauncherSearchResultItem> results = findBookmarkMatches(
+      context.normalizedQuery,
+      includeAllOnEmpty: context.normalizedQuery.isEmpty,
+      kinds: <BookmarkResultKind>{kind},
+    ).map(LauncherSearchResultItem.bookmark).toList();
+    context.setResults(results, isSearching: false);
+  }
+
+  void _handleTimerCommand(LauncherSearchContext context) {
+    final _ParsedLauncherTimer? timer = _parseTimerCommand(context.query);
+    if (timer == null) {
+      context.setResults(<LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'timer-help',
+          title: 'Create a timer',
+          subtitle: 'Type timer {minute} {message}',
+          icon: Icons.timer_outlined,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    context.setResults(<LauncherSearchResultItem>[
+      LauncherSearchResultItem.quickAction(_buildTimerQuickAction(timer)),
+    ], isSearching: false);
+  }
+
+  _ParsedLauncherTimer? _parseTimerCommand(String query) {
+    final RegExpMatch? match = RegExp(r'^timer\s+(\d+)\s+(.+)$', caseSensitive: false).firstMatch(query.trim());
+    if (match == null) return null;
+
+    final int? minutes = int.tryParse(match.group(1)!);
+    final String message = match.group(2)!.trim();
+    if (minutes == null || minutes <= 0 || message.isEmpty) return null;
+    return _ParsedLauncherTimer(minutes: minutes, message: message);
+  }
+
+  QuickActionMenuEntry _buildTimerQuickAction(_ParsedLauncherTimer timer) {
+    return QuickActionMenuEntry(
+      id: 'timer:${timer.minutes}:${timer.message}',
+      title: 'Create ${timer.minutes} minute timer',
+      searchTerms: <String>['timer', timer.message],
+      onExecute: () => _createLauncherTimer(timer),
+      builder: (BuildContext context) {
+        final ThemeData theme = Theme.of(context);
+        final Color accent = globalSettings.themeColors.accentColor;
+        final Color onSurface = theme.colorScheme.onSurface;
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _createLauncherTimer(timer),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(24),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.timer_outlined, size: 18, color: accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Create ${timer.minutes} minute timer',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        timer.message,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: onSurface.withAlpha(140),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.keyboard_return_rounded, size: 14, color: onSurface.withAlpha(100)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _createLauncherTimer(_ParsedLauncherTimer timer) {
+    Boxes().addQuickTimer(timer.message, timer.minutes, 1);
+    // final SavedQuickTimers savedTimer = SavedQuickTimers()
+    //   ..name = timer.message
+    //   ..minutes = timer.minutes
+    //   ..type = 1;
+    // Boxes.lastQuickTimers.add(savedTimer);
+    // Boxes.lastQuickTimers.sort((SavedQuickTimers a, SavedQuickTimers b) => a.minutes - b.minutes);
+    // if (Boxes.lastQuickTimers.length > 20) {
+    //   Boxes.lastQuickTimers.removeRange(0, Boxes.lastQuickTimers.length - 20);
+    // }
+    // Boxes().saveLatestQuickTimers();
+    _finishLauncherFunctionExecution();
+  }
+
+  void _finishLauncherFunctionExecution() {
+    globalSettings.launcherSearchText = '';
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+
+    if (mounted) {
+      _controller.clear();
+      _setResults(_launcherShortcuts, isSearching: false);
+      _focusNode.requestFocus();
+    }
+
+    if (kReleaseMode) {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+    }
+  }
+
+  Future<void> _handleFunctionCommand(LauncherSearchContext context) async {
+    final String input = context.normalizedQuery.trimLeft();
+    if (input.isEmpty) {
+      context.setResults(_buildFunctionSuggestions(''), isSearching: false);
+      return;
+    }
+
+    final List<String> parts = input.split(RegExp(r'\s+'));
+    final String commandName = parts.first.toLowerCase();
+    final String commandInput =
+        input.length == commandName.length ? '' : input.substring(commandName.length).trimLeft();
+    final _LauncherFunctionCommand? command = _findFunctionCommand(commandName);
+
+    if (command == null) {
+      context.setResults(_buildFunctionSuggestions(input), isSearching: false);
+      return;
+    }
+
+    if (command.debounce > Duration.zero) {
+      await Future<void>.delayed(command.debounce);
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+    }
+
+    context.setSearching(true);
+    try {
+      final List<LauncherSearchResultItem> results = await command.handler(commandInput);
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(results, isSearching: false);
+    } catch (error) {
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-error:${command.name}:$error',
+          title: '${command.name} failed',
+          subtitle: error.toString(),
+          icon: Icons.error_outline_rounded,
+        )),
+      ], isSearching: false);
+    }
+  }
+
+  _LauncherFunctionCommand? _findFunctionCommand(String name) {
+    for (final _LauncherFunctionCommand command in _functionCommands) {
+      if (command.matchesName(name)) return command;
+    }
+    return null;
+  }
+
+  List<LauncherSearchResultItem> _buildFunctionSuggestions(String query) {
+    final String normalized = query.toLowerCase().replaceFirst(RegExp(r'^\$'), '').trim();
+    final List<_LauncherFunctionCommand> matches = normalized.isEmpty
+        ? _functionCommands
+        : _functionCommands.where((_LauncherFunctionCommand command) => command.matchesQuery(normalized)).toList();
+    if (matches.isEmpty) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-no-match',
+          title: 'No function found',
+          subtitle: r'Try $timer, $translate, $unit, $cur, or $c',
+          icon: Icons.functions_rounded,
+        )),
+      ];
+    }
+    return matches.map((_LauncherFunctionCommand command) {
+      return LauncherSearchResultItem.quickAction(_buildFunctionSuggestionAction(command));
+    }).toList(growable: false);
+  }
+
+  QuickActionMenuEntry _buildFunctionSuggestionAction(_LauncherFunctionCommand command) {
+    return _buildFunctionAction(
+      id: 'function-help:${command.name}',
+      title: command.name,
+      subtitle: '${command.description} - ${command.usage}',
+      icon: command.icon,
+      searchTerms: <String>[command.name, command.description, command.usage, ...command.aliases],
+      onExecute: () {
+        _controller.text = '\$${command.name} ';
+        _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
+        _onSearchChanged(_controller.text);
+        _focusNode.requestFocus();
+      },
+    );
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionTimerResults(String input) async {
+    final _ParsedLauncherTimer? timer = _parseFunctionTimerCommand(input);
+    if (timer == null) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-timer-help',
+          title: r'Type $timer {minutes} {message}',
+          subtitle: r'Example: $timer 1 stretch',
+          icon: Icons.timer_outlined,
+        )),
+      ];
+    }
+    return <LauncherSearchResultItem>[LauncherSearchResultItem.quickAction(_buildTimerQuickAction(timer))];
+  }
+
+  _ParsedLauncherTimer? _parseFunctionTimerCommand(String input) {
+    final RegExpMatch? match = RegExp(r'^(\d+)\s+(.+)$', caseSensitive: false).firstMatch(input.trim());
+    if (match == null) return null;
+    final int? minutes = int.tryParse(match.group(1)!);
+    final String message = match.group(2)!.trim();
+    if (minutes == null || minutes <= 0 || message.isEmpty) return null;
+    return _ParsedLauncherTimer(minutes: minutes, message: message);
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionClearResults(String input) async {
+    if (input.trim().toLowerCase() != 'cache') {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-clear-help',
+          title: r'Type $clear cache',
+          subtitle: 'This command needs the full target before it can run.',
+          icon: Icons.cleaning_services_rounded,
+        )),
+      ];
+    }
+    return <LauncherSearchResultItem>[
+      LauncherSearchResultItem.quickAction(_buildFunctionAction(
+        id: 'function-clear-cache',
+        title: 'Clear cache folder',
+        subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache',
+        icon: Icons.cleaning_services_rounded,
+        searchTerms: const <String>['clear', 'cache'],
+        onExecute: () => unawaited(_clearCacheFolder()),
+      )),
+    ];
+  }
+
+  Future<void> _clearCacheFolder() async {
+    final Directory cacheDirectory = Directory('${WinUtils.getTabameAppDataFolder()}\\cache');
+    if (await cacheDirectory.exists()) {
+      await for (final FileSystemEntity entity in cacheDirectory.list()) {
+        await entity.delete(recursive: true);
+      }
+    }
+    _finishLauncherFunctionExecution();
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionReindexResults(String input) async {
+    if (input.trim().toLowerCase() != 'files') {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-reindex-help',
+          title: r'Type $reindex files',
+          subtitle: 'This command needs the full target before it can run.',
+          icon: Icons.manage_search_rounded,
+        )),
+      ];
+    }
+    return <LauncherSearchResultItem>[
+      LauncherSearchResultItem.quickAction(_buildFunctionAction(
+        id: 'function-reindex-files',
+        title: 'Reindex all launcher files',
+        subtitle: '${Boxes.searchFolders.length} search source${Boxes.searchFolders.length == 1 ? '' : 's'} configured',
+        icon: Icons.manage_search_rounded,
+        searchTerms: const <String>['reindex', 'files'],
+        onExecute: () {
+          FileIndexer.instance.fullReindex();
+          _finishLauncherFunctionExecution();
+        },
+      )),
+    ];
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionCalculatorResults(String input) async {
+    return _buildParserFunctionResults(
+      idPrefix: 'function-calc',
+      input: input,
+      emptyHelp: r'Format: $c 1+3/5',
+      icon: Icons.calculate_rounded,
+      parser: Parsers().calculator,
+    );
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionUnitResults(String input) async {
+    return _buildParserFunctionResults(
+      idPrefix: 'function-unit',
+      input: input,
+      emptyHelp: r'Format: $unit 10 km to mi',
+      icon: Icons.straighten_rounded,
+      parser: Parsers().unit,
+    );
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionCurrencyResults(String input) async {
+    if (input.trim().isEmpty) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-currency-help',
+          title: 'Convert currency',
+          subtitle: r'Format: $cur 1 USD to EUR or $cur 1 USD',
+          icon: Icons.currency_exchange_rounded,
+        )),
+      ];
+    }
+
+    final String target = Boxes.pref.getString(CurrencyConverterService.toKey) ?? 'eur';
+    final CurrencyConversionResult result = await CurrencyConverterService().convert(
+      input.trim(),
+      defaultTargetCurrency: target,
+    );
+
+    return <LauncherSearchResultItem>[
+      LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
+        id: 'function-currency:${result.fromCurrency}:${result.toCurrency}:${result.convertedAmount}',
+        title: result.convertedLabel,
+        subtitle: '${result.fromCurrency.toUpperCase()} (${result.fromName}) to '
+            '${result.toCurrency.toUpperCase()} (${result.toName})',
+        icon: Icons.currency_exchange_rounded,
+        value: result.convertedLabel,
+      )),
+      LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
+        id: 'function-currency-rate:${result.fromCurrency}:${result.toCurrency}:${result.rate}',
+        title: result.rateLabel,
+        subtitle: 'Copy exchange rate',
+        icon: Icons.currency_exchange_rounded,
+        value: result.rateLabel,
+      )),
+    ];
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildParserFunctionResults({
+    required String idPrefix,
+    required String input,
+    required String emptyHelp,
+    required IconData icon,
+    required Future<ParserResult> Function(String input) parser,
+  }) async {
+    if (input.trim().isEmpty) {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: '$idPrefix-help',
+          title: 'Function format',
+          subtitle: emptyHelp,
+          icon: icon,
+        )),
+      ];
+    }
+    final ParserResult result = await parser(input.trim());
+    if (result.results.isEmpty) {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: '$idPrefix-empty',
+          title: result.error.isEmpty ? 'No result' : result.error,
+          subtitle: emptyHelp,
+          icon: icon,
+        )),
+      ];
+    }
+    return result.results.take(12).map((String value) {
+      return LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
+        id: '$idPrefix:$value',
+        title: value,
+        subtitle: result.error.isEmpty ? 'Copy result' : result.error,
+        icon: icon,
+        value: value,
+      ));
+    }).toList(growable: false);
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionTranslateResults(String input) async {
+    final _ParsedTranslateCommand? parsed = _parseTranslateCommand(input);
+    if (parsed == null) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-translate-help',
+          title: 'Translate text',
+          subtitle: r'Use $translate message or $translate "message" from en to ro',
+          icon: Icons.translate_rounded,
+        )),
+      ];
+    }
+
+    final GoogleTranslator translator = GoogleTranslator();
+    final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+    try {
+      for (final String target in parsed.targets) {
+        final GoogleTranslateResponse response = await translator.translate(parsed.text, from: parsed.from, to: target);
+        final String targetName = GoogleTranslator.languages[target] ?? target.toUpperCase();
+        final String source = response.from.language.iso.isEmpty ? parsed.from : response.from.language.iso;
+        results.add(LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
+          id: 'function-translate:$target:${response.text}',
+          title: response.text.isEmpty ? 'No translation returned' : response.text,
+          subtitle: '$targetName - from $source',
+          icon: Icons.translate_rounded,
+          value: response.text,
+        )));
+      }
+    } finally {
+      translator.close();
+    }
+    return results;
+  }
+
+  _ParsedTranslateCommand? _parseTranslateCommand(String input) {
+    String text = input.trim();
+    if (text.isEmpty) return null;
+
+    String from = 'auto';
+    List<String> targets = _loadTranslatorTargets();
+    final RegExpMatch? explicit = RegExp(r'^(.+?)\s+from\s+(.+?)\s+to\s+(.+)$', caseSensitive: false).firstMatch(text);
+    if (explicit != null) {
+      text = _stripQuotes(explicit.group(1)!.trim());
+      final String? parsedFrom = GoogleTranslator.getIsoCode(explicit.group(2)!.trim());
+      final String? parsedTo = GoogleTranslator.getIsoCode(explicit.group(3)!.trim());
+      if (parsedFrom == null || parsedTo == null) return null;
+      from = parsedFrom;
+      targets = <String>[parsedTo];
+    } else {
+      text = _stripQuotes(text);
+    }
+    if (text.isEmpty || targets.isEmpty) return null;
+    return _ParsedTranslateCommand(text: text, from: from, targets: targets);
+  }
+
+  List<String> _loadTranslatorTargets() {
+    final List<String> saved = Boxes.pref.getStringList('translatorTargetLanguages') ?? <String>['en', 'ro'];
+    final List<String> valid = saved
+        .map(GoogleTranslator.getIsoCode)
+        .whereType<String>()
+        .where((String code) => code != 'auto')
+        .toSet()
+        .toList(growable: false);
+    return valid.isEmpty ? <String>['en', 'ro'] : valid;
+  }
+
+  String _stripQuotes(String value) {
+    if (value.length >= 2) {
+      final bool doubleQuoted = value.startsWith('"') && value.endsWith('"');
+      final bool singleQuoted = value.startsWith("'") && value.endsWith("'");
+      if (doubleQuoted || singleQuoted) return value.substring(1, value.length - 1);
+    }
+    return value;
+  }
+
+  QuickActionMenuEntry _buildCopyFunctionAction({
+    required String id,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required String value,
+  }) {
+    return _buildFunctionAction(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      searchTerms: <String>[title, subtitle, value],
+      onExecute: () {
+        Clipboard.setData(ClipboardData(text: value));
+        _finishLauncherFunctionExecution();
+      },
+    );
+  }
+
+  QuickActionMenuEntry _buildFunctionAction({
+    required String id,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required List<String> searchTerms,
+    required VoidCallback onExecute,
+  }) {
+    return QuickActionMenuEntry(
+      id: id,
+      title: title,
+      searchTerms: searchTerms,
+      onExecute: onExecute,
+      builder: (BuildContext context) {
+        final ThemeData theme = Theme.of(context);
+        final Color accent = globalSettings.themeColors.accentColor;
+        final Color onSurface = theme.colorScheme.onSurface;
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onExecute,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(24),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 18, color: accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: onSurface.withAlpha(140),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.keyboard_return_rounded, size: 14, color: onSurface.withAlpha(100)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleNotionSearch(LauncherSearchContext context) async {
+    await NotionSearchCache.load();
+    if (!context.isActiveSearch(context.requestId, context.query)) return;
+
+    final List<NotionResult> cached = NotionSearchCache.cached(context.normalizedQuery);
+    if (cached.isNotEmpty || context.normalizedQuery.isEmpty) {
+      context.setResults(cached.map(LauncherSearchResultItem.notion).toList(), isSearching: false);
+    }
+
+    if (context.normalizedQuery.isEmpty) return;
+    if (NotionSearchCache.apiKey.isEmpty) return;
+
+    context.setSearching(true);
+    try {
+      final List<NotionResult> results = await NotionSearchCache.search(context.normalizedQuery);
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(results.map(LauncherSearchResultItem.notion).toList(),
+          isSearching: false, resetSelection: false);
+    } catch (_) {
+      if (context.isActiveSearch(context.requestId, context.query)) {
+        context.setSearching(false);
+      }
+    }
+  }
+
+  bool _isActiveSearch(int requestId, String query, {bool trimLeft = false}) {
+    if (!mounted || requestId != _searchRequestId) return false;
+    return trimLeft ? _controller.text.trimLeft() == query : _controller.text == query;
+  }
+
+  void _setSearching(bool value) {
+    if (!mounted || _isSearching == value) return;
+    setState(() => _isSearching = value);
+  }
+
+  void _scrollResultsToTopForQuery(String query) {
+    if (query == _lastScrollResetQuery) return;
+    _lastScrollResetQuery = query;
+    _mouseSelectionEnabled = false;
+    if (_activeIndexNotifier.value != 0) {
+      _activeIndexNotifier.value = 0;
+    }
+    if (!_scrollController.hasClients || _scrollController.offset <= 0) return;
+    _scrollController.jumpTo(0);
+  }
+
+  void _setResults(
+    List<LauncherSearchResultItem> results, {
+    bool resetSelection = true,
+    bool? isSearching,
+  }) {
+    if (!mounted) return;
+
+    _syncQuickActionKeys(results);
+    _syncResultKeys(results);
+    _mouseSelectionEnabled = false;
+
+    int nextIndex = 0;
+    if (!resetSelection && _results.isNotEmpty && _activeIndexNotifier.value < _results.length) {
+      final String activeId = _results[_activeIndexNotifier.value].id;
+      final int foundIndex = results.indexWhere((LauncherSearchResultItem r) => r.id == activeId);
+      if (foundIndex != -1) {
+        nextIndex = foundIndex;
+      } else {
+        nextIndex = _activeIndexNotifier.value.clamp(0, (results.length - 1).clamp(0, 999999)).toInt();
+      }
+    }
+
+    setState(() {
+      _results = results;
+      if (resetSelection) {
+        _activeIndexNotifier.value = 0;
+      } else {
+        _activeIndexNotifier.value = nextIndex;
+      }
+      if (isSearching != null) {
+        _isSearching = isSearching;
+      }
+    });
+
+    if (resetSelection && _scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Submit / open handlers
+  // ---------------------------------------------------------------------------
+
+  void _onShortcutPressed(LauncherShortcut shortcut) {
+    _controller.text = shortcut.prefix;
+    _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
+    _onSearchChanged(_controller.text);
+    _focusNode.requestFocus();
+  }
+
+  void _onSubmitted(String query) {
+    if (_results.isEmpty || _activeIndexNotifier.value >= _results.length) return;
+
+    final LauncherSearchResultItem result = _results[_activeIndexNotifier.value];
+
+    if (result.isShortcut) {
+      _onShortcutPressed(result.shortcut!);
+      return;
+    }
+
+    if (result.isFile) {
+      _openFile(result.entity!.path, nodeId: result.nodeId);
+      return;
+    }
+    if (result.isWindow) {
+      _openWindow(result.window!);
+      return;
+    }
+    if (result.isBookmark) {
+      _openBookmarkResult(result.bookmarkResult!);
+      return;
+    }
+    if (result.isNotion) {
+      _openNotionResult(result.notionResult!);
+      return;
+    }
+
+    if (result.quickAction != null) {
+      _runQuickAction(result.quickAction!);
+    }
+
+    _focusNode.requestFocus();
+  }
+
+  void _openBookmarkResult(BookmarkSearchResult result) {
+    switch (result.kind) {
+      case BookmarkResultKind.bookmark:
+        WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        globalSettings.launcherSearchText = '';
+      case BookmarkResultKind.cliBook:
+        // Copy the CLI command to clipboard.
+        Clipboard.setData(ClipboardData(text: result.cli!.value));
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        globalSettings.launcherSearchText = '';
+      case BookmarkResultKind.appItem:
+        WinUtils.open(result.app!.path, arguments: result.app!.arguments);
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        globalSettings.launcherSearchText = '';
+    }
+  }
+
+  void _openFile(String path, {int? nodeId}) {
+    if (nodeId != null) {
+      print("Incrementing");
+      FileIndexDb.instance.incrementTimesOpened(nodeId);
+    }
+
+    if (path.endsWith('ps1')) {
+      final String openPath = 'powershell -ExecutionPolicy Bypass -File "$path"';
+      WinUtils.open(openPath, parseParamaters: true);
+    } else {
+      WinUtils.open(path);
+    }
+    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    globalSettings.launcherSearchText = '';
+  }
+
+  void _openWindow(Window window) {
+    Win32.activateWindow(window.hWnd);
+    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    Globals.lastFocusedWinHWND = window.hWnd;
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    globalSettings.launcherSearchText = '';
+  }
+
+  LauncherSearchMode _getLauncherSearchMode(String query) {
+    // final String trimmed = query.trimLeft();
+    if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
+    if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
+    if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
+    if (query.startsWith(';')) return LauncherSearchMode.desktopOnly;
+    if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
+    if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
+    if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
+    if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
+    if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
+    if (query.startsWith('>') || query.startsWith('?') || query.startsWith(' ')) {
+      return LauncherSearchMode.filesOnly;
+    }
+    if (query.startsWith("'")) return LauncherSearchMode.bookmarksOnly;
+    return LauncherSearchMode.mixed;
+  }
+
+  String _getNormalizedQuery(String query) {
+    // final String trimmed = query.trimLeft();
+    if (query.startsWith('timer ')) return query.substring(6).trimLeft();
+    if (query.startsWith('cli ')) return query.substring(4).trimLeft();
+    if (query.startsWith('app ')) return query.substring(4).trimLeft();
+    if (query.startsWith('n ')) return query.substring(2).trimLeft();
+    if (query.startsWith('b ')) return query.substring(2).trimLeft();
+    if (query.startsWith('/') ||
+        query.startsWith('.') ||
+        query.startsWith(r'$') ||
+        query.startsWith('>') ||
+        query.startsWith('?') ||
+        query.startsWith(';') ||
+        query.startsWith(' ') ||
+        query.startsWith("'")) {
+      return query.substring(1).trimLeft();
+    }
+    return query;
+  }
+
+  void _openNotionResult(NotionResult result) {
+    if (result.url.isEmpty) return;
+    WinUtils.open(result.url);
+    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    globalSettings.launcherSearchText = '';
+  }
+
+  void _syncQuickActionKeys(List<LauncherSearchResultItem> results) {
+    final Set<String> activeQuickActionIds = results
+        .where((LauncherSearchResultItem result) => result.quickAction != null)
+        .map((LauncherSearchResultItem result) => result.quickAction!.id)
+        .toSet();
+    _quickActionKeys.removeWhere((String key, GlobalKey value) => !activeQuickActionIds.contains(key));
+  }
+
+  void _syncResultKeys(List<LauncherSearchResultItem> results) {
+    final Set<String> activeResultIds = <String>{
+      for (int index = 0; index < results.length; index++) _resultKeyId(results[index], index),
+    };
+    _resultKeys.removeWhere((String key, GlobalKey value) => !activeResultIds.contains(key));
+    for (final String id in activeResultIds) {
+      _resultKeys.putIfAbsent(id, () => GlobalKey());
+    }
+  }
+
+  String _resultKeyId(LauncherSearchResultItem result, int index) => '${result.id}#$index';
+
+  void _selectResultFromPointerHover(PointerHoverEvent event, int index) {
+    if (event.delta == Offset.zero) return;
+
+    final bool pointerMoved = _lastMousePosition == null || (_lastMousePosition! - event.position).distance > 0.5;
+    _lastMousePosition = event.position;
+    if (!pointerMoved && !_mouseSelectionEnabled) return;
+
+    _mouseSelectionEnabled = true;
+    _selectResultFromMouse(index);
+  }
+
+  void _selectResultFromMouse(int index) {
+    if (!_mouseSelectionEnabled) return;
+    if (index < 0 || index >= _results.length) return;
+    if (_activeIndexNotifier.value != index) {
+      _activeIndexNotifier.value = index;
+    }
+  }
+
+  void _runQuickAction(QuickActionMenuEntry entry) {
+    if (entry.onExecute != null) {
+      entry.onExecute!.call();
+      return;
+    }
+
+    if (!entry.allowRenderedFallbackExecute) return;
+    final GlobalKey? actionKey = _quickActionKeys[entry.id];
+    if (actionKey == null) return;
+    triggerFirstTappableDescendant(actionKey.currentContext);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = theme.colorScheme.onSurface;
+    final bool hasInput = _controller.text.trim().isNotEmpty;
+    return Theme(
+      data: theme.copyWith(
+        textTheme: ThemeData.dark().textTheme.apply(fontFamily: globalSettings.theme.entryFontFamily),
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => _focusNode.requestFocus(),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 360),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                theme.colorScheme.surface.withAlpha(245),
+                Color.alphaBlend(accent.withAlpha(24), theme.colorScheme.surface),
+                Color.alphaBlend(accent.withAlpha(10), theme.colorScheme.surface),
+              ],
+            ),
+            border: Border.all(color: accent.withAlpha(28)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withAlpha(18),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // Search bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withAlpha(210),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withAlpha(32)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2.0),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onPanStart: (DragStartDetails details) {
+                          windowManager.startDragging();
+                        },
+                        child: Icon(Icons.search_rounded, size: 20, color: accent),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            autofocus: true,
+                            onTapOutside: (_) => _focusNode.requestFocus(),
+                            // Keep keyboard focus on the search field after Enter.
+                            onEditingComplete: () {},
+                            decoration: InputDecoration(
+                              hintText: 'Search files and quick actions...',
+                              hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                                color: onSurface.withAlpha(105),
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.only(top: 2),
+                            ),
+                            onChanged: _onSearchChanged,
+                            onSubmitted: (String value) => _onSubmitted(value),
+                            style: TextStyle(
+                              fontFamily: globalSettings.themeColors.entryFontFamily,
+                              fontWeight: AppTheme.getFontWeight(globalSettings.themeColors.entryFontWeight),
+                              fontStyle:
+                                  globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                              color: onSurface,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isSearching)
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: accent.withAlpha(100),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Results area
+              Material(
+                type: MaterialType.transparency,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 260, maxHeight: 320),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (!hasInput && _results.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
+                          child: Text(
+                            'Results'.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: accent.withAlpha(180),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                      if (Boxes.searchFolders.isEmpty &&
+                          (_searchMode == LauncherSearchMode.filesOnly || _searchMode == LauncherSearchMode.mixed))
+                        Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Icon(Icons.folder_off_rounded, size: 48, color: accent.withAlpha(40)),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No Search Folders Configured',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      color: onSurface.withAlpha(180),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: onSurface.withAlpha(100),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: ValueListenableBuilder<int>(
+                              valueListenable: _activeIndexNotifier,
+                              builder: (BuildContext context, int activeIndex, Widget? child) {
+                                return ValueListenableBuilder<bool>(
+                                  valueListenable: _isRepeatingKey,
+                                  builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                                    return ListView.builder(
+                                      controller: _scrollController,
+                                      shrinkWrap: true,
+                                      itemCount: _results.length,
+                                      itemBuilder: (BuildContext context, int index) {
+                                        final LauncherSearchResultItem result = _results[index];
+                                        final bool isSelected = index == activeIndex;
+                                        late final Widget resultWidget;
+                                        if (result.isShortcut) {
+                                          resultWidget = _buildShortcutResult(
+                                              context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                                        } else if (result.isFile) {
+                                          resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
+                                              index, isSelected, isRepeatingKey);
+                                        } else if (result.isWindow) {
+                                          resultWidget = _buildWindowResult(
+                                              context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                        } else if (result.isBookmark) {
+                                          resultWidget = _buildBookmarkResult(context, theme, result.bookmarkResult!,
+                                              index, isSelected, isRepeatingKey);
+                                        } else if (result.isNotion) {
+                                          resultWidget = _buildNotionResult(
+                                              context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                                        } else if (result.isInfo) {
+                                          resultWidget = _buildInfoResult(
+                                              context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                                        } else {
+                                          resultWidget = _buildQuickActionResult(
+                                              context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                                        }
+                                        return KeyedSubtree(
+                                          key: _resultKeys[_resultKeyId(result, index)],
+                                          child: MouseRegion(
+                                            onHover: (PointerHoverEvent event) =>
+                                                _selectResultFromPointerHover(event, index),
+                                            child: resultWidget,
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Item builders (delegate to split widget files)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildShortcutResult(BuildContext context, ThemeData theme, LauncherShortcut shortcut, int index,
+      bool isSelected, bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: GestureDetector(
+        onTap: () => _onShortcutPressed(shortcut),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+          curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.highlightColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(isSelected ? 40 : 20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(shortcut.icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      shortcut.caption,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Press ${!shortcut.label.startsWith('>') && shortcut.label.length > 1 ? "'${shortcut.label}'" : shortcut.label} to search',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected) Icon(Icons.keyboard_return_rounded, size: 14, color: onSurface.withAlpha(100)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookmarkResult(BuildContext context, ThemeData theme, BookmarkSearchResult result, int index,
+      bool isSelected, bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return BookmarkSearchListItem(
+      result: result,
+      isSelected: isSelected,
+      isRepeating: isRepeatingKey,
+      accent: accent,
+      onSurface: theme.colorScheme.onSurface,
+      onTap: () => _openBookmarkResult(result),
+      onHover: () => _selectResultFromMouse(index),
+    );
+  }
+
+  Widget _buildFileResult(BuildContext context, ThemeData theme, FileSystemEntity entity, int? nodeId, int index,
+      bool isSelected, bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return LauncherListItem(
+      entity: entity,
+      isSelected: isSelected,
+      isRepeating: isRepeatingKey,
+      accent: accent,
+      onSurface: theme.colorScheme.onSurface,
+      isInHistory: false, // History removed
+      onTap: () => _openFile(entity.path, nodeId: nodeId),
+      onHover: () => _selectResultFromMouse(index),
+      onRemoveFromHistory: () {}, // No-op
+    );
+  }
+
+  Widget _buildNotionResult(
+      BuildContext context, ThemeData theme, NotionResult result, int index, bool isSelected, bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: GestureDetector(
+        onTap: () => _openNotionResult(result),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+          curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.highlightColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(isSelected ? 40 : 20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: result.emojiIcon != null
+                    ? Text(result.emojiIcon!, style: const TextStyle(fontSize: 16))
+                    : Icon(Icons.description_outlined, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      result.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'NOTION ${result.objectType.toUpperCase()}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new_rounded, size: 14, color: onSurface.withAlpha(100)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoResult(BuildContext context, ThemeData theme, LauncherInfoResult result, int index, bool isSelected,
+      bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+        curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.highlightColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: accent.withAlpha(isSelected ? 40 : 20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(result.icon, size: 18, color: accent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    result.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    result.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: onSurface.withAlpha(140),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionResult(BuildContext context, ThemeData theme, QuickActionMenuEntry quickAction, int index,
+      bool isSelected, bool isRepeatingKey) {
+    final GlobalKey actionKey = _quickActionKeys.putIfAbsent(quickAction.id, () => GlobalKey());
+    final Color accent = globalSettings.themeColors.accentColor;
+    final bool showSplash = _quickActionSplashId == quickAction.id;
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+        curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+        key: ValueKey<String>(quickAction.id),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: showSplash
+              ? accent.withAlpha(90)
+              : isSelected
+                  ? theme.highlightColor
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: KeyedSubtree(
+          key: actionKey,
+          child: quickAction.builder(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWindowResult(
+      BuildContext context, ThemeData theme, Window window, int index, bool isSelected, bool isRepeatingKey) {
+    final Color accent = globalSettings.themeColors.accentColor;
+    return WindowSearchListItem(
+      window: window,
+      isSelected: isSelected,
+      isRepeating: isRepeatingKey,
+      accent: accent,
+      onSurface: theme.colorScheme.onSurface,
+      onTap: () => _openWindow(window),
+      onHover: () => _selectResultFromMouse(index),
+    );
+  }
+}

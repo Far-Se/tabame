@@ -12,8 +12,9 @@ import 'package:intl/intl.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/popup_dialog.dart';
 
 // -----------------------------------------
@@ -25,12 +26,14 @@ class ProjectAnalysisArgs {
   final String included;
   final String excluded;
   final bool useGitIgnore;
+  final bool useCloc;
 
   ProjectAnalysisArgs({
     required this.folder,
     required this.included,
     required this.excluded,
     required this.useGitIgnore,
+    required this.useCloc,
   });
 }
 
@@ -58,6 +61,7 @@ class ProjectAnalysisResult {
   double get commentDensity => totalLines > 0 ? (totalComments / totalLines) * 100 : 0;
   double get codeIntensity => totalLines > 0 ? totalChars / totalLines : 0;
   double get avgLinesPerFile => files.isNotEmpty ? totalLines / files.length : 0;
+  double get compactedLines => totalChars / 70;
 }
 
 class TotalCode {
@@ -67,6 +71,7 @@ class TotalCode {
   int empty = 0;
   int nonCode = 0;
   int characters = 0;
+  double get compactedLines => characters / 70;
   @override
   String toString() {
     return 'TotalCode(lines: $lines, comments: $comments, code: $code, empty: $empty, nonCode: $nonCode, characters: $characters)';
@@ -116,10 +121,254 @@ extension DecimalFormat on int {
   String get decimal => NumberFormat.decimalPattern().format(this);
 }
 
+List<String> _parseCsvRow(String line) {
+  final List<String> values = <String>[];
+  final StringBuffer current = StringBuffer();
+  bool inQuotes = false;
+
+  for (int i = 0; i < line.length; i++) {
+    final String char = line[i];
+    if (char == '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+        current.write('"');
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char == ',' && !inQuotes) {
+      values.add(current.toString());
+      current.clear();
+    } else {
+      current.write(char);
+    }
+  }
+
+  values.add(current.toString());
+  return values;
+}
+
+String _normalizeProjectPath(String folder, String path) {
+  String normalized = path.trim().replaceAll('/', r'\');
+  final String normalizedFolder = folder.trim().replaceAll('/', r'\');
+  if (normalized.startsWith('.\\')) normalized = normalized.substring(2);
+  if (normalized.toLowerCase().startsWith(normalizedFolder.toLowerCase())) {
+    normalized = normalized.substring(normalizedFolder.length);
+  }
+  while (normalized.startsWith(r'\')) {
+    normalized = normalized.substring(1);
+  }
+  return normalized;
+}
+
+List<String> _splitProjectSetting(String setting) {
+  return setting.split(';').map((String value) => value.trim()).where((String value) => value.isNotEmpty).toList();
+}
+
+bool _isSimpleClocDirExclude(String pattern) {
+  return RegExp(r'^[\w .-]+$').hasMatch(pattern) && !pattern.contains('.');
+}
+
+bool _isSimpleClocExtension(String pattern) {
+  String ext = pattern.trim();
+  if (ext.startsWith('.')) ext = ext.substring(1);
+  return RegExp(r'^[A-Za-z0-9_+#-]+$').hasMatch(ext);
+}
+
+List<String> _buildClocArguments(ProjectAnalysisArgs args) {
+  final List<String> arguments = <String>[
+    args.folder,
+    '--by-file',
+    '--csv',
+  ];
+
+  final List<String> includeExtensions = _splitProjectSetting(args.included)
+      .map((String ext) => ext.startsWith('.') ? ext.substring(1) : ext)
+      .where(_isSimpleClocExtension)
+      .toList();
+  if (includeExtensions.isNotEmpty) {
+    arguments.add('--include-ext=${includeExtensions.join(',')}');
+  }
+
+  final List<String> excludePatterns = _splitProjectSetting(args.excluded);
+  final List<String> excludeDirs = excludePatterns.where(_isSimpleClocDirExclude).toList();
+  if (excludeDirs.isNotEmpty) {
+    arguments.add('--exclude-dir=${excludeDirs.join(',')}');
+  }
+
+  final List<String> notMatchFilePatterns = <String>[r'(test|spec)\.js$'];
+  notMatchFilePatterns.addAll(excludePatterns.where((String pattern) => !_isSimpleClocDirExclude(pattern)));
+  arguments.add('--not-match-f=${notMatchFilePatterns.join('|')}');
+
+  return arguments;
+}
+
+bool _matchesProjectFilters(String folder, String filePath, String includedSetting, String excludedSetting) {
+  final String normalizedFolder = folder.replaceAll('/', r'\');
+  final String normalizedFile = filePath.replaceAll('/', r'\');
+  final String absoluteFile = normalizedFile.toLowerCase().startsWith(normalizedFolder.toLowerCase())
+      ? normalizedFile
+      : '$normalizedFolder\\$normalizedFile';
+  final String fileName = normalizedFile.split(r'\').last;
+  final List<String> included = _splitProjectSetting(includedSetting);
+  final List<String> excluded = _splitProjectSetting(excludedSetting);
+
+  for (String exclude in excluded) {
+    String testExclude = exclude;
+    if (testExclude.startsWith('^')) {
+      testExclude = testExclude.substring(1);
+      if (absoluteFile.contains(RegExp(r"\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+        return false;
+      }
+    } else if (testExclude.startsWith("/") || testExclude.startsWith(r"\\")) {
+      testExclude = testExclude.substring(testExclude.startsWith("/") ? 1 : 2);
+      if (absoluteFile
+          .replaceFirst(normalizedFolder, '')
+          .contains(RegExp(r"^\\" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+        return false;
+      }
+    } else if (absoluteFile.contains(RegExp(r"[^\\]" + testExclude + r"[^\\]*\\", caseSensitive: false))) {
+      return false;
+    } else if (RegExp(testExclude, caseSensitive: false).hasMatch(absoluteFile)) {
+      return false;
+    }
+  }
+
+  if (included.isEmpty) return true;
+  for (final String include in included) {
+    if (fileName.contains(RegExp("$include\$", caseSensitive: false))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+Future<ProjectAnalysisResult> _analyzeProjectWithCloc(ProjectAnalysisArgs args) async {
+  final ProcessResult clocResult = await _runCloc(
+    args.folder,
+    _buildClocArguments(args),
+  );
+
+  if (clocResult.exitCode != 0) {
+    final String error = clocResult.stderr.toString().trim();
+    throw Exception(error.isEmpty ? 'cloc exited with code ${clocResult.exitCode}' : error);
+  }
+
+  final List<ProjectFile> projectFiles = <ProjectFile>[];
+  final List<String> lines = clocResult.stdout.toString().split(RegExp(r'\r?\n'));
+
+  for (final String line in lines) {
+    if (line.trim().isEmpty) continue;
+    final List<String> row = _parseCsvRow(line);
+    if (row.length < 5) continue;
+
+    final String language = row[0].trim();
+    if (language.isEmpty || language.toLowerCase() == 'language' || language.toUpperCase() == 'SUM') continue;
+
+    final int? blank = int.tryParse(row[row.length - 3].trim());
+    final int? comments = int.tryParse(row[row.length - 2].trim());
+    final int? code = int.tryParse(row[row.length - 1].trim());
+    if (blank == null || comments == null || code == null) continue;
+
+    final String filePath = _normalizeProjectPath(args.folder, row.sublist(1, row.length - 3).join(','));
+    if (filePath.isEmpty) continue;
+    if (!_matchesProjectFilters(args.folder, filePath, args.included, args.excluded)) continue;
+
+    final String fileName = filePath.split(r'\').last;
+    final String fileExtension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : language.toLowerCase();
+    final TotalCode total = TotalCode()
+      ..empty = blank
+      ..comments = comments
+      ..code = code
+      ..lines = blank + comments + code;
+
+    try {
+      final File file = File('${args.folder}\\$filePath');
+      if (file.existsSync()) {
+        total.characters = file.readAsLinesSync().fold<int>(0, (int sum, String line) => sum + line.trim().length);
+      }
+    } catch (_) {}
+
+    projectFiles.add(ProjectFile(name: fileName, path: filePath, ext: fileExtension, total: total));
+  }
+
+  projectFiles.sort((ProjectFile a, ProjectFile b) => b.total.lines.compareTo(a.total.lines));
+
+  int totalComments = 0;
+  int totalLines = 0;
+  int totalCode = 0;
+  int totalEmpty = 0;
+  int totalChars = 0;
+  final Map<String, int> exts = <String, int>{};
+
+  for (final ProjectFile file in projectFiles) {
+    totalComments += file.total.comments;
+    totalLines += file.total.lines;
+    totalCode += file.total.code;
+    totalEmpty += file.total.empty;
+    totalChars += file.total.characters;
+    exts[file.ext] = (exts[file.ext] ?? 0) + file.total.lines;
+  }
+
+  final List<MapEntry<String, int>> extsList = exts.entries.toList();
+  extsList.sort((MapEntry<String, int> a, MapEntry<String, int> b) => b.value.compareTo(a.value));
+
+  return ProjectAnalysisResult(
+    files: projectFiles,
+    totalLines: totalLines,
+    totalCode: totalCode,
+    totalComments: totalComments,
+    totalEmpty: totalEmpty,
+    totalNonCode: 0,
+    totalChars: totalChars,
+    programmingLanguages:
+        extsList.map((MapEntry<String, int> entry) => <String>[entry.key, entry.value.toString()]).toList(),
+  );
+}
+
+Future<ProcessResult> _runCloc(String folder, List<String> arguments) async {
+  final List<String> candidates = <String>[];
+
+  try {
+    final ProcessResult whereResult = await Process.run('where.exe', <String>['cloc']);
+    if (whereResult.exitCode == 0) {
+      candidates.addAll(whereResult.stdout
+          .toString()
+          .split(RegExp(r'\r?\n'))
+          .map((String path) => path.trim())
+          .where((String path) => path.isNotEmpty));
+    }
+  } catch (_) {}
+
+  candidates.add('cloc');
+
+  Object? lastError;
+  ProcessResult? lastResult;
+  for (final String executable in candidates) {
+    try {
+      final bool needsShell = executable.toLowerCase().endsWith('.cmd') || executable.toLowerCase() == 'cloc';
+      final ProcessResult result = await Process.run(
+        executable,
+        arguments,
+        runInShell: needsShell,
+      );
+      if (result.exitCode == 0) return result;
+      lastResult = result;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  if (lastResult != null) return lastResult;
+  throw Exception('Unable to start cloc for "$folder": $lastError');
+}
+
 // -----------------------------------------
 // ISOLATE FUNCTION
 // -----------------------------------------
 Future<ProjectAnalysisResult> _analyzeProjectIsolate(ProjectAnalysisArgs args) async {
+  if (args.useCloc) return _analyzeProjectWithCloc(args);
+
   final File gitignoreFile = File("${args.folder}\\.gitignore");
   final List<String> gitIgnore = <String>[];
   if (args.useGitIgnore && gitignoreFile.existsSync()) {
@@ -360,9 +609,10 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   ];
   Map<String, Color> extColors = <String, Color>{};
 
-  bool showFilters = false;
+  bool showFilters = true;
   bool showGit = false;
   bool projectUseGitIgnore = true;
+  bool projectUseCloc = false;
 
   bool isAnalyzing = false;
   bool projectAnalyzed = false;
@@ -415,6 +665,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       included: _includeController.text,
       excluded: _excludeController.text,
       useGitIgnore: projectUseGitIgnore,
+      useCloc: projectUseCloc,
     );
 
     try {
@@ -439,7 +690,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         setState(() {
           isAnalyzing = false;
         });
-        popupDialog(context, "Analysis failed: $e");
+        popupDialog(context,
+            "Analysis failed: $e\n. If you want the cloc command, install it from https://github.com/aldanial/cloc");
       }
     }
   }
@@ -485,6 +737,14 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
           case 5:
             valA = a.total.characters;
             valB = b.total.characters;
+            break;
+          case 6:
+            valA = a.total.compactedLines;
+            valB = b.total.compactedLines;
+            break;
+          case 7:
+            valA = a.total.nonCode;
+            valB = b.total.nonCode;
             break;
           default:
             valA = a.total.lines;
@@ -543,8 +803,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
-    final Color background = Color(globalSettings.theme.background);
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color background = globalSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Stack(
@@ -630,9 +890,28 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
             onSurface: onSurface,
           ),
           const SizedBox(width: 8),
-          _buildActionButton(accent, background),
+          _buildAnalyzeControls(accent, background),
         ],
       ),
+    );
+  }
+
+  Widget _buildAnalyzeControls(Color accent, Color background) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _buildActionButton(accent, background),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 150,
+          child: CheckBoxWidget(
+            value: projectUseCloc,
+            onChanged: (bool e) => setState(() => projectUseCloc = e),
+            text: 'Use cloc cmd',
+          ),
+        ),
+      ],
     );
   }
 
@@ -642,15 +921,18 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       required VoidCallback onPressed,
       required String tooltip,
       required Color onSurface}) {
-    return IconButton(
-      icon: Icon(icon, size: 20),
-      onPressed: onPressed,
-      tooltip: tooltip,
-      style: IconButton.styleFrom(
-        backgroundColor:
-            isSelected ? Color(globalSettings.theme.accentColor).withValues(alpha: 0.1) : Colors.transparent,
-        foregroundColor: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    return CustomTooltip(
+      message: tooltip,
+      child: IconButton(
+        icon: Icon(icon, size: 20),
+        tooltip: "",
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          backgroundColor:
+              isSelected ? globalSettings.themeColors.accentColor.withValues(alpha: 0.1) : Colors.transparent,
+          foregroundColor: isSelected ? globalSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }
@@ -720,7 +1002,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         hintText: hint,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        floatingLabelStyle: TextStyle(color: Color(globalSettings.theme.accentColor)),
+        floatingLabelStyle: TextStyle(color: globalSettings.themeColors.accentColor),
       ),
     );
   }
@@ -792,7 +1074,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 **${result!.files.length.decimal}** files found with **${result!.totalLines.decimal}** lines in total, of these, **${result!.totalCode.decimal}** are code lines, **${result!.totalNonCode.decimal}** are non-code lines, **${result!.totalComments.decimal}** are comments, and **${result!.totalEmpty.decimal}** are empty lines.
 
 There is a total of **${result!.totalChars.decimal}** characters.
-*That's roughly **${((result!.totalChars / 250).floor()).decimal} pages** or **${(result!.totalChars / 250 / 400).toStringAsFixed(1)} books**!*
+*That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70 chars each), **${((result!.totalChars / 250).floor()).decimal} pages** or **${(result!.totalChars / 250 / 400).toStringAsFixed(1)} books**!*
 ''',
         styleSheet: MarkdownStyleSheet(
           h3: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -806,15 +1088,23 @@ There is a total of **${result!.totalChars.decimal}** characters.
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
+      crossAxisCount: 5,
       padding: const EdgeInsets.all(0),
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
-      childAspectRatio: 2.2,
+      childAspectRatio: 1.8,
       children: <Widget>[
-        _buildMetricCard("Lines of Code", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
-        _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%", Icons.comment_bank_rounded,
-            Colors.green, onSurface),
+        _buildMetricCard("Total Lines", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
+        CustomTooltip(
+          message: "All characters divided by 70",
+          child: _buildMetricCard("Compacted Lns", result!.compactedLines.floor().decimal, Icons.compress_rounded,
+              Colors.purple, onSurface),
+        ),
+        CustomTooltip(
+          message: "${result!.totalComments.formatNum()} Comment Lines",
+          child: _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%",
+              Icons.comment_bank_rounded, Colors.green, onSurface),
+        ),
         _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined,
             Colors.orange, onSurface),
         _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns",
@@ -899,7 +1189,7 @@ There is a total of **${result!.totalChars.decimal}** characters.
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: result!.programmingLanguages.map((List<String> langData) {
+              children: result!.programmingLanguages.take(12).map((List<String> langData) {
                 final String lang = langData[0];
                 final int lines = int.parse(langData[1]);
                 return _buildLanguageChip(lang, lines, extColors[lang] ?? Colors.grey, onSurface);
@@ -974,34 +1264,39 @@ There is a total of **${result!.totalChars.decimal}** characters.
         children: <Widget>[
           const Expanded(
               flex: 4, child: Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-          _buildSortableHeader("Lines", 1, 70, onSurface),
-          _buildSortableHeader("Code", 2, 70, onSurface),
-          _buildSortableHeader("Comments", 3, 70, onSurface),
-          _buildSortableHeader("Empty", 4, 70, onSurface),
-          _buildSortableHeader("Chars", 5, 80, onSurface),
+          _buildSortableHeader("Lines", 1, 70, onSurface, tooltip: "Total Lines"),
+          _buildSortableHeader("Code", 2, 70, onSurface, tooltip: "Lines of code"),
+          _buildSortableHeader("Comms.", 3, 70, onSurface, tooltip: "Comments"),
+          _buildSortableHeader("Empty", 4, 70, onSurface, tooltip: "Empty lines"),
+          _buildSortableHeader("Non", 7, 70, onSurface, tooltip: "Non codes such as {});"),
+          _buildSortableHeader("Chars", 5, 80, onSurface, tooltip: "Characters"),
+          _buildSortableHeader("Comp.", 6, 80, onSurface, tooltip: "Compacted Lines"),
         ],
       ),
     );
   }
 
-  Widget _buildSortableHeader(String label, int index, double width, Color onSurface) {
+  Widget _buildSortableHeader(String label, int index, double width, Color onSurface, {String? tooltip}) {
     final bool isSelected = sortColumnIndex == index;
     return InkWell(
       onTap: () => _sortFiles(index),
-      child: SizedBox(
-        width: width,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: isSelected ? Color(globalSettings.theme.accentColor) : onSurface.withValues(alpha: 0.5))),
-            if (isSelected)
-              Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  size: 16, color: Color(globalSettings.theme.accentColor)),
-          ],
+      child: CustomTooltip(
+        message: tooltip ?? "",
+        child: SizedBox(
+          width: width,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(label,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: isSelected ? globalSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.5))),
+              if (isSelected)
+                Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    size: 16, color: globalSettings.themeColors.accentColor),
+            ],
+          ),
         ),
       ),
     );
@@ -1024,7 +1319,18 @@ There is a total of **${result!.totalChars.decimal}** characters.
                     height: 8,
                     decoration: BoxDecoration(color: extColors[file.ext] ?? Colors.grey, shape: BoxShape.circle)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(file.path, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+                Expanded(
+                    child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                      onTap: () {
+                        WinUtils.open("${_folderController.text}\\${file.path}");
+                      },
+                      child: Text(
+                          file.path.length > 35 ? "...${file.path.substring(file.path.length - 35)}" : file.path,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis)),
+                )),
               ],
             ),
           ),
@@ -1032,7 +1338,9 @@ There is a total of **${result!.totalChars.decimal}** characters.
           _buildColText(file.total.code.decimal, 70, onSurface),
           _buildColText(file.total.comments.decimal, 70, onSurface, color: Colors.green),
           _buildColText(file.total.empty.decimal, 70, onSurface, opacity: 0.4),
+          _buildColText(file.total.nonCode.decimal, 70, onSurface, opacity: 0.4),
           _buildColText(file.total.characters.decimal, 80, onSurface),
+          _buildColText(file.total.compactedLines.floor().decimal, 80, onSurface),
         ],
       ),
     );
@@ -1166,7 +1474,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

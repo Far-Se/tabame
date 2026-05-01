@@ -30,6 +30,21 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     Map<String, String> changelog = <String, String>{
+      '2.0': """
+## UI
+Refactor the whole UI, added more QuickMenu Designs.
+## Launcher
+Added Launcher, that can be trigger by typing in QuickMenu.
+## QuickMenu
+Can be resized, better focus management.
+Taskbar: Added badges for apps if you have notifications.
+Traybar: better integration.
+## QuickActions
+Adapted the modals, added multiple Quick Actions Buttons.
+## Interface Settings
+New Settings panel. Re-aranged and modernized all pages.
+
+""",
       '1.3': """
 ## Reminders change
  - Persistent Reminders: You will see a warning sign on QuickMenu when a persistent reminder triggers, its good for meds reminder.
@@ -54,7 +69,7 @@ With Fancyshot you can make screenshots that are social media friendly. You can 
 You can create Profiles so you only need to set it once.
 
 ## **Added QuickActions Menu**
-You can add quick actions in a separate menu so it's easier to access. You can run commands, trigger special actions, manage volume, manage Spotify and audio devices.
+You can add quick actions in a separate menu so it's easier to access. You can run commands, trigger special actions, manage volume and audio devices.
 
 ### **Added Predefined Sizes**
 You can set a specific size to a window. Create a list of sizes from Settings -> Views then right click a window in QuickMenu and select the new size.
@@ -108,6 +123,7 @@ Now you can set default Volume for apps, for example if you open a game, and usu
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 15),
           ...changelog.entries.map((MapEntry<String, String> entry) {
             return Container(
               margin: const EdgeInsets.only(bottom: 24),

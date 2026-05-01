@@ -1,21 +1,22 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
+
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
-import 'package:window_manager/window_manager.dart';
-import '../../widgets/panel_header.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/modal_button.dart';
+import '../../widgets/panel_header.dart';
 import 'button_window_app.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 class AppsButton extends StatelessWidget {
   const AppsButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return const ModalButton(actionName: "Apps", icon: Icon(Icons.apps), child: QuickMenuApps());
+    return ModalButton(actionName: "Apps", icon: const Icon(Icons.apps), child: () => const QuickMenuApps());
   }
 }
 
@@ -56,7 +57,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
     if (!hasAnyItems) {
       final Color accent = Theme.of(context).colorScheme.primary;
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-        PanelHeader(title: "Apps", accent: accent, boldFont: globalSettings.theme.quickMenuBoldFont, icon: Icons.apps),
+        PanelHeader(title: "Apps", accent: accent, icon: Icons.apps),
         Flexible(
             child: Center(
           child: Padding(
@@ -64,7 +65,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.apps_rounded, size: 48, color: Color(globalSettings.themeColors.accentColor).withAlpha(80)),
+                Icon(Icons.apps_rounded, size: 48, color: globalSettings.themeColors.accentColor.withAlpha(80)),
                 const SizedBox(height: 16),
                 const Text(
                   "Your Apps",
@@ -113,16 +114,27 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
     final List<AppItem> items = List<AppItem>.from(category.items);
     if (category.folderPath != null && category.folderPath!.isNotEmpty) {
       final Directory dir = Directory(category.folderPath!);
+      final bool isDesktop = category.folderPath!.toLowerCase().endsWith("desktop");
+
       if (dir.existsSync()) {
         final List<FileSystemEntity> files = dir.listSync();
         for (final FileSystemEntity file in files) {
-          if (file is File &&
-              (file.path.endsWith(".exe") || file.path.endsWith(".lnk") || file.path.endsWith(".url"))) {
+          final bool isAllowedFile =
+              file is File && (file.path.endsWith(".exe") || file.path.endsWith(".lnk") || file.path.endsWith(".url"));
+
+          if (isDesktop || isAllowedFile) {
             if (category.items.any((AppItem a) => a.path == file.path)) continue;
+
+            final int sepIdx = file.path.lastIndexOf('\\');
+            final String rawName = sepIdx >= 0 ? file.path.substring(sepIdx + 1) : file.path;
+
+            String displayName = rawName;
+            if (file is File) {
+              displayName = rawName.replaceFirst(RegExp(r'\.(exe|lnk|url)$', caseSensitive: false), "");
+            }
+
             items.add(AppItem(
-              name: file.path
-                  .substring(file.path.lastIndexOf('\\') + 1)
-                  .replaceFirst(RegExp(r'\.(exe|lnk|url)$', caseSensitive: false), ""),
+              name: displayName,
               path: file.path,
             ));
           }
@@ -212,19 +224,10 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
                       _categoryHorizontalPadding,
                       0,
                     ),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 60,
-                        mainAxisSpacing: 6,
-                        crossAxisSpacing: 6,
-                        childAspectRatio: 0.92,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return _buildAppItem(items[index]);
-                      },
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: items.map((AppItem item) => _buildAppItem(item)).toList(),
                     ),
                   )
                 : Padding(
@@ -251,7 +254,16 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
         minVerticalPadding: 0,
         minTileHeight: 30,
         minLeadingWidth: 10,
-        leading: IgnorePointer(ignoring: true, child: WindowsAppButton(path: item.path)),
+        leading: IgnorePointer(
+          ignoring: true,
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: WindowsAppButton(path: item.path),
+            ),
+          ),
+        ),
         title: Text(
           item.name,
           style: const TextStyle(fontSize: 12),
@@ -263,8 +275,8 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
     }
     return CustomTooltip(
       message: item.name,
-      verticalOffset: 26,
-      preferBelow: false,
+      verticalOffset: 20,
+      waitDuration: Duration.zero,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -274,17 +286,16 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
           highlightColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
           onTap: () => _launchApp(item),
           child: SizedBox(
-            width: 12,
-            height: 12,
+            width: 52,
+            height: 52,
             child: Center(
-              heightFactor: 0.2,
               child: IgnorePointer(
                 ignoring: true,
                 child: RepaintBoundary(
                   child: WindowsAppButton(
                     path: item.path,
                     arguments: item.arguments,
-                    placeholder: const SizedBox(width: 7, height: 7),
+                    placeholder: const SizedBox(width: 32, height: 32),
                   ),
                 ),
               ),

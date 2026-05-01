@@ -49,10 +49,17 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel = nullp
 // ---------------------------------------------------------------------------
 #include "system_utils.cpp"
 #include "clipboard.cpp"
+#include "clipboard_extended.cpp"
 #include "window_utils.cpp"
 #include "shell_utils.cpp"
 #include "win_hooks.cpp"
 #include "hotkeys.cpp"
+#include "desktop_wallpaper.cpp"
+#include "taskbar_uia.cpp"
+#include "tray_extended.cpp"
+#include "windows_theme.cpp"
+#include "get_changed_folders.cpp"
+#include "capture_monitor.cpp"
 
 // ---------------------------------------------------------------------------
 // GDI+ state
@@ -74,6 +81,12 @@ namespace Args
 {
     inline const EMap &Map(const MethodCall &call) { return std::get<EMap>(*call.arguments()); }
     inline int Int(const EMap &m, const char *k) { return std::get<int>(m.at(EVal(k))); }
+    inline int64_t Int64(const EMap &m, const char *k)
+    {
+        const auto &v = m.at(EVal(k));
+        if (std::holds_alternative<int64_t>(v)) return std::get<int64_t>(v);
+        return static_cast<int64_t>(std::get<int>(v));
+    }
     inline bool Bool(const EMap &m, const char *k) { return std::get<bool>(m.at(EVal(k))); }
     inline double Double(const EMap &m, const char *k) { return std::get<double>(m.at(EVal(k))); }
     inline std::string Str(const EMap &m, const char *k) { return std::get<std::string>(m.at(EVal(k))); }
@@ -140,6 +153,25 @@ namespace Encode
         m[EVal("hIcon")] = EVal(static_cast<int>(reinterpret_cast<LONG_PTR>(t.data.hIcon)));
         return m;
     }
+
+    EMap WindowDataToMap(const WindowData &win)
+    {
+        EMap m;
+        m[EVal("helpText")] = EVal(Encoding::WideToUtf8(win.helpText));
+        m[EVal("uiaName")] = EVal(Encoding::WideToUtf8(win.uiaName));
+        return m;
+    }
+
+    EMap MonitorCaptureToMap(const MonitorCaptureResult &capture)
+    {
+        EMap m;
+        m[EVal("pixels")] = EVal(capture.pixels);
+        m[EVal("width")] = EVal(capture.width);
+        m[EVal("height")] = EVal(capture.height);
+        m[EVal("length")] = EVal(static_cast<int>(capture.pixels.size()));
+        return m;
+    }
+
 } // namespace Encode
 
 // ===========================================================================
@@ -147,6 +179,50 @@ namespace Encode
 // ===========================================================================
 namespace tabamewin32
 {
+    bool RegisterClipboardUpdateListener(Tabamewin32Plugin *plugin)
+    {
+        if (plugin == nullptr || plugin->registrar_ == nullptr || plugin->registrar_->GetView() == nullptr)
+            return false;
+
+        HWND view_hwnd = plugin->registrar_->GetView()->GetNativeWindow();
+        HWND root_hwnd = view_hwnd != nullptr ? ::GetAncestor(view_hwnd, GA_ROOT) : nullptr;
+        bool registered = false;
+
+        if (view_hwnd != nullptr && view_hwnd != plugin->clipboard_view_hwnd_)
+        {
+            AddClipboardFormatListener(view_hwnd);
+            plugin->clipboard_view_hwnd_ = view_hwnd;
+            registered = true;
+        }
+
+        if (root_hwnd != nullptr && root_hwnd != view_hwnd && root_hwnd != plugin->clipboard_root_hwnd_)
+        {
+            AddClipboardFormatListener(root_hwnd);
+            plugin->clipboard_root_hwnd_ = root_hwnd;
+            registered = true;
+        }
+
+        return registered || plugin->clipboard_view_hwnd_ != nullptr || plugin->clipboard_root_hwnd_ != nullptr;
+    }
+
+    void UnregisterClipboardUpdateListener(Tabamewin32Plugin *plugin)
+    {
+        if (plugin == nullptr)
+            return;
+
+        if (plugin->clipboard_view_hwnd_ != nullptr)
+        {
+            RemoveClipboardFormatListener(plugin->clipboard_view_hwnd_);
+            plugin->clipboard_view_hwnd_ = nullptr;
+        }
+
+        if (plugin->clipboard_root_hwnd_ != nullptr)
+        {
+            RemoveClipboardFormatListener(plugin->clipboard_root_hwnd_);
+            plugin->clipboard_root_hwnd_ = nullptr;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Handler function type
     // -----------------------------------------------------------------------
@@ -233,6 +309,31 @@ namespace tabamewin32
                            Args::Bool(a, "multimedia"),
                            Args::Bool(a, "communications")));
         }
+
+        void SetAudioDeviceVolumeH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            auto devID = Encoding::Utf8ToWide(Args::Str(a, "deviceID"));
+            float volume = static_cast<float>(Args::Double(a, "volumeLevel"));
+            OK(result, setAudioDeviceVolume(volume, const_cast<LPWSTR>(devID.c_str())));
+        }
+
+        void GetAudioDeviceVolumeH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            auto devID = Encoding::Utf8ToWide(Args::Str(a, "deviceID"));
+            OK(result, EVal(static_cast<double>(getAudioDeviceVolume(const_cast<LPWSTR>(devID.c_str())))));
+        }
+
+        void SetProcessVolumeByPathH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            std::string path = Args::Str(a, "processPath");
+            float volume = static_cast<float>(Args::Double(a, "volumeLevel"));
+            OK(result, SetProcessVolumeByPath(eConsole, path, volume));
+        }
+
+
 
         // ===== Audio Mixer =====
         void EnumAudioMixerH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
@@ -515,6 +616,8 @@ namespace tabamewin32
         void HotkeyResetH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
         {
             hotkeys.clear();
+            ResetActiveHotkeyState();
+            ResetDoubleAltGestureState();
             OK(result, true);
         }
 
@@ -526,6 +629,7 @@ namespace tabamewin32
             g_EventHook = nullptr;
             g_MouseHook = nullptr;
             g_KeyboardHook = nullptr;
+            ResetDoubleAltGestureState();
             OK(result, true);
         }
 
@@ -541,10 +645,24 @@ namespace tabamewin32
             OK(result, true);
         }
 
+        void StartKeyboardBlockerH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            SetKeyboardBlockerEnabled(true);
+            if (!g_KeyboardHook)
+                g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook, GetModuleHandle(nullptr), 0);
+            OK(result, g_KeyboardHook != nullptr);
+        }
+
+        void StopKeyboardBlockerH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            SetKeyboardBlockerEnabled(false);
+            OK(result, true);
+        }
+
         void FreeHotkeyH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
         {
-            hotkeyPressed = false;
-            hotkeyCorrectName = false;
+            ResetActiveHotkeyState();
+            ResetDoubleAltGestureState();
             OK(result, true);
         }
 
@@ -612,6 +730,158 @@ namespace tabamewin32
             }
             OK(result, true);
         }
+
+        void SetDesktopWallpaperH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            auto path = Encoding::Utf8ToWide(Args::Str(a, "imagePath"));
+            int monitorIndex = Args::Int(a, "monitorIndex");
+            int fillMode = Args::Int(a, "fillMode");
+
+            try {
+                ChangeWallpaperForMonitor(path, monitorIndex, static_cast<WallpaperFillMode>(fillMode));
+                OK(result, true);
+            } catch (const std::exception &e) {
+                result->Error("WALLPAPER_ERROR", e.what());
+            }
+        }
+
+        // ===== Taskbar UIA =====
+        void GetTaskbarItemHelpTextsH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            const auto windows = GetTaskbarWindowsUIA();
+            flutter::EncodableList list;
+            list.reserve(windows.size());
+            for (const auto &win : windows)
+            {
+                list.emplace_back(EVal(Encode::WindowDataToMap(win)));
+            }
+            OK(result, EVal(list));
+        }
+
+        void ShutdownTaskbarUiaH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            ShutdownTaskbarUia();
+            OK(result, true);
+        }
+
+        // ===== Extended tray =====
+        void EnumAllTrayIconsH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            const auto icons = EnumAllTrayIcons();
+            flutter::EncodableList list;
+            list.reserve(icons.size());
+            for (const auto &icon : icons)
+            {
+                EMap m;
+                m[EVal("toolTip")]      = EVal(Encoding::WideToUtf8(icon.toolTip));
+                m[EVal("processId")]    = EVal(icon.processId);
+                m[EVal("hWnd")]         = EVal(static_cast<int>(reinterpret_cast<LONG_PTR>(icon.appHwnd)));
+                m[EVal("uID")]          = EVal(static_cast<int>(icon.uID));
+                m[EVal("uCallbackMsg")] = EVal(static_cast<int>(icon.uCallbackMsg));
+                m[EVal("hIcon")]        = EVal(static_cast<int>(reinterpret_cast<LONG_PTR>(icon.hIcon)));
+                m[EVal("isVisible")]    = EVal(icon.isVisible);
+                m[EVal("isOverflow")]   = EVal(icon.isOverflow);
+                list.emplace_back(EVal(m));
+            }
+            OK(result, EVal(list));
+        }
+
+        void ClickTrayNotifyIconH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            const auto &a = Args::Map(call);
+            const auto tipName    = Encoding::Utf8ToWide(Args::Str(a, "tipName"));
+            const bool isOverflow = Args::Bool(a, "isOverflow");
+            const int  clickType  = Args::Int(a, "clickType"); // 0=left,1=right,2=mid,3=dblclk
+            OK(result, ClickTrayIconUia(tipName, isOverflow, clickType));
+        }
+
+        void SetWindowThemeH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            OK(result, SetWindowTheme(Args::Int(a, "type")));
+        }
+
+        void CaptureMonitorH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            MonitorCaptureResult capture;
+            if (!CaptureMonitor(Args::Int(a, "monitorIndex"), capture))
+            {
+                result->Error("CAPTURE_FAILED", "Unable to capture the requested monitor.");
+                return;
+            }
+            OK(result, EVal(Encode::MonitorCaptureToMap(capture)));
+        }
+
+        void ExcludeWindowFromCaptureH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(Args::Int64(a, "hWnd")));
+            OK(result, ExcludeWindowFromCapture(hwnd));
+        }
+
+        void IncludeWindowFromCaptureH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            HWND hwnd = reinterpret_cast<HWND>(static_cast<LONG_PTR>(Args::Int64(a, "hWnd")));
+            OK(result, IncludeWindowFromCapture(hwnd));
+        }
+
+
+        // ===== Changed Folders =====
+        void GetChangedFoldersH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            auto changed = GetChangedFolders();
+            flutter::EncodableList list;
+            for (const auto &path : changed)
+                list.push_back(EVal(Encoding::WideToUtf8(path)));
+            OK(result, EVal(list));
+        }
+
+        void AddFoldersToWatchlistH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            auto pathsVal = a.at(EVal("paths"));
+            std::vector<std::wstring> paths;
+            if (std::holds_alternative<flutter::EncodableList>(pathsVal)) {
+                for (const auto& v : std::get<flutter::EncodableList>(pathsVal)) {
+                    paths.push_back(Encoding::Utf8ToWide(std::get<std::string>(v)));
+                }
+            }
+            AddFoldersToWatchlist(paths);
+            OK(result, true);
+        }
+
+        void RemoveFoldersFromWatchlistH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            auto pathsVal = a.at(EVal("paths"));
+            std::vector<std::wstring> paths;
+            if (std::holds_alternative<flutter::EncodableList>(pathsVal)) {
+                for (const auto& v : std::get<flutter::EncodableList>(pathsVal)) {
+                    paths.push_back(Encoding::Utf8ToWide(std::get<std::string>(v)));
+                }
+            }
+            RemoveFoldersFromWatchlist(paths);
+            OK(result, true);
+        }
+
+        void StartClipboardWatcherH(Tabamewin32Plugin *self, const MethodCall &, MethodResult result)
+        {
+            OK(result, RegisterClipboardUpdateListener(self));
+        }
+
+        void StopClipboardWatcherH(Tabamewin32Plugin *self, const MethodCall &, MethodResult result)
+        {
+            UnregisterClipboardUpdateListener(self);
+            OK(result, true);
+        }
+
+        void ClipboardExtendedH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            ClipboardExtended::HandleMethodCall(call, std::move(result));
+        }
     } // namespace Handlers
 
     // -----------------------------------------------------------------------
@@ -630,6 +900,9 @@ namespace tabamewin32
             {"setMuteAudioDevice",     Handlers::SetMuteAudioDeviceH},
             {"getMuteAudioDevice",     Handlers::GetMuteAudioDeviceH},
             {"switchDefaultDevice",    Handlers::SwitchDefaultDeviceH},
+            {"setAudioDeviceVolume",   Handlers::SetAudioDeviceVolumeH},
+            {"getAudioDeviceVolume",   Handlers::GetAudioDeviceVolumeH},
+            {"setProcessVolumeByPath", Handlers::SetProcessVolumeByPathH},
             // Audio Mixer
             {"enumAudioMixer",         Handlers::EnumAudioMixerH},
             {"setAudioMixerVolume",    Handlers::SetAudioMixerVolumeH},
@@ -669,6 +942,8 @@ namespace tabamewin32
             {"hotkeyReset",            Handlers::HotkeyResetH},
             {"hotkeyUnHook",           Handlers::HotkeyUnHookH},
             {"hotkeyHook",             Handlers::HotkeyHookH},
+            {"startKeyboardBlocker",    Handlers::StartKeyboardBlockerH},
+            {"stopKeyboardBlocker",     Handlers::StopKeyboardBlockerH},
             {"freeHotkey",             Handlers::FreeHotkeyH},
             {"trcktivity",             Handlers::TrcktivityH},
             {"views",                  Handlers::ViewsH},
@@ -680,6 +955,35 @@ namespace tabamewin32
             {"saveClipboardImageAsPngFile", Handlers::SaveClipboardImageH},
             {"copyImageToClipboard",   Handlers::CopyImageToClipboardH},
             {"initializeGDI",          Handlers::InitializeGDIH},
+            {"setDesktopWallpaper",    Handlers::SetDesktopWallpaperH},
+            // Taskbar UIA
+            {"getTaskbarItemHelpTexts", Handlers::GetTaskbarItemHelpTextsH},
+            {"shutdownTaskbarUia",      Handlers::ShutdownTaskbarUiaH},
+            // Extended tray
+            {"enumAllTrayIcons",        Handlers::EnumAllTrayIconsH},
+            {"clickTrayNotifyIcon",     Handlers::ClickTrayNotifyIconH},
+            {"setWindowTheme",          Handlers::SetWindowThemeH},
+            {"captureMonitor",          Handlers::CaptureMonitorH},
+            {"excludeWindowFromCapture", Handlers::ExcludeWindowFromCaptureH},
+            {"includeWindowFromCapture", Handlers::IncludeWindowFromCaptureH},
+            {"getChangedFolders",       Handlers::GetChangedFoldersH},
+            {"addFoldersToWatchlist",   Handlers::AddFoldersToWatchlistH},
+            {"removeFoldersFromWatchlist", Handlers::RemoveFoldersFromWatchlistH},
+            {"startClipboardWatcher",   Handlers::StartClipboardWatcherH},
+            {"stopClipboardWatcher",    Handlers::StopClipboardWatcherH},
+            {"clipboardExtendedCopy",    Handlers::ClipboardExtendedH},
+            {"clipboardExtendedCopyRichText", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedCopyMultiple", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedCopyImage", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedPaste",   Handlers::ClipboardExtendedH},
+            {"clipboardExtendedPasteRichText", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedPasteImage", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedGetContentType", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedHasData", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedClear",   Handlers::ClipboardExtendedH},
+            {"clipboardExtendedGetDataSize", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedStartMonitoring", Handlers::ClipboardExtendedH},
+            {"clipboardExtendedStopMonitoring", Handlers::ClipboardExtendedH},
         };
         return table;
     }
@@ -696,6 +1000,18 @@ namespace tabamewin32
                 &flutter::StandardMethodCodec::GetInstance());
 
         auto plugin = std::make_unique<Tabamewin32Plugin>(registrar);
+        RegisterClipboardUpdateListener(plugin.get());
+        plugin->clipboard_proc_id_ = registrar->RegisterTopLevelWindowProcDelegate(
+            [](HWND, UINT message, WPARAM, LPARAM) -> std::optional<LRESULT>
+            {
+                if (message == WM_CLIPBOARDUPDATE && channel)
+                {
+                    channel->InvokeMethod(
+                        "ClipboardUpdate",
+                        std::make_unique<flutter::EncodableValue>(true));
+                }
+                return std::nullopt;
+            });
 
         channel->SetMethodCallHandler(
             [plugin_pointer = plugin.get()](const auto &call, auto result)
@@ -711,12 +1027,16 @@ namespace tabamewin32
 
     Tabamewin32Plugin::~Tabamewin32Plugin()
     {
+        UnregisterClipboardUpdateListener(this);
+        if (registrar_ != nullptr && clipboard_proc_id_ != -1)
+            registrar_->UnregisterTopLevelWindowProcDelegate(clipboard_proc_id_);
         if (gEventHook) UnhookWinEvent(gEventHook);
         if (gMouseHook) UnhookWindowsHookEx(gMouseHook);
         if (g_EventHook) UnhookWinEvent(g_EventHook);
         if (g_MouseHook) UnhookWindowsHookEx(g_MouseHook);
         if (g_KeyboardHook) UnhookWindowsHookEx(g_KeyboardHook);
         if (gdiInitialized) Gdiplus::GdiplusShutdown(gdiplusToken);
+        ShutdownTaskbarUia();
     }
 
     // -----------------------------------------------------------------------

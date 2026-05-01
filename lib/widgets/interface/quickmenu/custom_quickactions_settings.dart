@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quick_actions.dart';
-import '../../widgets/info_text.dart';
 import '../../widgets/text_input.dart';
 
 class QuickmenuCustomQuickActionsSettingsPage extends StatefulWidget {
@@ -96,11 +95,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
             child: Icon(Icons.bolt_rounded, size: 18, color: scheme.primary),
           ),
           const SizedBox(width: 16),
-          const Expanded(
-            child: InfoText(
-              "Bind these actions to Hotkeys or Triggers in the main Hotkeys configuration panel.",
-            ),
-          ),
+          const Expanded(child: Text("These can be activated from Launcher or QuickActions button.")),
         ],
       ),
     );
@@ -315,8 +310,6 @@ class QuickmenuQuickActionEdit extends StatefulWidget {
 class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
   static IconData _getStaticIconForType(String type) {
     switch (type) {
-      case "Spotify Controls":
-        return Icons.music_note_rounded;
       case "Audio Output Devices":
         return Icons.speaker_group_rounded;
       case "Audio Input Devices":
@@ -429,7 +422,7 @@ class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
             ),
           ),
 
-          TextInput(
+          CustomTextInput(
             labelText: "Display Name",
             onChanged: (String v) {
               widget.leAction.name = v;
@@ -510,7 +503,7 @@ class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
             ),
           ] else if (<int>[4, 5, 6, 8, 9]
               .any((int e) => e == quickActionsType.indexOf(widget.leAction.type))) ...<Widget>[
-            TextInput(
+            CustomTextInput(
               labelText: "Action Value",
               hintText: _getHintForType(widget.leAction.type),
               onChanged: (String e) {

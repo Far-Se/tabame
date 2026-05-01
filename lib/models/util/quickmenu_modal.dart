@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../classes/boxes/quick_menu_box.dart';
 import '../globals.dart';
 import '../settings.dart';
 import '../theme.dart';
@@ -20,7 +23,7 @@ Future<void> showQuickMenuModal({
   VoidCallback? whenComplete,
 }) async {
   final ({int height, int width}) size = Win32.getSize();
-  maxWidth ??= size.width * 0.80;
+  maxWidth ??= size.width * 0.85;
   if (maxWidth < 280) maxWidth = 280;
   return showModalBottomSheet<void>(
     context: context,
@@ -45,14 +48,23 @@ Future<void> showQuickMenuModal({
           final Color surface = scheme.surface;
           final Animation<double>? animation = ModalRoute.of(context)?.animation;
 
-          final Widget modalChild = FractionallySizedBox(
-            heightFactor: heightFactor,
-            child: Listener(
-              onPointerDown: (PointerDownEvent event) {
-                if (event.kind == PointerDeviceKind.mouse && event.buttons == kSecondaryMouseButton) {
-                  Navigator.pop(context);
+          final Widget modalChild = Focus(
+            autofocus: true,
+            onKeyEvent: (FocusNode node, KeyEvent keyEvent) {
+              if (keyEvent is KeyDownEvent && keyEvent.logicalKey == LogicalKeyboardKey.escape) {
+                unawaited(Navigator.of(context).maybePop());
+                return KeyEventResult.handled;
+              }
+              if (keyEvent.logicalKey == LogicalKeyboardKey.keyH && HardwareKeyboard.instance.isControlPressed) {
+                if (keyEvent is KeyDownEvent) {
+                  globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus;
                 }
-              },
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: FractionallySizedBox(
+              heightFactor: heightFactor,
               child: Theme(
                 data: modalTheme,
                 child: Material(
@@ -83,41 +95,45 @@ Future<void> showQuickMenuModal({
                             child: animatedChild!,
                           );
                         },
-                        child: Container(
-                          width: maxWidth,
-                          constraints: const BoxConstraints(maxHeight: 520, minHeight: 250),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: surface.withValues(
-                                alpha: switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
-                              QuickMenuDesigns.modern => 0.95,
-                              QuickMenuDesigns.classic => 0.88,
-                              QuickMenuDesigns.interface => 0.93,
-                              // ignore: unreachable_switch_case
-                              _ => 0.90,
-                            }),
-                            border: Border(
-                              top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
-                              left: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
-                              right: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2.0).copyWith(top: 0),
+                          child: Container(
+                            width: maxWidth,
+                            constraints: const BoxConstraints(maxHeight: 520, minHeight: 250),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: surface.withValues(
+                                  alpha: switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
+                                QuickMenuDesigns.modern => 0.95,
+                                QuickMenuDesigns.classic => 0.88,
+                                QuickMenuDesigns.interface => 0.93,
+                                // ignore: unreachable_switch_case
+                                _ => 0.90,
+                              }),
+                              border: Border(
+                                top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
+                                left: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
+                                right: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
+                                bottom: BorderSide.none,
+                              ),
+                              boxShadow: true
+                                  ? null
+                                  // ignore: dead_code
+                                  : <BoxShadow>[
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(45),
+                                        blurRadius: 25,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(30),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                             ),
-                            boxShadow: true
-                                ? null
-                                // ignore: dead_code
-                                : <BoxShadow>[
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(45),
-                                      blurRadius: 25,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(30),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                            child: ClipRRect(borderRadius: BorderRadius.circular(16), child: child),
                           ),
-                          child: ClipRRect(borderRadius: BorderRadius.circular(16), child: child),
                         )),
                   ),
                 ),
@@ -138,5 +154,6 @@ Future<void> showQuickMenuModal({
     },
   ).whenComplete(() {
     whenComplete?.call();
+    QuickMenuFunctions.requestQuickMenuFocus();
   });
 }

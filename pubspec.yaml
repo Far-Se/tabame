@@ -10,6 +10,7 @@ environment:
 
 dependencies:
   animated_button_bar: ^1.0.0
+  audiotags: ^1.4.5
   characters: ^1.2.0
   collection: any
   crypto: ^3.0.7
@@ -25,14 +26,23 @@ dependencies:
     sdk: flutter
   flutter_colorpicker: ^1.1.0
   flutter_markdown: ^0.7.3
+  flutter_svg: ^2.2.4
   foldable_list: ^1.0.1
+  google_fonts: ^8.0.2
   http: ^1.2.1
   image: ^4.0.15
   intl: ^0.20.2
+  just_audio: ^0.10.5
+  just_audio_windows: ^0.2.3
   local_notifier: ^0.1.5
   markdown_widget: ^2.3.2+8
   math_parser: ^1.5.0
+  path: ^1.9.1
+  path_provider: ^2.1.5
   screenshot: ^3.0.0
+  shared_preferences: ^2.5.5
+  sqlite3: ^3.3.1
+  subsonic_api: ^0.0.6
   tabamewin32:
     path: tabamewin32
   timezone: ^0.11.0
@@ -76,3 +86,8 @@ msix_config:
   capabilities: internetClient
   store: true
   publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4
+
+fonts:
+  - family: Jura
+    fonts:
+      - asset: resources/Jura-VariableFont_wght.ttf

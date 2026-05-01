@@ -5,21 +5,20 @@ import 'dart:ui';
 
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:win32/win32.dart';
-import 'package:tabame/widgets/widgets/custom_tooltip.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
 class Fancyshot extends StatefulWidget {
@@ -338,153 +337,164 @@ class FancyshotState extends State<Fancyshot> {
       child: Material(
         type: MaterialType.transparency,
         child: ClipRect(
-          child: Container(
-            padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
-            decoration: _previewBackgroundDecoration(),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: filters.backgroundBlur,
-                sigmaY: filters.backgroundBlur,
-              ),
-              child: Transform(
-                transform: filters.skewX != 0 && filters.skewY != 0
-                    ? (Matrix4.identity()
-                      ..scaledByVector3(Vector3.all(0.1))
-                      ..setEntry(3, 2, filters.skewPerspective)
-                      ..rotateX(0.1 * filters.skewY)
-                      ..rotateY(-0.1 * filters.skewX))
-                    : Matrix4.identity(),
-                filterQuality: FilterQuality.high,
-                alignment: Alignment.center,
-                child: Padding(
-                  padding: EdgeInsets.all(filters.watermark.isNotEmpty ? 20 : 0),
+          child: Stack(
+            children: <Widget>[
+              if (!capturing)
+                Positioned.fill(
                   child: Container(
-                    constraints: capturing ? null : const BoxConstraints(maxHeight: 400, maxWidth: 500),
-                    child: FittedBox(
-                      alignment: Alignment.center,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: <Widget>[
-                          IntrinsicWidth(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: filters.showBrowserFrame
-                                    ? const Color(0xFFEBEBEB)
-                                    : bgColor, // macOS light grey or match existing bg
-                                borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
-                                boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
-                                    ? <BoxShadow>[
-                                        BoxShadow(
-                                          offset: const Offset(3, 3),
-                                          spreadRadius: filters.shadowSpread,
-                                          blurRadius: filters.shadowRadius,
-                                          color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  if (filters.showBrowserFrame)
-                                    Container(
-                                      height: 32,
-                                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEBEBEB),
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(filters.borderRadius),
-                                          topRight: Radius.circular(filters.borderRadius),
-                                        ),
-                                        border: Border(
-                                            bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1)),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: <Widget>[
-                                          Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: const BoxDecoration(
-                                                  color: Color(0xFFFF5F56), shape: BoxShape.circle)),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: const BoxDecoration(
-                                                  color: Color(0xFFFFBD2E), shape: BoxShape.circle)),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: const BoxDecoration(
-                                                  color: Color(0xFF27C93F), shape: BoxShape.circle)),
-                                          const Spacer(),
-                                        ],
-                                      ),
-                                    ),
-                                  Padding(
-                                    padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
-                                    child: GestureDetector(
-                                      onPanUpdate: (DragUpdateDetails details) => setState(() => filters
-                                        ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2))
-                                        ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2))),
-                                      onDoubleTap: () => setState(() => filters
-                                        ..skewX = 0
-                                        ..skewY = 0),
-                                      child: ClipRRect(
-                                        borderRadius: filters.showBrowserFrame
-                                            ? BorderRadius.only(
-                                                bottomLeft: Radius.circular(filters.borderRadius),
-                                                bottomRight: Radius.circular(filters.borderRadius))
-                                            : BorderRadius.circular(filters.borderRadius),
-                                        child: Image.memory(
-                                          capture!,
-                                          fit: BoxFit.contain,
-                                          width: photo!.width.toDouble(),
-                                          height: photo!.height.toDouble(),
-                                          filterQuality: FilterQuality.high,
-                                        ),
-                                      ),
-                                    ),
+                    color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : const Color(0xFF1E1E1E),
+                  ),
+                ),
+              Container(
+                padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
+                decoration: _previewBackgroundDecoration(),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: filters.backgroundBlur,
+                    sigmaY: filters.backgroundBlur,
+                  ),
+                  child: Transform(
+                    transform: filters.skewX != 0 && filters.skewY != 0
+                        ? (Matrix4.identity()
+                          ..scaledByVector3(Vector3.all(0.1))
+                          ..setEntry(3, 2, filters.skewPerspective)
+                          ..rotateX(0.1 * filters.skewY)
+                          ..rotateY(-0.1 * filters.skewX))
+                        : Matrix4.identity(),
+                    filterQuality: FilterQuality.high,
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: EdgeInsets.all(filters.watermark.isNotEmpty ? 20 : 0),
+                      child: Container(
+                        constraints: capturing ? null : const BoxConstraints(maxHeight: 400, maxWidth: 500),
+                        child: FittedBox(
+                          alignment: Alignment.center,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: <Widget>[
+                              IntrinsicWidth(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: filters.showBrowserFrame
+                                        ? const Color(0xFFEBEBEB)
+                                        : bgColor, // macOS light grey or match existing bg
+                                    borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
+                                    boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
+                                        ? <BoxShadow>[
+                                            BoxShadow(
+                                              offset: const Offset(3, 3),
+                                              spreadRadius: filters.shadowSpread,
+                                              blurRadius: filters.shadowRadius,
+                                              color: const Color.fromRGBO(0, 0, 0, 0.5),
+                                            ),
+                                          ]
+                                        : null,
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 12,
-                            right: 12,
-                            child: Transform(
-                              transform: Matrix4.skewX(-0.1),
-                              child: Text(
-                                filters.watermark,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                  letterSpacing: 0.5,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  shadows: <Shadow>[
-                                    Shadow(
-                                      blurRadius: 10,
-                                      color: Colors.black.withValues(alpha: 0.5),
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: <Widget>[
+                                      if (filters.showBrowserFrame)
+                                        Container(
+                                          height: 32,
+                                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEBEBEB),
+                                            borderRadius: BorderRadius.only(
+                                              topLeft: Radius.circular(filters.borderRadius),
+                                              topRight: Radius.circular(filters.borderRadius),
+                                            ),
+                                            border: Border(
+                                                bottom:
+                                                    BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: <Widget>[
+                                              Container(
+                                                  width: 12,
+                                                  height: 12,
+                                                  decoration: const BoxDecoration(
+                                                      color: Color(0xFFFF5F56), shape: BoxShape.circle)),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                  width: 12,
+                                                  height: 12,
+                                                  decoration: const BoxDecoration(
+                                                      color: Color(0xFFFFBD2E), shape: BoxShape.circle)),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                  width: 12,
+                                                  height: 12,
+                                                  decoration: const BoxDecoration(
+                                                      color: Color(0xFF27C93F), shape: BoxShape.circle)),
+                                              const Spacer(),
+                                            ],
+                                          ),
+                                        ),
+                                      Padding(
+                                        padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
+                                        child: GestureDetector(
+                                          onPanUpdate: (DragUpdateDetails details) => setState(() => filters
+                                            ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2))
+                                            ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2))),
+                                          onDoubleTap: () => setState(() => filters
+                                            ..skewX = 0
+                                            ..skewY = 0),
+                                          child: ClipRRect(
+                                            borderRadius: filters.showBrowserFrame
+                                                ? BorderRadius.only(
+                                                    bottomLeft: Radius.circular(filters.borderRadius),
+                                                    bottomRight: Radius.circular(filters.borderRadius))
+                                                : BorderRadius.circular(filters.borderRadius),
+                                            child: Image.memory(
+                                              capture!,
+                                              fit: BoxFit.contain,
+                                              width: photo!.width.toDouble(),
+                                              height: photo!.height.toDouble(),
+                                              filterQuality: FilterQuality.high,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Transform(
+                                  transform: Matrix4.skewX(-0.1),
+                                  child: Text(
+                                    filters.watermark,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14,
+                                      letterSpacing: 0.5,
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      shadows: <Shadow>[
+                                        Shadow(
+                                          blurRadius: 10,
+                                          color: Colors.black.withValues(alpha: 0.5),
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -663,11 +673,6 @@ class FancyshotState extends State<Fancyshot> {
                   decoration: BoxDecoration(color: colorScheme.surfaceContainerLowest),
                   child: Stack(
                     children: <Widget>[
-                      // Checkerboard pattern painter
-                      Positioned.fill(
-                        child: CustomPaint(
-                            painter: _CheckerboardPainter(color: colorScheme.onSurface.withValues(alpha: 0.03))),
-                      ),
                       Center(
                         child: hasCapture
                             ? MouseScrollWidget(
@@ -1254,26 +1259,6 @@ class _BgTileState extends State<_BgTile> {
       ),
     );
   }
-}
-
-class _CheckerboardPainter extends CustomPainter {
-  final Color color;
-  final double squareSize = 8;
-  const _CheckerboardPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = color;
-    for (double i = 0; i < size.width; i += squareSize * 2) {
-      for (double j = 0; j < size.height; j += squareSize * 2) {
-        canvas.drawRect(Rect.fromLTWH(i, j, squareSize, squareSize), paint);
-        canvas.drawRect(Rect.fromLTWH(i + squareSize, j + squareSize, squareSize, squareSize), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 enum BackgroundType {

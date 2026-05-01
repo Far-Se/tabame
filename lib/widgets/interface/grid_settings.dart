@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
+import '../../models/util/theme_colors.dart';
+import '../widgets/color_picker.dart';
 import '../widgets/text_input.dart';
 
 class ViewsInterface extends StatefulWidget {
@@ -23,7 +25,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -37,9 +39,9 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               const SizedBox(height: 16),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 250),
-                opacity: globalSettings.views ? 1.0 : 0.5,
+                opacity: globalSettings.quickSnapGrid ? 1.0 : 0.5,
                 child: IgnorePointer(
-                  ignoring: !globalSettings.views,
+                  ignoring: !globalSettings.quickSnapGrid,
                   child: Column(
                     children: <Widget>[
                       _buildConfigurationHub(accent),
@@ -90,12 +92,12 @@ class ViewsInterfaceState extends State<ViewsInterface> {
             ),
           ),
           _toggleChip(
-            label: globalSettings.views ? "ACTIVE" : "OFFLINE",
-            value: globalSettings.views,
+            label: globalSettings.quickSnapGrid ? "ACTIVE" : "OFFLINE",
+            value: globalSettings.quickSnapGrid,
             onChanged: (bool value) {
               setState(() {
-                globalSettings.views = value;
-                Boxes.updateSettings("views", globalSettings.views);
+                globalSettings.quickSnapGrid = value;
+                Boxes.updateSettings("quickSnapGrid", globalSettings.quickSnapGrid);
               });
             },
           ),
@@ -239,7 +241,29 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
           ),
-          onTap: () {},
+          onTap: () {
+            Color? newColor;
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                    content: CustomColorPicker(
+                  startColor: settings.bgColor,
+                  onColorChanged: (Color color) {
+                    newColor = color;
+                  },
+                  themeOptions: darkThemeOptions,
+                  colorIndex: 0,
+                ));
+              },
+            ).then((_) {
+              if (newColor == null) return;
+              settings.bgColor = newColor!;
+              settings.save();
+              setState(() {});
+              // onColorChanged(newColor!);
+            });
+          },
         ),
       ],
     );
@@ -256,8 +280,10 @@ class ViewsInterfaceState extends State<ViewsInterface> {
                 child: _inputGrid(
                   "SUBDIVISION",
                   <Widget>[
-                    _gridInput("Rows", settings.scaleW.toString(), (String v) => settings.scaleW = int.tryParse(v) ?? 15),
-                    _gridInput("Cols", settings.scaleH.toString(), (String v) => settings.scaleH = int.tryParse(v) ?? 15),
+                    _gridInput(
+                        "Rows", settings.scaleW.toString(), (String v) => settings.scaleW = int.tryParse(v) ?? 15),
+                    _gridInput(
+                        "Cols", settings.scaleH.toString(), (String v) => settings.scaleH = int.tryParse(v) ?? 15),
                   ],
                 ),
               ),
@@ -325,7 +351,9 @@ class ViewsInterfaceState extends State<ViewsInterface> {
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3))),
         const SizedBox(height: 6),
         Row(
-          children: inputs.map((Widget w) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 8), child: w))).toList(),
+          children: inputs
+              .map((Widget w) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 8), child: w)))
+              .toList(),
         ),
       ],
     );
@@ -390,7 +418,8 @@ class ViewsInterfaceState extends State<ViewsInterface> {
     );
   }
 
-  Widget _compactAction({required String title, required Color accent, required Widget trailing, required VoidCallback onTap}) {
+  Widget _compactAction(
+      {required String title, required Color accent, required Widget trailing, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -409,7 +438,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
   }
 
   Widget _toggleChip({required String label, required bool value, required ValueChanged<bool> onChanged}) {
-    final Color accent = Color(globalSettings.theme.accentColor);
+    final Color accent = globalSettings.themeColors.accentColor;
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(20),
@@ -479,7 +508,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
   }
 
   Widget _gridInput(String label, String value, Function(String) onChanged) {
-    return TextInput(
+    return CustomTextInput(
       key: UniqueKey(),
       labelText: label,
       value: value,

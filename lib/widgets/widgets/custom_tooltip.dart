@@ -1,109 +1,267 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
-/// Project wrapper around [Tooltip] that defaults to not intercepting pointer
-/// input while the overlay is visible.
-class CustomTooltip extends StatelessWidget {
+import '../../models/settings.dart';
+import '../../models/theme.dart';
+
+class CustomTooltip extends StatefulWidget {
+  final String message;
+  final String? shortcut;
+  final Widget child;
+  final double verticalOffset;
+  final Duration waitDuration;
+
   const CustomTooltip({
     super.key,
-    this.message,
-    this.richMessage,
-    @Deprecated(
-      'Use CustomTooltip.constraints instead. '
-      'This feature was deprecated after v3.30.0-0.1.pre.',
-    )
-    this.height,
-    this.constraints,
-    this.padding,
-    this.margin,
-    this.verticalOffset,
-    this.preferBelow,
-    this.excludeFromSemantics,
-    this.decoration,
-    this.textStyle,
-    this.textAlign,
-    this.waitDuration,
-    this.showDuration,
-    this.exitDuration,
-    this.enableTapToDismiss = true,
-    this.triggerMode,
-    this.enableFeedback,
-    this.onTriggered,
-    this.mouseCursor,
-    this.ignorePointer = true,
-    this.positionDelegate,
-    this.child,
-  })  : assert(
-          (message == null) != (richMessage == null),
-          'Either `message` or `richMessage` must be specified',
-        ),
-        assert(
-          height == null || constraints == null,
-          'Only one of `height` and `constraints` may be specified.',
+    required this.message,
+    this.shortcut,
+    required this.child,
+    this.verticalOffset = 30.0,
+    this.waitDuration = const Duration(milliseconds: 110),
+  });
+
+  @override
+  State<CustomTooltip> createState() => _CustomTooltipState();
+}
+
+class _CustomTooltipState extends State<CustomTooltip> {
+  OverlayEntry? _overlayEntry;
+  Timer? _showTimer;
+
+  void _showTooltip() {
+    _removeTooltip();
+
+    final RenderObject? renderObject = context.findRenderObject();
+    if (renderObject == null || renderObject is! RenderBox) return;
+
+    final RenderBox renderBox = renderObject;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    const double screenMargin = 8.0;
+
+    _overlayEntry = OverlayEntry(
+      builder: (BuildContext context) {
+        return _TooltipOverlay(
+          message: widget.message,
+          shortcut: widget.shortcut,
+          targetCenter: offset.dx + size.width / 2,
+          targetTop: offset.dy,
+          screenWidth: screenWidth,
+          screenMargin: screenMargin,
+          verticalOffset: widget.verticalOffset,
         );
+      },
+    );
 
-  final String? message;
-  final InlineSpan? richMessage;
+    Overlay.of(context).insert(_overlayEntry!);
+  }
 
-  @Deprecated(
-    'Use CustomTooltip.constraints instead. '
-    'This feature was deprecated after v3.30.0-0.1.pre.',
-  )
-  final double? height;
+  void _removeTooltip() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _showTimer?.cancel();
+  }
 
-  final BoxConstraints? constraints;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final double? verticalOffset;
-  final bool? preferBelow;
-  final bool? excludeFromSemantics;
-  final Decoration? decoration;
-  final TextStyle? textStyle;
-  final TextAlign? textAlign;
-  final Duration? waitDuration;
-  final Duration? showDuration;
-  final Duration? exitDuration;
-  final bool enableTapToDismiss;
-  final TooltipTriggerMode? triggerMode;
-  final bool? enableFeedback;
-  final TooltipTriggeredCallback? onTriggered;
-  final MouseCursor? mouseCursor;
-  final bool ignorePointer;
-  final TooltipPositionDelegate? positionDelegate;
-  final Widget? child;
-
-  static bool dismissAllToolTips() {
-    return Tooltip.dismissAllToolTips();
+  @override
+  void dispose() {
+    _removeTooltip();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: message,
-      richMessage: richMessage,
-      // Preserve the native API surface so existing call sites can switch over
-      // without losing access to the deprecated `height` escape hatch.
-      // ignore: deprecated_member_use
-      height: height,
-      constraints: constraints,
-      padding: padding,
-      margin: margin,
-      verticalOffset: verticalOffset,
-      preferBelow: preferBelow,
-      excludeFromSemantics: excludeFromSemantics,
-      decoration: decoration,
-      textStyle: textStyle,
-      textAlign: textAlign,
-      waitDuration: waitDuration,
-      showDuration: showDuration,
-      exitDuration: exitDuration,
-      enableTapToDismiss: enableTapToDismiss,
-      triggerMode: triggerMode,
-      enableFeedback: enableFeedback,
-      onTriggered: onTriggered,
-      mouseCursor: mouseCursor,
-      ignorePointer: ignorePointer,
-      positionDelegate: positionDelegate,
-      child: child,
+    return MouseRegion(
+      onEnter: (_) {
+        _showTimer = Timer(
+          widget.waitDuration,
+          _showTooltip,
+        );
+      },
+      onExit: (_) => _removeTooltip(),
+      child: widget.child,
+    );
+  }
+}
+
+class _TooltipOverlay extends StatefulWidget {
+  final String message;
+  final String? shortcut;
+  final double targetCenter;
+  final double targetTop;
+  final double screenWidth;
+  final double screenMargin;
+  final double verticalOffset;
+
+  const _TooltipOverlay({
+    required this.message,
+    this.shortcut,
+    required this.targetCenter,
+    required this.targetTop,
+    required this.screenWidth,
+    required this.screenMargin,
+    required this.verticalOffset,
+  });
+
+  @override
+  State<_TooltipOverlay> createState() => _TooltipOverlayState();
+}
+
+class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProviderStateMixin {
+  final GlobalKey<State<StatefulWidget>> _key = GlobalKey();
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  double _left = 0;
+  bool _positioned = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutQuart,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutQuart,
+    ));
+
+    // Measure after first frame, then reposition
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final RenderBox? box = _key.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      final double tooltipWidth = box.size.width;
+      final double x = (widget.targetCenter - tooltipWidth / 2).clamp(
+        widget.screenMargin,
+        widget.screenWidth - tooltipWidth - widget.screenMargin,
+      );
+      setState(() {
+        _left = x;
+        _positioned = true;
+      });
+      _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.message.isEmpty) return const SizedBox();
+    // First frame: render off-screen at left:-9999 to measure size.
+    // Second frame: render at clamped position.
+    final double left = _positioned ? _left : -9999;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Positioned(
+      left: left,
+      top: widget.targetTop - widget.verticalOffset,
+      child: IgnorePointer(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: AnimatedBuilder(
+            animation: _slideAnimation,
+            builder: (BuildContext context, Widget? child) {
+              return Transform.translate(
+                offset: _slideAnimation.value,
+                child: child,
+              );
+            },
+            child: Material(
+              key: _key,
+              color: Colors.transparent,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: onSurface.withValues(alpha: 0.05),
+                        width: 0.5,
+                      ),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        // Label
+                        Flexible(
+                          child: Text(
+                            widget.message,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: globalSettings.themeColors.entryFontFamily,
+                              fontWeight: AppTheme.getFontWeight(globalSettings.themeColors.entryFontWeight),
+                              fontStyle:
+                                  globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                              fontSize: 11.5,
+                              letterSpacing: 0.2, // Reduced for a more relaxed feel
+                              height: 1.2,
+                              color: onSurface.withValues(alpha: 0.9),
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // Subtler Keycap Shortcut
+                        if (widget.shortcut != null) ...<Widget>[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: onSurface.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              widget.shortcut!,
+                              style: TextStyle(
+                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                                letterSpacing: 0.5,
+                                color: onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

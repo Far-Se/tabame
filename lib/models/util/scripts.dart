@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../win32/win32.dart';
+import '../win32/win_utils.dart';
 
 void writeScript(Scripts script) {
   String? scriptCode;

@@ -7,12 +7,15 @@ import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
+import '../../../models/win32/win_utils.dart';
 
 int _weatherLastFetchDate = 0;
 Future<String> fetchWeather([bool showUnit = false]) async {
   // Check if we have already fetched the weather in the last 15 minutes
-  if (_weatherLastFetchDate + 900000 > DateTime.now().millisecondsSinceEpoch && globalSettings.weatherTemperature.isNotEmpty) return globalSettings.weatherTemperature;
+  if (_weatherLastFetchDate + 900000 > DateTime.now().millisecondsSinceEpoch &&
+      globalSettings.weatherTemperature.isNotEmpty) {
+    return globalSettings.weatherTemperature;
+  }
   _weatherLastFetchDate = DateTime.now().millisecondsSinceEpoch;
   bool failed = false;
   final List<String> latLong = globalSettings.weatherLatLong.split(',');
@@ -63,7 +66,9 @@ Future<String> fetchWeather([bool showUnit = false]) async {
           99: "🌩",
         };
         String weather = "";
-        if (weatherEmoji.containsKey(data["current_weather"]["weathercode"])) weather = weatherEmoji[data["current_weather"]["weathercode"]].toString();
+        if (weatherEmoji.containsKey(data["current_weather"]["weathercode"])) {
+          weather = weatherEmoji[data["current_weather"]["weathercode"]].toString();
+        }
         weather += " ${double.parse(data["current_weather"]["temperature"].toString()).toInt().toString()}°";
         if (showUnit) weather += " ${globalSettings.weatherUnit == "u" ? "F" : "C"}";
         return weather;
@@ -170,7 +175,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                 maxLines: 2,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: globalSettings.theme.quickMenuBoldFont ? FontWeight.w500 : FontWeight.w200,
+                  fontWeight: FontWeight(globalSettings.theme.uiFontWeight),
                   height: 1.1,
                 ),
               ),
