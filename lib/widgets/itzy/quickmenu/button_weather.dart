@@ -1017,7 +1017,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
     if (code <= 3) return Icons.cloud_queue_rounded;
     if (code == 45 || code == 48) return Icons.foggy;
     if (code >= 51 && code <= 67) return Icons.grain_rounded;
-    if (code >= 71 && code <= 86) return Icons.ac_unit_rounded;
+    if (code >= 71 && code <= 86) return Icons.umbrella_outlined;
     if (code >= 95) return Icons.thunderstorm_rounded;
     return Icons.cloud_rounded;
   }

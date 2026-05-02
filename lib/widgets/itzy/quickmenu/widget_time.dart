@@ -4,8 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../models/win32/keys.dart';
 import '../../../models/settings.dart';
+import '../../../models/win32/keys.dart';
 
 class TimeWidget extends StatefulWidget {
   final bool inline;
@@ -59,7 +59,7 @@ class _TimeWidgetState extends State<TimeWidget> {
         onTap: _onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+          padding: const EdgeInsets.fromLTRB(20, 5, 0, 5),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[

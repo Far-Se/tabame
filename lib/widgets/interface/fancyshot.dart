@@ -1455,6 +1455,107 @@ class FancyShotProfile {
 }
 
 class FancyShot {
+  static List<FancyShotProfile> defaultProfiles() => <FancyShotProfile>[
+        FancyShotProfile(
+          name: "Default",
+          backgroundPadding: 10,
+          imagePadding: 0,
+          backgroundType: BackgroundType.transparent,
+          backgroundImage: "resources/gradient/gradient1.jpg",
+          borderRadius: 5,
+          shadowSpread: 1,
+          shadowRadius: 1,
+          backgroundBlur: 0,
+          background: 0,
+          aspectRatio: 0,
+          width: 0,
+          height: 0,
+          watermark: "",
+        ),
+        FancyShotProfile(
+          name: "Self Background",
+          backgroundPadding: 16,
+          imagePadding: 7.5,
+          backgroundType: BackgroundType.self,
+          backgroundImage: "resources/gradient/gradient1.jpg",
+          borderRadius: 8,
+          shadowSpread: 3,
+          shadowRadius: 6,
+          backgroundBlur: 8,
+          background: 0,
+          aspectRatio: 0,
+          width: 0,
+          height: 0,
+          watermark: "",
+        ),
+        FancyShotProfile(
+          name: "Image Background",
+          backgroundPadding: 28,
+          imagePadding: 7.5,
+          backgroundType: BackgroundType.stock,
+          backgroundImage: "resources/gradient/gradient7.jpg",
+          borderRadius: 5,
+          shadowSpread: 3,
+          shadowRadius: 6,
+          backgroundBlur: 18,
+          background: 0,
+          aspectRatio: 0,
+          width: 0,
+          height: 0,
+          watermark: "",
+        ),
+      ];
+
+  static List<FancyShotProfile> loadProfiles() {
+    final List<FancyShotProfile> profiles = Boxes.getSavedMap<FancyShotProfile>(
+      FancyShotProfile.fromJson,
+      "fancyShotProfile",
+      def: defaultProfiles(),
+    );
+    if (profiles.isEmpty) return defaultProfiles();
+    return profiles;
+  }
+
+  static FancyShotProfile? profileByName(String name) {
+    final List<FancyShotProfile> profiles = loadProfiles();
+    final int index = profiles.indexWhere((FancyShotProfile profile) => profile.name == name);
+    if (index < 0) return null;
+    return profiles[index].copyWith();
+  }
+
+  static Future<Uint8List> renderPresetCapture({
+    required Uint8List captureBytes,
+    required FancyShotProfile profile,
+  }) async {
+    await initializeGDI();
+    final img.Image? photo = img.decodeImage(captureBytes);
+    if (photo == null) {
+      throw Exception('Failed to decode captured image for FancyShot preset.');
+    }
+
+    final img.Pixel pixel32 = photo.getPixelSafe(0, 0);
+    final int hex = _abgrToArgb(
+      pixel32.a.toInt() << 24 | pixel32.r.toInt() << 16 | pixel32.g.toInt() << 8 | pixel32.b.toInt(),
+    );
+    final Color bgColor = Color(hex);
+    final ScreenshotController screenshotController = ScreenshotController();
+
+    return screenshotController.captureFromWidget(
+      _FancyShotRenderSurface(
+        captureBytes: captureBytes,
+        photo: photo,
+        bgColor: bgColor,
+        profile: profile.copyWith(),
+      ),
+    );
+  }
+
+  static int _abgrToArgb(int argbColor) {
+    final int r = (argbColor >> 16) & 0xFF;
+    final int b = argbColor & 0xFF;
+    return (argbColor & 0xFF00FF00) | (b << 16) | r;
+  }
+
   img.Image? photo;
   Uint8List? capture;
   Color? bgColor;
@@ -1637,5 +1738,195 @@ class FancyShot {
     int r = (argbColor >> 16) & 0xFF;
     int b = argbColor & 0xFF;
     return (argbColor & 0xFF00FF00) | (b << 16) | r;
+  }
+}
+
+class _FancyShotRenderSurface extends StatelessWidget {
+  const _FancyShotRenderSurface({
+    required this.captureBytes,
+    required this.photo,
+    required this.bgColor,
+    required this.profile,
+  });
+
+  final Uint8List captureBytes;
+  final img.Image photo;
+  final Color bgColor;
+  final FancyShotProfile profile;
+
+  BoxDecoration _backgroundDecoration() {
+    switch (profile.backgroundType) {
+      case BackgroundType.stock:
+        return BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(profile.backgroundImage),
+            fit: BoxFit.cover,
+          ),
+        );
+      case BackgroundType.self:
+        return BoxDecoration(
+          image: DecorationImage(
+            image: MemoryImage(captureBytes),
+            fit: BoxFit.cover,
+          ),
+        );
+      case BackgroundType.custom:
+        return BoxDecoration(
+          image: File(profile.backgroundImage).existsSync()
+              ? DecorationImage(
+                  image: FileImage(File(profile.backgroundImage)),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        );
+      case BackgroundType.transparent:
+        return const BoxDecoration(color: Colors.transparent);
+    }
+  }
+
+  Matrix4 _buildTransform() {
+    if (profile.skewX == 0 || profile.skewY == 0) {
+      return Matrix4.identity();
+    }
+    return Matrix4.identity()
+      ..scaledByVector3(Vector3.all(0.1))
+      ..setEntry(3, 2, profile.skewPerspective)
+      ..rotateX(0.1 * profile.skewY)
+      ..rotateY(-0.1 * profile.skewX);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: ClipRect(
+        child: Container(
+          padding: EdgeInsets.all(profile.backgroundPadding.ceil().toDouble()),
+          decoration: _backgroundDecoration(),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: profile.backgroundBlur,
+              sigmaY: profile.backgroundBlur,
+            ),
+            child: Transform(
+              transform: _buildTransform(),
+              filterQuality: FilterQuality.high,
+              alignment: Alignment.center,
+              child: Padding(
+                padding: EdgeInsets.all(profile.watermark.isNotEmpty ? 20 : 0),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    IntrinsicWidth(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : bgColor,
+                          borderRadius: BorderRadius.all(Radius.circular(profile.borderRadius)),
+                          boxShadow: profile.shadowRadius != 0 && profile.shadowSpread != 0
+                              ? <BoxShadow>[
+                                  BoxShadow(
+                                    offset: const Offset(3, 3),
+                                    spreadRadius: profile.shadowSpread,
+                                    blurRadius: profile.shadowRadius,
+                                    color: const Color.fromRGBO(0, 0, 0, 0.5),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            if (profile.showBrowserFrame)
+                              Container(
+                                height: 32,
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEBEBEB),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(profile.borderRadius),
+                                    topRight: Radius.circular(profile.borderRadius),
+                                  ),
+                                  border: Border(
+                                    bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: <Widget>[
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: const BoxDecoration(color: Color(0xFFFF5F56), shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: const BoxDecoration(color: Color(0xFFFFBD2E), shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: const BoxDecoration(color: Color(0xFF27C93F), shape: BoxShape.circle),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            Padding(
+                              padding: EdgeInsets.all(profile.imagePadding.ceil().toDouble()),
+                              child: ClipRRect(
+                                borderRadius: profile.showBrowserFrame
+                                    ? BorderRadius.only(
+                                        bottomLeft: Radius.circular(profile.borderRadius),
+                                        bottomRight: Radius.circular(profile.borderRadius),
+                                      )
+                                    : BorderRadius.circular(profile.borderRadius),
+                                child: Image.memory(
+                                  captureBytes,
+                                  fit: BoxFit.contain,
+                                  width: photo.width.toDouble(),
+                                  height: photo.height.toDouble(),
+                                  filterQuality: FilterQuality.high,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (profile.watermark.isNotEmpty)
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Transform(
+                          transform: Matrix4.skewX(-0.1),
+                          child: Text(
+                            profile.watermark,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              letterSpacing: 0.5,
+                              color: Colors.white.withValues(alpha: 0.90),
+                              shadows: <Shadow>[
+                                Shadow(
+                                  blurRadius: 6,
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

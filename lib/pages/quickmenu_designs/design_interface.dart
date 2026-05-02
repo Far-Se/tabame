@@ -6,6 +6,7 @@ import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/task_bar.dart';
+import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 class MainMenuInterfaceWidget extends StatelessWidget {
@@ -125,11 +126,8 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                     child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
                   ),
                   const PinnedAndTrayList(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
-                  ),
-                  Container(padding: const EdgeInsets.fromLTRB(0, 6, 2, 10), child: const BottomBar()),
+                  if (globalSettings.taskManagerStats) const TaskbarStats(),
+                  Container(padding: const EdgeInsets.fromLTRB(0, 4, 2, 6), child: const BottomBar()),
                 ],
               ),
             ),

@@ -141,6 +141,8 @@ class MusicServerPanel extends StatefulWidget {
 enum _PlayerTrackMenuAction { artist, album, folder, file }
 
 class _MusicServerPanelState extends State<MusicServerPanel> {
+  static const Duration _kBufferingWarningDelay = Duration(seconds: 5);
+
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _userController = TextEditingController();
@@ -167,6 +169,10 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
   bool _restoringSavedQueue = false;
   String? _infoMessage;
   Timer? _infoTimer;
+  Timer? _bufferingWarningTimer;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  String? _bufferingTimerItemId;
+  String? _bufferingWarnedItemId;
   List<MusicItem> _items = <MusicItem>[];
   List<MusicItem> _folderItems = <MusicItem>[];
   List<MusicItem> _rootFolders = <MusicItem>[];
@@ -183,6 +189,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
     super.initState();
     MusicLocalIndexer.instance.indexedCount.addListener(_handleIndexProgress);
     MusicLocalIndexer.instance.isIndexingNotifier.addListener(_handleIndexProgress);
+    _playerStateSubscription = MusicServerManager.player.playerStateStream.listen(_handlePlayerStateChanged);
     unawaited(_initManager());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -193,6 +200,8 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
   @override
   void dispose() {
     _infoTimer?.cancel();
+    _bufferingWarningTimer?.cancel();
+    _playerStateSubscription?.cancel();
     MusicLocalIndexer.instance.indexedCount.removeListener(_handleIndexProgress);
     MusicLocalIndexer.instance.isIndexingNotifier.removeListener(_handleIndexProgress);
     _searchController.dispose();
@@ -210,6 +219,62 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
   void _handleIndexProgress() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _handlePlayerStateChanged(PlayerState state) {
+    final bool buffering =
+        state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
+    final MusicItem? currentItem = _currentQueuedItem();
+
+    if (!buffering || currentItem == null) {
+      _cancelBufferingWarning(resetWarnedItem: !buffering);
+      return;
+    }
+
+    if (_bufferingWarnedItemId == currentItem.id) return;
+    if (_bufferingTimerItemId == currentItem.id && _bufferingWarningTimer?.isActive == true) return;
+
+    _bufferingWarningTimer?.cancel();
+    _bufferingTimerItemId = currentItem.id;
+    _bufferingWarningTimer = Timer(_kBufferingWarningDelay, () {
+      if (!mounted) return;
+      final PlayerState currentState = MusicServerManager.player.playerState;
+      final bool stillBuffering = currentState.processingState == ProcessingState.loading ||
+          currentState.processingState == ProcessingState.buffering;
+      final MusicItem? bufferedItem = _currentQueuedItem();
+      if (!stillBuffering || bufferedItem == null || bufferedItem.id != currentItem.id) return;
+
+      _bufferingWarnedItemId = bufferedItem.id;
+      _showInfo(_buildBufferingFailureMessage(bufferedItem), duration: 10);
+    });
+  }
+
+  MusicItem? _currentQueuedItem() {
+    final int? currentIndex = MusicServerManager.player.currentIndex;
+    final List<IndexedAudioSource> sequence = MusicServerManager.player.sequence;
+    if (currentIndex == null || currentIndex < 0 || currentIndex >= sequence.length) return null;
+    final Object? tag = sequence[currentIndex].tag;
+    return tag is MusicItem ? tag : null;
+  }
+
+  String _buildBufferingFailureMessage(MusicItem item) {
+    final String? path = item.localPath?.trim();
+    if (path == null || path.isEmpty) {
+      return "Playback is stuck. The file may be missing or use an unsupported filename.";
+    }
+
+    if (!File(path).existsSync()) {
+      return "Playback is stuck. The file is missing: ${item.title}.";
+    }
+
+    return "Playback is stuck. The file may use an unsupported filename or format: ${item.title}.";
+  }
+
+  void _cancelBufferingWarning({bool resetWarnedItem = false}) {
+    _bufferingWarningTimer?.cancel();
+    _bufferingWarningTimer = null;
+    _bufferingTimerItemId = null;
+    if (resetWarnedItem) _bufferingWarnedItemId = null;
   }
 
   Future<void> _initManager() async {
@@ -651,10 +716,10 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
     if (index == 2 || index == 3 || index == 4) unawaited(_refresh());
   }
 
-  void _showInfo(String message) {
+  void _showInfo(String message, {int? duration}) {
     _infoTimer?.cancel();
     setState(() => _infoMessage = message);
-    _infoTimer = Timer(const Duration(seconds: 3), () {
+    _infoTimer = Timer(Duration(seconds: duration ?? 3), () {
       if (mounted) setState(() => _infoMessage = null);
     });
   }

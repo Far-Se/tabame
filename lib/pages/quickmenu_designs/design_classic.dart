@@ -6,6 +6,7 @@ import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/task_bar.dart';
+import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 class MainMenuClassicWidget extends StatelessWidget {
@@ -83,20 +84,21 @@ class MainMenuClassicWidget extends StatelessWidget {
               ),
             ),
             // Foreground Content
-            const RepaintBoundary(
+            RepaintBoundary(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.fromLTRB(3, 3, 6, 3),
                     child: TopBar(),
                   ),
-                  TaskBar(),
-                  Divider(thickness: 1, height: 1),
-                  PinnedAndTrayList(),
-                  BottomBar(),
+                  const TaskBar(),
+                  const Divider(thickness: 1, height: 1),
+                  const PinnedAndTrayList(),
+                  if (globalSettings.taskManagerStats) const TaskbarStats(),
+                  const BottomBar(),
                 ],
               ),
             ),

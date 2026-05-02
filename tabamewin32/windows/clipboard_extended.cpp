@@ -338,6 +338,29 @@ class ClipboardPluginImpl {
       return false;
     }
 
+    auto SetClipboardRawData = [](UINT format, const void* data, size_t size) -> bool {
+      if (format == 0 || data == nullptr || size == 0) return false;
+
+      HGLOBAL hData = GlobalAlloc(GMEM_MOVEABLE, size);
+      if (!hData) return false;
+
+      void* pData = GlobalLock(hData);
+      if (!pData) {
+        GlobalFree(hData);
+        return false;
+      }
+
+      memcpy(pData, data, size);
+      GlobalUnlock(hData);
+
+      if (SetClipboardData(format, hData) == NULL) {
+        GlobalFree(hData);
+        return false;
+      }
+
+      return true;
+    };
+
     // Initialize GDI+
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
@@ -384,7 +407,7 @@ class ClipboardPluginImpl {
     BITMAPINFOHEADER bih = {0};
     bih.biSize = sizeof(BITMAPINFOHEADER);
     bih.biWidth = width;
-    bih.biHeight = -height; // Negative for top-down DIB
+    bih.biHeight = height; // Bottom-up DIB is more widely accepted by clipboard consumers
     bih.biPlanes = 1;
     bih.biBitCount = 32;
     bih.biCompression = BI_RGB;
@@ -422,18 +445,17 @@ class ClipboardPluginImpl {
       BYTE* pSource = (BYTE*)bitmapData.Scan0;
       
       for (int y = 0; y < height; y++) {
+        const int dstY = height - 1 - y;
         for (int x = 0; x < width; x++) {
-          // GDI+ uses BGRA format, DIB needs BGRA too, but we need to handle alpha
           BYTE b = pSource[y * bitmapData.Stride + x * 4 + 0];
           BYTE g = pSource[y * bitmapData.Stride + x * 4 + 1];
           BYTE r = pSource[y * bitmapData.Stride + x * 4 + 2];
           BYTE a = pSource[y * bitmapData.Stride + x * 4 + 3];
           
-          // Copy to DIB (BGRA format)
-          pBits[y * rowSize + x * 4 + 0] = b;
-          pBits[y * rowSize + x * 4 + 1] = g;
-          pBits[y * rowSize + x * 4 + 2] = r;
-          pBits[y * rowSize + x * 4 + 3] = a;
+          pBits[dstY * rowSize + x * 4 + 0] = b;
+          pBits[dstY * rowSize + x * 4 + 1] = g;
+          pBits[dstY * rowSize + x * 4 + 2] = r;
+          pBits[dstY * rowSize + x * 4 + 3] = a;
         }
       }
       
@@ -449,15 +471,22 @@ class ClipboardPluginImpl {
 
     GlobalUnlock(hDib);
 
-    // Set clipboard data
-    bool success = (SetClipboardData(CF_DIB, hDib) != NULL);
+    // Publish both a native PNG payload and a DIB fallback.
+    // Discord tends to prefer the PNG clipboard format, while Paint happily
+    // consumes the DIB fallback.
+    const UINT pngFormat = RegisterClipboardFormatW(L"PNG");
+    const bool pngSuccess = SetClipboardRawData(pngFormat, png_bytes.data(), png_bytes.size());
+    const bool dibSuccess = (SetClipboardData(CF_DIB, hDib) != NULL);
+    if (!dibSuccess) {
+      GlobalFree(hDib);
+    }
 
     // Cleanup
     delete pBitmap;
     pStream->Release();
     GdiplusShutdown(gdiplusToken);
 
-    return success;
+    return pngSuccess || dibSuccess;
   }
 
   void HandlePaste(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {

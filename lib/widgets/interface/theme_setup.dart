@@ -471,7 +471,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     final List<File> results = picker.getFiles();
     if (results.isEmpty) return;
 
-    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\cache\\backdrops";
+    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\backdrops";
     if (!Directory(backdropsDir).existsSync()) {
       Directory(backdropsDir).createSync(recursive: true);
     }

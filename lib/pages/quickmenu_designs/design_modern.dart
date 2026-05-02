@@ -6,6 +6,7 @@ import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/task_bar.dart';
+import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 class MainMenuModernWidget extends StatelessWidget {
@@ -104,20 +105,21 @@ class MainMenuModernWidget extends StatelessWidget {
               ),
             ),
             // Interaction Layer (Fully Opaque)
-            const RepaintBoundary(
+            RepaintBoundary(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.fromLTRB(3, 3, 6, 4),
                     child: TopBar(),
                   ),
-                  TaskBar(),
-                  Divider(thickness: 1, height: 1, color: Color(0x1C000000)),
-                  PinnedAndTrayList(),
-                  Padding(
+                  const TaskBar(),
+                  Divider(thickness: 1, height: 1, color: globalSettings.themeColors.textColor.withValues(alpha: 0.08)),
+                  const PinnedAndTrayList(),
+                  if (globalSettings.taskManagerStats) const TaskbarStats(),
+                  const Padding(
                     padding: EdgeInsets.fromLTRB(0, 4, 1, 6),
                     child: BottomBar(),
                   ),

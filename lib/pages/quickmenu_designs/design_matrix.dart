@@ -7,6 +7,7 @@ import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/task_bar.dart';
+import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 class MainMenuMatrixWidget extends StatefulWidget {
@@ -165,7 +166,12 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
       const SizedBox(height: 8),
       _sectionCard(
         key: _listKey,
-        child: const PinnedAndTrayList(),
+        child: Column(
+          children: <Widget>[
+            const PinnedAndTrayList(),
+            if (globalSettings.taskManagerStats) const TaskbarStats(),
+          ],
+        ),
         onSurface: onSurface,
         padding: const EdgeInsets.symmetric(vertical: 2),
       ),
@@ -182,13 +188,14 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
         key: _listKey,
         onSurface: onSurface,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: const Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            PinnedAndTrayList(),
-            SizedBox(height: 6),
-            BottomBar(),
+            const PinnedAndTrayList(),
+            const SizedBox(height: 6),
+            if (globalSettings.taskManagerStats) const TaskbarStats(),
+            const BottomBar(),
           ],
         ),
       ),

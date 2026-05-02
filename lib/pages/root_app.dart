@@ -52,7 +52,7 @@ class _TabameState extends State<Tabame> {
         valueListenable: Globals.fullLoaded,
         builder: (BuildContext context, bool value, __) {
           Debug.add("Tabame: fullLoaded");
-          if (value == false) return Container();
+          if (value == false) return const SizedBox.shrink();
           return ValueListenableBuilder<bool>(
             valueListenable: Globals.themeChangeNotifier,
             builder: (_, bool refreshed, __) {

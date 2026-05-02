@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
@@ -119,6 +120,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _keyRepeatTimer;
   Timer? _launcherFocusRetryTimer;
   LogicalKeyboardKey? _lastPressedKey;
+  bool _isRepairingFileIndex = false;
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   bool _isSearching = false;
@@ -1356,8 +1358,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _openFile(String path, {int? nodeId}) {
     if (nodeId != null) {
-      print("Incrementing");
-      FileIndexDb.instance.incrementTimesOpened(nodeId);
+      unawaited(_recordFileOpen(nodeId));
     }
 
     if (path.endsWith('ps1')) {
@@ -1369,6 +1370,42 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     QuickMenuFunctions.toggleQuickMenu(visible: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     globalSettings.launcherSearchText = '';
+  }
+
+  Future<void> _recordFileOpen(int nodeId) async {
+    try {
+      await FileIndexDb.instance.database;
+      FileIndexDb.instance.incrementTimesOpened(nodeId);
+    } catch (error, stackTrace) {
+      if (_isMalformedFileIndexError(error)) {
+        debugPrint('Launcher: File index DB is malformed while opening node $nodeId. Repairing in background...');
+        await _repairFileIndexInBackground();
+        return;
+      }
+
+      debugPrint('Launcher: Failed to increment times_opened for node $nodeId: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  bool _isMalformedFileIndexError(Object error) {
+    if (error is! SqliteException) return false;
+    return error.toString().toLowerCase().contains('malformed');
+  }
+
+  Future<void> _repairFileIndexInBackground() async {
+    if (_isRepairingFileIndex) return;
+    _isRepairingFileIndex = true;
+
+    try {
+      await FileIndexDb.instance.repair();
+      await FileIndexer.instance.fullReindex();
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to repair file index DB: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      _isRepairingFileIndex = false;
+    }
   }
 
   void _openWindow(Window window) {

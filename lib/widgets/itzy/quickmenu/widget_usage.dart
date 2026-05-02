@@ -13,7 +13,7 @@ class SystemUsageWidget extends StatefulWidget {
 }
 
 class SystemUsageWidgetState extends State<SystemUsageWidget> {
-  late Timer timer;
+  Timer? timer;
   @override
   void initState() {
     super.initState();
@@ -21,7 +21,7 @@ class SystemUsageWidgetState extends State<SystemUsageWidget> {
       if (!mounted) return;
       setState(() {});
     });
-    timer = Timer.periodic(const Duration(seconds: 2), (Timer timer) {
+    timer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         getSystemResourcesInfo();
         if (!mounted) return;
@@ -41,12 +41,12 @@ class SystemUsageWidgetState extends State<SystemUsageWidget> {
 
   @override
   void dispose() {
-    timer.cancel();
+    timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Text("🏼$cpuUsage\n💾$memUsage", style: const TextStyle(fontSize: 11, height: 1.1), softWrap: false);
+    return Text("📟$cpuUsage\n💾$memUsage", style: const TextStyle(fontSize: 12, height: 1.1), softWrap: false);
   }
 }

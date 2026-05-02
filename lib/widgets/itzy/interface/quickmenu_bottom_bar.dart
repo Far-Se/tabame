@@ -101,6 +101,19 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               },
             ),
             SwitchListTile(
+              title: const Text("Show TaskManager System Usage",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              subtitle: const Text("If Taskmanager is open, put it on at the bottom of the screen",
+                  style: TextStyle(fontSize: 12)),
+              secondary: const Icon(Icons.query_stats, size: 20),
+              value: globalSettings.taskManagerStats,
+              onChanged: (bool newValue) async {
+                globalSettings.taskManagerStats = newValue;
+                await Boxes.updateSettings("taskManagerStats", globalSettings.taskManagerStats);
+                if (mounted) setState(() {});
+              },
+            ),
+            SwitchListTile(
               title: const Text("Tray Bar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.expand_less, size: 20),

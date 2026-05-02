@@ -63,6 +63,7 @@ class Settings {
   bool expandedTaskbar = true;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
+  bool taskManagerStats = false;
   bool trktivityEnabled = false;
   bool runAsAdministrator = false;
   bool _hideTabameOnUnfocus = true;

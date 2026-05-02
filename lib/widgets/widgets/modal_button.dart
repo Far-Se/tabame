@@ -26,7 +26,7 @@ class ModalButton extends StatefulWidget {
     required this.actionName,
     required this.child,
     required this.icon,
-    this.heightFactor = 0.85,
+    this.heightFactor = 0.9,
     this.backdropFilter = true,
     this.onSecondaryTap,
     this.onDoubleTap,

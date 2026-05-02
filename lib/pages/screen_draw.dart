@@ -211,20 +211,6 @@ class ScreenDrawCapture {
   static Future<void> _copyPngToClipboard(Uint8List pngBytes) async {
     ClipboardExtended.copyImage(pngBytes);
     return;
-    // final Pointer<Utf16> fmtName = 'PNG'.toNativeUtf16();
-    // final int pngFormat = RegisterClipboardFormat(fmtName);
-    // calloc.free(fmtName);
-
-    // if (OpenClipboard(NULL) == 0) return;
-    // EmptyClipboard();
-
-    // final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE, pngBytes.length);
-    // final Pointer<NativeType> ptr = GlobalLock(hMem);
-    // ptr.cast<Uint8>().asTypedList(pngBytes.length).setAll(0, pngBytes);
-    // GlobalUnlock(hMem);
-
-    // SetClipboardData(pngFormat, hMem.address);
-    // CloseClipboard();
   }
 }
 // ---------------------------------------------------------------------------
@@ -937,9 +923,12 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _ctrl,
-      builder: (_, __) => AnnotationOverlay(controller: _ctrl),
+    return Material(
+      type: MaterialType.transparency,
+      child: ListenableBuilder(
+        listenable: _ctrl,
+        builder: (_, __) => AnnotationOverlay(controller: _ctrl),
+      ),
     );
   }
 }

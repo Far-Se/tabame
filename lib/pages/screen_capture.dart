@@ -24,15 +24,24 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../models/classes/boxes.dart';
 import '../models/win32/mixed.dart';
+import '../models/win32/win_utils.dart';
+import '../widgets/interface/fancyshot.dart';
+import '../widgets/widgets/color_picker.dart';
+import '../widgets/widgets/custom_tooltip.dart';
+import '../widgets/widgets/font_picker/models/picker_font.dart';
+import '../widgets/widgets/font_picker/ui/font_picker.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -48,10 +57,11 @@ Future<void> startScreenCapture() async {
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: false,
-    title: 'Screen Capture',
+    title: 'Tabame Screen Capture',
   );
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await Boxes.registerBoxes(justLoad: true);
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
     await windowManager.show();
@@ -67,6 +77,13 @@ Future<void> startScreenCapture() async {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum AppView { capture, editor }
+
+enum CaptureActionMode {
+  ask,
+  copyImageToClipboard,
+  copyImageFileToClipboard,
+  openPhotoEditor,
+}
 
 class AppState extends ChangeNotifier {
   AppView view = AppView.capture;
@@ -172,7 +189,7 @@ class ScreenCapture {
     final int memDc = CreateCompatibleDC(screenDc);
     final int bmp = CreateCompatibleBitmap(screenDc, w, h);
     SelectObject(memDc, bmp);
-    BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY | CAPTUREBLT);
+    BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY);
 
     final Pointer<BITMAPINFO> bmi = calloc<BITMAPINFO>();
     bmi.ref.bmiHeader.biSize = sizeOf<BITMAPINFOHEADER>();
@@ -214,13 +231,21 @@ class ScreenCapture {
     ClipboardExtended.copyImage(pngBytes);
   }
 
+  static Future<void> copyFileToClipboard(String filePath) async {
+    ClipboardExtension.copyFile(filePath);
+  }
+
   /// Save PNG to %localappdata%\Tabame\screenshots\<timestamp>.png
   static Future<String> saveToFile(Uint8List pngBytes) async {
-    final String localAppData = Platform.environment['LOCALAPPDATA'] ?? (await getApplicationSupportDirectory()).path;
-    final Directory dir = Directory('$localAppData\\Tabame\\screenshots');
+    final DateTime date = DateTime.now();
+
+    String shortMonth = intl.DateFormat('MMM').format(date);
+
+    final Directory dir = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots\\${date.year} - $shortMonth');
     if (!dir.existsSync()) dir.createSync(recursive: true);
 
-    final String ts = DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
+    final String ts =
+        DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-').replaceFirst(RegExp(r'^.*?T'), '');
     final String path = '${dir.path}\\$ts.png';
     await File(path).writeAsBytes(pngBytes);
     return path;
@@ -264,10 +289,20 @@ class _AppShellState extends State<AppShell> {
     });
     Monitor.fetchMonitors();
     _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _checkMonitor());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+      WidgetsBinding.instance.platformDispatcher.onMetricsChanged?.call();
+      final ui.Size size = await windowManager.getSize();
+      await windowManager.setSize(Size(size.width + 1, size.height + 1));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await windowManager.setSize(size);
+    });
   }
 
   Future<void> _checkMonitor() async {
-    if (!mounted) return;
+    if (!mounted || appState.view == AppView.editor) return;
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
     final int monitor = MonitorFromPoint(lpPoint.ref, 0);
@@ -292,19 +327,22 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: appState,
-      builder: (_, __) {
-        if (appState.view == AppView.editor) {
-          return PhotoEditorView(
-            initialImageBytes: appState.capturedImageBytes!,
-            imageW: appState.capturedW,
-            imageH: appState.capturedH,
-            filePath: appState.capturedFilePath!,
-          );
-        }
-        return const ScreenCaptureView();
-      },
+    return Material(
+      type: MaterialType.transparency,
+      child: ListenableBuilder(
+        listenable: appState,
+        builder: (_, __) {
+          if (appState.view == AppView.editor) {
+            return PhotoEditorView(
+              initialImageBytes: appState.capturedImageBytes!,
+              imageW: appState.capturedW,
+              imageH: appState.capturedH,
+              filePath: appState.capturedFilePath!,
+            );
+          }
+          return const ScreenCaptureView();
+        },
+      ),
     );
   }
 }
@@ -320,13 +358,85 @@ class ScreenCaptureView extends StatefulWidget {
 }
 
 class _ScreenCaptureViewState extends State<ScreenCaptureView> {
+  CaptureActionMode _captureActionMode = CaptureActionMode.ask;
+  List<FancyShotProfile> _fancyShotProfiles = <FancyShotProfile>[];
+  String? _selectedFancyShotPresetName;
   Offset? _captureStart;
   Offset? _captureCurrent;
   bool _capturing = false;
+  bool _captureEnabled = true;
+  Timer? _tickerTimer;
+  final Set<String> _pressedScreenCaptureHotkeys = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _fancyShotProfiles = FancyShot.loadProfiles();
+    _tickerTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _ticker());
+  }
+
+  void _ticker() {
+    _handleScreenDrawHotkeys();
+  }
+
+  void _handleScreenDrawHotkeys() {
+    const String hotkey = 'CTRL+ALT+V';
+    final bool pressed = _isHotkeyPressed(
+      keyVk: 0x56,
+      ctrl: true,
+      alt: true,
+    );
+    if (!pressed) {
+      _pressedScreenCaptureHotkeys.remove(hotkey);
+      return;
+    }
+    if (_pressedScreenCaptureHotkeys.contains(hotkey)) return;
+
+    _pressedScreenCaptureHotkeys.add(hotkey);
+    _toggleScreenCaptureEnabled();
+  }
+
+  bool _isHotkeyPressed(
+      {required int keyVk, bool ctrl = false, bool alt = false, bool shift = false, bool win = false}) {
+    if (GetKeyState(keyVk) >= 0) return false;
+    if (ctrl && !_isAnyKeyPressed(<int>[VK_LCONTROL, VK_RCONTROL, VK_CONTROL])) return false;
+    if (alt && !_isAnyKeyPressed(<int>[VK_LMENU, VK_RMENU, VK_MENU])) return false;
+    if (shift && !_isAnyKeyPressed(<int>[VK_LSHIFT, VK_RSHIFT, VK_SHIFT])) return false;
+    if (win && !_isAnyKeyPressed(<int>[VK_LWIN, VK_RWIN])) return false;
+    return true;
+  }
+
+  bool _isAnyKeyPressed(List<int> keys) => keys.any((int vk) => GetKeyState(vk) < 0);
+
+  void _toggleScreenCaptureEnabled() {
+    setState(() {
+      _captureEnabled = !_captureEnabled;
+      _captureStart = null;
+      _captureCurrent = null;
+      _capturing = false;
+    });
+    if (_captureEnabled) {
+      Win32Window.disableClickThrough();
+      windowManager.focus();
+    } else {
+      Navigator.of(context).maybePop();
+      Win32Window.enableClickThrough();
+    }
+  }
+
+  @override
+  void dispose() {
+    _tickerTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final ui.Size size = MediaQuery.of(context).size;
+
+    if (!_captureEnabled) {
+      return const SizedBox.expand();
+    }
 
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
@@ -378,9 +488,36 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
           // Crosshair cursor layer
           if (!_capturing) const Positioned.fill(child: _CrosshairCursor()),
 
-          // HUD hint
           Positioned(
             top: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _CaptureActionDropdown(
+                    value: _captureActionMode,
+                    onChanged: (CaptureActionMode mode) {
+                      setState(() => _captureActionMode = mode);
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  _FancyShotPresetDropdown(
+                    presetNames: _fancyShotProfiles.map((FancyShotProfile profile) => profile.name).toList(),
+                    value: _selectedFancyShotPresetName,
+                    onChanged: (String? presetName) {
+                      setState(() => _selectedFancyShotPresetName = presetName);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // HUD hint
+          Positioned(
+            top: 74,
             left: 0,
             right: 0,
             child: Center(
@@ -392,7 +529,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                   border: Border.all(color: Colors.white24),
                 ),
                 child: const Text(
-                  'Drag to select a region  •  ESC to exit',
+                  'Drag to select a region  •  Ctrl+Alt+V disable/enable  •  ESC to exit',
                   style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
@@ -405,40 +542,106 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
   Future<void> _doCapture(Rect localRect) async {
     // Convert to screen coordinates
-    final Pointer<RECT> windowRect = calloc<RECT>();
+    final Pointer<POINT> clientTopLeft = calloc<POINT>();
     try {
       final int hwnd = Win32Window.getHwnd();
-      if (hwnd == 0 || GetWindowRect(hwnd, windowRect) == 0) return;
+      if (hwnd == 0) return;
+      clientTopLeft.ref.x = 0;
+      clientTopLeft.ref.y = 0;
+      if (ClientToScreen(hwnd, clientTopLeft) == 0) return;
 
       final Rect screenRect = Rect.fromLTWH(
-        windowRect.ref.left + localRect.left,
-        windowRect.ref.top + localRect.top,
+        clientTopLeft.ref.x + localRect.left,
+        clientTopLeft.ref.y + localRect.top,
         localRect.width,
         localRect.height,
       );
 
-      // Small delay so the overlay doesn't appear in the capture
-      await Future<void>.delayed(const Duration(milliseconds: 90));
+      // Hide the overlay window before capturing. A delay alone is not enough on
+      // Windows because layered/shadow surfaces can still be included by GDI.
+      ShowWindow(hwnd, SW_HIDE);
+      await Future<void>.delayed(const Duration(milliseconds: 120));
 
-      final Uint8List? pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
+      Uint8List? pngBytes;
+      try {
+        pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
+      } finally {
+        ShowWindow(hwnd, SW_SHOW);
+      }
       if (pngBytes == null || !mounted) return;
 
+      final Uint8List outputBytes = await _applySelectedPreset(pngBytes);
+      final img.Image? outputImage = img.decodeImage(outputBytes);
+      if (outputImage == null) return;
+
       // Save to disk
-      final String filePath = await ScreenCapture.saveToFile(pngBytes);
+      final String filePath = await ScreenCapture.saveToFile(outputBytes);
 
       await windowManager.focus();
       if (!mounted) return;
 
-      // Show action modal
-      _showCaptureModal(
-        pngBytes,
-        filePath,
-        screenRect.width.round(),
-        screenRect.height.round(),
+      await _handleCaptureResult(
+        pngBytes: outputBytes,
+        filePath: filePath,
+        imageW: outputImage.width,
+        imageH: outputImage.height,
       );
     } finally {
-      calloc.free(windowRect);
+      calloc.free(clientTopLeft);
     }
+  }
+
+  Future<Uint8List> _applySelectedPreset(Uint8List pngBytes) async {
+    final String? presetName = _selectedFancyShotPresetName;
+    if (presetName == null) return pngBytes;
+
+    FancyShotProfile? preset;
+    for (final FancyShotProfile profile in _fancyShotProfiles) {
+      if (profile.name == presetName) {
+        preset = profile.copyWith();
+        break;
+      }
+    }
+    preset ??= FancyShot.profileByName(presetName);
+    if (preset == null) return pngBytes;
+
+    return FancyShot.renderPresetCapture(
+      captureBytes: pngBytes,
+      profile: preset,
+    );
+  }
+
+  Future<void> _handleCaptureResult({
+    required Uint8List pngBytes,
+    required String filePath,
+    required int imageW,
+    required int imageH,
+  }) async {
+    switch (_captureActionMode) {
+      case CaptureActionMode.ask:
+        _showCaptureModal(pngBytes, filePath, imageW, imageH);
+        return;
+      case CaptureActionMode.copyImageToClipboard:
+        await ScreenCapture.copyPngToClipboard(pngBytes);
+        await _finishClipboardAction();
+        return;
+      case CaptureActionMode.copyImageFileToClipboard:
+        await ScreenCapture.copyFileToClipboard(filePath);
+        await _finishClipboardAction();
+        return;
+      case CaptureActionMode.openPhotoEditor:
+        appState.openEditor(filePath, pngBytes, imageW, imageH);
+        return;
+    }
+  }
+
+  Future<void> _finishClipboardAction() async {
+    if (kDebugMode) {
+      appState.backToCapture();
+      await windowManager.focus();
+      return;
+    }
+    await windowManager.close();
   }
 
   void _showCaptureModal(Uint8List pngBytes, String filePath, int w, int h) {
@@ -458,6 +661,305 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture selection painter
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _CaptureActionDropdown extends StatelessWidget {
+  final CaptureActionMode value;
+  final ValueChanged<CaptureActionMode> onChanged;
+
+  const _CaptureActionDropdown({
+    required this.value,
+    required this.onChanged,
+  });
+
+  static const List<({CaptureActionMode mode, String title, String subtitle, IconData icon})> _options =
+      <({CaptureActionMode mode, String title, String subtitle, IconData icon})>[
+    (
+      mode: CaptureActionMode.ask,
+      title: 'Ask',
+      subtitle: 'Show the action popup after each capture',
+      icon: Icons.help_outline,
+    ),
+    (
+      mode: CaptureActionMode.copyImageToClipboard,
+      title: 'Copy Image to Clipboard',
+      subtitle: 'Copy the captured bitmap and close',
+      icon: Icons.image_outlined,
+    ),
+    (
+      mode: CaptureActionMode.copyImageFileToClipboard,
+      title: 'Copy Image File to Clipboard',
+      subtitle: 'Copy the saved screenshot file and close',
+      icon: Icons.file_copy_outlined,
+    ),
+    (
+      mode: CaptureActionMode.openPhotoEditor,
+      title: 'Open Photo Editor',
+      subtitle: 'Open the screenshot directly in the editor',
+      icon: Icons.edit_outlined,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final ({CaptureActionMode mode, String title, String subtitle, IconData icon}) selected = _options.firstWhere(
+      (({IconData icon, CaptureActionMode mode, String subtitle, String title}) option) => option.mode == value,
+    );
+
+    return Material(
+      type: MaterialType.transparency,
+      child: PopupMenuButton<CaptureActionMode>(
+        tooltip: 'Capture action',
+        color: const Color(0xFF121826),
+        elevation: 12,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Colors.white24),
+        ),
+        onSelected: onChanged,
+        itemBuilder: (BuildContext context) => _options
+            .map(
+              (({IconData icon, CaptureActionMode mode, String subtitle, String title}) option) =>
+                  PopupMenuItem<CaptureActionMode>(
+                value: option.mode,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: option.mode == value ? const Color(0xFF4A9EFF).withValues(alpha: 0.18) : Colors.white10,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        option.icon,
+                        size: 18,
+                        color: option.mode == value ? const Color(0xFF7DB8FF) : Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            option.title,
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            option.subtitle,
+                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 280, maxWidth: 280),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4A9EFF).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(selected.icon, size: 18, color: const Color(0xFF7DB8FF)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Text(
+                      'After Capture',
+                      style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 0.6),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      selected.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FancyShotPresetDropdown extends StatelessWidget {
+  final List<String> presetNames;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  const _FancyShotPresetDropdown({
+    required this.presetNames,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = value ?? 'None';
+
+    return Material(
+      type: MaterialType.transparency,
+      child: PopupMenuButton<String?>(
+        tooltip: 'FancyShot preset',
+        color: const Color(0xFF121826),
+        elevation: 12,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Colors.white24),
+        ),
+        onSelected: onChanged,
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<String?>>[
+          const PopupMenuItem<String?>(
+            value: null,
+            child: _PresetMenuRow(
+              icon: Icons.block,
+              title: 'None',
+              subtitle: 'Use the raw captured image',
+            ),
+          ),
+          ...presetNames.map(
+            (String presetName) => PopupMenuItem<String?>(
+              value: presetName,
+              child: _PresetMenuRow(
+                icon: Icons.auto_awesome,
+                title: presetName,
+                subtitle: 'FancyShot preset',
+              ),
+            ),
+          ),
+        ],
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 240, maxWidth: 240),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2ECC71).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.auto_awesome, size: 18, color: Color(0xFF7DFFB1)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Text(
+                      'Preset',
+                      style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 0.6),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetMenuRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _PresetMenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: Colors.white70),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _CapturePainter extends CustomPainter {
   final Offset? start;
@@ -694,7 +1196,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                 children: <Widget>[
                   _ModalAction(
                     icon: Icons.content_copy,
-                    label: 'Copy to Clipboard',
+                    label: 'Copy Image to Clipboard',
                     subtitle: 'Copy image to system clipboard',
                     color: const Color(0xFF4A9EFF),
                     onTap: () async {
@@ -705,18 +1207,18 @@ class _CaptureModalState extends State<_CaptureModal> {
                   const SizedBox(height: 10),
                   _ModalAction(
                     icon: Icons.file_copy_outlined,
-                    label: 'Copy File Path',
-                    subtitle: 'Copy the saved file path to clipboard',
+                    label: 'Copy Image File to Clipboard',
+                    subtitle: 'Copy the saved screenshot file to clipboard',
                     color: const Color(0xFF9B59B6),
                     onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: widget.filePath));
-                      setState(() => _statusMsg = '✓ File path copied!');
+                      await ScreenCapture.copyFileToClipboard(widget.filePath);
+                      setState(() => _statusMsg = '✓ Screenshot file copied!');
                     },
                   ),
                   const SizedBox(height: 10),
                   _ModalAction(
                     icon: Icons.edit,
-                    label: 'Open in Editor',
+                    label: 'Open Photo Editor',
                     subtitle: 'Annotate and draw on the screenshot',
                     color: const Color(0xFF2ECC71),
                     onTap: () {
@@ -872,6 +1374,7 @@ class EditorShape {
   final bool textBackground;
   final Color? textColor;
   final double? fontSize;
+  final String? fontFamily;
   final int? stepNumber;
   final Uint8List? imageBytes;
   final int? imageW;
@@ -889,6 +1392,7 @@ class EditorShape {
     this.textBackground = true,
     this.textColor,
     this.fontSize,
+    this.fontFamily,
     this.stepNumber,
     this.imageBytes,
     this.imageW,
@@ -903,6 +1407,7 @@ class EditorShape {
     Uint8List? imageBytes,
     int? imageW,
     int? imageH,
+    String? fontFamily,
   }) {
     return EditorShape(
       tool: tool,
@@ -915,6 +1420,7 @@ class EditorShape {
       textBackground: textBackground,
       textColor: textColor,
       fontSize: fontSize,
+      fontFamily: fontFamily ?? this.fontFamily,
       stepNumber: stepNumber,
       imageBytes: imageBytes ?? this.imageBytes,
       imageW: imageW ?? this.imageW,
@@ -934,6 +1440,7 @@ class EditorController extends ChangeNotifier {
   bool textBackground = true;
   double fontSize = 16.0;
   Color? textColor;
+  String fontFamily = 'Roboto';
   bool gridVisible = false;
 
   int _stepCount = 1;
@@ -983,6 +1490,11 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setFontFamily(String family) {
+    fontFamily = family;
+    notifyListeners();
+  }
+
   void startShape(Offset pos) {
     _redo.clear();
     currentShape = EditorShape(
@@ -1023,7 +1535,7 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void commitTextShape(Offset pos, String text) {
+  void commitTextShape(Offset pos, String text, {double? size}) {
     _shapes.add(EditorShape(
       tool: activeTool,
       points: <ui.Offset>[pos],
@@ -1033,7 +1545,8 @@ class EditorController extends ChangeNotifier {
       text: text,
       textBackground: textBackground,
       textColor: textColor,
-      fontSize: fontSize,
+      fontSize: size ?? fontSize,
+      fontFamily: fontFamily,
     ));
     notifyListeners();
   }
@@ -1113,11 +1626,24 @@ class EditorController extends ChangeNotifier {
   }
 
   bool _hitTest(EditorShape s, Offset pos) {
+    if (s.points.isEmpty) return false;
+    final Offset a = s.points.first;
+
     if (s.tool == EditorTool.pen || s.tool == EditorTool.highlight) {
       return s.points.any((ui.Offset p) => (p - pos).distance < 8);
     }
+
+    if (s.tool == EditorTool.text || s.tool == EditorTool.infoBalloon) {
+      return Rect.fromCircle(center: a, radius: 30).contains(pos);
+    }
+
+    if (s.tool == EditorTool.stepCounter) {
+      return Rect.fromCircle(center: a, radius: 22).contains(pos);
+    }
+
     if (s.points.length < 2) return false;
-    final Offset a = s.points.first, b = s.points.last;
+    final Offset b = s.points.last;
+
     if (s.tool == EditorTool.rect ||
         s.tool == EditorTool.blur ||
         s.tool == EditorTool.pixelate ||
@@ -1126,12 +1652,7 @@ class EditorController extends ChangeNotifier {
         s.tool == EditorTool.magnifier) {
       return Rect.fromPoints(a, b).inflate(6).contains(pos);
     }
-    if (s.tool == EditorTool.text || s.tool == EditorTool.infoBalloon) {
-      return Rect.fromCircle(center: a, radius: 30).contains(pos);
-    }
-    if (s.tool == EditorTool.stepCounter) {
-      return Rect.fromCircle(center: a, radius: 22).contains(pos);
-    }
+
     final Offset center = Offset((a.dx + b.dx) / 2, (a.dy + b.dy) / 2);
     return (center - pos).distance < 24;
   }
@@ -1171,6 +1692,7 @@ class PhotoEditorView extends StatefulWidget {
 class _PhotoEditorViewState extends State<PhotoEditorView> {
   final EditorController _ctrl = EditorController();
   ui.Image? _backgroundImage;
+  img.Image? _sourceImage;
   bool _shiftHeld = false;
   Offset? _lastSelectPos;
   Offset? _dragStart;
@@ -1187,13 +1709,14 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   Future<void> _decodeBackground() async {
-    final ui.ImmutableBuffer buf = await ui.ImmutableBuffer.fromUint8List(widget.initialImageBytes);
-    final ui.ImageDescriptor desc = ui.ImageDescriptor.raw(
-      buf,
-      width: widget.imageW,
-      height: widget.imageH,
-      pixelFormat: ui.PixelFormat.rgba8888,
-    );
+    _sourceImage = img.decodeImage(widget.initialImageBytes);
+    // final ui.ImmutableBuffer buf = await ui.ImmutableBuffer.fromUint8List(widget.initialImageBytes);
+    // final ui.ImageDescriptor desc = ui.ImageDescriptor.raw(
+    //   buf,
+    //   width: widget.imageW,
+    //   height: widget.imageH,
+    //   pixelFormat: ui.PixelFormat.rgba8888,
+    // );
     // Use flutter's standard PNG decode instead for background
     final ui.Codec codec = await ui.instantiateImageCodec(widget.initialImageBytes);
     final ui.FrameInfo frame = await codec.getNextFrame();
@@ -1201,6 +1724,24 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   bool _isRegionTool(EditorTool t) => t == EditorTool.blur || t == EditorTool.pixelate || t == EditorTool.smartDelete;
+
+  Rect _imageRect(Size viewSize) {
+    final ui.Image? image = _backgroundImage;
+    if (image == null || viewSize.width <= 0 || viewSize.height <= 0) return Rect.zero;
+    final double scale = min(viewSize.width / image.width, viewSize.height / image.height);
+    final double w = image.width * scale;
+    final double h = image.height * scale;
+    return Rect.fromLTWH((viewSize.width - w) / 2, (viewSize.height - h) / 2, w, h);
+  }
+
+  Offset? _viewToImage(Offset viewPos) {
+    final Size viewSize = MediaQuery.of(context).size;
+    final Rect rect = _imageRect(viewSize);
+    final ui.Image? image = _backgroundImage;
+    if (image == null || rect.isEmpty || !rect.contains(viewPos)) return null;
+    final double scale = rect.width / image.width;
+    return Offset((viewPos.dx - rect.left) / scale, (viewPos.dy - rect.top) / scale);
+  }
 
   @override
   void dispose() {
@@ -1226,7 +1767,14 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
           Positioned.fill(
             child: Center(
               child: _backgroundImage != null
-                  ? RawImage(image: _backgroundImage, fit: BoxFit.contain)
+                  ? FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: _backgroundImage!.width.toDouble(),
+                        height: _backgroundImage!.height.toDouble(),
+                        child: RawImage(image: _backgroundImage),
+                      ),
+                    )
                   : const CircularProgressIndicator(),
             ),
           ),
@@ -1238,7 +1786,10 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
               onPanUpdate: _onPanUpdate,
               onPanEnd: _onPanEnd,
               onTapDown: _onTapDown,
-              onSecondaryTapDown: (TapDownDetails d) => _ctrl.deleteShapeAt(d.localPosition),
+              onSecondaryTapDown: (TapDownDetails d) {
+                final Offset? imagePos = _viewToImage(d.localPosition);
+                if (imagePos != null) _ctrl.deleteShapeAt(imagePos);
+              },
               child: ListenableBuilder(
                 listenable: _ctrl,
                 builder: (_, __) => CustomPaint(
@@ -1314,7 +1865,9 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   void _onPanStart(DragStartDetails d) {
-    final Offset pos = d.localPosition;
+    final Offset? imagePos = _viewToImage(d.localPosition);
+    if (imagePos == null) return;
+    final Offset pos = imagePos;
     if (_ctrl.activeTool == EditorTool.select || _selectMode) {
       _ctrl.selectShapeAt(pos);
       _lastSelectPos = pos;
@@ -1332,7 +1885,9 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   void _onPanUpdate(DragUpdateDetails d) {
-    final Offset pos = d.localPosition;
+    final Offset? imagePos = _viewToImage(d.localPosition);
+    if (imagePos == null) return;
+    final Offset pos = imagePos;
     if (_ctrl.activeTool == EditorTool.select || _selectMode) {
       if (_lastSelectPos != null) {
         _ctrl.moveSelected(pos - _lastSelectPos!);
@@ -1368,7 +1923,9 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   void _onTapDown(TapDownDetails d) {
-    final Offset pos = d.localPosition;
+    final Offset? imagePos = _viewToImage(d.localPosition);
+    if (imagePos == null) return;
+    final Offset pos = imagePos;
     if (_selectMode) {
       _ctrl.selectShapeAt(pos);
       return;
@@ -1385,57 +1942,138 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   }
 
   void _commitRegion(Rect region) {
-    // For editor: we generate a simple color fill for smartDelete,
-    // and a Gaussian blur rect for blur, pixelate for pixelate.
-    // We reuse imageBytes from the background image cropped region.
     if (_backgroundImage == null) return;
-    // Just commit a shape with tool info (rendered by painter)
+    final Color fillColor = _smartDeleteFillColor(region);
     _ctrl.commitRegionShape(
       _ctrl.activeTool,
       region,
       Uint8List(0),
       region.width.round(),
       region.height.round(),
-      fillColor: Colors.white,
+      fillColor: fillColor,
+    );
+  }
+
+  Color _smartDeleteFillColor(Rect region) {
+    final img.Image? source = _sourceImage;
+    if (source == null || source.width == 0 || source.height == 0) {
+      return Colors.white;
+    }
+
+    final int x = region.left.floor().clamp(0, source.width - 1);
+    final int y = region.top.floor().clamp(0, source.height - 1);
+    final img.Pixel pixel = source.getPixelSafe(x, y);
+    return Color.fromARGB(
+      pixel.a.toInt(),
+      pixel.r.toInt(),
+      pixel.g.toInt(),
+      pixel.b.toInt(),
     );
   }
 
   Future<void> _showTextDialog(Offset pos) async {
     final TextEditingController tc = TextEditingController();
-    final String? result = await showDialog<String>(
+    double localSize = _ctrl.fontSize;
+    String localFontFamily = _ctrl.fontFamily;
+
+    Future<void> openFontPicker(StateSetter setSt) async {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black54,
+        builder: (BuildContext pickerCtx) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: SizedBox(
+            width: 900,
+            height: 700,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: FontPicker(
+                showInDialog: false,
+                initialFontFamily: localFontFamily,
+                onFontChanged: (PickerFont font) {
+                  setSt(() {
+                    localFontFamily = font.fontFamily;
+                  });
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final List<dynamic>? result = await showDialog<List<dynamic>>(
       context: context,
       barrierColor: Colors.black38,
-      builder: (BuildContext ctx) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: Text(
-          _ctrl.activeTool == EditorTool.infoBalloon ? 'Info Balloon' : 'Enter Text',
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: SizedBox(
-          width: 320,
-          child: TextField(
-            controller: tc,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Type here…',
-              hintStyle: TextStyle(color: Colors.white38),
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.yellowAccent)),
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setSt) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Text(
+              _ctrl.activeTool == EditorTool.infoBalloon ? 'Info Balloon' : 'Enter Text',
+              style: const TextStyle(color: Colors.white),
             ),
-            onSubmitted: (String v) => Navigator.pop(ctx, v),
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, tc.text),
-            child: const Text('OK'),
-          ),
-        ],
+            content: SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    controller: tc,
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Type here…',
+                      hintStyle: TextStyle(color: Colors.white38),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.yellowAccent)),
+                    ),
+                    onSubmitted: (String v) => Navigator.pop(ctx, <dynamic>[v, localSize, localFontFamily]),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: <Widget>[
+                      const Text('Size', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Expanded(
+                        child: Slider(
+                          value: localSize,
+                          min: 8,
+                          max: 120,
+                          activeColor: Colors.yellowAccent,
+                          onChanged: (double v) => setSt(() => localSize = v),
+                        ),
+                      ),
+                      Text(localSize.round().toString(),
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Font Family', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    subtitle:
+                        Text(localFontFamily, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    trailing: const Icon(Icons.font_download, color: Colors.white54),
+                    onTap: () => openFontPicker(setSt),
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, <dynamic>[tc.text, localSize, localFontFamily]),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (result != null && result.isNotEmpty) _ctrl.commitTextShape(pos, result);
+    if (result != null && result.isNotEmpty) {
+      _ctrl.setFontFamily(result[2] as String);
+      _ctrl.commitTextShape(pos, result[0] as String, size: result[1] as double);
+    }
   }
 }
 
@@ -1466,19 +2104,41 @@ class _EditorPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final EditorShape s in shapes) {
-      _paintShape(canvas, s, null);
-    }
-    if (currentShape != null) _paintShape(canvas, currentShape!, currentEnd);
+    final ui.Image? image = backgroundImage;
+    final Rect imageRect = _displayImageRect(size);
 
-    // Region drag preview
-    if (isRegionDrag && dragStart != null && dragCurrent != null) {
-      final Rect r = Rect.fromPoints(dragStart!, dragCurrent!).normalized();
-      canvas.drawRect(r, Paint()..color = Colors.cyan.withValues(alpha: 0.25));
-      _drawDashedRect(canvas, r, Colors.cyanAccent);
+    if (image != null && !imageRect.isEmpty) {
+      final double scale = imageRect.width / image.width;
+      canvas.save();
+      canvas.clipRect(imageRect);
+      canvas.translate(imageRect.left, imageRect.top);
+      canvas.scale(scale, scale);
+
+      for (final EditorShape s in shapes) {
+        _paintShape(canvas, s, null);
+      }
+      if (currentShape != null) _paintShape(canvas, currentShape!, currentEnd);
+
+      // Region drag preview; drag coordinates are stored in image space.
+      if (isRegionDrag && dragStart != null && dragCurrent != null) {
+        final Rect r = Rect.fromPoints(dragStart!, dragCurrent!).normalized();
+        canvas.drawRect(r, Paint()..color = Colors.cyan.withValues(alpha: 0.25));
+        _drawDashedRect(canvas, r, Colors.cyanAccent);
+      }
+
+      canvas.restore();
     }
 
     if (gridVisible) _paintGrid(canvas, size);
+  }
+
+  Rect _displayImageRect(Size size) {
+    final ui.Image? image = backgroundImage;
+    if (image == null || size.width <= 0 || size.height <= 0) return Rect.zero;
+    final double scale = min(size.width / image.width, size.height / image.height);
+    final double w = image.width * scale;
+    final double h = image.height * scale;
+    return Rect.fromLTWH((size.width - w) / 2, (size.height - h) / 2, w, h);
   }
 
   Paint _makePaint(EditorShape s) => Paint()
@@ -1605,8 +2265,17 @@ class _EditorPainter extends CustomPainter {
     if (s.text == null || s.text!.isEmpty) return;
     final double fs = s.fontSize ?? (s.strokeWidth * 8 + 12);
     final Color tc = s.textColor ?? s.color;
+    final String family = s.fontFamily ?? 'Roboto';
     final TextPainter tp = TextPainter(
-      text: TextSpan(text: s.text, style: TextStyle(color: tc, fontSize: fs, fontWeight: FontWeight.bold)),
+      text: TextSpan(
+        text: s.text,
+        style: TextStyle(
+          color: tc,
+          fontSize: fs,
+          fontWeight: FontWeight.bold,
+          fontFamily: GoogleFonts.getFont(family).fontFamily,
+        ),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     if (s.textBackground) {
@@ -1622,8 +2291,16 @@ class _EditorPainter extends CustomPainter {
   void _drawInfoBalloon(Canvas canvas, EditorShape s, Offset pos) {
     if (s.text == null || s.text!.isEmpty) return;
     const double padding = 10, tailH = 14, radius = 8;
+    final String family = s.fontFamily ?? 'Roboto';
     final TextPainter tp = TextPainter(
-      text: TextSpan(text: s.text, style: TextStyle(color: Colors.white, fontSize: s.strokeWidth * 6 + 12)),
+      text: TextSpan(
+        text: s.text,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: s.strokeWidth * 6 + 12,
+          fontFamily: GoogleFonts.getFont(family).fontFamily,
+        ),
+      ),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: 280);
     final double bw = tp.width + padding * 2, bh = tp.height + padding * 2;
@@ -1663,32 +2340,77 @@ class _EditorPainter extends CustomPainter {
     tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
   }
 
+  Rect _imageBounds() {
+    final ui.Image? image = backgroundImage;
+    if (image == null) return Rect.zero;
+    return Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+  }
+
   void _drawBlurRect(Canvas canvas, Rect rect) {
-    canvas.drawRect(
-        rect,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
-    canvas.drawRect(rect, Paint()..color = Colors.white12);
-    _drawDashedRect(canvas, rect, Colors.white54);
+    final ui.Image? image = backgroundImage;
+    final Rect clipped = rect.intersect(_imageBounds());
+    if (image == null || clipped.isEmpty) {
+      canvas.drawRect(rect, Paint()..color = Colors.white12);
+      _drawDashedRect(canvas, rect, Colors.white54);
+      return;
+    }
+
+    canvas.save();
+    canvas.clipRect(clipped);
+    canvas.saveLayer(
+      clipped.inflate(24),
+      Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+    );
+    canvas.drawImageRect(image, clipped, clipped, Paint());
+    canvas.restore();
+    canvas.restore();
+    _drawDashedRect(canvas, clipped, Colors.white54);
   }
 
   void _drawPixelateRect(Canvas canvas, Rect rect) {
-    const double bs = 14;
-    final int cols = (rect.width / bs).ceil();
-    final int rows = (rect.height / bs).ceil();
-    final List<Color> colors = <ui.Color>[Colors.grey.shade700, Colors.grey.shade500];
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        final Rect cell = Rect.fromLTWH(rect.left + c * bs, rect.top + r * bs, bs, bs).intersect(rect);
-        canvas.drawRect(cell, Paint()..color = colors[(r + c) % 2].withValues(alpha: 0.6));
+    final ui.Image? image = backgroundImage;
+    final Rect clipped = rect.intersect(_imageBounds());
+    if (image == null || clipped.isEmpty) {
+      _drawDashedRect(canvas, rect, Colors.orangeAccent);
+      return;
+    }
+
+    const double blockSize = 12.0;
+    final int cols = (clipped.width / blockSize).ceil();
+    final int rows = (clipped.height / blockSize).ceil();
+
+    canvas.save();
+    canvas.clipRect(clipped);
+
+    for (int row = 0; row < rows; row++) {
+      for (int col = 0; col < cols; col++) {
+        final Rect dst = Rect.fromLTWH(
+          clipped.left + col * blockSize,
+          clipped.top + row * blockSize,
+          blockSize,
+          blockSize,
+        ).intersect(clipped);
+        if (dst.isEmpty) continue;
+
+        final double sampleX = dst.center.dx.clamp(clipped.left, clipped.right - 1.0);
+        final double sampleY = dst.center.dy.clamp(clipped.top, clipped.bottom - 1.0);
+
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(sampleX, sampleY, 1, 1),
+          dst,
+          Paint()
+            ..filterQuality = FilterQuality.none
+            ..isAntiAlias = false,
+        );
       }
     }
-    _drawDashedRect(canvas, rect, Colors.orangeAccent);
+    canvas.restore();
+    _drawDashedRect(canvas, clipped, Colors.white54);
   }
 
   void _drawSmartDeleteRect(Canvas canvas, Rect rect, Color? fillColor) {
-    canvas.drawRect(rect, Paint()..color = (fillColor ?? Colors.white).withValues(alpha: 0.9));
+    canvas.drawRect(rect, Paint()..color = fillColor ?? Colors.white);
     _drawDashedRect(canvas, rect, Colors.redAccent);
   }
 
@@ -1852,7 +2574,7 @@ class _EditorToolBtn extends StatelessWidget {
       listenable: ctrl,
       builder: (_, __) {
         final bool active = ctrl.activeTool == tool;
-        return Tooltip(
+        return CustomTooltip(
           message: tooltip,
           child: IconButton(
             icon: Icon(icon, size: 18),
@@ -1876,7 +2598,7 @@ class _TipBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return CustomTooltip(
       message: tooltip,
       child: IconButton(
         icon: Icon(icon, size: 18),
@@ -1898,32 +2620,37 @@ class _EditorColorBtn extends StatefulWidget {
 }
 
 class _EditorColorBtnState extends State<_EditorColorBtn> {
+  Timer? _closeTimer;
   OverlayEntry? _overlay;
   final LayerLink _link = LayerLink();
 
   void _show() {
+    _closeTimer?.cancel();
     if (_overlay != null) return;
     _overlay = OverlayEntry(
       builder: (_) => Positioned(
-        width: 280,
+        width: 420,
         child: CompositedTransformFollower(
           link: _link,
           showWhenUnlinked: false,
           offset: const Offset(42, -4),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _Palette.colors
-                    .map((ui.Color c) => GestureDetector(
+          child: MouseRegion(
+            onEnter: (_) => _show(),
+            onExit: (_) => _scheduleHide(),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: <Widget>[
+                    ..._Palette.colors.map((ui.Color c) => GestureDetector(
                           onTap: () {
                             widget.ctrl.setColor(c);
                             _hide();
@@ -1942,8 +2669,17 @@ class _EditorColorBtnState extends State<_EditorColorBtn> {
                               ),
                             ),
                           ),
-                        ))
-                    .toList(),
+                        )),
+                    CustomColorPicker(
+                      startColor: widget.ctrl.strokeColor,
+                      themeOptions: <List<int>>[<int>[]],
+                      colorIndex: 0,
+                      onColorChanged: (Color color) {
+                        widget.ctrl.setColor(color);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1953,7 +2689,13 @@ class _EditorColorBtnState extends State<_EditorColorBtn> {
     Overlay.of(context).insert(_overlay!);
   }
 
+  void _scheduleHide() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 220), _hide);
+  }
+
   void _hide() {
+    _closeTimer?.cancel();
     _overlay?.remove();
     _overlay = null;
   }
@@ -1972,8 +2714,8 @@ class _EditorColorBtnState extends State<_EditorColorBtn> {
         listenable: widget.ctrl,
         builder: (_, __) => MouseRegion(
           onEnter: (_) => _show(),
-          onExit: (_) => Future<void>.delayed(const Duration(milliseconds: 200), _hide),
-          child: Tooltip(
+          onExit: (_) => _scheduleHide(),
+          child: CustomTooltip(
             message: 'Color',
             child: Container(
               width: 36,
@@ -2006,11 +2748,13 @@ class _EditorWidthBtn extends StatefulWidget {
 }
 
 class _EditorWidthBtnState extends State<_EditorWidthBtn> {
+  Timer? _closeTimer;
   OverlayEntry? _overlay;
   final LayerLink _link = LayerLink();
   static const List<double> _widths = <double>[1, 2, 4, 8];
 
   void _show() {
+    _closeTimer?.cancel();
     if (_overlay != null) return;
     _overlay = OverlayEntry(
       builder: (_) => Positioned(
@@ -2019,46 +2763,50 @@ class _EditorWidthBtnState extends State<_EditorWidthBtn> {
           link: _link,
           showWhenUnlinked: false,
           offset: const Offset(42, -4),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.88),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: _widths
-                    .map((double w) => GestureDetector(
-                          onTap: () {
-                            widget.ctrl.setStrokeWidth(w);
-                            _hide();
-                          },
-                          child: ListenableBuilder(
-                            listenable: widget.ctrl,
-                            builder: (_, __) => Container(
-                              width: 36,
-                              height: 32,
-                              margin: const EdgeInsets.only(right: 6),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: widget.ctrl.strokeWidth == w ? Colors.white24 : Colors.transparent,
-                              ),
-                              child: Container(
-                                width: 24,
-                                height: w,
+          child: MouseRegion(
+            onEnter: (_) => _show(),
+            onExit: (_) => _scheduleHide(),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _widths
+                      .map((double w) => GestureDetector(
+                            onTap: () {
+                              widget.ctrl.setStrokeWidth(w);
+                              _hide();
+                            },
+                            child: ListenableBuilder(
+                              listenable: widget.ctrl,
+                              builder: (_, __) => Container(
+                                width: 36,
+                                height: 32,
+                                margin: const EdgeInsets.only(right: 6),
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: widget.ctrl.strokeColor,
-                                  borderRadius: BorderRadius.circular(2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: widget.ctrl.strokeWidth == w ? Colors.white24 : Colors.transparent,
+                                ),
+                                child: Container(
+                                  width: 24,
+                                  height: w,
+                                  decoration: BoxDecoration(
+                                    color: widget.ctrl.strokeColor,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ))
-                    .toList(),
+                          ))
+                      .toList(),
+                ),
               ),
             ),
           ),
@@ -2068,7 +2816,13 @@ class _EditorWidthBtnState extends State<_EditorWidthBtn> {
     Overlay.of(context).insert(_overlay!);
   }
 
+  void _scheduleHide() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 220), _hide);
+  }
+
   void _hide() {
+    _closeTimer?.cancel();
     _overlay?.remove();
     _overlay = null;
   }
@@ -2087,8 +2841,8 @@ class _EditorWidthBtnState extends State<_EditorWidthBtn> {
         listenable: widget.ctrl,
         builder: (_, __) => MouseRegion(
           onEnter: (_) => _show(),
-          onExit: (_) => Future<void>.delayed(const Duration(milliseconds: 200), _hide),
-          child: Tooltip(
+          onExit: (_) => _scheduleHide(),
+          child: CustomTooltip(
             message: 'Stroke Width',
             child: Container(
               width: 36,
@@ -2134,63 +2888,88 @@ class _SaveButtonState extends State<_SaveButton> {
   bool _saving = false;
   String? _msg;
 
+  Future<Uint8List?> _renderEditedPng() async {
+    if (widget.backgroundImage == null) return null;
+
+    final int w = widget.backgroundImage!.width;
+    final int h = widget.backgroundImage!.height;
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+
+    canvas.drawImage(widget.backgroundImage!, Offset.zero, Paint());
+
+    final _EditorPainter painter = _EditorPainter(
+      shapes: widget.ctrl.shapes,
+      currentShape: null,
+      currentEnd: null,
+      backgroundImage: widget.backgroundImage,
+      gridVisible: false,
+    );
+    painter.paint(canvas, Size(w.toDouble(), h.toDouble()));
+
+    final ui.Picture picture = recorder.endRecording();
+    final ui.Image rendered = await picture.toImage(w, h);
+    final ByteData? byteData = await rendered.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) throw Exception('Failed to encode');
+
+    return byteData.buffer.asUint8List();
+  }
+
   Future<void> _save() async {
-    if (widget.backgroundImage == null) return;
     setState(() {
       _saving = true;
       _msg = null;
     });
     try {
-      // Render background + shapes to a new image using Flutter's PictureRecorder
-      final int w = widget.backgroundImage!.width;
-      final int h = widget.backgroundImage!.height;
-      final ui.PictureRecorder recorder = ui.PictureRecorder();
-      final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
-
-      // Draw background
-      canvas.drawImage(widget.backgroundImage!, Offset.zero, Paint());
-
-      // Draw shapes (using editor painter)
-      final _EditorPainter painter = _EditorPainter(
-        shapes: widget.ctrl.shapes,
-        currentShape: null,
-        currentEnd: null,
-        backgroundImage: widget.backgroundImage,
-        gridVisible: false,
-      );
-      painter.paint(canvas, Size(w.toDouble(), h.toDouble()));
-
-      final ui.Picture picture = recorder.endRecording();
-      final ui.Image rendered = await picture.toImage(w, h);
-      final ByteData? byteData = await rendered.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) throw Exception('Failed to encode');
-
-      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      final Uint8List? pngBytes = await _renderEditedPng();
+      if (pngBytes == null) return;
       final String savedPath = await ScreenCapture.saveToFile(pngBytes);
-
-      setState(() {
-        _msg = '✓ Saved!';
-        _saving = false;
-      });
-
-      // Also offer clipboard copy
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved to $savedPath'),
-            action: SnackBarAction(
-              label: 'Copy',
-              onPressed: () => ScreenCapture.copyPngToClipboard(pngBytes),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        setState(() {
+          _msg = 'Saved to $savedPath';
+        });
       }
     } catch (e) {
-      setState(() {
-        _msg = 'Error: $e';
-        _saving = false;
-      });
+      if (mounted) {
+        setState(() {
+          _msg = 'Error: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _copyToClipboard() async {
+    setState(() {
+      _saving = true;
+      _msg = null;
+    });
+    try {
+      final Uint8List? pngBytes = await _renderEditedPng();
+      if (pngBytes == null) return;
+      await ScreenCapture.copyPngToClipboard(pngBytes);
+      if (mounted) {
+        setState(() {
+          _msg = 'Copied to clipboard';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _msg = 'Error: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
     }
   }
 
@@ -2226,6 +3005,18 @@ class _SaveButtonState extends State<_SaveButton> {
                       width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.save_alt, size: 18),
               label: Text(_saving ? 'Saving…' : 'Save Edited'),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white12,
+                foregroundColor: Colors.white70,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: _saving ? null : _copyToClipboard,
+              icon: const Icon(Icons.copy, size: 18),
+              label: const Text('Copy to clipboard'),
             ),
             const SizedBox(width: 10),
             ElevatedButton.icon(

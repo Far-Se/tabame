@@ -21,7 +21,7 @@ class PinnedAndTrayList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double height = globalSettings.expandedTaskbar ? 32 : 27;
-    Globals.heights.pinnedAndTray = height;
+    Globals.heights.pinnedAndTray = globalSettings.taskManagerStats ? height * 2 : height;
     return Container(
       height: height,
       width: double.infinity,

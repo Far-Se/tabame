@@ -753,11 +753,23 @@ class MusicServerManager {
   }
 
   static Future<void> playQueue(List<MusicItem> items, {int initialIndex = 0}) async {
-    final List<MusicItem> playable = (await _refetchItemsWithBadDuration(items))
-        .where((MusicItem item) => item.streamUrl != null)
-        .toList(growable: false);
+    final int clampedInitialIndex = items.isEmpty ? 0 : initialIndex.clamp(0, items.length - 1);
+    final MusicItem? requestedItem = items.isEmpty ? null : items[clampedInitialIndex];
+    final List<MusicItem> playable = await _resolvePlayableQueueItems(items);
     if (playable.isEmpty) return;
-    await _loadQueue(playable, initialIndex: initialIndex, play: true);
+
+    final int resolvedInitialIndex;
+    if (requestedItem == null) {
+      resolvedInitialIndex = 0;
+    } else {
+      final int matchedIndex = playable.indexWhere(
+        (MusicItem item) =>
+            item.id == requestedItem.id || (item.localPath != null && item.localPath == requestedItem.localPath),
+      );
+      resolvedInitialIndex = matchedIndex >= 0 ? matchedIndex : 0;
+    }
+
+    await _loadQueue(playable, initialIndex: resolvedInitialIndex, play: true);
     await saveCurrentQueue();
   }
 
@@ -821,6 +833,31 @@ class MusicServerManager {
       resolved.add(refetched ?? item);
     }
     return resolved;
+  }
+
+  static Future<List<MusicItem>> _resolvePlayableQueueItems(List<MusicItem> items) async {
+    final List<MusicItem> durationResolved = await _refetchItemsWithBadDuration(items);
+    final List<MusicItem> playable = <MusicItem>[];
+
+    for (final MusicItem item in durationResolved) {
+      MusicItem resolvedItem = item;
+      if (isLocalActive) {
+        final MusicItem? refetched = await getSongDetails(item.id);
+        if (refetched != null) resolvedItem = refetched;
+      }
+
+      if (resolvedItem.streamUrl == null) continue;
+      if (isLocalActive) {
+        final String? path = resolvedItem.localPath;
+        if (path == null || path.trim().isEmpty || !File(path).existsSync()) {
+          debugPrint('MusicServerManager.playQueue skipping missing local file: ${resolvedItem.id} -> $path');
+          continue;
+        }
+      }
+      playable.add(resolvedItem);
+    }
+
+    return playable;
   }
 
   static Future<MusicItem?> getSongDetails(String songId) async {

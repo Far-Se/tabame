@@ -71,6 +71,7 @@ class Boxes {
       await pref.setBool("showTrayBar", true);
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
+      await pref.setBool("taskManagerStats", false);
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -131,6 +132,7 @@ class Boxes {
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? globalSettings.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? globalSettings.themeScheduleMax
+      ..taskManagerStats = pref.getBool("taskManagerStats") ?? globalSettings.taskManagerStats
       ..quickSnapOverlay = pref.getBool("quickSnapOverlay") ?? globalSettings.quickSnapOverlay
       ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? globalSettings.hideDesktopFiles
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? globalSettings.trktivityEnabled

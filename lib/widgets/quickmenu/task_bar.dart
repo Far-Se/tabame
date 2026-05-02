@@ -380,6 +380,9 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final bool expanded = globalSettings.expandedTaskbar;
     final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight;
 
+    if (globalSettings.taskManagerStats && widget.window.process.exe.toLowerCase() == "taskmgr.exe") {
+      return const SizedBox.shrink();
+    }
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),

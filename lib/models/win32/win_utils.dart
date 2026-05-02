@@ -1566,6 +1566,56 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
   }
 }
 
+class ClipboardExtension {
+  static Future<void> copyFile(String filePath) async {
+    final List<int> pathUnits = filePath.codeUnits;
+    final int bytesNeeded = sizeOf<DROPFILES>() + ((pathUnits.length + 2) * sizeOf<Uint16>());
+    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
+    if (hMem.address == 0) {
+      throw Exception('Failed to allocate clipboard memory.');
+    }
+
+    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
+    if (dropFiles.address == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to lock clipboard memory.');
+    }
+
+    try {
+      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
+      dropFiles.ref.pt.x = 0;
+      dropFiles.ref.pt.y = 0;
+      dropFiles.ref.fNC = 0;
+      dropFiles.ref.fWide = 1;
+
+      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
+      for (int i = 0; i < pathUnits.length; i++) {
+        fileListPtr[i] = pathUnits[i];
+      }
+      fileListPtr[pathUnits.length] = 0;
+      fileListPtr[pathUnits.length + 1] = 0;
+    } finally {
+      GlobalUnlock(hMem);
+    }
+
+    if (OpenClipboard(NULL) == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to open clipboard.');
+    }
+
+    try {
+      EmptyClipboard();
+      final int result = SetClipboardData(CF_HDROP, hMem.address);
+      if (result == 0) {
+        GlobalFree(hMem);
+        throw Exception('Failed to set clipboard file data.');
+      }
+    } finally {
+      CloseClipboard();
+    }
+  }
+}
+
 enum DesktopBackgroundType {
   wallpaper,
   solidColor,

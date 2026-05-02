@@ -7,7 +7,6 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
@@ -15,7 +14,6 @@ import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_widget.dart';
-
 import 'trktivity/trktivity_activity_chart.dart';
 import 'trktivity/trktivity_daily_stats.dart';
 import 'trktivity/trktivity_filter_set.dart';
@@ -378,29 +376,31 @@ It records keystrokes, mouse movement and active Window.
                                     ),
                                   ),
                                   const Spacer(),
-                                  CheckBoxWidget(
-                                    onChanged: (bool e) {
-                                      globalSettings.trktivitySaveAllTitles = e;
-                                      Boxes.updateSettings("trktivitySaveAllTitles", e);
-                                      setState(() {});
-                                    },
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    value: globalSettings.trktivitySaveAllTitles,
-                                    text: "Save All Window Titles",
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      trk.filters.add(TrktivityFilter(
-                                        exe: "exe",
-                                        titleSearch: r"",
-                                        titleReplace: r"",
-                                      ));
-                                      Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
-                                      setState(() => showFilters = true);
-                                    },
-                                    icon: const Icon(Icons.add_rounded, size: 18),
-                                    label: const Text("Add Rule", style: TextStyle(fontSize: 12)),
-                                  ),
+                                  if (showFilters) ...<Widget>[
+                                    CheckBoxWidget(
+                                      onChanged: (bool e) {
+                                        globalSettings.trktivitySaveAllTitles = e;
+                                        Boxes.updateSettings("trktivitySaveAllTitles", e);
+                                        setState(() {});
+                                      },
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      value: globalSettings.trktivitySaveAllTitles,
+                                      text: "Save All Window Titles",
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        trk.filters.add(TrktivityFilter(
+                                          exe: "exe",
+                                          titleSearch: r"",
+                                          titleReplace: r"",
+                                        ));
+                                        Boxes.updateSettings("trktivityFilter", jsonEncode(trk.filters));
+                                        setState(() => showFilters = true);
+                                      },
+                                      icon: const Icon(Icons.add_rounded, size: 18),
+                                      label: const Text("Add Rule", style: TextStyle(fontSize: 12)),
+                                    )
+                                  ],
                                 ],
                               ),
                             ),
