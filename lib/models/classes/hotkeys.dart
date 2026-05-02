@@ -616,6 +616,7 @@ class HotKeyInfo {
     "Wallpapers",
     "Weather",
     "Workspaces",
+    "Timers",
   ];
   static Map<String, Function> tabameFunctionsMap = <String, Function>{
     "ToggleQuickMenu": () {

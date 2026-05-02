@@ -321,7 +321,7 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.randomizeBackdrop();
 
     if (visible) {
-      PaintingBinding.instance.imageCache.clear();
+      // PaintingBinding.instance.imageCache.clear();
 
       if (Navigator.of(context).canPop()) {
         if (globalSettings.hideTabameOnUnfocus) {
@@ -352,8 +352,8 @@ class QuickMenuState extends State<QuickMenu>
         Globals.quickMenuPage = QuickMenuPage.quickMenu;
       }
     } else {
-      PaintingBinding.instance.imageCache.clear();
-      PaintingBinding.instance.imageCache.clearLiveImages();
+      // PaintingBinding.instance.imageCache.clear();
+      // PaintingBinding.instance.imageCache.clearLiveImages();
       lastTimeShown = DateTime.now();
       // FocusScope.of(context).unfocus();
       tryPop = true;

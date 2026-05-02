@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -44,14 +42,14 @@ class OpenSettingsButton extends StatelessWidget {
                   Win32.activateWindow(hWnd);
                   return;
                 }
-                bool settingsChanged = globalSettings.settingsChanged;
-                Boxes().watchForSettingsChange();
-                Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
-                  if (settingsChanged != globalSettings.settingsChanged) {
-                    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                    settingsChanged = globalSettings.settingsChanged;
-                  }
-                });
+                // bool settingsChanged = globalSettings.settingsChanged;
+                // Boxes().watchForSettingsChange();
+                // Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
+                //   if (settingsChanged != globalSettings.settingsChanged) {
+                //     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                //     settingsChanged = globalSettings.settingsChanged;
+                //   }
+                // });
                 // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                 return;
               }
@@ -61,8 +59,6 @@ class OpenSettingsButton extends StatelessWidget {
               x?.setState(() {});
               Globals.mainPageViewController.jumpToPage(Pages.interface.index);
               Globals.changingPages = true;
-              PaintingBinding.instance.imageCache.clear();
-              PaintingBinding.instance.imageCache.clearLiveImages();
               return;
             },
           ),

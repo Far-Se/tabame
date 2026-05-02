@@ -58,9 +58,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     super.initState();
     Debug.add("QuickMenu: Taskbar-Init");
 
-    // optimize image cache
-    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
-
     _initializeWindowSize();
     if (mounted) {
       QuickMenuFunctions.addListener(this);

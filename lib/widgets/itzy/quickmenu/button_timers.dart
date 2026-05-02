@@ -5,9 +5,8 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 // ============================================================
 // Button that lives in the quick-menu bar
@@ -49,6 +48,24 @@ class TimersButtonState extends State<TimersButton> {
 
   @override
   Widget build(BuildContext context) {
+    return ModalButton(
+      actionName: "Timers",
+      child: () => const TimersWidget(),
+      icon: Boxes.quickTimers.isNotEmpty
+          ? Align(
+              alignment: AlignmentGeometry.center,
+              child: Text(
+                remainingTimer,
+                softWrap: false,
+                style:
+                    TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: globalSettings.themeColors.accentColor),
+              ),
+            )
+          : const Icon(Icons.timer_sharp),
+    );
+  } /* 
+  @override
+  Widget build(BuildContext context) {
     return QuickActionItem(
       message: "Timers",
       hoverColor: Theme.of(context).colorScheme.primary,
@@ -67,7 +84,7 @@ class TimersButtonState extends State<TimersButton> {
         child: const TimersWidget(),
       ),
     );
-  }
+  } */
 }
 
 // ============================================================

@@ -38,7 +38,6 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   }
 
   void init() {
-    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     QuickMenuFunctions.addListener(this);
     fetchTray();
     mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);

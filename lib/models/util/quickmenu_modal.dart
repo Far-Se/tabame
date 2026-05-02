@@ -19,7 +19,7 @@ Future<void> showQuickMenuModal({
   double sigmaX = 3,
   double sigmaY = 3,
   double? maxWidth,
-  double heightFactor = 0.85,
+  double heightFactor = 0.9,
   VoidCallback? whenComplete,
 }) async {
   final ({int height, int width}) size = Win32.getSize();

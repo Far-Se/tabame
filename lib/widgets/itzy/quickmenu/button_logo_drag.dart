@@ -22,34 +22,36 @@ class LogoDragButtonState extends State<LogoDragButton> {
         onPanStart: (DragStartDetails details) {
           windowManager.startDragging();
         },
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          focusColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          onTap: () {
-            globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus;
-          },
-          child: Stack(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: globalSettings.customLogo == ""
-                        ? Image.asset(globalSettings.logo, width: 15)
-                        : Image.file(File(globalSettings.customLogo), width: 15)),
-              ),
-              if (!globalSettings.hideTabameOnUnfocus)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: CustomPaint(
-                    size: const Size(6, 6),
-                    painter: TrianglePainter(globalSettings.themeColors.accentColor.withValues(alpha: 0.5)),
-                  ),
+        child: RepaintBoundary(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            focusColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            onTap: () {
+              globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus;
+            },
+            child: Stack(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
+                  child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: globalSettings.customLogo == ""
+                          ? Image.asset(globalSettings.logo, width: 15)
+                          : Image.file(File(globalSettings.customLogo), width: 15)),
                 ),
-            ],
+                if (!globalSettings.hideTabameOnUnfocus)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: CustomPaint(
+                      size: const Size(6, 6),
+                      painter: TrianglePainter(globalSettings.themeColors.accentColor.withValues(alpha: 0.5)),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

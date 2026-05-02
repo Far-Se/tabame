@@ -12,6 +12,7 @@ class CustomTooltip extends StatefulWidget {
   final Widget child;
   final double verticalOffset;
   final Duration waitDuration;
+  final bool preferBelow;
 
   const CustomTooltip({
     super.key,
@@ -20,6 +21,7 @@ class CustomTooltip extends StatefulWidget {
     required this.child,
     this.verticalOffset = 30.0,
     this.waitDuration = const Duration(milliseconds: 110),
+    this.preferBelow = false,
   });
 
   @override
@@ -49,9 +51,11 @@ class _CustomTooltipState extends State<CustomTooltip> {
           shortcut: widget.shortcut,
           targetCenter: offset.dx + size.width / 2,
           targetTop: offset.dy,
+          targetHeight: size.height,
           screenWidth: screenWidth,
           screenMargin: screenMargin,
           verticalOffset: widget.verticalOffset,
+          preferBelow: widget.preferBelow,
         );
       },
     );
@@ -91,18 +95,22 @@ class _TooltipOverlay extends StatefulWidget {
   final String? shortcut;
   final double targetCenter;
   final double targetTop;
+  final double targetHeight;
   final double screenWidth;
   final double screenMargin;
   final double verticalOffset;
+  final bool preferBelow;
 
   const _TooltipOverlay({
     required this.message,
     this.shortcut,
     required this.targetCenter,
     required this.targetTop,
+    required this.targetHeight,
     required this.screenWidth,
     required this.screenMargin,
     required this.verticalOffset,
+    required this.preferBelow,
   });
 
   @override
@@ -132,14 +140,13 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 4),
+      begin: widget.preferBelow ? const Offset(0, -4) : const Offset(0, 4),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutQuart,
     ));
 
-    // Measure after first frame, then reposition
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final RenderBox? box = _key.currentContext?.findRenderObject() as RenderBox?;
@@ -166,14 +173,16 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
   @override
   Widget build(BuildContext context) {
     if (widget.message.isEmpty) return const SizedBox();
-    // First frame: render off-screen at left:-9999 to measure size.
-    // Second frame: render at clamped position.
+
     final double left = _positioned ? _left : -9999;
+    final double top = widget.preferBelow
+        ? widget.targetTop + widget.targetHeight + widget.verticalOffset
+        : widget.targetTop - widget.verticalOffset;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Positioned(
       left: left,
-      top: widget.targetTop - widget.verticalOffset,
+      top: top,
       child: IgnorePointer(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -213,7 +222,6 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        // Label
                         Flexible(
                           child: Text(
                             widget.message,
@@ -224,7 +232,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                               fontStyle:
                                   globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                               fontSize: 11.5,
-                              letterSpacing: 0.2, // Reduced for a more relaxed feel
+                              letterSpacing: 0.2,
                               height: 1.2,
                               color: onSurface.withValues(alpha: 0.9),
                             ),
@@ -232,7 +240,6 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Subtler Keycap Shortcut
                         if (widget.shortcut != null) ...<Widget>[
                           const SizedBox(width: 12),
                           Container(

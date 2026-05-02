@@ -106,7 +106,6 @@ class ThemeSetupState extends State<ThemeSetup> {
     } else {
       await Boxes.saveActiveQuickMenuThemes();
       savedLightTheme = globalSettings.lightTheme.copyWith();
-      Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
     }
     setState(() => changed = false);
   }
@@ -253,25 +252,23 @@ class ThemeSetupState extends State<ThemeSetup> {
                         onChanged: () => setState(() => changed = true),
                         onGradientChanged: (double e) {
                           globalSettings.lightTheme.gradientAlpha = e.toInt();
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                         },
                         onBackdropOpacityChanged: (double e) {
                           globalSettings.lightTheme.backdropOpacity = e;
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                         },
                         onPanelOpacityPointsChanged: (List<double> e) {
                           globalSettings.lightTheme.panelOpacityPoints = e;
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityBeginChanged: (String e) {
                           globalSettings.lightTheme.panelOpacityBegin = e;
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityEndChanged: (String e) {
                           globalSettings.lightTheme.panelOpacityEnd = e;
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
+
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onColorChanged: (Color color, int i) {
@@ -279,7 +276,6 @@ class ThemeSetupState extends State<ThemeSetup> {
                           if (i == 1) globalSettings.lightTheme.textColor = color;
                           if (i == 2) globalSettings.lightTheme.accentColor = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                          Boxes.updateSettings("previewThemeLight", jsonDecode(globalSettings.lightTheme.toJson()));
                         },
                         predefinedColors: predefinedColorsLight,
                         themeOptions: lightThemeOptions,
@@ -549,8 +545,12 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           ),
                     ),
                     Text(
-                      "All changes are applied immediately to the preview but must be committed to be permanent.",
+                      "Changes are applied after closing Interface",
                       style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                    ),
+                    Text(
+                      "You can change colors live from Quick Menu Design Button (from Top bar or Launcher).",
+                      style: TextStyle(fontSize: 12, color: accent.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),

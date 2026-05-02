@@ -44,7 +44,6 @@ class AudioBoxState extends State<AudioBox> {
   }
 
   void init() {
-    // PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
     if (timerMixer != null) timerMixer?.cancel();
     if (timerData != null) timerData?.cancel();
 

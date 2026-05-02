@@ -47,8 +47,6 @@ class CheckChangelogButtonState extends State<CheckChangelogButton> {
         x?.setState(() {});
         Globals.mainPageViewController.jumpToPage(Pages.interface.index);
         Globals.changingPages = true;
-        PaintingBinding.instance.imageCache.clear();
-        PaintingBinding.instance.imageCache.clearLiveImages();
         return;
       },
     );

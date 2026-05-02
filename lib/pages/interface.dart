@@ -28,6 +28,7 @@ import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
 import '../widgets/interface/wizardly.dart';
 import '../widgets/widgets/bmac_dialog.dart';
+import '../widgets/widgets/custom_tooltip.dart';
 import '../widgets/widgets/mouse_scroll_widget.dart';
 import '../widgets/widgets/windows_scroll.dart';
 
@@ -313,6 +314,19 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   icon: Icons.minimize_rounded,
                                   onTap: () => WindowManager.instance.minimize(),
                                 ),
+                                CustomTooltip(
+                                  message: "Close without reloading",
+                                  preferBelow: true,
+                                  verticalOffset: 2,
+                                  child: _WindowButton(
+                                    icon: Icons.unfold_less_double,
+                                    onTap: () async {
+                                      if (kReleaseMode) {
+                                        exit(0);
+                                      }
+                                    },
+                                  ),
+                                ),
                                 _WindowButton(
                                   icon: Icons.close_rounded,
                                   isCloseButton: true,
@@ -323,8 +337,6 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                       } else if (globalSettings.args.contains('-fancyshot')) {
                                         exit(0);
                                       } else if (globalSettings.args.contains('-interface')) {
-                                        await Boxes.pref.remove("previewThemeLight");
-                                        await Boxes.pref.remove("previewThemeDark");
                                         WinUtils.reloadTabameQuickMenu();
                                         exit(0);
                                       }
@@ -612,7 +624,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                           color: Theme.of(context).colorScheme.error),
                                                                       const SizedBox(width: 12),
                                                                       Text(
-                                                                        "Exit",
+                                                                        "Full Exit",
                                                                         style: TextStyle(
                                                                           fontSize: 14,
                                                                           color: Theme.of(context).colorScheme.error,

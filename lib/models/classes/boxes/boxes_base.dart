@@ -882,48 +882,6 @@ class Boxes {
   }
 
   // --------------------------------------------------------------------------
-  // Group: Live settings preview watcher
-  // Purpose: Watch the settings file and rehydrate preview themes on changes.
-  // --------------------------------------------------------------------------
-
-  void watchForSettingsChange() {
-    globalSettings.previewTheme = true;
-    String savedSettingsFileText = File(Boxes.pref.fileName).readAsStringSync();
-    bool isUpdatingPreview = false;
-
-    Timer.periodic(const Duration(milliseconds: 100), (Timer _) async {
-      if (isUpdatingPreview) return;
-
-      final String latestSettingsFileText = File(Boxes.pref.fileName).readAsStringSync();
-      if (savedSettingsFileText == latestSettingsFileText) return;
-
-      isUpdatingPreview = true;
-      savedSettingsFileText = latestSettingsFileText;
-      await Boxes.registerBoxes(reload: true);
-      isUpdatingPreview = false;
-
-      Map<String, dynamic> decodedSettingsJson;
-      try {
-        decodedSettingsJson = jsonDecode(savedSettingsFileText);
-      } catch (e) {
-        return;
-      }
-
-      final String previewLightThemeJson = decodedSettingsJson["flutter.previewThemeLight"] ?? "";
-      if (previewLightThemeJson.isNotEmpty) {
-        globalSettings.lightTheme = ThemeColors.fromJson(previewLightThemeJson);
-      }
-
-      final String previewDarkThemeJson = decodedSettingsJson["flutter.previewThemeDark"] ?? "";
-      if (previewDarkThemeJson.isNotEmpty) {
-        globalSettings.darkTheme = ThemeColors.fromJson(previewDarkThemeJson);
-      }
-
-      globalSettings.settingsChanged = !globalSettings.settingsChanged;
-    });
-  }
-
-  // --------------------------------------------------------------------------
   // Group: Quick timer runtime management
   // Purpose: Create, restore, and execute active quick timers.
   // --------------------------------------------------------------------------
