@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             switchPage(hash, false);
         } else {
             // Default page
-            switchPage('quickmenu', false);
+            switchPage('preview', false);
         }
     };
 
