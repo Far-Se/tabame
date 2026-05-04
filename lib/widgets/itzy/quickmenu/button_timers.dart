@@ -57,13 +57,12 @@ class TimersButtonState extends State<TimersButton> {
               child: Text(
                 remainingTimer,
                 softWrap: false,
-                style:
-                    TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: globalSettings.themeColors.accentColor),
+                style: TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: globalSettings.themeColors.textColor),
               ),
             )
           : const Icon(Icons.timer_sharp),
     );
-  } /* 
+  } /*
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(

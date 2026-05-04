@@ -14,6 +14,7 @@ import 'dart:ffi' hide Size;
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:emoji_selector/emoji_selector.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -231,6 +232,7 @@ enum DrawTool {
   guide,
   // New tools
   text,
+  emoji,
   stepCounter,
   infoBalloon,
   magnifier,
@@ -333,12 +335,14 @@ class DrawShape {
 
 class GuideLineModel {
   final GuideOrientation orientation;
+  final Color color;
   double position; // screen coordinate (x for vertical, y for horizontal)
   bool locked;
   bool selected;
 
   GuideLineModel({
     required this.orientation,
+    required this.color,
     required this.position,
     this.locked = false,
     this.selected = false,
@@ -400,6 +404,7 @@ class AnnotationController extends ChangeNotifier {
   // Guide being dragged
   GuideLineModel? _draggingGuide;
   GuideLineModel? get draggingGuide => _draggingGuide;
+
   void toggleGrid() {
     gridVisible = !gridVisible;
     notifyListeners(); // This is allowed here because it's inside the class
@@ -557,7 +562,7 @@ class AnnotationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Called by overlay after user types text (text / infoBalloon tools).
+  /// Called by overlay after user types text-like content.
   void commitTextShape(Offset pos, String text) {
     if (text.isEmpty) return;
     _redoStack.clear();
@@ -568,7 +573,7 @@ class AnnotationController extends ChangeNotifier {
       strokeWidth: strokeWidth,
       opacity: opacity,
       text: text,
-      textBackground: textBackground,
+      textBackground: activeTool == DrawTool.emoji ? false : textBackground,
       textColor: textColor,
       fontSize: fontSize,
     ));
@@ -595,12 +600,20 @@ class AnnotationController extends ChangeNotifier {
   // ── Guide lines ────────────────────────────────────────────────────────────
 
   void addGuide(GuideOrientation orientation, double position) {
-    _guides.add(GuideLineModel(orientation: orientation, position: position));
+    _clearGuideSelection(notify: false);
+    _guides.add(GuideLineModel(
+      orientation: orientation,
+      color: strokeColor,
+      position: position,
+      selected: true,
+    ));
     notifyListeners();
   }
 
   void startDragGuide(GuideLineModel g) {
+    selectGuide(g, notify: false);
     _draggingGuide = g;
+    notifyListeners();
   }
 
   void dragGuide(Offset pos) {
@@ -613,6 +626,56 @@ class AnnotationController extends ChangeNotifier {
   void endDragGuide() {
     _draggingGuide = null;
     notifyListeners();
+  }
+
+  void selectGuide(GuideLineModel guide, {bool notify = true}) {
+    for (final GuideLineModel item in _guides) {
+      item.selected = identical(item, guide);
+    }
+    for (final DrawShape shape in _shapes) {
+      shape.selected = false;
+    }
+    selectedShapeIndex = null;
+    if (notify) notifyListeners();
+  }
+
+  void clearGuideSelection({bool notify = true}) {
+    _clearGuideSelection(notify: notify);
+  }
+
+  void _clearGuideSelection({bool notify = true}) {
+    bool changed = false;
+    for (final GuideLineModel guide in _guides) {
+      if (guide.selected) {
+        guide.selected = false;
+        changed = true;
+      }
+    }
+    if (notify && changed) notifyListeners();
+  }
+
+  bool deleteSelectedGuide() {
+    final int index = _guides.indexWhere((GuideLineModel guide) => guide.selected);
+    if (index == -1) return false;
+    if (identical(_draggingGuide, _guides[index])) _draggingGuide = null;
+    _guides.removeAt(index);
+    notifyListeners();
+    return true;
+  }
+
+  bool deleteGuideAt(Offset pos, {double tolerance = 8}) {
+    for (int i = _guides.length - 1; i >= 0; i--) {
+      final GuideLineModel guide = _guides[i];
+      final double distance = guide.orientation == GuideOrientation.horizontal
+          ? (pos.dy - guide.position).abs()
+          : (pos.dx - guide.position).abs();
+      if (distance >= tolerance) continue;
+      if (identical(_draggingGuide, guide)) _draggingGuide = null;
+      _guides.removeAt(i);
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   // ── Undo / redo ────────────────────────────────────────────────────────────
@@ -643,7 +706,9 @@ class AnnotationController extends ChangeNotifier {
       _shapes.removeAt(selectedShapeIndex!);
       selectedShapeIndex = null;
       notifyListeners();
+      return;
     }
+    deleteSelectedGuide();
   }
 
   bool deleteShapeAt(Offset pos) {
@@ -651,6 +716,7 @@ class AnnotationController extends ChangeNotifier {
       if (_hitTest(_shapes[i], pos)) {
         _shapes.removeAt(i);
         selectedShapeIndex = null;
+        _clearGuideSelection(notify: false);
         _redoStack.clear();
         notifyListeners();
         return true;
@@ -660,6 +726,7 @@ class AnnotationController extends ChangeNotifier {
   }
 
   void selectShapeAt(Offset pos) {
+    _clearGuideSelection(notify: false);
     for (int i = _shapes.length - 1; i >= 0; i--) {
       if (_hitTest(_shapes[i], pos)) {
         for (DrawShape s in _shapes) {
@@ -713,7 +780,7 @@ class AnnotationController extends ChangeNotifier {
       return Rect.fromPoints(a, b).inflate(6).contains(pos);
     }
     // Text-like tools: hit their actual painted bounds, not only the anchor.
-    if (s.tool == DrawTool.text) {
+    if (s.tool == DrawTool.text || s.tool == DrawTool.emoji) {
       return _textHitRect(s, a).contains(pos);
     }
     if (s.tool == DrawTool.infoBalloon) {
@@ -744,8 +811,9 @@ class AnnotationController extends ChangeNotifier {
     const double padding = 10.0;
     const double tailH = 14.0;
     const double radius = 8.0;
+    final double fs = s.fontSize ?? (s.strokeWidth * 6 + 12);
     final TextPainter tp = TextPainter(
-      text: TextSpan(text: text, style: TextStyle(fontSize: s.strokeWidth * 6 + 12)),
+      text: TextSpan(text: text, style: TextStyle(fontSize: fs)),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: 280);
     final double bw = tp.width + padding * 2;
@@ -966,7 +1034,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   Offset? _magnifierCenter;
   DrawShape? _magnifierShape; // fetched pixels for the magnifier circle
 
-  Timer? _selectedImageRefreshDebounce;
   Timer? _liveRegionFetchDebounce;
   int _selectedImageRefreshToken = 0;
 
@@ -995,7 +1062,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 
   @override
   void dispose() {
-    _selectedImageRefreshDebounce?.cancel();
     _liveRegionFetchDebounce?.cancel();
     ctrl.removeListener(_handleControllerChanged);
     super.dispose();
@@ -1177,6 +1243,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         LogicalKeyboardKey.keyU: DrawTool.guide,
         LogicalKeyboardKey.keyC: DrawTool.screenCapture,
         LogicalKeyboardKey.keyT: DrawTool.text,
+        LogicalKeyboardKey.keyJ: DrawTool.emoji,
         LogicalKeyboardKey.keyN: DrawTool.stepCounter,
         LogicalKeyboardKey.keyI: DrawTool.infoBalloon,
         LogicalKeyboardKey.keyZ: DrawTool.magnifier,
@@ -1217,10 +1284,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       });
       return;
     }
-    if (ctrl.activeTool == DrawTool.guide) {
-      _addingGuide = true;
-      return;
-    }
     if (ctrl.activeTool == DrawTool.magnifier) return;
 
     final GuideLineModel? hit = _hitGuide(pos);
@@ -1228,10 +1291,15 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       ctrl.startDragGuide(hit);
       return;
     }
+    if (ctrl.activeTool == DrawTool.guide) {
+      _addingGuide = true;
+      return;
+    }
 
     if (selectMode) {
       ctrl.selectShapeAt(pos);
       _lastSelectPos = pos;
+      unawaited(_refreshSelectedCaptureMonitorShape(force: true));
       return;
     }
 
@@ -1288,7 +1356,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (selectMode && _lastSelectPos != null) {
       ctrl.moveSelected(pos - _lastSelectPos!);
       _lastSelectPos = pos;
-      _debounceSelectedCaptureMonitorShapeRefresh();
       return;
     }
     ctrl.updateShape(pos, shiftHeld: _shiftHeld);
@@ -1323,20 +1390,25 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       return;
     }
     ctrl.endDragGuide();
-    unawaited(_refreshSelectedCaptureMonitorShape(force: true));
     if (!selectMode) ctrl.endShape();
     _lastSelectPos = null;
   }
 
   void _onSecondaryTapDown(TapDownDetails d) {
     if (!ctrl.drawingModeActive) return;
+    if (ctrl.deleteGuideAt(d.localPosition)) return;
     ctrl.deleteShapeAt(d.localPosition);
   }
 
   void _onTapDown(TapDownDetails d) {
     if (!ctrl.drawingModeActive) return;
     final ui.Offset pos = d.localPosition;
+    final GuideLineModel? hitGuide = _hitGuide(pos);
     if (selectMode) {
+      if (hitGuide != null) {
+        ctrl.selectGuide(hitGuide);
+        return;
+      }
       ctrl.selectShapeAt(pos);
       return;
     }
@@ -1346,6 +1418,10 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
     if (ctrl.activeTool == DrawTool.text || ctrl.activeTool == DrawTool.infoBalloon) {
       unawaited(_showTextDialog(pos));
+      return;
+    }
+    if (ctrl.activeTool == DrawTool.emoji) {
+      unawaited(_showEmojiDialog(pos));
       return;
     }
     if (ctrl.activeTool == DrawTool.stepCounter) {
@@ -1540,15 +1616,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
   }
 
-  void _debounceSelectedCaptureMonitorShapeRefresh() {
-    _selectedImageRefreshDebounce?.cancel();
-    _selectedImageRefreshDebounce = Timer(const Duration(milliseconds: 200), () {
-      unawaited(_refreshSelectedCaptureMonitorShape());
-    });
-  }
-
   Future<void> _refreshSelectedCaptureMonitorShape({bool force = false}) async {
-    if (force) _selectedImageRefreshDebounce?.cancel();
     final DrawShape? shape = ctrl.selectedShape;
     if (shape == null || !_usesCaptureMonitorTool(shape.tool) || shape.points.length < 2) return;
 
@@ -1892,6 +1960,100 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (result != null && result.isNotEmpty) ctrl.commitTextShape(pos, result);
   }
 
+  Future<void> _showEmojiDialog(Offset pos) async {
+    String? selectedEmoji;
+    double localSize = ctrl.fontSize.clamp(24.0, 160.0);
+
+    final String? result = await showDialog<String>(
+      context: context,
+      barrierColor: Colors.black38,
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text(
+            'Pick Emoji',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Text(
+                    selectedEmoji ?? '🙂',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: localSize),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(ctx2).copyWith(
+                          activeTrackColor: Colors.yellowAccent,
+                          thumbColor: Colors.yellowAccent,
+                          inactiveTrackColor: Colors.white24,
+                        ),
+                        child: Slider(
+                          value: localSize,
+                          min: 24,
+                          max: 160,
+                          onChanged: (double v) => setSt(() => localSize = v),
+                        ),
+                      ),
+                    ),
+                    Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 320,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Material(
+                      color: Colors.white,
+                      child: EmojiSelector(
+                        rows: 5,
+                        columns: 8,
+                        onSelected: (EmojiData emoji) => setSt(() => selectedEmoji = emoji.char),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: selectedEmoji == null
+                  ? null
+                  : () {
+                      ctrl.fontSize = localSize;
+                      Navigator.pop(ctx, selectedEmoji);
+                    },
+              child: const Text('Place'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) ctrl.commitTextShape(pos, result);
+  }
+
   Future<void> _copyCaptureSelection() async {
     final Offset? start = _captureStart;
     final Offset? current = _captureCurrent;
@@ -2190,11 +2352,6 @@ class _CommittedRegionPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1,
     );
-    final Paint crosshair = Paint()
-      ..color = Colors.red.withValues(alpha: 0.85)
-      ..strokeWidth = 1;
-    canvas.drawLine(bounds.centerLeft + const Offset(14, 0), bounds.centerRight - const Offset(14, 0), crosshair);
-    canvas.drawLine(bounds.topCenter + const Offset(0, 14), bounds.bottomCenter - const Offset(0, 14), crosshair);
   }
 
   @override
@@ -2348,12 +2505,6 @@ class _MagnifierPainter extends CustomPainter {
       Rect.fromLTWH(dx, dy, image!.width * scale, image!.height * scale),
       Paint(),
     );
-    // Crosshair at center
-    final Paint ch = Paint()
-      ..color = Colors.red.withValues(alpha: 0.8)
-      ..strokeWidth = 1;
-    canvas.drawLine(Offset(size.width / 2 - 8, size.height / 2), Offset(size.width / 2 + 8, size.height / 2), ch);
-    canvas.drawLine(Offset(size.width / 2, size.height / 2 - 8), Offset(size.width / 2, size.height / 2 + 8), ch);
     canvas.restore();
   }
 
@@ -2740,6 +2891,7 @@ class AnnotationToolbar extends StatelessWidget {
               _ToolBtn(Icons.arrow_forward, DrawTool.arrow, controller, 'Arrow (A)'),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.text_fields, DrawTool.text, controller, 'Text (T)'),
+              _ToolBtn(Icons.emoji_emotions_outlined, DrawTool.emoji, controller, 'Emoji (J)'),
               _ToolBtn(Icons.format_list_numbered, DrawTool.stepCounter, controller, 'Step Counter (N)'),
               _ToolBtn(Icons.chat_bubble_outline, DrawTool.infoBalloon, controller, 'Info Balloon (I)'),
               const Divider(color: Colors.white24, height: 10),
@@ -3301,6 +3453,7 @@ class AnnotationPainter extends CustomPainter {
     // Dispatch new specialised tools first
     switch (s.tool) {
       case DrawTool.text:
+      case DrawTool.emoji:
         _drawText(canvas, s, start);
         return;
       case DrawTool.infoBalloon:
@@ -3368,10 +3521,12 @@ class AnnotationPainter extends CustomPainter {
     const double padding = 10.0;
     const double tailH = 14.0;
     const double radius = 8.0;
+    final double fs = s.fontSize ?? (s.strokeWidth * 6 + 12);
+    final Color tc = s.textColor ?? Colors.white;
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: s.text,
-        style: TextStyle(color: Colors.white, fontSize: s.strokeWidth * 6 + 12),
+        style: TextStyle(color: tc, fontSize: fs),
       ),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: 280);
@@ -3610,29 +3765,58 @@ class AnnotationPainter extends CustomPainter {
     tp.paint(canvas, pos);
   }
 
+  void _paintGuideDistance(Canvas canvas, Offset start, Offset end, Color color, {required Axis axis}) {
+    final double distance = (end - start).distance;
+    if (distance < 2) return;
+
+    final Offset offset = axis == Axis.horizontal ? const Offset(0, -12) : const Offset(12, 0);
+    final Offset lineStart = start + offset;
+    final Offset lineEnd = end + offset;
+    final Paint paint = Paint()
+      ..color = color.withValues(alpha: 0.9)
+      ..strokeWidth = 1.0;
+
+    canvas.drawLine(lineStart, lineEnd, paint);
+    const double tick = 4.0;
+    if (axis == Axis.horizontal) {
+      canvas.drawLine(lineStart + const Offset(0, -tick), lineStart + const Offset(0, tick), paint);
+      canvas.drawLine(lineEnd + const Offset(0, -tick), lineEnd + const Offset(0, tick), paint);
+      _drawLabel(
+          canvas, '${distance.round()}px', Offset((lineStart.dx + lineEnd.dx) / 2 - 20, lineStart.dy - 14), color);
+    } else {
+      canvas.drawLine(lineStart + const Offset(-tick, 0), lineStart + const Offset(tick, 0), paint);
+      canvas.drawLine(lineEnd + const Offset(-tick, 0), lineEnd + const Offset(tick, 0), paint);
+      _drawLabel(canvas, '${distance.round()}px', Offset(lineStart.dx + 6, (lineStart.dy + lineEnd.dy) / 2 - 8), color);
+    }
+  }
+
   void _paintGuides(Canvas canvas, Size size) {
     // Collect all guide positions for intersection detection
-    final List<GuideLineModel> hGuides =
-        guides.where((GuideLineModel g) => g.orientation == GuideOrientation.horizontal).toList();
-    final List<GuideLineModel> vGuides =
-        guides.where((GuideLineModel g) => g.orientation == GuideOrientation.vertical).toList();
+    final List<GuideLineModel> hGuides = guides
+        .where((GuideLineModel g) => g.orientation == GuideOrientation.horizontal)
+        .toList()
+      ..sort((GuideLineModel a, GuideLineModel b) => a.position.compareTo(b.position));
+    final List<GuideLineModel> vGuides = guides
+        .where((GuideLineModel g) => g.orientation == GuideOrientation.vertical)
+        .toList()
+      ..sort((GuideLineModel a, GuideLineModel b) => a.position.compareTo(b.position));
 
     for (final GuideLineModel g in hGuides) {
       final ui.Paint paint = Paint()
-        ..color = (g.selected ? Colors.yellow : Colors.cyan).withValues(alpha: 0.7)
-        ..strokeWidth = 1
+        ..color = g.color.withValues(alpha: g.selected ? 0.95 : 0.72)
+        ..strokeWidth = g.selected ? 2 : 1
         ..style = PaintingStyle.stroke;
       canvas.drawLine(Offset(0, g.position), Offset(size.width, g.position), paint);
-      _drawLabel(canvas, 'y: ${g.position.round()}', Offset(size.width - 40, g.position + 3), Colors.cyan);
+      _drawLabel(canvas, 'y: ${g.position.round()}', Offset(size.width - 54, g.position + 3), g.color);
     }
 
     for (final GuideLineModel g in vGuides) {
       final ui.Paint paint = Paint()
-        ..color = (g.selected ? Colors.yellow : Colors.green).withValues(alpha: 0.7)
-        ..strokeWidth = 1
+        ..color = g.color.withValues(alpha: g.selected ? 0.95 : 0.72)
+        ..strokeWidth = g.selected ? 2 : 1
         ..style = PaintingStyle.stroke;
       canvas.drawLine(Offset(g.position, 0), Offset(g.position, size.height), paint);
-      _drawLabel(canvas, 'x: ${g.position.round()}', Offset(g.position + 3, 4), Colors.green);
+      _drawLabel(canvas, 'x: ${g.position.round()}', Offset(g.position + 3, 4), g.color);
     }
 
     // Intersection highlights
@@ -3640,9 +3824,37 @@ class AnnotationPainter extends CustomPainter {
       for (final GuideLineModel v in vGuides) {
         final ui.Offset pt = Offset(v.position, h.position);
         final ui.Paint highlightPaint = Paint()
-          ..color = Colors.yellow.withValues(alpha: 0.9)
+          ..color = Color.lerp(h.color, v.color, 0.5)!.withValues(alpha: 0.95)
           ..style = PaintingStyle.fill;
         canvas.drawCircle(pt, 5, highlightPaint);
+      }
+    }
+
+    if (vGuides.length > 1) {
+      for (final GuideLineModel h in hGuides) {
+        for (int i = 0; i < vGuides.length - 1; i++) {
+          _paintGuideDistance(
+            canvas,
+            Offset(vGuides[i].position, h.position),
+            Offset(vGuides[i + 1].position, h.position),
+            h.color,
+            axis: Axis.horizontal,
+          );
+        }
+      }
+    }
+
+    if (hGuides.length > 1) {
+      for (final GuideLineModel v in vGuides) {
+        for (int i = 0; i < hGuides.length - 1; i++) {
+          _paintGuideDistance(
+            canvas,
+            Offset(v.position, hGuides[i].position),
+            Offset(v.position, hGuides[i + 1].position),
+            v.color,
+            axis: Axis.vertical,
+          );
+        }
       }
     }
   }

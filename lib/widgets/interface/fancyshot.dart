@@ -21,6 +21,52 @@ import '../../models/win32/win_utils.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
+class ScreenCaptureUploadHost {
+  ScreenCaptureUploadHost({
+    required this.id,
+    required this.name,
+    required this.command,
+  });
+
+  final String id;
+  final String name;
+  final String command;
+
+  ScreenCaptureUploadHost copyWith({
+    String? id,
+    String? name,
+    String? command,
+  }) {
+    return ScreenCaptureUploadHost(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      command: command ?? this.command,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'command': command,
+    };
+  }
+
+  factory ScreenCaptureUploadHost.fromMap(Map<String, dynamic> map) {
+    return ScreenCaptureUploadHost(
+      id: (map['id'] ?? DateTime.now().microsecondsSinceEpoch.toString()) as String,
+      name: (map['name'] ?? '') as String,
+      command: (map['command'] ?? '') as String,
+    );
+  }
+
+  String toJson() => jsonEncode(toMap());
+
+  factory ScreenCaptureUploadHost.fromJson(String source) {
+    return ScreenCaptureUploadHost.fromMap(jsonDecode(source) as Map<String, dynamic>);
+  }
+}
+
 class Fancyshot extends StatefulWidget {
   const Fancyshot({super.key});
   @override
@@ -297,6 +343,19 @@ class FancyshotState extends State<Fancyshot> {
     filters.backgroundType = BackgroundType.custom;
     filters.backgroundImage = result.path;
     setState(() {});
+  }
+
+  Future<void> _openUploadHostsSettings() async {
+    final List<ScreenCaptureUploadHost>? hosts = await showDialog<List<ScreenCaptureUploadHost>>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.36),
+      builder: (BuildContext context) {
+        return _UploadHostsDialog(initialHosts: FancyShot.loadUploadHosts());
+      },
+    );
+    if (hosts == null) return;
+    await FancyShot.saveUploadHosts(hosts);
+    if (mounted) setState(() {});
   }
 
   BoxDecoration _previewBackgroundDecoration() {
@@ -601,6 +660,18 @@ class FancyshotState extends State<Fancyshot> {
                   ),
                 ),
               ],
+              const SizedBox(width: 8),
+              IconButton(
+                iconSize: 18,
+                visualDensity: VisualDensity.compact,
+                tooltip: "Upload hosts",
+                onPressed: _openUploadHostsSettings,
+                icon: const Icon(Icons.cloud_upload_outlined),
+                style: IconButton.styleFrom(
+                  foregroundColor: colorScheme.onSurface,
+                  backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+                ),
+              ),
               const VerticalDivider(width: 32, indent: 14, endIndent: 14, thickness: 1),
               IconButton(
                 iconSize: 20,
@@ -1261,6 +1332,243 @@ class _BgTileState extends State<_BgTile> {
   }
 }
 
+class _UploadHostDraft {
+  _UploadHostDraft(ScreenCaptureUploadHost host)
+      : hostId = host.id,
+        nameController = TextEditingController(text: host.name),
+        commandController = TextEditingController(text: host.command);
+
+  final String hostId;
+  final TextEditingController nameController;
+  final TextEditingController commandController;
+
+  ScreenCaptureUploadHost toHost() {
+    return ScreenCaptureUploadHost(
+      id: hostId,
+      name: nameController.text.trim(),
+      command: commandController.text.trim(),
+    );
+  }
+
+  void dispose() {
+    nameController.dispose();
+    commandController.dispose();
+  }
+}
+
+class _UploadHostsDialog extends StatefulWidget {
+  const _UploadHostsDialog({required this.initialHosts});
+
+  final List<ScreenCaptureUploadHost> initialHosts;
+
+  @override
+  State<_UploadHostsDialog> createState() => _UploadHostsDialogState();
+}
+
+class _UploadHostsDialogState extends State<_UploadHostsDialog> {
+  late final List<_UploadHostDraft> _drafts;
+
+  @override
+  void initState() {
+    super.initState();
+    _drafts = widget.initialHosts.map(_UploadHostDraft.new).toList();
+    if (_drafts.isEmpty) _drafts.add(_UploadHostDraft(_newHost()));
+  }
+
+  @override
+  void dispose() {
+    for (final _UploadHostDraft draft in _drafts) {
+      draft.dispose();
+    }
+    super.dispose();
+  }
+
+  ScreenCaptureUploadHost _newHost() {
+    return ScreenCaptureUploadHost(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: '',
+      command: '',
+    );
+  }
+
+  void _addDraft() {
+    setState(() => _drafts.add(_UploadHostDraft(_newHost())));
+  }
+
+  void _removeDraft(_UploadHostDraft draft) {
+    setState(() {
+      _drafts.remove(draft);
+      draft.dispose();
+      if (_drafts.isEmpty) _drafts.add(_UploadHostDraft(_newHost()));
+    });
+  }
+
+  void _save() {
+    final List<ScreenCaptureUploadHost> hosts = _drafts
+        .map((_UploadHostDraft draft) => draft.toHost())
+        .where((ScreenCaptureUploadHost host) => host.name.isNotEmpty && host.command.isNotEmpty)
+        .toList();
+    Navigator.pop(context, hosts);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 56, vertical: 48),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 780,
+        constraints: const BoxConstraints(maxHeight: 720),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.08)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.32),
+              blurRadius: 28,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.cloud_upload_outlined, size: 18, color: colorScheme.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Uploading Hosts',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Use \${file} where the captured file path should be inserted. Older commands without \${file} still get the file path appended as the last argument.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addDraft,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add Host'),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: _drafts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 14),
+                itemBuilder: (BuildContext context, int index) {
+                  final _UploadHostDraft draft = _drafts[index];
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.06)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Text(
+                              'Host ${index + 1}',
+                              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              tooltip: 'Delete host',
+                              onPressed: _drafts.length == 1 ? null : () => _removeDraft(draft),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: draft.nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            hintText: 'My Uploader',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: draft.commandController,
+                          minLines: 2,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                            labelText: 'CLI',
+                            hintText: 'python \"C:\\scripts\\upload.py\" --file \${file}',
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'Only hosts with both a name and a command are saved.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.55),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _save,
+                    child: const Text('Save Hosts'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 enum BackgroundType {
   transparent,
   self,
@@ -1455,6 +1763,21 @@ class FancyShotProfile {
 }
 
 class FancyShot {
+  static List<ScreenCaptureUploadHost> loadUploadHosts() {
+    return Boxes.getSavedMap<ScreenCaptureUploadHost>(
+      ScreenCaptureUploadHost.fromJson,
+      "screenCaptureUploadHosts",
+      def: <ScreenCaptureUploadHost>[],
+    );
+  }
+
+  static Future<void> saveUploadHosts(List<ScreenCaptureUploadHost> hosts) {
+    return Boxes.updateSettings(
+      "screenCaptureUploadHosts",
+      jsonEncode(hosts.map((ScreenCaptureUploadHost host) => host.toJson()).toList()),
+    );
+  }
+
   static List<FancyShotProfile> defaultProfiles() => <FancyShotProfile>[
         FancyShotProfile(
           name: "Default",
@@ -1547,6 +1870,7 @@ class FancyShot {
         bgColor: bgColor,
         profile: profile.copyWith(),
       ),
+      delay: const Duration(milliseconds: 20),
     );
   }
 
@@ -1583,134 +1907,136 @@ class FancyShot {
 
     ScreenshotController screenshotController = ScreenshotController();
 
-    final Uint8List output = await screenshotController.captureFromWidget(Material(
-      type: MaterialType.transparency,
-      child: ClipRect(
-        child: Container(
-          width: photo!.width.toDouble(),
-          height: photo!.height.toDouble(),
-          padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
-          decoration: filters.backgroundType == BackgroundType.stock
-              ? BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(filters.backgroundImage),
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : filters.backgroundType == BackgroundType.self
+    final Uint8List output = await screenshotController.captureFromWidget(
+        Material(
+          type: MaterialType.transparency,
+          child: ClipRect(
+            child: Container(
+              width: photo!.width.toDouble(),
+              height: photo!.height.toDouble(),
+              padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
+              decoration: filters.backgroundType == BackgroundType.stock
                   ? BoxDecoration(
                       image: DecorationImage(
-                        image: MemoryImage(capture!),
+                        image: AssetImage(filters.backgroundImage),
                         fit: BoxFit.cover,
                       ),
                     )
-                  : filters.backgroundType == BackgroundType.custom
+                  : filters.backgroundType == BackgroundType.self
                       ? BoxDecoration(
-                          image: File(filters.backgroundImage).existsSync()
-                              ? DecorationImage(
-                                  image: FileImage(File(filters.backgroundImage)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
+                          image: DecorationImage(
+                            image: MemoryImage(capture!),
+                            fit: BoxFit.cover,
+                          ),
                         )
-                      : const BoxDecoration(color: Colors.transparent),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: filters.backgroundBlur,
-              sigmaY: filters.backgroundBlur,
-            ),
-            child: Transform(
-              transform: filters.skewX != 0 && filters.skewY != 0
-                  ? (Matrix4.identity()
-                    ..scaledByVector3(Vector3.all(0.1))
-                    ..setEntry(3, 2, filters.skewPerspective)
-                    ..rotateX(0.1 * filters.skewY)
-                    ..rotateY(-0.1 * filters.skewX))
-                  : Matrix4.identity(),
-              filterQuality: FilterQuality.high,
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                      : filters.backgroundType == BackgroundType.custom
+                          ? BoxDecoration(
+                              image: File(filters.backgroundImage).existsSync()
+                                  ? DecorationImage(
+                                      image: FileImage(File(filters.backgroundImage)),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            )
+                          : const BoxDecoration(color: Colors.transparent),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: filters.backgroundBlur,
+                  sigmaY: filters.backgroundBlur,
+                ),
+                child: Transform(
+                  transform: filters.skewX != 0 && filters.skewY != 0
+                      ? (Matrix4.identity()
+                        ..scaledByVector3(Vector3.all(0.1))
+                        ..setEntry(3, 2, filters.skewPerspective)
+                        ..rotateX(0.1 * filters.skewY)
+                        ..rotateY(-0.1 * filters.skewX))
+                      : Matrix4.identity(),
+                  filterQuality: FilterQuality.high,
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
-                        child: FittedBox(
-                          alignment: Alignment.center,
-                          // fit: BoxFit.fill,
-                          child: Stack(
-                            children: <Widget>[
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: bgColor,
-                                  borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
-                                  boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
-                                      ? <BoxShadow>[
-                                          BoxShadow(
-                                            offset: const Offset(3, 3),
-                                            spreadRadius: filters.shadowSpread,
-                                            blurRadius: filters.shadowRadius,
-                                            color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(filters.borderRadius),
-                                  child: Image.memory(
-                                    capture!,
-                                    fit: BoxFit.contain,
-                                    width: photo!.width.toDouble(),
-                                    height: photo!.height.toDouble(),
-                                    filterQuality: FilterQuality.high,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Transform.translate(
-                                  offset: const Offset(0, 25),
-                                  child: Transform(
-                                    transform: Matrix4.skewX(-0.2),
-                                    child: Text(
-                                      filters.watermark,
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 17,
-                                        shadows: <Shadow>[
-                                          Shadow(blurRadius: 1, color: Colors.black.withValues(alpha: 0.7))
-                                        ],
+                      if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
+                            child: FittedBox(
+                              alignment: Alignment.center,
+                              // fit: BoxFit.fill,
+                              child: Stack(
+                                children: <Widget>[
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: bgColor,
+                                      borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
+                                      boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
+                                          ? <BoxShadow>[
+                                              BoxShadow(
+                                                offset: const Offset(3, 3),
+                                                spreadRadius: filters.shadowSpread,
+                                                blurRadius: filters.shadowRadius,
+                                                color: const Color.fromRGBO(0, 0, 0, 0.5),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(filters.borderRadius),
+                                      child: Image.memory(
+                                        capture!,
+                                        fit: BoxFit.contain,
+                                        width: photo!.width.toDouble(),
+                                        height: photo!.height.toDouble(),
+                                        filterQuality: FilterQuality.high,
                                       ),
                                     ),
                                   ),
-                                ),
-                              )
-                            ],
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Transform.translate(
+                                      offset: const Offset(0, 25),
+                                      child: Transform(
+                                        transform: Matrix4.skewX(-0.2),
+                                        child: Text(
+                                          filters.watermark,
+                                          textAlign: TextAlign.right,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 17,
+                                            shadows: <Shadow>[
+                                              Shadow(blurRadius: 1, color: Colors.black.withValues(alpha: 0.7))
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                        ],
                       ),
-                      if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
+                      if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
                     ],
                   ),
-                  if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    ));
+        delay: const Duration(milliseconds: 20));
 
     final String path = "${WinUtils.getTempFolder()}/copy.png";
     File(path).writeAsBytesSync(output);

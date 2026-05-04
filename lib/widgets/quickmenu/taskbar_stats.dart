@@ -164,7 +164,6 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                                         fontStyle: globalSettings.themeColors.entryFontItalic
                                             ? FontStyle.italic
                                             : FontStyle.normal,
-                                        fontWeight: FontWeight(globalSettings.themeColors.entryFontWeight),
                                         color: globalSettings.themeColors.textColor,
                                       ),
                                     ),
