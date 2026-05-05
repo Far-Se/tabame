@@ -5,7 +5,6 @@ Ignore this file, it's for me to remember things.
 - Sa poata alege dintrun preset de tabame logos
 - Font Factor, unde seteaza cate de mare sa fie fontul in general.
 - Music player 3-dotted button moves the poster.
-- in screen draw ruler can not be removed.
-- also calculate distance between where points meet.
 - keymap popups do not work if you do not have the button listed.
-- cand il deschid jos, timpul iese pe afara.
+- La taskmgr title fetch, punel in try catch, poate altii in alta limba e diferit.
+- -Faci alternativa daca nu este cpu/memory etc, iei primele numere, daca nici aia nu merge, aia e.

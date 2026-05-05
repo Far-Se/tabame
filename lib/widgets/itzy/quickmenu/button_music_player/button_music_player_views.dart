@@ -78,117 +78,106 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                            Stack(
-                              children: <Widget>[
-                                Builder(
-                                  builder: (BuildContext context) {
-                                    final bool disableAnimations =
-                                        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-                                    final bool useStackedHeader = constraints.maxWidth < 430;
-                                    final Widget metadata = AnimatedSwitcher(
-                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeOutCubic,
-                                      child: KeyedSubtree(
-                                        key: ValueKey<String>('meta_${item.id}'),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              useStackedHeader ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              _clipPlayerLabel(item.title),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                              style: TextStyle(
-                                                fontFamily: globalSettings.themeColors.entryFontFamily,
-                                                fontSize: 19,
-                                                height: 1.1,
-                                                fontWeight: FontWeight.w800,
-                                                color: onSurface,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              _clipPlayerLabel(item.artist ?? "Unknown artist"),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                              style: TextStyle(
-                                                fontFamily: globalSettings.themeColors.entryFontFamily,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: accent.withAlpha(200),
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            if (item.album != null) ...<Widget>[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                item.album!,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                                style: TextStyle(
-                                                  fontFamily: globalSettings.themeColors.entryFontFamily,
-                                                  fontSize: 11.5,
-                                                  color: onSurface.withAlpha(140),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: _PlayerTrackMenuButton(
+                                accent: accent,
+                                onSurface: onSurface,
+                                onSelected: (_PlayerTrackMenuAction action) =>
+                                    _handlePlayerTrackMenuAction(action, item),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Builder(
+                              builder: (BuildContext context) {
+                                final bool disableAnimations = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+                                final bool useStackedHeader = constraints.maxWidth < 430;
+                                final Widget metadata = AnimatedSwitcher(
+                                  duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeOutCubic,
+                                  child: KeyedSubtree(
+                                    key: ValueKey<String>('meta_${item.id}'),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          useStackedHeader ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          _clipPlayerLabel(item.title),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                          style: TextStyle(
+                                            fontFamily: globalSettings.themeColors.entryFontFamily,
+                                            fontSize: 19,
+                                            height: 1.1,
+                                            fontWeight: FontWeight.w800,
+                                            color: onSurface,
+                                          ),
                                         ),
-                                      ),
-                                    );
-
-                                    final Widget coverArt = AnimatedSwitcher(
-                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 240),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeOutCubic,
-                                      child: KeyedSubtree(
-                                        key: ValueKey<String>(item.id),
-                                        child: _CoverArt(item: item, size: 120, accent: accent, onSurface: onSurface),
-                                      ),
-                                    );
-
-                                    if (useStackedHeader) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(right: 40),
-                                        child: Column(
-                                          children: <Widget>[
-                                            Center(child: coverArt),
-                                            const SizedBox(height: 18),
-                                            metadata,
-                                          ],
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _clipPlayerLabel(item.artist ?? "Unknown artist"),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                          style: TextStyle(
+                                            fontFamily: globalSettings.themeColors.entryFontFamily,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: accent.withAlpha(200),
+                                            letterSpacing: 0.3,
+                                          ),
                                         ),
-                                      );
-                                    }
-
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 40),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          coverArt,
-                                          const SizedBox(width: 30),
-                                          Expanded(child: metadata),
+                                        if (item.album != null) ...<Widget>[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            item.album!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                            style: TextStyle(
+                                              fontFamily: globalSettings.themeColors.entryFontFamily,
+                                              fontSize: 11.5,
+                                              color: onSurface.withAlpha(140),
+                                            ),
+                                          ),
                                         ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: _PlayerTrackMenuButton(
-                                    accent: accent,
-                                    onSurface: onSurface,
-                                    onSelected: (_PlayerTrackMenuAction action) =>
-                                        _handlePlayerTrackMenuAction(action, item),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                );
+
+                                final Widget coverArt = AnimatedSwitcher(
+                                  duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 240),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeOutCubic,
+                                  child: KeyedSubtree(
+                                    key: ValueKey<String>(item.id),
+                                    child: _CoverArt(item: item, size: 120, accent: accent, onSurface: onSurface),
+                                  ),
+                                );
+
+                                if (useStackedHeader) {
+                                  return Column(
+                                    children: <Widget>[
+                                      Center(child: coverArt),
+                                      const SizedBox(height: 18),
+                                      metadata,
+                                    ],
+                                  );
+                                }
+
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    coverArt,
+                                    const SizedBox(width: 30),
+                                    Expanded(child: metadata),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 24),
                             _buildTimeline(accent, onSurface, item),

@@ -14,6 +14,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4201)
+#include "capture_monitor.cpp"
 #include "hicon_to_bytes.cpp"
 #include "tray_info.cpp"
 #include "transparent.cpp"
@@ -59,7 +60,6 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel = nullp
 #include "tray_extended.cpp"
 #include "windows_theme.cpp"
 #include "get_changed_folders.cpp"
-#include "capture_monitor.cpp"
 
 // ---------------------------------------------------------------------------
 // GDI+ state
@@ -814,6 +814,18 @@ namespace tabamewin32
             OK(result, EVal(Encode::MonitorCaptureToMap(capture)));
         }
 
+        void CaptureMonitorBitmapAlternativeH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
+        {
+            auto &a = Args::Map(call);
+            MonitorCaptureResult capture;
+            if (!CaptureMonitorBitmapAlternative(Args::Int64(a, "monitorHandle"), capture))
+            {
+                result->Error("CAPTURE_FAILED", "Unable to capture the requested monitor using the bitmap alternative.");
+                return;
+            }
+            OK(result, EVal(Encode::MonitorCaptureToMap(capture)));
+        }
+
         void ExcludeWindowFromCaptureH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result)
         {
             auto &a = Args::Map(call);
@@ -964,6 +976,7 @@ namespace tabamewin32
             {"clickTrayNotifyIcon",     Handlers::ClickTrayNotifyIconH},
             {"setWindowTheme",          Handlers::SetWindowThemeH},
             {"captureMonitor",          Handlers::CaptureMonitorH},
+            {"captureMonitorBitmapAlternative", Handlers::CaptureMonitorBitmapAlternativeH},
             {"excludeWindowFromCapture", Handlers::ExcludeWindowFromCaptureH},
             {"includeWindowFromCapture", Handlers::IncludeWindowFromCaptureH},
             {"getChangedFolders",       Handlers::GetChangedFoldersH},

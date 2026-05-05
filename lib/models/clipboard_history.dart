@@ -262,8 +262,9 @@ class ClipboardHistoryStore {
     if (!enabled || _recording) return;
     _recording = true;
     try {
-      ClipboardHistoryEntry? entry = await _readTextOrRichText();
-      entry ??= await _readImage();
+      ClipboardHistoryEntry? entry = await _readImage();
+      entry ??= await _readImageFromRichText();
+      entry ??= await _readTextOrRichText();
       if (entry == null) return;
 
       // Lazy-load the recent cache from disk (only the first time).
@@ -533,6 +534,22 @@ class ClipboardHistoryStore {
     );
   }
 
+  static Future<ClipboardHistoryEntry?> _readImageFromRichText() async {
+    final Map<String, dynamic>? data = await _tryClipboardRead<Map<String, dynamic>?>(
+      'rich text image',
+      () => ClipboardExtended.pasteRichText(),
+    );
+    if (data == null) return null;
+
+    final String html = _htmlFragment((data['html'] as String?)?.trim() ?? '');
+    if (html.isEmpty) return null;
+
+    final Uint8List? bytes = _extractEmbeddedImageBytes(html);
+    if (bytes == null || bytes.isEmpty) return null;
+
+    return _saveImageEntry(bytes);
+  }
+
   static Future<ClipboardHistoryEntry?> _readImage() async {
     final Uint8List? bytes = await _tryClipboardRead<Uint8List?>(
       'image',
@@ -540,6 +557,10 @@ class ClipboardHistoryStore {
     );
     if (bytes == null || bytes.isEmpty) return null;
 
+    return _saveImageEntry(bytes);
+  }
+
+  static Future<ClipboardHistoryEntry?> _saveImageEntry(Uint8List bytes) async {
     final DateTime now = DateTime.now();
     final String id = _entryId(now);
     final Directory imageDir = Directory(imageDirectoryPath);
@@ -556,6 +577,40 @@ class ClipboardHistoryStore {
       imagePath: imagePath,
       byteLength: bytes.length,
     );
+  }
+
+  static Uint8List? _extractEmbeddedImageBytes(String html) {
+    final RegExp imgSrcPattern = RegExp(
+      r"""<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1""",
+      caseSensitive: false,
+      dotAll: true,
+    );
+
+    for (final RegExpMatch match in imgSrcPattern.allMatches(html)) {
+      final String src = (match.group(2) ?? '').trim();
+      final Uint8List? bytes = _decodeImageDataUri(src);
+      if (bytes != null && bytes.isNotEmpty) return bytes;
+    }
+
+    return _decodeImageDataUri(html.trim());
+  }
+
+  static Uint8List? _decodeImageDataUri(String value) {
+    final RegExpMatch? match = RegExp(
+      r'^data:image\/[-+.a-zA-Z0-9]+;base64,([a-zA-Z0-9+/=\s]+)$',
+      caseSensitive: false,
+      dotAll: true,
+    ).firstMatch(value);
+    if (match == null) return null;
+
+    final String payload = (match.group(1) ?? '').replaceAll(RegExp(r'\s+'), '');
+    if (payload.isEmpty) return null;
+
+    try {
+      return base64Decode(payload);
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _htmlFragment(String html) {

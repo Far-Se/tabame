@@ -54,23 +54,24 @@ class _TaskbarStatsState extends State<TaskbarStats> {
   List<({String label, String value})> _parseStats(String stats) {
     final List<({String label, String value})> metrics = <({String label, String value})>[];
     if (stats.isEmpty) return metrics;
-
-    final RegExp metricPattern = RegExp(r'(CPU|RAM|DISK|NET)\s+([^\s]+)', caseSensitive: false);
-    final Iterable<RegExpMatch> matches = metricPattern.allMatches(stats);
-    final Map<String, String> parsed = <String, String>{};
-    for (final RegExpMatch match in matches) {
-      final String? label = match.group(1)?.toUpperCase();
-      final String? value = match.group(2);
-      if (label == null || value == null) continue;
-      parsed[label] = value;
-    }
-
-    for (final String label in _kMetricOrder) {
-      final String? value = parsed[label];
-      if (value != null && value.isNotEmpty) {
-        metrics.add((label: label, value: value));
+    try {
+      final RegExp metricPattern = RegExp(r'(CPU|RAM|DISK|NET)\s+([^\s]+)', caseSensitive: false);
+      final Iterable<RegExpMatch> matches = metricPattern.allMatches(stats);
+      final Map<String, String> parsed = <String, String>{};
+      for (final RegExpMatch match in matches) {
+        final String? label = match.group(1)?.toUpperCase();
+        final String? value = match.group(2);
+        if (label == null || value == null) continue;
+        parsed[label] = value;
       }
-    }
+
+      for (final String label in _kMetricOrder) {
+        final String? value = parsed[label];
+        if (value != null && value.isNotEmpty) {
+          metrics.add((label: label, value: value));
+        }
+      }
+    } catch (_) {}
 
     return metrics;
   }

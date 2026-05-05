@@ -37,6 +37,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/win32/mixed.dart';
+import '../models/win32/screenshot.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
@@ -323,32 +324,20 @@ class ScreenCapture {
   }
 
   static Future<_FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
-    Monitor.fetchMonitors();
-    final Square? monitorBounds = Monitor.monitorSizes[monitorHandle];
-    if (monitorBounds == null) return null;
-
-    final int? monitorNumber = Monitor.monitorIds[monitorHandle];
-    if (monitorNumber == null || monitorNumber <= 0) return null;
-
-    final int hwnd = Win32Window.getHwnd();
-    if (hwnd != 0) {
-      await excludeWindowFromCapture(hwnd);
-    }
-
-    final MonitorCapture? capture = await captureMonitor(monitorIndex: monitorNumber - 1);
-    if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.pixels.isEmpty) {
+    final MonitorBitmapCapture? capture = captureMonitorBitmapByHandle(monitorHandle);
+    if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
       return null;
     }
 
     return _FrozenMonitorSnapshot(
       monitorHandle: monitorHandle,
       screenRect: Rect.fromLTWH(
-        monitorBounds.x.toDouble(),
-        monitorBounds.y.toDouble(),
-        monitorBounds.width.toDouble(),
-        monitorBounds.height.toDouble(),
+        capture.left.toDouble(),
+        capture.top.toDouble(),
+        capture.width.toDouble(),
+        capture.height.toDouble(),
       ),
-      rgbaBytes: _bgraToRgba(capture.pixels),
+      rgbaBytes: capture.rgbaBytes,
       pixelWidth: capture.width,
       pixelHeight: capture.height,
     );
@@ -572,7 +561,11 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   Timer? _tickerTimer;
   final Set<String> _pressedScreenCaptureHotkeys = <String>{};
   final Map<int, _FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, _FrozenMonitorSnapshot>{};
+  final Map<int, ui.Image> _frozenMonitorImages = <int, ui.Image>{};
+  final Set<int> _frozenMonitorImageLoadsInProgress = <int>{};
   Future<void>? _frozenSnapshotWarmup;
+  int? _visibleFrozenMonitorHandle;
+  bool _visibleFrozenMonitorSyncInProgress = false;
 
   @override
   void initState() {
@@ -594,6 +587,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     _tickerTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _ticker());
     if (widget.freezeMode) {
       _frozenSnapshotWarmup = _warmFrozenMonitorSnapshots();
+      unawaited(_syncVisibleFrozenMonitor(forceRefresh: true));
     }
   }
 
@@ -614,6 +608,9 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
   void _ticker() {
     _handleScreenDrawHotkeys();
+    if (widget.freezeMode) {
+      unawaited(_syncVisibleFrozenMonitor());
+    }
   }
 
   void _resetActiveCaptureSelection() {
@@ -626,9 +623,30 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   Future<void> _warmFrozenMonitorSnapshots() async {
-    Monitor.fetchMonitors();
-    for (final int monitorHandle in Monitor.list) {
-      await _ensureFrozenMonitorSnapshot(monitorHandle);
+    final int hwnd = Win32Window.getHwnd();
+    if (hwnd != 0) {
+      ShowWindow(hwnd, SW_HIDE);
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
+    try {
+      Monitor.fetchMonitors();
+      for (final int monitorHandle in Monitor.list) {
+        final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+        if (snapshot != null) {
+          await _ensureFrozenMonitorImage(
+            monitorHandle,
+            snapshot: snapshot,
+            notify: false,
+          );
+        }
+      }
+    } finally {
+      if (hwnd != 0) {
+        ShowWindow(hwnd, SW_SHOW);
+      }
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -640,6 +658,100 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       _frozenMonitorSnapshots[monitorHandle] = snapshot;
     }
     return snapshot;
+  }
+
+  Future<ui.Image?> _ensureFrozenMonitorImage(
+    int monitorHandle, {
+    _FrozenMonitorSnapshot? snapshot,
+    bool notify = true,
+  }) async {
+    final ui.Image? existing = _frozenMonitorImages[monitorHandle];
+    if (existing != null) return existing;
+
+    if (!_frozenMonitorImageLoadsInProgress.add(monitorHandle)) {
+      while (_frozenMonitorImageLoadsInProgress.contains(monitorHandle) && mounted) {
+        await Future<void>.delayed(const Duration(milliseconds: 16));
+      }
+      return _frozenMonitorImages[monitorHandle];
+    }
+
+    try {
+      snapshot ??= await _ensureFrozenMonitorSnapshot(monitorHandle);
+      if (snapshot == null) return null;
+
+      final ui.Image image = await _decodeFrozenMonitorImage(
+        snapshot.rgbaBytes,
+        snapshot.pixelWidth,
+        snapshot.pixelHeight,
+      );
+
+      if (!mounted) {
+        image.dispose();
+        return null;
+      }
+
+      final ui.Image? cached = _frozenMonitorImages[monitorHandle];
+      if (cached != null) {
+        image.dispose();
+        return cached;
+      }
+
+      _frozenMonitorImages[monitorHandle] = image;
+      if (notify) {
+        setState(() {});
+      }
+      return image;
+    } finally {
+      _frozenMonitorImageLoadsInProgress.remove(monitorHandle);
+    }
+  }
+
+  Future<ui.Image> _decodeFrozenMonitorImage(
+    Uint8List rgbaBytes,
+    int width,
+    int height,
+  ) {
+    final Completer<ui.Image> completer = Completer<ui.Image>();
+    ui.decodeImageFromPixels(
+      rgbaBytes,
+      width,
+      height,
+      ui.PixelFormat.rgba8888,
+      completer.complete,
+    );
+    return completer.future;
+  }
+
+  Future<void> _syncVisibleFrozenMonitor({bool forceRefresh = false}) async {
+    if (!widget.freezeMode || !mounted || _visibleFrozenMonitorSyncInProgress) return;
+
+    _visibleFrozenMonitorSyncInProgress = true;
+
+    final Pointer<POINT> cursorPoint = calloc<POINT>();
+    try {
+      if (GetCursorPos(cursorPoint) == 0) return;
+      final int monitorHandle = MonitorFromPoint(cursorPoint.ref, MONITOR_DEFAULTTONEAREST);
+      if (monitorHandle == 0) return;
+
+      final bool monitorChanged = _visibleFrozenMonitorHandle != monitorHandle;
+      if (monitorChanged) {
+        if (!mounted) return;
+        setState(() {
+          _visibleFrozenMonitorHandle = monitorHandle;
+        });
+      }
+
+      if (!forceRefresh && !monitorChanged && _frozenMonitorImages.containsKey(monitorHandle)) {
+        return;
+      }
+
+      final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+      if (snapshot == null) return;
+      await _ensureFrozenMonitorImage(monitorHandle, snapshot: snapshot);
+    } finally {
+      calloc.free(cursorPoint);
+      _visibleFrozenMonitorSyncInProgress = false;
+    }
   }
 
   Future<Uint8List?> _captureFrozenRegionToPng(Rect screenRect) async {
@@ -735,12 +847,18 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   @override
   void dispose() {
     _tickerTimer?.cancel();
+    for (final ui.Image image in _frozenMonitorImages.values) {
+      image.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final ui.Size size = MediaQuery.of(context).size;
+    final ui.Image? frozenBackgroundImage = widget.freezeMode && _visibleFrozenMonitorHandle != null
+        ? _frozenMonitorImages[_visibleFrozenMonitorHandle!]
+        : null;
 
     if (!_captureEnabled) {
       return const SizedBox.expand();
@@ -756,6 +874,17 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       },
       child: Stack(
         children: <Widget>[
+          if (widget.freezeMode && frozenBackgroundImage != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: RawImage(
+                  image: frozenBackgroundImage,
+                  fit: BoxFit.fill,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+              ),
+            ),
           // Dim overlay with crosshair region selector
           Positioned.fill(
             child: Listener(
@@ -1494,18 +1623,20 @@ class _CapturePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Semi-transparent dim
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = Colors.black.withValues(alpha: 0.35),
-    );
+    final Paint dimPaint = Paint()..color = Colors.black.withValues(alpha: 0.35);
 
-    if (start == null || current == null) return;
+    if (start == null || current == null) {
+      canvas.drawRect(Offset.zero & size, dimPaint);
+      return;
+    }
 
     final Rect sel = Rect.fromPoints(start!, current!).normalized();
 
-    // Clear the selected region
-    canvas.drawRect(sel, Paint()..blendMode = BlendMode.clear);
+    final Path dimPath = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRect(sel);
+    canvas.drawPath(dimPath, dimPaint);
 
     // Dashed selection border
     final Paint dashedPaint = Paint()
@@ -3732,9 +3863,9 @@ class _EditorWindowBar extends StatelessWidget {
                 children: <Widget>[
                   const Icon(Icons.photo_size_select_large_rounded, size: 16, color: Colors.white70),
                   const SizedBox(width: 10),
-                  Text(
+                  const Text(
                     'Photo Editor',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

@@ -17,10 +17,9 @@ import 'widgets/widgets/focus_fix.dart';
 Future<void> main(List<String> arguments) async {
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
-  final bool wantsScreenCapture =
-      arguments.contains("-capture") || arguments.contains("-screnCapture") || arguments.contains("-screenCapture");
+  final bool wantsScreenCapture = arguments.contains("-capture") || arguments.contains("-screenCapture");
   final bool freezeScreenCapture = arguments.contains("-freeze");
-  if (kDebugMode && true && arguments.isEmpty) return startScreenCapture();
+  // if (kDebugMode && true && arguments.isEmpty) return startScreenCapture();
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (wantsScreenCapture) return startScreenCapture(freezeMode: freezeScreenCapture);
   if (arguments.contains("-screenDraw")) return startScreenDraw();

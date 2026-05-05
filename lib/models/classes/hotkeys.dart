@@ -665,6 +665,14 @@ class HotKeyInfo {
         WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
       }
     },
+    "OpenScreenCaptureFreeze": () {
+      final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
+      if (windowHwnd != 0) {
+        Win32.closeWindow(windowHwnd);
+      } else {
+        WinUtils.startTabame(closeCurrent: false, arguments: "-capture -freeze");
+      }
+    },
     "ShowStartMenu": () {
       int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (trayWindowHandle != 0) {

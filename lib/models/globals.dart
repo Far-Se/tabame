@@ -79,6 +79,12 @@ class Globals {
     quickMenuSearchInputVersion.value++;
   }
 
+  static void setQuickMenuSearchInput(String input) {
+    if (input.isEmpty) return;
+    _pendingQuickMenuSearchInput = input;
+    quickMenuSearchInputVersion.value++;
+  }
+
   static String takeQuickMenuSearchInput() {
     final String value = _pendingQuickMenuSearchInput;
     _pendingQuickMenuSearchInput = "";

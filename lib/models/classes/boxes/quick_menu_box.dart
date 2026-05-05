@@ -122,7 +122,7 @@ class QuickMenuFunctions {
       Globals.quickMenuPage = type;
 
       if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
-        Future<void>.delayed(const Duration(milliseconds: 100), () async {
+        Future<void>.delayed(const Duration(milliseconds: 110), () async {
           if (center) {
             Win32.setCenter(useMouse: true);
           } else {
@@ -147,7 +147,8 @@ class QuickMenuFunctions {
   }
 
   static Future<void> openQuickMenuWithAction(String actionName, {bool center = false}) async {
-    await toggleQuickMenu(visible: true, center: center);
+    Globals.setQuickMenuSearchInput("/");
+    await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     triggerQuickAction(actionName);
   }

@@ -599,7 +599,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     _setSearching(true);
-    _searchDebounce = Timer(const Duration(milliseconds: 100), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
       if (!_isActiveSearch(requestId, query)) return;
       _runSearch(requestId, query, normalizedQuery, searchMode);
     });

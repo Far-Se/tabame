@@ -12,11 +12,10 @@ class FancyShotButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "FancyShot",
+      message: "FancyShot Profiles",
       icon: const Icon(Icons.center_focus_strong_rounded),
       onTap: () async {
         QuickMenuFunctions.toggleQuickMenu(visible: false);
-        await WinUtils.screenCapture();
 
         if (kReleaseMode) {
           WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot");

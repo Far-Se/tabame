@@ -1,12 +1,12 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
@@ -16,9 +16,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
-import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
-import '../widgets/custom_tooltip.dart';
 import '../widgets/mouse_scroll_widget.dart';
 
 class ScreenCaptureUploadHost {
@@ -74,260 +72,268 @@ class Fancyshot extends StatefulWidget {
 }
 
 class FancyshotState extends State<Fancyshot> {
-  final List<List<double>> aspectRatioList = <List<double>>[
-    <double>[1, 1],
-    <double>[3 / 2, 2 / 3],
-    <double>[4 / 3, 3 / 4],
-    <double>[16 / 9, 9 / 16]
+  static const List<({String label, int value, double? ratio})> aspectRatioOptions = <({
+    String label,
+    int value,
+    double? ratio,
+  })>[
+    (label: 'Auto', value: 0, ratio: null),
+    (label: '1:1', value: 1, ratio: 1),
+    (label: '3:2', value: 2, ratio: 3 / 2),
+    (label: '4:3', value: 3, ratio: 4 / 3),
+    (label: '16:9', value: 4, ratio: 16 / 9),
+    (label: '9:16', value: 5, ratio: 9 / 16),
   ];
-  final FancyShotProfile defaultProfile = FancyShotProfile(
-    name: "Default",
-    backgroundPadding: 10,
-    imagePadding: 0,
-    backgroundType: BackgroundType.transparent,
-    backgroundImage: "resources/gradient/gradient1.jpg",
-    borderRadius: 5,
-    shadowSpread: 1,
-    shadowRadius: 1,
-    backgroundBlur: 0,
-    background: 0,
-    aspectRatio: 0,
-    width: 0,
-    height: 0,
-    watermark: "",
-  );
+
+  static const List<({String label, int value, Color color})> stageTintOptions = <({
+    String label,
+    int value,
+    Color color,
+  })>[
+    (label: 'None', value: 0, color: Color(0x00000000)),
+    (label: 'Graphite', value: 0xFF1B2432, color: Color(0xFF1B2432)),
+    (label: 'Cobalt', value: 0xFF1D4ED8, color: Color(0xFF1D4ED8)),
+    (label: 'Emerald', value: 0xFF0F766E, color: Color(0xFF0F766E)),
+    (label: 'Amber', value: 0xFFB45309, color: Color(0xFFB45309)),
+    (label: 'Rose', value: 0xFFBE185D, color: Color(0xFFBE185D)),
+  ];
+
+  final FancyShotProfile defaultProfile = FancyShot.defaultProfiles().first.copyWith();
+  final TextEditingController textEditingController = TextEditingController();
+  final TextEditingController watermarkTextController = TextEditingController();
+  final TextEditingController skewPerspectiveController = TextEditingController();
+  final ScrollController inspectorScrollController = ScrollController();
+
+  late final List<FancyShotProfile> profiles;
   late FancyShotProfile filters;
 
   Uint8List? capture;
-  Color? bgColor;
-  // final List<String> profiles = <String>[""];
-  final List<FancyShotProfile> profiles =
-      Boxes.getSavedMap<FancyShotProfile>(FancyShotProfile.fromJson, "fancyShotProfile", def: <FancyShotProfile>[
-    FancyShotProfile(
-      name: "Default",
-      backgroundPadding: 10,
-      imagePadding: 0,
-      backgroundType: BackgroundType.transparent,
-      backgroundImage: "resources/gradient/gradient1.jpg",
-      borderRadius: 5,
-      shadowSpread: 1,
-      shadowRadius: 1,
-      backgroundBlur: 0,
-      background: 0,
-      aspectRatio: 0,
-      width: 0,
-      height: 0,
-      watermark: "",
-    ),
-    FancyShotProfile(
-      name: "Self Background",
-      backgroundPadding: 16,
-      imagePadding: 7.5,
-      backgroundType: BackgroundType.self,
-      backgroundImage: "resources/gradient/gradient1.jpg",
-      borderRadius: 8,
-      shadowSpread: 3,
-      shadowRadius: 6,
-      backgroundBlur: 8,
-      background: 0,
-      aspectRatio: 0,
-      width: 0,
-      height: 0,
-      watermark: "",
-    ),
-    FancyShotProfile(
-      name: "Image Background",
-      backgroundPadding: 28,
-      imagePadding: 7.5,
-      backgroundType: BackgroundType.stock,
-      backgroundImage: "resources/gradient/gradient7.jpg",
-      borderRadius: 5,
-      shadowSpread: 3,
-      shadowRadius: 6,
-      backgroundBlur: 18,
-      background: 0,
-      aspectRatio: 0,
-      width: 0,
-      height: 0,
-      watermark: "",
-    )
-  ]);
-  final List<String> profilesName = <String>[""];
-  int aspectRatio = 0;
+  img.Image? photo;
+  Color bgColor = const Color(0xFF121723);
   String? selectedProfile;
-  final TextEditingController textEditingController = TextEditingController();
-  final ScrollController bottomScrollController = ScrollController();
+  String? _previewPath;
+  DateTime? _previewModifiedAt;
+  bool _previewActualSize = false;
+  bool _autosavePending = false;
+  DateTime? _lastAutosavedAt;
+  Timer? _autosaveTimer;
 
-  bool capturing = false;
-
-  TextEditingController watermarkTextController = TextEditingController();
-  TextEditingController skewPerspectiveController = TextEditingController();
-
-  bool closeOnAction = true;
-
-  String copyMessage = "Copy";
-  final WinClipboard winClipboard = WinClipboard();
-  bool _isOverVerticalGrid = false;
   @override
   void initState() {
     super.initState();
     initializeGDI();
-    filters = defaultProfile.copyWith();
-    if (profiles.isEmpty) profiles.add(defaultProfile);
-    profilesName.addAll(profiles.map((FancyShotProfile e) => e.name));
-    String? profile = Boxes.pref.getString("fancyshot");
-    profile ??= "Default";
-    final int i = profiles.indexWhere((FancyShotProfile element) => element.name == profile);
-    if (i >= 0) {
-      selectedProfile = profile;
-      filters = profiles[i].copyWith();
-      watermarkTextController.text = filters.watermark;
-      skewPerspectiveController.text = filters.skewPerspective.toString();
+    profiles = FancyShot.loadProfiles();
+    if (profiles.isEmpty) {
+      profiles.add(defaultProfile.copyWith(name: 'Default'));
     }
-
-    if (profilesName.length > 1) profilesName.remove("");
-    loadCaptureFile();
+    filters = profiles.first.copyWith();
+    _applySelectedProfile(Boxes.pref.getString('fancyshot') ?? profiles.first.name, notify: false);
+    _loadLatestScreenshotPreview();
   }
 
   @override
   void dispose() {
+    _autosaveTimer?.cancel();
     textEditingController.dispose();
     watermarkTextController.dispose();
     skewPerspectiveController.dispose();
-    bottomScrollController.dispose();
+    inspectorScrollController.dispose();
     super.dispose();
-  }
-
-  img.Image? photo;
-  void loadCaptureFile() async {
-    final String temp = WinUtils.getTempFolder();
-    if (File("$temp\\capture.png").existsSync()) {
-      capture = File("$temp\\capture.png").readAsBytesSync();
-      photo = img.decodeImage(capture!);
-      final img.Pixel pixel32 = photo!.getPixelSafe(0, 0);
-      int hex =
-          abgrToArgb(pixel32.a.toInt() << 24 | pixel32.r.toInt() << 16 | pixel32.g.toInt() << 8 | pixel32.b.toInt());
-      bgColor = Color(hex);
-    } else {
-      capture = null;
-    }
-  }
-
-  int abgrToArgb(int argbColor) {
-    int r = (argbColor >> 16) & 0xFF;
-    int b = argbColor & 0xFF;
-    return (argbColor & 0xFF00FF00) | (b << 16) | r;
   }
 
   bool get hasCapture => capture != null && photo != null;
 
-  Future<void> _captureScreen() async {
-    await WinUtils.screenCapture();
-    capture = null;
-    setState(() {});
-    loadCaptureFile();
-    if (mounted) setState(() {});
-  }
-
-  ScreenshotController screenshotController = ScreenshotController();
-
-  Future<void> _saveCapture() async {
-    if (!hasCapture) return;
-    setState(() => capturing = true);
-    await Future<void>.delayed(const Duration(milliseconds: 16));
-    try {
-      await screenshotController.captureAndSave('${WinUtils.getTabameAppDataFolder()}/fancyshot');
-      WinUtils.open('${WinUtils.getTabameAppDataFolder()}/fancyshot');
-      if (globalSettings.args.contains("-fancyshot") && closeOnAction) {
-        exit(0);
-      }
-    } finally {
-      Future<void>.delayed(
-        const Duration(milliseconds: 50),
-        () => mounted ? setState(() => capturing = false) : null,
-      );
-    }
-  }
-
-  Future<void> _copyCapture() async {
-    if (!hasCapture) return;
-    setState(() => capturing = true);
-    await Future<void>.delayed(const Duration(milliseconds: 16));
-    try {
-      final String? filename =
-          (await screenshotController.captureAndSave('${WinUtils.getTabameAppDataFolder()}/fancyshot'))
-              ?.replaceAll('/', r'\');
-      if (filename == null) return;
-      await winClipboard.copyImageToClipboard(filename);
-      if (globalSettings.args.contains("-fancyshot") && closeOnAction) {
-        exit(0);
-      }
-      setState(() => copyMessage = "Copied!");
-      Future<void>.delayed(
-        const Duration(seconds: 1),
-        () => mounted ? setState(() => copyMessage = "Copy") : null,
-      );
-    } finally {
-      Future<void>.delayed(
-        const Duration(milliseconds: 50),
-        () => mounted ? setState(() => capturing = false) : null,
-      );
-    }
-  }
-
-  void _deleteSelectedProfile() {
-    if (selectedProfile == null || selectedProfile == "Default") return;
-    profiles.removeWhere((FancyShotProfile e) => e.name == selectedProfile);
-    profilesName.removeWhere((String element) => element == selectedProfile);
-    Boxes.updateSettings("fancyShotProfile", jsonEncode(profiles));
-
-    final int defaultIndex = profiles.indexWhere((FancyShotProfile element) => element.name == "Default");
-    if (defaultIndex >= 0) {
-      selectedProfile = "Default";
-      filters = profiles[defaultIndex].copyWith();
-      watermarkTextController.text = filters.watermark;
-      skewPerspectiveController.text = filters.skewPerspective.toString();
-      Boxes.pref.setString("fancyshot", "Default");
-    } else {
-      selectedProfile = null;
-    }
-    if (profilesName.isEmpty) profilesName.add("");
-    setState(() {});
-  }
-
-  void _selectProfile(String? value) {
-    if (value == null) return;
-    final int i = profiles.indexWhere((FancyShotProfile element) => element.name == value);
-    if (i < 0) return;
-    selectedProfile = value;
-    filters = profiles[i].copyWith();
+  void _syncControllersFromFilters() {
     watermarkTextController.text = filters.watermark;
-    skewPerspectiveController.text = filters.skewPerspective.toString();
-    Boxes.pref.setString("fancyshot", value);
-    setState(() {});
+    skewPerspectiveController.text = filters.skewPerspective == 0 ? '' : filters.skewPerspective.toStringAsFixed(3);
   }
 
-  void _createProfile(String? newValue) {
-    if (newValue == null) return;
-    final String profileName = newValue.trim();
-    if (profileName.isEmpty) return;
+  void _applySelectedProfile(String name, {bool notify = true}) {
+    final int index = profiles.indexWhere((FancyShotProfile element) => element.name == name);
+    final int safeIndex = index >= 0 ? index : 0;
+    final FancyShotProfile selected = profiles[safeIndex];
+    selectedProfile = selected.name;
+    filters = selected.copyWith();
+    _syncControllersFromFilters();
+    Boxes.pref.setString('fancyshot', selected.name);
+    if (notify && mounted) setState(() {});
+  }
 
-    final int existingIndex =
-        profiles.indexWhere((FancyShotProfile element) => element.name.toLowerCase() == profileName.toLowerCase());
-    if (existingIndex >= 0) {
-      _selectProfile(profiles[existingIndex].name);
-      textEditingController.clear();
+  void _stashCurrentProfileLocally() {
+    final String? currentName = selectedProfile;
+    if (currentName == null) return;
+    final FancyShotProfile snapshot = filters.copyWith(name: currentName);
+    final int index = profiles.indexWhere((FancyShotProfile profile) => profile.name == currentName);
+    if (index >= 0) {
+      profiles[index] = snapshot;
+    } else {
+      profiles.add(snapshot);
+    }
+  }
+
+  Future<void> _persistProfilesNow() async {
+    _autosaveTimer?.cancel();
+    _stashCurrentProfileLocally();
+    await Boxes.updateSettings('fancyShotProfile', jsonEncode(profiles));
+    if (!mounted) return;
+    setState(() {
+      _autosavePending = false;
+      _lastAutosavedAt = DateTime.now();
+    });
+  }
+
+  void _scheduleAutosave({bool immediate = false}) {
+    if (selectedProfile == null) return;
+    _autosaveTimer?.cancel();
+    if (mounted && !_autosavePending) {
+      setState(() => _autosavePending = true);
+    }
+    if (immediate) {
+      unawaited(_persistProfilesNow());
+      return;
+    }
+    _autosaveTimer = Timer(const Duration(milliseconds: 220), () {
+      unawaited(_persistProfilesNow());
+    });
+  }
+
+  void _updateFilters(VoidCallback change, {bool immediate = false}) {
+    setState(change);
+    _scheduleAutosave(immediate: immediate);
+  }
+
+  File? _latestScreenshotFile() {
+    final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+    if (!screenshotsRoot.existsSync()) return null;
+
+    final List<File> screenshotFiles = screenshotsRoot
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((File file) => file.path.toLowerCase().endsWith('.png'))
+        .toList();
+    if (screenshotFiles.isEmpty) return null;
+
+    screenshotFiles.sort((File a, File b) => b.statSync().modified.compareTo(a.statSync().modified));
+    return screenshotFiles.first;
+  }
+
+  Color _samplePreviewColor(img.Image decoded) {
+    final img.Pixel pixel32 = decoded.getPixelSafe(0, 0);
+    final int hex =
+        _abgrToArgb(pixel32.a.toInt() << 24 | pixel32.r.toInt() << 16 | pixel32.g.toInt() << 8 | pixel32.b.toInt());
+    return Color(hex);
+  }
+
+  void _loadLatestScreenshotPreview() {
+    final File? latestFile = _latestScreenshotFile();
+    if (latestFile == null) {
+      setState(() {
+        capture = null;
+        photo = null;
+        bgColor = const Color(0xFF121723);
+        _previewPath = null;
+        _previewModifiedAt = null;
+      });
       return;
     }
 
-    profiles.add(filters.copyWith(name: profileName));
-    profilesName.add(profileName);
-    if (profilesName.contains("")) profilesName.remove("");
-    Boxes.updateSettings("fancyShotProfile", jsonEncode(profiles));
-    Boxes.pref.setString("fancyshot", profileName);
+    try {
+      final Uint8List bytes = latestFile.readAsBytesSync();
+      final img.Image? decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        setState(() {
+          capture = null;
+          photo = null;
+          bgColor = const Color(0xFF121723);
+          _previewPath = null;
+          _previewModifiedAt = null;
+        });
+        return;
+      }
+
+      setState(() {
+        capture = bytes;
+        photo = decoded;
+        bgColor = _samplePreviewColor(decoded);
+        _previewPath = latestFile.path;
+        _previewModifiedAt = latestFile.statSync().modified;
+      });
+    } catch (_) {
+      setState(() {
+        capture = null;
+        photo = null;
+        bgColor = const Color(0xFF121723);
+        _previewPath = null;
+        _previewModifiedAt = null;
+      });
+    }
+  }
+
+  int _abgrToArgb(int argbColor) {
+    final int r = (argbColor >> 16) & 0xFF;
+    final int b = argbColor & 0xFF;
+    return (argbColor & 0xFF00FF00) | (b << 16) | r;
+  }
+
+  String _latestPreviewLabel() {
+    final String? path = _previewPath;
+    if (path == null || path.isEmpty) return 'Placeholder Preview';
+    final List<String> parts = path.split(RegExp(r'[\\/]'));
+    return parts.isEmpty ? path : parts.last;
+  }
+
+  String _autosaveLabel() {
+    if (_autosavePending) return 'Autosaving...';
+    if (_lastAutosavedAt == null) return 'Autosave enabled';
+    return 'Autosaved ${_lastAutosavedAt!.hour.toString().padLeft(2, '0')}:${_lastAutosavedAt!.minute.toString().padLeft(2, '0')}:${_lastAutosavedAt!.second.toString().padLeft(2, '0')}';
+  }
+
+  String _uniqueProfileName(String seed) {
+    String candidate = seed.trim().isEmpty ? 'Profile' : seed.trim();
+    final Set<String> existing = profiles.map((FancyShotProfile profile) => profile.name.toLowerCase()).toSet();
+    if (!existing.contains(candidate.toLowerCase())) return candidate;
+
+    int suffix = 2;
+    while (existing.contains('$candidate $suffix'.toLowerCase())) {
+      suffix++;
+    }
+    return '$candidate $suffix';
+  }
+
+  Future<void> _createProfile({required bool duplicateCurrent}) async {
+    final String typedName = textEditingController.text.trim();
+    final String baseName = typedName.isNotEmpty
+        ? typedName
+        : duplicateCurrent && selectedProfile != null
+            ? '${selectedProfile!} Copy'
+            : 'Profile';
+    final String profileName = _uniqueProfileName(baseName);
+
+    final FancyShotProfile source = duplicateCurrent ? filters.copyWith() : defaultProfile.copyWith();
+    profiles.add(source.copyWith(name: profileName));
     textEditingController.clear();
-    selectedProfile = profileName;
+    _applySelectedProfile(profileName, notify: false);
+    await _persistProfilesNow();
+    if (!mounted) return;
     setState(() {});
+  }
+
+  Future<void> _deleteSelectedProfile() async {
+    if (selectedProfile == null || selectedProfile == 'Default') return;
+    profiles.removeWhere((FancyShotProfile profile) => profile.name == selectedProfile);
+    if (profiles.isEmpty) {
+      profiles.add(defaultProfile.copyWith(name: 'Default'));
+    }
+    _applySelectedProfile(profiles.first.name, notify: false);
+    await _persistProfilesNow();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _selectProfile(String profileName) {
+    _stashCurrentProfileLocally();
+    unawaited(Boxes.updateSettings('fancyShotProfile', jsonEncode(profiles)));
+    _applySelectedProfile(profileName);
   }
 
   void _pickCustomBackground() {
@@ -340,9 +346,10 @@ class FancyshotState extends State<Fancyshot> {
     final File? result = file.getFile();
     if (result == null) return;
 
-    filters.backgroundType = BackgroundType.custom;
-    filters.backgroundImage = result.path;
-    setState(() {});
+    _updateFilters(() {
+      filters.backgroundType = BackgroundType.custom;
+      filters.backgroundImage = result.path;
+    });
   }
 
   Future<void> _openUploadHostsSettings() async {
@@ -358,611 +365,543 @@ class FancyshotState extends State<Fancyshot> {
     if (mounted) setState(() {});
   }
 
-  BoxDecoration _previewBackgroundDecoration() {
-    switch (filters.backgroundType) {
-      case BackgroundType.stock:
-        return BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(filters.backgroundImage),
-            fit: BoxFit.cover,
-          ),
-        );
-      case BackgroundType.self:
-        return BoxDecoration(
-          image: DecorationImage(
-            image: MemoryImage(capture!),
-            fit: BoxFit.cover,
-          ),
-        );
-      case BackgroundType.custom:
-        return BoxDecoration(
-          image: File(filters.backgroundImage).existsSync()
-              ? DecorationImage(
-                  image: FileImage(File(filters.backgroundImage)),
-                  fit: BoxFit.cover,
-                )
-              : null,
-        );
-      case BackgroundType.transparent:
-        return const BoxDecoration(color: Colors.transparent);
-    }
+  Widget _buildPreviewCanvas() {
+    final double previewWidth = (photo?.width ?? 1280).toDouble();
+    final double previewHeight = (photo?.height ?? 800).toDouble();
+    final Widget subject = hasCapture
+        ? GestureDetector(
+            onPanUpdate: (DragUpdateDetails details) {
+              _updateFilters(() {
+                filters.skewX = filters.skewX + details.delta.dx / (previewWidth / 2);
+                filters.skewY = filters.skewY + details.delta.dy / (previewHeight / 2);
+              });
+            },
+            onDoubleTap: () => _updateFilters(() {
+              filters.skewX = 0;
+              filters.skewY = 0;
+            }, immediate: true),
+            child: Image.memory(
+              capture!,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+            ),
+          )
+        : const _FancyShotPlaceholderSubject();
+
+    return _FancyShotFrameSurface(
+      captureBytesForBackground: capture,
+      subject: subject,
+      profile: filters,
+      surfaceColor: bgColor,
+      sourceWidth: previewWidth,
+      sourceHeight: previewHeight,
+    );
   }
 
-  Widget _buildPreviewCanvas() {
-    if (!hasCapture) return const SizedBox.shrink();
+  Widget _buildProfileLibrary(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final bool canDelete = selectedProfile != null && selectedProfile != 'Default';
 
-    return Screenshot(
-      controller: screenshotController,
-      child: Material(
-        type: MaterialType.transparency,
-        child: ClipRect(
-          child: Stack(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
             children: <Widget>[
-              if (!capturing)
-                Positioned.fill(
-                  child: Container(
-                    color: globalSettings.themeTypeMode == ThemeType.dark ? Colors.white : const Color(0xFF1E1E1E),
-                  ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'PROFILE LIBRARY',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                        color: colorScheme.onSurface.withValues(alpha: 0.58),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      selectedProfile ?? 'No profile selected',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
-              Container(
-                padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
-                decoration: _previewBackgroundDecoration(),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: filters.backgroundBlur,
-                    sigmaY: filters.backgroundBlur,
+              ),
+              const SizedBox(width: 16),
+              _MetaChip(
+                icon: Icons.save_as_rounded,
+                label: _autosaveLabel(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 158,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: profiles.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (BuildContext context, int index) {
+                if (index == 0) {
+                  return _CreateProfileCard(
+                    controller: textEditingController,
+                    canDelete: canDelete,
+                    onCreate: () => _createProfile(duplicateCurrent: false),
+                    onDuplicate: selectedProfile == null ? null : () => _createProfile(duplicateCurrent: true),
+                    onDelete: canDelete ? _deleteSelectedProfile : null,
+                  );
+                }
+
+                final FancyShotProfile profile = profiles[index - 1];
+                return SizedBox(
+                  width: 244,
+                  child: _ProfileEntryCard(
+                    profile: profile,
+                    selected: profile.name == selectedProfile,
+                    onTap: () => _selectProfile(profile.name),
                   ),
-                  child: Transform(
-                    transform: filters.skewX != 0 && filters.skewY != 0
-                        ? (Matrix4.identity()
-                          ..scaledByVector3(Vector3.all(0.1))
-                          ..setEntry(3, 2, filters.skewPerspective)
-                          ..rotateX(0.1 * filters.skewY)
-                          ..rotateY(-0.1 * filters.skewX))
-                        : Matrix4.identity(),
-                    filterQuality: FilterQuality.high,
-                    alignment: Alignment.center,
-                    child: Padding(
-                      padding: EdgeInsets.all(filters.watermark.isNotEmpty ? 20 : 0),
-                      child: Container(
-                        constraints: capturing ? null : const BoxConstraints(maxHeight: 400, maxWidth: 500),
-                        child: FittedBox(
-                          alignment: Alignment.center,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: <Widget>[
-                              IntrinsicWidth(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: filters.showBrowserFrame
-                                        ? const Color(0xFFEBEBEB)
-                                        : bgColor, // macOS light grey or match existing bg
-                                    borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
-                                    boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
-                                        ? <BoxShadow>[
-                                            BoxShadow(
-                                              offset: const Offset(3, 3),
-                                              spreadRadius: filters.shadowSpread,
-                                              blurRadius: filters.shadowRadius,
-                                              color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: <Widget>[
-                                      if (filters.showBrowserFrame)
-                                        Container(
-                                          height: 32,
-                                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEBEBEB),
-                                            borderRadius: BorderRadius.only(
-                                              topLeft: Radius.circular(filters.borderRadius),
-                                              topRight: Radius.circular(filters.borderRadius),
-                                            ),
-                                            border: Border(
-                                                bottom:
-                                                    BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1)),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: <Widget>[
-                                              Container(
-                                                  width: 12,
-                                                  height: 12,
-                                                  decoration: const BoxDecoration(
-                                                      color: Color(0xFFFF5F56), shape: BoxShape.circle)),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                  width: 12,
-                                                  height: 12,
-                                                  decoration: const BoxDecoration(
-                                                      color: Color(0xFFFFBD2E), shape: BoxShape.circle)),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                  width: 12,
-                                                  height: 12,
-                                                  decoration: const BoxDecoration(
-                                                      color: Color(0xFF27C93F), shape: BoxShape.circle)),
-                                              const Spacer(),
-                                            ],
-                                          ),
-                                        ),
-                                      Padding(
-                                        padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
-                                        child: GestureDetector(
-                                          onPanUpdate: (DragUpdateDetails details) => setState(() => filters
-                                            ..skewX = (filters.skewX + details.delta.dx / (photo!.width / 2))
-                                            ..skewY = (filters.skewY + details.delta.dy / (photo!.height / 2))),
-                                          onDoubleTap: () => setState(() => filters
-                                            ..skewX = 0
-                                            ..skewY = 0),
-                                          child: ClipRRect(
-                                            borderRadius: filters.showBrowserFrame
-                                                ? BorderRadius.only(
-                                                    bottomLeft: Radius.circular(filters.borderRadius),
-                                                    bottomRight: Radius.circular(filters.borderRadius))
-                                                : BorderRadius.circular(filters.borderRadius),
-                                            child: Image.memory(
-                                              capture!,
-                                              fit: BoxFit.contain,
-                                              width: photo!.width.toDouble(),
-                                              height: photo!.height.toDouble(),
-                                              filterQuality: FilterQuality.high,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 12,
-                                right: 12,
-                                child: Transform(
-                                  transform: Matrix4.skewX(-0.1),
-                                  child: Text(
-                                    filters.watermark,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 14,
-                                      letterSpacing: 0.5,
-                                      color: Colors.white.withValues(alpha: 0.9),
-                                      shadows: <Shadow>[
-                                        Shadow(
-                                          blurRadius: 10,
-                                          color: Colors.black.withValues(alpha: 0.5),
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewPane(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final Widget preview = _buildPreviewCanvas();
+
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLowest,
+          border: Border(right: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+        ),
+        child: Column(
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'LIVE PREVIEW',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                            color: colorScheme.onSurface.withValues(alpha: 0.58),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _latestPreviewLabel(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        if (_previewModifiedAt != null)
+                          Text(
+                            'Updated ${_previewModifiedAt!.year}-${_previewModifiedAt!.month.toString().padLeft(2, '0')}-${_previewModifiedAt!.day.toString().padLeft(2, '0')} ${_previewModifiedAt!.hour.toString().padLeft(2, '0')}:${_previewModifiedAt!.minute.toString().padLeft(2, '0')}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface.withValues(alpha: 0.52),
+                            ),
+                          )
+                        else
+                          Text(
+                            'Using a built-in placeholder until a saved screenshot exists.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface.withValues(alpha: 0.52),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: _loadLatestScreenshotPreview,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Reload Latest'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+                    icon: const Icon(Icons.folder_open_rounded, size: 16),
+                    label: const Text('Screenshots'),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: _previewActualSize ? 'Fit preview' : 'Actual size',
+                    onPressed: () => setState(() => _previewActualSize = !_previewActualSize),
+                    icon: Icon(_previewActualSize ? Icons.fit_screen_rounded : Icons.fullscreen_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: MouseScrollWidget(
+                scrollDirection: Axis.horizontal,
+                child: MouseScrollWidget(
+                  scrollDirection: Axis.vertical,
+                  child: Padding(
+                    padding: const EdgeInsets.all(42),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: _previewActualSize
+                          ? preview
+                          : ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 980, maxHeight: 700),
+                              child: FittedBox(
+                                fit: BoxFit.contain,
+                                child: preview,
+                              ),
+                            ),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+              ),
+              child: Row(
+                children: <Widget>[
+                  _MetaChip(
+                    icon: Icons.aspect_ratio_rounded,
+                    label: hasCapture ? '${photo!.width} x ${photo!.height}' : '1280 x 800',
+                  ),
+                  const SizedBox(width: 8),
+                  _MetaChip(
+                    icon: Icons.layers_outlined,
+                    label: filters.backgroundType.name.toUpperCase(),
+                  ),
+                  const SizedBox(width: 8),
+                  _MetaChip(
+                    icon: Icons.save_as_rounded,
+                    label: _autosaveLabel(),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildToolLayout(BuildContext context) {
+  Widget _buildInspectorPane(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
 
-    return Column(
-      children: <Widget>[
-        // --- Top Bar ---
-        Container(
-          height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.9),
-            border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
-          ),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
-              const SizedBox(width: 12),
-              Text(
-                "FancyShot".toUpperCase(),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  color: colorScheme.onSurface.withValues(alpha: 0.8),
-                ),
-              ),
-              const Spacer(),
-              // Profile Selection in Top Bar
-              SizedBox(
-                width: 200,
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton2<String>(
-                    isExpanded: true,
-                    hint: Text("Select Profile",
-                        style: TextStyle(fontSize: 12, color: theme.hintColor, fontWeight: FontWeight.w600)),
-                    buttonStyleData: ButtonStyleData(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.05)),
-                      ),
-                    ),
-                    dropdownStyleData: DropdownStyleData(
-                      maxHeight: 400,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: colorScheme.surface,
-                      ),
-                      elevation: 8,
-                    ),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    items: profilesName
-                        .map((String item) => DropdownMenuItem<String>(
-                              value: item,
-                              child: Text(item, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+    return Container(
+      width: 368,
+      color: colorScheme.surface,
+      child: SingleChildScrollView(
+        controller: inspectorScrollController,
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _SectionCard(
+              title: 'Layout',
+              subtitle: 'Control the stage size, crop rhythm, and frame silhouette.',
+              child: Column(
+                children: <Widget>[
+                  _ChoicePills<int>(
+                    value: filters.aspectRatio,
+                    options: aspectRatioOptions
+                        .map((({String label, int value, double? ratio}) option) => (
+                              label: option.label,
+                              value: option.value,
                             ))
                         .toList(),
-                    value: selectedProfile,
-                    onChanged: _selectProfile,
-                    dropdownSearchData: DropdownSearchData<String>(
-                      searchController: textEditingController,
-                      searchInnerWidgetHeight: 50,
-                      searchInnerWidget: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: TextFormField(
-                          controller: textEditingController,
-                          style: const TextStyle(fontSize: 12),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                            hintText: 'Create new profile...',
-                            hintStyle: const TextStyle(fontSize: 11),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-                            filled: true,
-                          ),
-                          onFieldSubmitted: _createProfile,
-                        ),
-                      ),
-                      searchMatchFn: (DropdownMenuItem<dynamic> item, String searchValue) => true,
-                    ),
+                    onChanged: (int value) => _updateFilters(() => filters.aspectRatio = value),
                   ),
-                ),
-              ),
-              if (selectedProfile != null && selectedProfile != "Default") ...<Widget>[
-                const SizedBox(width: 8),
-                IconButton(
-                  iconSize: 18,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: "Delete profile",
-                  onPressed: _deleteSelectedProfile,
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  style: IconButton.styleFrom(
-                    foregroundColor: colorScheme.error,
-                    backgroundColor: colorScheme.error.withValues(alpha: 0.05),
+                  const SizedBox(height: 10),
+                  _ToggleTile(
+                    label: 'Browser Frame',
+                    subtitle: 'Wrap the screenshot in a browser-style chrome.',
+                    value: filters.showBrowserFrame,
+                    onChanged: (bool value) => _updateFilters(() => filters.showBrowserFrame = value),
                   ),
-                ),
-              ],
-              const SizedBox(width: 8),
-              IconButton(
-                iconSize: 18,
-                visualDensity: VisualDensity.compact,
-                tooltip: "Upload hosts",
-                onPressed: _openUploadHostsSettings,
-                icon: const Icon(Icons.cloud_upload_outlined),
-                style: IconButton.styleFrom(
-                  foregroundColor: colorScheme.onSurface,
-                  backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
-                ),
-              ),
-              const VerticalDivider(width: 32, indent: 14, endIndent: 14, thickness: 1),
-              IconButton(
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-                tooltip: capturing ? "Fit Preview" : "Actual Size",
-                onPressed: () => setState(() => capturing = !capturing),
-                icon: Icon(capturing ? Icons.fit_screen_rounded : Icons.fullscreen_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.primary.withValues(alpha: 0.05),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // --- Main Content Area ---
-        Expanded(
-          child: Row(
-            children: <Widget>[
-              // --- Left Toolbar (Slim) ---
-              Container(
-                width: 44,
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  border: Border(right: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1))),
-                ),
-                child: Column(
-                  children: <Widget>[
-                    const SizedBox(height: 8),
-                    _ToolbarAction(
-                      icon: Icons.photo_camera_rounded,
-                      tooltip: "Capture Screen",
-                      onTap: _captureScreen,
-                    ),
-                    _ToolbarAction(
-                      icon: Icons.save_rounded,
-                      tooltip: "Save to File",
-                      onTap: hasCapture ? _saveCapture : null,
-                    ),
-                    _ToolbarAction(
-                      icon: Icons.copy_all_rounded,
-                      tooltip: copyMessage,
-                      onTap: hasCapture ? _copyCapture : null,
-                      color: copyMessage == "Copied!" ? Colors.green : null,
-                    ),
-                    const Divider(height: 16, indent: 8, endIndent: 8),
-                    _ToolbarAction(
-                      icon: Icons.refresh_rounded,
-                      tooltip: "Reset Skew",
-                      onTap: () => setState(() => filters
-                        ..skewX = 0
-                        ..skewY = 0),
-                    ),
-                    const Spacer(),
-                    if (globalSettings.args.contains("-fancyshot"))
-                      _ToolbarAction(
-                        icon: closeOnAction ? Icons.exit_to_app_rounded : Icons.stay_current_landscape_rounded,
-                        tooltip: "Close on action: ${closeOnAction ? 'ON' : 'OFF'}",
-                        onTap: () => setState(() => closeOnAction = !closeOnAction),
-                        active: closeOnAction,
-                      ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-
-              // --- Central Canvas ---
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(color: colorScheme.surfaceContainerLowest),
-                  child: Stack(
-                    children: <Widget>[
-                      Center(
-                        child: hasCapture
-                            ? MouseScrollWidget(
-                                scrollDirection: Axis.horizontal,
-                                child: MouseScrollWidget(
-                                  scrollDirection: Axis.vertical,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(60),
-                                    child: _buildPreviewCanvas(),
-                                  ),
-                                ),
-                              )
-                            : _buildEmptyState(context),
-                      ),
-                      if (hasCapture)
-                        Positioned(
-                          bottom: 16,
-                          left: 16,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Icon(Icons.aspect_ratio_rounded, size: 14, color: colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "${photo!.width} × ${photo!.height} PX",
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onSurface,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
+                  const SizedBox(height: 12),
+                  _CompactSlider(
+                    label: 'Background Padding',
+                    value: filters.backgroundPadding,
+                    min: 0,
+                    max: 84,
+                    onChanged: (double v) => _updateFilters(() => filters.backgroundPadding = v),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // --- Bottom Property Bar ---
-        Container(
-          height: 220,
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            border: Border(top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1))),
-          ),
-          child: Listener(
-            onPointerSignal: (PointerSignalEvent event) {
-              if (event is PointerScrollEvent && !_isOverVerticalGrid) {
-                final double offset = event.scrollDelta.dy;
-                bottomScrollController.jumpTo(
-                    (bottomScrollController.offset + offset).clamp(0, bottomScrollController.position.maxScrollExtent));
-              }
-            },
-            child: SingleChildScrollView(
-              controller: bottomScrollController,
-              scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    SizedBox(
-                      width: 220,
-                      child: _SidebarSection(
-                        title: "LAYOUT",
-                        children: <Widget>[
-                          _CompactSlider(
-                            label: "Background Padding",
-                            value: filters.backgroundPadding,
-                            min: 10,
-                            max: 50,
-                            onChanged: (double v) => setState(() => filters.backgroundPadding = v),
-                          ),
-                          _CompactSlider(
-                            label: "Image Padding",
-                            value: filters.imagePadding,
-                            min: 0,
-                            max: 50,
-                            onChanged: (double v) => setState(() => filters.imagePadding = v),
-                          ),
-                          _CompactSlider(
-                            label: "Radius",
-                            value: filters.borderRadius,
-                            min: 0,
-                            max: 20,
-                            onChanged: (double v) => setState(() => filters.borderRadius = v),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const VerticalDivider(width: 32, indent: 8, endIndent: 8),
-                    SizedBox(
-                      width: 220,
-                      child: _SidebarSection(
-                        title: "EFFECTS",
-                        children: <Widget>[
-                          _CompactSlider(
-                            label: "Shadow Radius",
-                            value: filters.shadowRadius,
-                            max: 10,
-                            onChanged: (double v) {
-                              filters.shadowRadius = v;
-                              if (v > 0 && filters.shadowSpread == 0) filters.shadowSpread = 1;
-                              if (v == 0) filters.shadowSpread = 0;
-                              setState(() {});
-                            },
-                          ),
-                          _CompactSlider(
-                            label: "Shadow Spread",
-                            value: filters.shadowSpread,
-                            max: 10,
-                            onChanged: (double v) {
-                              filters.shadowSpread = v;
-                              if (v > 0 && filters.shadowRadius == 0) filters.shadowRadius = 1;
-                              if (v == 0) filters.shadowRadius = 0;
-                              setState(() {});
-                            },
-                          ),
-                          _CompactSlider(
-                            label: "Blur",
-                            value: filters.backgroundBlur,
-                            max: 20,
-                            onChanged: (double v) => setState(() => filters.backgroundBlur = v),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const VerticalDivider(width: 32, indent: 8, endIndent: 8),
-                    SizedBox(
-                      width: 200,
-                      child: _SidebarSection(
-                        title: "DECORATION",
-                        children: <Widget>[
-                          _CompactTextField(
-                            label: "Watermark",
-                            controller: watermarkTextController,
-                            hint: "Text...",
-                            onChanged: (String v) => setState(() => filters.watermark = v),
-                          ),
-                          const SizedBox(height: 12),
-                          _CompactTextField(
-                            label: "Perspective",
-                            controller: skewPerspectiveController,
-                            hint: "0.001",
-                            onChanged: (String v) => setState(() => filters.skewPerspective = double.tryParse(v) ?? 0),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const VerticalDivider(width: 32, indent: 8, endIndent: 8),
-                    SizedBox(
-                      width: 320,
-                      child: _SidebarSection(
-                        title: "BACKGROUND",
-                        children: <Widget>[
-                          _BackgroundGrid(
-                            filters: filters,
-                            capture: capture,
-                            onBackgroundChanged: (BackgroundType type, String? image) {
-                              setState(() {
-                                filters.backgroundType = type;
-                                if (image != null) filters.backgroundImage = image;
-                              });
-                            },
-                            onPickCustom: _pickCustomBackground,
-                            onHover: (bool hovered) => setState(() => _isOverVerticalGrid = hovered),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  _CompactSlider(
+                    label: 'Image Padding',
+                    value: filters.imagePadding,
+                    min: 0,
+                    max: 64,
+                    onChanged: (double v) => _updateFilters(() => filters.imagePadding = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Corner Radius',
+                    value: filters.borderRadius,
+                    min: 0,
+                    max: 28,
+                    onChanged: (double v) => _updateFilters(() => filters.borderRadius = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Image Scale',
+                    value: filters.imageScale,
+                    min: 0.8,
+                    decimals: 2,
+                    max: 1.35,
+                    onChanged: (double v) => _updateFilters(() => filters.imageScale = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Frame Border',
+                    value: filters.frameBorderWidth,
+                    min: 0,
+                    max: 6,
+                    onChanged: (double v) => _updateFilters(() => filters.frameBorderWidth = v),
+                  ),
+                ],
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            _SectionCard(
+              title: 'Effects',
+              subtitle: 'Shadow, blur, tilt, and motion language.',
+              child: Column(
+                children: <Widget>[
+                  _CompactSlider(
+                    label: 'Shadow Radius',
+                    value: filters.shadowRadius,
+                    min: 0,
+                    max: 28,
+                    onChanged: (double v) => _updateFilters(() => filters.shadowRadius = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Shadow Spread',
+                    value: filters.shadowSpread,
+                    min: 0,
+                    max: 12,
+                    onChanged: (double v) => _updateFilters(() => filters.shadowSpread = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Shadow Opacity',
+                    value: filters.shadowOpacity,
+                    min: 0,
+                    decimals: 2,
+                    max: 0.8,
+                    onChanged: (double v) => _updateFilters(() => filters.shadowOpacity = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Backdrop Blur',
+                    value: filters.backgroundBlur,
+                    min: 0,
+                    max: 28,
+                    onChanged: (double v) => _updateFilters(() => filters.backgroundBlur = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Rotation',
+                    value: filters.rotation,
+                    min: -8,
+                    decimals: 1,
+                    max: 8,
+                    onChanged: (double v) => _updateFilters(() => filters.rotation = v),
+                  ),
+                  _CompactTextField(
+                    label: 'Perspective',
+                    controller: skewPerspectiveController,
+                    hint: '0.001',
+                    onChanged: (String value) =>
+                        _updateFilters(() => filters.skewPerspective = double.tryParse(value) ?? 0),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Drag the preview image to adjust tilt. Double-click it to reset skew.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.56),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                        onPressed: () => _updateFilters(() {
+                          filters.skewX = 0;
+                          filters.skewY = 0;
+                          filters.rotation = 0;
+                          filters.skewPerspective = 0;
+                          skewPerspectiveController.clear();
+                        }, immediate: true),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Reset'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SectionCard(
+              title: 'Decoration',
+              subtitle: 'Watermarks, edge treatment, and stage tinting.',
+              child: Column(
+                children: <Widget>[
+                  _CompactTextField(
+                    label: 'Watermark',
+                    controller: watermarkTextController,
+                    hint: 'brand.name',
+                    onChanged: (String value) => _updateFilters(() => filters.watermark = value),
+                  ),
+                  const SizedBox(height: 12),
+                  _CompactSlider(
+                    label: 'Watermark Size',
+                    value: filters.watermarkSize,
+                    min: 10,
+                    max: 28,
+                    onChanged: (double v) => _updateFilters(() => filters.watermarkSize = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Watermark Opacity',
+                    value: filters.watermarkOpacity,
+                    min: 0,
+                    decimals: 2,
+                    max: 1,
+                    onChanged: (double v) => _updateFilters(() => filters.watermarkOpacity = v),
+                  ),
+                  _CompactSlider(
+                    label: 'Stage Tint',
+                    value: filters.backgroundTintOpacity,
+                    min: 0,
+                    decimals: 2,
+                    max: 0.72,
+                    onChanged: (double v) => _updateFilters(() => filters.backgroundTintOpacity = v),
+                  ),
+                  const SizedBox(height: 8),
+                  _ColorSwatchRow(
+                    value: filters.background,
+                    options: stageTintOptions
+                        .map((({String label, int value, Color color}) option) => (
+                              label: option.label,
+                              value: option.value,
+                              color: option.color,
+                            ))
+                        .toList(),
+                    onChanged: (int value) => _updateFilters(() => filters.background = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SectionCard(
+              title: 'Background Source',
+              subtitle: 'Choose the canvas behind the framed screenshot.',
+              child: _BackgroundGrid(
+                filters: filters,
+                capture: capture,
+                onBackgroundChanged: (BackgroundType type, String? image) {
+                  _updateFilters(() {
+                    filters.backgroundType = type;
+                    if (image != null) filters.backgroundImage = image;
+                  });
+                },
+                onPickCustom: _pickCustomBackground,
+                onHover: (_) {},
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+  Widget _buildHeader(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'FancyShot Profile Creator',
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Edit reusable screenshot looks here. Screen Capture now handles export and after-capture actions.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.58),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          _MetaChip(
+            icon: Icons.folder_copy_outlined,
+            label: _latestPreviewLabel(),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonalIcon(
+            onPressed: _openUploadHostsSettings,
+            icon: const Icon(Icons.cloud_upload_outlined, size: 16),
+            label: const Text('Upload Hosts'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolLayout(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        Icon(Icons.add_photo_alternate_outlined, size: 48, color: colorScheme.primary.withValues(alpha: 0.5)),
-        const SizedBox(height: 16),
-        Text(
-          "No capture loaded",
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          "Click the camera icon on the left to start",
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
+        _buildHeader(context),
+        _buildProfileLibrary(context),
+        Expanded(
+          child: Row(
+            children: <Widget>[
+              _buildPreviewPane(context),
+              _buildInspectorPane(context),
+            ],
+          ),
         ),
       ],
     );
@@ -974,117 +913,12 @@ class FancyshotState extends State<Fancyshot> {
   }
 }
 
-class _ToolbarAction extends StatefulWidget {
-  const _ToolbarAction({
-    required this.icon,
-    required this.tooltip,
-    this.onTap,
-    this.active = false,
-    this.color,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onTap;
-  final bool active;
-  final Color? color;
-
-  @override
-  State<_ToolbarAction> createState() => _ToolbarActionState();
-}
-
-class _ToolbarActionState extends State<_ToolbarAction> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
-    _scaleAnimation =
-        Tween<double>(begin: 1.0, end: 1.1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    return MouseRegion(
-      onEnter: (_) {
-        setState(() => _isHovered = true);
-        _controller.forward();
-      },
-      onExit: (_) {
-        setState(() => _isHovered = false);
-        _controller.reverse();
-      },
-      child: CustomTooltip(
-        message: widget.tooltip,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            child: IconButton(
-              onPressed: widget.onTap,
-              icon: Icon(
-                widget.icon,
-                size: 20,
-                color: widget.color ??
-                    (widget.active || _isHovered ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.6)),
-              ),
-              style: IconButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                backgroundColor: widget.active
-                    ? colorScheme.primary.withValues(alpha: 0.15)
-                    : _isHovered
-                        ? colorScheme.primary.withValues(alpha: 0.05)
-                        : Colors.transparent,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SidebarSection extends StatelessWidget {
-  const _SidebarSection({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-        ),
-        const SizedBox(height: 12),
-        ...children,
-      ],
-    );
-  }
-}
-
 class _CompactSlider extends StatelessWidget {
   const _CompactSlider({
     required this.label,
     required this.value,
     this.min = 0,
+    this.decimals = 0,
     required this.max,
     required this.onChanged,
   });
@@ -1092,6 +926,7 @@ class _CompactSlider extends StatelessWidget {
   final String label;
   final double value;
   final double min;
+  final int decimals;
   final double max;
   final ValueChanged<double> onChanged;
 
@@ -1116,7 +951,7 @@ class _CompactSlider extends StatelessWidget {
                 ),
               ),
               Text(
-                value.toStringAsFixed(0),
+                value.toStringAsFixed(decimals),
                 style: TextStyle(
                   fontSize: 10,
                   color: colorScheme.primary,
@@ -1212,6 +1047,806 @@ class _CompactTextField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CreateProfileCard extends StatelessWidget {
+  const _CreateProfileCard({
+    required this.controller,
+    required this.canDelete,
+    required this.onCreate,
+    required this.onDuplicate,
+    required this.onDelete,
+  });
+
+  final TextEditingController controller;
+  final bool canDelete;
+  final VoidCallback onCreate;
+  final VoidCallback? onDuplicate;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
+    return Container(
+      width: 332,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[
+            colorScheme.primary.withValues(alpha: 0.15),
+            colorScheme.surfaceContainerHigh,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.20)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.add_photo_alternate_outlined, color: colorScheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Create Profile',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Spin up a fresh look or clone the current one.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.62),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: controller,
+            onSubmitted: (_) => onCreate(),
+            decoration: InputDecoration(
+              labelText: 'Profile Name',
+              hintText: 'Campaign Polish',
+              isDense: true,
+              filled: true,
+              fillColor: colorScheme.surface.withValues(alpha: 0.74),
+              prefixIcon: const Icon(Icons.bookmark_add_outlined, size: 18),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
+              ),
+            ),
+          ),
+          const Spacer(),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onCreate,
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text('New'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onDuplicate,
+                  icon: const Icon(Icons.copy_all_rounded, size: 16),
+                  label: const Text('Duplicate'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: canDelete ? 'Delete profile' : 'Default profile cannot be deleted',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileEntryCard extends StatelessWidget {
+  const _ProfileEntryCard({
+    required this.profile,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final FancyShotProfile profile;
+  final bool selected;
+  final VoidCallback onTap;
+
+  String _backgroundLabel() {
+    switch (profile.backgroundType) {
+      case BackgroundType.transparent:
+        return 'Clear';
+      case BackgroundType.self:
+        return 'Self';
+      case BackgroundType.custom:
+        return 'Custom';
+      case BackgroundType.stock:
+        return 'Gradient';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? colorScheme.primary.withValues(alpha: 0.12)
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.26),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? colorScheme.primary.withValues(alpha: 0.34) : colorScheme.outline.withValues(alpha: 0.08),
+          ),
+          boxShadow: selected
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.10),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    profile.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (selected) Icon(Icons.check_circle_rounded, size: 18, color: colorScheme.primary),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Reusable frame preset',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.56),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                _MiniBadge(label: _backgroundLabel()),
+                _MiniBadge(label: profile.showBrowserFrame ? 'Browser' : 'Clean'),
+                _MiniBadge(label: profile.watermark.isNotEmpty ? 'Watermark' : 'No Mark'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniBadge extends StatelessWidget {
+  const _MiniBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface.withValues(alpha: 0.62),
+            ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: colorScheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.56),
+                  height: 1.3,
+                ),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 14, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChoicePills<T> extends StatelessWidget {
+  const _ChoicePills({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<({String label, T value})> options;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((({String label, T value}) option) {
+        return ChoiceChip(
+          label: Text(option.label),
+          selected: option.value == value,
+          visualDensity: VisualDensity.compact,
+          onSelected: (_) => onChanged(option.value),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _ToggleTile extends StatelessWidget {
+  const _ToggleTile({
+    required this.label,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.56),
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColorSwatchRow extends StatelessWidget {
+  const _ColorSwatchRow({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final int value;
+  final List<({String label, int value, Color color})> options;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((({String label, int value, Color color}) option) {
+        final bool selected = option.value == value;
+        return Tooltip(
+          message: option.label,
+          child: InkWell(
+            onTap: () => onChanged(option.value),
+            borderRadius: BorderRadius.circular(999),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: option.value == 0 ? colorScheme.surface : option.color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.16),
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: option.value == 0
+                  ? Icon(
+                      Icons.close_rounded,
+                      size: 14,
+                      color: colorScheme.onSurface.withValues(alpha: 0.52),
+                    )
+                  : null,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _FancyShotPlaceholderSubject extends StatelessWidget {
+  const _FancyShotPlaceholderSubject();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1280,
+      height: 800,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            Color(0xFF111723),
+            Color(0xFF1A2231),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: <Widget>[
+          const Positioned(
+            left: 44,
+            top: 42,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Latest saved screenshot preview',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Take a screenshot from Screen Capture to replace this placeholder.',
+                  style: TextStyle(
+                    color: Color(0xB3FFFFFF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 44,
+            right: 44,
+            bottom: 46,
+            child: Row(
+              children: List<Widget>.generate(3, (int index) {
+                return Expanded(
+                  child: Container(
+                    height: 132 + index * 8,
+                    margin: EdgeInsets.only(right: index == 2 ? 0 : 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06 + (index * 0.02)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FancyShotFrameSurface extends StatelessWidget {
+  const _FancyShotFrameSurface({
+    required this.subject,
+    required this.profile,
+    required this.surfaceColor,
+    required this.sourceWidth,
+    required this.sourceHeight,
+    this.captureBytesForBackground,
+  });
+
+  final Widget subject;
+  final FancyShotProfile profile;
+  final Color surfaceColor;
+  final double sourceWidth;
+  final double sourceHeight;
+  final Uint8List? captureBytesForBackground;
+
+  double? _selectedAspectRatio() {
+    switch (profile.aspectRatio) {
+      case 1:
+        return 1;
+      case 2:
+        return 3 / 2;
+      case 3:
+        return 4 / 3;
+      case 4:
+        return 16 / 9;
+      case 5:
+        return 9 / 16;
+    }
+    return null;
+  }
+
+  BoxDecoration _backgroundDecoration() {
+    switch (profile.backgroundType) {
+      case BackgroundType.stock:
+        return BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(profile.backgroundImage),
+            fit: BoxFit.cover,
+          ),
+        );
+      case BackgroundType.self:
+        return BoxDecoration(
+          image: captureBytesForBackground == null
+              ? null
+              : DecorationImage(
+                  image: MemoryImage(captureBytesForBackground!),
+                  fit: BoxFit.cover,
+                ),
+        );
+      case BackgroundType.custom:
+        return BoxDecoration(
+          image: File(profile.backgroundImage).existsSync()
+              ? DecorationImage(
+                  image: FileImage(File(profile.backgroundImage)),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        );
+      case BackgroundType.transparent:
+        return const BoxDecoration(color: Colors.transparent);
+    }
+  }
+
+  Matrix4 _buildTransform() {
+    final Matrix4 matrix = Matrix4.identity();
+    if (profile.skewX != 0 || profile.skewY != 0) {
+      matrix
+        ..scaledByVector3(Vector3.all(0.1))
+        ..setEntry(3, 2, profile.skewPerspective)
+        ..rotateX(0.1 * profile.skewY)
+        ..rotateY(-0.1 * profile.skewX);
+    }
+    if (profile.rotation != 0) {
+      matrix.rotateZ(profile.rotation * math.pi / 180);
+    }
+    return matrix;
+  }
+
+  Size _canvasSize() {
+    final double mediaWidth = sourceWidth * profile.imageScale;
+    final double mediaHeight = sourceHeight * profile.imageScale;
+    final double frameWidth = mediaWidth + (profile.imagePadding * 2);
+    final double frameHeight = mediaHeight + (profile.imagePadding * 2) + (profile.showBrowserFrame ? 32 : 0);
+    double canvasWidth = frameWidth + (profile.backgroundPadding * 2);
+    double canvasHeight = frameHeight + (profile.backgroundPadding * 2);
+    final double? ratio = _selectedAspectRatio();
+    if (ratio != null) {
+      if (canvasWidth / canvasHeight < ratio) {
+        canvasWidth = canvasHeight * ratio;
+      } else {
+        canvasHeight = canvasWidth / ratio;
+      }
+    }
+    return Size(canvasWidth, canvasHeight);
+  }
+
+  Color _frameBorderColor() {
+    if (profile.background != 0) {
+      return Color(profile.background).withValues(alpha: 0.30);
+    }
+    return profile.showBrowserFrame ? Colors.black.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.14);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Size canvasSize = _canvasSize();
+    final BorderRadius radius = BorderRadius.circular(profile.borderRadius);
+    final Widget scaledSubject = SizedBox(
+      width: sourceWidth * profile.imageScale,
+      height: sourceHeight * profile.imageScale,
+      child: subject,
+    );
+
+    return Material(
+      type: MaterialType.transparency,
+      child: ClipRect(
+        child: SizedBox(
+          width: canvasSize.width,
+          height: canvasSize.height,
+          child: Container(
+            padding: EdgeInsets.all(profile.backgroundPadding.ceil().toDouble()),
+            decoration: _backgroundDecoration(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                if (profile.background != 0 && profile.backgroundTintOpacity > 0)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(profile.background).withValues(alpha: profile.backgroundTintOpacity),
+                    ),
+                  ),
+                BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: profile.backgroundBlur,
+                    sigmaY: profile.backgroundBlur,
+                  ),
+                  child: Center(
+                    child: Transform(
+                      transform: _buildTransform(),
+                      filterQuality: FilterQuality.high,
+                      alignment: Alignment.center,
+                      child: Stack(
+                        children: <Widget>[
+                          Container(
+                            decoration: BoxDecoration(
+                              color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : surfaceColor,
+                              borderRadius: radius,
+                              border: profile.frameBorderWidth > 0
+                                  ? Border.all(color: _frameBorderColor(), width: profile.frameBorderWidth)
+                                  : null,
+                              boxShadow: profile.shadowRadius > 0 || profile.shadowSpread > 0
+                                  ? <BoxShadow>[
+                                      BoxShadow(
+                                        offset: const Offset(0, 14),
+                                        spreadRadius: profile.shadowSpread,
+                                        blurRadius: profile.shadowRadius,
+                                        color: Colors.black.withValues(alpha: profile.shadowOpacity),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                if (profile.showBrowserFrame)
+                                  Container(
+                                    height: 32,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEBEBEB),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(profile.borderRadius),
+                                        topRight: Radius.circular(profile.borderRadius),
+                                      ),
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: <Widget>[
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFF5F56),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFFBD2E),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFF27C93F),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: EdgeInsets.all(profile.imagePadding.ceil().toDouble()),
+                                  child: ClipRRect(
+                                    borderRadius: profile.showBrowserFrame
+                                        ? BorderRadius.only(
+                                            bottomLeft: Radius.circular(profile.borderRadius),
+                                            bottomRight: Radius.circular(profile.borderRadius),
+                                          )
+                                        : radius,
+                                    child: scaledSubject,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (profile.watermark.isNotEmpty)
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Transform(
+                                transform: Matrix4.skewX(-0.1),
+                                child: Text(
+                                  profile.watermark,
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: profile.watermarkSize,
+                                    letterSpacing: 0.4,
+                                    color: Colors.white.withValues(alpha: profile.watermarkOpacity),
+                                    shadows: <Shadow>[
+                                      Shadow(
+                                        blurRadius: 10,
+                                        color: Colors.black.withValues(alpha: 0.42),
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1526,7 +2161,7 @@ class _UploadHostsDialogState extends State<_UploadHostsDialog> {
                           maxLines: 4,
                           decoration: const InputDecoration(
                             labelText: 'CLI',
-                            hintText: 'python \"C:\\scripts\\upload.py\" --file \${file}',
+                            hintText: 'python "C:\\scripts\\upload.py" --file \${file}',
                           ),
                         ),
                       ],
@@ -1580,19 +2215,26 @@ class FancyShotProfile {
   String name;
   double backgroundPadding = 10;
   double imagePadding = 10;
+  double imageScale = 1;
   //enum
   BackgroundType backgroundType = BackgroundType.transparent;
   String backgroundImage = "resources/gradient/gradient1.jpg";
   double borderRadius = 10;
+  double frameBorderWidth = 0;
   double shadowSpread = 0;
   double shadowRadius = 0;
+  double shadowOpacity = 0.35;
   double backgroundBlur = 0;
+  double backgroundTintOpacity = 0;
   double skewX = 0;
   double skewY = 0;
   double skewPerspective = 0;
+  double rotation = 0;
   int background = 0;
   int aspectRatio = 0;
   String watermark = "";
+  double watermarkOpacity = 0.90;
+  double watermarkSize = 14;
   bool showBrowserFrame = false;
   int width = 0;
   int height = 0;
@@ -1600,18 +2242,25 @@ class FancyShotProfile {
     required this.name,
     this.backgroundPadding = 10,
     this.imagePadding = 10,
+    this.imageScale = 1,
     this.backgroundType = BackgroundType.transparent,
     this.backgroundImage = "resources/gradient/gradient1.jpg",
     this.borderRadius = 10,
+    this.frameBorderWidth = 0,
     this.shadowSpread = 0,
     this.shadowRadius = 0,
+    this.shadowOpacity = 0.35,
     this.backgroundBlur = 0,
+    this.backgroundTintOpacity = 0,
     this.skewX = 0,
     this.skewY = 0,
     this.skewPerspective = 0,
+    this.rotation = 0,
     this.background = 0,
     this.aspectRatio = 0,
     this.watermark = "",
+    this.watermarkOpacity = 0.90,
+    this.watermarkSize = 14,
     this.showBrowserFrame = false,
     this.width = 0,
     this.height = 0,
@@ -1621,18 +2270,25 @@ class FancyShotProfile {
     String? name,
     double? backgroundPadding,
     double? imagePadding,
+    double? imageScale,
     BackgroundType? backgroundType,
     String? backgroundImage,
     double? borderRadius,
+    double? frameBorderWidth,
     double? shadowSpread,
     double? shadowRadius,
+    double? shadowOpacity,
     double? backgroundBlur,
+    double? backgroundTintOpacity,
     double? skewX,
     double? skewY,
     double? skewPerspective,
+    double? rotation,
     int? background,
     int? aspectRatio,
     String? watermark,
+    double? watermarkOpacity,
+    double? watermarkSize,
     bool? showBrowserFrame,
     int? width,
     int? height,
@@ -1641,18 +2297,25 @@ class FancyShotProfile {
       name: name ?? this.name,
       backgroundPadding: backgroundPadding ?? this.backgroundPadding,
       imagePadding: imagePadding ?? this.imagePadding,
+      imageScale: imageScale ?? this.imageScale,
       backgroundType: backgroundType ?? this.backgroundType,
       backgroundImage: backgroundImage ?? this.backgroundImage,
       borderRadius: borderRadius ?? this.borderRadius,
+      frameBorderWidth: frameBorderWidth ?? this.frameBorderWidth,
       shadowSpread: shadowSpread ?? this.shadowSpread,
       shadowRadius: shadowRadius ?? this.shadowRadius,
+      shadowOpacity: shadowOpacity ?? this.shadowOpacity,
       backgroundBlur: backgroundBlur ?? this.backgroundBlur,
+      backgroundTintOpacity: backgroundTintOpacity ?? this.backgroundTintOpacity,
       skewX: skewX ?? this.skewX,
       skewY: skewY ?? this.skewY,
       skewPerspective: skewPerspective ?? this.skewPerspective,
+      rotation: rotation ?? this.rotation,
       background: background ?? this.background,
       aspectRatio: aspectRatio ?? this.aspectRatio,
       watermark: watermark ?? this.watermark,
+      watermarkOpacity: watermarkOpacity ?? this.watermarkOpacity,
+      watermarkSize: watermarkSize ?? this.watermarkSize,
       showBrowserFrame: showBrowserFrame ?? this.showBrowserFrame,
       width: width ?? this.width,
       height: height ?? this.height,
@@ -1664,18 +2327,25 @@ class FancyShotProfile {
       'name': name,
       'backgroundPadding': backgroundPadding,
       'imagePadding': imagePadding,
+      'imageScale': imageScale,
       'backgroundType': backgroundType.index,
       'backgroundImage': backgroundImage,
       'borderRadius': borderRadius,
+      'frameBorderWidth': frameBorderWidth,
       'shadowSpread': shadowSpread,
       'shadowRadius': shadowRadius,
+      'shadowOpacity': shadowOpacity,
       'backgroundBlur': backgroundBlur,
+      'backgroundTintOpacity': backgroundTintOpacity,
       'skewX': skewX,
       'skewY': skewY,
       'skewPerspective': skewPerspective,
+      'rotation': rotation,
       'background': background,
       'aspectRatio': aspectRatio,
       'watermark': watermark,
+      'watermarkOpacity': watermarkOpacity,
+      'watermarkSize': watermarkSize,
       'showBrowserFrame': showBrowserFrame,
       'width': width,
       'height': height,
@@ -1685,20 +2355,27 @@ class FancyShotProfile {
   factory FancyShotProfile.fromMap(Map<String, dynamic> map) {
     return FancyShotProfile(
       name: (map['name'] ?? '') as String,
-      backgroundPadding: (map['backgroundPadding'] ?? 0.0) as double,
-      imagePadding: (map['imagePadding'] ?? 0.0) as double,
+      backgroundPadding: ((map['backgroundPadding'] ?? 0.0) as num).toDouble(),
+      imagePadding: ((map['imagePadding'] ?? 0.0) as num).toDouble(),
+      imageScale: ((map['imageScale'] ?? 1.0) as num).toDouble(),
       backgroundType: BackgroundType.values[(map['backgroundType'] ?? 0) as int],
       backgroundImage: (map['backgroundImage'] ?? "resources/gradient/gradient1.jpg") as String,
-      borderRadius: (map['borderRadius'] ?? 0.0) as double,
-      shadowSpread: (map['shadowSpread'] ?? 0.0) as double,
-      shadowRadius: (map['shadowRadius'] ?? 0.0) as double,
-      backgroundBlur: (map['backgroundBlur'] ?? 0.0) as double,
-      skewX: (map['skewX'] ?? 0.0) as double,
-      skewY: (map['skewY'] ?? 0.0) as double,
-      skewPerspective: (map['skewPerspective'] ?? 0.0) as double,
+      borderRadius: ((map['borderRadius'] ?? 0.0) as num).toDouble(),
+      frameBorderWidth: ((map['frameBorderWidth'] ?? 0.0) as num).toDouble(),
+      shadowSpread: ((map['shadowSpread'] ?? 0.0) as num).toDouble(),
+      shadowRadius: ((map['shadowRadius'] ?? 0.0) as num).toDouble(),
+      shadowOpacity: ((map['shadowOpacity'] ?? 0.35) as num).toDouble(),
+      backgroundBlur: ((map['backgroundBlur'] ?? 0.0) as num).toDouble(),
+      backgroundTintOpacity: ((map['backgroundTintOpacity'] ?? 0.0) as num).toDouble(),
+      skewX: ((map['skewX'] ?? 0.0) as num).toDouble(),
+      skewY: ((map['skewY'] ?? 0.0) as num).toDouble(),
+      skewPerspective: ((map['skewPerspective'] ?? 0.0) as num).toDouble(),
+      rotation: ((map['rotation'] ?? 0.0) as num).toDouble(),
       background: (map['background'] ?? 0) as int,
       aspectRatio: (map['aspectRatio'] ?? 0) as int,
       watermark: (map['watermark'] ?? '') as String,
+      watermarkOpacity: ((map['watermarkOpacity'] ?? 0.90) as num).toDouble(),
+      watermarkSize: ((map['watermarkSize'] ?? 14.0) as num).toDouble(),
       showBrowserFrame: (map['showBrowserFrame'] ?? false) as bool,
       width: (map['width'] ?? 0) as int,
       height: (map['height'] ?? 0) as int,
@@ -1712,7 +2389,7 @@ class FancyShotProfile {
 
   @override
   String toString() {
-    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, backgroundBlur: $backgroundBlur, skewX: $skewX, skewY: $skewY, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, showBrowserFrame: $showBrowserFrame, width: $width, height: $height)';
+    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, imageScale: $imageScale, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, frameBorderWidth: $frameBorderWidth, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, shadowOpacity: $shadowOpacity, backgroundBlur: $backgroundBlur, backgroundTintOpacity: $backgroundTintOpacity, skewX: $skewX, skewY: $skewY, skewPerspective: $skewPerspective, rotation: $rotation, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, watermarkOpacity: $watermarkOpacity, watermarkSize: $watermarkSize, showBrowserFrame: $showBrowserFrame, width: $width, height: $height)';
   }
 
   @override
@@ -1722,18 +2399,25 @@ class FancyShotProfile {
     return other.name == name &&
         other.backgroundPadding == backgroundPadding &&
         other.imagePadding == imagePadding &&
+        other.imageScale == imageScale &&
         other.backgroundType == backgroundType &&
         other.backgroundImage == backgroundImage &&
         other.borderRadius == borderRadius &&
+        other.frameBorderWidth == frameBorderWidth &&
         other.shadowSpread == shadowSpread &&
         other.shadowRadius == shadowRadius &&
+        other.shadowOpacity == shadowOpacity &&
         other.backgroundBlur == backgroundBlur &&
+        other.backgroundTintOpacity == backgroundTintOpacity &&
         other.skewX == skewX &&
         other.skewY == skewY &&
         other.skewPerspective == skewPerspective &&
+        other.rotation == rotation &&
         other.background == background &&
         other.aspectRatio == aspectRatio &&
         other.watermark == watermark &&
+        other.watermarkOpacity == watermarkOpacity &&
+        other.watermarkSize == watermarkSize &&
         other.showBrowserFrame == showBrowserFrame &&
         other.width == width &&
         other.height == height;
@@ -1744,18 +2428,25 @@ class FancyShotProfile {
     return name.hashCode ^
         backgroundPadding.hashCode ^
         imagePadding.hashCode ^
+        imageScale.hashCode ^
         backgroundType.hashCode ^
         backgroundImage.hashCode ^
         borderRadius.hashCode ^
+        frameBorderWidth.hashCode ^
         shadowSpread.hashCode ^
         shadowRadius.hashCode ^
+        shadowOpacity.hashCode ^
         backgroundBlur.hashCode ^
+        backgroundTintOpacity.hashCode ^
         skewX.hashCode ^
         skewY.hashCode ^
         skewPerspective.hashCode ^
+        rotation.hashCode ^
         background.hashCode ^
         aspectRatio.hashCode ^
         watermark.hashCode ^
+        watermarkOpacity.hashCode ^
+        watermarkSize.hashCode ^
         showBrowserFrame.hashCode ^
         width.hashCode ^
         height.hashCode;
@@ -1781,13 +2472,15 @@ class FancyShot {
   static List<FancyShotProfile> defaultProfiles() => <FancyShotProfile>[
         FancyShotProfile(
           name: "Default",
-          backgroundPadding: 10,
-          imagePadding: 0,
+          backgroundPadding: 18,
+          imagePadding: 6,
           backgroundType: BackgroundType.transparent,
           backgroundImage: "resources/gradient/gradient1.jpg",
-          borderRadius: 5,
+          borderRadius: 10,
+          frameBorderWidth: 1,
           shadowSpread: 1,
-          shadowRadius: 1,
+          shadowRadius: 14,
+          shadowOpacity: 0.26,
           backgroundBlur: 0,
           background: 0,
           aspectRatio: 0,
@@ -1797,15 +2490,18 @@ class FancyShot {
         ),
         FancyShotProfile(
           name: "Self Background",
-          backgroundPadding: 16,
-          imagePadding: 7.5,
+          backgroundPadding: 24,
+          imagePadding: 10,
           backgroundType: BackgroundType.self,
           backgroundImage: "resources/gradient/gradient1.jpg",
-          borderRadius: 8,
-          shadowSpread: 3,
-          shadowRadius: 6,
-          backgroundBlur: 8,
-          background: 0,
+          borderRadius: 12,
+          frameBorderWidth: 1,
+          shadowSpread: 2,
+          shadowRadius: 20,
+          shadowOpacity: 0.30,
+          backgroundBlur: 12,
+          background: 0xFF1B2432,
+          backgroundTintOpacity: 0.20,
           aspectRatio: 0,
           width: 0,
           height: 0,
@@ -1813,15 +2509,19 @@ class FancyShot {
         ),
         FancyShotProfile(
           name: "Image Background",
-          backgroundPadding: 28,
-          imagePadding: 7.5,
+          backgroundPadding: 36,
+          imagePadding: 12,
           backgroundType: BackgroundType.stock,
           backgroundImage: "resources/gradient/gradient7.jpg",
-          borderRadius: 5,
+          borderRadius: 14,
+          frameBorderWidth: 1,
           shadowSpread: 3,
-          shadowRadius: 6,
-          backgroundBlur: 18,
-          background: 0,
+          shadowRadius: 24,
+          shadowOpacity: 0.30,
+          backgroundBlur: 20,
+          background: 0xFF1D4ED8,
+          backgroundTintOpacity: 0.12,
+          showBrowserFrame: true,
           aspectRatio: 0,
           width: 0,
           height: 0,
@@ -1904,139 +2604,12 @@ class FancyShot {
   Future<void> quickCapture() async {
     await init();
     loadCaptureFile();
+    if (capture == null || photo == null) return;
 
-    ScreenshotController screenshotController = ScreenshotController();
-
-    final Uint8List output = await screenshotController.captureFromWidget(
-        Material(
-          type: MaterialType.transparency,
-          child: ClipRect(
-            child: Container(
-              width: photo!.width.toDouble(),
-              height: photo!.height.toDouble(),
-              padding: EdgeInsets.all(filters.backgroundPadding.ceil().toDouble()),
-              decoration: filters.backgroundType == BackgroundType.stock
-                  ? BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(filters.backgroundImage),
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : filters.backgroundType == BackgroundType.self
-                      ? BoxDecoration(
-                          image: DecorationImage(
-                            image: MemoryImage(capture!),
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : filters.backgroundType == BackgroundType.custom
-                          ? BoxDecoration(
-                              image: File(filters.backgroundImage).existsSync()
-                                  ? DecorationImage(
-                                      image: FileImage(File(filters.backgroundImage)),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            )
-                          : const BoxDecoration(color: Colors.transparent),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: filters.backgroundBlur,
-                  sigmaY: filters.backgroundBlur,
-                ),
-                child: Transform(
-                  transform: filters.skewX != 0 && filters.skewY != 0
-                      ? (Matrix4.identity()
-                        ..scaledByVector3(Vector3.all(0.1))
-                        ..setEntry(3, 2, filters.skewPerspective)
-                        ..rotateX(0.1 * filters.skewY)
-                        ..rotateY(-0.1 * filters.skewX))
-                      : Matrix4.identity(),
-                  filterQuality: FilterQuality.high,
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
-                          Container(
-                            constraints: const BoxConstraints(maxHeight: 400, maxWidth: 500),
-                            child: FittedBox(
-                              alignment: Alignment.center,
-                              // fit: BoxFit.fill,
-                              child: Stack(
-                                children: <Widget>[
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: bgColor,
-                                      borderRadius: BorderRadius.all(Radius.circular(filters.borderRadius)),
-                                      boxShadow: filters.shadowRadius != 0 && filters.shadowSpread != 0
-                                          ? <BoxShadow>[
-                                              BoxShadow(
-                                                offset: const Offset(3, 3),
-                                                spreadRadius: filters.shadowSpread,
-                                                blurRadius: filters.shadowRadius,
-                                                color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    padding: EdgeInsets.all(filters.imagePadding.ceil().toDouble()),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(filters.borderRadius),
-                                      child: Image.memory(
-                                        capture!,
-                                        fit: BoxFit.contain,
-                                        width: photo!.width.toDouble(),
-                                        height: photo!.height.toDouble(),
-                                        filterQuality: FilterQuality.high,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Transform.translate(
-                                      offset: const Offset(0, 25),
-                                      child: Transform(
-                                        transform: Matrix4.skewX(-0.2),
-                                        child: Text(
-                                          filters.watermark,
-                                          textAlign: TextAlign.right,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 17,
-                                            shadows: <Shadow>[
-                                              Shadow(blurRadius: 1, color: Colors.black.withValues(alpha: 0.7))
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (filters.watermark.isNotEmpty) const SizedBox(height: 20),
-                        ],
-                      ),
-                      if (filters.watermark.isNotEmpty) const SizedBox(width: 20),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        delay: const Duration(milliseconds: 20));
+    final Uint8List output = await FancyShot.renderPresetCapture(
+      captureBytes: capture!,
+      profile: filters.copyWith(),
+    );
 
     final String path = "${WinUtils.getTempFolder()}/copy.png";
     File(path).writeAsBytesSync(output);
@@ -2080,179 +2653,19 @@ class _FancyShotRenderSurface extends StatelessWidget {
   final Color bgColor;
   final FancyShotProfile profile;
 
-  BoxDecoration _backgroundDecoration() {
-    switch (profile.backgroundType) {
-      case BackgroundType.stock:
-        return BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(profile.backgroundImage),
-            fit: BoxFit.cover,
-          ),
-        );
-      case BackgroundType.self:
-        return BoxDecoration(
-          image: DecorationImage(
-            image: MemoryImage(captureBytes),
-            fit: BoxFit.cover,
-          ),
-        );
-      case BackgroundType.custom:
-        return BoxDecoration(
-          image: File(profile.backgroundImage).existsSync()
-              ? DecorationImage(
-                  image: FileImage(File(profile.backgroundImage)),
-                  fit: BoxFit.cover,
-                )
-              : null,
-        );
-      case BackgroundType.transparent:
-        return const BoxDecoration(color: Colors.transparent);
-    }
-  }
-
-  Matrix4 _buildTransform() {
-    if (profile.skewX == 0 || profile.skewY == 0) {
-      return Matrix4.identity();
-    }
-    return Matrix4.identity()
-      ..scaledByVector3(Vector3.all(0.1))
-      ..setEntry(3, 2, profile.skewPerspective)
-      ..rotateX(0.1 * profile.skewY)
-      ..rotateY(-0.1 * profile.skewX);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: ClipRect(
-        child: Container(
-          padding: EdgeInsets.all(profile.backgroundPadding.ceil().toDouble()),
-          decoration: _backgroundDecoration(),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: profile.backgroundBlur,
-              sigmaY: profile.backgroundBlur,
-            ),
-            child: Transform(
-              transform: _buildTransform(),
-              filterQuality: FilterQuality.high,
-              alignment: Alignment.center,
-              child: Padding(
-                padding: EdgeInsets.all(profile.watermark.isNotEmpty ? 20 : 0),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: <Widget>[
-                    IntrinsicWidth(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : bgColor,
-                          borderRadius: BorderRadius.all(Radius.circular(profile.borderRadius)),
-                          boxShadow: profile.shadowRadius != 0 && profile.shadowSpread != 0
-                              ? <BoxShadow>[
-                                  BoxShadow(
-                                    offset: const Offset(3, 3),
-                                    spreadRadius: profile.shadowSpread,
-                                    blurRadius: profile.shadowRadius,
-                                    color: const Color.fromRGBO(0, 0, 0, 0.5),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            if (profile.showBrowserFrame)
-                              Container(
-                                height: 32,
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEBEBEB),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(profile.borderRadius),
-                                    topRight: Radius.circular(profile.borderRadius),
-                                  ),
-                                  border: Border(
-                                    bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: <Widget>[
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(color: Color(0xFFFF5F56), shape: BoxShape.circle),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(color: Color(0xFFFFBD2E), shape: BoxShape.circle),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(color: Color(0xFF27C93F), shape: BoxShape.circle),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            Padding(
-                              padding: EdgeInsets.all(profile.imagePadding.ceil().toDouble()),
-                              child: ClipRRect(
-                                borderRadius: profile.showBrowserFrame
-                                    ? BorderRadius.only(
-                                        bottomLeft: Radius.circular(profile.borderRadius),
-                                        bottomRight: Radius.circular(profile.borderRadius),
-                                      )
-                                    : BorderRadius.circular(profile.borderRadius),
-                                child: Image.memory(
-                                  captureBytes,
-                                  fit: BoxFit.contain,
-                                  width: photo.width.toDouble(),
-                                  height: photo.height.toDouble(),
-                                  filterQuality: FilterQuality.high,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (profile.watermark.isNotEmpty)
-                      Positioned(
-                        bottom: 12,
-                        right: 12,
-                        child: Transform(
-                          transform: Matrix4.skewX(-0.1),
-                          child: Text(
-                            profile.watermark,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                              letterSpacing: 0.5,
-                              color: Colors.white.withValues(alpha: 0.90),
-                              shadows: <Shadow>[
-                                Shadow(
-                                  blurRadius: 6,
-                                  color: Colors.black.withValues(alpha: 0.45),
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+    return _FancyShotFrameSurface(
+      captureBytesForBackground: captureBytes,
+      subject: Image.memory(
+        captureBytes,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
       ),
+      profile: profile,
+      surfaceColor: bgColor,
+      sourceWidth: photo.width.toDouble(),
+      sourceHeight: photo.height.toDouble(),
     );
   }
 }

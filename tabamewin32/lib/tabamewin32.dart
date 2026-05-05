@@ -482,6 +482,15 @@ Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
   return MonitorCapture._fromMap(result);
 }
 
+Future<MonitorCapture?> captureMonitorBitmapAlternative({required int monitorHandle}) async {
+  final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+    'captureMonitorBitmapAlternative',
+    <String, dynamic>{'monitorHandle': monitorHandle},
+  );
+  if (result == null) return null;
+  return MonitorCapture._fromMap(result);
+}
+
 Future<bool> excludeWindowFromCapture(int hWnd) async {
   final bool? result = await audioMethodChannel.invokeMethod<bool>(
     'excludeWindowFromCapture',

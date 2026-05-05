@@ -140,6 +140,9 @@ class WindowsAppButton extends StatefulWidget {
   });
 
   static Future<Uint8List?> getIcon(String path) {
+    if (path.endsWith('.url')) {
+      return Future<Uint8List?>(() => WinUtils.extractIcon(path));
+    }
     if (path.trim().isEmpty) {
       return Future<Uint8List?>.value(null);
     }
@@ -210,7 +213,9 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
     return GestureDetector(
       onTap: widget.onTap,
       child: FutureBuilder<Uint8List?>(
-        future: widget.path.endsWith('.url') ? WindowsAppButton.getIcon(widget.path) : _iconFuture,
+        future:
+            widget.path.endsWith('.url') ? Future<Uint8List?>(() => WinUtils.extractIcon(widget.path)) : _iconFuture,
+        // future: widget.path.endsWith('.url') ? WindowsAppButton.getIcon(widget.path) : _iconFuture,
         builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return widget.placeholder ?? const SizedBox(width: 32, height: 32);

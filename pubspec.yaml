@@ -53,6 +53,7 @@ dependencies:
   zoom_widget: ^2.0.0
   zxing2: 0.2.4
 
+  ffi_leak_tracker: any
 dev_dependencies:
   build_runner: ^2.1.11
   flutter_lints: ^6.0.0
