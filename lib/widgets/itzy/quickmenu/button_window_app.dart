@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes/boxes_base.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../widgets/extracted_icon.dart';
 
 // ── Messages ─────────────────────────────────────────────────────────────────
 
@@ -18,7 +20,7 @@ class _IconRequest {
 
 class _IconResponse {
   final int id;
-  final Uint8List? data;
+  final ExtractedIcon data;
   const _IconResponse({required this.id, required this.data});
 }
 
@@ -31,7 +33,7 @@ void _iconWorkerEntry(SendPort mainSendPort) {
   workerPort.listen((dynamic message) {
     if (message is _IconRequest) {
       try {
-        final Uint8List? data = WinUtils.extractIcon(message.path);
+        final ExtractedIcon data = WinUtils.extractIcon(message.path);
         mainSendPort.send(_IconResponse(id: message.id, data: data));
       } catch (e, st) {
         // Log the real error so you can see why null is returned.
@@ -60,7 +62,7 @@ class _IconWorkerPool {
   static const Duration _requestTimeout = Duration(seconds: 8);
 
   final List<SendPort> _workerSendPorts = <SendPort>[];
-  final Map<int, Completer<Uint8List?>> _pending = <int, Completer<Uint8List?>>{};
+  final Map<int, Completer<ExtractedIcon>> _pending = <int, Completer<ExtractedIcon>>{};
   int _nextId = 0;
   int _rrIndex = 0;
 
@@ -85,7 +87,7 @@ class _IconWorkerPool {
         }
 
         if (message is _IconResponse) {
-          final Completer<Uint8List?>? completer = _pending.remove(message.id);
+          final Completer<ExtractedIcon>? completer = _pending.remove(message.id);
           if (completer != null && !completer.isCompleted) {
             completer.complete(message.data);
           }
@@ -99,18 +101,18 @@ class _IconWorkerPool {
     }
   }
 
-  Future<Uint8List?> extractIcon(String path) async {
+  Future<ExtractedIcon> extractIcon(String path) async {
     await _ensureInitialized();
 
     final int id = _nextId++;
-    final Completer<Uint8List?> completer = Completer<Uint8List?>();
+    final Completer<ExtractedIcon> completer = Completer<ExtractedIcon>();
     _pending[id] = completer;
 
     final SendPort port = _workerSendPorts[_rrIndex++ % _poolSize];
     port.send(_IconRequest(id: id, path: path));
 
     final Timer timeout = Timer(_requestTimeout, () {
-      final Completer<Uint8List?>? pendingCompleter = _pending.remove(id);
+      final Completer<ExtractedIcon>? pendingCompleter = _pending.remove(id);
       if (pendingCompleter != null && !pendingCompleter.isCompleted) {
         Debug.add('Icon extraction timed out for $path');
         pendingCompleter.complete(null);
@@ -124,7 +126,7 @@ class _IconWorkerPool {
 // ── Widget ────────────────────────────────────────────────────────────────────
 
 class WindowsAppButton extends StatefulWidget {
-  static final Map<String, Future<Uint8List?>> iconFutureCache = <String, Future<Uint8List?>>{};
+  static final Map<String, Future<ExtractedIcon>> iconFutureCache = <String, Future<ExtractedIcon>>{};
 
   final String path;
   final String? arguments;
@@ -139,12 +141,12 @@ class WindowsAppButton extends StatefulWidget {
     this.placeholder,
   });
 
-  static Future<Uint8List?> getIcon(String path) {
+  static Future<ExtractedIcon> getIcon(String path) {
     if (path.endsWith('.url')) {
-      return Future<Uint8List?>(() => WinUtils.extractIcon(path));
+      return Future<ExtractedIcon>(() => WinUtils.extractIcon(path));
     }
     if (path.trim().isEmpty) {
-      return Future<Uint8List?>.value(null);
+      return Future<ExtractedIcon>.value(null);
     }
     if (iconFutureCache.length > 100) {
       iconFutureCache.remove(iconFutureCache.keys.first);
@@ -168,10 +170,12 @@ class WindowsAppButton extends StatefulWidget {
 
   static Future<String> getCacheInKb() async {
     int totalSize = 0;
-    for (final Future<Uint8List?> future in iconFutureCache.values) {
-      final Uint8List? data = await future;
-      if (data != null) {
-        totalSize += data.length;
+    for (final Future<ExtractedIcon> future in iconFutureCache.values) {
+      final ExtractedIcon data = await future;
+      if (data case final Uint8List bytes) {
+        totalSize += bytes.length;
+      } else if (data case final String path when File(path).existsSync()) {
+        totalSize += File(path).lengthSync();
       }
     }
     return "${(totalSize / 1024).toStringAsFixed(2)} KB";
@@ -182,7 +186,7 @@ class WindowsAppButton extends StatefulWidget {
 }
 
 class _WindowsAppButtonState extends State<WindowsAppButton> {
-  late Future<Uint8List?> _iconFuture;
+  late Future<ExtractedIcon> _iconFuture;
   late String _displayPath;
 
   @override
@@ -212,11 +216,10 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onTap,
-      child: FutureBuilder<Uint8List?>(
+      child: FutureBuilder<ExtractedIcon>(
         future:
-            widget.path.endsWith('.url') ? Future<Uint8List?>(() => WinUtils.extractIcon(widget.path)) : _iconFuture,
-        // future: widget.path.endsWith('.url') ? WindowsAppButton.getIcon(widget.path) : _iconFuture,
-        builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+            widget.path.endsWith('.url') ? Future<ExtractedIcon>(() => WinUtils.extractIcon(widget.path)) : _iconFuture,
+        builder: (BuildContext context, AsyncSnapshot<ExtractedIcon> snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return widget.placeholder ?? const SizedBox(width: 32, height: 32);
           }
@@ -227,15 +230,16 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
           }
 
           if (snapshot.data == null) {
-            Debug.add('Icon bytes are null for path: $_displayPath');
+            Debug.add('Icon data is null for path: $_displayPath');
             return widget.placeholder ?? const SizedBox(width: 32, height: 32);
           }
 
-          return Image.memory(
-            snapshot.data!,
+          return buildExtractedIcon(
+            snapshot.data,
             width: 32,
             height: 32,
             gaplessPlayback: true,
+            fallback: widget.placeholder ?? const SizedBox(width: 32, height: 32),
           );
         },
       ),

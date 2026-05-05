@@ -2,7 +2,6 @@
 
 import 'dart:ffi' hide Size;
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
@@ -22,7 +21,7 @@ class WindowWatcher {
   WindowWatcher._();
   static bool firstEverRun = true;
   static List<Window> list = <Window>[];
-  static Map<int, Uint8List?> icons = <int, Uint8List?>{};
+  static Map<int, ExtractedIcon> icons = <int, ExtractedIcon>{};
   static Map<int, int> iconsHandles = <int, int>{};
   static Map<String, String> taskBarRewrites = Boxes.taskBarRewrites;
   static int _activeWinHandle = 0;
@@ -146,7 +145,7 @@ class WindowWatcher {
 
   static Future<bool> handleIcons() async {
     if (list.length != icons.length) {
-      icons.removeWhere((int key, Uint8List? value) => !list.any((Window w) => w.hWnd == key));
+      icons.removeWhere((int key, ExtractedIcon value) => !list.any((Window w) => w.hWnd == key));
       iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
     }
 

@@ -7,6 +7,7 @@ import '../../models/win32/registry.dart';
 import '../../models/win32/win_utils.dart';
 import '../../models/wizardly/context_menu_item.dart';
 import '../widgets/custom_tooltip.dart';
+import '../widgets/extracted_icon.dart';
 import '../widgets/text_input.dart';
 
 class ContextMenuCleaner extends StatefulWidget {
@@ -362,9 +363,10 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
                   color: onSurface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: item.iconBytes != null
-                    ? Image.memory(item.iconBytes!)
-                    : Icon(Icons.apps_rounded, size: 18, color: onSurface.withValues(alpha: 0.3)),
+                child: buildExtractedIcon(
+                  item.iconBytes,
+                  fallback: Icon(Icons.apps_rounded, size: 18, color: onSurface.withValues(alpha: 0.3)),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

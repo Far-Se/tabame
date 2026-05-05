@@ -9,6 +9,7 @@ import '../../../models/win32/mixed.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
+import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
 
 class WorkspacesSettingsPage extends StatefulWidget {
@@ -823,12 +824,14 @@ class _CurrentWindowTile extends StatelessWidget {
               SizedBox(
                 width: 28,
                 height: 28,
-                child: WindowWatcher.icons[window.hWnd] != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.memory(WindowWatcher.icons[window.hWnd]!, gaplessPlayback: true),
-                      )
-                    : Icon(Icons.window_rounded, size: 18, color: onSurface.withValues(alpha: 0.45)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: buildExtractedIcon(
+                    WindowWatcher.icons[window.hWnd],
+                    gaplessPlayback: true,
+                    fallback: Icon(Icons.window_rounded, size: 18, color: onSurface.withValues(alpha: 0.45)),
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(

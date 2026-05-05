@@ -21,6 +21,7 @@ import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../itzy/quickmenu/button_music_player.dart';
 import '../widgets/custom_tooltip.dart';
+import '../widgets/extracted_icon.dart';
 import '../widgets/zoomed_button.dart';
 import 'context_menu.dart';
 import 'quick_snap_picker.dart';
@@ -646,14 +647,15 @@ class _TaskBarItemState extends State<TaskBarItem> {
     }
 
     if (WindowWatcher.icons.containsKey(widget.window.hWnd)) {
-      return Image.memory(
-        WindowWatcher.icons[widget.window.hWnd] ?? Uint8List(0),
+      return buildExtractedIcon(
+        WindowWatcher.icons[widget.window.hWnd],
         width: 20,
         height: 20,
         cacheWidth: 20,
         cacheHeight: 20,
         gaplessPlayback: true,
         errorBuilder: (_, __, ___) => const Icon(Icons.check_box_outline_blank, size: 20),
+        fallback: const Icon(Icons.check_box_outline_blank, size: 20),
       );
     }
 

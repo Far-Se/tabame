@@ -21,6 +21,8 @@ import 'mixed.dart';
 import 'registry.dart';
 import 'win32.dart';
 
+typedef ExtractedIcon = Object?;
+
 class WinUtils {
   WinUtils._();
   static int _isAdministrator = -1;
@@ -1022,7 +1024,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     return null;
   }
 
-  static Uint8List? extractIcon(String path, {int iconID = 0}) {
+  static ExtractedIcon extractIcon(String path, {int iconID = 0}) {
     File? cacheFile;
     if (iconID == 0) {
       final String cachePath = '${getTabameAppDataFolder()}/cache/icon_cache';
@@ -1034,7 +1036,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       if (cacheFile.existsSync()) {
         final DateTime lastModified = cacheFile.lastModifiedSync();
         if (DateTime.now().difference(lastModified).inDays < 7) {
-          return cacheFile.readAsBytesSync();
+          return cacheFile.path;
         }
         cacheFile.deleteSync();
       }
@@ -1044,6 +1046,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
 
     if (iconID == 0 && iconBytes != null && cacheFile != null) {
       cacheFile.writeAsBytesSync(iconBytes);
+      return cacheFile.path;
     }
 
     return iconBytes;
@@ -1103,7 +1106,8 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
         calloc.free(largeIconPointer);
         calloc.free(smallIconPointer);
       }
-      return extractIcon(path, iconID: 98988);
+      final ExtractedIcon fallbackIcon = extractIcon(path, iconID: 98988);
+      return fallbackIcon is Uint8List ? fallbackIcon : null;
     } else {
       return using((Arena arena) {
         final Pointer<Utf16> filePathPointer = path.toNativeUtf16(allocator: arena);

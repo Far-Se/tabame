@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/settings.dart';
+import '../../models/win32/win_utils.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
+import '../../widgets/widgets/extracted_icon.dart';
 
 class WindowSearchListItem extends StatefulWidget {
   const WindowSearchListItem({
@@ -35,7 +37,7 @@ class _WindowSearchListItemState extends State<WindowSearchListItem> {
   @override
   Widget build(BuildContext context) {
     final bool highlighted = _hovered || widget.isSelected;
-    final Uint8List? iconBytes = WindowWatcher.icons[widget.window.hWnd];
+    final ExtractedIcon iconData = WindowWatcher.icons[widget.window.hWnd];
     final String processName = widget.window.process.exe.replaceFirst('.exe', '');
     final int animMs = widget.isRepeating ? 50 : 200;
 
@@ -75,15 +77,14 @@ class _WindowSearchListItemState extends State<WindowSearchListItem> {
                 SizedBox(
                   width: 20,
                   height: 20,
-                  child: iconBytes != null && iconBytes.isNotEmpty
-                      ? Image.memory(
-                          iconBytes,
-                          width: 20,
-                          height: 20,
-                          gaplessPlayback: true,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.web_asset_sharp, size: 18),
-                        )
-                      : const Icon(Icons.web_asset_sharp, size: 18),
+                  child: buildExtractedIcon(
+                    iconData,
+                    width: 20,
+                    height: 20,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.web_asset_sharp, size: 18),
+                    fallback: const Icon(Icons.web_asset_sharp, size: 18),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(

@@ -60,6 +60,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel = nullp
 #include "tray_extended.cpp"
 #include "windows_theme.cpp"
 #include "get_changed_folders.cpp"
+#include "media_session.cpp"
 
 // ---------------------------------------------------------------------------
 // GDI+ state
@@ -894,6 +895,22 @@ namespace tabamewin32
         {
             ClipboardExtended::HandleMethodCall(call, std::move(result));
         }
+
+        void GetMediaSessionsH(Tabamewin32Plugin *, const MethodCall &, MethodResult result)
+        {
+            auto value = MediaSession::GetMediaSessions();
+            if (auto *map = std::get_if<EMap>(&value))
+            {
+                auto it = map->find(EVal("error"));
+                if (it != map->end())
+                {
+                    const auto *message = std::get_if<std::string>(&it->second);
+                    result->Error("SMTC_ERROR", message ? *message : "Unknown media session error");
+                    return;
+                }
+            }
+            OK(result, value);
+        }
     } // namespace Handlers
 
     // -----------------------------------------------------------------------
@@ -997,6 +1014,7 @@ namespace tabamewin32
             {"clipboardExtendedGetDataSize", Handlers::ClipboardExtendedH},
             {"clipboardExtendedStartMonitoring", Handlers::ClipboardExtendedH},
             {"clipboardExtendedStopMonitoring", Handlers::ClipboardExtendedH},
+            {"getMediaSessions",         Handlers::GetMediaSessionsH},
         };
         return table;
     }

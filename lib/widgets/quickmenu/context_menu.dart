@@ -6,6 +6,7 @@ import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
+import '../widgets/extracted_icon.dart';
 import '../widgets/panel_header.dart';
 
 class ContextMenuWidget extends StatefulWidget {
@@ -288,9 +289,11 @@ class _HookWindowTile extends StatelessWidget {
               SizedBox(
                 width: 20,
                 height: 20,
-                child: WindowWatcher.icons[window.hWnd] != null
-                    ? Image.memory(WindowWatcher.icons[window.hWnd]!, gaplessPlayback: true)
-                    : Icon(Icons.web_asset_rounded, size: 16, color: onSurface.withAlpha(100)),
+                child: buildExtractedIcon(
+                  WindowWatcher.icons[window.hWnd],
+                  gaplessPlayback: true,
+                  fallback: Icon(Icons.web_asset_rounded, size: 16, color: onSurface.withAlpha(100)),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(

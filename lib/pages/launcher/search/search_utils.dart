@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/db/file_index_db.dart';
+import '../../../models/settings.dart';
+import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -237,22 +240,23 @@ List<QuickActionMenuEntry> findQuickActionMatches(
   String query, {
   bool includeAllOnEmpty = false,
 }) {
-  if (query.isEmpty || query == ' ') {
-    if (!includeAllOnEmpty) return <QuickActionMenuEntry>[];
-    return buildQuickActionMenuEntries(
+  final List<QuickActionMenuEntry> allEntries = <QuickActionMenuEntry>[
+    _buildQuickActionsLauncherEntry(),
+    ...buildQuickActionMenuEntries(
       context,
       onStateChanged: () {
         // We might need to handle this differently if we are outside the state
       },
-    );
+    ),
+  ];
+
+  if (query.isEmpty || query == ' ') {
+    if (!includeAllOnEmpty) return <QuickActionMenuEntry>[];
+    return allEntries;
   }
 
-  final List<QuickActionMenuEntry> matches = buildQuickActionMenuEntries(
-    context,
-    onStateChanged: () {
-      // ...
-    },
-  ).where((QuickActionMenuEntry entry) => entry.matches(query)).toList();
+  final List<QuickActionMenuEntry> matches =
+      allEntries.where((QuickActionMenuEntry entry) => entry.matches(query)).toList();
 
   matches.sort((QuickActionMenuEntry a, QuickActionMenuEntry b) {
     final int rank = quickActionMatchRank(a, query).compareTo(quickActionMatchRank(b, query));
@@ -265,6 +269,76 @@ List<QuickActionMenuEntry> findQuickActionMatches(
   });
 
   return matches.take(5).toList();
+}
+
+QuickActionMenuEntry _buildQuickActionsLauncherEntry() {
+  return QuickActionMenuEntry(
+    id: 'launcher-quick-actions-menu',
+    title: 'Quick Actions',
+    searchTerms: const <String>[
+      'Quick Actions',
+      'quick actions menu',
+      'QuickActionsMenuButton',
+      'launcher catalog',
+    ],
+    builder: (BuildContext context) {
+      final ThemeData theme = Theme.of(context);
+      final Color accent = globalSettings.themeColors.accentColor;
+      final Color onSurface = theme.colorScheme.onSurface;
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          unawaited(showQuickMenuModal(
+            context: context,
+            child: const QuickActionWidget(popup: false),
+          ));
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(24),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.grid_view_rounded, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Quick Actions',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Open the Quick Actions modal',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new_rounded, size: 14, color: onSurface.withAlpha(100)),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 int quickActionMatchRank(QuickActionMenuEntry entry, String query) {

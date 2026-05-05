@@ -64,6 +64,7 @@ class Globals {
   static ValueNotifier<int> quickMenuSearchInputVersion = ValueNotifier<int>(0);
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
+  static String _pendingLauncherQuickAction = "";
 
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
@@ -85,14 +86,29 @@ class Globals {
     quickMenuSearchInputVersion.value++;
   }
 
+  static void setLauncherQuickAction(String actionName) {
+    final String normalized = actionName.trim();
+    if (normalized.isEmpty) return;
+    _pendingLauncherQuickAction = normalized;
+    _pendingQuickMenuSearchInput = "/$normalized";
+    quickMenuSearchInputVersion.value++;
+  }
+
   static String takeQuickMenuSearchInput() {
     final String value = _pendingQuickMenuSearchInput;
     _pendingQuickMenuSearchInput = "";
     return value;
   }
 
+  static String takeLauncherQuickAction() {
+    final String value = _pendingLauncherQuickAction;
+    _pendingLauncherQuickAction = "";
+    return value;
+  }
+
   static void clearQuickMenuSearchInput() {
     _pendingQuickMenuSearchInput = "";
+    _pendingLauncherQuickAction = "";
     quickMenuSearchInputVersion.value++;
   }
 }

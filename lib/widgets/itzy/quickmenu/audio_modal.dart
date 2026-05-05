@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
@@ -10,6 +9,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/extracted_icon.dart';
 import '../../widgets/panel_header.dart';
 
 class AudioBox extends StatefulWidget {
@@ -22,7 +22,7 @@ class AudioBox extends StatefulWidget {
 class AudioInfo {
   List<AudioDevice> devices = <AudioDevice>[];
   AudioDevice defaultDevice = AudioDevice();
-  Map<String, Uint8List> icons = <String, Uint8List>{};
+  Map<String, ExtractedIcon> icons = <String, ExtractedIcon>{};
   Map<String, double> deviceVolumes = <String, double>{};
   bool isMuted = false;
   double volume = 0.0;
@@ -34,7 +34,7 @@ class AudioBoxState extends State<AudioBox> {
   Timer? timerData;
   Timer? timerMixer;
   List<ProcessVolume> audioMixer = <ProcessVolume>[];
-  Map<int, Uint8List> audioMixerIcons = <int, Uint8List>{};
+  Map<int, ExtractedIcon> audioMixerIcons = <int, ExtractedIcon>{};
   Map<int, String> audioMixerNames = <int, String>{};
 
   @override
@@ -103,10 +103,13 @@ class AudioBoxState extends State<AudioBox> {
       for (ProcessVolume device in newData) {
         // if (audioMixerIcons.containsKey(device.processId)) continue;
         addedAny = true;
-        Uint8List? icon;
+        ExtractedIcon icon;
         final int hWnd = await findTopWindow(device.processId);
         if (hWnd == 0) {
-          audioMixerIcons[device.processId] = WinUtils.extractIcon(device.processPath)!;
+          final ExtractedIcon fallbackIcon = WinUtils.extractIcon(device.processPath);
+          if (fallbackIcon != null) {
+            audioMixerIcons[device.processId] = fallbackIcon;
+          }
           audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).toUpperCaseFirst();
           continue;
         }
@@ -470,22 +473,21 @@ class AudioBoxState extends State<AudioBox> {
                     children: <Widget>[
                       SizedBox(
                         width: 20,
-                        child: info.icons.containsKey(device.id)
-                            ? Image.memory(
-                                info.icons[device.id]!,
-                                width: 20,
-                                gaplessPlayback: true,
-                                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
-                                  Icons.audiotrack_rounded,
-                                  size: 14,
-                                  color: onSurface.withAlpha(120),
-                                ),
-                              )
-                            : Icon(
-                                Icons.audiotrack_rounded,
-                                size: 14,
-                                color: onSurface.withAlpha(120),
-                              ),
+                        child: buildExtractedIcon(
+                          info.icons[device.id],
+                          width: 20,
+                          gaplessPlayback: true,
+                          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
+                            Icons.audiotrack_rounded,
+                            size: 14,
+                            color: onSurface.withAlpha(120),
+                          ),
+                          fallback: Icon(
+                            Icons.audiotrack_rounded,
+                            size: 14,
+                            color: onSurface.withAlpha(120),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -574,22 +576,21 @@ class AudioBoxState extends State<AudioBox> {
               child: Container(
                 padding: const EdgeInsets.all(4), // Expanded hit area
                 width: 26,
-                child: audioMixerIcons.containsKey(mix.processId)
-                    ? Image.memory(
-                        audioMixerIcons[mix.processId]!,
-                        width: 22,
-                        gaplessPlayback: true,
-                        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
-                          Icons.audiotrack_rounded,
-                          size: 16,
-                          color: onSurface.withAlpha(150),
-                        ),
-                      )
-                    : Icon(
-                        Icons.audiotrack_rounded,
-                        size: 16,
-                        color: onSurface.withAlpha(150),
-                      ),
+                child: buildExtractedIcon(
+                  audioMixerIcons[mix.processId],
+                  width: 22,
+                  gaplessPlayback: true,
+                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
+                    Icons.audiotrack_rounded,
+                    size: 16,
+                    color: onSurface.withAlpha(150),
+                  ),
+                  fallback: Icon(
+                    Icons.audiotrack_rounded,
+                    size: 16,
+                    color: onSurface.withAlpha(150),
+                  ),
+                ),
               ),
             ),
           ),

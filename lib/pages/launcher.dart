@@ -126,6 +126,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   bool _isSearching = false;
   bool _canConsumePendingInput = false;
   LauncherSearchMode _searchMode = LauncherSearchMode.mixed;
+  String? _pendingLauncherQuickAction;
+  int _pendingLauncherQuickActionAttempt = 0;
 
   late final List<_LauncherFunctionCommand> _functionCommands = <_LauncherFunctionCommand>[
     _LauncherFunctionCommand(
@@ -560,6 +562,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _consumePendingQuickMenuSearchInput() {
     if (!_canConsumePendingInput) return;
 
+    final String pendingLauncherQuickAction = Globals.takeLauncherQuickAction();
+    if (pendingLauncherQuickAction.isNotEmpty) {
+      _pendingLauncherQuickAction = pendingLauncherQuickAction;
+      _pendingLauncherQuickActionAttempt = 0;
+    }
+
     final String pending = Globals.takeQuickMenuSearchInput();
     if (pending.isEmpty) return;
 
@@ -599,7 +607,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     _setSearching(true);
-    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 220), () {
       if (!_isActiveSearch(requestId, query)) return;
       _runSearch(requestId, query, normalizedQuery, searchMode);
     });
@@ -1291,6 +1299,44 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (resetSelection && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
+
+    _maybeExecutePendingLauncherQuickAction();
+  }
+
+  void _maybeExecutePendingLauncherQuickAction() {
+    final String? pendingAction = _pendingLauncherQuickAction;
+    if (pendingAction == null || pendingAction.isEmpty || _isSearching || _results.isEmpty) return;
+    if (_searchMode != LauncherSearchMode.actionsOnly) return;
+    if (_controller.text.trim() != '/$pendingAction') return;
+    if (_results.first.isInfo || _results.first.quickAction == null) {
+      _pendingLauncherQuickAction = null;
+      _pendingLauncherQuickActionAttempt = 0;
+      return;
+    }
+
+    final String firstResultKey = _resultKeyId(_results.first, 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _results.isEmpty) return;
+      if (_pendingLauncherQuickAction != pendingAction) return;
+      if (_controller.text.trim() != '/$pendingAction') return;
+
+      final BuildContext? itemContext = _resultKeys[firstResultKey]?.currentContext;
+      if (itemContext == null) {
+        if (_pendingLauncherQuickActionAttempt >= 12) {
+          _pendingLauncherQuickAction = null;
+          _pendingLauncherQuickActionAttempt = 0;
+          return;
+        }
+        _pendingLauncherQuickActionAttempt++;
+        _maybeExecutePendingLauncherQuickAction();
+        return;
+      }
+
+      _pendingLauncherQuickAction = null;
+      _pendingLauncherQuickActionAttempt = 0;
+      _activeIndexNotifier.value = 0;
+      _runQuickAction(_results.first.quickAction!);
+    });
   }
 
   // ---------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 import 'dart:ffi';
-import 'dart:typed_data';
 
 import '../win32/imports.dart';
 import '../win32/registry.dart';
@@ -16,7 +15,7 @@ class ContextMenuItem {
   final String? command;
   final String? clsid;
   final String? iconSource;
-  Uint8List? iconBytes;
+  ExtractedIcon iconBytes;
 
   ContextMenuItem({
     required this.name,

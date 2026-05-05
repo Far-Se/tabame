@@ -147,9 +147,9 @@ class QuickMenuFunctions {
   }
 
   static Future<void> openQuickMenuWithAction(String actionName, {bool center = false}) async {
-    Globals.setQuickMenuSearchInput("/");
     await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher);
+    Globals.setLauncherQuickAction(actionName);
     await Future<void>.delayed(const Duration(milliseconds: 100));
-    triggerQuickAction(actionName);
+    Globals.clearQuickMenuSearchInput();
   }
 }

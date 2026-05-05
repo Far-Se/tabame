@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/win32/keys.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
 
 class PinnedApps extends StatelessWidget {
@@ -72,9 +72,9 @@ class _PinnedAppButton extends StatelessWidget {
     return SizedBox(
       width: size + 6.1,
       height: size + 6.1,
-      child: FutureBuilder<Uint8List?>(
-        future: _loadIconBytes(path),
-        builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+      child: FutureBuilder<ExtractedIcon>(
+        future: _loadIcon(path),
+        builder: (BuildContext context, AsyncSnapshot<ExtractedIcon> snapshot) {
           return InkWell(
             onTap: () {
               WinUtils.open(path);
@@ -86,15 +86,14 @@ class _PinnedAppButton extends StatelessWidget {
                   ? CustomTooltip(
                       message: path.substring(path.lastIndexOf('\\') + 1),
                       child: RepaintBoundary(
-                        child: Image.memory(
-                          snapshot.data!,
+                        child: buildExtractedIcon(
+                          snapshot.data,
                           fit: BoxFit.scaleDown,
                           width: size,
                           gaplessPlayback: true,
-                          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const Icon(
-                            Icons.check_box_outline_blank,
-                            size: 16,
-                          ),
+                          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                              const Icon(Icons.check_box_outline_blank, size: 16),
+                          fallback: const Icon(Icons.check_box_outline_blank, size: 16),
                         ),
                       ),
                     )
@@ -106,12 +105,7 @@ class _PinnedAppButton extends StatelessWidget {
     );
   }
 
-  Future<Uint8List?> _loadIconBytes(String path) async {
-    final String customIconPath = Boxes.getIconRewrite(path);
-    if (customIconPath.isNotEmpty) {
-      final ByteData bytes = await rootBundle.load(customIconPath);
-      return bytes.buffer.asUint8List();
-    }
-    return Future<Uint8List?>.value(WinUtils.extractIcon(path));
+  Future<ExtractedIcon> _loadIcon(String path) async {
+    return Future<ExtractedIcon>.value(WinUtils.extractIcon(path));
   }
 }

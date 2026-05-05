@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
@@ -13,6 +12,7 @@ import '../../../models/tray_watcher.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
 
 enum BottomBarSection { all, trayOnly, weatherSystemOnly }
@@ -27,7 +27,7 @@ class QuickmenuBottomBar extends StatefulWidget {
 
 class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
   List<String> pinnedApps = <String>[];
-  final Map<String, Uint8List> pinnedAppsIcons = <String, Uint8List>{};
+  final Map<String, ExtractedIcon> pinnedAppsIcons = <String, ExtractedIcon>{};
   late Future<void> pinnedAppsLoader;
 
   final TextEditingController cityLatLong = TextEditingController();
@@ -208,7 +208,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
 
   Widget _buildPinnedAppItem(int index) {
     final String path = pinnedApps[index];
-    final Uint8List? iconData = pinnedAppsIcons[path];
+    final ExtractedIcon iconData = pinnedAppsIcons[path];
     return LayoutBuilder(
         key: ValueKey<String>(path),
         builder: (BuildContext context, BoxConstraints constraints) {
@@ -232,15 +232,13 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                         size: 20, color: Theme.of(context).colorScheme.onSurface.withAlpha(60)),
                   ),
                 ),
-                if (iconData != null)
-                  Image.memory(
-                    iconData,
-                    width: 24,
-                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                        const Icon(Icons.check_box_outline_blank, size: 20),
-                  )
-                else
-                  const Icon(Icons.check_box_outline_blank, size: 20),
+                buildExtractedIcon(
+                  iconData,
+                  width: 24,
+                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                      const Icon(Icons.check_box_outline_blank, size: 20),
+                  fallback: const Icon(Icons.check_box_outline_blank, size: 20),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -666,7 +664,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
     if (pinnedApps.contains(result.path)) return;
     pinnedApps.add(result.path);
 
-    final Uint8List? icon = WinUtils.extractIcon(result.path);
+    final ExtractedIcon icon = WinUtils.extractIcon(result.path);
     if (icon != null) pinnedAppsIcons[result.path] = icon;
     await Boxes.updateSettings("pinnedApps", pinnedApps);
     if (!mounted) return;
@@ -692,7 +690,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
   Future<void> _loadPinnedAppsIcons() async {
     pinnedAppsIcons.clear();
     for (final String app in pinnedApps) {
-      final Uint8List? icon = WinUtils.extractIcon(app);
+      final ExtractedIcon icon = WinUtils.extractIcon(app);
       if (icon != null) pinnedAppsIcons[app] = icon;
     }
   }

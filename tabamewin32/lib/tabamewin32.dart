@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+export 'media_session.dart';
+
 class AudioDevice {
   String id = "";
   String name = "";
