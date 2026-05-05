@@ -25,6 +25,7 @@ import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -48,7 +49,7 @@ import '../widgets/widgets/font_picker/ui/font_picker.dart';
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
-Future<void> startScreenCapture() async {
+Future<void> startScreenCapture({bool freezeMode = false}) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   const WindowOptions windowOptions = WindowOptions(
@@ -70,7 +71,7 @@ Future<void> startScreenCapture() async {
     Win32Window._hwnd = GetAncestor(GetActiveWindow(), 2);
   });
 
-  runApp(const ScreenCaptureApp());
+  runApp(ScreenCaptureApp(freezeMode: freezeMode));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -320,6 +321,76 @@ class ScreenCapture {
     await File(path).writeAsBytes(pngBytes);
     return path;
   }
+
+  static Future<_FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
+    Monitor.fetchMonitors();
+    final Square? monitorBounds = Monitor.monitorSizes[monitorHandle];
+    if (monitorBounds == null) return null;
+
+    final int? monitorNumber = Monitor.monitorIds[monitorHandle];
+    if (monitorNumber == null || monitorNumber <= 0) return null;
+
+    final int hwnd = Win32Window.getHwnd();
+    if (hwnd != 0) {
+      await excludeWindowFromCapture(hwnd);
+    }
+
+    final MonitorCapture? capture = await captureMonitor(monitorIndex: monitorNumber - 1);
+    if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.pixels.isEmpty) {
+      return null;
+    }
+
+    return _FrozenMonitorSnapshot(
+      monitorHandle: monitorHandle,
+      screenRect: Rect.fromLTWH(
+        monitorBounds.x.toDouble(),
+        monitorBounds.y.toDouble(),
+        monitorBounds.width.toDouble(),
+        monitorBounds.height.toDouble(),
+      ),
+      rgbaBytes: _bgraToRgba(capture.pixels),
+      pixelWidth: capture.width,
+      pixelHeight: capture.height,
+    );
+  }
+
+  static Uint8List encodeRgbaToPng(Uint8List rgbaBytes, int width, int height) {
+    final img.Image image = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: rgbaBytes.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    );
+    return Uint8List.fromList(img.encodePng(image));
+  }
+
+  static Uint8List _bgraToRgba(Uint8List bgraBytes) {
+    final Uint8List rgbaBytes = Uint8List(bgraBytes.length);
+    for (int i = 0; i < bgraBytes.length; i += 4) {
+      rgbaBytes[i] = bgraBytes[i + 2];
+      rgbaBytes[i + 1] = bgraBytes[i + 1];
+      rgbaBytes[i + 2] = bgraBytes[i];
+      rgbaBytes[i + 3] = 255;
+    }
+    return rgbaBytes;
+  }
+}
+
+class _FrozenMonitorSnapshot {
+  const _FrozenMonitorSnapshot({
+    required this.monitorHandle,
+    required this.screenRect,
+    required this.rgbaBytes,
+    required this.pixelWidth,
+    required this.pixelHeight,
+  });
+
+  final int monitorHandle;
+  final Rect screenRect;
+  final Uint8List rgbaBytes;
+  final int pixelWidth;
+  final int pixelHeight;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,20 +398,31 @@ class ScreenCapture {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ScreenCaptureApp extends StatelessWidget {
-  const ScreenCaptureApp({super.key});
+  const ScreenCaptureApp({
+    super.key,
+    required this.freezeMode,
+  });
+
+  final bool freezeMode;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const AppShell(),
+      home: AppShell(freezeMode: freezeMode),
     );
   }
 }
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({
+    super.key,
+    required this.freezeMode,
+  });
+
+  final bool freezeMode;
+
   @override
   State<AppShell> createState() => _AppShellState();
 }
@@ -454,7 +536,7 @@ class _AppShellState extends State<AppShell> {
               filePath: appState.capturedFilePath!,
             );
           }
-          return const ScreenCaptureView();
+          return ScreenCaptureView(freezeMode: widget.freezeMode);
         },
       ),
     );
@@ -466,7 +548,13 @@ class _AppShellState extends State<AppShell> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ScreenCaptureView extends StatefulWidget {
-  const ScreenCaptureView({super.key});
+  const ScreenCaptureView({
+    super.key,
+    required this.freezeMode,
+  });
+
+  final bool freezeMode;
+
   @override
   State<ScreenCaptureView> createState() => _ScreenCaptureViewState();
 }
@@ -483,6 +571,8 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   bool _applyingPreset = false;
   Timer? _tickerTimer;
   final Set<String> _pressedScreenCaptureHotkeys = <String>{};
+  final Map<int, _FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, _FrozenMonitorSnapshot>{};
+  Future<void>? _frozenSnapshotWarmup;
 
   @override
   void initState() {
@@ -502,6 +592,9 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       _selectedFancyShotPresetName = fancySaved;
     }
     _tickerTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _ticker());
+    if (widget.freezeMode) {
+      _frozenSnapshotWarmup = _warmFrozenMonitorSnapshots();
+    }
   }
 
   List<CaptureActionChoice> _captureChoices() {
@@ -521,6 +614,77 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
   void _ticker() {
     _handleScreenDrawHotkeys();
+  }
+
+  void _resetActiveCaptureSelection() {
+    if (!_capturing && _captureStart == null && _captureCurrent == null) return;
+    setState(() {
+      _captureStart = null;
+      _captureCurrent = null;
+      _capturing = false;
+    });
+  }
+
+  Future<void> _warmFrozenMonitorSnapshots() async {
+    Monitor.fetchMonitors();
+    for (final int monitorHandle in Monitor.list) {
+      await _ensureFrozenMonitorSnapshot(monitorHandle);
+    }
+  }
+
+  Future<_FrozenMonitorSnapshot?> _ensureFrozenMonitorSnapshot(int monitorHandle) async {
+    final _FrozenMonitorSnapshot? existing = _frozenMonitorSnapshots[monitorHandle];
+    if (existing != null) return existing;
+    final _FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+    if (snapshot != null) {
+      _frozenMonitorSnapshots[monitorHandle] = snapshot;
+    }
+    return snapshot;
+  }
+
+  Future<Uint8List?> _captureFrozenRegionToPng(Rect screenRect) async {
+    final Rect normalizedRect = screenRect.normalized();
+    final Pointer<RECT> rectPtr = calloc<RECT>()
+      ..ref.left = normalizedRect.left.round()
+      ..ref.top = normalizedRect.top.round()
+      ..ref.right = normalizedRect.right.round()
+      ..ref.bottom = normalizedRect.bottom.round();
+
+    late final int monitorHandle;
+    try {
+      monitorHandle = MonitorFromRect(rectPtr, 2);
+    } finally {
+      calloc.free(rectPtr);
+    }
+
+    final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+    if (snapshot == null) return null;
+
+    final Rect safeRect = normalizedRect.intersect(snapshot.screenRect);
+    if (safeRect.isEmpty) return null;
+
+    final int outputWidth = normalizedRect.width.round().clamp(1, 1000000);
+    final int outputHeight = normalizedRect.height.round().clamp(1, 1000000);
+    final double scaleX = snapshot.pixelWidth / snapshot.screenRect.width;
+    final double scaleY = snapshot.pixelHeight / snapshot.screenRect.height;
+    final Uint8List outputRgba = Uint8List(outputWidth * outputHeight * 4);
+
+    for (int row = 0; row < outputHeight; row++) {
+      final int sy = ((normalizedRect.top + row - snapshot.screenRect.top) * scaleY).floor();
+      if (sy < 0 || sy >= snapshot.pixelHeight) continue;
+      for (int col = 0; col < outputWidth; col++) {
+        final int sx = ((normalizedRect.left + col - snapshot.screenRect.left) * scaleX).floor();
+        if (sx < 0 || sx >= snapshot.pixelWidth) continue;
+        final int srcIndex = (sy * snapshot.pixelWidth + sx) * 4;
+        final int dstIndex = (row * outputWidth + col) * 4;
+        outputRgba[dstIndex] = snapshot.rgbaBytes[srcIndex];
+        outputRgba[dstIndex + 1] = snapshot.rgbaBytes[srcIndex + 1];
+        outputRgba[dstIndex + 2] = snapshot.rgbaBytes[srcIndex + 2];
+        outputRgba[dstIndex + 3] = snapshot.rgbaBytes[srcIndex + 3];
+      }
+    }
+
+    return ScreenCapture.encodeRgbaToPng(outputRgba, outputWidth, outputHeight);
   }
 
   void _handleScreenDrawHotkeys() {
@@ -594,13 +758,17 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         children: <Widget>[
           // Dim overlay with crosshair region selector
           Positioned.fill(
-            child: GestureDetector(
+            child: Listener(
               behavior: HitTestBehavior.opaque,
-              onSecondaryTapDown: (_) async {
-                _captureStart = null;
-                _captureCurrent = null;
-                _capturing = false;
-                setState(() {});
+              onPointerDown: (PointerDownEvent event) {
+                if ((event.buttons & kSecondaryMouseButton) != 0 && _capturing) {
+                  _resetActiveCaptureSelection();
+                }
+              },
+              onPointerMove: (PointerMoveEvent event) {
+                if ((event.buttons & kSecondaryMouseButton) != 0 && _capturing) {
+                  _resetActiveCaptureSelection();
+                }
               },
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -612,6 +780,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                   });
                 },
                 onPanUpdate: (DragUpdateDetails d) {
+                  if (!_capturing || _captureStart == null) return;
                   setState(() => _captureCurrent = d.localPosition);
                 },
                 onPanEnd: (_) async {
@@ -764,7 +933,14 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
       Uint8List? pngBytes;
       try {
-        pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
+        if (widget.freezeMode) {
+          if (_frozenSnapshotWarmup != null) {
+            await _frozenSnapshotWarmup;
+          }
+          pngBytes = await _captureFrozenRegionToPng(screenRect);
+        } else {
+          pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
+        }
       } finally {
         ShowWindow(hwnd, SW_SHOW);
       }

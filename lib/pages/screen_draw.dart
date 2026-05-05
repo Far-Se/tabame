@@ -1035,7 +1035,10 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   DrawShape? _magnifierShape; // fetched pixels for the magnifier circle
 
   Timer? _liveRegionFetchDebounce;
+  Timer? _selectedCaptureRefreshTimer;
   int _selectedImageRefreshToken = 0;
+  bool _selectedCaptureRefreshInProgress = false;
+  bool _selectedCaptureDragRefreshActive = false;
 
   // One frozen background per drawing-mode activation / monitor.
   // Region tools crop from this buffer instead of BitBlt-ing the live overlay.
@@ -1063,6 +1066,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   @override
   void dispose() {
     _liveRegionFetchDebounce?.cancel();
+    _selectedCaptureRefreshTimer?.cancel();
     ctrl.removeListener(_handleControllerChanged);
     super.dispose();
   }
@@ -1273,6 +1277,27 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 
   bool _usesCaptureMonitorTool(DrawTool t) => t == DrawTool.magnifier || t == DrawTool.blur || t == DrawTool.pixelate;
 
+  void _startSelectedCaptureDragRefresh() {
+    final DrawShape? shape = ctrl.selectedShape;
+    if (shape == null || !_usesCaptureMonitorTool(shape.tool)) return;
+
+    _selectedCaptureDragRefreshActive = true;
+    _selectedCaptureRefreshTimer?.cancel();
+    _selectedCaptureRefreshTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
+      unawaited(_refreshSelectedCaptureMonitorShape(force: true));
+    });
+  }
+
+  void _stopSelectedCaptureDragRefresh({bool refreshNow = false}) {
+    final bool shouldRefresh = refreshNow && _selectedCaptureDragRefreshActive;
+    _selectedCaptureDragRefreshActive = false;
+    _selectedCaptureRefreshTimer?.cancel();
+    _selectedCaptureRefreshTimer = null;
+    if (shouldRefresh) {
+      unawaited(_refreshSelectedCaptureMonitorShape(force: true));
+    }
+  }
+
   void _onPanStart(DragStartDetails d) {
     if (!ctrl.drawingModeActive) return;
     final ui.Offset pos = d.localPosition;
@@ -1300,6 +1325,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       ctrl.selectShapeAt(pos);
       _lastSelectPos = pos;
       unawaited(_refreshSelectedCaptureMonitorShape(force: true));
+      _startSelectedCaptureDragRefresh();
       return;
     }
 
@@ -1388,6 +1414,9 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         _captureCurrent = null;
       });
       return;
+    }
+    if (selectMode) {
+      _stopSelectedCaptureDragRefresh(refreshNow: true);
     }
     ctrl.endDragGuide();
     if (!selectMode) ctrl.endShape();
@@ -1617,21 +1646,27 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   }
 
   Future<void> _refreshSelectedCaptureMonitorShape({bool force = false}) async {
+    if (_selectedCaptureRefreshInProgress) return;
     final DrawShape? shape = ctrl.selectedShape;
     if (shape == null || !_usesCaptureMonitorTool(shape.tool) || shape.points.length < 2) return;
 
-    final int token = ++_selectedImageRefreshToken;
-    final Rect rect = Rect.fromPoints(shape.points.first, shape.points.last).normalized();
-    if (rect.width < 2 || rect.height < 2) return;
+    _selectedCaptureRefreshInProgress = true;
+    try {
+      final int token = ++_selectedImageRefreshToken;
+      final Rect rect = Rect.fromPoints(shape.points.first, shape.points.last).normalized();
+      if (rect.width < 2 || rect.height < 2) return;
 
-    final Uint8List? bytes = await _captureMonitorRegion(rect, force: true);
-    if (!mounted || bytes == null || token != _selectedImageRefreshToken) return;
+      final Uint8List? bytes = await _captureMonitorRegion(rect, force: true);
+      if (!mounted || bytes == null || token != _selectedImageRefreshToken) return;
 
-    ctrl.updateSelectedImage(
-      bytes,
-      rect.width.round().clamp(1, 100000),
-      rect.height.round().clamp(1, 100000),
-    );
+      ctrl.updateSelectedImage(
+        bytes,
+        rect.width.round().clamp(1, 100000),
+        rect.height.round().clamp(1, 100000),
+      );
+    } finally {
+      _selectedCaptureRefreshInProgress = false;
+    }
   }
 
   Uint8List _bgraToRgba(Uint8List bgra) {
