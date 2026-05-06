@@ -71,7 +71,9 @@ class _TaskbarStatsState extends State<TaskbarStats> {
           metrics.add((label: label, value: value));
         }
       }
-    } catch (_) {}
+    } catch (x) {
+      print(x);
+    }
 
     return metrics;
   }

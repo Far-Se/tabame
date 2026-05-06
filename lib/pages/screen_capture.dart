@@ -323,13 +323,13 @@ class ScreenCapture {
     return path;
   }
 
-  static Future<_FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
+  static Future<FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
     final MonitorBitmapCapture? capture = captureMonitorBitmapByHandle(monitorHandle);
     if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
       return null;
     }
 
-    return _FrozenMonitorSnapshot(
+    return FrozenMonitorSnapshot(
       monitorHandle: monitorHandle,
       screenRect: Rect.fromLTWH(
         capture.left.toDouble(),
@@ -366,8 +366,8 @@ class ScreenCapture {
   }
 }
 
-class _FrozenMonitorSnapshot {
-  const _FrozenMonitorSnapshot({
+class FrozenMonitorSnapshot {
+  const FrozenMonitorSnapshot({
     required this.monitorHandle,
     required this.screenRect,
     required this.rgbaBytes,
@@ -560,7 +560,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   bool _applyingPreset = false;
   Timer? _tickerTimer;
   final Set<String> _pressedScreenCaptureHotkeys = <String>{};
-  final Map<int, _FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, _FrozenMonitorSnapshot>{};
+  final Map<int, FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, FrozenMonitorSnapshot>{};
   final Map<int, ui.Image> _frozenMonitorImages = <int, ui.Image>{};
   final Set<int> _frozenMonitorImageLoadsInProgress = <int>{};
   Future<void>? _frozenSnapshotWarmup;
@@ -631,7 +631,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     try {
       Monitor.fetchMonitors();
       for (final int monitorHandle in Monitor.list) {
-        final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+        final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
         if (snapshot != null) {
           await _ensureFrozenMonitorImage(
             monitorHandle,
@@ -650,10 +650,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     }
   }
 
-  Future<_FrozenMonitorSnapshot?> _ensureFrozenMonitorSnapshot(int monitorHandle) async {
-    final _FrozenMonitorSnapshot? existing = _frozenMonitorSnapshots[monitorHandle];
+  Future<FrozenMonitorSnapshot?> _ensureFrozenMonitorSnapshot(int monitorHandle) async {
+    final FrozenMonitorSnapshot? existing = _frozenMonitorSnapshots[monitorHandle];
     if (existing != null) return existing;
-    final _FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
     if (snapshot != null) {
       _frozenMonitorSnapshots[monitorHandle] = snapshot;
     }
@@ -662,7 +662,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
   Future<ui.Image?> _ensureFrozenMonitorImage(
     int monitorHandle, {
-    _FrozenMonitorSnapshot? snapshot,
+    FrozenMonitorSnapshot? snapshot,
     bool notify = true,
   }) async {
     final ui.Image? existing = _frozenMonitorImages[monitorHandle];
@@ -745,7 +745,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         return;
       }
 
-      final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+      final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
       if (snapshot == null) return;
       await _ensureFrozenMonitorImage(monitorHandle, snapshot: snapshot);
     } finally {
@@ -769,7 +769,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       calloc.free(rectPtr);
     }
 
-    final _FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+    final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
     if (snapshot == null) return null;
 
     final Rect safeRect = normalizedRect.intersect(snapshot.screenRect);

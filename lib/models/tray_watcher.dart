@@ -9,58 +9,17 @@ import 'win32/win32.dart';
 import 'win32/win_utils.dart';
 import 'window_watcher.dart';
 
-class TrayBarInfo extends ExtendedTrayIcon {
-  String processPath = "";
-  String processExe = "";
-  int brightness = 0;
-  bool isPinned = false;
-  Uint8List iconData = Uint8List.fromList(<int>[0]);
-  TrayBarInfo({
-    required this.processPath,
-    required this.processExe,
-    required super.toolTip,
-    required super.processId,
-    required super.hWnd,
-    required super.uID,
-    required super.uCallbackMsg,
-    required super.hIcon,
-    required super.isVisible,
-    required super.isOverflow,
-  });
-
-  int get processID => processId;
-
-  int get uCallbackMessage => uCallbackMsg;
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is TrayBarInfo && other.processPath == processPath && other.processExe == processExe;
-  }
-
-  @override
-  int get hashCode {
-    return processPath.hashCode ^ processExe.hashCode;
-  }
-
-  @override
-  String toString() {
-    return 'TrayBarInfo(processPath: $processPath, processExe: $processExe, brightness: $brightness)';
-  }
-}
-
 Map<int, Uint8List> __trayIconCache = <int, Uint8List>{};
-Map<int, int> __trayIconHandleCache = <int, int>{};
 
+Map<int, int> __trayIconHandleCache = <int, int>{};
 int _trayIconCacheKey(ExtendedTrayIcon icon) {
   return Object.hash(icon.hWnd, icon.uID, icon.uCallbackMsg, icon.isOverflow);
 }
 
 class Tray {
-  Tray._();
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
   static final Map<int, TrayBarInfo> _trayCache = <int, TrayBarInfo>{};
+  Tray._();
 
   static Future<bool> fetchTray({bool sort = true}) async {
     final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
@@ -72,17 +31,13 @@ class Tray {
     final Set<int> processIds = <int>{};
     int taskManagerProcessId = -1;
     for (ExtendedTrayIcon element in winTray) {
-      if (element.toolTip == "Task Manager") {
-        taskManagerProcessId = element.processId;
-      } else if (taskManagerProcessId == element.processId) {
-        if (element.toolTip != "Task Manager") {
-          WindowWatcher.taskManagerStats = element.toolTip
-              .replaceAll("\n", ' ')
-              .replaceAll(RegExp(r' +'), ' ')
-              .replaceFirst('Memory', "RAM")
-              .replaceAll("Network", "NET")
-              .replaceAll("Disk", "DISK");
-          // print(element.toolTip);
+      if (element.toolTip.contains("%")) {
+        final RegExp regex = RegExp(r'(\d+)%');
+        final List<int> result =
+            regex.allMatches(element.toolTip).map((RegExpMatch m) => int.parse(m.group(1)!)).toList();
+        if (result.length == 4) {
+          taskManagerProcessId = element.processId;
+          WindowWatcher.taskManagerStats = "CPU ${result[0]}% RAM ${result[1]}% DISK ${result[2]}% NET ${result[3]}%";
         }
       }
       if (processIds.contains(element.processId)) continue;
@@ -160,5 +115,46 @@ class Tray {
     }
 
     return true;
+  }
+}
+
+class TrayBarInfo extends ExtendedTrayIcon {
+  String processPath = "";
+  String processExe = "";
+  int brightness = 0;
+  bool isPinned = false;
+  Uint8List iconData = Uint8List.fromList(<int>[0]);
+  TrayBarInfo({
+    required this.processPath,
+    required this.processExe,
+    required super.toolTip,
+    required super.processId,
+    required super.hWnd,
+    required super.uID,
+    required super.uCallbackMsg,
+    required super.hIcon,
+    required super.isVisible,
+    required super.isOverflow,
+  });
+
+  @override
+  int get hashCode {
+    return processPath.hashCode ^ processExe.hashCode;
+  }
+
+  int get processID => processId;
+
+  int get uCallbackMessage => uCallbackMsg;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is TrayBarInfo && other.processPath == processPath && other.processExe == processExe;
+  }
+
+  @override
+  String toString() {
+    return 'TrayBarInfo(processPath: $processPath, processExe: $processExe, brightness: $brightness)';
   }
 }

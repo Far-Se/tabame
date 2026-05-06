@@ -108,6 +108,9 @@ class QuickMenuState extends State<QuickMenu>
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) => _onQuickMenuToggled(visible, type);
+
+  @override
+  Future<void> onQuickMenuMaybePop() => Navigator.of(context).maybePop();
   @override
   Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) =>
       _onQuickMenuSwitchedPage(newType, oldType, visible);

@@ -239,12 +239,12 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   ),
   "ScreenCaptureButton": QuickAction(
     name: "ScreenCaptureButton",
-    icon: Icons.screenshot_monitor,
+    icon: Icons.dvr_outlined,
     widget: () => const ScreenCaptureButton(),
   ),
   "ScreenCaptureFreezeButton": QuickAction(
     name: "ScreenCaptureFreezeButton",
-    icon: Icons.screenshot_monitor,
+    icon: Icons.screenshot_outlined,
     widget: () => const ScreenCaptureButton(freeze: true),
   ),
   "PinWindowButton": QuickAction(

@@ -14,6 +14,7 @@ import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:win32/win32.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/win32/win_utils.dart';
@@ -111,8 +112,6 @@ class FancyshotState extends State<Fancyshot> {
   img.Image? photo;
   Color bgColor = const Color(0xFF121723);
   String? selectedProfile;
-  String? _previewPath;
-  DateTime? _previewModifiedAt;
   bool _previewActualSize = false;
   bool _autosavePending = false;
   DateTime? _lastAutosavedAt;
@@ -231,8 +230,6 @@ class FancyshotState extends State<Fancyshot> {
         capture = null;
         photo = null;
         bgColor = const Color(0xFF121723);
-        _previewPath = null;
-        _previewModifiedAt = null;
       });
       return;
     }
@@ -245,8 +242,6 @@ class FancyshotState extends State<Fancyshot> {
           capture = null;
           photo = null;
           bgColor = const Color(0xFF121723);
-          _previewPath = null;
-          _previewModifiedAt = null;
         });
         return;
       }
@@ -255,16 +250,12 @@ class FancyshotState extends State<Fancyshot> {
         capture = bytes;
         photo = decoded;
         bgColor = _samplePreviewColor(decoded);
-        _previewPath = latestFile.path;
-        _previewModifiedAt = latestFile.statSync().modified;
       });
     } catch (_) {
       setState(() {
         capture = null;
         photo = null;
         bgColor = const Color(0xFF121723);
-        _previewPath = null;
-        _previewModifiedAt = null;
       });
     }
   }
@@ -273,13 +264,6 @@ class FancyshotState extends State<Fancyshot> {
     final int r = (argbColor >> 16) & 0xFF;
     final int b = argbColor & 0xFF;
     return (argbColor & 0xFF00FF00) | (b << 16) | r;
-  }
-
-  String _latestPreviewLabel() {
-    final String? path = _previewPath;
-    if (path == null || path.isEmpty) return 'Placeholder Preview';
-    final List<String> parts = path.split(RegExp(r'[\\/]'));
-    return parts.isEmpty ? path : parts.last;
   }
 
   String _autosaveLabel() {
@@ -300,17 +284,17 @@ class FancyshotState extends State<Fancyshot> {
     return '$candidate $suffix';
   }
 
-  Future<void> _createProfile({required bool duplicateCurrent}) async {
+  Future<void> _createProfile({FancyShotProfile? source}) async {
     final String typedName = textEditingController.text.trim();
     final String baseName = typedName.isNotEmpty
         ? typedName
-        : duplicateCurrent && selectedProfile != null
-            ? '${selectedProfile!} Copy'
+        : source != null
+            ? '${source.name} Copy'
             : 'Profile';
     final String profileName = _uniqueProfileName(baseName);
 
-    final FancyShotProfile source = duplicateCurrent ? filters.copyWith() : defaultProfile.copyWith();
-    profiles.add(source.copyWith(name: profileName));
+    final FancyShotProfile newProfile = source != null ? source.copyWith() : defaultProfile.copyWith();
+    profiles.add(newProfile.copyWith(name: profileName));
     textEditingController.clear();
     _applySelectedProfile(profileName, notify: false);
     await _persistProfilesNow();
@@ -318,13 +302,15 @@ class FancyshotState extends State<Fancyshot> {
     setState(() {});
   }
 
-  Future<void> _deleteSelectedProfile() async {
-    if (selectedProfile == null || selectedProfile == 'Default') return;
-    profiles.removeWhere((FancyShotProfile profile) => profile.name == selectedProfile);
+  Future<void> _deleteProfile(FancyShotProfile profile) async {
+    if (profile.name == 'Default') return;
+    profiles.removeWhere((FancyShotProfile p) => p.name == profile.name);
     if (profiles.isEmpty) {
       profiles.add(defaultProfile.copyWith(name: 'Default'));
     }
-    _applySelectedProfile(profiles.first.name, notify: false);
+    if (selectedProfile == profile.name) {
+      _applySelectedProfile(profiles.first.name, notify: false);
+    }
     await _persistProfilesNow();
     if (!mounted) return;
     setState(() {});
@@ -401,7 +387,6 @@ class FancyshotState extends State<Fancyshot> {
   Widget _buildProfileLibrary(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
-    final bool canDelete = selectedProfile != null && selectedProfile != 'Default';
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -412,38 +397,8 @@ class FancyshotState extends State<Fancyshot> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'PROFILE LIBRARY',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                        color: colorScheme.onSurface.withValues(alpha: 0.58),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      selectedProfile ?? 'No profile selected',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              _MetaChip(
-                icon: Icons.save_as_rounded,
-                label: _autosaveLabel(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
           SizedBox(
-            height: 158,
+            height: 80,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: profiles.length + 1,
@@ -452,10 +407,7 @@ class FancyshotState extends State<Fancyshot> {
                 if (index == 0) {
                   return _CreateProfileCard(
                     controller: textEditingController,
-                    canDelete: canDelete,
-                    onCreate: () => _createProfile(duplicateCurrent: false),
-                    onDuplicate: selectedProfile == null ? null : () => _createProfile(duplicateCurrent: true),
-                    onDelete: canDelete ? _deleteSelectedProfile : null,
+                    onCreate: () => _createProfile(),
                   );
                 }
 
@@ -466,6 +418,8 @@ class FancyshotState extends State<Fancyshot> {
                     profile: profile,
                     selected: profile.name == selectedProfile,
                     onTap: () => _selectProfile(profile.name),
+                    onDelete: profile.name != 'Default' ? () => _deleteProfile(profile) : null,
+                    onDuplicate: () => _createProfile(source: profile),
                   ),
                 );
               },
@@ -482,6 +436,7 @@ class FancyshotState extends State<Fancyshot> {
     final Widget preview = _buildPreviewCanvas();
 
     return Expanded(
+      flex: 3,
       child: Container(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerLowest,
@@ -489,6 +444,15 @@ class FancyshotState extends State<Fancyshot> {
         ),
         child: Column(
           children: <Widget>[
+            const SizedBox(height: 3),
+            Text(
+              'LIVE PREVIEW',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+                color: colorScheme.onSurface.withValues(alpha: 0.58),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
               decoration: BoxDecoration(
@@ -496,55 +460,7 @@ class FancyshotState extends State<Fancyshot> {
               ),
               child: Row(
                 children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'LIVE PREVIEW',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.0,
-                            color: colorScheme.onSurface.withValues(alpha: 0.58),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _latestPreviewLabel(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        if (_previewModifiedAt != null)
-                          Text(
-                            'Updated ${_previewModifiedAt!.year}-${_previewModifiedAt!.month.toString().padLeft(2, '0')}-${_previewModifiedAt!.day.toString().padLeft(2, '0')} ${_previewModifiedAt!.hour.toString().padLeft(2, '0')}:${_previewModifiedAt!.minute.toString().padLeft(2, '0')}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface.withValues(alpha: 0.52),
-                            ),
-                          )
-                        else
-                          Text(
-                            'Using a built-in placeholder until a saved screenshot exists.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface.withValues(alpha: 0.52),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: _loadLatestScreenshotPreview,
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Reload Latest'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
-                    icon: const Icon(Icons.folder_open_rounded, size: 16),
-                    label: const Text('Screenshots'),
-                  ),
-                  const SizedBox(width: 8),
+                  const Spacer(),
                   IconButton(
                     tooltip: _previewActualSize ? 'Fit preview' : 'Actual size',
                     onPressed: () => setState(() => _previewActualSize = !_previewActualSize),
@@ -581,23 +497,26 @@ class FancyshotState extends State<Fancyshot> {
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
               ),
-              child: Row(
-                children: <Widget>[
-                  _MetaChip(
-                    icon: Icons.aspect_ratio_rounded,
-                    label: hasCapture ? '${photo!.width} x ${photo!.height}' : '1280 x 800',
-                  ),
-                  const SizedBox(width: 8),
-                  _MetaChip(
-                    icon: Icons.layers_outlined,
-                    label: filters.backgroundType.name.toUpperCase(),
-                  ),
-                  const SizedBox(width: 8),
-                  _MetaChip(
-                    icon: Icons.save_as_rounded,
-                    label: _autosaveLabel(),
-                  ),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: <Widget>[
+                    _MetaChip(
+                      icon: Icons.aspect_ratio_rounded,
+                      label: hasCapture ? '${photo!.width} x ${photo!.height}' : '1280 x 800',
+                    ),
+                    const SizedBox(width: 8),
+                    _MetaChip(
+                      icon: Icons.layers_outlined,
+                      label: filters.backgroundType.name.toUpperCase(),
+                    ),
+                    const SizedBox(width: 8),
+                    _MetaChip(
+                      icon: Icons.save_as_rounded,
+                      label: _autosaveLabel(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -611,7 +530,7 @@ class FancyshotState extends State<Fancyshot> {
     final ColorScheme colorScheme = theme.colorScheme;
 
     return Container(
-      width: 368,
+      width: 340,
       color: colorScheme.surface,
       child: SingleChildScrollView(
         controller: inspectorScrollController,
@@ -619,6 +538,30 @@ class FancyshotState extends State<Fancyshot> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            Align(
+              alignment: Alignment.center,
+              child: FutureBuilder<bool>(
+                  future: windowManager.isMaximized(),
+                  builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                    if (snapshot.hasError) {
+                      return const SizedBox.shrink();
+                    }
+                    if (snapshot.hasData && snapshot.data! == false) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 14, bottom: 12),
+                        child: FilledButton.tonalIcon(
+                          onPressed: () async {
+                            await windowManager.maximize();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.fullscreen_rounded, size: 16),
+                          label: const Text('Maximize for a better preview'),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
+            ),
             _SectionCard(
               title: 'Layout',
               subtitle: 'Control the stage size, crop rhythm, and frame silhouette.',
@@ -874,16 +817,17 @@ class FancyshotState extends State<Fancyshot> {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          _MetaChip(
-            icon: Icons.folder_copy_outlined,
-            label: _latestPreviewLabel(),
-          ),
           const SizedBox(width: 8),
           FilledButton.tonalIcon(
             onPressed: _openUploadHostsSettings,
             icon: const Icon(Icons.cloud_upload_outlined, size: 16),
             label: const Text('Upload Hosts'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonalIcon(
+            onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+            icon: const Icon(Icons.folder_open_rounded, size: 16),
+            label: const Text('Screenshots'),
           ),
         ],
       ),
@@ -1054,17 +998,11 @@ class _CompactTextField extends StatelessWidget {
 class _CreateProfileCard extends StatelessWidget {
   const _CreateProfileCard({
     required this.controller,
-    required this.canDelete,
     required this.onCreate,
-    required this.onDuplicate,
-    required this.onDelete,
   });
 
   final TextEditingController controller;
-  final bool canDelete;
   final VoidCallback onCreate;
-  final VoidCallback? onDuplicate;
-  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1094,88 +1032,41 @@ class _CreateProfileCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.add_photo_alternate_outlined, color: colorScheme.primary),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Create Profile',
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                child: TextField(
+                  controller: controller,
+                  onSubmitted: (_) => onCreate(),
+                  decoration: InputDecoration(
+                    labelText: 'Profile Name',
+                    hintText: 'Campaign Polish',
+                    isDense: true,
+                    filled: true,
+                    fillColor: colorScheme.surface.withValues(alpha: 0.74),
+                    prefixIcon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Spin up a fresh look or clone the current one.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.62),
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: controller,
-            onSubmitted: (_) => onCreate(),
-            decoration: InputDecoration(
-              labelText: 'Profile Name',
-              hintText: 'Campaign Polish',
-              isDense: true,
-              filled: true,
-              fillColor: colorScheme.surface.withValues(alpha: 0.74),
-              prefixIcon: const Icon(Icons.bookmark_add_outlined, size: 18),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
-              ),
-            ),
-          ),
-          const Spacer(),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('New'),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onDuplicate,
-                  icon: const Icon(Icons.copy_all_rounded, size: 16),
-                  label: const Text('Duplicate'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: canDelete ? 'Delete profile' : 'Default profile cannot be deleted',
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              IconButton.filled(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add_rounded, size: 20),
               ),
             ],
           ),
@@ -1190,24 +1081,15 @@ class _ProfileEntryCard extends StatelessWidget {
     required this.profile,
     required this.selected,
     required this.onTap,
+    this.onDelete,
+    required this.onDuplicate,
   });
 
   final FancyShotProfile profile;
   final bool selected;
   final VoidCallback onTap;
-
-  String _backgroundLabel() {
-    switch (profile.backgroundType) {
-      case BackgroundType.transparent:
-        return 'Clear';
-      case BackgroundType.self:
-        return 'Self';
-      case BackgroundType.custom:
-        return 'Custom';
-      case BackgroundType.stock:
-        return 'Gradient';
-    }
-  }
+  final VoidCallback? onDelete;
+  final VoidCallback onDuplicate;
 
   @override
   Widget build(BuildContext context) {
@@ -1256,50 +1138,38 @@ class _ProfileEntryCard extends StatelessWidget {
                 if (selected) Icon(Icons.check_circle_rounded, size: 18, color: colorScheme.primary),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Reusable frame preset',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.56),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                _MiniBadge(label: _backgroundLabel()),
-                _MiniBadge(label: profile.showBrowserFrame ? 'Browser' : 'Clean'),
-                _MiniBadge(label: profile.watermark.isNotEmpty ? 'Watermark' : 'No Mark'),
+                IconButton.filledTonal(
+                  onPressed: onDuplicate,
+                  tooltip: 'Duplicate profile',
+                  icon: const Icon(Icons.copy_all_rounded, size: 16),
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                  ),
+                ),
+                if (onDelete != null) ...<Widget>[
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    onPressed: onDelete,
+                    tooltip: 'Delete profile',
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.5),
+                      foregroundColor: colorScheme.error,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: colorScheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface.withValues(alpha: 0.62),
-            ),
       ),
     );
   }
@@ -1668,8 +1538,12 @@ class _FancyShotFrameSurface extends StatelessWidget {
   Size _canvasSize() {
     final double mediaWidth = sourceWidth * profile.imageScale;
     final double mediaHeight = sourceHeight * profile.imageScale;
-    final double frameWidth = mediaWidth + (profile.imagePadding * 2);
-    final double frameHeight = mediaHeight + (profile.imagePadding * 2) + (profile.showBrowserFrame ? 32 : 0);
+    final double frameWidth =
+        mediaWidth + (profile.imagePadding * 2) + (profile.frameBorderWidth > 0 ? profile.frameBorderWidth * 2 : 0);
+    final double frameHeight = mediaHeight +
+        (profile.imagePadding * 2) +
+        (profile.showBrowserFrame ? 32 : 0) +
+        (profile.frameBorderWidth > 0 ? profile.frameBorderWidth * 2 : 0);
     double canvasWidth = frameWidth + (profile.backgroundPadding * 2);
     double canvasHeight = frameHeight + (profile.backgroundPadding * 2);
     final double? ratio = _selectedAspectRatio();

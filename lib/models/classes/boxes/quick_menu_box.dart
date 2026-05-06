@@ -16,6 +16,7 @@ import 'boxes_base.dart';
 
 mixin class QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {}
+  Future<void> onQuickMenuMaybePop() async {}
   Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {}
   Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {}
   void refreshQuickMenu() async {}
@@ -97,7 +98,7 @@ class QuickMenuFunctions {
   static void removeListener(QuickMenuTriggers listener) => _listeners.remove(listener);
 
   static Future<void> toggleQuickMenu(
-      {QuickMenuPage type = QuickMenuPage.quickMenu, bool? visible, bool center = false}) async {
+      {QuickMenuPage type = QuickMenuPage.quickMenu, bool? visible, bool center = false, bool forcePop = false}) async {
     if (visible == false && kDebugMode) return;
     if (visible != null) {
       if (visible == false && QuickMenuFunctions.keepOpen) {
@@ -116,6 +117,7 @@ class QuickMenuFunctions {
     for (final QuickMenuTriggers listener in listeners) {
       if (!_listeners.contains(listener)) return;
       await listener.onQuickMenuToggled(visible, type);
+      if (forcePop) await listener.onQuickMenuMaybePop();
     }
 
     if (visible) {
@@ -147,7 +149,8 @@ class QuickMenuFunctions {
   }
 
   static Future<void> openQuickMenuWithAction(String actionName, {bool center = false}) async {
-    await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher);
+    await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher, forcePop: true);
+
     Globals.setLauncherQuickAction(actionName);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     Globals.clearQuickMenuSearchInput();

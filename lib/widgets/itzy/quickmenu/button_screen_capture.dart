@@ -12,7 +12,7 @@ class ScreenCaptureButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return QuickActionItem(
       message: freeze ? "Open Frozen Screen Capture" : "Open Screen Capture",
-      icon: const Icon(Icons.featured_video_rounded),
+      icon: freeze ? const Icon(Icons.dvr_outlined) : const Icon(Icons.featured_video_rounded),
       onTap: () {
         final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
         if (windowHwnd != 0) {

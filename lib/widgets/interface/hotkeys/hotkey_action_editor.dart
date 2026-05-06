@@ -870,10 +870,13 @@ class HotKeyActionState extends State<HotKeyAction> {
             .toList(),
       );
     } else if (action.type == ActionType.openQuickMenupage) {
-      return ModernDropdown<String>(
-        value: HotKeyInfo.quickMenuPopups.contains(action.value) ? action.value : HotKeyInfo.quickMenuPopups[0],
-        onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.quickMenuPopups[0]),
-        items: HotKeyInfo.quickMenuPopups.map((String v) => ModernDropdownItem<String>(value: v, label: v)).toList(),
+      return Material(
+        type: MaterialType.transparency,
+        child: ModernDropdown<String>(
+          value: HotKeyInfo.quickMenuPopups.contains(action.value) ? action.value : HotKeyInfo.quickMenuPopups[0],
+          onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.quickMenuPopups[0]),
+          items: HotKeyInfo.quickMenuPopups.map((String v) => ModernDropdownItem<String>(value: v, label: v)).toList(),
+        ),
       );
     } else if (action.type == ActionType.wait) {
       return CustomTextInput(

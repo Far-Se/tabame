@@ -8,23 +8,18 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class ClearKeyboardButton extends StatelessWidget {
   const ClearKeyboardButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Clear Keyboard",
-      icon: const Icon(Icons.keyboard_hide_rounded),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const ClearKeyboardPanel(),
-      ),
-    );
+    return ModalButton(
+        actionName: "Clear Keyboard",
+        icon: const Icon(Icons.keyboard_hide_rounded),
+        child: () => const ClearKeyboardPanel());
   }
 }
 

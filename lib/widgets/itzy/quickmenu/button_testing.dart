@@ -44,7 +44,15 @@ class _TestingButtonState extends State<TestingButton> {
           final String res = await WindowsAppButton.getCacheInKb();
           WinUtils.msgBox("Cache", "${WindowsAppButton.iconFutureCache.length} Cache: $res ");
         }
-        print(FocusScope.of(context).focusedChild);
+        final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
+
+        print('Current: ${result.currentSession?.title}');
+
+        for (final MediaSession session in result.sessions) {
+          print('${session.isCurrent ? "▶" : " "} [${session.id}] '
+              '${session.title} — ${session.artist} (${session.playbackStatus})');
+        }
+        // print(FocusScope.of(context).focusedChild);
         // print(Globals.quickMenuPage);
         return;
       },
@@ -57,16 +65,17 @@ class _TestingButtonState extends State<TestingButton> {
       onTertiaryTapUp: (TapUpDetails details) async {
         final List<ExtendedTrayIcon> icons = await WinTray.enumAllIcons();
         //get current mouse position
-        final Pointer<POINT> point = calloc<POINT>();
-        GetCursorPos(point);
-        final int x = point.ref.x;
-        final int y = point.ref.y;
-        free(point);
-        WinTray.click(icons.where((ExtendedTrayIcon element) => element.processId == 10632).first,
-            clickType: TrayClickType.left);
-        // interval 10ms move mosue back to pos
-        await Future<void>.delayed(const Duration(milliseconds: 400));
-        SetCursorPos(x, y);
+        print(icons);
+        // final Pointer<POINT> point = calloc<POINT>();
+        // GetCursorPos(point);
+        // final int x = point.ref.x;
+        // final int y = point.ref.y;
+        // free(point);
+        // WinTray.click(icons.where((ExtendedTrayIcon element) => element.processId == 10632).first,
+        //     clickType: TrayClickType.left);
+        // // interval 10ms move mosue back to pos
+        // await Future<void>.delayed(const Duration(milliseconds: 400));
+        // SetCursorPos(x, y);
       },
     );
   }
