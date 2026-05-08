@@ -46,7 +46,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
 
   void checkForNewTrayIcons(Timer timer) async {
     // if (!QuickMenuFunctions.isQuickMenuVisible && kReleaseMode) return;
-    if (Globals.isWindowActive || true) {
+    if (QuickMenuFunctions.isQuickMenuVisible) {
       // PaintingBinding.instance.imageCache.clear();
       if (!fetching) fetchTray();
     }
@@ -143,7 +143,12 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                   },
                   onDoubleTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
-                    sendClick(info, TrayClickType.doubleClick);
+
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),

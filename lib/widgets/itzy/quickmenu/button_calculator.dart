@@ -6,9 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:math_parser/math_parser.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/converter.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/quickmenu_modal.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import 'button_currency_converter.dart';
 
 class CalculatorButton extends StatelessWidget {
   const CalculatorButton({super.key});
@@ -23,18 +26,21 @@ class CalcEntry {
   String name;
   String expression;
   double value;
-  CalcEntry({required this.name, required this.expression, required this.value});
+  String? displayResult;
+  CalcEntry({required this.name, required this.expression, required this.value, this.displayResult});
 
   Map<String, dynamic> toMap() => <String, dynamic>{
         'name': name,
         'expression': expression,
         'value': value,
+        'displayResult': displayResult,
       };
 
   factory CalcEntry.fromMap(Map<String, dynamic> map) => CalcEntry(
         name: (map['name'] as String?) ?? '',
         expression: (map['expression'] as String?) ?? '',
         value: (map['value'] as num?)?.toDouble() ?? 0.0,
+        displayResult: map['displayResult'] as String?,
       );
 }
 
@@ -52,6 +58,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
   String _errorMessage = "";
   String? _statusMessage;
   Timer? _statusTimer;
+  int _previewToken = 0;
 
   @override
   void initState() {
@@ -71,12 +78,13 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     super.dispose();
   }
 
-  void _loadHistory() {
+  void _loadHistory() async {
     final String saved = Boxes.pref.getString("calculatorEntries") ?? "";
     if (saved.isNotEmpty) {
       final List<dynamic> list = jsonDecode(saved) as List<dynamic>;
+      _history.clear();
       _history.addAll(list.map((dynamic e) => CalcEntry.fromMap(e as Map<String, dynamic>)));
-      _recalculateAll();
+      await _recalculateAll();
     }
   }
 
@@ -88,23 +96,86 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     return exp.replaceAll('%', '*0.01');
   }
 
-  void _recalculateAll() {
-    final Map<String, double> vars = <String, double>{};
-    for (int i = 0; i < _history.length; i++) {
-      try {
-        final String preprocessed = _preprocess(_history[i].expression);
-        final MathNode node = MathNodeExpression.fromString(preprocessed, variableNames: vars.keys.toSet());
-        final double result = node.calc(MathVariableValues(vars)).toDouble();
-        _history[i].value = result;
-        vars[_history[i].name] = result;
-      } catch (e) {
-        // Keep previous value or mark error
-      }
-    }
-    setState(() {});
+  String _replaceVariables(String input, Map<String, double> vars) {
+    String result = input;
+    vars.forEach((String name, double value) {
+      result = result.replaceAll('\$${name.toLowerCase()}', value.toString());
+    });
+    return result;
   }
 
-  void _evaluatePreview(String val) {
+  Future<({double value, String display})?> _runConverter(String expression, Map<String, double> vars) async {
+    if (!expression.startsWith('/')) return null;
+    final String input = _replaceVariables(expression.substring(1).trim(), vars);
+    if (input.isEmpty) return null;
+
+    try {
+      if (input.startsWith('c ') || input.startsWith('currency ')) {
+        final String cmd = input.replaceFirst(RegExp(r'^currency\s+|^c\s+'), '');
+        final String target = Boxes.pref.getString(CurrencyConverterService.toKey) ?? 'eur';
+        final CurrencyConversionResult res =
+            await CurrencyConverterService().convert(cmd, defaultTargetCurrency: target);
+        return (value: res.convertedAmount, display: res.convertedLabel);
+      } else if (input.startsWith('unit ')) {
+        final String cmd = input.replaceFirst(RegExp(r'^unit\s+'), '');
+        final ParserResult res = await Parsers().unit(cmd);
+        if (res.results.isNotEmpty) {
+          final double? val = double.tryParse(res.results.first.split(' ').first.replaceAll(',', ''));
+          if (val != null) {
+            return (value: val, display: res.results.first);
+          }
+        }
+      } else {
+        String cmd = input;
+        if (input.startsWith('c ')) cmd = input.substring(2);
+        if (input.startsWith('calc ')) cmd = input.substring(5);
+
+        final ParserResult res = await Parsers().calculator(cmd);
+        if (res.results.isNotEmpty) {
+          final String first = res.results.first;
+          double? val;
+          if (first.contains('=')) {
+            val = double.tryParse(first.split('=').last.trim().replaceAll(',', ''));
+          } else {
+            val = double.tryParse(first.replaceAll(',', ''));
+          }
+          if (val != null) {
+            return (value: val, display: first);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _recalculateAll() async {
+    final Map<String, double> vars = <String, double>{};
+    for (int i = 0; i < _history.length; i++) {
+      final CalcEntry entry = _history[i];
+      try {
+        if (entry.expression.startsWith('/')) {
+          final ({double value, String display})? res = await _runConverter(entry.expression, vars);
+          if (res != null) {
+            entry.value = res.value;
+            entry.displayResult = res.display;
+          }
+        } else {
+          final String preprocessed = _preprocess(entry.expression);
+          final MathNode node = MathNodeExpression.fromString(preprocessed, variableNames: vars.keys.toSet());
+          final double result = node.calc(MathVariableValues(vars)).toDouble();
+          entry.value = result;
+          entry.displayResult = null;
+        }
+        vars[entry.name] = entry.value;
+      } catch (e) {
+        // Keep previous value
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _evaluatePreview(String val) async {
+    final int token = ++_previewToken;
     if (val.isEmpty) {
       setState(() {
         _previewResult = "";
@@ -113,8 +184,26 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       return;
     }
 
+    final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
+
+    if (val.startsWith('/')) {
+      final ({double value, String display})? res = await _runConverter(val, vars);
+      if (token != _previewToken) return;
+      if (res != null) {
+        setState(() {
+          _previewResult = res.display;
+          _errorMessage = "";
+        });
+      } else {
+        setState(() {
+          _previewResult = "";
+          _errorMessage = "Invalid converter command";
+        });
+      }
+      return;
+    }
+
     try {
-      final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
       String mathPart = val;
       if (val.contains('=')) {
         final List<String> parts = val.split('=');
@@ -132,11 +221,13 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       final String preprocessed = _preprocess(mathPart);
       final MathNode node = MathNodeExpression.fromString(preprocessed, variableNames: vars.keys.toSet());
       final double result = node.calc(MathVariableValues(vars)).toDouble();
+      if (token != _previewToken) return;
       setState(() {
         _previewResult = result.formatNum2();
         _errorMessage = "";
       });
     } catch (e) {
+      if (token != _previewToken) return;
       setState(() {
         _previewResult = "";
         _errorMessage = "Invalid expression";
@@ -144,50 +235,65 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     }
   }
 
-  void _submit() {
+  void _submit() async {
     final String val = _controller.text.trim();
     if (val.isEmpty) return;
 
-    // Check if it's an assignment (e.g., a=50)
+    final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
+
+    // Check for assignment (e.g., a = /cur 100 USD to EUR or a = 10 + 20)
+    String? assignedName;
+    String finalExpression = val;
+
     if (val.contains('=')) {
       final List<String> parts = val.split('=');
       if (parts.length == 2) {
-        final String name = parts[0].trim();
-        final String exp = parts[1].trim();
-        final int index = _history.indexWhere((CalcEntry e) => e.name == name);
-        if (index > -1) {
-          _history[index].expression = exp;
-          _recalculateAll();
-          _saveHistory();
-          _controller.clear();
-          _evaluatePreview("");
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            _focusNode.requestFocus();
-          });
-          return;
-        }
+        assignedName = parts[0].trim();
+        finalExpression = parts[1].trim();
       }
     }
 
-    // Otherwise, create new variable
     try {
-      final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
-      final String preprocessed = _preprocess(val);
-      final MathNode node = MathNodeExpression.fromString(preprocessed, variableNames: vars.keys.toSet());
-      final double result = node.calc(MathVariableValues(vars)).toDouble();
+      double? result;
+      String? display;
 
+      if (finalExpression.startsWith('/')) {
+        final ({double value, String display})? res = await _runConverter(finalExpression, vars);
+        if (res != null) {
+          result = res.value;
+          display = res.display;
+        }
+      } else {
+        final String preprocessed = _preprocess(finalExpression);
+        final MathNode node = MathNodeExpression.fromString(preprocessed, variableNames: vars.keys.toSet());
+        result = node.calc(MathVariableValues(vars)).toDouble();
+      }
+
+      if (result == null) throw Exception("Could not calculate result");
+
+      if (assignedName != null) {
+        final int index = _history.indexWhere((CalcEntry e) => e.name == assignedName);
+        if (index > -1) {
+          _history[index].expression = finalExpression;
+          _history[index].value = result;
+          _history[index].displayResult = display;
+          await _recalculateAll();
+          _saveHistory();
+          _controller.clear();
+          _evaluatePreview("");
+          _focusNode.requestFocus();
+          return;
+        }
+      }
+
+      // Otherwise, create new variable
       final String nextName = String.fromCharCode('a'.codeUnitAt(0) + (_history.length % 26)).toLowerCase();
-      // If we go beyond z, we might need a different naming scheme, but 26 vars is usually enough for quick menu
-      _history.add(CalcEntry(name: nextName, expression: val, value: result));
-      _recalculateAll();
+      _history.add(CalcEntry(name: nextName, expression: finalExpression, value: result, displayResult: display));
+      await _recalculateAll();
       _saveHistory();
       _controller.clear();
       _evaluatePreview("");
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _focusNode.requestFocus();
-      });
+      _focusNode.requestFocus();
     } catch (e) {
       setState(() {
         _errorMessage = "Error: Check your formula";
@@ -219,6 +325,102 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
         });
       }
     });
+  }
+
+  void _showInfo() {
+    final Color accent = globalSettings.themeColors.accentColor;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    showQuickMenuModal(
+      context: context,
+      sigmaX: 8,
+      sigmaY: 8,
+      heightFactor: 0.96,
+      child: Column(
+        children: <Widget>[
+          PanelHeader(
+            title: "Calculator Guide",
+            accent: accent,
+            icon: Icons.help_outline_rounded,
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                _buildInfoSection(
+                  "Math & Variables",
+                  "Use variables like 'a', 'b', etc., in your expressions. "
+                      "Each line you submit creates a new variable automatically.",
+                  <String>["10 + 20", "a * 3", "b / 2"],
+                  accent,
+                  onSurface,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  "Advanced Converters",
+                  "Start with '/' to use unit or currency converters. "
+                      "Use '\$var' to reference your variables.",
+                  <String>["/c 100 USD to EUR", "/c \$a RON to USD", "/unit 10 km to miles", "/unit \$b kg to g"],
+                  accent,
+                  onSurface,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  "Management",
+                  "Assign or update variables manually by writing '[a-z]=expression'. "
+                      "Click on any history entry's expression to edit it.",
+                  <String>["a = 50", "a = b * 10", "Click entry to edit"],
+                  accent,
+                  onSurface,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(String title, String description, List<String> examples, Color accent, Color onSurface) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: TextStyle(color: onSurface.withAlpha(180), fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: onSurface.withAlpha(15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: onSurface.withAlpha(20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: examples.map((String e) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  "• $e",
+                  style: TextStyle(
+                    color: onSurface.withAlpha(220),
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -257,6 +459,12 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                   ),
                 ],
                 IconButton(
+                  onPressed: _showInfo,
+                  icon: const Icon(Icons.info_outline_rounded, size: 18),
+                  tooltip: "How to use",
+                  color: onSurface.withAlpha(120),
+                ),
+                IconButton(
                   onPressed: _clearAll,
                   icon: const Icon(Icons.delete_sweep_outlined, size: 18),
                   tooltip: "Clear All",
@@ -289,15 +497,14 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       itemBuilder: (BuildContext context, int index) {
         final CalcEntry entry = _history.elementAt(_history.length - index - 1);
         return _HistoryTile(
+          key: ValueKey<String>(entry.name),
           entry: entry,
           accent: accent,
           onSurface: onSurface,
-          onEdit: (String newExp) {
-            setState(() {
-              entry.expression = newExp;
-              _recalculateAll();
-              _saveHistory();
-            });
+          onEdit: (String newExp) async {
+            entry.expression = newExp;
+            await _recalculateAll();
+            _saveHistory();
           },
           onCopy: (String val) => _copyToClipboard(val),
         );
@@ -368,6 +575,7 @@ class _HistoryTile extends StatefulWidget {
   final Function(String) onCopy;
 
   const _HistoryTile({
+    super.key,
     required this.entry,
     required this.accent,
     required this.onSurface,
@@ -388,6 +596,14 @@ class _HistoryTileState extends State<_HistoryTile> {
   void initState() {
     super.initState();
     _editController = TextEditingController(text: widget.entry.expression);
+  }
+
+  @override
+  void didUpdateWidget(_HistoryTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.entry.expression != oldWidget.entry.expression && !_isEditing) {
+      _editController.text = widget.entry.expression;
+    }
   }
 
   @override
@@ -487,7 +703,7 @@ class _HistoryTileState extends State<_HistoryTile> {
                       style: TextStyle(color: widget.onSurface.withAlpha(80), fontSize: 13),
                     ),
                     Text(
-                      widget.entry.value.formatNum2(),
+                      widget.entry.displayResult ?? widget.entry.value.formatNum2(),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ],

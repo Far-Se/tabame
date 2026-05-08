@@ -331,7 +331,7 @@ class QuickMenuState extends State<QuickMenu>
           if (!globalSettings.keepPopupsOpen) {
             Navigator.of(context).pop();
           } else {
-            if (DateTime.now().difference(lastTimeShown).inSeconds > 40) {
+            if (DateTime.now().difference(lastTimeShown).inSeconds > 30) {
               Navigator.of(context).pop();
             }
           }
@@ -616,8 +616,8 @@ class QuickMenuState extends State<QuickMenu>
           body: MouseRegion(
             onEnter: (PointerEnterEvent event) async {
               Globals.isWindowActive = true;
-              AllowSetForegroundWindow(pid);
-              Win32.focusWindow(Win32.hWnd);
+              // AllowSetForegroundWindow(pid);
+              Win32.activateWindow(Win32.hWnd);
               _requestQuickMenuFocus();
               // await WindowManager.instance.focus();
             },
@@ -631,8 +631,8 @@ class QuickMenuState extends State<QuickMenu>
                 lastCheck = now;
                 final int hWnd = GetForegroundWindow();
                 if (hWnd != Win32.hWnd) {
-                  WindowManager.instance.show();
-                  WindowManager.instance.focus();
+                  // WindowManager.instance.show();
+                  // WindowManager.instance.focus();
                   _requestQuickMenuFocus();
                 }
               }

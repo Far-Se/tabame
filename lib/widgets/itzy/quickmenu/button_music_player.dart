@@ -785,7 +785,6 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
   @override
   Widget build(BuildContext context) {
     final Color accent = globalSettings.themeColors.accentColor;
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final Duration transitionDuration = reduceMotion ? Duration.zero : const Duration(milliseconds: 220);
     final bool localFolderTab = MusicServerManager.isLocalActive && _tabIndex == 3;
@@ -798,12 +797,12 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         behavior: HitTestBehavior.translucent,
         onSecondaryTap: _hasBackHistory ? _goBack : null,
         child: QuickMenuPanel(
+          accent: globalSettings.themeColors.accentColor,
           title: _tabIndex == 2
               ? _titles.last
               : _tabIndex == 3
                   ? _folderTitles.last
                   : _tabTitle,
-          accent: accent,
           icon: _tabIcon,
           buttonIcon: localFolderTab ? Icons.sync_rounded : Icons.refresh_rounded,
           buttonTooltip: localFolderTab ? "Reindex current folder" : "Refresh",
@@ -864,12 +863,12 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
                               child: IndexedStack(
                                 index: _tabIndex,
                                 children: <Widget>[
-                                  _buildPlayerTab(accent, onSurface),
-                                  _buildSearchTab(accent, onSurface),
-                                  _buildLibraryTab(accent, onSurface),
-                                  _buildFoldersTab(accent, onSurface),
-                                  _buildPlaylistsTab(accent, onSurface),
-                                  _buildSettingsTab(accent, onSurface),
+                                  _buildPlayerTab(accent),
+                                  _buildSearchTab(accent),
+                                  _buildLibraryTab(accent),
+                                  _buildFoldersTab(accent),
+                                  _buildPlaylistsTab(accent),
+                                  _buildSettingsTab(accent),
                                 ],
                               ),
                             ),
@@ -897,7 +896,6 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
                           },
                           child: _StatusStrip(
                             message: _infoMessage!,
-                            accent: accent,
                             onClose: () => setState(() => _infoMessage = null),
                           ),
                         ),
@@ -905,7 +903,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
                   ],
                 ),
               ),
-              _buildTabBar(accent, onSurface),
+              _buildTabBar(accent),
             ],
           ),
         ),

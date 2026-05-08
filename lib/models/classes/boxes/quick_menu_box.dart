@@ -99,7 +99,7 @@ class QuickMenuFunctions {
 
   static Future<void> toggleQuickMenu(
       {QuickMenuPage type = QuickMenuPage.quickMenu, bool? visible, bool center = false, bool forcePop = false}) async {
-    if (visible == false && (kDebugMode && !Globals.debugHotkeys)) return;
+    // if (visible == false /* && (kDebugMode && !Globals.debugHotkeys) */) return;
     if (visible != null) {
       if (visible == false && QuickMenuFunctions.keepOpen) {
         return;
@@ -124,6 +124,7 @@ class QuickMenuFunctions {
       Globals.quickMenuPage = type;
 
       if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
+        triggerQuickAction("action:refreshTaskbar");
         Future<void>.delayed(const Duration(milliseconds: 110), () async {
           if (center) {
             Win32.setCenter(useMouse: true);
@@ -142,7 +143,7 @@ class QuickMenuFunctions {
     } else {
       Globals.quickMenuPage = QuickMenuPage.quickMenu;
       await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
-      if (!kReleaseMode) return;
+      if (kDebugMode && !Globals.debugHotkeys) return;
       Win32.setPosition(const Offset(-99999, -99999));
       hidTime = DateTime.now().millisecondsSinceEpoch;
     }

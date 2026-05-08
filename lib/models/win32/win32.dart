@@ -25,8 +25,37 @@ class Win32 {
 
   // Window handles and metadata
   static int getMainHandle() {
-    if (hWnd == 0) getMainHandleByClass();
+    if (hWnd == 0) {
+      final int? mainWindowHandle = getMainWindowHandle();
+      if (mainWindowHandle != null) {
+        hWnd = GetAncestor(mainWindowHandle, 2);
+      } else {
+        hWnd = getMainHandleByClass();
+      }
+    }
     return hWnd;
+  }
+
+  static int? getMainWindowHandle() {
+    final int currentPid = GetCurrentProcessId();
+    final List<int> wins = enumWindows();
+    int? foundHwnd;
+
+    for (int hwnd in wins) {
+      final Pointer<Uint32> pidPtr = calloc<Uint32>();
+
+      GetWindowThreadProcessId(hwnd, pidPtr);
+
+      final int windowPid = pidPtr.value;
+      calloc.free(pidPtr);
+
+      if (windowPid == currentPid && IsWindowVisible(hwnd) != 0 && GetWindow(hwnd, GW_OWNER) == 0) {
+        foundHwnd = hwnd;
+        return foundHwnd;
+      }
+    }
+
+    return foundHwnd;
   }
 
   static Future<void> fetchMainWindowHandle() async {
@@ -331,7 +360,7 @@ class Win32 {
     }
   }
 
-  static void activateWindow(int hWnd, {bool forced = false}) {
+  static void activateWindow(int hWnd) {
     final int currentThread = GetCurrentThreadId();
     final int targetThread = GetWindowThreadProcessId(hWnd, nullptr);
 
@@ -358,12 +387,20 @@ class Win32 {
     SetForegroundWindow(hWnd);
     BringWindowToTop(hWnd);
     SetFocus(hWnd);
-
+    // new code
+    SetActiveWindow(hWnd);
+    UpdateWindow(hWnd);
+    final int extendedStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    if ((extendedStyle & WS_EX_TOPMOST) == 0) {
+      SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+      SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+    //
     AttachThreadInput(currentThread, targetThread, FALSE);
   }
 
   static void forceActivateWindow(int hWnd) {
-    activateWindow(hWnd, forced: true);
+    activateWindow(hWnd);
   }
 
   /// Activates the window under the cursor.
@@ -737,12 +774,12 @@ class Win32 {
           horizontalPosition -= 10;
           break;
       }
-      print(Globals.heights);
     }
     await WindowManager.instance.setPosition(Offset(horizontalPosition + 1, verticalPosition));
     // SetForegroundWindow(hWnd);
     // WindowManager.instance.blur();
     WindowManager.instance.focus();
+    Win32.activateWindow(Win32.hWnd);
 
     free(anchorPoint);
     free(popupBounds);

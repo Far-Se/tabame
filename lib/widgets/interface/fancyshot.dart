@@ -399,14 +399,20 @@ class FancyshotState extends State<Fancyshot> {
               )
             : const _FancyShotPlaceholderSubject();
 
-        return _FancyShotFrameSurface(
-          captureImage: subject,
-          captureBytesForBackground: capture,
-          profile: filters,
-          surfaceColor: bgColor,
-          sourceWidth: srcW,
-          sourceHeight: srcH,
-          scale: scale,
+        return MediaQuery(
+          data: const MediaQueryData(),
+          child: Material(
+            color: Colors.transparent,
+            child: _FancyShotFrameSurface(
+              captureImage: subject,
+              captureBytesForBackground: capture,
+              profile: filters,
+              surfaceColor: bgColor,
+              sourceWidth: srcW,
+              sourceHeight: srcH,
+              scale: scale,
+            ),
+          ),
         );
       },
     );
@@ -2180,12 +2186,21 @@ class FancyShot {
     final ScreenshotController screenshotController = ScreenshotController();
 
     return screenshotController.captureFromWidget(
-      _FancyShotRenderSurface(
-        captureBytes: captureBytes,
-        photo: photo,
-        bgColor: bgColor,
-        profile: profile.copyWith(),
+      MediaQuery(
+        data: const MediaQueryData(),
+        child: Material(
+          color: Colors.transparent,
+          child: _FancyShotFrameSurface(
+            captureImage: Image.memory(captureBytes, fit: BoxFit.fill, filterQuality: FilterQuality.high),
+            captureBytesForBackground: captureBytes,
+            profile: profile,
+            surfaceColor: bgColor,
+            sourceWidth: photo.width.toDouble(),
+            sourceHeight: photo.height.toDouble(),
+          ),
+        ),
       ),
+      pixelRatio: 1.0,
       delay: const Duration(milliseconds: 20),
     );
   }

@@ -1150,7 +1150,16 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
                     color: accent.withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.keyboard_command_key_rounded, size: 18, color: accent),
+                  child: Icon(
+                    switch (_binding.action) {
+                      ScreenDrawHotkeyAction.toggleDrawing => Icons.draw_outlined,
+                      ScreenDrawHotkeyAction.closeScreenDraw => Icons.draw_outlined,
+                      ScreenDrawHotkeyAction.toggleVisibility => Icons.draw_outlined,
+                      _ => Icons.no_flash,
+                    },
+                    size: 18,
+                    color: accent,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

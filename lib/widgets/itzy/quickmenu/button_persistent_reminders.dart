@@ -35,6 +35,12 @@ class _PersistentRemindersWidgetState extends State<PersistentRemindersWidget> w
     final int count = globalSettings.persistentReminders.length;
     return ModalButton(
       actionName: "Reminders",
+      onSecondaryTap: () {
+        globalSettings.persistentReminders.clear();
+        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+        QuickMenuFunctions.refreshQuickMenu();
+        setState(() {});
+      },
       icon: count > 0
           ? Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),

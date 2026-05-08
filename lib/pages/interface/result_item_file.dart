@@ -18,14 +18,16 @@ class FileResultIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BookmarkIcon(
-      mark: BookmarkInfo(
-        emoji: '',
-        title: path,
-        stringToExecute: path,
-        preferInputIcon: true,
+    return RepaintBoundary(
+      child: BookmarkIcon(
+        mark: BookmarkInfo(
+          emoji: '',
+          title: path,
+          stringToExecute: path,
+          preferInputIcon: true,
+        ),
+        size: 20,
       ),
-      size: 20,
     );
   }
 }
@@ -73,81 +75,83 @@ class _LauncherListItemState extends State<LauncherListItem> {
     final String name = sepIdx >= 0 ? path.substring(sepIdx + 1) : path;
     final bool highlighted = _hovered || widget.isSelected;
     final int animMs = widget.isRepeating ? 50 : 200;
-    return MouseRegion(
-      onHover: (PointerHoverEvent event) {
-        if (event.delta != Offset.zero) {
-          setState(() => _hovered = true);
-          widget.onHover();
-        }
-      },
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: animMs),
-        curve: widget.isRepeating ? Curves.linear : Curves.easeIn,
-        margin: const EdgeInsets.symmetric(vertical: 2),
-        decoration: BoxDecoration(
-          color: highlighted ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: widget.onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              children: <Widget>[
-                AnimatedContainer(
-                  duration: Duration(milliseconds: animMs),
-                  width: highlighted ? 2.5 : 0,
-                  height: 22,
-                  margin: EdgeInsets.only(right: highlighted ? 7 : 0),
-                  decoration: BoxDecoration(
-                    color: globalSettings.themeColors.accentColor,
-                    borderRadius: BorderRadius.circular(2),
+    return RepaintBoundary(
+      child: MouseRegion(
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero && _hovered == false) {
+            setState(() => _hovered = true);
+            widget.onHover();
+          }
+        },
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: animMs),
+          curve: widget.isRepeating ? Curves.linear : Curves.easeIn,
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(
+            color: highlighted ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                children: <Widget>[
+                  AnimatedContainer(
+                    duration: Duration(milliseconds: animMs),
+                    width: highlighted ? 2.5 : 0,
+                    height: 22,
+                    margin: EdgeInsets.only(right: highlighted ? 7 : 0),
+                    decoration: BoxDecoration(
+                      color: globalSettings.themeColors.accentColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                FileResultIcon(path: path),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        name.replaceFirst('.lnk', ''),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: highlighted ? widget.onSurface : widget.onSurface.withAlpha(200),
-                          fontFamily: globalSettings.themeColors.entryFontFamily,
-                          fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                          fontWeight: FontWeight(globalSettings.themeColors.entryFontWeight),
+                  FileResultIcon(path: path),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          name.replaceFirst('.lnk', ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: highlighted ? widget.onSurface : widget.onSurface.withAlpha(200),
+                            fontFamily: globalSettings.themeColors.entryFontFamily,
+                            fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                            fontWeight: FontWeight(globalSettings.themeColors.entryFontWeight),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _hovered ? path.lastChars(40) : path,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: highlighted ? widget.onSurface.withAlpha(170) : widget.onSurface.withAlpha(130),
+                        const SizedBox(height: 2),
+                        Text(
+                          _hovered ? path.lastChars(40) : path,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: highlighted ? widget.onSurface.withAlpha(170) : widget.onSurface.withAlpha(130),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // File/Dir badge
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: _FileKindBadge(
-                    isDirectory: widget.entity.path.split('.').length != 2,
-                    accent: globalSettings.themeColors.accentColor,
-                    onSurface: widget.onSurface,
+                  // File/Dir badge
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: _FileKindBadge(
+                      isDirectory: widget.entity.path.split('.').length != 2,
+                      accent: globalSettings.themeColors.accentColor,
+                      onSurface: widget.onSurface,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

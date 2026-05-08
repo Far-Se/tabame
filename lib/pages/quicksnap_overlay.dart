@@ -710,7 +710,7 @@ class _NotchBar extends StatelessWidget {
             bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10), width: 0.5),
           ),
         ),
-        padding: const EdgeInsets.only(left: 10, right: 10, top: 6, bottom: 10),
+        padding: const EdgeInsets.only(left: 10, right: 10, top: 0, bottom: 10), // <- this
         child: IntrinsicWidth(
           child: Row(
             mainAxisSize: MainAxisSize.min,

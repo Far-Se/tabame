@@ -29,11 +29,11 @@ enum ScreenDrawHotkeyAction {
       case ScreenDrawHotkeyAction.spotlightSetActiveWindow:
         return "Spotlight: Set Active Window";
       case ScreenDrawHotkeyAction.spotlightRaiseBlurSigma:
-        return "Spotlight: Raise Blur Sigma";
+        return "Spotlight: Increase Blur Sigma";
       case ScreenDrawHotkeyAction.spotlightDecreaseBlurSigma:
         return "Spotlight: Decrease Blur Sigma";
       case ScreenDrawHotkeyAction.spotlightRaiseDimOpacity:
-        return "Spotlight: Raise Dim Opacity";
+        return "Spotlight: Increase Dim Opacity";
       case ScreenDrawHotkeyAction.spotlightDecreaseDimOpacity:
         return "Spotlight: Decrease Dim Opacity";
       case ScreenDrawHotkeyAction.spotlightClose:

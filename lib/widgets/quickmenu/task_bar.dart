@@ -68,6 +68,13 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     }
   }
 
+  @override
+  Future<void> onQuickActionExecute(String actionName) async {
+    if (actionName == "action:refreshTaskbar") {
+      await _fetchWindows(force: true);
+    }
+  }
+
   int _sizeIncrement = 1;
   void _initializeWindowSize() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -119,8 +126,9 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         .toList();
   }
 
-  Future<void> _fetchWindows({bool updateState = true}) async {
-    if (!_keepFetching || _fetching) return;
+  Future<void> _fetchWindows({bool force = false, bool updateState = true}) async {
+    if (!force && !_keepFetching) return;
+    if (_fetching) return;
 
     if (await WindowWatcher.fetchWindows()) {
       _fetching = true;

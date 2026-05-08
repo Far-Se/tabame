@@ -12,7 +12,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     return '${normalized.substring(0, maxChars).trimRight()}...';
   }
 
-  Widget _buildPlayerTab(Color accent, Color onSurface) {
+  Widget _buildPlayerTab(Color accent) {
     return StreamBuilder<SequenceState?>(
       stream: MusicServerManager.player.sequenceStateStream,
       builder: (BuildContext context, AsyncSnapshot<SequenceState?> sequenceSnapshot) {
@@ -28,16 +28,14 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _EmptyState(
+                const _EmptyState(
                   icon: Icons.album_outlined,
                   title: "Nothing playing",
                   subtitle: "Start with a playlist or indexed folder.",
-                  accent: accent,
-                  onSurface: onSurface,
                 ),
                 if (_savedQueueAvailable) ...<Widget>[
                   const SizedBox(height: 12),
-                  _buildSavedQueueCard(accent, onSurface),
+                  _buildSavedQueueCard(accent),
                 ],
                 const SizedBox(height: 12),
               ],
@@ -78,113 +76,120 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                            Align(
-                              alignment: Alignment.topRight,
-                              child: _PlayerTrackMenuButton(
-                                accent: accent,
-                                onSurface: onSurface,
-                                onSelected: (_PlayerTrackMenuAction action) =>
-                                    _handlePlayerTrackMenuAction(action, item),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Builder(
-                              builder: (BuildContext context) {
-                                final bool disableAnimations = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-                                final bool useStackedHeader = constraints.maxWidth < 430;
-                                final Widget metadata = AnimatedSwitcher(
-                                  duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeOutCubic,
-                                  child: KeyedSubtree(
-                                    key: ValueKey<String>('meta_${item.id}'),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          useStackedHeader ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          _clipPlayerLabel(item.title),
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                          style: TextStyle(
-                                            fontFamily: globalSettings.themeColors.entryFontFamily,
-                                            fontSize: 19,
-                                            height: 1.1,
-                                            fontWeight: FontWeight.w800,
-                                            color: onSurface,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _clipPlayerLabel(item.artist ?? "Unknown artist"),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                          style: TextStyle(
-                                            fontFamily: globalSettings.themeColors.entryFontFamily,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: accent.withAlpha(200),
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                        if (item.album != null) ...<Widget>[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.album!,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                            style: TextStyle(
-                                              fontFamily: globalSettings.themeColors.entryFontFamily,
-                                              fontSize: 11.5,
-                                              color: onSurface.withAlpha(140),
+                            Stack(
+                              // fit: StackFit.passthrough,
+                              children: <Widget>[
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: _PlayerTrackMenuButton(
+                                    onSelected: (_PlayerTrackMenuAction action) =>
+                                        _handlePlayerTrackMenuAction(action, item),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Builder(
+                                  builder: (BuildContext context) {
+                                    final bool disableAnimations =
+                                        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+                                    final bool useStackedHeader = constraints.maxWidth < 430;
+                                    final Widget metadata = AnimatedSwitcher(
+                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeOutCubic,
+                                      child: KeyedSubtree(
+                                        key: ValueKey<String>('meta_${item.id}'),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              useStackedHeader ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Text(
+                                              _clipPlayerLabel(item.title),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                              style: TextStyle(
+                                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                fontSize: 19,
+                                                height: 1.1,
+                                                fontWeight: FontWeight.w800,
+                                                color: Theme.of(context).colorScheme.onSurface,
+                                              ),
                                             ),
-                                          ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              _clipPlayerLabel(item.artist ?? "Unknown artist"),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                              style: TextStyle(
+                                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: accent.withAlpha(200),
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                            if (item.album != null) ...<Widget>[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item.album!,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
+                                                style: TextStyle(
+                                                  fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                  fontSize: 11.5,
+                                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    );
+
+                                    final Widget coverArt = AnimatedSwitcher(
+                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 240),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeOutCubic,
+                                      child: KeyedSubtree(
+                                        key: ValueKey<String>(item.id),
+                                        child: _CoverArt(
+                                          item: item,
+                                          size: 120,
+                                        ),
+                                      ),
+                                    );
+
+                                    if (useStackedHeader) {
+                                      return Column(
+                                        children: <Widget>[
+                                          Center(child: coverArt),
+                                          const SizedBox(height: 18),
+                                          metadata,
                                         ],
+                                      );
+                                    }
+
+                                    return Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        coverArt,
+                                        const SizedBox(width: 30),
+                                        Expanded(child: metadata),
                                       ],
-                                    ),
-                                  ),
-                                );
-
-                                final Widget coverArt = AnimatedSwitcher(
-                                  duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 240),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeOutCubic,
-                                  child: KeyedSubtree(
-                                    key: ValueKey<String>(item.id),
-                                    child: _CoverArt(item: item, size: 120, accent: accent, onSurface: onSurface),
-                                  ),
-                                );
-
-                                if (useStackedHeader) {
-                                  return Column(
-                                    children: <Widget>[
-                                      Center(child: coverArt),
-                                      const SizedBox(height: 18),
-                                      metadata,
-                                    ],
-                                  );
-                                }
-
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    coverArt,
-                                    const SizedBox(width: 30),
-                                    Expanded(child: metadata),
-                                  ],
-                                );
-                              },
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 24),
-                            _buildTimeline(accent, onSurface, item),
+                            const SizedBox(height: 10),
+                            _buildTimeline(accent, item),
+                            const SizedBox(height: 10),
+                            _buildTransport(accent, sequenceState, item),
                             const SizedBox(height: 20),
-                            _buildTransport(accent, onSurface, sequenceState, item),
-                            const SizedBox(height: 30),
-                            _buildQueueButton(accent, onSurface, queueLength, currentIndex),
+                            _buildQueueButton(accent, queueLength, currentIndex),
                           ],
                         ),
                       ),
@@ -193,8 +198,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 );
               },
             ),
-            if (_queueVisible) _buildQueuePreview(accent, onSurface, sequenceState),
-            if (_playlistPickerVisible) _buildPlaylistPicker(accent, onSurface, item),
+            if (_queueVisible) _buildQueuePreview(accent, sequenceState),
+            if (_playlistPickerVisible) _buildPlaylistPicker(accent, item),
           ],
         );
       },
@@ -333,25 +338,29 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
 
   bool _sameMusicLabel(String left, String right) => left.trim().toLowerCase() == right.trim().toLowerCase();
 
-  Widget _buildSavedQueueCard(Color accent, Color onSurface) {
+  Widget _buildSavedQueueCard(Color accent) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: _cardDecoration(onSurface),
+      decoration: _cardDecoration(),
       child: Row(
         children: <Widget>[
-          _IconPill(icon: Icons.queue_music_rounded, accent: accent),
+          const _IconPill(
+            icon: Icons.queue_music_rounded,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text("Saved queue", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                Text("Saved queue",
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(height: 2),
                 Text(
                   _restoringSavedQueue ? "Fetching tracks..." : "Ready to list in Player.",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                 ),
               ],
             ),
@@ -359,14 +368,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           const SizedBox(width: 8),
           _MiniIconButton(
             icon: Icons.restore_rounded,
-            accent: accent,
-            onSurface: onSurface,
             onTap: _restoringSavedQueue ? () {} : () => _restoreSavedQueue(),
           ),
           _MiniIconButton(
             icon: Icons.delete_outline_rounded,
-            accent: accent,
-            onSurface: onSurface,
             onTap: _clearSavedQueue,
           ),
         ],
@@ -374,7 +379,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildTimeline(Color accent, Color onSurface, MusicItem item) {
+  Widget _buildTimeline(Color accent, MusicItem item) {
     return StreamBuilder<Duration>(
       stream: MusicServerManager.player.positionStream,
       builder: (BuildContext context, AsyncSnapshot<Duration> positionSnapshot) {
@@ -394,7 +399,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 children: <Widget>[
                   _TimelineTimeLabel(
                     label: _formatDuration(position),
-                    onSurface: onSurface,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -424,7 +428,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   const SizedBox(width: 6),
                   _TimelineTimeLabel(
                     label: trustedDuration == null ? "--:--" : _formatDuration(duration),
-                    onSurface: onSurface,
                   ),
                 ],
               ),
@@ -435,7 +438,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildTransport(Color accent, Color onSurface, SequenceState? sequenceState, MusicItem item) {
+  Widget _buildTransport(Color accent, SequenceState? sequenceState, MusicItem item) {
     final bool canPrevious = (sequenceState?.currentIndex ?? 0) > 0;
     final bool canNext = (sequenceState?.currentIndex ?? 0) < ((sequenceState?.sequence.length ?? 1) - 1);
     final bool starred = _starredOverrides[item.id] ?? item.starred;
@@ -465,9 +468,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   children: <Widget>[
                     _TransportButton(
                       icon: starred ? Icons.star_rounded : Icons.star_border_rounded,
+                      tooltip: "Save to Stared Playlist",
                       active: starred,
-                      accent: accent,
-                      onSurface: onSurface,
                       size: secondarySize,
                       onTap: () => _toggleStarred(item, !starred),
                     ),
@@ -476,8 +478,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       icon:
                           sequenceState?.shuffleModeEnabled == true ? Icons.shuffle_on_rounded : Icons.shuffle_rounded,
                       active: sequenceState?.shuffleModeEnabled == true,
-                      accent: accent,
-                      onSurface: onSurface,
+                      tooltip: "Shuffle",
                       size: secondarySize,
                       onTap: () => MusicServerManager.player
                           .setShuffleModeEnabled(!(sequenceState?.shuffleModeEnabled ?? false)),
@@ -485,8 +486,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     SizedBox(width: gap),
                     _TransportButton(
                       icon: Icons.skip_previous_rounded,
-                      accent: accent,
-                      onSurface: onSurface,
+                      tooltip: "Previous",
                       enabled: canPrevious,
                       size: secondarySize,
                       onTap: MusicServerManager.player.seekToPrevious,
@@ -498,10 +498,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                           : playing
                               ? Icons.pause_rounded
                               : Icons.play_arrow_rounded,
+                      tooltip: playing ? "Pause" : "Play",
                       active: true,
                       isPrimary: true,
-                      accent: accent,
-                      onSurface: onSurface,
                       size: primarySize,
                       onTap: buffering
                           ? null
@@ -512,8 +511,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     SizedBox(width: gap),
                     _TransportButton(
                       icon: Icons.skip_next_rounded,
-                      accent: accent,
-                      onSurface: onSurface,
+                      tooltip: "Next",
                       enabled: canNext,
                       size: secondarySize,
                       onTap: MusicServerManager.player.seekToNext,
@@ -522,8 +520,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     _TransportButton(
                       icon: sequenceState?.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
                       active: sequenceState?.loopMode != LoopMode.off,
-                      accent: accent,
-                      onSurface: onSurface,
+                      tooltip: "Repeat",
                       size: secondarySize,
                       onTap: () {
                         final LoopMode next = sequenceState?.loopMode == LoopMode.off
@@ -537,8 +534,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     SizedBox(width: gap),
                     _TransportButton(
                       icon: Icons.playlist_add_rounded,
-                      accent: accent,
-                      onSurface: onSurface,
+                      tooltip: "Add to Playlist",
                       size: secondarySize,
                       onTap: () => _openPlaylistPicker(),
                     ),
@@ -579,7 +575,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     if (mounted) setState(() => _playlistPickerVisible = true);
   }
 
-  Widget _buildQueueButton(Color accent, Color onSurface, int queueLength, int currentIndex) {
+  Widget _buildQueueButton(Color accent, int queueLength, int currentIndex) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: InkWell(
@@ -612,15 +608,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   children: <Widget>[
                     Text(
                       "Queue",
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: onSurface),
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     const SizedBox(height: 1),
-                    Text(
-                      queueLength == 0 ? "No songs queued" : "Track $currentIndex of $queueLength",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: onSurface.withAlpha(130)),
-                    ),
                   ],
                 ),
               ),
@@ -632,12 +623,13 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  "$queueLength",
+                  "$currentIndex/$queueLength",
                   style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, size: 18, color: onSurface.withAlpha(130)),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
             ],
           ),
         ),
@@ -645,7 +637,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildPlaylistPicker(Color accent, Color onSurface, MusicItem item) {
+  Widget _buildPlaylistPicker(Color accent, MusicItem item) {
     return Positioned.fill(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -654,7 +646,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface.withAlpha(245),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: onSurface.withAlpha(24)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(24)),
             boxShadow: <BoxShadow>[
               BoxShadow(
                 color: Colors.black.withAlpha(28),
@@ -675,8 +667,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         icon: Icons.playlist_add_rounded,
                         label: "Add To",
                         count: _playlists.length,
-                        accent: accent,
-                        onSurface: onSurface,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -685,20 +675,19 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       borderRadius: BorderRadius.circular(8),
                       child: Padding(
                         padding: const EdgeInsets.all(5),
-                        child: Icon(Icons.close_rounded, size: 17, color: onSurface.withAlpha(150)),
+                        child: Icon(Icons.close_rounded,
+                            size: 17, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 if (_playlists.isEmpty)
-                  Expanded(
+                  const Expanded(
                     child: _EmptyState(
                       icon: Icons.playlist_remove_rounded,
                       title: "No playlists",
                       subtitle: "Create a playlist first, then add this song.",
-                      accent: accent,
-                      onSurface: onSurface,
                     ),
                   )
                 else
@@ -710,8 +699,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         final MusicPlaylist playlist = _playlists[index];
                         return _PlaylistPickerRow(
                           playlist: playlist,
-                          accent: accent,
-                          onSurface: onSurface,
                           onTap: () => _addCurrentSongToPlaylist(playlist, item),
                         );
                       },
@@ -725,7 +712,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildQueuePreview(Color accent, Color onSurface, SequenceState? sequenceState) {
+  Widget _buildQueuePreview(Color accent, SequenceState? sequenceState) {
     final List<IndexedAudioSource> sequence = sequenceState?.sequence ?? <IndexedAudioSource>[];
     if (sequence.isEmpty) return const SizedBox.shrink();
     final int currentIndex = sequenceState?.currentIndex ?? 0;
@@ -745,7 +732,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface.withAlpha(245),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: onSurface.withAlpha(24)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(24)),
             boxShadow: <BoxShadow>[
               BoxShadow(
                 color: Colors.black.withAlpha(28),
@@ -771,8 +758,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                           decoration: _inputDecoration(
                             hint: "Search queue by artist, album, or title",
                             icon: Icons.queue_music_rounded,
-                            accent: accent,
-                            onSurface: onSurface,
                           ),
                         ),
                       ),
@@ -782,7 +767,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(
                           padding: const EdgeInsets.all(5),
-                          child: Icon(Icons.close_rounded, size: 17, color: onSurface.withAlpha(150)),
+                          child: Icon(Icons.close_rounded,
+                              size: 17, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
                         ),
                       ),
                     ],
@@ -790,12 +776,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   const SizedBox(height: 8),
                   Expanded(
                     child: visibleEntries.isEmpty
-                        ? _EmptyState(
+                        ? const _EmptyState(
                             icon: Icons.search_off_rounded,
                             title: "No queue matches",
                             subtitle: "Try another artist, album, or title.",
-                            accent: accent,
-                            onSurface: onSurface,
                           )
                         : ClipRRect(
                             child: Material(
@@ -809,8 +793,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                   return _CompactQueueRow(
                                     item: entry.item,
                                     active: entry.index == currentIndex,
-                                    accent: accent,
-                                    onSurface: onSurface,
                                     onTap: () => MusicServerManager.player.seek(Duration.zero, index: entry.index),
                                   );
                                 },
@@ -827,7 +809,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildSearchTab(Color accent, Color onSurface) {
+  Widget _buildSearchTab(Color accent) {
     final List<MusicItem> artistResults =
         _searchResults.where((MusicItem item) => item.type == MusicItemType.artist).toList(growable: false);
     final List<MusicItem> albumResults =
@@ -852,8 +834,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             decoration: _inputDecoration(
               hint: "Search artists, albums, or songs",
               icon: Icons.search_rounded,
-              accent: accent,
-              onSurface: onSurface,
               suffix: CancelTraversal(
                 child: IconButton(
                   tooltip: "Search",
@@ -879,8 +859,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   subtitle: _searchController.text.trim().isEmpty
                       ? "Type a title, artist, or album."
                       : "Try a broader query.",
-                  accent: accent,
-                  onSurface: onSurface,
                 )
               : ClipRRect(
                   child: Material(
@@ -895,11 +873,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                               icon: Icons.person_search_rounded,
                               label: "Artists",
                               count: artistResults.length,
-                              accent: accent,
-                              onSurface: onSurface,
                             ),
                             const SizedBox(height: 8),
-                            _buildItemSection(artistResults, accent, onSurface),
+                            _buildItemSection(artistResults, accent),
                             const SizedBox(height: 12),
                           ],
                           if (albumResults.isNotEmpty) ...<Widget>[
@@ -907,11 +883,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                               icon: Icons.album_rounded,
                               label: "Albums",
                               count: albumResults.length,
-                              accent: accent,
-                              onSurface: onSurface,
                             ),
                             const SizedBox(height: 8),
-                            _buildItemSection(albumResults, accent, onSurface),
+                            _buildItemSection(albumResults, accent),
                             const SizedBox(height: 12),
                           ],
                           if (songResults.isNotEmpty) ...<Widget>[
@@ -919,11 +893,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                               icon: Icons.music_note_rounded,
                               label: "Songs",
                               count: songResults.length,
-                              accent: accent,
-                              onSurface: onSurface,
                             ),
                             const SizedBox(height: 8),
-                            _buildItemSection(songResults, accent, onSurface),
+                            _buildItemSection(songResults, accent),
                           ],
                         ],
                       ),
@@ -935,7 +907,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildLibraryTab(Color accent, Color onSurface) {
+  Widget _buildLibraryTab(Color accent) {
     if (_items.isEmpty && !_loading) {
       return _EmptyState(
         icon: Icons.library_music_outlined,
@@ -947,16 +919,14 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 ? "Add a music folder or reindex Local."
                 : "Refresh or check your Subsonic library.")
             : "Add or activate a source in settings.",
-        accent: accent,
-        onSurface: onSurface,
         actionLabel: "Refresh",
         onAction: _refresh,
       );
     }
-    return _buildItemList(_items, accent, onSurface, playlistId: _activePlaylistId);
+    return _buildItemList(_items, accent, playlistId: _activePlaylistId);
   }
 
-  Widget _buildItemList(List<MusicItem> items, Color accent, Color onSurface, {String? playlistId}) {
+  Widget _buildItemList(List<MusicItem> items, Color accent, {String? playlistId}) {
     return ClipRRect(
       child: Material(
         type: MaterialType.transparency,
@@ -968,8 +938,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             final MusicItem item = items[index];
             return _MusicRow(
               item: item,
-              accent: accent,
-              onSurface: onSurface,
               onTap: () => _onItemTap(item, items, index),
               trailingActions: <_RowAction>[
                 if (item.isFolder)
@@ -998,7 +966,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildItemSection(List<MusicItem> items, Color accent, Color onSurface) {
+  Widget _buildItemSection(List<MusicItem> items, Color accent) {
     return Column(
       children: List<Widget>.generate(items.length, (int index) {
         final MusicItem item = items[index];
@@ -1006,8 +974,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           padding: EdgeInsets.only(bottom: index == items.length - 1 ? 0 : 6),
           child: _MusicRow(
             item: item,
-            accent: accent,
-            onSurface: onSurface,
             onTap: () => _onItemTap(item, items, index),
             trailingActions: <_RowAction>[
               if (item.isFolder)
@@ -1029,7 +995,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildFoldersTab(Color accent, Color onSurface) {
+  Widget _buildFoldersTab(Color accent) {
     if (_folderItems.isEmpty && !_loading) {
       return _EmptyState(
         icon: Icons.folder_outlined,
@@ -1039,8 +1005,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 ? "Add a local root folder or reindex Local."
                 : "Refresh or check whether your server exposes Subsonic indexes.")
             : "Add or activate a source in settings.",
-        accent: accent,
-        onSurface: onSurface,
         actionLabel: "Refresh",
         onAction: _refresh,
       );
@@ -1053,8 +1017,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
         final MusicItem item = _folderItems[index];
         return _MusicRow(
           item: item,
-          accent: accent,
-          onSurface: onSurface,
           onTap: () => _onFolderTap(item, _folderItems, index),
           trailingActions: <_RowAction>[
             _RowAction(
@@ -1074,7 +1036,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildPlaylistsTab(Color accent, Color onSurface) {
+  Widget _buildPlaylistsTab(Color accent) {
     const List<_SmartPlaylistCategory> smartCategories = <_SmartPlaylistCategory>[
       _SmartPlaylistCategory(
         title: "Top Rated",
@@ -1103,7 +1065,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
         children: <Widget>[
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: _cardDecoration(onSurface),
+            decoration: _cardDecoration(),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -1114,8 +1076,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     decoration: _inputDecoration(
                       hint: "New playlist name",
                       icon: Icons.playlist_add_rounded,
-                      accent: accent,
-                      onSurface: onSurface,
                     ),
                   ),
                 ),
@@ -1142,8 +1102,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             icon: Icons.auto_awesome_rounded,
             label: MusicServerManager.isLocalActive ? "Local" : "Subsonic",
             count: smartCategories.length,
-            accent: accent,
-            onSurface: onSurface,
           ),
           const SizedBox(height: 8),
           ...smartCategories.map(
@@ -1151,8 +1109,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
               padding: const EdgeInsets.only(bottom: 8),
               child: _SmartPlaylistRow(
                 category: category,
-                accent: accent,
-                onSurface: onSurface,
                 onTap: () => _openSmartPlaylist(category),
               ),
             ),
@@ -1162,17 +1118,13 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             icon: Icons.playlist_play_rounded,
             label: "Playlists",
             count: _playlists.length,
-            accent: accent,
-            onSurface: onSurface,
           ),
           const SizedBox(height: 8),
           if (_playlists.isEmpty && !_loading)
-            _InlinePanel(
+            const _InlinePanel(
               icon: Icons.playlist_remove_rounded,
               title: "No saved playlists",
               subtitle: "Create a playlist above or refresh after creating one on your server.",
-              accent: accent,
-              onSurface: onSurface,
             )
           else
             ..._playlists.map(
@@ -1180,8 +1132,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _PlaylistRow(
                   playlist: playlist,
-                  accent: accent,
-                  onSurface: onSurface,
                   onTap: () => _openPlaylist(playlist),
                   trailingActions: <_RowAction>[
                     _RowAction(
@@ -1203,7 +1153,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildLocalSourceCard(Color accent, Color onSurface) {
+  Widget _buildLocalSourceCard(Color accent) {
     final bool active = MusicServerManager.isLocalActive;
     final bool indexing = MusicLocalIndexer.instance.isIndexingNotifier.value;
     final int indexed = MusicLocalIndexer.instance.indexedCount.value;
@@ -1212,9 +1162,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: active ? accent.withAlpha(20) : onSurface.withAlpha(8),
+        color: active ? accent.withAlpha(20) : Theme.of(context).colorScheme.onSurface.withAlpha(8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: active ? accent.withAlpha(80) : onSurface.withAlpha(18)),
+        border:
+            Border.all(color: active ? accent.withAlpha(80) : Theme.of(context).colorScheme.onSurface.withAlpha(18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1222,7 +1173,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           Row(
             children: <Widget>[
               _IconPill(
-                  icon: active ? Icons.radio_button_checked_rounded : Icons.folder_special_rounded, accent: accent),
+                icon: active ? Icons.radio_button_checked_rounded : Icons.folder_special_rounded,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1231,7 +1183,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     Text("Local",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface)),
                     const SizedBox(height: 2),
                     Text(
                       indexing
@@ -1239,7 +1192,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                           : "${_localRoots.length} folders - $_localSongCount tracks indexed",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                     ),
                   ],
                 ),
@@ -1249,8 +1202,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   message: "Activate Local",
                   child: _MiniIconButton(
                     icon: Icons.login_rounded,
-                    accent: accent,
-                    onSurface: onSurface,
                     onTap: _activateLocal,
                   ),
                 ),
@@ -1258,8 +1209,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 message: "Edit folders",
                 child: _MiniIconButton(
                   icon: Icons.edit_rounded,
-                  accent: accent,
-                  onSurface: onSurface,
                   onTap: () => setState(() => _localEditorVisible = !_localEditorVisible),
                 ),
               ),
@@ -1267,8 +1216,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 message: "Reindex all",
                 child: _MiniIconButton(
                   icon: Icons.sync_rounded,
-                  accent: accent,
-                  onSurface: onSurface,
                   onTap: _reindexLocalAll,
                 ),
               ),
@@ -1276,31 +1223,29 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           ),
           if (_localEditorVisible) ...<Widget>[
             const SizedBox(height: 10),
-            _buildLocalRootEditor(accent, onSurface),
+            _buildLocalRootEditor(accent),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildLocalRootEditor(Color accent, Color onSurface) {
+  Widget _buildLocalRootEditor(Color accent) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: onSurface.withAlpha(7),
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(7),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: onSurface.withAlpha(16)),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (_localRoots.isEmpty)
-            _InlinePanel(
+            const _InlinePanel(
               icon: Icons.folder_off_rounded,
               title: "No local folders",
               subtitle: "Add a root folder to index local music.",
-              accent: accent,
-              onSurface: onSurface,
             )
           else
             ..._localRoots.map(
@@ -1319,15 +1264,16 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         root.path,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: onSurface),
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                     ),
                     Tooltip(
                       message: "Reindex folder",
                       child: _MiniIconButton(
                         icon: Icons.sync_rounded,
-                        accent: accent,
-                        onSurface: onSurface,
                         onTap: () async {
                           setState(() => _loading = true);
                           try {
@@ -1345,7 +1291,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       child: _MiniIconButton(
                         icon: Icons.delete_outline_rounded,
                         accent: Colors.redAccent,
-                        onSurface: onSurface,
                         onTap: () => _removeLocalRoot(root),
                       ),
                     ),
@@ -1379,7 +1324,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  Widget _buildSettingsTab(Color accent, Color onSurface) {
+  Widget _buildSettingsTab(Color accent) {
     final List<MusicServerConfig> configs = MusicServerManager.configs;
     final String? activeId = MusicServerManager.activeConfigId;
 
@@ -1389,20 +1334,17 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _SectionLabel(
-              icon: Icons.dns_rounded,
-              label: "Servers",
-              count: configs.length + 1,
-              accent: accent,
-              onSurface: onSurface),
+            icon: Icons.dns_rounded,
+            label: "Servers",
+            count: configs.length + 1,
+          ),
           const SizedBox(height: 8),
-          _buildLocalSourceCard(accent, onSurface),
+          _buildLocalSourceCard(accent),
           if (configs.isEmpty)
-            _InlinePanel(
+            const _InlinePanel(
               icon: Icons.cloud_off_rounded,
               title: "No remote servers configured",
               subtitle: "Use Local above or add a Subsonic-compatible server below.",
-              accent: accent,
-              onSurface: onSurface,
             )
           else
             ...configs.map((MusicServerConfig config) {
@@ -1411,13 +1353,16 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: active ? accent.withAlpha(20) : onSurface.withAlpha(8),
+                  color: active ? accent.withAlpha(20) : Theme.of(context).colorScheme.onSurface.withAlpha(8),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: active ? accent.withAlpha(80) : onSurface.withAlpha(18)),
+                  border: Border.all(
+                      color: active ? accent.withAlpha(80) : Theme.of(context).colorScheme.onSurface.withAlpha(18)),
                 ),
                 child: Row(
                   children: <Widget>[
-                    _IconPill(icon: active ? Icons.radio_button_checked_rounded : Icons.dns_outlined, accent: accent),
+                    _IconPill(
+                      icon: active ? Icons.radio_button_checked_rounded : Icons.dns_outlined,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1426,32 +1371,31 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                           Text(config.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface)),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.onSurface)),
                           const SizedBox(height: 2),
                           Text(config.url,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130))),
+                              style: TextStyle(
+                                  fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
                         ],
                       ),
                     ),
                     if (!active)
                       _MiniIconButton(
                         icon: Icons.login_rounded,
-                        accent: accent,
-                        onSurface: onSurface,
                         onTap: () => _activateServer(config),
                       ),
                     _MiniIconButton(
                       icon: Icons.sync_rounded,
-                      accent: accent,
-                      onSurface: onSurface,
                       onTap: () => _testServer(config),
                     ),
                     _MiniIconButton(
                       icon: Icons.delete_outline_rounded,
                       accent: Colors.redAccent,
-                      onSurface: onSurface,
                       onTap: () async {
                         await MusicServerManager.removeServer(config.id);
                         if (mounted) setState(() {});
@@ -1462,21 +1406,21 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
               );
             }),
           const SizedBox(height: 16),
-          _SectionLabel(
+          const _SectionLabel(
             icon: Icons.settings_suggest_rounded,
             label: "Preferences",
             count: 0,
-            accent: accent,
-            onSurface: onSurface,
             hideCount: true,
           ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: _cardDecoration(onSurface),
+            decoration: _cardDecoration(),
             child: Row(
               children: <Widget>[
-                _IconPill(icon: Icons.task_rounded, accent: accent),
+                const _IconPill(
+                  icon: Icons.task_rounded,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1484,12 +1428,13 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     children: <Widget>[
                       Text(
                         "Show in Taskbar",
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: onSurface),
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         "Display playback controls in the quick menu taskbar.",
-                        style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                       ),
                     ],
                   ),
@@ -1508,32 +1453,25 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             ),
           ),
           const SizedBox(height: 16),
-          _SectionLabel(
-              icon: Icons.add_link_rounded,
-              label: "Add Subsonic type Server",
-              count: 0,
-              accent: accent,
-              onSurface: onSurface,
-              hideCount: true),
+          const _SectionLabel(
+              icon: Icons.add_link_rounded, label: "Add Subsonic type Server", count: 0, hideCount: true),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: _cardDecoration(onSurface),
+            decoration: _cardDecoration(),
             child: Column(
               children: <Widget>[
-                _buildTextField(_nameController, "Server name", Icons.badge_outlined, accent, onSurface),
+                _buildTextField(_nameController, "Server name", Icons.badge_outlined, accent),
                 const SizedBox(height: 8),
-                _buildTextField(_urlController, "Server URL", Icons.link_rounded, accent, onSurface),
+                _buildTextField(_urlController, "Server URL", Icons.link_rounded, accent),
                 const SizedBox(height: 8),
                 Row(
                   children: <Widget>[
-                    Expanded(
-                        child: _buildTextField(
-                            _userController, "Username", Icons.person_outline_rounded, accent, onSurface)),
+                    Expanded(child: _buildTextField(_userController, "Username", Icons.person_outline_rounded, accent)),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: _buildTextField(_passController, "Password", Icons.key_rounded, accent, onSurface,
-                            isPassword: true)),
+                        child:
+                            _buildTextField(_passController, "Password", Icons.key_rounded, accent, isPassword: true)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -1710,43 +1648,43 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     TextEditingController controller,
     String label,
     IconData icon,
-    Color accent,
-    Color onSurface, {
+    Color accent, {
     bool isPassword = false,
   }) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      decoration: _inputDecoration(hint: label, icon: icon, accent: accent, onSurface: onSurface),
+      decoration: _inputDecoration(
+        hint: label,
+        icon: icon,
+      ),
     );
   }
 
   InputDecoration _inputDecoration({
     required String hint,
     required IconData icon,
-    required Color accent,
-    required Color onSurface,
     Widget? suffix,
   }) {
     return InputDecoration(
       isDense: true,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(110)),
-      prefixIcon: Icon(icon, size: 16, color: accent),
+      hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
+      prefixIcon: Icon(icon, size: 16, color: globalSettings.themeColors.accentColor),
       suffixIcon: suffix,
       filled: true,
-      fillColor: accent.withAlpha(10),
+      fillColor: globalSettings.themeColors.accentColor.withAlpha(10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: accent.withAlpha(90)),
+        borderSide: BorderSide(color: globalSettings.themeColors.accentColor.withAlpha(90)),
       ),
     );
   }
 
-  Widget _buildTabBar(Color accent, Color onSurface) {
+  Widget _buildTabBar(Color accent) {
     final List<_TabSpec> tabs = <_TabSpec>[
       const _TabSpec(Icons.graphic_eq_rounded, "Player"),
       const _TabSpec(Icons.search_rounded, "Search"),
@@ -1759,8 +1697,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: onSurface.withAlpha(4),
-        border: Border(top: BorderSide(color: onSurface.withAlpha(12), width: 1)),
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(4),
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(12), width: 1)),
       ),
       child: Row(
         children: tabs.asMap().entries.map((MapEntry<int, _TabSpec> entry) {
@@ -1771,8 +1709,6 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 icon: entry.value.icon,
                 label: entry.value.label,
                 active: entry.key == _tabIndex,
-                accent: accent,
-                onSurface: onSurface,
                 onTap: () => _setTab(entry.key),
               ),
             ),
@@ -1782,11 +1718,11 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
-  BoxDecoration _cardDecoration(Color onSurface) {
+  BoxDecoration _cardDecoration() {
     return BoxDecoration(
-      color: onSurface.withAlpha(8),
+      color: Theme.of(context).colorScheme.onSurface.withAlpha(8),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: onSurface.withAlpha(18)),
+      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(18)),
     );
   }
 
