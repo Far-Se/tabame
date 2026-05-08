@@ -1326,10 +1326,8 @@ There is a total of **${result!.totalChars.decimal}** characters.
                       onTap: () {
                         WinUtils.open("${_folderController.text}\\${file.path}");
                       },
-                      child: Text(
-                          file.path.length > 35 ? "...${file.path.substring(file.path.length - 35)}" : file.path,
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis)),
+                      child: Text(file.path.lastChars(35, addDots: true),
+                          style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
                 )),
               ],
             ),

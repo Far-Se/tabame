@@ -127,6 +127,7 @@ class Boxes {
       ..volumeSetBack = pref.getBool("volumeSetBack") ?? globalSettings.volumeSetBack
       ..quickSnapGrid = pref.getBool("quickSnapGrid") ?? globalSettings.quickSnapGrid
       ..lastChangelog = pref.getString("lastChangelog") ?? globalSettings.lastChangelog
+      ..bottomBarOnTop = pref.getBool("bottomBarOnTop") ?? globalSettings.bottomBarOnTop
       ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? globalSettings.keepPopupsOpen
       ..expandedTaskbar = pref.getBool("expandedTaskbar") ?? globalSettings.expandedTaskbar
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? globalSettings.showSystemUsage

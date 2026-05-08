@@ -99,7 +99,7 @@ class QuickMenuFunctions {
 
   static Future<void> toggleQuickMenu(
       {QuickMenuPage type = QuickMenuPage.quickMenu, bool? visible, bool center = false, bool forcePop = false}) async {
-    if (visible == false && kDebugMode) return;
+    if (visible == false && (kDebugMode && !Globals.debugHotkeys)) return;
     if (visible != null) {
       if (visible == false && QuickMenuFunctions.keepOpen) {
         return;

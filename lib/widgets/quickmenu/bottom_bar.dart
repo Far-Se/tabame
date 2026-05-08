@@ -32,11 +32,34 @@ class PinnedAndTrayList extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            const Flexible(flex: 4, child: PinnedApps()),
-            if (globalSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
-            const Flexible(flex: 4, child: TrayBar()),
-          ],
+          children: globalSettings.bottomBarOnTop
+              ? <Widget>[
+                  Expanded(
+                    flex: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const LogoDragButton(),
+                        const SizedBox(width: 3),
+                        const Expanded(child: BarWithQuickActions()),
+                        Theme(
+                            data: Theme.of(context).copyWith(
+                                iconTheme: IconThemeData(
+                              size: 16,
+                              color: Theme.of(context).iconTheme.color,
+                            )),
+                            child: const OpenSettingsButton()),
+                      ],
+                    ),
+                  ),
+                  if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
+                  const Flexible(flex: 4, child: TrayBar()),
+                ]
+              : <Widget>[
+                  if (globalSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
+                  if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
+                  const Flexible(flex: 4, child: TrayBar()),
+                ],
         ),
       ),
     );
@@ -126,7 +149,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncLogoDragOverlay();
+      if (mounted && !globalSettings.bottomBarOnTop) _syncLogoDragOverlay();
     });
     return Theme(
       data: Theme.of(context).copyWith(
@@ -144,7 +167,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
                 ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
                 if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
                 if (kDebugMode) const TestingButton(),
-                const OpenSettingsButton(),
+                if (!globalSettings.bottomBarOnTop) const OpenSettingsButton(),
               ],
             )
           : const SizedBox.shrink(),

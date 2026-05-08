@@ -659,7 +659,7 @@ class QuickMenuState extends State<QuickMenu>
                           color: Colors.transparent,
                           child: Globals.quickMenuPage == QuickMenuPage.launcher
                               ? const Launcher()
-                              : const LoadQuickMenuDesign(),
+                              : LoadQuickMenuDesign(key: Globals.quickMenuKey),
                         ),
                       ),
                     ),

@@ -183,11 +183,27 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
             value: globalSettings.quickActionsAtBottom,
             onChanged: (bool v) async {
               globalSettings.quickActionsAtBottom = v;
+              globalSettings.bottomBarOnTop = false;
               await Boxes.updateSettings("quickActionsAtBottom", globalSettings.quickActionsAtBottom);
+              await Boxes.updateSettings("bottomBarOnTop", globalSettings.bottomBarOnTop);
               if (!mounted) return;
               setState(() {});
             },
           ),
+          if (globalSettings.quickActionsAtBottom) ...<Widget>[
+            const Divider(height: 1),
+            _buildToggleTile(
+              title: "Bottom Bar at top",
+              subtitle: "Put Buttom bar at the top to not get crowded",
+              value: globalSettings.bottomBarOnTop,
+              onChanged: (bool v) async {
+                globalSettings.bottomBarOnTop = v;
+                await Boxes.updateSettings("bottomBarOnTop", globalSettings.bottomBarOnTop);
+                if (!mounted) return;
+                setState(() {});
+              },
+            ),
+          ],
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(16),

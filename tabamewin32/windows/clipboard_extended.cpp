@@ -332,162 +332,156 @@ class ClipboardPluginImpl {
       result->Error("COPY_IMAGE_ERROR", "Failed to open clipboard");
     }
   }
+bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
+  if (png_bytes.empty()) return false;
 
-  bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
-    if (png_bytes.empty()) {
-      return false;
-    }
+  auto SetClipboardRawData = [](UINT format, const void* data, size_t size) -> bool {
+    if (format == 0 || data == nullptr || size == 0) return false;
+    HGLOBAL hData = GlobalAlloc(GMEM_MOVEABLE, size);
+    if (!hData) return false;
+    void* pData = GlobalLock(hData);
+    if (!pData) { GlobalFree(hData); return false; }
+    memcpy(pData, data, size);
+    GlobalUnlock(hData);
+    if (SetClipboardData(format, hData) == NULL) { GlobalFree(hData); return false; }
+    return true;
+  };
 
-    auto SetClipboardRawData = [](UINT format, const void* data, size_t size) -> bool {
-      if (format == 0 || data == nullptr || size == 0) return false;
+  GdiplusStartupInput gdiplusStartupInput;
+  ULONG_PTR gdiplusToken;
+  GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
 
-      HGLOBAL hData = GlobalAlloc(GMEM_MOVEABLE, size);
-      if (!hData) return false;
+  // Load PNG into GDI+ bitmap
+  HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, png_bytes.size());
+  if (!hMem) { GdiplusShutdown(gdiplusToken); return false; }
+  void* pMem = GlobalLock(hMem);
+  if (!pMem) { GlobalFree(hMem); GdiplusShutdown(gdiplusToken); return false; }
+  memcpy(pMem, png_bytes.data(), png_bytes.size());
+  GlobalUnlock(hMem);
 
-      void* pData = GlobalLock(hData);
-      if (!pData) {
-        GlobalFree(hData);
-        return false;
-      }
+  IStream* pStream = nullptr;
+  if (CreateStreamOnHGlobal(hMem, TRUE, &pStream) != S_OK) {
+    GlobalFree(hMem);
+    GdiplusShutdown(gdiplusToken);
+    return false;
+  }
 
-      memcpy(pData, data, size);
-      GlobalUnlock(hData);
+  Bitmap* pBitmap = Bitmap::FromStream(pStream);
+  if (!pBitmap || pBitmap->GetLastStatus() != Ok) {
+    pStream->Release();
+    GdiplusShutdown(gdiplusToken);
+    if (pBitmap) delete pBitmap;
+    return false;
+  }
 
-      if (SetClipboardData(format, hData) == NULL) {
-        GlobalFree(hData);
-        return false;
-      }
+  int width  = pBitmap->GetWidth();
+  int height = pBitmap->GetHeight();
+  int rowSize = ((width * 32 + 31) / 32) * 4;
 
-      return true;
-    };
+  BitmapData bitmapData;
+  Rect rect(0, 0, width, height);
+  if (pBitmap->LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &bitmapData) != Ok) {
+    delete pBitmap;
+    pStream->Release();
+    GdiplusShutdown(gdiplusToken);
+    return false;
+  }
+  BYTE* pSource = (BYTE*)bitmapData.Scan0;
 
-    // Initialize GDI+
-    GdiplusStartupInput gdiplusStartupInput;
-    ULONG_PTR gdiplusToken;
-    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
+  // ── CF_DIBV5 — full ARGB transparency, understood by most modern apps ──
+  size_t v5Size = sizeof(BITMAPV5HEADER) + rowSize * height;
+  HGLOBAL hDibV5 = GlobalAlloc(GMEM_MOVEABLE, v5Size);
+  bool dibV5Success = false;
+  if (hDibV5) {
+    BYTE* pDibV5 = (BYTE*)GlobalLock(hDibV5);
+    if (pDibV5) {
+      BITMAPV5HEADER* pv5 = (BITMAPV5HEADER*)pDibV5;
+      ZeroMemory(pv5, sizeof(BITMAPV5HEADER));
+      pv5->bV5Size        = sizeof(BITMAPV5HEADER);
+      pv5->bV5Width       = width;
+      pv5->bV5Height      = height; // bottom-up
+      pv5->bV5Planes      = 1;
+      pv5->bV5BitCount    = 32;
+      pv5->bV5Compression = BI_BITFIELDS;
+      pv5->bV5RedMask     = 0x00FF0000;
+      pv5->bV5GreenMask   = 0x0000FF00;
+      pv5->bV5BlueMask    = 0x000000FF;
+      pv5->bV5AlphaMask   = 0xFF000000; // preserve alpha
+      pv5->bV5CSType      = LCS_sRGB;
+      pv5->bV5Intent      = LCS_GM_IMAGES;
 
-    // Create IStream from PNG bytes
-    IStream* pStream = nullptr;
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, png_bytes.size());
-    if (!hMem) {
-      GdiplusShutdown(gdiplusToken);
-      return false;
-    }
-
-    void* pMem = GlobalLock(hMem);
-    if (!pMem) {
-      GlobalFree(hMem);
-      GdiplusShutdown(gdiplusToken);
-      return false;
-    }
-
-    memcpy(pMem, png_bytes.data(), png_bytes.size());
-    GlobalUnlock(hMem);
-
-    if (CreateStreamOnHGlobal(hMem, TRUE, &pStream) != S_OK) {
-      GlobalFree(hMem);
-      GdiplusShutdown(gdiplusToken);
-      return false;
-    }
-
-    // Load image from stream
-    Bitmap* pBitmap = Bitmap::FromStream(pStream);
-    if (!pBitmap || pBitmap->GetLastStatus() != Ok) {
-      pStream->Release();
-      GdiplusShutdown(gdiplusToken);
-      if (pBitmap) delete pBitmap;
-      return false;
-    }
-
-    // Get bitmap dimensions
-    int width = pBitmap->GetWidth();
-    int height = pBitmap->GetHeight();
-
-    // Create DIB compatible with clipboard
-    BITMAPINFOHEADER bih = {0};
-    bih.biSize = sizeof(BITMAPINFOHEADER);
-    bih.biWidth = width;
-    bih.biHeight = height; // Bottom-up DIB is more widely accepted by clipboard consumers
-    bih.biPlanes = 1;
-    bih.biBitCount = 32;
-    bih.biCompression = BI_RGB;
-
-    int rowSize = ((width * 32 + 31) / 32) * 4; // DWORD-aligned
-    DWORD imageSize = rowSize * height;
-
-    // Allocate memory for DIB
-    HGLOBAL hDib = GlobalAlloc(GMEM_MOVEABLE, sizeof(BITMAPINFOHEADER) + imageSize);
-    if (!hDib) {
-      delete pBitmap;
-      pStream->Release();
-      GdiplusShutdown(gdiplusToken);
-      return false;
-    }
-
-    BYTE* pDib = (BYTE*)GlobalLock(hDib);
-    if (!pDib) {
-      GlobalFree(hDib);
-      delete pBitmap;
-      pStream->Release();
-      GdiplusShutdown(gdiplusToken);
-      return false;
-    }
-
-    // Copy BITMAPINFOHEADER
-    memcpy(pDib, &bih, sizeof(BITMAPINFOHEADER));
-    BYTE* pBits = pDib + sizeof(BITMAPINFOHEADER);
-
-    // Lock bitmap bits and copy pixel data
-    BitmapData bitmapData;
-    Rect rect(0, 0, width, height);
-    
-    if (pBitmap->LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &bitmapData) == Ok) {
-      BYTE* pSource = (BYTE*)bitmapData.Scan0;
-      
+      BYTE* pBits = pDibV5 + sizeof(BITMAPV5HEADER);
       for (int y = 0; y < height; y++) {
-        const int dstY = height - 1 - y;
+        int dstY = height - 1 - y; // flip to bottom-up
         for (int x = 0; x < width; x++) {
           BYTE b = pSource[y * bitmapData.Stride + x * 4 + 0];
           BYTE g = pSource[y * bitmapData.Stride + x * 4 + 1];
           BYTE r = pSource[y * bitmapData.Stride + x * 4 + 2];
           BYTE a = pSource[y * bitmapData.Stride + x * 4 + 3];
-          
           pBits[dstY * rowSize + x * 4 + 0] = b;
           pBits[dstY * rowSize + x * 4 + 1] = g;
           pBits[dstY * rowSize + x * 4 + 2] = r;
           pBits[dstY * rowSize + x * 4 + 3] = a;
         }
       }
-      
-      pBitmap->UnlockBits(&bitmapData);
+      GlobalUnlock(hDibV5);
+      dibV5Success = (SetClipboardData(CF_DIBV5, hDibV5) != NULL);
+      if (!dibV5Success) GlobalFree(hDibV5);
     } else {
-      GlobalUnlock(hDib);
-      GlobalFree(hDib);
-      delete pBitmap;
-      pStream->Release();
-      GdiplusShutdown(gdiplusToken);
-      return false;
+      GlobalFree(hDibV5);
     }
-
-    GlobalUnlock(hDib);
-
-    // Publish both a native PNG payload and a DIB fallback.
-    // Discord tends to prefer the PNG clipboard format, while Paint happily
-    // consumes the DIB fallback.
-    const UINT pngFormat = RegisterClipboardFormatW(L"PNG");
-    const bool pngSuccess = SetClipboardRawData(pngFormat, png_bytes.data(), png_bytes.size());
-    const bool dibSuccess = (SetClipboardData(CF_DIB, hDib) != NULL);
-    if (!dibSuccess) {
-      GlobalFree(hDib);
-    }
-
-    // Cleanup
-    delete pBitmap;
-    pStream->Release();
-    GdiplusShutdown(gdiplusToken);
-
-    return pngSuccess || dibSuccess;
   }
+
+  // ── CF_DIB fallback — no alpha, composite transparent pixels onto white ──
+  // so apps that only read CF_DIB don't see black where transparency was.
+  HGLOBAL hDib = GlobalAlloc(GMEM_MOVEABLE, sizeof(BITMAPINFOHEADER) + rowSize * height);
+  bool dibSuccess = false;
+  if (hDib) {
+    BYTE* pDib = (BYTE*)GlobalLock(hDib);
+    if (pDib) {
+      BITMAPINFOHEADER* pbih = (BITMAPINFOHEADER*)pDib;
+      ZeroMemory(pbih, sizeof(BITMAPINFOHEADER));
+      pbih->biSize        = sizeof(BITMAPINFOHEADER);
+      pbih->biWidth       = width;
+      pbih->biHeight      = height;
+      pbih->biPlanes      = 1;
+      pbih->biBitCount    = 32;
+      pbih->biCompression = BI_RGB;
+
+      BYTE* pBits = pDib + sizeof(BITMAPINFOHEADER);
+      for (int y = 0; y < height; y++) {
+        int dstY = height - 1 - y;
+        for (int x = 0; x < width; x++) {
+          BYTE b = pSource[y * bitmapData.Stride + x * 4 + 0];
+          BYTE g = pSource[y * bitmapData.Stride + x * 4 + 1];
+          BYTE r = pSource[y * bitmapData.Stride + x * 4 + 2];
+          BYTE a = pSource[y * bitmapData.Stride + x * 4 + 3];
+          // Pre-multiply against white so transparency -> white, not black
+          pBits[dstY * rowSize + x * 4 + 0] = (BYTE)(b + (255 - a));
+          pBits[dstY * rowSize + x * 4 + 1] = (BYTE)(g + (255 - a));
+          pBits[dstY * rowSize + x * 4 + 2] = (BYTE)(r + (255 - a));
+          pBits[dstY * rowSize + x * 4 + 3] = 0; // ignored by BI_RGB consumers
+        }
+      }
+      GlobalUnlock(hDib);
+      dibSuccess = (SetClipboardData(CF_DIB, hDib) != NULL);
+      if (!dibSuccess) GlobalFree(hDib);
+    } else {
+      GlobalFree(hDib);
+    }
+  }
+
+  pBitmap->UnlockBits(&bitmapData);
+  delete pBitmap;
+  pStream->Release();
+  GdiplusShutdown(gdiplusToken);
+
+  // PNG format for apps like Discord that prefer it
+  const UINT pngFormat = RegisterClipboardFormatW(L"PNG");
+  const bool pngSuccess = SetClipboardRawData(pngFormat, png_bytes.data(), png_bytes.size());
+
+  return pngSuccess || dibV5Success || dibSuccess;
+}
 
   void HandlePaste(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
     if (OpenClipboard(nullptr)) {

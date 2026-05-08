@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -1045,8 +1046,11 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     final Uint8List? iconBytes = _extractIconInternal(path, iconID);
 
     if (iconID == 0 && iconBytes != null && cacheFile != null) {
-      cacheFile.writeAsBytesSync(iconBytes);
-      return cacheFile.path;
+      final String hash = crypto.md5.convert(iconBytes).toString();
+      if (hash != 'a326e0850b34c1935b2e3499fc986380' && hash != '5b290ed4dac06a15d465c7f0f9d5003b') {
+        cacheFile.writeAsBytesSync(iconBytes);
+        return cacheFile.path;
+      }
     }
 
     return iconBytes;

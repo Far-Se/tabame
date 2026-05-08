@@ -64,7 +64,6 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
 
     final ThemeData theme = Theme.of(context);
     final Color accent = globalSettings.themeColors.accentColor;
-    final Color onSurface = theme.colorScheme.onSurface;
     final Color surface = theme.colorScheme.surface;
 
     final List<double> points = globalSettings.themeColors.panelOpacityPoints;
@@ -77,8 +76,8 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minHeight: 203,
-        maxHeight: MediaQuery.of(context).size.height - 100,
+        minHeight: 250,
+        maxHeight: MediaQuery.of(context).size.height - 20,
       ),
       child: Stack(
         key: _stackKey,
@@ -141,14 +140,14 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                 return true;
               },
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: globalSettings.quickActionsAtBottom
-                      ? _buildBottomQuickActionsSections(onSurface)
-                      : _buildDefaultSections(onSurface),
+                  children: globalSettings.quickActionsAtBottom && !globalSettings.bottomBarOnTop
+                      ? _buildBottomQuickActionsSections()
+                      : _buildDefaultSections(),
                 ),
               ),
             ),
@@ -158,35 +157,40 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
     );
   }
 
-  List<Widget> _buildDefaultSections(Color onSurface) {
+  List<Widget> _buildDefaultSections() {
     return <Widget>[
-      _sectionCard(key: _topKey, child: const TopBar(), onSurface: onSurface),
+      _sectionCard(key: _topKey, child: globalSettings.bottomBarOnTop ? const PinnedAndTrayList() : const TopBar()),
       const SizedBox(height: 8),
-      _sectionCard(key: _taskKey, child: const TaskBar(), onSurface: onSurface),
+      _sectionCard(key: _taskKey, child: const TaskBar()),
+      if (!globalSettings.bottomBarOnTop) ...<Widget>[
+        const SizedBox(height: 8),
+        _sectionCard(
+            key: _listKey,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: const PinnedAndTrayList())
+      ],
+      //_sectionCard(key: _listKey, child: const PinnedAndTrayList(), padding: const EdgeInsets.symmetric(vertical: 2)),
       const SizedBox(height: 8),
       _sectionCard(
-        key: _listKey,
-        child: Column(
-          children: <Widget>[
-            const PinnedAndTrayList(),
-            if (globalSettings.taskManagerStats) const TaskbarStats(),
-          ],
-        ),
-        onSurface: onSurface,
-        padding: const EdgeInsets.symmetric(vertical: 2),
-      ),
-      const SizedBox(height: 8),
-      _sectionCard(key: _bottomKey, child: const BottomBar(), onSurface: onSurface),
+          key: _bottomKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (globalSettings.taskManagerStats) const TaskbarStats(withTopDivider: false),
+              const SizedBox(height: 6),
+              const BottomBar(),
+            ],
+          )),
     ];
   }
 
-  List<Widget> _buildBottomQuickActionsSections(Color onSurface) {
+  List<Widget> _buildBottomQuickActionsSections() {
     return <Widget>[
-      _sectionCard(key: _taskKey, child: const TaskBar(), onSurface: onSurface),
+      _sectionCard(key: _taskKey, child: const TaskBar()),
       const SizedBox(height: 8),
       _sectionCard(
         key: _listKey,
-        onSurface: onSurface,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -205,7 +209,6 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
   Widget _sectionCard({
     required Key key,
     required Widget child,
-    required Color onSurface,
     EdgeInsets? padding,
   }) {
     return SizeChangedLayoutNotifier(
@@ -213,9 +216,9 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
         key: key,
         padding: padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: onSurface.withAlpha(8), // Subtle tint even if backdrop fails
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(8), // Subtle tint even if backdrop fails
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: onSurface.withAlpha(18)),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(18)),
         ),
         child: child,
       ),

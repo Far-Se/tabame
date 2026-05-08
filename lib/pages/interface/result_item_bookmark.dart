@@ -217,7 +217,7 @@ class _KindBadge extends StatelessWidget {
       case BookmarkResultKind.bookmark:
         label = 'BM';
         icon = Icons.bookmark_rounded;
-        color = Colors.amber;
+        color = Colors.deepPurple;
       case BookmarkResultKind.cliBook:
         label = 'CLI';
         icon = Icons.terminal_rounded;

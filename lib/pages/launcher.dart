@@ -899,30 +899,67 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   Future<List<LauncherSearchResultItem>> _buildFunctionClearResults(String input) async {
-    if (input.trim().toLowerCase() != 'cache') {
+    if (input.trim().isEmpty) {
       return <LauncherSearchResultItem>[
         const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-clear-help-icon',
+          title: r'$clear icon',
+          subtitle: 'Removes Icon Cache',
+          icon: Icons.cleaning_services_rounded,
+        )),
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-clear-help-auth-logo',
+          title: r'$clear authlogo',
+          subtitle: 'Removes Authenticator Logos Cache',
+          icon: Icons.cleaning_services_rounded,
+        )),
+        const LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'function-clear-help',
-          title: r'Type $clear cache',
-          subtitle: 'This command needs the full target before it can run.',
+          title: r'$clear all',
+          subtitle: 'Removes all cache folder',
           icon: Icons.cleaning_services_rounded,
         )),
       ];
     }
-    return <LauncherSearchResultItem>[
-      LauncherSearchResultItem.quickAction(_buildFunctionAction(
-        id: 'function-clear-cache',
-        title: 'Clear cache folder',
-        subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache',
-        icon: Icons.cleaning_services_rounded,
-        searchTerms: const <String>['clear', 'cache'],
-        onExecute: () => unawaited(_clearCacheFolder()),
-      )),
-    ];
+    if (input.trim().toLowerCase() == 'icon') {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'function-clear-icon-cache',
+          title: 'Clear icon cache',
+          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\icon_cache'.lastChars(35),
+          icon: Icons.cleaning_services_rounded,
+          searchTerms: const <String>['clear', 'cache', 'icon'],
+          onExecute: () => unawaited(_clearCacheFolder('icon_cache')),
+        )),
+      ];
+    } else if (input.trim().toLowerCase() == 'authlogo') {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'function-clear-authlogo-cache',
+          title: 'Clear authlogo cache',
+          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\authenticator logos'.lastChars(35),
+          icon: Icons.cleaning_services_rounded,
+          searchTerms: const <String>['clear', 'cache', 'icon'],
+          onExecute: () => unawaited(_clearCacheFolder('authenticator logos')),
+        )),
+      ];
+    } else if (input.trim().toLowerCase() == 'all') {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'function-clear-all',
+          title: 'Clear all cache folder',
+          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache'.lastChars(35),
+          icon: Icons.cleaning_services_rounded,
+          searchTerms: const <String>['clear', 'cache'],
+          onExecute: () => unawaited(_clearCacheFolder("")),
+        )),
+      ];
+    }
+    return <LauncherSearchResultItem>[];
   }
 
-  Future<void> _clearCacheFolder() async {
-    final Directory cacheDirectory = Directory('${WinUtils.getTabameAppDataFolder()}\\cache');
+  Future<void> _clearCacheFolder(String folder) async {
+    final Directory cacheDirectory = Directory('${WinUtils.getTabameAppDataFolder()}\\cache\\$folder');
     if (await cacheDirectory.exists()) {
       await for (final FileSystemEntity entity in cacheDirectory.list()) {
         await entity.delete(recursive: true);

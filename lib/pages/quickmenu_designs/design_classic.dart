@@ -90,13 +90,16 @@ class MainMenuClassicWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(3, 3, 6, 3),
-                    child: TopBar(),
-                  ),
+                  if (!globalSettings.bottomBarOnTop)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(3, 3, 6, 3),
+                      child: TopBar(),
+                    )
+                  else
+                    const PinnedAndTrayList(),
                   const TaskBar(),
                   const Divider(thickness: 1, height: 1),
-                  const PinnedAndTrayList(),
+                  if (!globalSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (globalSettings.taskManagerStats) const TaskbarStats(),
                   const BottomBar(),
                 ],

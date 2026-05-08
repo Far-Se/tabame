@@ -48,7 +48,7 @@ Future<int> interfaceWindowSetup() async {
   Globals.currentPage = Pages.interface;
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   final Square monitor = Monitor.monitorSizes[Win32.getWindowMonitor(Win32.hWnd)]!;
-  await WindowManager.instance.setMinimumSize(const Size(800, 600));
+  await WindowManager.instance.setMinimumSize(const Size(1100, 600));
   await WindowManager.instance.setMaximumSize(const Size(3000, 3000));
   // await WindowManager.instance.setMaximumSize(Size(monitor.width.toDouble(), monitor.height.toDouble()));
   await WindowManager.instance.setSkipTaskbar(false);
@@ -56,7 +56,7 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setAlwaysOnTop(false);
   await WindowManager.instance.setAspectRatio(0);
   if (kDebugMode) await WindowManager.instance.setTitle("Tabame - Interface");
-  await WindowManager.instance.setSize(Size(monitor.width / 1.9, monitor.height / 1.3));
+  await WindowManager.instance.setSize(Size(monitor.width / 1.8, monitor.height / 1.3));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }

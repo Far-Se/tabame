@@ -8,6 +8,7 @@ import 'package:math_parser/math_parser.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
+import '../../widgets/panel_header.dart';
 
 class CalculatorButton extends StatelessWidget {
   const CalculatorButton({super.key});
@@ -236,48 +237,38 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
         ),
         child: Column(
           children: <Widget>[
-            _buildHeader(accent, onSurface),
-            const Divider(height: 1),
+            PanelHeader(
+              title: "Calculator",
+              accent: accent,
+              icon: Icons.calculate_outlined,
+              extraActions: <Widget>[
+                if (_statusMessage != null) ...<Widget>[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(40),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _statusMessage!,
+                      style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+                IconButton(
+                  onPressed: _clearAll,
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                  tooltip: "Clear All",
+                  color: onSurface.withAlpha(120),
+                ),
+              ],
+            ),
             Expanded(child: _buildHistoryList(accent, onSurface)),
             const Divider(height: 1),
             _buildInputArea(accent, onSurface),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(Color accent, Color onSurface) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: <Widget>[
-          Icon(Icons.calculate_outlined, size: 20, color: accent),
-          const SizedBox(width: 8),
-          const Text("Calculator", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          if (_statusMessage != null) ...<Widget>[
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: accent.withAlpha(40),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _statusMessage!,
-                style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
-          const Spacer(),
-          if (_history.isNotEmpty)
-            IconButton(
-              onPressed: _clearAll,
-              icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-              tooltip: "Clear All",
-              color: onSurface.withAlpha(120),
-            ),
-        ],
       ),
     );
   }
@@ -444,6 +435,10 @@ class _HistoryTileState extends State<_HistoryTile> {
                       autofocus: true,
                       onSubmitted: (String val) {
                         widget.onEdit(val);
+                        setState(() => _isEditing = false);
+                      },
+                      onTapOutside: (_) {
+                        widget.onEdit(_editController.text);
                         setState(() => _isEditing = false);
                       },
                       style: const TextStyle(fontSize: 13),

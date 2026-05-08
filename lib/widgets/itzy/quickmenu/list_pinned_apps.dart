@@ -44,7 +44,7 @@ class _PinnedAppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double size = Theme.of(context).iconTheme.size ?? 15;
+    final double size = Theme.of(context).iconTheme.size ?? 14.3;
     if (!File(path).existsSync()) return const SizedBox();
     final String customIconPath = Boxes.getIconRewrite(path);
 

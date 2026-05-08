@@ -127,7 +127,7 @@ class _LauncherListItemState extends State<LauncherListItem> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        path,
+                        _hovered ? path.lastChars(40) : path,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

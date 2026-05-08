@@ -707,11 +707,12 @@ class Win32 {
     final ({int height, int width}) windowSize = getSize();
     final Pointer<SIZE> popupSize = calloc<SIZE>();
     popupSize.ref.cx = windowSize.width;
-    popupSize.ref.cy = Globals.heights.allSummed.toInt() + 20;
+    popupSize.ref.cy = Globals.quickMenuCurrentHeight.toInt();
+    // popupSize.ref.cy = Globals.heights.allSummed.toInt() + 20;
     if (globalSettings.showQuickMenuAtTaskbarLevel == false) {
       popupSize.ref.cy += 30;
     }
-    popupSize.ref.cy += 30;
+    popupSize.ref.cy += 3;
     if (popupSize.ref.cy == 0) {
       popupSize.ref.cy = 300;
     }
@@ -721,7 +722,22 @@ class Win32 {
     verticalPosition = popupBounds.ref.top.toDouble();
 
     if (globalSettings.showQuickMenuAtTaskbarLevel == true) {
-      verticalPosition -= 30;
+      switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
+        case QuickMenuDesigns.classic:
+          verticalPosition -= 30;
+          break;
+        case QuickMenuDesigns.interface:
+          verticalPosition -= 30;
+          break;
+        case QuickMenuDesigns.modern:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.matrix:
+          verticalPosition -= 70;
+          horizontalPosition -= 10;
+          break;
+      }
+      print(Globals.heights);
     }
     await WindowManager.instance.setPosition(Offset(horizontalPosition + 1, verticalPosition));
     // SetForegroundWindow(hWnd);

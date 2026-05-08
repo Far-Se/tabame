@@ -118,14 +118,16 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                   if (!globalSettings.quickActionsAtBottom) ...<Widget>[
                     Container(padding: const EdgeInsets.fromLTRB(4, 5, 10, 6), child: const TopBar()),
                     Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08))
-                  ] else
+                  ] else if (globalSettings.bottomBarOnTop)
+                    const PinnedAndTrayList()
+                  else
                     const SizedBox(height: 3),
                   const TaskBar(),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
                   ),
-                  const PinnedAndTrayList(),
+                  if (!globalSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (globalSettings.taskManagerStats) const TaskbarStats(),
                   Container(padding: const EdgeInsets.fromLTRB(0, 4, 2, 6), child: const BottomBar()),
                 ],

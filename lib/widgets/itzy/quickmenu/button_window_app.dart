@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes/boxes_base.dart';
@@ -154,7 +155,16 @@ class WindowsAppButton extends StatefulWidget {
     return iconFutureCache.putIfAbsent(
       path,
       () {
-        return _IconWorkerPool.instance.extractIcon(path).catchError((Object error, StackTrace stackTrace) {
+        return _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon? result) {
+          if (result == null) iconFutureCache.remove(path);
+          if (result is Uint8List) {
+            final String hash = crypto.md5.convert(result).toString();
+            if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
+              iconFutureCache.remove(path);
+            }
+          }
+          return result;
+        }).catchError((Object error, StackTrace stackTrace) {
           Debug.add('Icon extraction failed for $path: $error');
           Debug.add('$stackTrace');
           iconFutureCache.remove(path);

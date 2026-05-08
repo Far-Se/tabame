@@ -90,10 +90,23 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
           value: globalSettings.quickActionsAtBottom,
           onChanged: (bool val) async {
             globalSettings.quickActionsAtBottom = val;
+            globalSettings.bottomBarOnTop = false;
             await Boxes.updateSettings("quickActionsAtBottom", val);
+            await Boxes.updateSettings("bottomBarOnTop", val);
             setState(() {});
           },
         ),
+        if (globalSettings.quickActionsAtBottom)
+          _buildToggleSetting(
+            title: "Bottom Bar at top",
+            subtitle: "Put Buttom bar at the top to not get crowded.",
+            value: globalSettings.bottomBarOnTop,
+            onChanged: (bool val) async {
+              globalSettings.bottomBarOnTop = val;
+              await Boxes.updateSettings("bottomBarOnTop", val);
+              setState(() {});
+            },
+          ),
       ],
     );
   }

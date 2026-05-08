@@ -38,6 +38,9 @@ enum QuickMenuPage {
 
 class Globals {
   Globals._();
+  static final GlobalKey quickMenuKey = GlobalKey();
+  static double quickMenuCurrentHeight = 0;
+
   static ({double width, double height}) quickMenuSize = (width: 355, height: 555);
   static ({double width, double height}) launcherSize = (width: 715, height: 555);
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;

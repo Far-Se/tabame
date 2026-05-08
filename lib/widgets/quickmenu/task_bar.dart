@@ -224,10 +224,25 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   // --- UI BUILD ---
-
+  int skipFewBuilds = 5;
   @override
   Widget build(BuildContext context) {
-    Globals.heights.taskbar = 150; // Minimum height from constraints
+    if (skipFewBuilds > 0) {
+      skipFewBuilds--;
+    } else {
+      skipFewBuilds = 5;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final BuildContext? context = Globals.quickMenuKey.currentContext;
+        if (context != null) {
+          final RenderBox box = context.findRenderObject() as RenderBox;
+          Globals.quickMenuCurrentHeight = box.size.height;
+        }
+      });
+    }
+    Globals.heights.taskbar =
+        ((globalSettings.expandedTaskbar ? kTaskBarItemExpandedHeight : kTaskBarItemHeight) * _windows.length)
+            .clamp(150, globalSettings.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _keepFetching = true),
       child: Container(
@@ -235,7 +250,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 150, maxHeight: 320),
+            constraints: BoxConstraints(
+                minHeight: 150, maxHeight: globalSettings.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
             child: ShaderMask(
               shaderCallback: (Rect rect) {
                 return const LinearGradient(
@@ -325,6 +341,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   Future<void> _handleWindowClose(int index, Window window) async {
+    QuickMenuFunctions.keepOpen = true;
     if (window.process.exe == "Taskmgr.exe" && !WinUtils.isAdministrator()) {
       WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
     }
@@ -339,6 +356,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     _fetchWindows();
 
     if (mounted) setState(() => _fetching = false);
+    Future<void>.delayed(const Duration(milliseconds: 400), () => QuickMenuFunctions.keepOpen = false);
   }
 }
 

@@ -12,13 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:screenshot/screenshot.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/win32/win_utils.dart';
-import '../widgets/mouse_scroll_widget.dart';
 
 class ScreenCaptureUploadHost {
   ScreenCaptureUploadHost({
@@ -351,36 +349,66 @@ class FancyshotState extends State<Fancyshot> {
     if (mounted) setState(() {});
   }
 
-  Widget _buildPreviewCanvas() {
-    final double previewWidth = (photo?.width ?? 1280).toDouble();
-    final double previewHeight = (photo?.height ?? 800).toDouble();
-    final Widget subject = hasCapture
-        ? GestureDetector(
-            onPanUpdate: (DragUpdateDetails details) {
-              _updateFilters(() {
-                filters.skewX = filters.skewX + details.delta.dx / (previewWidth / 2);
-                filters.skewY = filters.skewY + details.delta.dy / (previewHeight / 2);
-              });
-            },
-            onDoubleTap: () => _updateFilters(() {
-              filters.skewX = 0;
-              filters.skewY = 0;
-            }, immediate: true),
-            child: Image.memory(
-              capture!,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-          )
-        : const _FancyShotPlaceholderSubject();
+  Widget _buildCanvasEditor() {
+    final double srcW = (photo?.width ?? 1280).toDouble();
+    final double srcH = (photo?.height ?? 800).toDouble();
 
-    return _FancyShotFrameSurface(
-      captureBytesForBackground: capture,
-      subject: subject,
-      profile: filters,
-      surfaceColor: bgColor,
-      sourceWidth: previewWidth,
-      sourceHeight: previewHeight,
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints outer) {
+        // Compute the natural (scale=1) canvas size to find the fit scale
+        final double scaledW = srcW * filters.imageScale;
+        final double scaledH = srcH * filters.imageScale;
+        final double frameW = scaledW + filters.imagePadding * 2 + filters.frameBorderWidth * 2;
+        final double frameH =
+            scaledH + filters.imagePadding * 2 + (filters.showBrowserFrame ? 32 : 0) + filters.frameBorderWidth * 2;
+        double naturalW = frameW + filters.backgroundPadding * 2;
+        double naturalH = frameH + filters.backgroundPadding * 2;
+        final double? ratio = <int, double>{1: 1, 2: 3 / 2, 3: 4 / 3, 4: 16 / 9, 5: 9 / 16}[filters.aspectRatio];
+        if (ratio != null) {
+          if (naturalW / naturalH < ratio) {
+            naturalW = naturalH * ratio;
+          } else {
+            naturalH = naturalW / ratio;
+          }
+        }
+
+        final double availW = outer.maxWidth - 80;
+        final double availH = outer.maxHeight - 80;
+        final double scale = (availW / naturalW).clamp(0.0, availH / naturalH);
+
+        final Widget subject = hasCapture
+            ? GestureDetector(
+                onPanUpdate: (DragUpdateDetails details) {
+                  _updateFilters(() {
+                    filters.skewX += details.delta.dx / (srcW / 2);
+                    filters.skewY += details.delta.dy / (srcH / 2);
+                  });
+                },
+                onDoubleTap: () => _updateFilters(
+                  () {
+                    filters.skewX = 0;
+                    filters.skewY = 0;
+                  },
+                  immediate: true,
+                ),
+                child: Image.memory(
+                  capture!,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                ),
+              )
+            : const _FancyShotPlaceholderSubject();
+
+        return _FancyShotFrameSurface(
+          captureImage: subject,
+          captureBytesForBackground: capture,
+          profile: filters,
+          surfaceColor: bgColor,
+          sourceWidth: srcW,
+          sourceHeight: srcH,
+          scale: scale,
+        );
+      },
     );
   }
 
@@ -433,7 +461,6 @@ class FancyshotState extends State<Fancyshot> {
   Widget _buildPreviewPane(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
-    final Widget preview = _buildPreviewCanvas();
 
     return Expanded(
       flex: 3,
@@ -470,25 +497,10 @@ class FancyshotState extends State<Fancyshot> {
               ),
             ),
             Expanded(
-              child: MouseScrollWidget(
-                scrollDirection: Axis.horizontal,
-                child: MouseScrollWidget(
-                  scrollDirection: Axis.vertical,
-                  child: Padding(
-                    padding: const EdgeInsets.all(42),
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: _previewActualSize
-                          ? preview
-                          : ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 980, maxHeight: 700),
-                              child: FittedBox(
-                                fit: BoxFit.contain,
-                                child: preview,
-                              ),
-                            ),
-                    ),
-                  ),
+              child: ColoredBox(
+                color: const Color(0xFF1A1A1A),
+                child: Center(
+                  child: _buildCanvasEditor(),
                 ),
               ),
             ),
@@ -1455,276 +1467,6 @@ class _FancyShotPlaceholderSubject extends StatelessWidget {
   }
 }
 
-class _FancyShotFrameSurface extends StatelessWidget {
-  const _FancyShotFrameSurface({
-    required this.subject,
-    required this.profile,
-    required this.surfaceColor,
-    required this.sourceWidth,
-    required this.sourceHeight,
-    this.captureBytesForBackground,
-  });
-
-  final Widget subject;
-  final FancyShotProfile profile;
-  final Color surfaceColor;
-  final double sourceWidth;
-  final double sourceHeight;
-  final Uint8List? captureBytesForBackground;
-
-  double? _selectedAspectRatio() {
-    switch (profile.aspectRatio) {
-      case 1:
-        return 1;
-      case 2:
-        return 3 / 2;
-      case 3:
-        return 4 / 3;
-      case 4:
-        return 16 / 9;
-      case 5:
-        return 9 / 16;
-    }
-    return null;
-  }
-
-  BoxDecoration _backgroundDecoration() {
-    switch (profile.backgroundType) {
-      case BackgroundType.stock:
-        return BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(profile.backgroundImage),
-            fit: BoxFit.cover,
-          ),
-        );
-      case BackgroundType.self:
-        return BoxDecoration(
-          image: captureBytesForBackground == null
-              ? null
-              : DecorationImage(
-                  image: MemoryImage(captureBytesForBackground!),
-                  fit: BoxFit.cover,
-                ),
-        );
-      case BackgroundType.custom:
-        return BoxDecoration(
-          image: File(profile.backgroundImage).existsSync()
-              ? DecorationImage(
-                  image: FileImage(File(profile.backgroundImage)),
-                  fit: BoxFit.cover,
-                )
-              : null,
-        );
-      case BackgroundType.transparent:
-        return const BoxDecoration(color: Colors.transparent);
-    }
-  }
-
-  Matrix4 _buildTransform() {
-    final Matrix4 matrix = Matrix4.identity();
-    if (profile.skewX != 0 || profile.skewY != 0) {
-      matrix
-        ..scaledByVector3(Vector3.all(0.1))
-        ..setEntry(3, 2, profile.skewPerspective)
-        ..rotateX(0.1 * profile.skewY)
-        ..rotateY(-0.1 * profile.skewX);
-    }
-    if (profile.rotation != 0) {
-      matrix.rotateZ(profile.rotation * math.pi / 180);
-    }
-    return matrix;
-  }
-
-  Size _canvasSize() {
-    final double mediaWidth = sourceWidth * profile.imageScale;
-    final double mediaHeight = sourceHeight * profile.imageScale;
-    final double frameWidth =
-        mediaWidth + (profile.imagePadding * 2) + (profile.frameBorderWidth > 0 ? profile.frameBorderWidth * 2 : 0);
-    final double frameHeight = mediaHeight +
-        (profile.imagePadding * 2) +
-        (profile.showBrowserFrame ? 32 : 0) +
-        (profile.frameBorderWidth > 0 ? profile.frameBorderWidth * 2 : 0);
-    double canvasWidth = frameWidth + (profile.backgroundPadding * 2);
-    double canvasHeight = frameHeight + (profile.backgroundPadding * 2);
-    final double? ratio = _selectedAspectRatio();
-    if (ratio != null) {
-      if (canvasWidth / canvasHeight < ratio) {
-        canvasWidth = canvasHeight * ratio;
-      } else {
-        canvasHeight = canvasWidth / ratio;
-      }
-    }
-    return Size(canvasWidth, canvasHeight);
-  }
-
-  Color _frameBorderColor() {
-    if (profile.background != 0) {
-      return Color(profile.background).withValues(alpha: 0.30);
-    }
-    return profile.showBrowserFrame ? Colors.black.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.14);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Size canvasSize = _canvasSize();
-    final BorderRadius radius = BorderRadius.circular(profile.borderRadius);
-    final Widget scaledSubject = SizedBox(
-      width: sourceWidth * profile.imageScale,
-      height: sourceHeight * profile.imageScale,
-      child: subject,
-    );
-
-    return Material(
-      type: MaterialType.transparency,
-      child: ClipRect(
-        child: SizedBox(
-          width: canvasSize.width,
-          height: canvasSize.height,
-          child: Container(
-            padding: EdgeInsets.all(profile.backgroundPadding.ceil().toDouble()),
-            decoration: _backgroundDecoration(),
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                if (profile.background != 0 && profile.backgroundTintOpacity > 0)
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(profile.background).withValues(alpha: profile.backgroundTintOpacity),
-                    ),
-                  ),
-                BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: profile.backgroundBlur,
-                    sigmaY: profile.backgroundBlur,
-                  ),
-                  child: Center(
-                    child: Transform(
-                      transform: _buildTransform(),
-                      filterQuality: FilterQuality.high,
-                      alignment: Alignment.center,
-                      child: Stack(
-                        children: <Widget>[
-                          Container(
-                            decoration: BoxDecoration(
-                              color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : surfaceColor,
-                              borderRadius: radius,
-                              border: profile.frameBorderWidth > 0
-                                  ? Border.all(color: _frameBorderColor(), width: profile.frameBorderWidth)
-                                  : null,
-                              boxShadow: profile.shadowRadius > 0 || profile.shadowSpread > 0
-                                  ? <BoxShadow>[
-                                      BoxShadow(
-                                        offset: const Offset(0, 14),
-                                        spreadRadius: profile.shadowSpread,
-                                        blurRadius: profile.shadowRadius,
-                                        color: Colors.black.withValues(alpha: profile.shadowOpacity),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: <Widget>[
-                                if (profile.showBrowserFrame)
-                                  Container(
-                                    height: 32,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEBEBEB),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(profile.borderRadius),
-                                        topRight: Radius.circular(profile.borderRadius),
-                                      ),
-                                      border: Border(
-                                        bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05), width: 1),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: <Widget>[
-                                        Container(
-                                          width: 12,
-                                          height: 12,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFFF5F56),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          width: 12,
-                                          height: 12,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFFFBD2E),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          width: 12,
-                                          height: 12,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFF27C93F),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                Padding(
-                                  padding: EdgeInsets.all(profile.imagePadding.ceil().toDouble()),
-                                  child: ClipRRect(
-                                    borderRadius: profile.showBrowserFrame
-                                        ? BorderRadius.only(
-                                            bottomLeft: Radius.circular(profile.borderRadius),
-                                            bottomRight: Radius.circular(profile.borderRadius),
-                                          )
-                                        : radius,
-                                    child: scaledSubject,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (profile.watermark.isNotEmpty)
-                            Positioned(
-                              bottom: 12,
-                              right: 12,
-                              child: Transform(
-                                transform: Matrix4.skewX(-0.1),
-                                child: Text(
-                                  profile.watermark,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: profile.watermarkSize,
-                                    letterSpacing: 0.4,
-                                    color: Colors.white.withValues(alpha: profile.watermarkOpacity),
-                                    shadows: <Shadow>[
-                                      Shadow(
-                                        blurRadius: 10,
-                                        color: Colors.black.withValues(alpha: 0.42),
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _BackgroundGrid extends StatelessWidget {
   const _BackgroundGrid({
     required this.filters,
@@ -2531,9 +2273,9 @@ class _FancyShotRenderSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return _FancyShotFrameSurface(
       captureBytesForBackground: captureBytes,
-      subject: Image.memory(
+      captureImage: Image.memory(
         captureBytes,
-        fit: BoxFit.cover,
+        fit: BoxFit.fill,
         filterQuality: FilterQuality.high,
       ),
       profile: profile,
@@ -2542,4 +2284,301 @@ class _FancyShotRenderSurface extends StatelessWidget {
       sourceHeight: photo.height.toDouble(),
     );
   }
+}
+
+class _FancyShotFrameSurface extends StatelessWidget {
+  const _FancyShotFrameSurface({
+    required this.captureImage,
+    required this.profile,
+    required this.surfaceColor,
+    required this.sourceWidth,
+    required this.sourceHeight,
+    this.captureBytesForBackground,
+    this.scale = 1.0,
+  });
+
+  final Widget captureImage;
+  final FancyShotProfile profile;
+  final Color surfaceColor;
+  final double sourceWidth;
+  final double sourceHeight;
+  final Uint8List? captureBytesForBackground;
+  final double scale;
+  Size get _captureSize => Size(
+        sourceWidth * profile.imageScale * scale,
+        sourceHeight * profile.imageScale * scale,
+      );
+
+  Size get _mainLayerSize {
+    final double outset = (profile.imagePadding + profile.frameBorderWidth) * 2 * scale;
+    final double browserBar = profile.showBrowserFrame ? 32.0 * scale : 0.0;
+    return Size(
+      _captureSize.width + outset,
+      _captureSize.height + outset + browserBar,
+    );
+  }
+
+  Size get _canvasSize {
+    final double bp = profile.backgroundPadding * 2 * scale;
+    double w = _mainLayerSize.width + bp;
+    double h = _mainLayerSize.height + bp;
+    final double? ratio = _aspectRatio();
+    if (ratio != null) {
+      if (w / h < ratio) {
+        w = h * ratio;
+      } else {
+        h = w / ratio;
+      }
+    }
+    return Size(w, h);
+  }
+
+  double? _aspectRatio() {
+    switch (profile.aspectRatio) {
+      case 1:
+        return 1;
+      case 2:
+        return 3 / 2;
+      case 3:
+        return 4 / 3;
+      case 4:
+        return 16 / 9;
+      case 5:
+        return 9 / 16;
+    }
+    return null;
+  }
+
+  BoxDecoration _backgroundDecoration() {
+    switch (profile.backgroundType) {
+      case BackgroundType.stock:
+        return BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(profile.backgroundImage),
+            fit: BoxFit.cover,
+          ),
+        );
+      case BackgroundType.self:
+        return BoxDecoration(
+          image: captureBytesForBackground == null
+              ? null
+              : DecorationImage(
+                  image: MemoryImage(captureBytesForBackground!),
+                  fit: BoxFit.cover,
+                ),
+        );
+      case BackgroundType.custom:
+        return BoxDecoration(
+          image: File(profile.backgroundImage).existsSync()
+              ? DecorationImage(
+                  image: FileImage(File(profile.backgroundImage)),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        );
+      case BackgroundType.transparent:
+        return const BoxDecoration(color: Colors.transparent);
+    }
+  }
+
+  Color _frameBorderColor() {
+    if (profile.background != 0) {
+      return Color(profile.background).withValues(alpha: 0.30);
+    }
+    return profile.showBrowserFrame ? Colors.black.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.14);
+  }
+
+  Matrix4 _buildTransform() {
+    final Matrix4 matrix = Matrix4.identity();
+    if (profile.skewX != 0 || profile.skewY != 0) {
+      matrix
+        // ignore: deprecated_member_use
+        ..scale(0.1)
+        ..setEntry(3, 2, profile.skewPerspective)
+        ..rotateX(0.1 * profile.skewY)
+        ..rotateY(-0.1 * profile.skewX);
+    }
+    if (profile.rotation != 0) {
+      matrix.rotateZ(profile.rotation * math.pi / 180);
+    }
+    return matrix;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Size capture = _captureSize;
+    final Size main = _mainLayerSize;
+    final Size canvas = _canvasSize;
+    final BorderRadius radius = BorderRadius.circular(profile.borderRadius * scale);
+
+    // ── capturedImageLayer ──────────────────────────────────────────────────
+    // Exact source size, rounded corners, no shadow.
+    final Widget capturedImageLayer = ClipRRect(
+      borderRadius: radius,
+      child: SizedBox(
+        width: capture.width,
+        height: capture.height,
+        child: captureImage,
+      ),
+    );
+
+    // ── mainImageLayer ──────────────────────────────────────────────────────
+    // Grows outward from capture via imagePadding + frameBorderWidth.
+    // Carries shadow and border. Never resizes capturedImageLayer.
+    final Widget mainImageLayer = Container(
+      // Remove width/height here — Column drives the size
+      decoration: BoxDecoration(
+        color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : surfaceColor,
+        borderRadius: radius,
+        border: profile.frameBorderWidth > 0
+            ? Border.all(
+                color: _frameBorderColor(),
+                width: profile.frameBorderWidth * scale,
+              )
+            : null,
+        boxShadow: (profile.shadowRadius > 0 || profile.shadowSpread > 0)
+            ? <BoxShadow>[
+                BoxShadow(
+                  offset: Offset(0, 14 * scale),
+                  spreadRadius: profile.shadowSpread * scale,
+                  blurRadius: profile.shadowRadius * scale,
+                  color: Colors.black.withValues(alpha: profile.shadowOpacity),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Optional browser chrome bar
+          if (profile.showBrowserFrame)
+            Container(
+              width: main.width,
+              height: 32 * scale,
+              padding: EdgeInsets.symmetric(horizontal: 14 * scale),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEBEBEB),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(profile.borderRadius),
+                  topRight: Radius.circular(profile.borderRadius),
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  _trafficLight(const Color(0xFFFF5F56)),
+                  const SizedBox(width: 8),
+                  _trafficLight(const Color(0xFFFFBD2E)),
+                  const SizedBox(width: 8),
+                  _trafficLight(const Color(0xFF27C93F)),
+                ],
+              ),
+            ),
+
+          // imagePadding sits between the mainLayer edge and the capturedImageLayer
+          Padding(
+            padding: EdgeInsets.all(profile.imagePadding * scale),
+            child: capturedImageLayer,
+          ),
+        ],
+      ),
+    );
+
+    // Watermark floats over mainImageLayer
+    final Widget mainWithWatermark = Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        mainImageLayer,
+        if (profile.watermark.isNotEmpty)
+          Positioned(
+            bottom: profile.imagePadding * scale + 6,
+            right: profile.imagePadding * scale + 6,
+            child: Transform(
+              transform: Matrix4.skewX(-0.1),
+              child: Text(
+                profile.watermark,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: profile.watermarkSize * scale,
+                  letterSpacing: 0.4,
+                  color: Colors.white.withValues(alpha: profile.watermarkOpacity),
+                  shadows: <Shadow>[
+                    Shadow(
+                      blurRadius: 10,
+                      color: Colors.black.withValues(alpha: 0.42),
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    // ── backgroundLayer + canvas ────────────────────────────────────────────
+    // Canvas is sized to mainLayer + backgroundPadding + aspect ratio expansion.
+    // The background fills the canvas. mainImageLayer is centered inside it.
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox(
+        width: canvas.width,
+        height: canvas.height,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            // 1. Background fills entire canvas
+            Container(
+              width: canvas.width,
+              height: canvas.height,
+              decoration: _backgroundDecoration(),
+            ),
+
+            // 2. Colour tint
+            if (profile.background != 0 && profile.backgroundTintOpacity > 0)
+              Container(
+                color: Color(profile.background).withValues(alpha: profile.backgroundTintOpacity),
+              ),
+
+            // 3. Background blur (blurs background only, not the frame)
+            if (profile.backgroundBlur > 0)
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: profile.backgroundBlur,
+                    sigmaY: profile.backgroundBlur,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+
+            // 4. mainImageLayer centered — backgroundPadding is the space
+            //    between canvas edge and mainLayer, enforced by Center +
+            //    the canvas being exactly mainLayer + backgroundPadding*2.
+            Center(
+              child: Transform(
+                transform: _buildTransform(),
+                filterQuality: FilterQuality.high,
+                alignment: Alignment.center,
+                child: mainWithWatermark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _trafficLight(Color color) => Container(
+        width: 12 * scale,
+        height: 12 * scale,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }

@@ -61,6 +61,7 @@ class Settings {
   bool volumeSetBack = false;
   bool keepPopupsOpen = true;
   bool expandedTaskbar = true;
+  bool bottomBarOnTop = false;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool taskManagerStats = false;
@@ -525,6 +526,11 @@ extension StringExtension on String {
 
   String removeCharAtTheEnd(String char) {
     if (lastIndexOf(char) == char.length - 1) return substring(0, length - 1);
+    return this;
+  }
+
+  String lastChars(int last, {bool addDots = true}) {
+    if (length > last) return "${addDots ? '...' : ''}${substring(length - last)}";
     return this;
   }
 
