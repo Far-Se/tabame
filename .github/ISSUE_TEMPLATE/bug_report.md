@@ -15,9 +15,9 @@ assignees: ''
  - Windows Version: 
  - Tabame Version: (optional)
 
-**Error.log file**
+**Errors.log file**
 
-*If `error.log` file is empty or you are reporting a visual bug, delete this part.*
+*If `errors.log` file is empty or you are reporting a visual bug, delete this part.*
 
 You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
 

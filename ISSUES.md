@@ -5,3 +5,4 @@ Ignore this file, it's for me to remember things.
 - Hotkeys pentru Fancyshot.
 - ScreenCapture: border pentru windows.
 - Cli Book: set default Run in Directory parameter.
+- The photo editor does not set itself upfront.

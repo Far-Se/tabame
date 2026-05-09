@@ -623,6 +623,11 @@ class ScreenCaptureView extends StatefulWidget {
   State<ScreenCaptureView> createState() => _ScreenCaptureViewState();
 }
 
+void writeToError(String text) {
+  File("${WinUtils.getTabameAppDataFolder()}\\errors.log")
+      .writeAsStringSync("\n${DateTime.now().toString()}\n ========== $text", mode: FileMode.append);
+}
+
 class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   String _captureActionId = CaptureActionChoice.askId;
   List<FancyShotProfile> _fancyShotProfiles = <FancyShotProfile>[];
@@ -645,6 +650,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   @override
   void initState() {
     super.initState();
+    writeToError(" initState");
     _fancyShotProfiles = FancyShot.loadProfiles();
     Settings.load();
     _uploadHosts = FancyShot.loadUploadHosts();
@@ -661,6 +667,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       _frozenSnapshotWarmup = _warmFrozenMonitorSnapshots();
       unawaited(_syncVisibleFrozenMonitor(forceRefresh: true));
     }
+    writeToError(" End of initSate");
   }
 
   List<CaptureActionChoice> _captureChoices() {
@@ -737,6 +744,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     FrozenMonitorSnapshot? snapshot,
     bool notify = true,
   }) async {
+    writeToError(" Start of _ensureFrozenMonitorImage");
     final ui.Image? existing = _frozenMonitorImages[monitorHandle];
     if (existing != null) return existing;
 
@@ -747,6 +755,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       return _frozenMonitorImages[monitorHandle];
     }
 
+    writeToError(" End of _ensureFrozenMonitorImage 1");
     try {
       snapshot ??= await _ensureFrozenMonitorSnapshot(monitorHandle);
       if (snapshot == null) return null;
@@ -776,6 +785,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     } finally {
       _frozenMonitorImageLoadsInProgress.remove(monitorHandle);
     }
+    writeToError(" End of _ensureFrozenMonitorImage 2");
   }
 
   Future<ui.Image> _decodeFrozenMonitorImage(
@@ -783,6 +793,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     int width,
     int height,
   ) {
+    writeToError(" Start of _decodeFrozenMonitorImage");
     final Completer<ui.Image> completer = Completer<ui.Image>();
     ui.decodeImageFromPixels(
       rgbaBytes,
@@ -791,6 +802,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       ui.PixelFormat.rgba8888,
       completer.complete,
     );
+    writeToError(" End of _decodeFrozenMonitorImage");
     return completer.future;
   }
 
@@ -816,10 +828,11 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       if (!forceRefresh && !monitorChanged && _frozenMonitorImages.containsKey(monitorHandle)) {
         return;
       }
-
+      writeToError(" _ensureFrozenMonitorSnapshot");
       final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
       if (snapshot == null) return;
       await _ensureFrozenMonitorImage(monitorHandle, snapshot: snapshot);
+      writeToError("End _ensureFrozenMonitorSnapshot");
     } finally {
       calloc.free(cursorPoint);
       _visibleFrozenMonitorSyncInProgress = false;
@@ -827,6 +840,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   Future<Uint8List?> _captureFrozenRegionToPng(Rect screenRect) async {
+    writeToError(" Start of _captureFrozenRegionToPng");
     final Rect normalizedRect = screenRect.normalized();
     final Pointer<RECT> rectPtr = calloc<RECT>()
       ..ref.left = normalizedRect.left.round()
@@ -867,7 +881,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         outputRgba[dstIndex + 3] = snapshot.rgbaBytes[srcIndex + 3];
       }
     }
-
+    writeToError(" End of _captureFrozenRegionToPng 1");
     return ScreenCapture.encodeRgbaToPng(outputRgba, outputWidth, outputHeight);
   }
 
@@ -941,10 +955,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   @override
   Widget build(BuildContext context) {
     final ui.Size size = MediaQuery.of(context).size;
+
     final ui.Image? frozenBackgroundImage = widget.freezeMode && _visibleFrozenMonitorHandle != null
         ? _frozenMonitorImages[_visibleFrozenMonitorHandle!]
         : null;
-
     if (!_captureEnabled) {
       return const SizedBox.expand();
     }
@@ -1157,7 +1171,11 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
           }
           pngBytes = await _captureFrozenRegionToPng(screenRect);
         } else {
-          pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
+          if (_frozenSnapshotWarmup != null) {
+            await _frozenSnapshotWarmup;
+          }
+          pngBytes = await _captureFrozenRegionToPng(screenRect);
+          // pngBytes = await ScreenCapture.captureRegionToPng(screenRect);
         }
       } finally {
         ShowWindow(hwnd, SW_SHOW);
