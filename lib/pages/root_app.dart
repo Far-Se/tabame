@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/classes/boxes.dart';
@@ -66,30 +67,33 @@ class _TabameState extends State<Tabame> {
                   <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
 
               return MaterialApp(
-                scrollBehavior: MyCustomScrollBehavior(),
-                debugShowCheckedModeBanner: false,
-                title: 'Tabame - Taskbar Menu',
-                theme: AppTheme.getLightThemeData(),
-                darkTheme: AppTheme.getDarkThemeData(context),
-                themeMode: themeMode,
-                home: PageView.builder(
-                  controller: Globals.mainPageViewController,
-                  allowImplicitScrolling: false,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemBuilder: (BuildContext context, int index) {
-                    Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
-                    if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
-                      return const Interface();
-                    }
-                    if (index == Pages.quickmenu.index) {
-                      return const QuickMenu();
-                    } else if (index == Pages.interface.index) {
-                      return const Interface();
-                    }
-                    return const QuickMenu();
-                  },
-                ),
-              );
+                  scrollBehavior: MyCustomScrollBehavior(),
+                  debugShowCheckedModeBanner: false,
+                  title: 'Tabame - Taskbar Menu',
+                  theme: AppTheme.getLightThemeData(),
+                  darkTheme: AppTheme.getDarkThemeData(context),
+                  themeMode: themeMode,
+                  home: kDebugMode
+                      ? PageView.builder(
+                          controller: Globals.mainPageViewController,
+                          allowImplicitScrolling: false,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemBuilder: (BuildContext context, int index) {
+                            Debug.add("Tabame: $index ${globalSettings.args.join(':')}");
+                            if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+                              return const Interface();
+                            }
+                            if (index == Pages.quickmenu.index) {
+                              return const QuickMenu();
+                            } else if (index == Pages.interface.index) {
+                              return const Interface();
+                            }
+                            return const QuickMenu();
+                          },
+                        )
+                      : (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty)
+                          ? const Interface()
+                          : const QuickMenu());
             },
           );
         });

@@ -662,7 +662,9 @@ class HotKeyInfo {
       if (windowHwnd != 0) {
         Win32.closeWindow(windowHwnd);
       } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
+        // WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
+        Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
+        QuickMenuFunctions.refreshQuickMenu();
       }
     },
     "OpenScreenCaptureFreeze": () {
@@ -670,7 +672,9 @@ class HotKeyInfo {
       if (windowHwnd != 0) {
         Win32.closeWindow(windowHwnd);
       } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-capture -freeze");
+        Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
+        QuickMenuFunctions.refreshQuickMenu();
+        // WinUtils.startTabame(closeCurrent: false, arguments: "-capture -freeze");
       }
     },
     "ShowStartMenu": () {
@@ -698,16 +702,6 @@ class HotKeyInfo {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.showSecondWindowUnderCursor();
     },
-    "FancyShot": () async {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
-      await WinUtils.screenCapture();
-      WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot");
-    },
-    // "QuickFancyShot": () async {
-    //   QuickMenuFunctions.toggleQuickMenu(visible: false);
-    //   await WinUtils.screenCapture();
-    //   FancyShot().quickCapture();
-    // },
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'logic/app_startup.dart';
 import 'pages/color_picker/color_picker.dart';
 import 'pages/msgbox.dart';
+import 'pages/photo_editor.dart';
 import 'pages/root_app.dart';
 import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
@@ -22,6 +23,7 @@ Future<void> main(List<String> arguments) async {
   // if (kDebugMode && true && arguments.isEmpty) return startScreenCapture();
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (wantsScreenCapture) return startScreenCapture(freezeMode: freezeScreenCapture);
+  if (arguments.contains("-editor")) return startPhotoEditor(arguments);
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);

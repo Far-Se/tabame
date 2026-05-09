@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
+import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
@@ -102,6 +103,11 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void _startTimer() {
     _mainTimer = Timer.periodic(kTimerInterval, (Timer timer) {
       if (_keepFetching && !_fetching) {
+        if (GetForegroundWindow() != Win32.hWnd && globalSettings.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
+          if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 400) {
+            QuickMenuFunctions.toggleQuickMenu(visible: false);
+          }
+        }
         _fetchWindows();
       }
     });

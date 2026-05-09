@@ -28,6 +28,7 @@ import '../services/wallpaper_service.dart';
 import 'launcher.dart';
 import 'quickmenu_designs/designs.dart';
 import 'quicksnap_overlay.dart';
+import 'screen_capture.dart';
 
 class QuickMenu extends StatefulWidget {
   const QuickMenu({super.key});
@@ -49,6 +50,14 @@ Future<int> quickMenuWindowSetup() async {
     await Win32.setMainWindowToMousePos();
   } else {
     await Win32.setMainWindowToMousePos();
+  }
+  if (kReleaseMode) {
+    final int exStyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
+    SetWindowLongPtr(
+      Win32.hWnd,
+      GWL_EXSTYLE,
+      (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW,
+    );
   }
   Globals.currentPage = Pages.quickmenu;
   Debug.add("QuickMenu: setup");
@@ -103,8 +112,6 @@ class QuickMenuState extends State<QuickMenu>
   // --------------------------------------------------------------------------
   // Triggers / Listeners
   // --------------------------------------------------------------------------
-  @override
-  void onViewsEvent(ViewsAction action, int hWnd) => _onViewsEvent(action, hWnd);
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) => _onQuickMenuToggled(visible, type);
@@ -153,6 +160,8 @@ class QuickMenuState extends State<QuickMenu>
 
   @override
   void onWinEventReceived(int hWnd, WinEventType type) => trk.onWinEventReceived(hWnd, type);
+  @override
+  void onViewsEvent(ViewsAction action, int hWnd) => _onViewsEvent(action, hWnd);
 
   // --------------------------------------------------------------------------
   // Private Implementations
@@ -536,6 +545,12 @@ class QuickMenuState extends State<QuickMenu>
     if (Globals.quickMenuPage == QuickMenuPage.quickSnap) {
       return const ViewsScreen();
     }
+    if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive) {
+      return const FancyShotCaptureWidget(freezeMode: false);
+    }
+    if (Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
+      return const FancyShotCaptureWidget(freezeMode: true);
+    }
     return Focus(
       focusNode: focusNode,
       autofocus: true,
@@ -613,50 +628,50 @@ class QuickMenuState extends State<QuickMenu>
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: MouseRegion(
-            onEnter: (PointerEnterEvent event) async {
-              Globals.isWindowActive = true;
-              // AllowSetForegroundWindow(pid);
-              Win32.activateWindow(Win32.hWnd);
-              _requestQuickMenuFocus();
-              // await WindowManager.instance.focus();
-            },
-            onHover: (PointerHoverEvent event) {
-              final int now = DateTime.timestamp().millisecondsSinceEpoch;
-              if (lastCheck == 0) {
-                lastCheck = now;
-                return;
-              }
-              if (now - lastCheck > 400) {
-                lastCheck = now;
-                final int hWnd = GetForegroundWindow();
-                if (hWnd != Win32.hWnd) {
-                  // WindowManager.instance.show();
-                  // WindowManager.instance.focus();
-                  _requestQuickMenuFocus();
-                }
-              }
-            },
-            onExit: (PointerExitEvent event) {
-              Globals.isWindowActive = false;
-              lastCheck = 0;
-            },
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Stack(
-                children: <Widget>[
-                  if (globalSettings.customSpash != "")
-                    Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
-                  Padding(
-                    padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
-                    child: DragToResizeArea(
-                      resizeEdgeSize: 5,
-                      enableResizeEdges: <ResizeEdge>[ResizeEdge.right],
-                      child: GestureDetector(
-                        onTap: () {},
-                        child: Container(
-                          key: Globals.quickMenu,
-                          color: Colors.transparent,
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: Stack(
+              children: <Widget>[
+                if (globalSettings.customSpash != "")
+                  Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                Padding(
+                  padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                  child: DragToResizeArea(
+                    resizeEdgeSize: 5,
+                    enableResizeEdges: <ResizeEdge>[ResizeEdge.right],
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        key: Globals.quickMenu,
+                        color: Colors.transparent,
+                        child: MouseRegion(
+                          onEnter: (PointerEnterEvent event) async {
+                            Globals.isWindowActive = true;
+                            // AllowSetForegroundWindow(pid);
+                            Win32.activateWindow(Win32.hWnd);
+                            _requestQuickMenuFocus();
+                            // await WindowManager.instance.focus();
+                          },
+                          onHover: (PointerHoverEvent event) {
+                            final int now = DateTime.timestamp().millisecondsSinceEpoch;
+                            if (lastCheck == 0) {
+                              lastCheck = now;
+                              return;
+                            }
+                            if (now - lastCheck > 400) {
+                              lastCheck = now;
+                              final int hWnd = GetForegroundWindow();
+                              if (hWnd != Win32.hWnd) {
+                                WindowManager.instance.show();
+                                WindowManager.instance.focus();
+                                _requestQuickMenuFocus();
+                              }
+                            }
+                          },
+                          onExit: (PointerExitEvent event) {
+                            Globals.isWindowActive = false;
+                            lastCheck = 0;
+                          },
                           child: Globals.quickMenuPage == QuickMenuPage.launcher
                               ? const Launcher()
                               : LoadQuickMenuDesign(key: Globals.quickMenuKey),
@@ -664,8 +679,8 @@ class QuickMenuState extends State<QuickMenu>
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

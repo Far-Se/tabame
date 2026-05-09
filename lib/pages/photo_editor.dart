@@ -11,6 +11,7 @@ import 'package:image/image.dart' as img;
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../models/classes/boxes/boxes_base.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
@@ -19,6 +20,60 @@ import '../widgets/widgets/emoji_picker_modal.dart';
 import '../widgets/widgets/font_picker/models/picker_font.dart';
 import '../widgets/widgets/font_picker/ui/font_picker.dart';
 import 'screen_capture.dart';
+
+Future<void> startPhotoEditor(List<String> arguments) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final int fileIndex = arguments.indexOf('-file');
+  final String? imageFilePath = fileIndex >= 0 && fileIndex + 1 < arguments.length ? arguments[fileIndex + 1] : null;
+  if (imageFilePath == null || imageFilePath.isEmpty) {
+    throw ArgumentError('Missing -file argument for photo editor.');
+  }
+
+  final File imageFile = File(imageFilePath);
+  if (!imageFile.existsSync()) {
+    throw ArgumentError('Photo editor file does not exist: $imageFilePath');
+  }
+
+  final Uint8List initialImageBytes = await imageFile.readAsBytes();
+  final img.Image? image = img.decodeImage(initialImageBytes);
+  if (image == null) {
+    throw ArgumentError('Could not decode image: $imageFilePath');
+  }
+
+  final Size initialSize = Size(
+    (image.width + 360).clamp(980, 1800).toDouble(),
+    (image.height + 240).clamp(720, 1200).toDouble(),
+  );
+
+  const WindowOptions windowOptions = WindowOptions(
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden,
+    alwaysOnTop: false,
+    title: 'Tabame Photo Editor',
+  );
+
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await Boxes.registerBoxes(justLoad: true);
+    await windowManager.setAsFrameless();
+    await windowManager.setHasShadow(true);
+    await windowManager.setMinimumSize(const Size(980, 720));
+    await windowManager.setSize(initialSize);
+    await windowManager.show();
+    await windowManager.focus();
+  });
+
+  runApp(
+    _StandalonePhotoEditorApp(
+      filePath: imageFilePath,
+      initialImageBytes: initialImageBytes,
+      imageW: image.width,
+      imageH: image.height,
+    ),
+  );
+}
 
 // ── Tool enum ─────────────────────────────────────────────────────────────────
 
@@ -517,6 +572,8 @@ class PhotoEditorView extends StatefulWidget {
   final int imageW;
   final int imageH;
   final String filePath;
+  final bool standaloneMode;
+  final VoidCallback? onBack;
 
   const PhotoEditorView({
     super.key,
@@ -524,6 +581,8 @@ class PhotoEditorView extends StatefulWidget {
     required this.imageW,
     required this.imageH,
     required this.filePath,
+    this.standaloneMode = false,
+    this.onBack,
   });
 
   @override
@@ -547,6 +606,19 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   bool _captureMoreBusy = false;
   bool _presetBusy = false;
 
+  void _handleBackAction() {
+    final VoidCallback? onBack = widget.onBack;
+    if (onBack != null) {
+      onBack();
+      return;
+    }
+    if (widget.standaloneMode) {
+      unawaited(windowManager.close());
+      return;
+    }
+    appState.backToCapture();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -554,6 +626,13 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
     _editorFancyShotProfiles = FancyShot.loadProfiles();
     _ctrl.addListener(_handleControllerChanged);
     _decodeBackground();
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Future<void>.delayed(const Duration(milliseconds: 100), () async {
+        final Size value = await windowManager.getSize();
+        await windowManager.setSize(Size(value.width + 1, value.height + 1));
+        await windowManager.setSize(Size(value.width, value.height));
+      });
+    });
   }
 
   Future<void> _decodeBackground() async {
@@ -718,7 +797,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                       children: <Widget>[
                         _EditorWindowBar(
                           filePath: widget.filePath,
-                          onBack: () => appState.backToCapture(),
+                          onBack: _handleBackAction,
+                          standaloneMode: widget.standaloneMode,
                           resetState: () => setState(() {}),
                         ),
                         Expanded(
@@ -726,7 +806,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                             children: <Widget>[
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-                                child: _EditorToolbar(ctrl: _ctrl, onBack: () => appState.backToCapture()),
+                                child: _EditorToolbar(ctrl: _ctrl, onBack: _handleBackAction),
                               ),
                               Expanded(
                                 child: Padding(
@@ -814,6 +894,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                   value: _selectedEditorPresetName,
                                   busy: _presetBusy,
                                   onPresetChanged: _applyEditorFancyShotPreset,
+                                  showScreenCaptureActions: !widget.standaloneMode,
+                                  onNewCapture: _handleBackAction,
                                 ),
                               ],
                             ),
@@ -841,7 +923,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
         _ctrl.redo();
         return;
       }
-      if (e.logicalKey == LogicalKeyboardKey.escape) appState.backToCapture();
+      if (e.logicalKey == LogicalKeyboardKey.escape) _handleBackAction();
 
       final Map<LogicalKeyboardKey, EditorTool> toolKeys = <LogicalKeyboardKey, EditorTool>{
         LogicalKeyboardKey.keyS: EditorTool.select,
@@ -1867,11 +1949,13 @@ class _EditorWindowBar extends StatelessWidget {
   const _EditorWindowBar({
     required this.filePath,
     required this.onBack,
+    required this.standaloneMode,
     required this.resetState,
   });
 
   final String filePath;
   final VoidCallback onBack;
+  final bool standaloneMode;
   final VoidCallback resetState;
 
   @override
@@ -1900,8 +1984,8 @@ class _EditorWindowBar extends StatelessWidget {
           children: <Widget>[
             IconButton(
               onPressed: onBack,
-              tooltip: 'Back to Capture',
-              icon: const Icon(Icons.arrow_back_rounded, size: 18),
+              tooltip: standaloneMode ? 'Close Editor' : 'Back to Capture',
+              icon: Icon(standaloneMode ? Icons.close_rounded : Icons.arrow_back_rounded, size: 18),
               color: Colors.white70,
             ),
             Expanded(
@@ -2372,6 +2456,8 @@ class _SaveButton extends StatefulWidget {
   final String? value;
   final bool busy;
   final Function(String? e) onPresetChanged;
+  final bool showScreenCaptureActions;
+  final VoidCallback onNewCapture;
 
   const _SaveButton({
     required this.ctrl,
@@ -2384,6 +2470,8 @@ class _SaveButton extends StatefulWidget {
     required this.value,
     required this.busy,
     required this.onPresetChanged,
+    required this.showScreenCaptureActions,
+    required this.onNewCapture,
   });
 
   @override
@@ -2543,7 +2631,7 @@ class _SaveButtonState extends State<_SaveButton> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () => appState.backToCapture(),
+              onPressed: widget.onNewCapture,
               icon: const Icon(Icons.camera_alt_outlined, size: 18),
               label: const Text('New Capture'),
             ),
@@ -2624,6 +2712,39 @@ class _EditorPresetButton extends StatelessWidget {
               const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StandalonePhotoEditorApp extends StatelessWidget {
+  const _StandalonePhotoEditorApp({
+    required this.filePath,
+    required this.initialImageBytes,
+    required this.imageW,
+    required this.imageH,
+  });
+
+  final String filePath;
+  final Uint8List initialImageBytes;
+  final int imageW;
+  final int imageH;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: PhotoEditorView(
+          initialImageBytes: initialImageBytes,
+          imageW: imageW,
+          imageH: imageH,
+          filePath: filePath,
+          standaloneMode: true,
+          onBack: () => windowManager.close(),
         ),
       ),
     );

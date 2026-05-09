@@ -126,7 +126,7 @@ class _MusicServerButtonState extends State<MusicServerButton> {
       onVerticalDragEnd: (_) => _lastDragPosition = 0,
       onVerticalDragUpdate: _handleVolumeDrag,
       icon: content,
-      child: () => const MusicServerPanel(),
+      child: () => MusicServerPanel(key: UniqueKey()),
     );
   }
 }

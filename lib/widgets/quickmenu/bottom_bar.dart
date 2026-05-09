@@ -163,10 +163,10 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
           ? BarWithButtons(
               height: 25.1,
               children: <Widget>[
+                if (kDebugMode) const TestingButton(),
                 if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
                 ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
                 if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
-                if (kDebugMode) const TestingButton(),
                 if (!globalSettings.bottomBarOnTop) const OpenSettingsButton(),
               ],
             )

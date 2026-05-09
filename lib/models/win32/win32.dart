@@ -360,7 +360,38 @@ class Win32 {
     }
   }
 
-  static void activateWindow(int hWnd) {
+  static void activateWindow(int hwnd) {
+    if (IsWindow(hwnd) == 0) return;
+
+    // Restore if minimized
+    if (IsIconic(hwnd) != 0) {
+      ShowWindow(hwnd, SW_RESTORE);
+    } else {
+      ShowWindow(hwnd, SW_SHOW);
+    }
+
+    final int fg = GetForegroundWindow();
+
+    final int fgThread = GetWindowThreadProcessId(fg, nullptr);
+    final int thisThread = GetCurrentThreadId();
+    final int targetThread = GetWindowThreadProcessId(hwnd, nullptr);
+
+    // Attach to foreground thread
+    AttachThreadInput(thisThread, fgThread, TRUE);
+    AttachThreadInput(thisThread, targetThread, TRUE);
+
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+    BringWindowToTop(hwnd);
+    SetForegroundWindow(hwnd);
+    SetFocus(hwnd);
+    SetActiveWindow(hwnd);
+
+    AttachThreadInput(thisThread, targetThread, FALSE);
+    AttachThreadInput(thisThread, fgThread, FALSE);
+  }
+
+  static void activateWindowOld(int hWnd) {
     final int currentThread = GetCurrentThreadId();
     final int targetThread = GetWindowThreadProcessId(hWnd, nullptr);
 
@@ -875,6 +906,21 @@ class Win32 {
       SetLayeredWindowAttributes(hWnd, 0, 255, LWA_ALPHA);
     }
   }
+
+  static void setClipHeight(int height, {int? hWnd}) {
+    hWnd ??= Win32.hWnd;
+    final Pointer<RECT> rect = calloc<RECT>();
+
+    GetWindowRect(hWnd, rect);
+
+    final int width = rect.ref.right - rect.ref.left;
+
+    calloc.free(rect);
+
+    final int region = CreateRectRgn(0, 0, width, height);
+
+    SetWindowRgn(hWnd, region, TRUE);
+  }
 }
 
 enum Scripts {
@@ -1197,5 +1243,206 @@ class HwndPath {
 
   static bool _needsAppxInstallLocation(String exePath) {
     return exePath.contains('WWAHost') || exePath.contains("ApplicationFrameHost");
+  }
+}
+// lib/src/appx_packages_win32.dart
+//
+// Enumerates all AppX / MSIX packages installed under
+// C:\Program Files\WindowsApps using only Win32 / WinRT package-management
+// APIs via dart:ffi.
+//
+// APIs used
+// ─────────
+//  kernel32  : GetPackagesByPackageFamily  (not used here — see note below)
+//  kernel32  : GetPackagePathByFullName
+//  appmodel  : OpenPackageInfoByFullName
+//              GetPackageInfo
+//              ClosePackageInfo
+//
+// The highest-level API that enumerates ALL packages for ALL users without
+// PowerShell is FindPackages() / FindPackagesByUserSecurityId() from the
+// Windows.Management.Deployment WinRT namespace.  Because calling WinRT
+// from plain FFI is verbose, we use the lower-level kernel32 approach:
+//
+//   1. GetCurrentPackageFullName — not useful (host is not packaged)
+//   2. PackageManager::FindPackages — WinRT only
+//   3. ✔  Enumerate HKLM\SOFTWARE\Classes\Local Settings\Software\
+//             Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages
+//      and then call GetPackagePathByFullName for each key name.
+//
+// The registry hive above is the canonical source that Windows itself reads;
+// it contains every machine-wide and per-user package registration.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data class
+// ─────────────────────────────────────────────────────────────────────────────
+
+class AppxPackage {
+  final String fullName;
+  final String installLocation;
+
+  const AppxPackage({required this.fullName, required this.installLocation});
+
+  @override
+  String toString() => 'AppxPackage($fullName  →  $installLocation)';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FFI bindings not already in the win32 package
+// ─────────────────────────────────────────────────────────────────────────────
+
+// LONG GetPackagePathByFullName(
+//   PCWSTR packageFullName,
+//   UINT32 *pathLength,   // in/out: in chars, including null terminator
+//   PWSTR  path           // out: may be NULL on the first call
+// );
+typedef _GetPackagePathByFullNameNative = Int32 Function(
+  Pointer<Utf16> packageFullName,
+  Pointer<Uint32> pathLength,
+  Pointer<Utf16> path,
+);
+typedef _GetPackagePathByFullNameDart = int Function(
+  Pointer<Utf16> packageFullName,
+  Pointer<Uint32> pathLength,
+  Pointer<Utf16> path,
+);
+
+final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
+
+final _GetPackagePathByFullNameDart _getPackagePathByFullName = _kernel32
+    .lookupFunction<_GetPackagePathByFullNameNative, _GetPackagePathByFullNameDart>('GetPackagePathByFullName');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Registry helpers (using win32's RegOpenKeyEx / RegEnumKeyEx)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Registry path that lists every registered package (machine + per-user).
+const String _kPackageRepoKey = r'SOFTWARE\Classes\Local Settings\Software\Microsoft'
+    r'\Windows\CurrentVersion\AppModel\Repository\Packages';
+
+/// Opens [subKey] under HKLM and returns the handle, or 0 on failure.
+int _openKey(String subKey) {
+  final Pointer<HKEY> hKey = calloc<HKEY>();
+  final Pointer<Utf16> lpSubKey = subKey.toNativeUtf16();
+  try {
+    final int rc = RegOpenKeyEx(
+      HKEY_LOCAL_MACHINE,
+      lpSubKey,
+      0,
+      KEY_READ | KEY_WOW64_64KEY,
+      hKey,
+    );
+    if (rc != ERROR_SUCCESS) return 0;
+    return hKey.value;
+  } finally {
+    calloc.free(lpSubKey);
+    calloc.free(hKey);
+  }
+}
+
+/// Enumerates the immediate sub-key names of [hKey].
+List<String> _enumSubKeyNames(int hKey) {
+  final List<String> names = <String>[];
+  final Pointer<Uint16> nameBuffer = calloc<Uint16>(256); // MAX_PATH in chars
+  final Pointer<DWORD> nameLen = calloc<DWORD>();
+
+  try {
+    for (int index = 0;; index++) {
+      nameLen.value = 256;
+      final int rc = RegEnumKeyEx(
+        hKey,
+        index,
+        nameBuffer.cast<Utf16>(),
+        nameLen,
+        nullptr, // reserved
+        nullptr, // class
+        nullptr, // class size
+        nullptr, // last-write time
+      );
+
+      if (rc == ERROR_NO_MORE_ITEMS) break;
+      if (rc != ERROR_SUCCESS) break;
+
+      names.add(nameBuffer.cast<Utf16>().toDartString(length: nameLen.value));
+    }
+  } finally {
+    calloc.free(nameBuffer);
+    calloc.free(nameLen);
+  }
+
+  return names;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GetPackagePathByFullName wrapper
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns the install path for [fullName], or `null` if the package is not
+/// found / the path cannot be retrieved.
+String? getPackagePathByFullName(String fullName) {
+  final Pointer<Utf16> pFullName = fullName.toNativeUtf16();
+  final Pointer<Uint32> pathLen = calloc<Uint32>();
+
+  try {
+    // First call: pathLen receives the required buffer size (in WCHARs,
+    // including the null terminator).  path must be NULL.
+    int rc = _getPackagePathByFullName(pFullName, pathLen, nullptr);
+
+    // ERROR_INSUFFICIENT_BUFFER (122) is the expected success code here.
+    const int errorInsufficientBuffer = 122;
+    if (rc != errorInsufficientBuffer) return null;
+
+    final Pointer<Uint16> pathBuffer = calloc<Uint16>(pathLen.value);
+    try {
+      rc = _getPackagePathByFullName(pFullName, pathLen, pathBuffer.cast<Utf16>());
+      if (rc != ERROR_SUCCESS) return null;
+
+      return pathBuffer.cast<Utf16>().toDartString(length: pathLen.value - 1);
+    } finally {
+      calloc.free(pathBuffer);
+    }
+  } finally {
+    calloc.free(pFullName);
+    calloc.free(pathLen);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns every AppX / MSIX package installed under
+/// `C:\Program Files\WindowsApps` using only Win32 kernel32 APIs.
+///
+/// Throws [UnsupportedError] on non-Windows platforms.
+List<AppxPackage> getAllAppxPackages() {
+  if (!Platform.isWindows) {
+    throw UnsupportedError('getAllAppxPackages() is Windows-only.');
+  }
+
+  const String windowsAppsPrefix = r'C:\Program Files\WindowsApps\';
+
+  final int hKey = _openKey(_kPackageRepoKey);
+  if (hKey == 0) {
+    throw StateError('Could not open package repository registry key. '
+        'Try running as Administrator.');
+  }
+
+  try {
+    final List<String> fullNames = _enumSubKeyNames(hKey);
+    final List<AppxPackage> packages = <AppxPackage>[];
+
+    for (final String fullName in fullNames) {
+      final String? path = getPackagePathByFullName(fullName);
+
+      // Filter to WindowsApps only (machine-wide / provisioned packages).
+      if (path != null && path.toLowerCase().startsWith(windowsAppsPrefix.toLowerCase())) {
+        packages.add(AppxPackage(fullName: fullName, installLocation: path));
+      }
+    }
+
+    return packages;
+  } finally {
+    RegCloseKey(hKey);
   }
 }

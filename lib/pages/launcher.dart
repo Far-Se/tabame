@@ -302,10 +302,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     QuickMenuFunctions.addListener(this);
 
     _controller.text = globalSettings.launcherSearchText;
-    _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
+    _moveCaretToEnd();
     Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.addListener(_onFocusManagerChanged);
     _focusNode.onKeyEvent = _onKeyEvent;
+    _focusNode.addListener(_onLauncherFocusChanged);
 
     _focusNode.requestFocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -341,6 +342,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.removeListener(_onFocusManagerChanged);
     _isRepeatingKey.dispose();
+    _focusNode.removeListener(_onLauncherFocusChanged);
 
     if (!FileIndexer.instance.isIndexing) {
       FileIndexDb.instance.close();
@@ -383,6 +385,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (!_canFocusLauncher) return;
       if (focusWindow) unawaited(windowManager.focus());
       if (!_focusNode.hasPrimaryFocus) {
+        _moveCaretToEnd();
         _focusNode.requestFocus();
       }
     }
@@ -398,6 +401,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _requestLauncherFocus();
     });
+  }
+
+  void _onLauncherFocusChanged() {
+    if (!_focusNode.hasPrimaryFocus) return;
+    _moveCaretToEnd();
+  }
+
+  void _moveCaretToEnd() {
+    final int endOffset = _controller.text.length;
+    final TextSelection nextSelection = TextSelection.collapsed(offset: endOffset);
+    if (_controller.selection == nextSelection) return;
+    _controller.selection = nextSelection;
   }
 
   // ignore: unused_element

@@ -2271,6 +2271,7 @@ class FancyShot {
   }
 }
 
+// ignore: unused_element
 class _FancyShotRenderSurface extends StatelessWidget {
   const _FancyShotRenderSurface({
     required this.captureBytes,
@@ -2407,11 +2408,10 @@ class _FancyShotFrameSurface extends StatelessWidget {
     final Matrix4 matrix = Matrix4.identity();
     if (profile.skewX != 0 || profile.skewY != 0) {
       matrix
-        // ignore: deprecated_member_use
-        ..scale(0.1)
         ..setEntry(3, 2, profile.skewPerspective)
         ..rotateX(0.1 * profile.skewY)
         ..rotateY(-0.1 * profile.skewX);
+      // removed: ..scale(0.1) — this was shrinking the widget to 10% size
     }
     if (profile.rotation != 0) {
       matrix.rotateZ(profile.rotation * math.pi / 180);

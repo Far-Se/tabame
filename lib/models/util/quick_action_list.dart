@@ -19,7 +19,6 @@ import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
-import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_launcher.dart';
 import '../../widgets/itzy/quickmenu/button_media_control.dart';
@@ -31,7 +30,7 @@ import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
-import '../../widgets/itzy/quickmenu/button_screen_capture.dart';
+import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
@@ -237,15 +236,15 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.featured_video_rounded,
     widget: () => const SpotlightButton(),
   ),
-  "ScreenCaptureButton": QuickAction(
-    name: "ScreenCaptureButton",
-    icon: Icons.dvr_outlined,
-    widget: () => const ScreenCaptureButton(),
+  "FancyShotLiveButton": QuickAction(
+    name: "FancyShotLiveButton",
+    icon: Icons.center_focus_strong_outlined,
+    widget: () => const FancyShotButton(),
   ),
-  "ScreenCaptureFreezeButton": QuickAction(
-    name: "ScreenCaptureFreezeButton",
-    icon: Icons.screenshot_outlined,
-    widget: () => const ScreenCaptureButton(freeze: true),
+  "FancyShotFreezeButton": QuickAction(
+    name: "FancyShotFreezeButton",
+    icon: Icons.center_focus_strong,
+    widget: () => const FancyShotButton(freeze: true),
   ),
   "PinWindowButton": QuickAction(
     name: "PinWindowButton",
@@ -276,11 +275,6 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "QuickActionsMenuButton",
     icon: Icons.grid_view,
     widget: () => const QuickActionsMenuButton(),
-  ),
-  "FancyShotButton": QuickAction(
-    name: "FancyShotButton",
-    icon: Icons.center_focus_strong_rounded,
-    widget: () => const FancyShotButton(),
   ),
   "ToggleDesktopButton": QuickAction(
     name: "ToggleDesktopButton",

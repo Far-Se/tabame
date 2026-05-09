@@ -34,6 +34,9 @@ enum QuickMenuPage {
   quickMenu,
   launcher,
   quickSnap,
+  fancyShotLive,
+  fancyShotFreeze,
+  colorPicker,
 }
 
 class Globals {

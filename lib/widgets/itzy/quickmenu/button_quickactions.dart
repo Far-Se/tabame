@@ -86,15 +86,36 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
       entries.add(entry);
     }
   }
-
+  entries.addAll(
+    <QuickActionMenuEntry>[
+      QuickActionMenuEntry(
+        id: "OpenFancyShotFolder",
+        title: "Open FancyShot Screenshots folder",
+        searchTerms: <String>["fancyshot", "screenshot"],
+        onExecute: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+        builder: (BuildContext context) {
+          return _QuickActionListItem(
+            name: "Open FancyShot Screenshots folder",
+            accent: accent,
+            onSurface: onSurface,
+            leading: SizedBox(
+              width: 18,
+              child: Icon(Icons.open_in_browser, size: 14, color: onSurface),
+            ),
+            onTap: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+          );
+        },
+      ),
+    ],
+  );
   entries.addAll(
     HotKeyInfo.tabameFunctionsMap.entries.where((MapEntry<String, dynamic> e) {
       return <String>[
-        "SwitchDesktopToRight",
-        "SwitchDesktopToLeft",
+        // "SwitchDesktopToRight",
+        // "SwitchDesktopToLeft",
         "SwitchAudioOutput",
-        "ShowSecondWindowUnderCursor",
-        "ShowLastActiveWindow",
+        // "ShowSecondWindowUnderCursor",
+        // "ShowLastActiveWindow",
       ].contains(e.key);
     }).map((MapEntry<String, dynamic> e) {
       final String displayName =

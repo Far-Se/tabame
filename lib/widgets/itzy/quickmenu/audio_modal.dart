@@ -188,6 +188,15 @@ class AudioBoxState extends State<AudioBox> {
             title: "Audio Settings",
             accent: accent,
             icon: Icons.volume_up_rounded,
+            extraActions: <Widget>[
+              IconButton(
+                onPressed: () {
+                  WinUtils.runPowerShell(<String>["mmsys.cpl"]);
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.settings_applications_outlined),
+              ),
+            ],
           ),
           Flexible(
             child: SliderTheme(

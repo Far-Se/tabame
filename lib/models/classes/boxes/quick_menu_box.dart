@@ -30,6 +30,7 @@ class QuickMenuFunctions {
   static bool isQuickMenuVisible = true;
   static bool keepOpen = false;
   static int hidTime = 0;
+  static int shownTime = 0;
 
   static int taskBarSelectedIdx = -1;
 
@@ -136,6 +137,7 @@ class QuickMenuFunctions {
             await listener.onQuickMenuVisible(type, center);
           }
           Win32.setWindowInvisiblity(false);
+          shownTime = DateTime.now().millisecondsSinceEpoch;
         });
       } else {
         visible = false;

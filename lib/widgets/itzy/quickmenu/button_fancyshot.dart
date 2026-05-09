@@ -1,35 +1,28 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../models/classes/boxes.dart';
+import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/globals.dart';
-import '../../../models/win32/win_utils.dart';
-import '../../../pages/quickmenu.dart';
+import '../../../models/win32/win32.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class FancyShotButton extends StatelessWidget {
-  const FancyShotButton({super.key});
+  final bool freeze;
+  const FancyShotButton({super.key, this.freeze = false});
+
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "FancyShot Profiles",
-      icon: const Icon(Icons.center_focus_strong_rounded),
-      onTap: () async {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
-
-        if (kReleaseMode) {
-          WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot");
-          return;
+      message: freeze ? "Open Frozen Screen Capture" : "Open Screen Capture",
+      icon: freeze ? const Icon(Icons.center_focus_strong) : const Icon(Icons.center_focus_strong_outlined),
+      onTap: () {
+        final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
+        if (windowHwnd != 0) {
+          Win32.closeWindow(windowHwnd);
+        } else {
+          // WinUtils.startTabame(closeCurrent: false, arguments: freeze ? "-capture -freeze" : "-capture");
+          Globals.quickMenuPage = freeze ? QuickMenuPage.fancyShotFreeze : QuickMenuPage.fancyShotLive;
+          QuickMenuFunctions.refreshQuickMenu();
         }
-        final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
-        Globals.changingPages = true;
-        //ignore: invalid_use_of_protected_member
-        x?.setState(() {});
-        Globals.mainPageViewController.jumpToPage(Pages.interface.index);
-        Globals.changingPages = true;
-        PaintingBinding.instance.imageCache.clear();
-        PaintingBinding.instance.imageCache.clearLiveImages();
-        return;
       },
     );
   }

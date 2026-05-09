@@ -1,6 +1,7 @@
 // ignore_for_file: dead_code, unused_import
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
@@ -11,14 +12,16 @@ import 'package:flutter/material.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
+import 'package:xml/xml.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/classes/hotkeys.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
+import '../../../models/win32/appx_module.dart';
 import '../../../models/win32/mixed.dart';
-import '../../../models/win32/win32.dart';
+// import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../models/win32/window_event.dart';
 import '../../widgets/custom_tooltip.dart';
@@ -44,6 +47,26 @@ class _TestingButtonState extends State<TestingButton> {
           final String res = await WindowsAppButton.getCacheInKb();
           WinUtils.msgBox("Cache", "${WindowsAppButton.iconFutureCache.length} Cache: $res ");
         }
+
+        final List<AppxPackage> packages = getAllAppxPackages();
+        print('Found ${packages.length} WindowsApps packages:\n');
+        for (final AppxPackage p in packages) {
+          print(p);
+        }
+        // 2. Enrich with AUMID + icon from manifest
+        final List<AppxApp> apps = getAllAppxApps(packages);
+
+        for (final AppxApp app in apps) {
+          print('${app.displayName}');
+          print('  AUMID : ${app.aumid}');
+          print('  Icon  : ${app.iconPath ?? "(none found)"}');
+          print('');
+        }
+
+        // 3. Launch by AUMID (exactly like the Start Menu)
+        // final AppxApp outlook = apps.firstWhere((AppxApp a) => a.displayName.contains('Outlook'));
+        // final pid = launchAppxByAumid(outlook.aumid);
+        return;
         final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
 
         print('Current: ${result.currentSession?.title}');

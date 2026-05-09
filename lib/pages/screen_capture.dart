@@ -36,6 +36,7 @@ import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/globals.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/screenshot.dart';
 import '../models/win32/win_utils.dart';
@@ -178,8 +179,26 @@ class AppState extends ChangeNotifier {
 
 final AppState appState = AppState();
 
+Future<void> openPhotoEditorForCapture({
+  required String filePath,
+  required Uint8List bytes,
+  required int imageW,
+  required int imageH,
+}) async {
+  if (kReleaseMode) {
+    final String escapedFilePath = filePath.replaceAll('"', '\\"');
+    WinUtils.startTabame(
+      closeCurrent: false,
+      arguments: '-editor -file "$escapedFilePath"',
+    );
+    return;
+  }
+
+  appState.openEditor(filePath, bytes, imageW, imageH);
+}
+
 class Settings {
-  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_capture.dart';
+  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_capture.json';
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -455,13 +474,13 @@ class ScreenCaptureApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: AppShell(freezeMode: freezeMode),
+      home: FancyShotCaptureWidget(freezeMode: freezeMode),
     );
   }
 }
 
-class AppShell extends StatefulWidget {
-  const AppShell({
+class FancyShotCaptureWidget extends StatefulWidget {
+  const FancyShotCaptureWidget({
     super.key,
     required this.freezeMode,
   });
@@ -469,10 +488,10 @@ class AppShell extends StatefulWidget {
   final bool freezeMode;
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  State<FancyShotCaptureWidget> createState() => _FancyShotCaptureWidgetState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   Timer? _monitorTimer;
   int _currentMonitor = -1;
   Square _monitorData = Square(x: 0, y: 0, width: 0, height: 0);
@@ -627,6 +646,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   void initState() {
     super.initState();
     _fancyShotProfiles = FancyShot.loadProfiles();
+    Settings.load();
     _uploadHosts = FancyShot.loadUploadHosts();
     final String? savedActionId = Settings.getString("screenCaptureModeKey");
     if (savedActionId != null && _captureChoices().any((CaptureActionChoice choice) => choice.id == savedActionId)) {
@@ -659,7 +679,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   void _ticker() {
-    _handleScreenDrawHotkeys();
+    // _handleScreenDrawHotkeys();
     if (widget.freezeMode) {
       unawaited(_syncVisibleFrozenMonitor());
     }
@@ -905,6 +925,19 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     super.dispose();
   }
 
+  void closeMainWindow() async {
+    if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive ||
+        Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
+      _toggleScreenCaptureEnabled();
+      Navigator.of(context).maybePop();
+      QuickMenuFunctions.refreshQuickMenu();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+    } else {
+      windowManager.close();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui.Size size = MediaQuery.of(context).size;
@@ -921,7 +954,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       autofocus: true,
       onKeyEvent: (KeyEvent e) {
         if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
-          windowManager.close();
+          closeMainWindow();
         }
       },
       child: Stack(
@@ -942,8 +975,12 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
             child: Listener(
               behavior: HitTestBehavior.opaque,
               onPointerDown: (PointerDownEvent event) {
-                if ((event.buttons & kSecondaryMouseButton) != 0 && _capturing) {
-                  _resetActiveCaptureSelection();
+                if ((event.buttons & kSecondaryMouseButton) != 0) {
+                  if (_capturing) {
+                    _resetActiveCaptureSelection();
+                  } else {
+                    closeMainWindow();
+                  }
                 }
               },
               onPointerMove: (PointerMoveEvent event) {
@@ -1127,8 +1164,18 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       }
       if (pngBytes == null || !mounted) return;
 
+      final List<CaptureActionChoice> choices = _captureChoices();
+      final CaptureActionChoice choice = choices.firstWhere(
+        (CaptureActionChoice item) => item.id == _captureActionId,
+        orElse: () => CaptureActionChoice.builtIn.first,
+      );
+
       Uint8List outputBytes = pngBytes;
-      if ((_selectedFancyShotPresetName ?? '').isNotEmpty) {
+      final bool needsPresetForResult = choice.uploadHost != null ||
+          choice.mode == CaptureActionMode.ask ||
+          choice.mode == CaptureActionMode.copyImageToClipboard ||
+          choice.mode == CaptureActionMode.copyImageFileToClipboard;
+      if (needsPresetForResult && (_selectedFancyShotPresetName ?? '').isNotEmpty) {
         setState(() => _applyingPreset = true);
         await Future<void>.delayed(const Duration(milliseconds: 16));
         try {
@@ -1141,15 +1188,24 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       final img.Image? outputImage = img.decodeImage(outputBytes);
       if (outputImage == null) return;
 
-      // Save to disk
-      final String filePath = await ScreenCapture.saveToFile(outputBytes);
+      final String? filePath =
+          choice.mode == CaptureActionMode.openPhotoEditor ? null : await ScreenCapture.saveToFile(outputBytes);
+      final bool editorNeedsRawFile =
+          choice.mode == CaptureActionMode.openPhotoEditor || choice.mode == CaptureActionMode.ask;
+      final String rawFilePath = editorNeedsRawFile
+          ? (identical(outputBytes, pngBytes)
+              ? filePath ?? await ScreenCapture.saveToFile(pngBytes)
+              : await ScreenCapture.saveToFile(pngBytes))
+          : filePath ?? await ScreenCapture.saveToFile(pngBytes);
 
       await windowManager.focus();
       if (!mounted) return;
 
       await _handleCaptureResult(
         pngBytes: outputBytes,
-        filePath: filePath,
+        filePath: filePath ?? rawFilePath,
+        editorPngBytes: pngBytes,
+        editorFilePath: rawFilePath,
         imageW: outputImage.width,
         imageH: outputImage.height,
       );
@@ -1181,6 +1237,8 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   Future<void> _handleCaptureResult({
     required Uint8List pngBytes,
     required String filePath,
+    required Uint8List editorPngBytes,
+    required String editorFilePath,
     required int imageW,
     required int imageH,
   }) async {
@@ -1198,7 +1256,14 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
     switch (choice.mode ?? CaptureActionMode.ask) {
       case CaptureActionMode.ask:
-        _showCaptureModal(pngBytes, filePath, imageW, imageH);
+        _showCaptureModal(
+          pngBytes,
+          filePath,
+          imageW,
+          imageH,
+          editorPngBytes: editorPngBytes,
+          editorFilePath: editorFilePath,
+        );
         return;
       case CaptureActionMode.copyImageToClipboard:
         await ScreenCapture.copyPngToClipboard(pngBytes);
@@ -1209,18 +1274,24 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         await _finishPostCaptureAction();
         return;
       case CaptureActionMode.openPhotoEditor:
-        appState.openEditor(filePath, pngBytes, imageW, imageH);
+        await openPhotoEditorForCapture(
+          filePath: editorFilePath,
+          bytes: editorPngBytes,
+          imageW: imageW,
+          imageH: imageH,
+        );
+        closeMainWindow();
         return;
     }
   }
 
   Future<void> _finishPostCaptureAction() async {
-    if (kDebugMode) {
-      appState.backToCapture();
-      await windowManager.focus();
-      return;
-    }
-    await windowManager.close();
+    // if (kDebugMode) {
+    //   appState.backToCapture();
+    //   await windowManager.focus();
+    //   return;
+    // }
+    closeMainWindow();
   }
 
   Future<bool> _runUploadHost(ScreenCaptureUploadHost host, String filePath) async {
@@ -1262,16 +1333,27 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     }
   }
 
-  void _showCaptureModal(Uint8List pngBytes, String filePath, int w, int h) {
+  void _showCaptureModal(
+    Uint8List pngBytes,
+    String filePath,
+    int w,
+    int h, {
+    required Uint8List editorPngBytes,
+    required String editorFilePath,
+  }) {
     showDialog<void>(
       context: context,
       barrierColor: Colors.black54,
       builder: (_) => _CaptureModal(
-        pngBytes: pngBytes,
-        filePath: filePath,
-        imageW: w,
-        imageH: h,
-      ),
+          pngBytes: pngBytes,
+          filePath: filePath,
+          editorPngBytes: editorPngBytes,
+          editorFilePath: editorFilePath,
+          imageW: w,
+          imageH: h,
+          onClose: () {
+            closeMainWindow();
+          }),
     );
   }
 }
@@ -1710,12 +1792,18 @@ class _CrosshairPainter extends CustomPainter {
 class _CaptureModal extends StatefulWidget {
   final Uint8List pngBytes;
   final String filePath;
+  final Uint8List editorPngBytes;
+  final String editorFilePath;
   final int imageW;
   final int imageH;
+  final Function() onClose;
 
   const _CaptureModal({
+    required this.onClose,
     required this.pngBytes,
     required this.filePath,
+    required this.editorPngBytes,
+    required this.editorFilePath,
     required this.imageW,
     required this.imageH,
   });
@@ -1726,7 +1814,6 @@ class _CaptureModal extends StatefulWidget {
 
 class _CaptureModalState extends State<_CaptureModal> {
   String? _statusMsg;
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1810,9 +1897,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                     onTap: () async {
                       await ScreenCapture.copyPngToClipboard(widget.pngBytes);
                       setState(() => _statusMsg = '✓ Copied to clipboard!');
-                      if (kReleaseMode) {
-                        windowManager.close();
-                      }
+                      widget.onClose();
                     },
                   ),
                   const SizedBox(height: 10),
@@ -1824,9 +1909,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                     onTap: () async {
                       await ScreenCapture.copyFileToClipboard(widget.filePath);
                       setState(() => _statusMsg = '✓ Screenshot file copied!');
-                      if (kReleaseMode) {
-                        windowManager.close();
-                      }
+                      widget.onClose();
                     },
                   ),
                   const SizedBox(height: 10),
@@ -1835,14 +1918,15 @@ class _CaptureModalState extends State<_CaptureModal> {
                     label: 'Open Photo Editor',
                     subtitle: 'Annotate and draw on the screenshot',
                     color: const Color(0xFF2ECC71),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.of(context).pop();
-                      appState.openEditor(
-                        widget.filePath,
-                        widget.pngBytes,
-                        widget.imageW,
-                        widget.imageH,
+                      await openPhotoEditorForCapture(
+                        filePath: widget.editorFilePath,
+                        bytes: widget.editorPngBytes,
+                        imageW: widget.imageW,
+                        imageH: widget.imageH,
                       );
+                      widget.onClose();
                     },
                   ),
                   const SizedBox(height: 16),

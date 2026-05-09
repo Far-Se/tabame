@@ -74,6 +74,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.max,
           children: <Widget>[
+            if (kDebugMode) const TestingButton(),
             Expanded(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -98,7 +99,6 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                 ],
               ),
             ),
-            if (kDebugMode) const TestingButton(),
             if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
             const OpenSettingsButton(),
             const SizedBox(width: 2),

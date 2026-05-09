@@ -36,7 +36,7 @@ class FileResultIcon extends StatelessWidget {
 // File result list item
 // ---------------------------------------------------------------------------
 
-class LauncherListItem extends StatefulWidget {
+class LauncherListItem extends StatelessWidget {
   const LauncherListItem({
     super.key,
     required this.entity,
@@ -61,56 +61,49 @@ class LauncherListItem extends StatefulWidget {
   final VoidCallback onRemoveFromHistory;
 
   @override
-  State<LauncherListItem> createState() => _LauncherListItemState();
-}
-
-class _LauncherListItemState extends State<LauncherListItem> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    // Use lastIndexOf instead of split to avoid list allocation.
-    final String path = widget.entity.path;
+    final String path = entity.path;
     final int sepIdx = path.lastIndexOf(Platform.pathSeparator);
     final String name = sepIdx >= 0 ? path.substring(sepIdx + 1) : path;
-    final bool highlighted = _hovered || widget.isSelected;
-    final int animMs = widget.isRepeating ? 50 : 200;
+    final int animMs = isRepeating ? 50 : 200;
+    final Curve animCurve = isRepeating ? Curves.linear : Curves.easeOutCubic;
+
     return RepaintBoundary(
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onHover: (PointerHoverEvent event) {
-          if (event.delta != Offset.zero && _hovered == false) {
-            setState(() => _hovered = true);
-            widget.onHover();
-          }
+          if (event.delta != Offset.zero) onHover();
         },
-        onExit: (_) => setState(() => _hovered = false),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: animMs),
-          curve: widget.isRepeating ? Curves.linear : Curves.easeIn,
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            color: highlighted ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: widget.onTap,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: animCurve,
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSelected ? globalSettings.themeColors.accentColor.withAlpha(55) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 children: <Widget>[
+                  // Selection indicator bar
                   AnimatedContainer(
                     duration: Duration(milliseconds: animMs),
-                    width: highlighted ? 2.5 : 0,
+                    curve: animCurve,
+                    width: isSelected ? 2.5 : 0,
                     height: 22,
-                    margin: EdgeInsets.only(right: highlighted ? 7 : 0),
+                    margin: EdgeInsets.only(right: isSelected ? 7 : 0),
                     decoration: BoxDecoration(
                       color: globalSettings.themeColors.accentColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
+
                   FileResultIcon(path: path),
                   const SizedBox(width: 8),
+
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -122,7 +115,7 @@ class _LauncherListItemState extends State<LauncherListItem> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: highlighted ? widget.onSurface : widget.onSurface.withAlpha(200),
+                            color: isSelected ? onSurface : onSurface.withAlpha(200),
                             fontFamily: globalSettings.themeColors.entryFontFamily,
                             fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                             fontWeight: FontWeight(globalSettings.themeColors.entryFontWeight),
@@ -130,24 +123,28 @@ class _LauncherListItemState extends State<LauncherListItem> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _hovered ? path.lastChars(40) : path,
+                          // Show shortened path when selected — replaces the
+                          // old _hovered-only truncation. The full path is
+                          // always readable via ellipsis when not selected.
+                          isSelected ? path.lastChars(40) : path,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 10,
-                            color: highlighted ? widget.onSurface.withAlpha(170) : widget.onSurface.withAlpha(130),
+                            color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // File/Dir badge
+
+                  // File / Dir badge
                   Padding(
                     padding: const EdgeInsets.only(left: 4),
                     child: _FileKindBadge(
-                      isDirectory: widget.entity.path.split('.').length != 2,
+                      isDirectory: entity.path.split('.').length != 2,
                       accent: globalSettings.themeColors.accentColor,
-                      onSurface: widget.onSurface,
+                      onSurface: onSurface,
                     ),
                   ),
                 ],
@@ -159,6 +156,8 @@ class _LauncherListItemState extends State<LauncherListItem> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
 
 class _FileKindBadge extends StatelessWidget {
   const _FileKindBadge({
@@ -174,31 +173,31 @@ class _FileKindBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        // color: Colors.green.withAlpha(70),
+        color: accent.withAlpha(22),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: accent.withAlpha(40)),
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        decoration: BoxDecoration(color: accent.withAlpha(22)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(isDirectory ? Icons.folder_rounded : Icons.insert_drive_file_rounded,
-                size: 9, color: accent.withAlpha(180)),
-            const SizedBox(width: 2),
-            Text(
-              isDirectory ? 'Folder' : 'File',
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-                color: accent.withAlpha(200),
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            isDirectory ? Icons.folder_rounded : Icons.insert_drive_file_rounded,
+            size: 9,
+            color: accent.withAlpha(180),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            isDirectory ? 'Folder' : 'File',
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: accent.withAlpha(200),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
