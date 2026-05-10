@@ -20,7 +20,7 @@ class _QuickmenuRemindersSettingsPageState extends State<QuickmenuRemindersSetti
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return LayoutBuilder(
@@ -283,7 +283,7 @@ class _ReminderCardState extends State<_ReminderCard> {
           color: theme.cardColor.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: globalSettings.themeColors.accentColor.withValues(alpha: _isHovering ? 0.3 : 0.08), width: 1),
+              color: userSettings.themeColors.accentColor.withValues(alpha: _isHovering ? 0.3 : 0.08), width: 1),
         ),
         child: InkWell(
           onTap: widget.onTap,
@@ -300,7 +300,7 @@ class _ReminderCardState extends State<_ReminderCard> {
                 Checkbox(
                   value: isEnabled,
                   onChanged: widget.onChanged,
-                  activeColor: globalSettings.themeColors.accentColor,
+                  activeColor: userSettings.themeColors.accentColor,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -341,7 +341,7 @@ class _ReminderCardState extends State<_ReminderCard> {
                 ),
                 if (widget.reminder.voiceNotification)
                   Icon(Icons.record_voice_over_rounded,
-                      size: 16, color: globalSettings.themeColors.accentColor.withValues(alpha: 0.5)),
+                      size: 16, color: userSettings.themeColors.accentColor.withValues(alpha: 0.5)),
                 const SizedBox(width: 12),
                 if (_isHovering)
                   IconButton(

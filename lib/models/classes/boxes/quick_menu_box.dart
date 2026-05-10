@@ -35,21 +35,21 @@ class QuickMenuFunctions {
   static int taskBarSelectedIdx = -1;
 
   static void randomizeBackdrop() {
-    final ThemeColors currentTheme = globalSettings.themeColors;
+    final ThemeColors currentTheme = userSettings.themeColors;
     if (currentTheme.backdropType == '') {
-      globalSettings.activeBackdropPath = '';
+      userSettings.activeBackdropPath = '';
       return;
     }
     if (currentTheme.backdropType == 'builtIn') {
       final int random = Random().nextInt(10);
-      globalSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+      userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
     } else {
       if (currentTheme.backdropImages.isNotEmpty) {
         final int random = Random().nextInt(currentTheme.backdropImages.length);
-        globalSettings.activeBackdropPath = currentTheme.backdropImages[random];
+        userSettings.activeBackdropPath = currentTheme.backdropImages[random];
       } else {
         final int random = Random().nextInt(10);
-        globalSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+        userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
       }
     }
   }

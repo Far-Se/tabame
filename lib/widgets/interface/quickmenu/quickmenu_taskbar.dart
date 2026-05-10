@@ -156,10 +156,10 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
           _buildToggleTile(
             title: "Taskbar Level Positioning",
             subtitle: "Maintain QuickMenu alignment with taskbar height",
-            value: globalSettings.showQuickMenuAtTaskbarLevel,
+            value: userSettings.showQuickMenuAtTaskbarLevel,
             onChanged: (bool v) async {
-              globalSettings.showQuickMenuAtTaskbarLevel = v;
-              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", globalSettings.showQuickMenuAtTaskbarLevel);
+              userSettings.showQuickMenuAtTaskbarLevel = v;
+              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", userSettings.showQuickMenuAtTaskbarLevel);
               if (!mounted) return;
               setState(() {});
             },
@@ -168,10 +168,10 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
           _buildToggleTile(
             title: "Expanded Taskbar",
             subtitle: "High-density technical list with process labels",
-            value: globalSettings.expandedTaskbar,
+            value: userSettings.expandedTaskbar,
             onChanged: (bool v) async {
-              globalSettings.expandedTaskbar = v;
-              await Boxes.updateSettings("expandedTaskbar", globalSettings.expandedTaskbar);
+              userSettings.expandedTaskbar = v;
+              await Boxes.updateSettings("expandedTaskbar", userSettings.expandedTaskbar);
               if (!mounted) return;
               setState(() {});
             },
@@ -180,25 +180,25 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
           _buildToggleTile(
             title: "Quick Actions at the bottom",
             subtitle: "Put Quick Action on the bottom, between pinned and tray",
-            value: globalSettings.quickActionsAtBottom,
+            value: userSettings.quickActionsAtBottom,
             onChanged: (bool v) async {
-              globalSettings.quickActionsAtBottom = v;
-              globalSettings.bottomBarOnTop = false;
-              await Boxes.updateSettings("quickActionsAtBottom", globalSettings.quickActionsAtBottom);
-              await Boxes.updateSettings("bottomBarOnTop", globalSettings.bottomBarOnTop);
+              userSettings.quickActionsAtBottom = v;
+              userSettings.bottomBarOnTop = false;
+              await Boxes.updateSettings("quickActionsAtBottom", userSettings.quickActionsAtBottom);
+              await Boxes.updateSettings("bottomBarOnTop", userSettings.bottomBarOnTop);
               if (!mounted) return;
               setState(() {});
             },
           ),
-          if (globalSettings.quickActionsAtBottom) ...<Widget>[
+          if (userSettings.quickActionsAtBottom) ...<Widget>[
             const Divider(height: 1),
             _buildToggleTile(
               title: "Bottom Bar at top",
               subtitle: "Put Buttom bar at the top to not get crowded",
-              value: globalSettings.bottomBarOnTop,
+              value: userSettings.bottomBarOnTop,
               onChanged: (bool v) async {
-                globalSettings.bottomBarOnTop = v;
-                await Boxes.updateSettings("bottomBarOnTop", globalSettings.bottomBarOnTop);
+                userSettings.bottomBarOnTop = v;
+                await Boxes.updateSettings("bottomBarOnTop", userSettings.bottomBarOnTop);
                 if (!mounted) return;
                 setState(() {});
               },
@@ -238,7 +238,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
   Widget _buildStyleTile(TaskBarAppsStyle style) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final bool isSelected = globalSettings.taskBarAppsStyle == style;
+    final bool isSelected = userSettings.taskBarAppsStyle == style;
 
     String title = "";
     String subtitle = "";
@@ -274,8 +274,8 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
-          globalSettings.taskBarAppsStyle = style;
-          await Boxes.updateSettings("taskBarAppsStyle", globalSettings.taskBarAppsStyle.index);
+          userSettings.taskBarAppsStyle = style;
+          await Boxes.updateSettings("taskBarAppsStyle", userSettings.taskBarAppsStyle.index);
           if (!mounted) return;
           setState(() {});
         },

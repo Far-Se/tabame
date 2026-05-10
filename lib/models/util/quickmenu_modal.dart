@@ -41,7 +41,7 @@ Future<void> showQuickMenuModal({
       return ValueListenableBuilder<bool>(
         valueListenable: Globals.themeChangeNotifier,
         builder: (BuildContext context, bool _, __) {
-          final ThemeData modalTheme = globalSettings.themeTypeMode == ThemeType.dark
+          final ThemeData modalTheme = userSettings.themeTypeMode == ThemeType.dark
               ? AppTheme.getDarkThemeData(context)
               : AppTheme.getLightThemeData();
           final ColorScheme scheme = modalTheme.colorScheme;
@@ -57,7 +57,7 @@ Future<void> showQuickMenuModal({
               }
               if (keyEvent.logicalKey == LogicalKeyboardKey.keyH && HardwareKeyboard.instance.isControlPressed) {
                 if (keyEvent is KeyDownEvent) {
-                  globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus;
+                  userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus;
                 }
                 return KeyEventResult.handled;
               }
@@ -103,7 +103,7 @@ Future<void> showQuickMenuModal({
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               color: surface.withValues(
-                                  alpha: switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
+                                  alpha: switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
                                 QuickMenuDesigns.modern => 0.95,
                                 QuickMenuDesigns.classic => 0.88,
                                 QuickMenuDesigns.interface => 0.93,

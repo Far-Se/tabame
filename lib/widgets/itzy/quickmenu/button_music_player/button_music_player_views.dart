@@ -109,7 +109,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                               overflow: TextOverflow.ellipsis,
                                               textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
                                               style: TextStyle(
-                                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                fontFamily: userSettings.themeColors.entryFontFamily,
                                                 fontSize: 19,
                                                 height: 1.1,
                                                 fontWeight: FontWeight.w800,
@@ -123,7 +123,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                               overflow: TextOverflow.ellipsis,
                                               textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
                                               style: TextStyle(
-                                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                fontFamily: userSettings.themeColors.entryFontFamily,
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
                                                 color: accent.withAlpha(200),
@@ -138,7 +138,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                                 overflow: TextOverflow.ellipsis,
                                                 textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
                                                 style: TextStyle(
-                                                  fontFamily: globalSettings.themeColors.entryFontFamily,
+                                                  fontFamily: userSettings.themeColors.entryFontFamily,
                                                   fontSize: 11.5,
                                                   color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
                                                 ),
@@ -1441,10 +1441,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 ),
                 const SizedBox(width: 8),
                 Switch(
-                  value: globalSettings.showMusicPlayerInTaskbar,
+                  value: userSettings.showMusicPlayerInTaskbar,
                   activeThumbColor: accent,
                   onChanged: (bool val) async {
-                    globalSettings.showMusicPlayerInTaskbar = val;
+                    userSettings.showMusicPlayerInTaskbar = val;
                     await Boxes.updateSettings("showMusicPlayerInTaskbar", val);
                     setState(() {});
                   },
@@ -1671,15 +1671,15 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       isDense: true,
       hintText: hint,
       hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
-      prefixIcon: Icon(icon, size: 16, color: globalSettings.themeColors.accentColor),
+      prefixIcon: Icon(icon, size: 16, color: userSettings.themeColors.accentColor),
       suffixIcon: suffix,
       filled: true,
-      fillColor: globalSettings.themeColors.accentColor.withAlpha(10),
+      fillColor: userSettings.themeColors.accentColor.withAlpha(10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: globalSettings.themeColors.accentColor.withAlpha(90)),
+        borderSide: BorderSide(color: userSettings.themeColors.accentColor.withAlpha(90)),
       ),
     );
   }

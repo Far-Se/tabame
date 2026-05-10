@@ -89,7 +89,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
-    if (tray.isEmpty || !globalSettings.showTrayBar) return Container();
+    if (tray.isEmpty || !userSettings.showTrayBar) return Container();
     return ShaderMask(
       shaderCallback: (Rect rect) {
         return const LinearGradient(

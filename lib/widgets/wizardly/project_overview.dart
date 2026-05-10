@@ -630,8 +630,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     _excludeController.text =
         Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{5,}$";
 
-    if (globalSettings.args.contains("-wizardly")) {
-      _folderController.text = globalSettings.args[0].replaceAll('"', '');
+    if (userSettings.args.contains("-wizardly")) {
+      _folderController.text = userSettings.args[0].replaceAll('"', '');
     }
   }
 
@@ -803,8 +803,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
-    final Color background = globalSettings.themeColors.background;
+    final Color accent = userSettings.themeColors.accentColor;
+    final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Stack(
@@ -929,8 +929,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         onPressed: onPressed,
         style: IconButton.styleFrom(
           backgroundColor:
-              isSelected ? globalSettings.themeColors.accentColor.withValues(alpha: 0.1) : Colors.transparent,
-          foregroundColor: isSelected ? globalSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.6),
+              isSelected ? userSettings.themeColors.accentColor.withValues(alpha: 0.1) : Colors.transparent,
+          foregroundColor: isSelected ? userSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.6),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
@@ -1002,7 +1002,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         hintText: hint,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        floatingLabelStyle: TextStyle(color: globalSettings.themeColors.accentColor),
+        floatingLabelStyle: TextStyle(color: userSettings.themeColors.accentColor),
       ),
     );
   }
@@ -1291,10 +1291,10 @@ There is a total of **${result!.totalChars.decimal}** characters.
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
-                      color: isSelected ? globalSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.5))),
+                      color: isSelected ? userSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.5))),
               if (isSelected)
                 Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    size: 16, color: globalSettings.themeColors.accentColor),
+                    size: 16, color: userSettings.themeColors.accentColor),
             ],
           ),
         ),
@@ -1472,7 +1472,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

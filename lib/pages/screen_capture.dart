@@ -37,6 +37,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
+import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/screenshot.dart';
 import '../models/win32/win_utils.dart';
@@ -269,7 +270,8 @@ class Win32Window {
     }
   }
 
-  static void setupOverlay() {
+  static void setupOverlay() async {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
     final int hwnd = getHwnd();
     if (hwnd == 0) return;
 
@@ -751,6 +753,30 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     }
   }
 
+  void _showCaptureSettingsModal(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (BuildContext context) {
+        return _CaptureSettingsModal(
+          captureChoices: _captureChoices(),
+          currentActionId: _captureActionId,
+          fancyShotPresets: _fancyShotProfiles.map((FancyShotProfile p) => p.name).toList(),
+          currentPresetName: _selectedFancyShotPresetName,
+          onActionChanged: (String actionId) {
+            Settings.setString("screenCaptureModeKey", actionId);
+            setState(() => _captureActionId = actionId);
+          },
+          onPresetChanged: (String? presetName) {
+            if (presetName == "none") presetName = "";
+            Settings.setString("screenCaptureFancyShot", presetName ?? "");
+            setState(() => _selectedFancyShotPresetName = presetName);
+          },
+        );
+      },
+    );
+  }
+
   Future<FrozenMonitorSnapshot?> _ensureFrozenMonitorSnapshot(int monitorHandle) async {
     final FrozenMonitorSnapshot? existing = _frozenMonitorSnapshots[monitorHandle];
     if (existing != null) return existing;
@@ -1068,52 +1094,14 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
             left: 0,
             right: 0,
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _CaptureActionDropdown(
-                    value: _captureActionId,
-                    uploadHosts: _uploadHosts,
-                    onChanged: (String actionId) {
-                      Settings.setString("screenCaptureModeKey", actionId);
-                      setState(() => _captureActionId = actionId);
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _FancyShotPresetDropdown(
-                    presetNames: _fancyShotProfiles.map((FancyShotProfile profile) => profile.name).toList(),
-                    value: _selectedFancyShotPresetName,
-                    onChanged: (String? presetName) {
-                      if (presetName == "none") presetName = "";
-                      Settings.setString("screenCaptureFancyShot", presetName ?? "");
-                      setState(() => _selectedFancyShotPresetName = presetName);
-                    },
-                  ),
-                ],
+              child: _CaptureSettingsButton(
+                activeAction: _captureChoices().firstWhere((CaptureActionChoice c) => c.id == _captureActionId),
+                activePresetName: _selectedFancyShotPresetName,
+                onTap: () => _showCaptureSettingsModal(context),
               ),
             ),
           ),
 
-          // HUD hint
-          Positioned(
-            top: 74,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Text(
-                  'Drag to select a region  •  Ctrl+Alt+V disable/enable  •  ESC to exit',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ),
-            ),
-          ),
           if (_applyingPreset)
             Positioned.fill(
               child: IgnorePointer(
@@ -1397,135 +1385,88 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 // Capture selection painter
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _CaptureActionDropdown extends StatelessWidget {
-  final String value;
-  final List<ScreenCaptureUploadHost> uploadHosts;
-  final ValueChanged<String> onChanged;
+// ─────────────────────────────────────────────────────────────────────────────
+// Capture settings button & modal
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const _CaptureActionDropdown({
-    required this.value,
-    required this.uploadHosts,
-    required this.onChanged,
+class _CaptureSettingsButton extends StatefulWidget {
+  final CaptureActionChoice activeAction;
+  final String? activePresetName;
+  final VoidCallback onTap;
+
+  const _CaptureSettingsButton({
+    required this.activeAction,
+    required this.activePresetName,
+    required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final List<CaptureActionChoice> options = <CaptureActionChoice>[
-      ...CaptureActionChoice.builtIn,
-      ...uploadHosts.map(
-        (ScreenCaptureUploadHost host) => CaptureActionChoice(
-          id: CaptureActionChoice.uploadHostId(host.id),
-          title: host.name,
-          subtitle: 'Run custom uploader command',
-          icon: Icons.cloud_upload_outlined,
-          uploadHost: host,
-        ),
-      ),
-    ];
-    final CaptureActionChoice selected = options.firstWhere(
-      (CaptureActionChoice option) => option.id == value,
-      orElse: () => CaptureActionChoice.builtIn.first,
-    );
+  State<_CaptureSettingsButton> createState() => _CaptureSettingsButtonState();
+}
 
-    return Material(
-      type: MaterialType.transparency,
-      child: PopupMenuButton<String>(
-        tooltip: 'Capture action',
-        color: const Color(0xFF121826),
-        elevation: 12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: Colors.white24),
-        ),
-        onSelected: onChanged,
-        itemBuilder: (BuildContext context) => options
-            .map(
-              (CaptureActionChoice option) => PopupMenuItem<String>(
-                value: option.id,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: option.id == value ? const Color(0xFF4A9EFF).withValues(alpha: 0.18) : Colors.white10,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        option.icon,
-                        size: 18,
-                        color: option.id == value ? const Color(0xFF7DB8FF) : Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            option.title,
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            option.subtitle,
-                            style: const TextStyle(color: Colors.white54, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 280, maxWidth: 280),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+class _CaptureSettingsButtonState extends State<_CaptureSettingsButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasPreset = (widget.activePresetName ?? "").isNotEmpty;
+    final Color accent = userSettings.theme.accentColor;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.74),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24),
+            color: _hovered ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: _hovered ? accent.withValues(alpha: 0.5) : Colors.white24,
+              width: 1,
+            ),
             boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.30),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
+              if (_hovered)
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
             ],
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A9EFF).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(selected.icon, size: 18, color: const Color(0xFF7DB8FF)),
+              Icon(
+                widget.activeAction.icon,
+                size: 14,
+                color: Colors.white.withValues(alpha: 0.9),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Text(
-                      'After Capture',
-                      style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 0.6),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      selected.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+              Container(
+                width: 1,
+                height: 14,
+                color: Colors.white24,
+              ),
+              const SizedBox(width: 10),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 14,
+                  color: hasPreset ? accent : Colors.white.withValues(alpha: 0.3),
+                  shadows: hasPreset
+                      ? <Shadow>[
+                          Shadow(
+                            color: accent.withValues(alpha: 0.8),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
                 ),
               ),
-              const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
             ],
           ),
         ),
@@ -1534,150 +1475,247 @@ class _CaptureActionDropdown extends StatelessWidget {
   }
 }
 
-class _FancyShotPresetDropdown extends StatelessWidget {
-  final List<String> presetNames;
-  final String? value;
-  final ValueChanged<String?> onChanged;
+class _CaptureSettingsModal extends StatelessWidget {
+  final List<CaptureActionChoice> captureChoices;
+  final String currentActionId;
+  final List<String> fancyShotPresets;
+  final String? currentPresetName;
+  final ValueChanged<String> onActionChanged;
+  final ValueChanged<String?> onPresetChanged;
 
-  const _FancyShotPresetDropdown({
-    required this.presetNames,
-    required this.value,
-    required this.onChanged,
+  const _CaptureSettingsModal({
+    required this.captureChoices,
+    required this.currentActionId,
+    required this.fancyShotPresets,
+    required this.currentPresetName,
+    required this.onActionChanged,
+    required this.onPresetChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String label = value ?? 'None';
+    const Color onSurface = Colors.white;
+    final Color accent = userSettings.theme.accentColor;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: PopupMenuButton<String?>(
-        tooltip: 'FancyShot preset',
-        color: const Color(0xFF121826),
-        elevation: 12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: Colors.white24),
-        ),
-        onSelected: onChanged,
-        itemBuilder: (BuildContext context) => <PopupMenuEntry<String?>>[
-          const PopupMenuItem<String?>(
-            value: 'none',
-            child: PresetMenuRow(
-              icon: Icons.block,
-              title: 'None',
-              subtitle: 'Use the raw captured image',
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      alignment: Alignment.topCenter,
+      insetPadding: const EdgeInsets.only(top: 80),
+      child: Container(
+        width: 320,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1117),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white12),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.5),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
             ),
-          ),
-          ...presetNames.map(
-            (String presetName) => PopupMenuItem<String?>(
-              value: presetName,
-              child: PresetMenuRow(
-                icon: Icons.auto_awesome,
-                title: presetName,
-                subtitle: 'FancyShot preset',
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.settings_input_component_outlined, size: 16, color: accent),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CAPTURE ENGINE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: onSurface.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const Divider(height: 1, color: Colors.white10),
+
+            // Actions Section
+            _buildSectionLabel(label: 'AFTER CAPTURE', icon: Icons.bolt_outlined),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                children: captureChoices.map((CaptureActionChoice choice) {
+                  final bool selected = choice.id == currentActionId;
+                  return _ModalChoiceRow(
+                    icon: choice.icon,
+                    title: choice.title,
+                    subtitle: choice.subtitle,
+                    selected: selected,
+                    onTap: () {
+                      onActionChanged(choice.id);
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: Colors.white10),
+
+            // FancyShot Section
+            _buildSectionLabel(label: 'FANCYSHOT PRESET', icon: Icons.auto_awesome),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                children: <Widget>[
+                  _ModalChoiceRow(
+                    icon: Icons.block,
+                    title: 'None',
+                    subtitle: 'Use raw captured image',
+                    selected: (currentPresetName ?? '').isEmpty,
+                    onTap: () {
+                      onPresetChanged(null);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ...fancyShotPresets.map((String name) {
+                    final bool selected = name == currentPresetName;
+                    return _ModalChoiceRow(
+                      icon: Icons.auto_awesome,
+                      title: name,
+                      subtitle: 'Apply visual framing',
+                      selected: selected,
+                      onTap: () {
+                        onPresetChanged(name);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel({required String label, required IconData icon}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 13, color: Colors.white38),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: Colors.white38,
             ),
           ),
         ],
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 240, maxWidth: 240),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.74),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.30),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2ECC71).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.auto_awesome, size: 18, color: Color(0xFF7DFFB1)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Text(
-                      'Preset',
-                      style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 0.6),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
-class PresetMenuRow extends StatelessWidget {
+class _ModalChoiceRow extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const PresetMenuRow({
+  const _ModalChoiceRow({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
+  State<_ModalChoiceRow> createState() => _ModalChoiceRowState();
+}
+
+class _ModalChoiceRowState extends State<_ModalChoiceRow> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Container(
-          width: 34,
-          height: 34,
+    final Color accent = userSettings.theme.accentColor;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(10),
+            color: widget.selected
+                ? accent.withValues(alpha: 0.12)
+                : (_hovered ? Colors.white.withValues(alpha: 0.05) : Colors.transparent),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.selected ? accent.withValues(alpha: 0.3) : Colors.transparent,
+            ),
           ),
-          child: Icon(icon, size: 18, color: Colors.white70),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: <Widget>[
-              Text(
-                title,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: widget.selected ? accent.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: 16,
+                  color: widget.selected ? accent : Colors.white60,
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        color: widget.selected ? Colors.white : Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
+                        fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      widget.subtitle,
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              if (widget.selected) Icon(Icons.check_circle, size: 14, color: accent),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -57,9 +57,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildToggleSetting(
           title: "Hide when losing focus",
           subtitle: "Close Tabame when clicking external windows",
-          value: globalSettings.hideTabameOnUnfocus,
+          value: userSettings.hideTabameOnUnfocus,
           onChanged: (bool val) async {
-            globalSettings.hideTabameOnUnfocus = val;
+            userSettings.hideTabameOnUnfocus = val;
             await Boxes.updateSettings("hideTabameOnUnfocus", val);
             setState(() {});
           },
@@ -67,9 +67,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildToggleSetting(
           title: "Keep popups persistent",
           subtitle: "Prevent detached popups from closing on unfocus",
-          value: globalSettings.keepPopupsOpen,
+          value: userSettings.keepPopupsOpen,
           onChanged: (bool val) async {
-            globalSettings.keepPopupsOpen = val;
+            userSettings.keepPopupsOpen = val;
             await Boxes.updateSettings("keepPopupsOpen", val);
             setState(() {});
           },
@@ -77,9 +77,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildToggleSetting(
           title: "Drag popups by icon only",
           subtitle: "Drag around the QuickMenu by Popup header icon only rather than the header.",
-          value: globalSettings.dragPopupsByIconOnly,
+          value: userSettings.dragPopupsByIconOnly,
           onChanged: (bool val) async {
-            globalSettings.dragPopupsByIconOnly = val;
+            userSettings.dragPopupsByIconOnly = val;
             await Boxes.updateSettings("dragPopupsByIconOnly", val);
             setState(() {});
           },
@@ -87,22 +87,22 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildToggleSetting(
           title: "Quick Actions at the bottom",
           subtitle: "Put Quick Action on the bottom, between pinned and tray.",
-          value: globalSettings.quickActionsAtBottom,
+          value: userSettings.quickActionsAtBottom,
           onChanged: (bool val) async {
-            globalSettings.quickActionsAtBottom = val;
-            globalSettings.bottomBarOnTop = false;
+            userSettings.quickActionsAtBottom = val;
+            userSettings.bottomBarOnTop = false;
             await Boxes.updateSettings("quickActionsAtBottom", val);
             await Boxes.updateSettings("bottomBarOnTop", val);
             setState(() {});
           },
         ),
-        if (globalSettings.quickActionsAtBottom)
+        if (userSettings.quickActionsAtBottom)
           _buildToggleSetting(
             title: "Bottom Bar at top",
             subtitle: "Put Buttom bar at the top to not get crowded.",
-            value: globalSettings.bottomBarOnTop,
+            value: userSettings.bottomBarOnTop,
             onChanged: (bool val) async {
-              globalSettings.bottomBarOnTop = val;
+              userSettings.bottomBarOnTop = val;
               await Boxes.updateSettings("bottomBarOnTop", val);
               setState(() {});
             },
@@ -120,9 +120,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildToggleSetting(
           title: "Compact Tray Bar",
           subtitle: "Display system tray icons in the panel",
-          value: globalSettings.showTrayBar,
+          value: userSettings.showTrayBar,
           onChanged: (bool val) async {
-            globalSettings.showTrayBar = val;
+            userSettings.showTrayBar = val;
             await Boxes.updateSettings("showTrayBar", val);
             setState(() {});
           },
@@ -130,15 +130,15 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
         _buildImageSetting(
           title: "Primary Logo",
           subtitle: "Replace the default QuickMenu icon",
-          imagePath: globalSettings.customLogo,
-          defaultAsset: globalSettings.logo,
+          imagePath: userSettings.customLogo,
+          defaultAsset: userSettings.logo,
           onChanged: _pickLogoImage,
         ),
         const SizedBox(height: 4),
         _buildImageSetting(
           title: "Splash Header",
           subtitle: "Floating image centered above the panel",
-          imagePath: globalSettings.customSpash,
+          imagePath: userSettings.customSpash,
           onChanged: _pickSplashImage,
         ),
       ],
@@ -166,7 +166,7 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
   }
 
   Widget _buildDesignTile(QuickMenuDesigns design) {
-    final bool isSelected = globalSettings.quickMenuDesign == design.index;
+    final bool isSelected = userSettings.quickMenuDesign == design.index;
     final ThemeData theme = Theme.of(context);
 
     return InkWell(
@@ -377,25 +377,25 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
 
   Future<void> _pickLogoImage(bool enabled) async {
     if (!enabled) {
-      globalSettings.customLogo = "";
+      userSettings.customLogo = "";
     } else {
       final File? result = _pickPngFile();
       if (result == null) return;
-      globalSettings.customLogo = result.path;
+      userSettings.customLogo = result.path;
     }
-    await Boxes.updateSettings("customLogo", globalSettings.customLogo);
+    await Boxes.updateSettings("customLogo", userSettings.customLogo);
     setState(() {});
   }
 
   Future<void> _pickSplashImage(bool enabled) async {
     if (!enabled) {
-      globalSettings.customSpash = "";
+      userSettings.customSpash = "";
     } else {
       final File? result = _pickPngFile();
       if (result == null) return;
-      globalSettings.customSpash = result.path;
+      userSettings.customSpash = result.path;
     }
-    await Boxes.updateSettings("customSpash", globalSettings.customSpash);
+    await Boxes.updateSettings("customSpash", userSettings.customSpash);
     setState(() {});
   }
 

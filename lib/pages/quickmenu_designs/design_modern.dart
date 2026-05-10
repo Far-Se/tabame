@@ -17,10 +17,10 @@ class MainMenuModernWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color surface = theme.colorScheme.surface;
 
-    final List<double> points = globalSettings.themeColors.panelOpacityPoints;
+    final List<double> points = userSettings.themeColors.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> colors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -44,8 +44,8 @@ class MainMenuModernWidget extends StatelessWidget {
                   blendMode: BlendMode.dstIn,
                   shaderCallback: (Rect bounds) {
                     return LinearGradient(
-                      begin: panelAlignmentMap[globalSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                      end: panelAlignmentMap[globalSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                      begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
+                      end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
                       colors: colors,
                       stops: stops,
                     ).createShader(bounds);
@@ -57,11 +57,11 @@ class MainMenuModernWidget extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: <Color>[
-                          surface.withValues(alpha: globalSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.95),
+                          surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.95),
                           Color.alphaBlend(
-                              accent.withAlpha((globalSettings.themeColors.gradientAlpha * 24 / 100).toInt()), surface),
+                              accent.withAlpha((userSettings.themeColors.gradientAlpha * 24 / 100).toInt()), surface),
                           Color.alphaBlend(
-                              accent.withAlpha((globalSettings.themeColors.gradientAlpha * 10 / 100).toInt()), surface),
+                              accent.withAlpha((userSettings.themeColors.gradientAlpha * 10 / 100).toInt()), surface),
                         ],
                       ),
                       border: Border.all(color: accent.withAlpha(28)),
@@ -77,7 +77,7 @@ class MainMenuModernWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: surface.withValues(alpha: globalSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.9),
+                          color: surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.9),
                           border: Border.all(color: accent.withAlpha(18)),
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
@@ -90,11 +90,11 @@ class MainMenuModernWidget extends StatelessWidget {
                         ),
                         child: Stack(
                           children: <Widget>[
-                            if (globalSettings.themeColors.backdropType.isNotEmpty)
+                            if (userSettings.themeColors.backdropType.isNotEmpty)
                               Positioned.fill(
                                   child: DesignBackdrop(
-                                path: globalSettings.activeBackdropPath,
-                                opacity: globalSettings.themeColors.backdropOpacity,
+                                path: userSettings.activeBackdropPath,
+                                opacity: userSettings.themeColors.backdropOpacity,
                               )),
                           ],
                         ),
@@ -111,7 +111,7 @@ class MainMenuModernWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!globalSettings.quickActionsAtBottom)
+                  if (!userSettings.quickActionsAtBottom)
                     const Padding(
                       padding: EdgeInsets.fromLTRB(3, 3, 6, 4),
                       child: TopBar(),
@@ -119,9 +119,9 @@ class MainMenuModernWidget extends StatelessWidget {
                   else
                     const PinnedAndTrayList(),
                   const TaskBar(),
-                  Divider(thickness: 1, height: 1, color: globalSettings.themeColors.textColor.withValues(alpha: 0.08)),
-                  if (!globalSettings.bottomBarOnTop) const PinnedAndTrayList(),
-                  if (globalSettings.taskManagerStats) const TaskbarStats(),
+                  Divider(thickness: 1, height: 1, color: userSettings.themeColors.textColor.withValues(alpha: 0.08)),
+                  if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (userSettings.taskManagerStats) const TaskbarStats(),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(0, 4, 1, 6),
                     child: BottomBar(),

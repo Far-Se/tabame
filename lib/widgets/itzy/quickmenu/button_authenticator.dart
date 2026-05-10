@@ -487,7 +487,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -1059,7 +1059,7 @@ class _AuthenticatorPasswordDialogState extends State<_AuthenticatorPasswordDial
       title: Text(widget.title),
       shadowColor: Colors.red,
       elevation: 5,
-      surfaceTintColor: globalSettings.themeColors.accentColor,
+      surfaceTintColor: userSettings.themeColors.accentColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1210,11 +1210,11 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: _hovered
-              ? globalSettings.themeColors.accentColor.withAlpha(20)
-              : globalSettings.themeColors.accentColor.withAlpha(10),
+              ? userSettings.themeColors.accentColor.withAlpha(20)
+              : userSettings.themeColors.accentColor.withAlpha(10),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(70) : widget.onSurface.withAlpha(20),
+            color: _hovered ? userSettings.themeColors.accentColor.withAlpha(70) : widget.onSurface.withAlpha(20),
           ),
         ),
         child: InkWell(
@@ -1231,7 +1231,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: globalSettings.themeColors.accentColor.withAlpha(26),
+                        color: userSettings.themeColors.accentColor.withAlpha(26),
                         borderRadius: BorderRadius.circular(9),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -1255,7 +1255,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: globalSettings.themeColors.accentColor,
+                              color: userSettings.themeColors.accentColor,
                             ),
                           );
                         },
@@ -1314,7 +1314,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                         child: Icon(
                           Icons.edit_outlined,
                           size: 16,
-                          color: _hovered ? globalSettings.themeColors.accentColor : widget.onSurface.withAlpha(120),
+                          color: _hovered ? userSettings.themeColors.accentColor : widget.onSurface.withAlpha(120),
                         ),
                       ),
                     ),
@@ -1353,7 +1353,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: _copied ? globalSettings.themeColors.accentColor : widget.onSurface.withAlpha(140),
+                        color: _copied ? userSettings.themeColors.accentColor : widget.onSurface.withAlpha(140),
                       ),
                     ),
                   ],

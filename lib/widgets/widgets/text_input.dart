@@ -201,9 +201,9 @@ class CustomTextInputState extends State<CustomTextInput> {
                           ), */
                       controller: _controller,
                       style: TextStyle(
-                        fontFamily: globalSettings.themeColors.entryFontFamily,
-                        fontWeight: AppTheme.getFontWeight(globalSettings.themeColors.entryFontWeight),
-                        fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                        fontFamily: userSettings.themeColors.entryFontFamily,
+                        fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
+                        fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                         fontSize: 14,
                         letterSpacing: 0.5,
                       ),

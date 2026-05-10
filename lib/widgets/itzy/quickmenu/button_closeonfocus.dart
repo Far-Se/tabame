@@ -22,15 +22,15 @@ class CloseOnFocusLossButtonState extends State<CloseOnFocusLossButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (globalSettings.hideTabameOnUnfocus) {
+    if (userSettings.hideTabameOnUnfocus) {
       return QuickActionItem(
           message: "Hide on Focus Loss (CTRL + H)",
           icon: const Icon(Icons.disabled_visible_outlined),
-          onTap: () => setState(() => globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus));
+          onTap: () => setState(() => userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus));
     }
     return QuickActionItem(
         message: "Stay Visible (CTRL + H)",
         icon: const Icon(Icons.visibility_outlined),
-        onTap: () => setState(() => globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus));
+        onTap: () => setState(() => userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus));
   }
 }

@@ -156,7 +156,7 @@ class _ClearKeyboardPanelState extends State<ClearKeyboardPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -416,7 +416,7 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return InkWell(

@@ -708,7 +708,7 @@ class _NotionWidgetState extends State<NotionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     String headerTitle = 'Notion';

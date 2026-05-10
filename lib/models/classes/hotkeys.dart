@@ -706,15 +706,15 @@ class HotKeyInfo {
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(
           AudioDeviceType.output,
-          console: globalSettings.audioConsole,
-          multimedia: globalSettings.audioMultimedia,
-          communications: globalSettings.audioCommunications,
+          console: userSettings.audioConsole,
+          multimedia: userSettings.audioMultimedia,
+          communications: userSettings.audioCommunications,
         ),
     "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
           AudioDeviceType.input,
-          console: globalSettings.audioConsole,
-          multimedia: globalSettings.audioMultimedia,
-          communications: globalSettings.audioCommunications,
+          console: userSettings.audioConsole,
+          multimedia: userSettings.audioMultimedia,
+          communications: userSettings.audioCommunications,
         ),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input)
         .then((bool isMuted) => Audio.setMuteAudioDevice(!isMuted, AudioDeviceType.input)),

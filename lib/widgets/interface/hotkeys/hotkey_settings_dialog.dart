@@ -276,7 +276,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
     required int count,
     required ColorScheme colors,
   }) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     return Row(
       children: <Widget>[
         Icon(icon, size: 14, color: accent),
@@ -381,7 +381,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
   }
 
   Widget _buildHotkeyMonitor(ColorScheme colors, TextTheme texts) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return _buildInstrumentCard(
       colors: colors,
@@ -517,7 +517,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
 
   Widget _modifierStatusTile(String label, bool isActive) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return Expanded(
       child: AnimatedContainer(
@@ -557,7 +557,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
   }
 
   Widget _buildSpecialBindingRadioRow(ColorScheme colors, TextTheme texts, String binding) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final bool selected = hotkey.key == binding;
 
     return InkWell(
@@ -631,7 +631,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
   }
 
   Widget _buildStickyFooter(ColorScheme colors) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -724,7 +724,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return InkWell(
       onTap: () => onChanged(!value),

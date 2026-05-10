@@ -94,7 +94,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   }
 
   Widget _buildScreenDrawHotkeysTile(ColorScheme colors, TextTheme texts) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -642,12 +642,12 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
           margin: const EdgeInsets.only(bottom: 6),
           decoration: BoxDecoration(
             color: isEnabled
-                ? (_hovered ? globalSettings.themeColors.accentColor.withAlpha(12) : widget.onSurface.withAlpha(5))
+                ? (_hovered ? userSettings.themeColors.accentColor.withAlpha(12) : widget.onSurface.withAlpha(5))
                 : widget.onSurface.withAlpha(2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isEnabled
-                  ? (_hovered ? globalSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent)
+                  ? (_hovered ? userSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent)
                   : (_hovered ? widget.onSurface.withAlpha(20) : Colors.transparent),
             ),
           ),
@@ -695,7 +695,7 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
                                   fontWeight: isEnabled ? FontWeight.w500 : FontWeight.w400,
                                   fontStyle: isEnabled ? FontStyle.normal : FontStyle.italic,
                                   color: isEnabled
-                                      ? (_hovered ? globalSettings.themeColors.accentColor : widget.onSurface)
+                                      ? (_hovered ? userSettings.themeColors.accentColor : widget.onSurface)
                                       : widget.onSurface.withAlpha(150),
                                 ),
                               ),
@@ -1129,7 +1129,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme texts = Theme.of(context).textTheme;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return Container(
       decoration: BoxDecoration(
@@ -1234,7 +1234,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
 
   Widget _modifierChip(String label, bool active) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return Expanded(
       child: Container(

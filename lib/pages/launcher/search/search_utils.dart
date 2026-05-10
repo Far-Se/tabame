@@ -229,7 +229,7 @@ QuickActionMenuEntry _buildQuickActionsLauncherEntry() {
     ],
     builder: (BuildContext context) {
       final ThemeData theme = Theme.of(context);
-      final Color accent = globalSettings.themeColors.accentColor;
+      final Color accent = userSettings.themeColors.accentColor;
       final Color onSurface = theme.colorScheme.onSurface;
       return InkWell(
         borderRadius: BorderRadius.circular(8),

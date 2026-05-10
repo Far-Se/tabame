@@ -64,7 +64,7 @@ class VaultsWidgetState extends State<VaultsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -437,7 +437,7 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
 
           return _VaultItemTile(
             item: item,
-            accent: globalSettings.themeColors.accentColor,
+            accent: userSettings.themeColors.accentColor,
             onSurface: widget.onSurface,
             onEdit: () => setState(() {
               _editingIndex = index;
@@ -459,7 +459,7 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-          color: globalSettings.themeColors.accentColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+          color: userSettings.themeColors.accentColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: <Widget>[
           TextField(
@@ -527,7 +527,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+            color: _hovered ? userSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
             borderRadius: BorderRadius.circular(8)),
         child: InkWell(
           onTap: () {
@@ -561,7 +561,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                 if (_copied)
                   Text("Copied!",
                       style: TextStyle(
-                          fontSize: 10, color: globalSettings.themeColors.accentColor, fontWeight: FontWeight.bold)),
+                          fontSize: 10, color: userSettings.themeColors.accentColor, fontWeight: FontWeight.bold)),
                 if (_hovered && !_copied) ...<Widget>[
                   IconButton(
                       onPressed: widget.onEdit,

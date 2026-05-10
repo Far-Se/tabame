@@ -42,9 +42,9 @@ class _TimeWidgetState extends State<TimeWidget> {
   }
 
   void _onTap() {
-    globalSettings.noopKeyListener = true;
+    userSettings.noopKeyListener = true;
     WinKeys.send("{#LWIN}C");
-    Future<void>.delayed(const Duration(milliseconds: 500), () => globalSettings.noopKeyListener = false);
+    Future<void>.delayed(const Duration(milliseconds: 500), () => userSettings.noopKeyListener = false);
   }
 
   @override
@@ -52,7 +52,7 @@ class _TimeWidgetState extends State<TimeWidget> {
     final String timeStr = DateFormat('hh:mm:ss').format(_now);
     final String dateStr = DateFormat('dd MMM').format(_now);
     final String dayStr = DateFormat('EE').format(_now);
-    final FontWeight fontWeight = FontWeight(globalSettings.theme.uiFontWeight);
+    final FontWeight fontWeight = FontWeight(userSettings.theme.uiFontWeight);
 
     if (widget.inline) {
       return InkWell(

@@ -394,7 +394,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
     final double amount = _parsedAmount;
     final double? rate = _currentRate;
@@ -865,7 +865,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: globalSettings.themeColors.accentColor.withAlpha(12),
+        color: userSettings.themeColors.accentColor.withAlpha(12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

@@ -40,9 +40,9 @@ class MessageBoxApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     ThemeMode scheduled = ThemeMode.system;
-    final ThemeType themeType = globalSettings.themeType;
+    final ThemeType themeType = userSettings.themeType;
     if (themeType.index == 3) {
-      scheduled = globalSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+      scheduled = userSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
     }
     final ThemeMode themeMode =
         <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
@@ -113,7 +113,7 @@ class _MessageBoxWindowState extends State<MessageBoxWindow> with WindowListener
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color panelBase = scheme.surface;
     final Color panelOutline = accent.withValues(alpha: 0.16);
     final Color panelGlow = accent.withValues(alpha: 0.10);

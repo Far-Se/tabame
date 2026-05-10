@@ -1,18 +1,20 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
-import '../settings.dart';
+
 import '../classes/boxes.dart';
+import '../settings.dart';
 
 class SolarCalculator {
   static Future<void> updateSolarData({bool force = false}) async {
     final int nowUnix = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    
+
     // Refresh only if 12h passed or forced
-    if (!force && (nowUnix - globalSettings.lightSwitchLastFetch < 12 * 3600)) {
+    if (!force && (nowUnix - userSettings.lightSwitchLastFetch < 12 * 3600)) {
       return;
     }
 
-    final List<String> latLong = globalSettings.weatherLatLong.split(',');
+    final List<String> latLong = userSettings.weatherLatLong.split(',');
     if (latLong.length < 2) return;
 
     final String lat = latLong[0].trim();
@@ -32,13 +34,13 @@ class SolarCalculator {
           final DateTime sunrise = DateTime.parse(sunriseStr);
           final DateTime sunset = DateTime.parse(sunsetStr);
 
-          globalSettings.lightSwitchSunrise = sunrise.hour * 60 + sunrise.minute;
-          globalSettings.lightSwitchSunset = sunset.hour * 60 + sunset.minute;
-          globalSettings.lightSwitchLastFetch = nowUnix;
+          userSettings.lightSwitchSunrise = sunrise.hour * 60 + sunrise.minute;
+          userSettings.lightSwitchSunset = sunset.hour * 60 + sunset.minute;
+          userSettings.lightSwitchLastFetch = nowUnix;
 
-          await Boxes.updateSettings("lightSwitchSunrise", globalSettings.lightSwitchSunrise);
-          await Boxes.updateSettings("lightSwitchSunset", globalSettings.lightSwitchSunset);
-          await Boxes.updateSettings("lightSwitchLastFetch", globalSettings.lightSwitchLastFetch);
+          await Boxes.updateSettings("lightSwitchSunrise", userSettings.lightSwitchSunrise);
+          await Boxes.updateSettings("lightSwitchSunset", userSettings.lightSwitchSunset);
+          await Boxes.updateSettings("lightSwitchLastFetch", userSettings.lightSwitchLastFetch);
         }
       }
     } catch (e) {

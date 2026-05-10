@@ -61,7 +61,7 @@ class WindowSearchListItem extends StatelessWidget {
           curve: animCurve,
           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
-            color: isSelected ? globalSettings.themeColors.accentColor.withAlpha(55) : Colors.transparent,
+            color: isSelected ? userSettings.themeColors.accentColor.withAlpha(55) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Padding(
@@ -76,7 +76,7 @@ class WindowSearchListItem extends StatelessWidget {
                   height: 22,
                   margin: EdgeInsets.only(right: isSelected ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: globalSettings.themeColors.accentColor,
+                    color: userSettings.themeColors.accentColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -110,9 +110,9 @@ class WindowSearchListItem extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           color: isSelected ? onSurface : onSurface.withAlpha(200),
-                          fontFamily: globalSettings.themeColors.entryFontFamily,
-                          fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                          fontWeight: FontWeight(globalSettings.themeColors.entryFontWeight),
+                          fontFamily: userSettings.themeColors.entryFontFamily,
+                          fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                          fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -136,13 +136,13 @@ class WindowSearchListItem extends StatelessWidget {
                     child: Icon(
                       Icons.push_pin_rounded,
                       size: 10,
-                      color: globalSettings.themeColors.accentColor.withAlpha(200),
+                      color: userSettings.themeColors.accentColor.withAlpha(200),
                     ),
                   ),
 
                 // WIN badge
                 _WindowKindBadge(
-                  accent: globalSettings.themeColors.accentColor,
+                  accent: userSettings.themeColors.accentColor,
                   onSurface: onSurface,
                 ),
               ],

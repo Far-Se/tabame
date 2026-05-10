@@ -79,10 +79,10 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
   }
 
   Future<void> _setVolumeOSDStyle(VolumeOSDStyle? value) async {
-    globalSettings.volumeOSDStyle = value ?? VolumeOSDStyle.normal;
+    userSettings.volumeOSDStyle = value ?? VolumeOSDStyle.normal;
     WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
-    WinUtils.setVolumeOSDStyle(type: globalSettings.volumeOSDStyle, applyStyle: true);
-    await Boxes.updateSettings('volumeOSDStyle', globalSettings.volumeOSDStyle.index);
+    WinUtils.setVolumeOSDStyle(type: userSettings.volumeOSDStyle, applyStyle: true);
+    await Boxes.updateSettings('volumeOSDStyle', userSettings.volumeOSDStyle.index);
     if (!mounted) return;
     setState(() {});
   }
@@ -240,9 +240,9 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                   ),
           ),
           style: TextStyle(
-            fontFamily: globalSettings.themeColors.entryFontFamily,
-            fontWeight: AppTheme.getFontWeight(globalSettings.themeColors.entryFontWeight),
-            fontStyle: globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+            fontFamily: userSettings.themeColors.entryFontFamily,
+            fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
+            fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
             fontSize: 14,
           ),
           minLines: 1,
@@ -276,30 +276,30 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
         _buildToggleSetting(
           title: 'Multimedia',
           subtitle: 'Apply volume and mute actions to the main playback device',
-          value: globalSettings.audioMultimedia,
+          value: userSettings.audioMultimedia,
           onChanged: (bool value) async {
-            globalSettings.audioMultimedia = value;
-            await Boxes.updateSettings('audio', globalSettings.audio);
+            userSettings.audioMultimedia = value;
+            await Boxes.updateSettings('audio', userSettings.audio);
             if (mounted) setState(() {});
           },
         ),
         _buildToggleSetting(
           title: 'Console',
           subtitle: 'Include the system console role when changing volume',
-          value: globalSettings.audioConsole,
+          value: userSettings.audioConsole,
           onChanged: (bool value) async {
-            globalSettings.audioConsole = value;
-            await Boxes.updateSettings('audio', globalSettings.audio);
+            userSettings.audioConsole = value;
+            await Boxes.updateSettings('audio', userSettings.audio);
             if (mounted) setState(() {});
           },
         ),
         _buildToggleSetting(
           title: 'Communications',
           subtitle: 'Include call-oriented devices in global audio actions',
-          value: globalSettings.audioCommunications,
+          value: userSettings.audioCommunications,
           onChanged: (bool value) async {
-            globalSettings.audioCommunications = value;
-            await Boxes.updateSettings('audio', globalSettings.audio);
+            userSettings.audioCommunications = value;
+            await Boxes.updateSettings('audio', userSettings.audio);
             if (mounted) setState(() {});
           },
         ),
@@ -316,14 +316,14 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
         _buildToggleSetting(
           title: 'Show media control for each app',
           subtitle: 'Expose media controls directly from QuickMenu app entries',
-          value: globalSettings.showMediaControlForApp,
+          value: userSettings.showMediaControlForApp,
           onChanged: (bool value) async {
-            globalSettings.showMediaControlForApp = value;
+            userSettings.showMediaControlForApp = value;
             await Boxes.updateSettings('showMediaControlForApp', value);
             if (mounted) setState(() {});
           },
         ),
-        if (globalSettings.showMediaControlForApp)
+        if (userSettings.showMediaControlForApp)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: _buildMediaAppsField(),
@@ -341,7 +341,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: RadioGroup<VolumeOSDStyle>(
-            groupValue: globalSettings.volumeOSDStyle,
+            groupValue: userSettings.volumeOSDStyle,
             onChanged: _setVolumeOSDStyle,
             child: Column(
               children: <Widget>[
@@ -437,7 +437,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                     _buildTargetingCard(),
                     const SizedBox(height: 16),
                     _buildMediaIntegrationCard(),
-                    if (globalSettings.isWindows10) ...<Widget>[
+                    if (userSettings.isWindows10) ...<Widget>[
                       const SizedBox(height: 16),
                       _buildVolumeOsdCard(),
                     ],
@@ -537,8 +537,8 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
               children: <Widget>[
                 InkWell(
                   onTap: () async {
-                    globalSettings.volumeSetBack = !globalSettings.volumeSetBack;
-                    await Boxes.updateSettings('volumeSetBack', globalSettings.volumeSetBack);
+                    userSettings.volumeSetBack = !userSettings.volumeSetBack;
+                    await Boxes.updateSettings('volumeSetBack', userSettings.volumeSetBack);
                     if (mounted) setState(() {});
                   },
                   borderRadius: BorderRadius.circular(10),
@@ -565,9 +565,9 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                           ),
                         ),
                         Switch(
-                          value: globalSettings.volumeSetBack,
+                          value: userSettings.volumeSetBack,
                           onChanged: (bool value) async {
-                            globalSettings.volumeSetBack = value;
+                            userSettings.volumeSetBack = value;
                             await Boxes.updateSettings('volumeSetBack', value);
                             if (mounted) setState(() {});
                           },

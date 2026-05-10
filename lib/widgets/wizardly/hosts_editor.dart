@@ -53,8 +53,8 @@ class HostsEditorState extends State<HostsEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
-    final Color background = globalSettings.themeColors.background;
+    final Color accent = userSettings.themeColors.accentColor;
+    final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     if (!canAccessHosts) {
@@ -307,7 +307,7 @@ class _HostRowState extends State<HostRow> {
   Widget build(BuildContext context) {
     if (badLine) return Container();
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

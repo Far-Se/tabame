@@ -57,7 +57,7 @@ class MemosWidgetState extends State<MemosWidget> {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -268,11 +268,11 @@ class _MemoCardState extends State<_MemoCard> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _isHovered ? globalSettings.themeColors.accentColor.withAlpha(60) : widget.onSurface.withAlpha(10),
+              color: _isHovered ? userSettings.themeColors.accentColor.withAlpha(60) : widget.onSurface.withAlpha(10),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color:
-                    _isHovered ? globalSettings.themeColors.accentColor.withAlpha(150) : widget.onSurface.withAlpha(12),
+                    _isHovered ? userSettings.themeColors.accentColor.withAlpha(150) : widget.onSurface.withAlpha(12),
                 width: 1.5,
               ),
             ),
@@ -281,7 +281,7 @@ class _MemoCardState extends State<_MemoCard> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(Icons.push_pin_outlined, size: 14, color: globalSettings.themeColors.accentColor),
+                    Icon(Icons.push_pin_outlined, size: 14, color: userSettings.themeColors.accentColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

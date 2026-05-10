@@ -131,11 +131,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         });
       });
     });
-    if (globalSettings.args.contains("-wizardly")) {
+    if (userSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
-    } else if (globalSettings.args.contains("-fancyshot")) {
+    } else if (userSettings.args.contains("-fancyshot")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Fancyshot");
-    } else if (globalSettings.args.contains("-changelog")) {
+    } else if (userSettings.args.contains("-changelog")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
     } else if (Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
@@ -284,7 +284,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                       padding: const EdgeInsets.only(left: 12),
                                       child: Row(
                                         children: <Widget>[
-                                          Image(image: AssetImage(globalSettings.logo), width: 16),
+                                          Image(image: AssetImage(userSettings.logo), width: 16),
                                           const SizedBox(width: 8),
                                           Text(
                                             "Tabame",
@@ -332,11 +332,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   isCloseButton: true,
                                   onTap: () async {
                                     if (kReleaseMode) {
-                                      if (globalSettings.args.contains('-wizardly')) {
+                                      if (userSettings.args.contains('-wizardly')) {
                                         exit(0);
-                                      } else if (globalSettings.args.contains('-fancyshot')) {
+                                      } else if (userSettings.args.contains('-fancyshot')) {
                                         exit(0);
-                                      } else if (globalSettings.args.contains('-interface')) {
+                                      } else if (userSettings.args.contains('-interface')) {
                                         WinUtils.reloadTabameQuickMenu();
                                         exit(0);
                                       }
@@ -406,7 +406,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                               children: <Widget>[
                                                 //1 Sidebar
                                                 //#h green
-                                                // if (!globalSettings.args.contains("-wizardly")) //2 commented this
+                                                // if (!userSettings.args.contains("-wizardly")) //2 commented this
                                                 //1 Sidebar
                                                 Material(
                                                   type: MaterialType.transparency,
@@ -561,7 +561,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                         const SizedBox(height: 4),
                                                                         if (sponsorImageLight != null)
                                                                           Image.file(
-                                                                            globalSettings.themeType == ThemeType.light
+                                                                            userSettings.themeType == ThemeType.light
                                                                                 ? sponsorImageLight!
                                                                                 : sponsorImageDark!,
                                                                             height: 40,
@@ -769,7 +769,7 @@ class _BMACFooterState extends State<_BMACFooter> with SingleTickerProviderState
                         Icons.coffee_rounded,
                         size: 14,
                         color: isHovered
-                            ? globalSettings.themeColors.accentColor
+                            ? userSettings.themeColors.accentColor
                             : Theme.of(context).colorScheme.onSurface.withAlpha(80),
                       ),
                     ),

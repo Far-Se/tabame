@@ -227,10 +227,9 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                             widget.message,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontFamily: globalSettings.themeColors.entryFontFamily,
-                              fontWeight: AppTheme.getFontWeight(globalSettings.themeColors.entryFontWeight),
-                              fontStyle:
-                                  globalSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                              fontFamily: userSettings.themeColors.entryFontFamily,
+                              fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
+                              fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                               fontSize: 11.5,
                               letterSpacing: 0.2,
                               height: 1.2,
@@ -251,7 +250,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                             child: Text(
                               widget.shortcut!,
                               style: TextStyle(
-                                fontFamily: globalSettings.themeColors.entryFontFamily,
+                                fontFamily: userSettings.themeColors.entryFontFamily,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 10,
                                 letterSpacing: 0.5,

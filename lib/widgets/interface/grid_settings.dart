@@ -25,7 +25,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -39,9 +39,9 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               const SizedBox(height: 16),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 250),
-                opacity: globalSettings.quickSnapGrid ? 1.0 : 0.5,
+                opacity: userSettings.quickSnapGrid ? 1.0 : 0.5,
                 child: IgnorePointer(
-                  ignoring: !globalSettings.quickSnapGrid,
+                  ignoring: !userSettings.quickSnapGrid,
                   child: Column(
                     children: <Widget>[
                       _buildConfigurationHub(accent),
@@ -92,12 +92,12 @@ class ViewsInterfaceState extends State<ViewsInterface> {
             ),
           ),
           _toggleChip(
-            label: globalSettings.quickSnapGrid ? "ACTIVE" : "OFFLINE",
-            value: globalSettings.quickSnapGrid,
+            label: userSettings.quickSnapGrid ? "ACTIVE" : "OFFLINE",
+            value: userSettings.quickSnapGrid,
             onChanged: (bool value) {
               setState(() {
-                globalSettings.quickSnapGrid = value;
-                Boxes.updateSettings("quickSnapGrid", globalSettings.quickSnapGrid);
+                userSettings.quickSnapGrid = value;
+                Boxes.updateSettings("quickSnapGrid", userSettings.quickSnapGrid);
               });
             },
           ),
@@ -438,7 +438,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
   }
 
   Widget _toggleChip({required String label, required bool value, required ValueChanged<bool> onChanged}) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(20),

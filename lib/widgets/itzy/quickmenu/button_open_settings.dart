@@ -19,13 +19,13 @@ class OpenSettingsButton extends StatelessWidget {
       child: SizedBox(
         width: 25,
         child: CustomTooltip(
-          message: globalSettings.autoCheckForUpdates && Globals.version != globalSettings.newVersion
+          message: userSettings.autoCheckForUpdates && Globals.version != userSettings.newVersion
               ? "New Version Available"
               : "Settings",
           child: IconButton(
             padding: const EdgeInsets.all(0),
             splashRadius: 25,
-            icon: globalSettings.autoCheckForUpdates && Globals.version != globalSettings.newVersion
+            icon: userSettings.autoCheckForUpdates && Globals.version != userSettings.newVersion
                 ? const Icon(Icons.new_releases)
                 : const Icon(Icons.settings),
             onPressed: () {
@@ -42,12 +42,12 @@ class OpenSettingsButton extends StatelessWidget {
                   Win32.activateWindow(hWnd);
                   return;
                 }
-                // bool settingsChanged = globalSettings.settingsChanged;
+                // bool settingsChanged = userSettings.settingsChanged;
                 // Boxes().watchForSettingsChange();
                 // Timer.periodic(const Duration(milliseconds: 100), (Timer timer) {
-                //   if (settingsChanged != globalSettings.settingsChanged) {
+                //   if (settingsChanged != userSettings.settingsChanged) {
                 //     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                //     settingsChanged = globalSettings.settingsChanged;
+                //     settingsChanged = userSettings.settingsChanged;
                 //   }
                 // });
                 // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;

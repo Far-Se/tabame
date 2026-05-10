@@ -318,12 +318,12 @@ class TrktivityPageState extends State<TrktivityPage> {
                 children: <Widget>[
                   CheckboxListTile(
                     onChanged: (bool? e) => setState(() {
-                      globalSettings.trktivityEnabled = !globalSettings.trktivityEnabled;
-                      Boxes.updateSettings("trktivityEnabled", globalSettings.trktivityEnabled);
-                      enableTrcktivity(globalSettings.trktivityEnabled);
+                      userSettings.trktivityEnabled = !userSettings.trktivityEnabled;
+                      Boxes.updateSettings("trktivityEnabled", userSettings.trktivityEnabled);
+                      enableTrcktivity(userSettings.trktivityEnabled);
                     }),
                     controlAffinity: ListTileControlAffinity.leading,
-                    value: globalSettings.trktivityEnabled,
+                    value: userSettings.trktivityEnabled,
                     title: Text(
                       "Trktivity",
                       style: Theme.of(context).textTheme.headlineSmall,
@@ -332,7 +332,7 @@ class TrktivityPageState extends State<TrktivityPage> {
                       WinUtils.open("${WinUtils.getTabameAppDataFolder()}\\trktivity");
                     }),
                   ),
-                  !globalSettings.trktivityEnabled
+                  !userSettings.trktivityEnabled
                       ? const Markdown(
                           shrinkWrap: true,
                           data: '''
@@ -379,12 +379,12 @@ It records keystrokes, mouse movement and active Window.
                                   if (showFilters) ...<Widget>[
                                     CheckBoxWidget(
                                       onChanged: (bool e) {
-                                        globalSettings.trktivitySaveAllTitles = e;
+                                        userSettings.trktivitySaveAllTitles = e;
                                         Boxes.updateSettings("trktivitySaveAllTitles", e);
                                         setState(() {});
                                       },
                                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      value: globalSettings.trktivitySaveAllTitles,
+                                      value: userSettings.trktivitySaveAllTitles,
                                       text: "Save All Window Titles",
                                     ),
                                     TextButton.icon(

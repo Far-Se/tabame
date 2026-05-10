@@ -29,7 +29,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return LayoutBuilder(
@@ -225,7 +225,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
     String currentEmoji = project.emoji;
     String currentTitle = project.title;
     String currentViewMode = project.viewMode;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final ThemeData theme = Theme.of(context);
 
     await showDialog<void>(
@@ -437,7 +437,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
     String currentTitle = item.title;
     String currentPath = item.stringToExecute;
     bool currentPreferInputIcon = item.preferInputIcon;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final ThemeData theme = Theme.of(context);
 
     await showDialog<void>(
@@ -764,7 +764,7 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color:
-                globalSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded || _isHovering ? 0.3 : 0.08),
+                userSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded || _isHovering ? 0.3 : 0.08),
             width: 1),
       ),
       child: ClipRRect(
@@ -784,12 +784,12 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: (widget.isExpanded || _isHovering)
-                        ? globalSettings.themeColors.accentColor.withValues(alpha: 0.05)
+                        ? userSettings.themeColors.accentColor.withValues(alpha: 0.05)
                         : Colors.transparent,
                     border: Border(
                         bottom: BorderSide(
                             color:
-                                globalSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded ? 0.15 : 0),
+                                userSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded ? 0.15 : 0),
                             width: 1)),
                   ),
                   child: Row(
@@ -815,7 +815,7 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: widget.isExpanded ? globalSettings.themeColors.accentColor : widget.onSurface,
+                                color: widget.isExpanded ? userSettings.themeColors.accentColor : widget.onSurface,
                               ),
                             ),
                             Text(
@@ -907,7 +907,7 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                             key: ValueKey<String>("${widget.project.title}_bookmark_$index"),
                             item: item,
                             index: index,
-                            accent: globalSettings.themeColors.accentColor,
+                            accent: userSettings.themeColors.accentColor,
                             onSurface: widget.onSurface,
                             onEdit: () => widget.onEditBookmark(index),
                             onDelete: () => widget.onDeleteBookmark(index),
@@ -960,7 +960,7 @@ class _BookmarkItemTileState extends State<_BookmarkItemTile> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: widget.onSurface.withValues(alpha: 0.05))),
-          color: _isHovering ? globalSettings.themeColors.accentColor.withValues(alpha: 0.05) : Colors.transparent,
+          color: _isHovering ? userSettings.themeColors.accentColor.withValues(alpha: 0.05) : Colors.transparent,
         ),
         child: Row(
           children: <Widget>[

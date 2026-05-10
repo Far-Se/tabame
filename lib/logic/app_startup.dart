@@ -40,12 +40,12 @@ class AppStartup {
     if (arguments.isNotEmpty) {
       if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
       String argString = arguments.join(" ");
-      globalSettings.args = <String>[...arguments];
+      userSettings.args = <String>[...arguments];
       if (argString.contains("interface")) {
-        globalSettings.page = TPage.interface;
+        userSettings.page = TPage.interface;
       }
     }
-    Debug.add("Parsed arguments ${globalSettings.page}");
+    Debug.add("Parsed arguments ${userSettings.page}");
   }
 
   static Future<void> registerServices() async {
@@ -58,14 +58,14 @@ class AppStartup {
 
   static Future<bool> checkAdminAndRestart() async {
     if (kReleaseMode &&
-        globalSettings.runAsAdministrator &&
+        userSettings.runAsAdministrator &&
         !WinUtils.isAdministrator() &&
-        !globalSettings.args.join(' ').contains('-tryadmin')) {
+        !userSettings.args.join(' ').contains('-tryadmin')) {
       Debug.add("Trying Admin");
-      globalSettings.args.add('-tryadmin');
+      userSettings.args.add('-tryadmin');
       WinUtils.closeAllTabameExProcesses();
       Debug.add("Closed all tabame processed");
-      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${globalSettings.args.join('" "')}"');
+      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${userSettings.args.join('" "')}"');
       Debug.add("Started New");
       Timer(const Duration(seconds: 1), () {
         Debug.add("Started Close Current");
@@ -73,7 +73,7 @@ class AppStartup {
       });
       return true;
     }
-    if (globalSettings.args.contains("-restarted")) {
+    if (userSettings.args.contains("-restarted")) {
       Future<void>.delayed(const Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
     }
     return false;
@@ -82,7 +82,7 @@ class AppStartup {
   static void registerHooks() {
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
-      if (globalSettings.args.contains("-interface") && Boxes.remap.isEmpty) {
+      if (userSettings.args.contains("-interface") && Boxes.remap.isEmpty) {
         NativeHooks.registerCallHandler();
       } else {
         NativeHooks.registerCallHandler();
@@ -92,11 +92,11 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
-    if (globalSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    if (userSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
       late String title;
-      if (globalSettings.args.contains("-wizardly")) {
+      if (userSettings.args.contains("-wizardly")) {
         title = "Wizardly";
-      } else if (globalSettings.args.contains("-fancyshot")) {
+      } else if (userSettings.args.contains("-fancyshot")) {
         title = "Fancyshot";
       } else {
         title = "Interface";

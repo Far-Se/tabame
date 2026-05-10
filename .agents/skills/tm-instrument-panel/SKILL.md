@@ -27,17 +27,17 @@ Every modal or flyout MUST start with a `PanelHeader`. It provides the title, pr
 Use these to divide content within a panel instead of standard headers.
 *   **Pattern**: Icon + Label + Count Pill + Divider.
 *   **Label Style**: `11px`, bold, `0.45` letter spacing.
-*   **Pill**: Highly rounded (`999px`), `globalSettings.themeColors.accentColor.withAlpha(28)` background.
+*   **Pill**: Highly rounded (`999px`), `userSettings.themeColors.accentColor.withAlpha(28)` background.
 
 ### Cards & Rows
 *   **Cards**: Background `onSurface.withAlpha(8)`, Border `onSurface.withAlpha(16)`, `12px` radius.
 *   **Rows**: Interactive items should have `8-10px` internal padding and `9px` or `10px` border radius.
-*   **Hover States**: Use `globalSettings.themeColors.accentColor.withAlpha(60)` for active hover or `globalSettings.themeColors.accentColor.withAlpha(10-18)` for passive selections.
+*   **Hover States**: Use `userSettings.themeColors.accentColor.withAlpha(60)` for active hover or `userSettings.themeColors.accentColor.withAlpha(10-18)` for passive selections.
 
 ### Primary Action Buttons (Sticky)
 Major actions like "Save Changes" or "Add Item" should be anchored and visually prioritized but modern.
 *   **Sticky**: Must be fixed at the bottom of the container, allowing other content to scroll independently.
-*   **Style**: Avoid "screaming" solid backgrounds. Use a subtle `globalSettings.themeColors.accentColor.withAlpha(20-30)` fill with a more defined `globalSettings.themeColors.accentColor.withAlpha(80)` border.
+*   **Style**: Avoid "screaming" solid backgrounds. Use a subtle `userSettings.themeColors.accentColor.withAlpha(20-30)` fill with a more defined `userSettings.themeColors.accentColor.withAlpha(80)` border.
 *   **Typography**: Sentence Case, `w700` weight, `0.5` letter spacing.
 *   **Visual Feed**: No heavy shadows or glossy gradients. Use precise single-pixel borders.
 
@@ -56,8 +56,8 @@ Major actions like "Save Changes" or "Add Item" should be anchored and visually 
 
 ### Colors (Tabame Palette)
 *   **Neutrals**: Never use pure black/white. Use `withAlpha` to create layers on the theme surface.
-*   **Accents**: All UI state should be derived from `globalSettings.themeColors.accentColor`.
-*   **Border Emphases**: Use `globalSettings.themeColors.accentColor.withAlpha(70)` for selected items.
+*   **Accents**: All UI state should be derived from `userSettings.themeColors.accentColor`.
+*   **Border Emphases**: Use `userSettings.themeColors.accentColor.withAlpha(70)` for selected items.
 
 ## 4. Interaction Patterns
 
@@ -84,7 +84,7 @@ Widget _buildSectionLabel({
 }) {
   return Row(
     children: <Widget>[
-      Icon(icon, size: 14, color: globalSettings.themeColors.accentColor),
+      Icon(icon, size: 14, color: userSettings.themeColors.accentColor),
       const SizedBox(width: 6),
       Text(
         label.toUpperCase(),
@@ -99,10 +99,10 @@ Widget _buildSectionLabel({
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: globalSettings.themeColors.accentColor.withAlpha(28),
+          color: userSettings.themeColors.accentColor.withAlpha(28),
           borderRadius: BorderRadius.circular(99),
         ),
-        child: Text("$count", style: TextStyle(fontSize: 10, color: globalSettings.themeColors.accentColor)),
+        child: Text("$count", style: TextStyle(fontSize: 10, color: userSettings.themeColors.accentColor)),
       ),
       const SizedBox(width: 8),
       Expanded(child: Divider(height: 1, color: onSurface.withAlpha(20))),
@@ -137,9 +137,9 @@ Widget _buildFixedBottomBar({
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 32),
           decoration: BoxDecoration(
-            color: globalSettings.themeColors.accentColor.withAlpha(28),
+            color: userSettings.themeColors.accentColor.withAlpha(28),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: globalSettings.themeColors.accentColor.withAlpha(80), width: 1),
+            border: Border.all(color: userSettings.themeColors.accentColor.withAlpha(80), width: 1),
           ),
           child: Text(
             label,
@@ -147,7 +147,7 @@ Widget _buildFixedBottomBar({
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
-              color: globalSettings.themeColors.accentColor,
+              color: userSettings.themeColors.accentColor,
             ),
           ),
         ),

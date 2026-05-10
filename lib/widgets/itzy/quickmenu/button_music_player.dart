@@ -419,7 +419,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
       builder: (BuildContext context) => AlertDialog(
         shadowColor: Colors.red,
         elevation: 5,
-        surfaceTintColor: globalSettings.themeColors.accentColor,
+        surfaceTintColor: userSettings.themeColors.accentColor,
         title: const Text("Delete Playlist?"),
         content:
             Text("Delete '${playlist.name}' from ${MusicServerManager.isLocalActive ? 'Local' : 'the music server'}?"),
@@ -558,7 +558,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         title: const Text("Remove Track?"),
         shadowColor: Colors.red,
         elevation: 5,
-        surfaceTintColor: globalSettings.themeColors.accentColor,
+        surfaceTintColor: userSettings.themeColors.accentColor,
         content: Text("Remove '${item.title}' from this playlist?"),
         actions: <Widget>[
           TextButton(
@@ -784,7 +784,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final Duration transitionDuration = reduceMotion ? Duration.zero : const Duration(milliseconds: 220);
     final bool localFolderTab = MusicServerManager.isLocalActive && _tabIndex == 3;
@@ -797,7 +797,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         behavior: HitTestBehavior.translucent,
         onSecondaryTap: _hasBackHistory ? _goBack : null,
         child: QuickMenuPanel(
-          accent: globalSettings.themeColors.accentColor,
+          accent: userSettings.themeColors.accentColor,
           title: _tabIndex == 2
               ? _titles.last
               : _tabIndex == 3

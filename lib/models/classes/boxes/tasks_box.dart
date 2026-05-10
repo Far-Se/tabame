@@ -90,10 +90,10 @@ class Tasks {
       );
     }
     if (reminder.persistent) {
-      globalSettings.persistentReminders.add(
+      userSettings.persistentReminders.add(
         "${reminder.message} ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}",
       );
-      Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+      Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
       QuickMenuFunctions.refreshQuickMenu();
     }
   }
@@ -114,10 +114,10 @@ class Tasks {
         );
       }
       if (reminder.persistent) {
-        globalSettings.persistentReminders.add(
+        userSettings.persistentReminders.add(
           "${reminder.message} ${DateTime.now().hour.formatZeros()}:${DateTime.now().minute.formatZeros()}",
         );
-        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+        Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
         QuickMenuFunctions.refreshQuickMenu();
       }
     }
@@ -154,8 +154,8 @@ class Tasks {
         );
       }
       if (reminder.persistent) {
-        globalSettings.persistentReminders.add("${reminder.message} at ${reminder.time.formatTime()}");
-        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+        userSettings.persistentReminders.add("${reminder.message} at ${reminder.time.formatTime()}");
+        Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
         QuickMenuFunctions.refreshQuickMenu();
       }
     }

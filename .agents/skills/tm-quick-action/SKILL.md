@@ -97,7 +97,7 @@ class _ExamplePanelState extends State<ExamplePanel> {
       children: <Widget>[
         PanelHeader(
           title: "Example",
-          accent: globalSettings.themeColors.accentColor,
+          accent: userSettings.themeColors.accentColor,
           boldFont: true,
           icon: Icons.extension_rounded,
         ),
@@ -123,7 +123,7 @@ Prefer this hierarchy:
 
 Match the existing quick menu visual language:
 
-- Read accent from `globalSettings.themeColors.accentColor`.
+- Read accent from `userSettings.themeColors.accentColor`.
 - Read text color from `Theme.of(context).colorScheme.onSurface`.
 - Use rounded corners, usually `8`, `10`, `12`, `14`, `16`, or `18`.
 - Use soft accent washes such as `accent.withAlpha(10)` to `accent.withAlpha(28)` for cards and pills.

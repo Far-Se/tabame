@@ -28,7 +28,7 @@ class FancyShotButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: freeze ? "Open Frozen Screen Capture" : "Open Screen Capture",
+      message: freeze ? "Open Frozen Fancyshot" : "Open Live Fancyshot",
       icon: freeze ? const Icon(Icons.center_focus_strong) : const Icon(Icons.center_focus_strong_outlined),
       onTap: () {
         final int windowHwnd = Win32.findWindow("Tabame Screen Capture");

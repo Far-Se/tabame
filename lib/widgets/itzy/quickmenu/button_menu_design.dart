@@ -50,7 +50,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   void initState() {
     super.initState();
     _paletteMode =
-        globalSettings.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
+        userSettings.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
     _lightPresets = <Map<ColorSwatch<Object>, String>>[
       getPredefinedColorSet(lightThemeOptions, 0, maximum: 24),
       getPredefinedColorSet(lightThemeOptions, 1, maximum: 24),
@@ -70,7 +70,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   ThemeColors get _selectedTheme {
-    return _paletteMode == _QuickMenuPaletteMode.dark ? globalSettings.darkTheme : globalSettings.lightTheme;
+    return _paletteMode == _QuickMenuPaletteMode.dark ? userSettings.darkTheme : userSettings.lightTheme;
   }
 
   List<Map<ColorSwatch<Object>, String>> get _presetOptions {
@@ -102,18 +102,18 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     final ThemeColors currentTheme = _selectedTheme;
     if (currentTheme.backdropType == 'builtIn') {
       final int random = math.Random().nextInt(10);
-      globalSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+      userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
     } else {
       final List<String> images = currentTheme.backdropImages;
       if (images.length < 2) return;
 
-      final String current = globalSettings.activeBackdropPath;
+      final String current = userSettings.activeBackdropPath;
       final List<String> others = images.where((String path) => path != current).toList();
 
       final math.Random random = math.Random();
       final String next = others[random.nextInt(others.length)];
 
-      globalSettings.activeBackdropPath = next;
+      userSettings.activeBackdropPath = next;
     }
 
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
@@ -122,12 +122,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
 
   Future<void> _resetCurrentPalette() async {
     final QuickMenuDesignThemeSet defaults =
-        Settings.createDefaultQuickMenuDesignThemes()[globalSettings.currentQuickMenuDesign.name]!;
+        Settings.createDefaultQuickMenuDesignThemes()[userSettings.currentQuickMenuDesign.name]!;
     await _updateTheme(() {
       if (_paletteMode == _QuickMenuPaletteMode.dark) {
-        globalSettings.darkTheme = defaults.darkTheme.copyWith();
+        userSettings.darkTheme = defaults.darkTheme.copyWith();
       } else {
-        globalSettings.lightTheme = defaults.lightTheme.copyWith();
+        userSettings.lightTheme = defaults.lightTheme.copyWith();
       }
     });
   }
@@ -191,7 +191,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -273,7 +273,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 separatorBuilder: (_, __) => const SizedBox(width: 6),
                 itemBuilder: (BuildContext context, int index) {
                   final QuickMenuDesigns design = QuickMenuDesigns.values[index];
-                  final bool selected = globalSettings.currentQuickMenuDesign == design;
+                  final bool selected = userSettings.currentQuickMenuDesign == design;
                   return ChoiceChip(
                     label: Text(_designTitle(design)),
                     selected: selected,

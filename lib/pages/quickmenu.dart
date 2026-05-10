@@ -176,9 +176,9 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.randomizeBackdrop();
     WinHotkeys.update();
     ClipboardHistoryStore.clearCache();
-    if (globalSettings.trktivityEnabled) enableTrcktivity(globalSettings.trktivityEnabled);
+    if (userSettings.trktivityEnabled) enableTrcktivity(userSettings.trktivityEnabled);
     Globals.changingPages = false;
-    if (globalSettings.trktivityEnabled) trk.startTimer();
+    if (userSettings.trktivityEnabled) trk.startTimer();
     WallpaperService.instance.init();
     FileIndexer.instance.init();
     WinUtils.deleteOldFiles("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache", days: 4);
@@ -269,8 +269,8 @@ class QuickMenuState extends State<QuickMenu>
 
   Future<void> _onViewsEvent(ViewsAction action, int hWnd) async {
     if (action == ViewsAction.open) {
-      if (!globalSettings.quickSnapOverlay) return;
-      if (Boxes.quickGrids.isEmpty && !globalSettings.quickSnapGrid) return;
+      if (!userSettings.quickSnapOverlay) return;
+      if (Boxes.quickGrids.isEmpty && !userSettings.quickSnapGrid) return;
       if (Navigator.of(context).canPop()) Navigator.of(context).pop();
       _savedQuickMenuSize = await windowManager.getSize();
 
@@ -325,7 +325,7 @@ class QuickMenuState extends State<QuickMenu>
 
   DateTime lastTimeShown = DateTime.now();
   Future<void> _onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    globalSettings.launcherSearchText = "";
+    userSettings.launcherSearchText = "";
     Globals.clearQuickMenuSearchInput();
     unixVisible = DateTime.now().millisecondsSinceEpoch;
     Globals.quickMenuPage = type;
@@ -336,8 +336,8 @@ class QuickMenuState extends State<QuickMenu>
       // PaintingBinding.instance.imageCache.clear();
 
       if (Navigator.of(context).canPop()) {
-        if (globalSettings.hideTabameOnUnfocus) {
-          if (!globalSettings.keepPopupsOpen) {
+        if (userSettings.hideTabameOnUnfocus) {
+          if (!userSettings.keepPopupsOpen) {
             Navigator.of(context).pop();
           } else {
             if (DateTime.now().difference(lastTimeShown).inSeconds > 30) {
@@ -347,7 +347,7 @@ class QuickMenuState extends State<QuickMenu>
         }
       }
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
-        globalSettings.launcherSearchText = "";
+        userSettings.launcherSearchText = "";
         await WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height));
         await windowManager.center();
         await windowManager.focus();
@@ -369,7 +369,7 @@ class QuickMenuState extends State<QuickMenu>
       lastTimeShown = DateTime.now();
       // FocusScope.of(context).unfocus();
       tryPop = true;
-      globalSettings.launcherSearchText = "";
+      userSettings.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
       if (mounted) setState(() {});
     }
@@ -453,12 +453,12 @@ class QuickMenuState extends State<QuickMenu>
   void _onWindowBlur() async {}
 
   void _onForegroundWindowChanged(int hWnd) {
-    if (globalSettings.hookedWins.containsKey(hWnd)) {
-      for (int win in globalSettings.hookedWins[hWnd]!) {
+    if (userSettings.hookedWins.containsKey(hWnd)) {
+      for (int win in userSettings.hookedWins[hWnd]!) {
         if (Win32.winExists(win)) {
           Win32.surfaceWindow(win);
         } else {
-          globalSettings.hookedWins[hWnd]?.remove(win);
+          userSettings.hookedWins[hWnd]?.remove(win);
         }
       }
       Win32.surfaceWindow(hWnd);
@@ -482,7 +482,7 @@ class QuickMenuState extends State<QuickMenu>
               break;
           }
           if (RegExp(def.match, caseSensitive: false).hasMatch(stringCheck)) {
-            if (globalSettings.volumeSetBack) {
+            if (userSettings.volumeSetBack) {
               Audio.getVolume(AudioDeviceType.output).then((double value) {
                 previousVolume = value;
                 Audio.setVolume(def.volume / 100, AudioDeviceType.output);
@@ -499,7 +499,7 @@ class QuickMenuState extends State<QuickMenu>
         previousVolume = 0.0;
       }
     }
-    if (globalSettings.hideTabameOnUnfocus &&
+    if (userSettings.hideTabameOnUnfocus &&
         QuickMenuFunctions.isQuickMenuVisible &&
         Globals.quickMenuPage == QuickMenuPage.quickMenu &&
         !QuickMenuFunctions.keepOpen) {
@@ -584,7 +584,7 @@ class QuickMenuState extends State<QuickMenu>
         // CTRL + H shortcut
         if (keyEvent.logicalKey == LogicalKeyboardKey.keyH && HardwareKeyboard.instance.isControlPressed) {
           if (keyEvent is KeyDownEvent) {
-            globalSettings.hideTabameOnUnfocus = !globalSettings.hideTabameOnUnfocus;
+            userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus;
             if (mounted) setState(() {});
           }
           return KeyEventResult.handled;
@@ -622,7 +622,7 @@ class QuickMenuState extends State<QuickMenu>
       },
       child: GestureDetector(
         onTap: () {
-          if (globalSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
+          if (userSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
             QuickMenuFunctions.toggleQuickMenu(visible: false);
           }
         },
@@ -632,8 +632,8 @@ class QuickMenuState extends State<QuickMenu>
             alignment: Alignment.topLeft,
             child: Stack(
               children: <Widget>[
-                if (globalSettings.customSpash != "")
-                  Positioned(child: Image.file(File(globalSettings.customSpash), height: 30), left: 10),
+                if (userSettings.customSpash != "")
+                  Positioned(child: Image.file(File(userSettings.customSpash), height: 30), left: 10),
                 Padding(
                   padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
                   child: DragToResizeArea(

@@ -71,7 +71,7 @@ class Monitor {
     final List<int> newMonitors = monitorsData.keys.toList();
 
     if (Set<int>.from(newMonitors) != Set<int>.from(_monitorIds.keys)) {
-      //   if (globalSettings.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
+      //   if (userSettings.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     }
 
     _monitors = newMonitors;

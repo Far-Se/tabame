@@ -32,12 +32,12 @@ class _PersistentRemindersWidgetState extends State<PersistentRemindersWidget> w
 
   @override
   Widget build(BuildContext context) {
-    final int count = globalSettings.persistentReminders.length;
+    final int count = userSettings.persistentReminders.length;
     return ModalButton(
       actionName: "Reminders",
       onSecondaryTap: () {
-        globalSettings.persistentReminders.clear();
-        Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+        userSettings.persistentReminders.clear();
+        Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
         QuickMenuFunctions.refreshQuickMenu();
         setState(() {});
       },
@@ -68,7 +68,7 @@ class RemindersPanel extends StatefulWidget {
 class RemindersPanelState extends State<RemindersPanel> {
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -81,7 +81,7 @@ class RemindersPanelState extends State<RemindersPanel> {
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(12),
-            child: globalSettings.persistentReminders.isEmpty
+            child: userSettings.persistentReminders.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 40),
@@ -103,15 +103,15 @@ class RemindersPanelState extends State<RemindersPanel> {
                           label: "Active",
                           accent: accent,
                           onSurface: onSurface,
-                          count: globalSettings.persistentReminders.length,
+                          count: userSettings.persistentReminders.length,
                           icon: Icons.notifications_active_outlined,
                         ),
                         const SizedBox(height: 10),
                         ...List<Widget>.generate(
-                          globalSettings.persistentReminders.length,
+                          userSettings.persistentReminders.length,
                           (int index) => _buildReminderCard(
                             index: index,
-                            text: globalSettings.persistentReminders.elementAt(index),
+                            text: userSettings.persistentReminders.elementAt(index),
                             accent: accent,
                             onSurface: onSurface,
                           ),
@@ -121,14 +121,14 @@ class RemindersPanelState extends State<RemindersPanel> {
                   ),
           ),
         ),
-        if (globalSettings.persistentReminders.isNotEmpty)
+        if (userSettings.persistentReminders.isNotEmpty)
           _buildFixedBottomBar(
             context: context,
             accent: Colors.redAccent,
             label: "CLEAR ALL REMINDERS",
             onTap: () {
-              globalSettings.persistentReminders.clear();
-              Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+              userSettings.persistentReminders.clear();
+              Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
               QuickMenuFunctions.refreshQuickMenu();
               setState(() {});
             },
@@ -188,8 +188,8 @@ class RemindersPanelState extends State<RemindersPanel> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          globalSettings.persistentReminders.removeAt(index);
-          Boxes.pref.setStringList("persistentReminders", globalSettings.persistentReminders);
+          userSettings.persistentReminders.removeAt(index);
+          Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
           QuickMenuFunctions.refreshQuickMenu();
           setState(() {});
         },

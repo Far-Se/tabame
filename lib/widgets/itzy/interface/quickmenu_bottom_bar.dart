@@ -93,10 +93,10 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               title: const Text("Show System Usage", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("Display RAM and CPU usage in the quick menu", style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.speed, size: 20),
-              value: globalSettings.showSystemUsage,
+              value: userSettings.showSystemUsage,
               onChanged: (bool newValue) async {
-                globalSettings.showSystemUsage = newValue;
-                await Boxes.updateSettings("showSystemUsage", globalSettings.showSystemUsage);
+                userSettings.showSystemUsage = newValue;
+                await Boxes.updateSettings("showSystemUsage", userSettings.showSystemUsage);
                 if (mounted) setState(() {});
               },
             ),
@@ -106,10 +106,10 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               subtitle: const Text("If Taskmanager is open, put it on at the bottom of the screen",
                   style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.query_stats, size: 20),
-              value: globalSettings.taskManagerStats,
+              value: userSettings.taskManagerStats,
               onChanged: (bool newValue) async {
-                globalSettings.taskManagerStats = newValue;
-                await Boxes.updateSettings("taskManagerStats", globalSettings.taskManagerStats);
+                userSettings.taskManagerStats = newValue;
+                await Boxes.updateSettings("taskManagerStats", userSettings.taskManagerStats);
                 if (mounted) setState(() {});
               },
             ),
@@ -117,14 +117,14 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               title: const Text("Tray Bar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.expand_less, size: 20),
-              value: globalSettings.showTrayBar,
+              value: userSettings.showTrayBar,
               onChanged: (bool newValue) async {
-                globalSettings.showTrayBar = newValue;
-                await Boxes.updateSettings("showTrayBar", globalSettings.showTrayBar);
+                userSettings.showTrayBar = newValue;
+                await Boxes.updateSettings("showTrayBar", userSettings.showTrayBar);
                 if (mounted) setState(() {});
               },
             ),
-            if (globalSettings.showTrayBar)
+            if (userSettings.showTrayBar)
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: _buildTrayList(),
@@ -290,9 +290,9 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                 tooltip: "Reload Tray List",
                 style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
                 onPressed: () {
-                  globalSettings.showTrayBar = false;
+                  userSettings.showTrayBar = false;
                   setState(() {});
-                  globalSettings.showTrayBar = true;
+                  userSettings.showTrayBar = true;
                   setState(() {});
                 },
               ),
@@ -488,14 +488,14 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               title: const Text("Show Weather", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("Display local weather in the bottom bar", style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.wb_sunny_outlined, size: 20),
-              value: globalSettings.showWeather,
+              value: userSettings.showWeather,
               onChanged: (bool newValue) async {
-                globalSettings.showWeather = newValue;
-                await Boxes.updateSettings("showWeather", globalSettings.showWeather);
+                userSettings.showWeather = newValue;
+                await Boxes.updateSettings("showWeather", userSettings.showWeather);
                 if (mounted) setState(() {});
               },
             ),
-            if (globalSettings.showWeather)
+            if (userSettings.showWeather)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
@@ -506,10 +506,10 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text("Use Celsius", style: TextStyle(fontSize: 13)),
                         secondary: const Icon(Icons.thermostat, size: 20),
-                        value: globalSettings.weatherUnit == "m",
+                        value: userSettings.weatherUnit == "m",
                         onChanged: (bool newValue) async {
-                          globalSettings.weatherUnit = newValue ? "m" : "u";
-                          await Boxes.updateSettings("weather", globalSettings.weather);
+                          userSettings.weatherUnit = newValue ? "m" : "u";
+                          await Boxes.updateSettings("weather", userSettings.weather);
                           if (mounted) setState(() {});
                         },
                       ),
@@ -525,11 +525,11 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                           helperStyle: const TextStyle(fontSize: 10),
                         ),
                         style: const TextStyle(fontSize: 13),
-                        controller: TextEditingController(text: globalSettings.weatherLatLong),
+                        controller: TextEditingController(text: userSettings.weatherLatLong),
                         onSubmitted: (String value) async {
                           if (value.isEmpty) return;
-                          globalSettings.weatherLatLong = value;
-                          await Boxes.updateSettings("weather", globalSettings.weather);
+                          userSettings.weatherLatLong = value;
+                          await Boxes.updateSettings("weather", userSettings.weather);
                           if (mounted) setState(() {});
                         },
                       ),
@@ -619,8 +619,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
         final Map<String, dynamic> res = (data["results"] as List<dynamic>)[0] as Map<String, dynamic>;
         if (res.containsKey("latitude") && res.containsKey("longitude")) {
           final String e = "${res["latitude"]}, ${res["longitude"]}";
-          globalSettings.weatherLatLong = e;
-          await Boxes.updateSettings("weather", globalSettings.weather);
+          userSettings.weatherLatLong = e;
+          await Boxes.updateSettings("weather", userSettings.weather);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Location set to ${res["name"]}, ${res["country"]}"),
@@ -640,8 +640,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
         final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
         if (data.containsKey("lat") && data.containsKey("lon")) {
           final String e = "${data["lat"]}, ${data["lon"]}";
-          globalSettings.weatherLatLong = e;
-          await Boxes.updateSettings("weather", globalSettings.weather);
+          userSettings.weatherLatLong = e;
+          await Boxes.updateSettings("weather", userSettings.weather);
           if (mounted) setState(() {});
         }
       }

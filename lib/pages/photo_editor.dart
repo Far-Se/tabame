@@ -13,6 +13,8 @@ import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes/boxes_base.dart';
+import '../models/classes/saved_maps.dart';
+import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
@@ -600,6 +602,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   List<FancyShotProfile> _editorFancyShotProfiles = <FancyShotProfile>[];
   String? _selectedEditorPresetName;
   final Map<String, ui.Image> _shapeImages = <String, ui.Image>{};
+  ThemeColors get _theme => userSettings.theme;
   bool _shiftHeld = false;
   Offset? _lastSelectPos;
   Offset? _dragStart;
@@ -608,6 +611,25 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   bool _isRegionDragging = false;
   bool _captureMoreBusy = false;
   bool _presetBusy = false;
+  double _zoomFactor = 1.0;
+
+  void _zoomIn() {
+    setState(() {
+      _zoomFactor = (_zoomFactor + 0.1).clamp(0.1, 5.0);
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      _zoomFactor = (_zoomFactor - 0.1).clamp(0.1, 5.0);
+    });
+  }
+
+  void _resetZoom() {
+    setState(() {
+      _zoomFactor = 1.0;
+    });
+  }
 
   void _handleBackAction() {
     final VoidCallback? onBack = widget.onBack;
@@ -683,7 +705,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
       }
 
       if (!mounted) return;
-      await _decodeBackgroundBytes(bytes!);
+      if (bytes != null) await _decodeBackgroundBytes(bytes);
     } finally {
       if (mounted) {
         setState(() => _presetBusy = false);
@@ -806,7 +828,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A9EFF).withValues(alpha: 0.8),
+              backgroundColor: userSettings.theme.accentColor.withValues(alpha: 0.8),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -858,14 +880,14 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                 child: DragToResizeArea(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF11151D),
+                      color: _theme.background,
                       borderRadius: maximized ? null : BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      border: Border.all(color: _theme.textColor.withValues(alpha: 0.08)),
                       boxShadow: <BoxShadow>[
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.36),
-                          blurRadius: 28,
-                          offset: const Offset(0, 16),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -883,67 +905,92 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                             children: <Widget>[
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-                                child: _EditorToolbar(ctrl: _ctrl, onBack: _handleBackAction),
+                                child: _EditorToolbar(
+                                  ctrl: _ctrl,
+                                  onBack: _handleBackAction,
+                                  zoomFactor: _zoomFactor,
+                                  onZoomIn: _zoomIn,
+                                  onZoomOut: _zoomOut,
+                                  onResetZoom: _resetZoom,
+                                ),
                               ),
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(0, 12, 12, 0),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0A0D13),
+                                      color: _theme.background.darken(5),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                                     ),
                                     child: LayoutBuilder(
                                       builder: (BuildContext context, BoxConstraints constraints) {
-                                        final Size canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
-                                        return Stack(
-                                          children: <Widget>[
-                                            Positioned.fill(
-                                              child: _backgroundImage == null
-                                                  ? (_originalImageBytes == null
-                                                      ? _buildNoPhotoPlaceholder()
-                                                      : const Center(
-                                                          child: SizedBox(
-                                                            width: 40,
-                                                            height: 40,
-                                                            child: CircularProgressIndicator(),
-                                                          ),
-                                                        ))
-                                                  : GestureDetector(
-                                                      behavior: HitTestBehavior.translucent,
-                                                      onPanStart: (DragStartDetails details) =>
-                                                          _onPanStart(details, canvasSize),
-                                                      onPanUpdate: (DragUpdateDetails details) =>
-                                                          _onPanUpdate(details, canvasSize),
-                                                      onPanEnd: _onPanEnd,
-                                                      onTapDown: (TapDownDetails details) =>
-                                                          _onTapDown(details, canvasSize),
-                                                      onSecondaryTapDown: (TapDownDetails details) {
-                                                        final Offset? imagePos =
-                                                            _viewToImage(details.localPosition, canvasSize);
-                                                        if (imagePos != null) _ctrl.deleteShapeAt(imagePos);
-                                                      },
-                                                      child: ListenableBuilder(
-                                                        listenable: _ctrl,
-                                                        builder: (_, __) => CustomPaint(
-                                                          size: canvasSize,
-                                                          painter: _EditorPainter(
-                                                            shapes: _ctrl.shapes,
-                                                            currentShape: _ctrl.currentShape,
-                                                            currentEnd: _ctrl.currentEnd,
-                                                            backgroundImage: _backgroundImage,
-                                                            shapeImages: _shapeImages,
-                                                            gridVisible: _ctrl.gridVisible,
-                                                            dragStart: _dragStart,
-                                                            dragCurrent: _dragCurrent,
-                                                            isRegionDrag: _isRegionDragging,
-                                                          ),
-                                                        ),
-                                                      ),
+                                        final Size viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
+                                        final Size canvasSize = viewportSize * _zoomFactor;
+
+                                        return Scrollbar(
+                                          controller: ScrollController(),
+                                          child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: SingleChildScrollView(
+                                              scrollDirection: Axis.vertical,
+                                              child: Container(
+                                                width: max(viewportSize.width, canvasSize.width),
+                                                height: max(viewportSize.height, canvasSize.height),
+                                                alignment: Alignment.center,
+                                                child: Stack(
+                                                  children: <Widget>[
+                                                    SizedBox(
+                                                      width: canvasSize.width,
+                                                      height: canvasSize.height,
+                                                      child: _backgroundImage == null
+                                                          ? (_originalImageBytes == null
+                                                              ? _buildNoPhotoPlaceholder()
+                                                              : const Center(
+                                                                  child: SizedBox(
+                                                                    width: 40,
+                                                                    height: 40,
+                                                                    child: CircularProgressIndicator(),
+                                                                  ),
+                                                                ))
+                                                          : GestureDetector(
+                                                              behavior: HitTestBehavior.translucent,
+                                                              onPanStart: (DragStartDetails details) =>
+                                                                  _onPanStart(details, canvasSize),
+                                                              onPanUpdate: (DragUpdateDetails details) =>
+                                                                  _onPanUpdate(details, canvasSize),
+                                                              onPanEnd: _onPanEnd,
+                                                              onTapDown: (TapDownDetails details) =>
+                                                                  _onTapDown(details, canvasSize),
+                                                              onSecondaryTapDown: (TapDownDetails details) {
+                                                                final Offset? imagePos =
+                                                                    _viewToImage(details.localPosition, canvasSize);
+                                                                if (imagePos != null) _ctrl.deleteShapeAt(imagePos);
+                                                              },
+                                                              child: ListenableBuilder(
+                                                                listenable: _ctrl,
+                                                                builder: (_, __) => CustomPaint(
+                                                                  size: canvasSize,
+                                                                  painter: _EditorPainter(
+                                                                    shapes: _ctrl.shapes,
+                                                                    currentShape: _ctrl.currentShape,
+                                                                    currentEnd: _ctrl.currentEnd,
+                                                                    backgroundImage: _backgroundImage,
+                                                                    shapeImages: _shapeImages,
+                                                                    gridVisible: _ctrl.gridVisible,
+                                                                    dragStart: _dragStart,
+                                                                    dragCurrent: _dragCurrent,
+                                                                    isRegionDrag: _isRegionDragging,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
                                                     ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
-                                          ],
+                                          ),
                                         );
                                       },
                                     ),
@@ -1000,6 +1047,18 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
       }
       if (lCtrl && e.logicalKey == LogicalKeyboardKey.keyY) {
         _ctrl.redo();
+        return;
+      }
+      if (lCtrl && (e.logicalKey == LogicalKeyboardKey.equal || e.logicalKey == LogicalKeyboardKey.add)) {
+        _zoomIn();
+        return;
+      }
+      if (lCtrl && e.logicalKey == LogicalKeyboardKey.minus) {
+        _zoomOut();
+        return;
+      }
+      if (lCtrl && (e.logicalKey == LogicalKeyboardKey.digit0 || e.logicalKey == LogicalKeyboardKey.numpad0)) {
+        _resetZoom();
         return;
       }
       if (e.logicalKey == LogicalKeyboardKey.escape) _handleBackAction();
@@ -1920,7 +1979,7 @@ class _EditorPainter extends CustomPainter {
 
   void _paintGrid(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
+      ..color = userSettings.theme.textColor.withValues(alpha: 0.08)
       ..strokeWidth = 0.5;
     for (double x = 0; x < size.width; x += 50) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
@@ -2057,33 +2116,45 @@ class _EditorWindowBar extends StatelessWidget {
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF161B24),
+          color: userSettings.theme.background.lighten(4),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-          border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+          border: Border(bottom: BorderSide(color: userSettings.theme.textColor.withValues(alpha: 0.06))),
         ),
         child: Row(
           children: <Widget>[
-            IconButton(
-              onPressed: onBack,
-              tooltip: standaloneMode ? 'Close Editor' : 'Back to Capture',
-              icon: Icon(standaloneMode ? Icons.close_rounded : Icons.arrow_back_rounded, size: 18),
-              color: Colors.white70,
-            ),
+            if (!standaloneMode)
+              IconButton(
+                onPressed: onBack,
+                tooltip: 'Back to Capture',
+                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                color: userSettings.theme.textColor.withValues(alpha: 0.7),
+              )
+            else
+              const SizedBox(width: 20),
             Expanded(
               child: Row(
                 children: <Widget>[
                   const Icon(Icons.photo_size_select_large_rounded, size: 16, color: Colors.white70),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'Photo Editor',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: userSettings.theme.textColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: userSettings.theme.uiFontFamily,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       fileName,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      style: TextStyle(
+                        color: userSettings.theme.textColor.withValues(alpha: 0.4),
+                        fontSize: 11,
+                        fontFamily: userSettings.theme.uiFontFamily,
+                      ),
                     ),
                   ),
                   _WindowBarButton(
@@ -2152,7 +2223,9 @@ class _WindowBarButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isClose ? Colors.redAccent.withValues(alpha: 0.0) : Colors.transparent,
           ),
-          child: Icon(icon, size: 18, color: isClose ? Colors.redAccent.shade100 : Colors.white70),
+          child: Icon(icon,
+              size: 18,
+              color: isClose ? Colors.redAccent.shade100 : userSettings.theme.textColor.withValues(alpha: 0.7)),
         ),
       ),
     );
@@ -2162,17 +2235,28 @@ class _WindowBarButton extends StatelessWidget {
 class _EditorToolbar extends StatelessWidget {
   final EditorController ctrl;
   final VoidCallback onBack;
+  final double zoomFactor;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final VoidCallback onResetZoom;
 
-  const _EditorToolbar({required this.ctrl, required this.onBack});
+  const _EditorToolbar({
+    required this.ctrl,
+    required this.onBack,
+    required this.zoomFactor,
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.onResetZoom,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 52,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.80),
+        color: userSettings.theme.background.darken(2).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: userSettings.theme.textColor.withValues(alpha: 0.1)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: SingleChildScrollView(
@@ -2184,38 +2268,51 @@ class _EditorToolbar extends StatelessWidget {
               tooltip: 'Back to Capture (ESC)',
               onTap: onBack,
             ),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorToolBtn(Icons.mouse_rounded, EditorTool.select, ctrl, 'Select (S)'),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorToolBtn(Icons.edit, EditorTool.pen, ctrl, 'Pen (P)'),
             _EditorToolBtn(Icons.highlight, EditorTool.highlight, ctrl, 'Highlight (H)'),
             _EditorToolBtn(Icons.remove, EditorTool.line, ctrl, 'Line (L)'),
             _EditorToolBtn(Icons.crop_square, EditorTool.rect, ctrl, 'Rect (R)'),
             _EditorToolBtn(Icons.circle_outlined, EditorTool.ellipse, ctrl, 'Ellipse (E)'),
             _EditorToolBtn(Icons.arrow_forward, EditorTool.arrow, ctrl, 'Arrow (A)'),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorToolBtn(Icons.text_fields, EditorTool.text, ctrl, 'Text (T)'),
             _EditorToolBtn(Icons.emoji_emotions_outlined, EditorTool.emoji, ctrl, 'Emoji'),
             _EditorToolBtn(Icons.format_list_numbered, EditorTool.stepCounter, ctrl, 'Step (N)'),
             _EditorToolBtn(Icons.chat_bubble_outline, EditorTool.infoBalloon, ctrl, 'Balloon (I)'),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorToolBtn(Icons.blur_on, EditorTool.blur, ctrl, 'Blur (F)'),
             _EditorToolBtn(Icons.grid_3x3, EditorTool.pixelate, ctrl, 'Pixelate (X)'),
             _EditorToolBtn(Icons.auto_fix_high, EditorTool.smartDelete, ctrl, 'Smart Delete (D)'),
             _EditorToolBtn(Icons.image_outlined, EditorTool.imageElement, ctrl, 'Image (G)'),
             _EditorToolBtn(Icons.highlight_alt, EditorTool.spotlight, ctrl, 'Spotlight'),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorToolBtn(Icons.straighten, EditorTool.ruler, ctrl, 'Ruler (M)'),
             _EditorToolBtn(Icons.aspect_ratio, EditorTool.sizebox, ctrl, 'Sizebox (B)'),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _EditorColorBtn(ctrl),
             _EditorWidthBtn(ctrl),
-            const Divider(color: Colors.white24, height: 10),
+            const Divider(color: Colors.white10, height: 10),
             _TipBtn(icon: Icons.undo, tooltip: 'Undo (Ctrl+Z)', onTap: ctrl.undo),
             _TipBtn(icon: Icons.redo, tooltip: 'Redo (Ctrl+Y)', onTap: ctrl.redo),
             _TipBtn(icon: Icons.delete_sweep, tooltip: 'Clear All', onTap: ctrl.clearAll),
             _TipBtn(icon: Icons.grid_on, tooltip: 'Toggle Grid', onTap: ctrl.toggleGrid),
             _TipBtn(icon: Icons.exposure_zero, tooltip: 'Reset Steps', onTap: ctrl.resetStepCounter),
+            const Divider(color: Colors.white24, height: 10),
+            _TipBtn(icon: Icons.zoom_in, tooltip: 'Zoom In', onTap: onZoomIn),
+            Text(
+              '${(zoomFactor * 100).round()}%',
+              style: TextStyle(
+                color: userSettings.theme.textColor.withValues(alpha: 0.4),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                fontFamily: userSettings.theme.uiFontFamily,
+              ),
+            ),
+            _TipBtn(icon: Icons.zoom_out, tooltip: 'Zoom Out', onTap: onZoomOut),
+            _TipBtn(icon: Icons.zoom_out_map, tooltip: 'Reset Zoom', onTap: onResetZoom),
           ],
         ),
       ),
@@ -2241,7 +2338,7 @@ class _EditorToolBtn extends StatelessWidget {
           message: tooltip,
           child: IconButton(
             icon: Icon(icon, size: 18),
-            color: active ? Colors.yellowAccent : Colors.white70,
+            color: active ? userSettings.theme.accentColor : userSettings.theme.textColor.withValues(alpha: 0.7),
             onPressed: () => ctrl.setTool(tool),
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(),
@@ -2265,7 +2362,7 @@ class _TipBtn extends StatelessWidget {
       message: tooltip,
       child: IconButton(
         icon: Icon(icon, size: 18),
-        color: Colors.white70,
+        color: userSettings.theme.textColor.withValues(alpha: 0.7),
         onPressed: onTap,
         padding: const EdgeInsets.all(6),
         constraints: const BoxConstraints(),
@@ -2668,7 +2765,7 @@ class _SaveButtonState extends State<_SaveButton> {
             const SizedBox(width: 10),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A9EFF),
+                backgroundColor: userSettings.theme.accentColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2761,7 +2858,7 @@ class _EditorPresetButton extends StatelessWidget {
         itemBuilder: (BuildContext context) => <PopupMenuEntry<String?>>[
           const PopupMenuItem<String?>(
             value: 'none',
-            child: PresetMenuRow(
+            child: _PresetMenuRow(
               icon: Icons.image_outlined,
               title: 'Original',
               subtitle: 'Use the original captured image',
@@ -2770,7 +2867,7 @@ class _EditorPresetButton extends StatelessWidget {
           ...presetNames.map(
             (String presetName) => PopupMenuItem<String?>(
               value: presetName,
-              child: PresetMenuRow(
+              child: _PresetMenuRow(
                 icon: Icons.auto_awesome,
                 title: presetName,
                 subtitle: 'Apply to the original capture',
@@ -2801,6 +2898,54 @@ class _EditorPresetButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PresetMenuRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _PresetMenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: Colors.white70),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

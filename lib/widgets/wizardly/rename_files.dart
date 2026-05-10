@@ -39,16 +39,16 @@ class FileNameWidgetState extends State<FileNameWidget> {
   void initState() {
     super.initState();
 
-    if (globalSettings.args.contains("-wizardly")) {
-      currentFolder = globalSettings.args[0].replaceAll('"', '');
+    if (userSettings.args.contains("-wizardly")) {
+      currentFolder = userSettings.args[0].replaceAll('"', '');
     }
     redrawWidget = ValueNotifier<bool>(false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
-    final Color background = globalSettings.themeColors.background;
+    final Color accent = userSettings.themeColors.accentColor;
+    final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -731,7 +731,7 @@ class ListTileFileState extends State<ListTileFile> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final bool unchanged = widget.oldName == widget.newName;
 
     return InkWell(

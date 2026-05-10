@@ -70,8 +70,8 @@ Map<ColorSwatch<Object>, String> getPredefinedColorSet(List<List<int>> predefine
 class ThemeSetupState extends State<ThemeSetup> {
   bool changed = false;
 
-  ThemeColors savedLightTheme = globalSettings.lightTheme.copyWith();
-  ThemeColors savedDarkTheme = globalSettings.darkTheme.copyWith();
+  ThemeColors savedLightTheme = userSettings.lightTheme.copyWith();
+  ThemeColors savedDarkTheme = userSettings.darkTheme.copyWith();
 
   List<Map<ColorSwatch<Object>, String>> predefinedColorsLight = <Map<ColorSwatch<Object>, String>>[
     getPredefinedColorSet(lightThemeOptions, 0),
@@ -99,19 +99,19 @@ class ThemeSetupState extends State<ThemeSetup> {
   }
 
   void _onSaved() async {
-    if (globalSettings.themeTypeMode == ThemeType.dark) {
+    if (userSettings.themeTypeMode == ThemeType.dark) {
       await Boxes.saveActiveQuickMenuThemes();
-      savedDarkTheme = globalSettings.darkTheme.copyWith();
-      Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+      savedDarkTheme = userSettings.darkTheme.copyWith();
+      Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
     } else {
       await Boxes.saveActiveQuickMenuThemes();
-      savedLightTheme = globalSettings.lightTheme.copyWith();
+      savedLightTheme = userSettings.lightTheme.copyWith();
     }
     setState(() => changed = false);
   }
 
   Future<void> _exportThemes() async {
-    final Map<String, dynamic> data = jsonDecode(globalSettings.quickMenuDesignThemesToJson());
+    final Map<String, dynamic> data = jsonDecode(userSettings.quickMenuDesignThemesToJson());
     for (final dynamic designEntry in data.values) {
       if (designEntry is Map<dynamic, dynamic>) {
         for (final String themeKey in <String>['lightTheme', 'darkTheme']) {
@@ -167,7 +167,7 @@ class ThemeSetupState extends State<ThemeSetup> {
           }
         }
 
-        globalSettings.loadQuickMenuDesignThemesFromJson(jsonEncode(data));
+        userSettings.loadQuickMenuDesignThemesFromJson(jsonEncode(data));
         await Boxes.saveActiveQuickMenuThemes(notify: true);
 
         // Update local state to reflect imported themes for current design
@@ -198,48 +198,48 @@ class ThemeSetupState extends State<ThemeSetup> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               child: Material(
                 type: MaterialType.transparency,
-                child: globalSettings.themeTypeMode == ThemeType.dark
+                child: userSettings.themeTypeMode == ThemeType.dark
                     ? ThemeSetupWidget(
                         title: "Dark Theme",
                         savedColors: savedDarkTheme,
-                        currentColors: globalSettings.darkTheme,
+                        currentColors: userSettings.darkTheme,
                         onChanged: () => setState(() => changed = true),
                         onGradientChanged: (double e) {
-                          globalSettings.darkTheme.gradientAlpha = e.toInt();
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          userSettings.darkTheme.gradientAlpha = e.toInt();
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                         },
                         onBackdropOpacityChanged: (double e) {
-                          globalSettings.darkTheme.backdropOpacity = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          userSettings.darkTheme.backdropOpacity = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                         },
                         onPanelOpacityPointsChanged: (List<double> e) {
-                          globalSettings.darkTheme.panelOpacityPoints = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          userSettings.darkTheme.panelOpacityPoints = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityBeginChanged: (String e) {
-                          globalSettings.darkTheme.panelOpacityBegin = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          userSettings.darkTheme.panelOpacityBegin = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityEndChanged: (String e) {
-                          globalSettings.darkTheme.panelOpacityEnd = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          userSettings.darkTheme.panelOpacityEnd = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onColorChanged: (Color color, int i) {
-                          if (i == 0) globalSettings.darkTheme.background = color;
-                          if (i == 1) globalSettings.darkTheme.textColor = color;
-                          if (i == 2) globalSettings.darkTheme.accentColor = color;
+                          if (i == 0) userSettings.darkTheme.background = color;
+                          if (i == 1) userSettings.darkTheme.textColor = color;
+                          if (i == 2) userSettings.darkTheme.accentColor = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(globalSettings.darkTheme.toJson()));
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                         },
                         predefinedColors: predefinedColorsDark,
                         themeOptions: darkThemeOptions,
                         onDesignChanged: (QuickMenuDesigns design) async {
                           await Boxes.switchQuickMenuDesign(design);
-                          savedDarkTheme = globalSettings.darkTheme.copyWith();
-                          savedLightTheme = globalSettings.lightTheme.copyWith();
+                          savedDarkTheme = userSettings.darkTheme.copyWith();
+                          savedLightTheme = userSettings.lightTheme.copyWith();
                           setState(() => changed = false);
                         },
                         onExport: _exportThemes,
@@ -248,41 +248,41 @@ class ThemeSetupState extends State<ThemeSetup> {
                     : ThemeSetupWidget(
                         title: "Light Theme",
                         savedColors: savedLightTheme,
-                        currentColors: globalSettings.lightTheme,
+                        currentColors: userSettings.lightTheme,
                         onChanged: () => setState(() => changed = true),
                         onGradientChanged: (double e) {
-                          globalSettings.lightTheme.gradientAlpha = e.toInt();
+                          userSettings.lightTheme.gradientAlpha = e.toInt();
                         },
                         onBackdropOpacityChanged: (double e) {
-                          globalSettings.lightTheme.backdropOpacity = e;
+                          userSettings.lightTheme.backdropOpacity = e;
                         },
                         onPanelOpacityPointsChanged: (List<double> e) {
-                          globalSettings.lightTheme.panelOpacityPoints = e;
+                          userSettings.lightTheme.panelOpacityPoints = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityBeginChanged: (String e) {
-                          globalSettings.lightTheme.panelOpacityBegin = e;
+                          userSettings.lightTheme.panelOpacityBegin = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityEndChanged: (String e) {
-                          globalSettings.lightTheme.panelOpacityEnd = e;
+                          userSettings.lightTheme.panelOpacityEnd = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onColorChanged: (Color color, int i) {
-                          if (i == 0) globalSettings.lightTheme.background = color;
-                          if (i == 1) globalSettings.lightTheme.textColor = color;
-                          if (i == 2) globalSettings.lightTheme.accentColor = color;
+                          if (i == 0) userSettings.lightTheme.background = color;
+                          if (i == 1) userSettings.lightTheme.textColor = color;
+                          if (i == 2) userSettings.lightTheme.accentColor = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         predefinedColors: predefinedColorsLight,
                         themeOptions: lightThemeOptions,
                         onDesignChanged: (QuickMenuDesigns design) async {
                           await Boxes.switchQuickMenuDesign(design);
-                          savedDarkTheme = globalSettings.darkTheme.copyWith();
-                          savedLightTheme = globalSettings.lightTheme.copyWith();
+                          savedDarkTheme = userSettings.darkTheme.copyWith();
+                          savedLightTheme = userSettings.lightTheme.copyWith();
                           setState(() => changed = false);
                         },
                         onExport: _exportThemes,
@@ -410,15 +410,15 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   }
 
   Future<void> _setThemeType(ThemeType? value) async {
-    globalSettings.themeType = value ?? ThemeType.system;
-    await Boxes.updateSettings("themeType", globalSettings.themeType.index);
+    userSettings.themeType = value ?? ThemeType.system;
+    await Boxes.updateSettings("themeType", userSettings.themeType.index);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
 
   Future<void> _pickThemeStart() async {
-    final int hour = (globalSettings.themeScheduleMin ~/ 60);
-    final int minute = (globalSettings.themeScheduleMin % 60);
+    final int hour = (userSettings.themeScheduleMin ~/ 60);
+    final int minute = (userSettings.themeScheduleMin % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -429,15 +429,15 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
       },
     );
     if (timePicker == null) return;
-    globalSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
-    await Boxes.updateSettings("themeScheduleMin", globalSettings.themeScheduleMin);
+    userSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
+    await Boxes.updateSettings("themeScheduleMin", userSettings.themeScheduleMin);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
 
   Future<void> _pickThemeEnd() async {
-    final int hour = (globalSettings.themeScheduleMax ~/ 60);
-    final int minute = (globalSettings.themeScheduleMax % 60);
+    final int hour = (userSettings.themeScheduleMax ~/ 60);
+    final int minute = (userSettings.themeScheduleMax % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -449,9 +449,9 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     );
     if (timePicker == null) return;
     final int newTime = (timePicker.hour) * 60 + (timePicker.minute);
-    if (newTime < globalSettings.themeScheduleMin) return;
-    globalSettings.themeScheduleMax = newTime;
-    await Boxes.updateSettings("themeScheduleMax", globalSettings.themeScheduleMax);
+    if (newTime < userSettings.themeScheduleMin) return;
+    userSettings.themeScheduleMax = newTime;
+    await Boxes.updateSettings("themeScheduleMax", userSettings.themeScheduleMax);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
@@ -520,7 +520,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor.withValues(alpha: 1.0);
+    final Color accent = userSettings.themeColors.accentColor.withValues(alpha: 1.0);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -931,7 +931,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   Widget _buildDesignTile(
       String title, String subtitle, QuickMenuDesigns current, ValueChanged<QuickMenuDesigns> onSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = globalSettings.themeColors.accentColor.withValues(alpha: 1.0);
+    final Color accent = userSettings.themeColors.accentColor.withValues(alpha: 1.0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1110,7 +1110,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               child: _buildDesignTile(
                 "Design Type",
                 "Quickly switch between predefined interface styles.",
-                globalSettings.currentQuickMenuDesign,
+                userSettings.currentQuickMenuDesign,
                 (QuickMenuDesigns design) {
                   widget.onDesignChanged(design);
                   setState(() {});
@@ -1146,7 +1146,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                       const Text("Theme Mode", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                       const SizedBox(height: 3),
                       Text(
-                        switch (globalSettings.themeType) {
+                        switch (userSettings.themeType) {
                           ThemeType.system => "Following Windows settings",
                           ThemeType.light => "Always use light theme",
                           ThemeType.dark => "Always use dark theme",
@@ -1165,7 +1165,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                       hoverColor: accent.withValues(alpha: 0.05),
                     ),
                     child: PopupMenuButton<ThemeType>(
-                      initialValue: globalSettings.themeType,
+                      initialValue: userSettings.themeType,
                       tooltip: "Select Theme Mode",
                       onSelected: _setThemeType,
                       offset: const Offset(0, 40),
@@ -1176,11 +1176,11 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           child: Row(
                             children: <Widget>[
                               Icon(
-                                type == globalSettings.themeType
+                                type == userSettings.themeType
                                     ? Icons.radio_button_checked_rounded
                                     : Icons.radio_button_off_rounded,
                                 size: 16,
-                                color: type == globalSettings.themeType ? accent : onSurface.withValues(alpha: 0.5),
+                                color: type == userSettings.themeType ? accent : onSurface.withValues(alpha: 0.5),
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -1207,7 +1207,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             Text(
-                              switch (globalSettings.themeType) {
+                              switch (userSettings.themeType) {
                                 ThemeType.system => "System",
                                 ThemeType.light => "Light",
                                 ThemeType.dark => "Dark",
@@ -1226,7 +1226,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               ],
             ),
           ),
-          if (globalSettings.themeType == ThemeType.schedule) ...<Widget>[
+          if (userSettings.themeType == ThemeType.schedule) ...<Widget>[
             const SizedBox(height: 8),
             _buildScheduleTimes(accent, onSurface),
           ],
@@ -1240,9 +1240,9 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          _timeChipRedesigned("From", globalSettings.themeScheduleMin.formatTime(), _pickThemeStart, accent, onSurface),
+          _timeChipRedesigned("From", userSettings.themeScheduleMin.formatTime(), _pickThemeStart, accent, onSurface),
           const SizedBox(width: 16),
-          _timeChipRedesigned("To", globalSettings.themeScheduleMax.formatTime(), _pickThemeEnd, accent, onSurface),
+          _timeChipRedesigned("To", userSettings.themeScheduleMax.formatTime(), _pickThemeEnd, accent, onSurface),
         ],
       ),
     );

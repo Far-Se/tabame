@@ -55,9 +55,9 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   void _handleSwitchDevice() {
     Audio.switchDefaultDevice(
       AudioDeviceType.output,
-      console: globalSettings.audioConsole,
-      multimedia: globalSettings.audioMultimedia,
-      communications: globalSettings.audioCommunications,
+      console: userSettings.audioConsole,
+      multimedia: userSettings.audioMultimedia,
+      communications: userSettings.audioCommunications,
     );
     switchedDefaultDevice = true;
     _setFeedbackIcon(Icons.published_with_changes);

@@ -20,19 +20,19 @@ class PinnedAndTrayList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double height = globalSettings.expandedTaskbar ? 32 : 27;
-    Globals.heights.pinnedAndTray = globalSettings.taskManagerStats ? height * 2 : height;
+    final double height = userSettings.expandedTaskbar ? 32 : 27;
+    Globals.heights.pinnedAndTray = userSettings.taskManagerStats ? height * 2 : height;
     return Container(
       height: height,
       width: double.infinity,
       child: Padding(
-        padding: !globalSettings.expandedTaskbar
+        padding: !userSettings.expandedTaskbar
             ? const EdgeInsets.fromLTRB(7, 3, 3, 3)
             : const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: globalSettings.bottomBarOnTop
+          children: userSettings.bottomBarOnTop
               ? <Widget>[
                   Expanded(
                     flex: 6,
@@ -56,7 +56,7 @@ class PinnedAndTrayList extends StatelessWidget {
                   const Flexible(flex: 4, child: TrayBar()),
                 ]
               : <Widget>[
-                  if (globalSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
+                  if (userSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
                   if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
                   const Flexible(flex: 4, child: TrayBar()),
                 ],
@@ -149,7 +149,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !globalSettings.bottomBarOnTop) _syncLogoDragOverlay();
+      if (mounted && !userSettings.bottomBarOnTop) _syncLogoDragOverlay();
     });
     return Theme(
       data: Theme.of(context).copyWith(
@@ -164,10 +164,10 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
               height: 25.1,
               children: <Widget>[
                 if (kDebugMode) const TestingButton(),
-                if (globalSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                if (userSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
                 ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
-                if (globalSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
-                if (!globalSettings.bottomBarOnTop) const OpenSettingsButton(),
+                if (userSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
+                if (!userSettings.bottomBarOnTop) const OpenSettingsButton(),
               ],
             )
           : const SizedBox.shrink(),

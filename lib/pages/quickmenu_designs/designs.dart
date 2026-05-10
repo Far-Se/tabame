@@ -6,8 +6,8 @@ import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'design_classic.dart';
 import 'design_interface.dart';
-import 'design_modern.dart';
 import 'design_matrix.dart';
+import 'design_modern.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -39,7 +39,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   }
 
   Future<void> _handleWindowSize() async {
-    final bool isMatrix = QuickMenuDesigns.values[globalSettings.quickMenuDesign] == QuickMenuDesigns.matrix;
+    final bool isMatrix = QuickMenuDesigns.values[userSettings.quickMenuDesign] == QuickMenuDesigns.matrix;
     if (isMatrix) {
       final Size size = await windowManager.getSize();
       if (size.width < 340) {
@@ -68,7 +68,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
 
   @override
   Widget build(BuildContext context) {
-    return switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
+    return switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
       QuickMenuDesigns.classic => MainMenuClassicWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.interface => MainMenuInterfaceWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.modern => MainMenuModernWidget(key: ValueKey<int>(_refreshCounter)),

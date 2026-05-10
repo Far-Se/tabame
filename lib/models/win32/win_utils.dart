@@ -566,7 +566,7 @@ class WinUtils {
     launchWithExplorer(path, arguments: arguments, workingDirectory: resolvedWorkingDirectory);
     return;
     // ignore: dead_code
-    if (arguments == null && !shouldParseParameters && globalSettings.runAsAdministrator && !path.startsWith("http")) {
+    if (arguments == null && !shouldParseParameters && userSettings.runAsAdministrator && !path.startsWith("http")) {
       //! you can gain admin priv with one command, but there is no command to de-elevate yourself or app you are launching.
       //! only way I've found is to start powershell that starts explorer THAT starts the file.
       runPowerShell(<String>['explorer.exe "$path"']);
@@ -587,7 +587,7 @@ class WinUtils {
     final RegExp commandPattern = RegExp(r"^([a-z0-9-_]+) (.*?)$");
     if (commandPattern.hasMatch(path)) {
       final RegExpMatch commandMatch = commandPattern.firstMatch(path)!;
-      if (!globalSettings.runAsAdministrator) {
+      if (!userSettings.runAsAdministrator) {
         ShellExecute(
             NULL, TEXT("open"), TEXT(commandMatch.group(1)!), TEXT(commandMatch.group(2)!), nullptr, SW_SHOWNORMAL);
         return;
@@ -1289,7 +1289,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     final bool ok = await Desktop.setWallpaper(file.path, monitorIndex, fillMode: fillMode);
     if (!ok) return false;
 
-    // Save to settings (do not load into globalSettings)
+    // Save to settings (do not load into userSettings)
     final String savedJson = Boxes.pref.getString("monitorWallpapers") ?? "{}";
     try {
       final Map<String, dynamic> savedWallpapers = jsonDecode(savedJson) as Map<String, dynamic>;

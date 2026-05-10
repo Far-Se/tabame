@@ -325,10 +325,10 @@ class _BookmarkRowItemState extends State<_BookmarkRowItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 1.5),
         decoration: BoxDecoration(
-          color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(25) : onSurface.withAlpha(5),
+          color: _hovered ? userSettings.themeColors.accentColor.withAlpha(25) : onSurface.withAlpha(5),
           borderRadius: BorderRadius.circular(9),
           border: Border.all(
-            color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : onSurface.withAlpha(12),
+            color: _hovered ? userSettings.themeColors.accentColor.withAlpha(60) : onSurface.withAlpha(12),
           ),
         ),
         child: InkWell(
@@ -353,7 +353,7 @@ class _BookmarkRowItemState extends State<_BookmarkRowItem> {
                     widget.mark.title,
                     style: TextStyle(
                       fontSize: 11.5,
-                      fontWeight: FontWeight(globalSettings.theme.entryFontWeight),
+                      fontWeight: FontWeight(userSettings.theme.entryFontWeight),
                       letterSpacing: 0.3,
                       color: _hovered ? onSurface : onSurface.withAlpha(200),
                     ),
@@ -469,10 +469,10 @@ class _BookmarkGridItemState extends State<_BookmarkGridItem> {
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
-              color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(35) : onSurface.withAlpha(10),
+              color: _hovered ? userSettings.themeColors.accentColor.withAlpha(35) : onSurface.withAlpha(10),
               borderRadius: BorderRadius.circular(11),
               border: Border.all(
-                  color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(110) : onSurface.withAlpha(18),
+                  color: _hovered ? userSettings.themeColors.accentColor.withAlpha(110) : onSurface.withAlpha(18),
                   width: 1),
             ),
             child: Center(

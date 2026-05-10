@@ -156,7 +156,7 @@ class AudioBoxState extends State<AudioBox> {
     }
 
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
     final List<Widget> audioCards = <Widget>[
       if (audioInfo.devices.isNotEmpty)
@@ -457,9 +457,9 @@ class AudioBoxState extends State<AudioBox> {
             onTap: () {
               Audio.setDefaultDevice(
                 device.id,
-                console: globalSettings.audioConsole,
-                multimedia: globalSettings.audioMultimedia,
-                communications: globalSettings.audioCommunications,
+                console: userSettings.audioConsole,
+                multimedia: userSettings.audioMultimedia,
+                communications: userSettings.audioCommunications,
               );
               fetchData();
             },

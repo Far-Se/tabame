@@ -24,7 +24,7 @@ The `tm-panel-list` style is used for sidebars, modals, and narrow configuration
 - **Background**: `Theme.of(context).colorScheme.onSurface.withAlpha(7)`
 - **Border**: `Border.all(color: onSurface.withAlpha(16))`
 - **BorderRadius**: `BorderRadius.circular(10)`
-- **Highlighted State**: Background `globalSettings.themeColors.accentColor.withAlpha(10)`, border `globalSettings.themeColors.accentColor.withAlpha(30)`.
+- **Highlighted State**: Background `userSettings.themeColors.accentColor.withAlpha(10)`, border `userSettings.themeColors.accentColor.withAlpha(30)`.
 
 ### Typography
 - **Card Title**: `fontSize: 12.5`, `fontWeight: FontWeight.w700`.
@@ -69,7 +69,7 @@ Compact badges for showing values (hex codes, percentages, toggles).
 Used for design types or mode switching within a card.
 - `ChoiceChip` with `visualDensity: VisualDensity.compact`.
 - `labelStyle`: `fontSize: 11.5`.
-- Selected color: `globalSettings.themeColors.accentColor.withAlpha(18)`.
+- Selected color: `userSettings.themeColors.accentColor.withAlpha(18)`.
 
 ### 4. Color Swatches/Pickers
 - Use `_buildSwatch` (20-22px circle) to show active colors.
@@ -79,4 +79,4 @@ Used for design types or mode switching within a card.
 - **Density over whitespace**: Prefer tight spacing (`SizedBox(height: 2-4)`) between related labels.
 - **Alignment**: Items in a card's header row usually use `crossAxisAlignment: CrossAxisAlignment.start`.
 - **Interactivity**: Use `Slider` for range values and `ChoiceChip` for enum-like selections.
-- **Visual Hierarchy**: Use the `globalSettings.themeColors.accentColor` color sparingly (Meta Chips, active Sliders, selected Chips) to keep the focused look.
+- **Visual Hierarchy**: Use the `userSettings.themeColors.accentColor` color sparingly (Meta Chips, active Sliders, selected Chips) to keep the focused look.

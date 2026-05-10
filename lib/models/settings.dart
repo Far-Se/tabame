@@ -346,7 +346,7 @@ class Settings {
   Timer? themeScheduleChangeTimer;
   void setScheduleThemeChange() {
     themeScheduleChangeTimer?.cancel();
-    if (globalSettings.lightSwitchMode == LightSwitchMode.off) return;
+    if (userSettings.lightSwitchMode == LightSwitchMode.off) return;
 
     final int start =
         lightSwitchMode == LightSwitchMode.sunrise ? (lightSwitchSunrise + lightSwitchSunriseOffset) : themeScheduleMin;
@@ -390,7 +390,7 @@ class Settings {
   Map<int, List<int>> hookedWins = <int, List<int>>{};
 }
 
-Settings globalSettings = Settings();
+Settings userSettings = Settings();
 
 Future<void> registerAll() async {
   final String locale = Platform.localeName.substring(0, 2);
@@ -403,7 +403,7 @@ Future<void> registerAll() async {
   Debug.add("Registered: Monitor");
   Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitors());
   Timer.periodic(const Duration(seconds: 5), (Timer timer) {
-    if (globalSettings.hideDesktopFiles) {
+    if (userSettings.hideDesktopFiles) {
       WinUtils.toggleDesktopFiles(visible: false);
     }
   });
@@ -411,8 +411,8 @@ Future<void> registerAll() async {
   await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? false : true);
   Debug.add("Registered: Boxes");
   //Schedule Theme
-  globalSettings.setScheduleThemeChange();
-  if (globalSettings.lightSwitchMode == LightSwitchMode.sunrise) {
+  userSettings.setScheduleThemeChange();
+  if (userSettings.lightSwitchMode == LightSwitchMode.sunrise) {
     SolarCalculator.updateSolarData();
   }
   Debug.add("Registered: ScheduleTheme");

@@ -46,9 +46,9 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
         onSecondaryTap: () async {
           await Audio.switchDefaultDevice(
             AudioDeviceType.input,
-            console: globalSettings.audioConsole,
-            multimedia: globalSettings.audioMultimedia,
-            communications: globalSettings.audioCommunications,
+            console: userSettings.audioConsole,
+            multimedia: userSettings.audioMultimedia,
+            communications: userSettings.audioCommunications,
           );
           switchedDefaultDevice = true;
           setState(() {});

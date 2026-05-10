@@ -87,7 +87,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                 children: <Widget>[
                   _buildSectionLabel(
                     label: "IDENTITY",
-                    accent: globalSettings.themeColors.accentColor,
+                    accent: userSettings.themeColors.accentColor,
                     onSurface: onSurface,
                     icon: Icons.badge_outlined,
                   ),
@@ -143,7 +143,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                               textCapitalization: TextCapitalization.words,
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                               decoration: _inputDecoration(context, isBookmark ? "Label" : "Category Name",
-                                  globalSettings.themeColors.accentColor),
+                                  userSettings.themeColors.accentColor),
                               onSubmitted: (_) => _handleSave(),
                             ),
                           ),
@@ -155,7 +155,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                     const SizedBox(height: 18),
                     _buildSectionLabel(
                       label: "OPTIONS",
-                      accent: globalSettings.themeColors.accentColor,
+                      accent: userSettings.themeColors.accentColor,
                       onSurface: onSurface,
                       icon: Icons.auto_awesome_rounded,
                     ),
@@ -163,7 +163,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                     InkWellButton(
                       onTap: () => setState(() => _preferInputIcon = !_preferInputIcon),
                       color: _preferInputIcon
-                          ? globalSettings.themeColors.accentColor.withAlpha(20)
+                          ? userSettings.themeColors.accentColor.withAlpha(20)
                           : onSurface.withAlpha(10),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Row(
@@ -171,7 +171,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                           Icon(
                             Icons.auto_awesome_rounded,
                             size: 16,
-                            color: _preferInputIcon ? globalSettings.themeColors.accentColor : onSurface.withAlpha(150),
+                            color: _preferInputIcon ? userSettings.themeColors.accentColor : onSurface.withAlpha(150),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -184,7 +184,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: _preferInputIcon
-                                        ? globalSettings.themeColors.accentColor
+                                        ? userSettings.themeColors.accentColor
                                         : onSurface.withAlpha(200),
                                   ),
                                 ),
@@ -195,7 +195,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 0.3,
                                     color: _preferInputIcon
-                                        ? globalSettings.themeColors.accentColor.withAlpha(180)
+                                        ? userSettings.themeColors.accentColor.withAlpha(180)
                                         : onSurface.withAlpha(100),
                                   ),
                                 ),
@@ -205,7 +205,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                           Switch(
                             value: _preferInputIcon,
                             onChanged: (bool val) => setState(() => _preferInputIcon = val),
-                            activeThumbColor: globalSettings.themeColors.accentColor,
+                            activeThumbColor: userSettings.themeColors.accentColor,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                         ],
@@ -216,7 +216,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                     const SizedBox(height: 18),
                     _buildSectionLabel(
                       label: "LAYOUT",
-                      accent: globalSettings.themeColors.accentColor,
+                      accent: userSettings.themeColors.accentColor,
                       onSurface: onSurface,
                       icon: Icons.grid_view_rounded,
                     ),
@@ -255,7 +255,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                     const SizedBox(height: 18),
                     _buildSectionLabel(
                       label: "EXECUTION",
-                      accent: globalSettings.themeColors.accentColor,
+                      accent: userSettings.themeColors.accentColor,
                       onSurface: onSurface,
                       icon: Icons.terminal_outlined,
                     ),
@@ -277,7 +277,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                               maxLines: null,
                               style: const TextStyle(fontSize: 11, letterSpacing: 0.2),
                               decoration: _inputDecoration(
-                                      context, "Target Path / URL / Command", globalSettings.themeColors.accentColor)
+                                      context, "Target Path / URL / Command", userSettings.themeColors.accentColor)
                                   .copyWith(
                                 isDense: false,
                               ),
@@ -289,7 +289,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                               InkWellButton(
                                 icon: Icons.file_open_rounded,
                                 label: "Pick File",
-                                color: globalSettings.themeColors.accentColor,
+                                color: userSettings.themeColors.accentColor,
                                 fontSize: 9,
                                 mainAxisSize: MainAxisSize.max,
                                 fontWeight: FontWeight.w800,
@@ -308,7 +308,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                                 icon: Icons.folder_open_rounded,
                                 label: "Pick Folder",
                                 mainAxisSize: MainAxisSize.max,
-                                color: globalSettings.themeColors.accentColor,
+                                color: userSettings.themeColors.accentColor,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -371,7 +371,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
             onTap: _handleSave,
             label: (widget.isNew ? (isBookmark ? "Add Bookmark" : "Create Category") : "Save"),
             icon: Icons.save_rounded,
-            color: globalSettings.themeColors.accentColor,
+            color: userSettings.themeColors.accentColor,
           ),
         ],
       ),
@@ -417,10 +417,10 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? globalSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent,
+          color: isSelected ? userSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? globalSettings.themeColors.accentColor.withAlpha(80) : Colors.transparent,
+            color: isSelected ? userSettings.themeColors.accentColor.withAlpha(80) : Colors.transparent,
             width: 1,
           ),
         ),
@@ -430,7 +430,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
             Icon(
               icon,
               size: 14,
-              color: isSelected ? globalSettings.themeColors.accentColor : onSurface.withAlpha(120),
+              color: isSelected ? userSettings.themeColors.accentColor : onSurface.withAlpha(120),
             ),
             const SizedBox(width: 8),
             Text(
@@ -439,7 +439,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
-                color: isSelected ? globalSettings.themeColors.accentColor : onSurface.withAlpha(120),
+                color: isSelected ? userSettings.themeColors.accentColor : onSurface.withAlpha(120),
               ),
             ),
           ],

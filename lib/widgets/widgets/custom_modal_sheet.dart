@@ -46,7 +46,7 @@ void showCustomModal(BuildContext context, {required Widget child}) {
                       gradient: LinearGradient(
                         colors: <Color>[
                           Theme.of(context).colorScheme.surface,
-                          Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                          Theme.of(context).colorScheme.surface.withAlpha(userSettings.themeColors.gradientAlpha),
                           Theme.of(context).colorScheme.surface,
                         ],
                         stops: <double>[0, 0.4, 1],

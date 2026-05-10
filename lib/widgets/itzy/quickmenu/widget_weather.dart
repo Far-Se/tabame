@@ -13,18 +13,18 @@ int _weatherLastFetchDate = 0;
 Future<String> fetchWeather([bool showUnit = false]) async {
   // Check if we have already fetched the weather in the last 15 minutes
   if (_weatherLastFetchDate + 900000 > DateTime.now().millisecondsSinceEpoch &&
-      globalSettings.weatherTemperature.isNotEmpty) {
-    return globalSettings.weatherTemperature;
+      userSettings.weatherTemperature.isNotEmpty) {
+    return userSettings.weatherTemperature;
   }
   _weatherLastFetchDate = DateTime.now().millisecondsSinceEpoch;
   bool failed = false;
-  final List<String> latLong = globalSettings.weatherLatLong.split(',');
+  final List<String> latLong = userSettings.weatherLatLong.split(',');
   if (latLong.length < 2) return "Bad Format.";
 
   try {
     final Future<http.Response> responseA = http
         .get(Uri.parse(
-            "https://api.open-meteo.com/v1/forecast?latitude=${latLong[0].trim()}&longitude=${latLong[1].trim()}&current_weather=true${globalSettings.weatherUnit == "u" ? "&temperature_unit=fahrenheit" : ""}"))
+            "https://api.open-meteo.com/v1/forecast?latitude=${latLong[0].trim()}&longitude=${latLong[1].trim()}&current_weather=true${userSettings.weatherUnit == "u" ? "&temperature_unit=fahrenheit" : ""}"))
         .catchError((_) {
       failed = true;
       return http.Response("", 500);
@@ -70,7 +70,7 @@ Future<String> fetchWeather([bool showUnit = false]) async {
           weather = weatherEmoji[data["current_weather"]["weathercode"]].toString();
         }
         weather += " ${double.parse(data["current_weather"]["temperature"].toString()).toInt().toString()}°";
-        if (showUnit) weather += " ${globalSettings.weatherUnit == "u" ? "F" : "C"}";
+        if (showUnit) weather += " ${userSettings.weatherUnit == "u" ? "F" : "C"}";
         return weather;
       }
     }
@@ -106,7 +106,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   void initState() {
     super.initState();
     // Seed cache from persisted settings so we show something immediately.
-    _cachedWeather = globalSettings.weatherTemperature;
+    _cachedWeather = userSettings.weatherTemperature;
 
     // Kick off the very first fetch.
     _triggerFetch();
@@ -130,7 +130,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (!globalSettings.showWeather) {
+    if (!userSettings.showWeather) {
       return Container(width: widget.width, height: 30, color: Colors.red);
     }
 
@@ -148,8 +148,8 @@ class _WeatherWidgetState extends State<WeatherWidget> {
             if (result.isNotEmpty) {
               // Persist the fresh result.
               _cachedWeather = result;
-              globalSettings.weatherTemperature = result;
-              Boxes.updateSettings("weather", globalSettings.weather);
+              userSettings.weatherTemperature = result;
+              Boxes.updateSettings("weather", userSettings.weather);
             }
           }
 
@@ -166,7 +166,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
           return InkWell(
             onTap: () {
-              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${globalSettings.weatherLatLong}");
+              WinUtils.open("https://www.accuweather.com/en/search-locations?query=${userSettings.weatherLatLong}");
             },
             child: Align(
               child: Text(
@@ -175,7 +175,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                 maxLines: 2,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight(globalSettings.theme.uiFontWeight),
+                  fontWeight: FontWeight(userSettings.theme.uiFontWeight),
                   height: 1.1,
                 ),
               ),

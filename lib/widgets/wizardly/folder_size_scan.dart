@@ -105,8 +105,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
   void initState() {
     redrawWidget = ValueNotifier<bool>(false);
 
-    if (globalSettings.args.contains("-wizardly")) {
-      currentFolder = globalSettings.args[0].replaceAll('"', '');
+    if (userSettings.args.contains("-wizardly")) {
+      currentFolder = userSettings.args[0].replaceAll('"', '');
     }
     super.initState();
   }
@@ -119,8 +119,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
-    final Color background = globalSettings.themeColors.background;
+    final Color accent = userSettings.themeColors.accentColor;
+    final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -425,7 +425,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: globalSettings.themeColors.background)),
+                child: Text("Ok", style: TextStyle(color: userSettings.themeColors.background)),
               ),
             ],
           );
@@ -448,7 +448,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: globalSettings.themeColors.background)),
+                child: Text("Ok", style: TextStyle(color: userSettings.themeColors.background)),
               ),
             ],
           );
@@ -519,7 +519,7 @@ class _FolderInfoState extends State<FolderInfo> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     String parentDirectory = widget.directory;
     if (parentDirectory.endsWith("\\")) parentDirectory = parentDirectory.substring(0, parentDirectory.length - 1);
     final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(parentDirectory);
@@ -615,7 +615,7 @@ class _FolderInfoState extends State<FolderInfo> {
                               actions: <Widget>[
                                 ElevatedButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  child: Text("Cancel", style: TextStyle(color: globalSettings.themeColors.background)),
+                                  child: Text("Cancel", style: TextStyle(color: userSettings.themeColors.background)),
                                 ),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -732,8 +732,7 @@ class _FolderInfoState extends State<FolderInfo> {
                                 actions: <Widget>[
                                   ElevatedButton(
                                     onPressed: () => Navigator.of(context).pop(),
-                                    child:
-                                        Text("Cancel", style: TextStyle(color: globalSettings.themeColors.background)),
+                                    child: Text("Cancel", style: TextStyle(color: userSettings.themeColors.background)),
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

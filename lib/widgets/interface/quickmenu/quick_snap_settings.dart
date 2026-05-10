@@ -66,10 +66,10 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
               Transform.scale(
                 scale: 0.8,
                 child: Switch(
-                  value: globalSettings.quickSnapOverlay,
+                  value: userSettings.quickSnapOverlay,
                   onChanged: (bool value) {
                     setState(() {
-                      globalSettings.quickSnapOverlay = value;
+                      userSettings.quickSnapOverlay = value;
                       Boxes.updateSettings('quickSnapOverlay', value);
                     });
                   },
@@ -160,7 +160,7 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
 
   Widget _buildList() {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -243,7 +243,7 @@ class _ZoneListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(
@@ -300,7 +300,7 @@ class _ZoneMiniPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: CustomPaint(
@@ -439,7 +439,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool isFreestyle = _zone.layoutType == QuickGridLayoutType.freestyle;
 
@@ -826,7 +826,7 @@ class _ZoneCanvasState extends State<_ZoneCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
@@ -1207,7 +1207,7 @@ class _ZoneFreestyleCanvasState extends State<_ZoneFreestyleCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return LayoutBuilder(
@@ -1668,7 +1668,7 @@ class _PctFieldState extends State<_PctField> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Expanded(
@@ -1765,7 +1765,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.remove_rounded,
             onTap: widget.value > 0 ? () => widget.onChanged(widget.value - 1) : null,
-            accent: globalSettings.themeColors.accentColor,
+            accent: userSettings.themeColors.accentColor,
           ),
           Expanded(
             child: Focus(
@@ -1784,7 +1784,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: globalSettings.themeColors.accentColor, width: 1.5),
+                    borderSide: BorderSide(color: userSettings.themeColors.accentColor, width: 1.5),
                   ),
                 ),
                 onChanged: (String v) {
@@ -1797,7 +1797,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.add_rounded,
             onTap: widget.value < 200 ? () => widget.onChanged(widget.value + 1) : null,
-            accent: globalSettings.themeColors.accentColor,
+            accent: userSettings.themeColors.accentColor,
           ),
         ],
       ),
@@ -1964,7 +1964,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Padding(
@@ -2007,7 +2007,7 @@ class _GridSettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(

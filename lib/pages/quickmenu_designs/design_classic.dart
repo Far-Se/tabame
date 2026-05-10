@@ -16,7 +16,7 @@ class MainMenuClassicWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<double> points = globalSettings.themeColors.panelOpacityPoints;
+    final List<double> points = userSettings.themeColors.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> colors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -39,8 +39,8 @@ class MainMenuClassicWidget extends StatelessWidget {
                   blendMode: BlendMode.dstIn,
                   shaderCallback: (Rect bounds) {
                     return LinearGradient(
-                      begin: panelAlignmentMap[globalSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                      end: panelAlignmentMap[globalSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                      begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
+                      end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
                       colors: colors,
                       stops: stops,
                     ).createShader(bounds);
@@ -50,18 +50,18 @@ class MainMenuClassicWidget extends StatelessWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .surface
-                            .withValues(alpha: globalSettings.activeBackdropPath.isNotEmpty ? 0.7 : 1.0),
+                            .withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 1.0),
                         gradient: LinearGradient(
                           colors: <Color>[
                             Theme.of(context)
                                 .colorScheme
                                 .surface
-                                .withValues(alpha: globalSettings.activeBackdropPath.isNotEmpty ? 0.8 : 1.0),
-                            Theme.of(context).colorScheme.surface.withAlpha(globalSettings.themeColors.gradientAlpha),
+                                .withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 1.0),
+                            Theme.of(context).colorScheme.surface.withAlpha(userSettings.themeColors.gradientAlpha),
                             Theme.of(context)
                                 .colorScheme
                                 .surface
-                                .withValues(alpha: globalSettings.activeBackdropPath.isNotEmpty ? 0.8 : 1.0),
+                                .withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 1.0),
                           ],
                           stops: const <double>[0, 0.4, 1],
                           end: Alignment.bottomRight,
@@ -71,11 +71,11 @@ class MainMenuClassicWidget extends StatelessWidget {
                         ]),
                     child: Stack(
                       children: <Widget>[
-                        if (globalSettings.themeColors.backdropType.isNotEmpty)
+                        if (userSettings.themeColors.backdropType.isNotEmpty)
                           Positioned.fill(
                               child: DesignBackdrop(
-                            path: globalSettings.activeBackdropPath,
-                            opacity: globalSettings.themeColors.backdropOpacity,
+                            path: userSettings.activeBackdropPath,
+                            opacity: userSettings.themeColors.backdropOpacity,
                           )),
                       ],
                     ),
@@ -90,7 +90,7 @@ class MainMenuClassicWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!globalSettings.bottomBarOnTop)
+                  if (!userSettings.bottomBarOnTop)
                     const Padding(
                       padding: EdgeInsets.fromLTRB(3, 3, 6, 3),
                       child: TopBar(),
@@ -99,8 +99,8 @@ class MainMenuClassicWidget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   const TaskBar(),
                   const Divider(thickness: 1, height: 1),
-                  if (!globalSettings.bottomBarOnTop) const PinnedAndTrayList(),
-                  if (globalSettings.taskManagerStats) const TaskbarStats(),
+                  if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (userSettings.taskManagerStats) const TaskbarStats(),
                   const BottomBar(),
                 ],
               ),

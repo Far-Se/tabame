@@ -777,7 +777,7 @@ class Win32 {
     popupSize.ref.cx = windowSize.width;
     popupSize.ref.cy = Globals.quickMenuCurrentHeight.toInt();
     // popupSize.ref.cy = Globals.heights.allSummed.toInt() + 20;
-    if (globalSettings.showQuickMenuAtTaskbarLevel == false) {
+    if (userSettings.showQuickMenuAtTaskbarLevel == false) {
       popupSize.ref.cy += 30;
     }
     popupSize.ref.cy += 3;
@@ -789,8 +789,8 @@ class Win32 {
     horizontalPosition = popupBounds.ref.left.toDouble();
     verticalPosition = popupBounds.ref.top.toDouble();
 
-    if (globalSettings.showQuickMenuAtTaskbarLevel == true) {
-      switch (QuickMenuDesigns.values[globalSettings.quickMenuDesign]) {
+    if (userSettings.showQuickMenuAtTaskbarLevel == true) {
+      switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
         case QuickMenuDesigns.classic:
           verticalPosition -= 30;
           break;

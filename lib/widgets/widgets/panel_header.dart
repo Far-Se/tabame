@@ -26,7 +26,7 @@ class PanelHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return !globalSettings.dragPopupsByIconOnly
+    return !userSettings.dragPopupsByIconOnly
         ? GestureDetector(
             behavior: HitTestBehavior.translucent,
             onPanStart: (DragStartDetails details) => windowManager.startDragging(),
@@ -74,9 +74,9 @@ class PanelHeader extends StatelessWidget {
                     fontSize: 13,
                     letterSpacing: 0.3,
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontFamily: globalSettings.theme.entryFontFamily,
-                    fontStyle: globalSettings.theme.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                    fontWeight: FontWeight(globalSettings.theme.entryFontWeight),
+                    fontFamily: userSettings.theme.entryFontFamily,
+                    fontStyle: userSettings.theme.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                    fontWeight: FontWeight(userSettings.theme.entryFontWeight),
                   ),
                 ),
               ),

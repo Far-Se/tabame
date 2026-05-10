@@ -54,7 +54,7 @@ class EmojiPickerTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     return TextField(
       controller: controller,
@@ -151,7 +151,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color borderColor = scheme.onSurface.withValues(alpha: 0.1);
 
     return ConstrainedBox(
@@ -592,20 +592,20 @@ class _EmojiTileState extends State<_EmojiTile> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _hovering
-                  ? globalSettings.themeColors.accentColor.withValues(alpha: 0.14)
-                  : globalSettings.themeColors.accentColor.withValues(alpha: 0.06),
+                  ? userSettings.themeColors.accentColor.withValues(alpha: 0.14)
+                  : userSettings.themeColors.accentColor.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: _hovering
-                    ? globalSettings.themeColors.accentColor.withValues(alpha: 0.34)
-                    : globalSettings.themeColors.accentColor.withValues(alpha: 0.10),
+                    ? userSettings.themeColors.accentColor.withValues(alpha: 0.34)
+                    : userSettings.themeColors.accentColor.withValues(alpha: 0.10),
               ),
             ),
             child: Text(
               widget.entry.char,
               style: TextStyle(
                 fontSize: 20,
-                color: _hovering ? globalSettings.themeColors.accentColor : widget.onSurface,
+                color: _hovering ? userSettings.themeColors.accentColor : widget.onSurface,
               ),
             ),
           ),

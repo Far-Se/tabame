@@ -14,7 +14,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return SingleChildScrollView(
@@ -31,7 +31,7 @@ class _HomeState extends State<Home> {
                   color: accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Image.asset(globalSettings.logo, width: 42),
+                child: Image.asset(userSettings.logo, width: 42),
               ),
               const SizedBox(width: 20),
               Column(
@@ -158,7 +158,7 @@ class _HomeState extends State<Home> {
               ),
             ),
             sizedImageBuilder: (MarkdownImageConfig config) {
-              if (config.uri.path == "logo") return Image.asset(globalSettings.logo, width: 20);
+              if (config.uri.path == "logo") return Image.asset(userSettings.logo, width: 20);
 
               const Map<String, IconData> icons = <String, IconData>{
                 "quickMenu": Icons.apps,

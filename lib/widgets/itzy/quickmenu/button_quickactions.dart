@@ -69,7 +69,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
   VoidCallback? onStateChanged,
 }) {
   final ThemeData theme = Theme.of(context);
-  final Color accent = globalSettings.themeColors.accentColor;
+  final Color accent = userSettings.themeColors.accentColor;
   final Color onSurface = theme.colorScheme.onSurface;
   final List<QuickActionMenuEntry> entries = <QuickActionMenuEntry>[];
   for (int index = 0; index < Boxes.quickActions.length; index++) {
@@ -538,7 +538,7 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
 
     final List<QuickActionMenuEntry> entries = buildQuickActionMenuEntries(
       context,
@@ -641,7 +641,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
               final GlobalKey buttonKey = GlobalKey();
               return _QuickActionListItem(
                 name: displayName,
-                accent: globalSettings.themeColors.accentColor,
+                accent: userSettings.themeColors.accentColor,
                 onSurface: widget.onSurface,
                 onTap: () => triggerFirstTappableDescendant(buttonKey.currentContext),
                 leading: Container(
@@ -690,7 +690,7 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
               ]),
         builder: (BuildContext context, AsyncSnapshot<List<dynamic>> out) {
           if (!out.hasData) return Container();
-          final Color accent = globalSettings.themeColors.accentColor;
+          final Color accent = userSettings.themeColors.accentColor;
           final Color onSurface = Theme.of(context).colorScheme.onSurface;
           final List<AudioDevice>? devices = out.data![0];
           final AudioDevice defaultDevice = out.data![1];
@@ -718,9 +718,9 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
                   onTap: () {
                     Audio.setDefaultDevice(
                       device.id,
-                      console: globalSettings.audioConsole,
-                      multimedia: globalSettings.audioMultimedia,
-                      communications: globalSettings.audioCommunications,
+                      console: userSettings.audioConsole,
+                      multimedia: userSettings.audioMultimedia,
+                      communications: userSettings.audioCommunications,
                     ).then((int value) {
                       if (mounted) {
                         setState(() {});
@@ -760,7 +760,7 @@ class VolumeSliderState extends State<VolumeSlider> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return MouseScrollWidget(
       child: Padding(
@@ -874,7 +874,7 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? globalSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+          color: _hovered ? userSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: GestureDetector(
@@ -891,7 +891,7 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
                     height: 14,
                     margin: EdgeInsets.only(right: _hovered ? 7 : 0),
                     decoration: BoxDecoration(
-                      color: globalSettings.themeColors.accentColor,
+                      color: userSettings.themeColors.accentColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -931,7 +931,7 @@ class _CompactIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = globalSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(

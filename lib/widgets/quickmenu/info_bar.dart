@@ -13,8 +13,8 @@ class BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     Debug.add("QuickMenu: BottomBar");
     Globals.heights.infoBar = 30;
-    if (!globalSettings.showSystemUsage && (globalSettings.showTrayBar || !globalSettings.showTrayBar)) {
-      if (!globalSettings.showWeather) {
+    if (!userSettings.showSystemUsage && (userSettings.showTrayBar || !userSettings.showTrayBar)) {
+      if (!userSettings.showWeather) {
         return const TimeWidget(inline: true);
       } else {
         return LayoutBuilder(
@@ -54,10 +54,10 @@ class BottomBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const TimeWidget(inline: true),
-              if (!globalSettings.showSystemUsage) const SizedBox(width: 10),
+              if (!userSettings.showSystemUsage) const SizedBox(width: 10),
               const WeatherWidget(width: 70, showUnit: true),
-              if (globalSettings.showSystemUsage) const SizedBox(width: 10),
-              if (globalSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()),
+              if (userSettings.showSystemUsage) const SizedBox(width: 10),
+              if (userSettings.showSystemUsage) const SizedBox(width: 45, child: SystemUsageWidget()),
             ],
           )),
     );
