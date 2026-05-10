@@ -408,7 +408,7 @@ Future<void> registerAll() async {
     }
   });
   //register
-  await Boxes.registerBoxes();
+  await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? false : true);
   Debug.add("Registered: Boxes");
   //Schedule Theme
   globalSettings.setScheduleThemeChange();

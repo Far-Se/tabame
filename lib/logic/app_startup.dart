@@ -82,7 +82,11 @@ class AppStartup {
   static void registerHooks() {
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
-      NativeHooks.registerCallHandler();
+      if (globalSettings.args.contains("-interface") && Boxes.remap.isEmpty) {
+        NativeHooks.registerCallHandler();
+      } else {
+        NativeHooks.registerCallHandler();
+      }
     }
   }
 

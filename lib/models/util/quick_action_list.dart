@@ -19,6 +19,7 @@ import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
+import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_launcher.dart';
 import '../../widgets/itzy/quickmenu/button_media_control.dart';
@@ -30,7 +31,6 @@ import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
-import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
@@ -245,6 +245,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "FancyShotFreezeButton",
     icon: Icons.center_focus_strong,
     widget: () => const FancyShotButton(freeze: true),
+  ),
+  "PhotoEditorButton": QuickAction(
+    name: "PhotoEditorButton",
+    icon: Icons.photo_camera_back_outlined,
+    widget: () => const PhotoEditorButton(),
   ),
   "PinWindowButton": QuickAction(
     name: "PinWindowButton",

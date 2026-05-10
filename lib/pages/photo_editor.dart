@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes/boxes_base.dart';
+import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
@@ -26,25 +28,25 @@ Future<void> startPhotoEditor(List<String> arguments) async {
 
   final int fileIndex = arguments.indexOf('-file');
   final String? imageFilePath = fileIndex >= 0 && fileIndex + 1 < arguments.length ? arguments[fileIndex + 1] : null;
-  if (imageFilePath == null || imageFilePath.isEmpty) {
-    throw ArgumentError('Missing -file argument for photo editor.');
+
+  Uint8List? initialImageBytes;
+  img.Image? image;
+  String effectiveFilePath = imageFilePath ?? '';
+
+  if (imageFilePath != null && imageFilePath.isNotEmpty) {
+    final File imageFile = File(imageFilePath);
+    if (imageFile.existsSync()) {
+      initialImageBytes = await imageFile.readAsBytes();
+      image = img.decodeImage(initialImageBytes);
+    }
   }
 
-  final File imageFile = File(imageFilePath);
-  if (!imageFile.existsSync()) {
-    throw ArgumentError('Photo editor file does not exist: $imageFilePath');
-  }
-
-  final Uint8List initialImageBytes = await imageFile.readAsBytes();
-  final img.Image? image = img.decodeImage(initialImageBytes);
-  if (image == null) {
-    throw ArgumentError('Could not decode image: $imageFilePath');
-  }
-
-  final Size initialSize = Size(
-    (image.width + 360).clamp(980, 1800).toDouble(),
-    (image.height + 240).clamp(720, 1200).toDouble(),
-  );
+  final Size initialSize = image != null
+      ? Size(
+          (image.width + 360).clamp(980, 1800).toDouble(),
+          (image.height + 240).clamp(720, 1200).toDouble(),
+        )
+      : const Size(1280, 800);
 
   const WindowOptions windowOptions = WindowOptions(
     center: true,
@@ -58,7 +60,7 @@ Future<void> startPhotoEditor(List<String> arguments) async {
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     await Boxes.registerBoxes(justLoad: true);
     await windowManager.setAsFrameless();
-    await windowManager.setHasShadow(true);
+    await windowManager.setHasShadow(false);
     await windowManager.setMinimumSize(const Size(980, 720));
     await windowManager.setSize(initialSize);
     await windowManager.show();
@@ -67,10 +69,10 @@ Future<void> startPhotoEditor(List<String> arguments) async {
 
   runApp(
     _StandalonePhotoEditorApp(
-      filePath: imageFilePath,
+      filePath: effectiveFilePath,
       initialImageBytes: initialImageBytes,
-      imageW: image.width,
-      imageH: image.height,
+      imageW: image?.width,
+      imageH: image?.height,
     ),
   );
 }
@@ -568,18 +570,18 @@ Rect _fitImageRect(Size viewportSize, ui.Image? image, {Rect? override}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class PhotoEditorView extends StatefulWidget {
-  final Uint8List initialImageBytes;
-  final int imageW;
-  final int imageH;
+  final Uint8List? initialImageBytes;
+  final int? imageW;
+  final int? imageH;
   final String filePath;
   final bool standaloneMode;
   final VoidCallback? onBack;
 
   const PhotoEditorView({
     super.key,
-    required this.initialImageBytes,
-    required this.imageW,
-    required this.imageH,
+    this.initialImageBytes,
+    this.imageW,
+    this.imageH,
     required this.filePath,
     this.standaloneMode = false,
     this.onBack,
@@ -592,7 +594,8 @@ class PhotoEditorView extends StatefulWidget {
 class _PhotoEditorViewState extends State<PhotoEditorView> {
   final EditorController _ctrl = EditorController();
   final FocusNode _focusNode = FocusNode();
-  late final Uint8List _originalImageBytes;
+  late Uint8List? _originalImageBytes;
+  late String _currentFilePath;
   ui.Image? _backgroundImage;
   List<FancyShotProfile> _editorFancyShotProfiles = <FancyShotProfile>[];
   String? _selectedEditorPresetName;
@@ -622,21 +625,27 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   @override
   void initState() {
     super.initState();
-    _originalImageBytes = Uint8List.fromList(widget.initialImageBytes);
+    _currentFilePath = widget.filePath;
+    _originalImageBytes = widget.initialImageBytes != null ? Uint8List.fromList(widget.initialImageBytes!) : null;
     _editorFancyShotProfiles = FancyShot.loadProfiles();
     _ctrl.addListener(_handleControllerChanged);
-    _decodeBackground();
+    if (_originalImageBytes != null) {
+      _decodeBackground();
+    }
     WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
       await Future<void>.delayed(const Duration(milliseconds: 100), () async {
         final Size value = await windowManager.getSize();
         await windowManager.setSize(Size(value.width + 1, value.height + 1));
         await windowManager.setSize(Size(value.width, value.height));
+        Win32.activateWindow(Win32.hWnd);
       });
     });
   }
 
   Future<void> _decodeBackground() async {
-    await _decodeBackgroundBytes(_originalImageBytes);
+    if (_originalImageBytes != null) {
+      await _decodeBackgroundBytes(_originalImageBytes!);
+    }
   }
 
   Future<void> _decodeBackgroundBytes(Uint8List bytes) async {
@@ -655,8 +664,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
     });
 
     try {
-      Uint8List bytes = _originalImageBytes;
-      if (normalizedName != null) {
+      Uint8List? bytes = _originalImageBytes;
+      if (normalizedName != null && bytes != null) {
         FancyShotProfile? preset;
         for (final FancyShotProfile profile in _editorFancyShotProfiles) {
           if (profile.name == normalizedName) {
@@ -667,14 +676,14 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
         preset ??= FancyShot.profileByName(normalizedName);
         if (preset != null) {
           bytes = await FancyShot.renderPresetCapture(
-            captureBytes: _originalImageBytes,
+            captureBytes: _originalImageBytes!,
             profile: preset,
           );
         }
       }
 
       if (!mounted) return;
-      await _decodeBackgroundBytes(bytes);
+      await _decodeBackgroundBytes(bytes!);
     } finally {
       if (mounted) {
         setState(() => _presetBusy = false);
@@ -745,6 +754,72 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
         t == EditorTool.imageElement;
   }
 
+  Future<void> _handleOpenFile() async {
+    final OpenFilePicker picker = OpenFilePicker()
+      ..filterSpecification = <String, String>{
+        'Image Files (*.png; *.jpg; *.jpeg; *.bmp; *.gif)': '*.png;*.jpg;*.jpeg;*.bmp;*.gif',
+        'All Files': '*.*'
+      }
+      ..defaultFilterIndex = 0
+      ..title = 'Select an image';
+
+    final File? result = picker.getFile();
+    if (result == null) return;
+
+    try {
+      final Uint8List bytes = await result.readAsBytes();
+      final img.Image? decoded = img.decodeImage(bytes);
+      if (decoded == null) return;
+
+      setState(() {
+        _originalImageBytes = bytes;
+        _currentFilePath = result.path;
+      });
+
+      await _decodeBackgroundBytes(bytes);
+
+      _ctrl.clearAll();
+      _ctrl.resetStepCounter();
+
+      final Size newSize = Size(
+        (decoded.width + 360).clamp(980, 1800).toDouble(),
+        (decoded.height + 240).clamp(720, 1200).toDouble(),
+      );
+      await windowManager.setSize(newSize);
+      await windowManager.center();
+    } catch (e) {
+      debugPrint('Error loading image: $e');
+    }
+  }
+
+  Widget _buildNoPhotoPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.photo_library_outlined, size: 64, color: Colors.white.withValues(alpha: 0.1)),
+          const SizedBox(height: 16),
+          const Text(
+            'No photo loaded',
+            style: TextStyle(color: Colors.white38, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A9EFF).withValues(alpha: 0.8),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: _handleOpenFile,
+            icon: const Icon(Icons.folder_open_rounded, size: 18),
+            label: const Text('Open an Image'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Rect _imageRect(Size viewSize) {
     return _fitImageRect(viewSize, _backgroundImage);
   }
@@ -777,13 +852,14 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
             future: windowManager.isMaximized(),
             builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
               if (snapshot.data == null) return const SizedBox.shrink();
+              final bool maximized = snapshot.data ?? false;
               return SafeArea(
-                minimum: snapshot.data == true ? const EdgeInsets.all(0) : const EdgeInsets.all(12).copyWith(top: 0),
+                minimum: maximized ? const EdgeInsets.all(0) : const EdgeInsets.all(12).copyWith(top: 0),
                 child: DragToResizeArea(
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF11151D),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: maximized ? null : BorderRadius.circular(18),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       boxShadow: <BoxShadow>[
                         BoxShadow(
@@ -796,10 +872,11 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                     child: Column(
                       children: <Widget>[
                         _EditorWindowBar(
-                          filePath: widget.filePath,
+                          filePath: _currentFilePath,
                           onBack: _handleBackAction,
                           standaloneMode: widget.standaloneMode,
                           resetState: () => setState(() {}),
+                          onOpenFile: _handleOpenFile,
                         ),
                         Expanded(
                           child: Row(
@@ -824,13 +901,15 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                           children: <Widget>[
                                             Positioned.fill(
                                               child: _backgroundImage == null
-                                                  ? const Center(
-                                                      child: SizedBox(
-                                                        width: 40,
-                                                        height: 40,
-                                                        child: CircularProgressIndicator(),
-                                                      ),
-                                                    )
+                                                  ? (_originalImageBytes == null
+                                                      ? _buildNoPhotoPlaceholder()
+                                                      : const Center(
+                                                          child: SizedBox(
+                                                            width: 40,
+                                                            height: 40,
+                                                            child: CircularProgressIndicator(),
+                                                          ),
+                                                        ))
                                                   : GestureDetector(
                                                       behavior: HitTestBehavior.translucent,
                                                       onPanStart: (DragStartDetails details) =>
@@ -1951,12 +2030,14 @@ class _EditorWindowBar extends StatelessWidget {
     required this.onBack,
     required this.standaloneMode,
     required this.resetState,
+    required this.onOpenFile,
   });
 
   final String filePath;
   final VoidCallback onBack;
   final bool standaloneMode;
   final VoidCallback resetState;
+  final VoidCallback onOpenFile;
 
   @override
   Widget build(BuildContext context) {
@@ -2005,6 +2086,12 @@ class _EditorWindowBar extends StatelessWidget {
                       style: const TextStyle(color: Colors.white38, fontSize: 11),
                     ),
                   ),
+                  _WindowBarButton(
+                    icon: Icons.folder_open_rounded,
+                    tooltip: 'Open Image',
+                    onTap: onOpenFile,
+                  ),
+                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -2721,15 +2808,15 @@ class _EditorPresetButton extends StatelessWidget {
 class _StandalonePhotoEditorApp extends StatelessWidget {
   const _StandalonePhotoEditorApp({
     required this.filePath,
-    required this.initialImageBytes,
-    required this.imageW,
-    required this.imageH,
+    this.initialImageBytes,
+    this.imageW,
+    this.imageH,
   });
 
   final String filePath;
-  final Uint8List initialImageBytes;
-  final int imageW;
-  final int imageH;
+  final Uint8List? initialImageBytes;
+  final int? imageW;
+  final int? imageH;
 
   @override
   Widget build(BuildContext context) {

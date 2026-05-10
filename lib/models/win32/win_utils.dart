@@ -1572,6 +1572,27 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       print("Error during file cleanup: $e");
     }
   }
+
+  static void setSortByDateModifiedDesc(String folderPath) {
+    // Make folder a "system folder" so desktop.ini is respected
+    final Pointer<Utf16> pathPtr = folderPath.toNativeUtf16();
+    SetFileAttributes(pathPtr, FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM);
+    calloc.free(pathPtr);
+
+    final String iniPath = '$folderPath\\desktop.ini';
+    const String iniContent = '[.ShellClassInfo]\r\n'
+        'FolderType=Pictures\r\n'
+        '\r\n'
+        '[ViewState]\r\n'
+        'Mode=4\r\n'
+        'Vid={137E7700-3573-11CF-AE69-08002B2E1262}\r\n';
+
+    File(iniPath).writeAsStringSync(iniContent);
+
+    final Pointer<Utf16> iniPtr = iniPath.toNativeUtf16();
+    SetFileAttributes(iniPtr, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
+    calloc.free(iniPtr);
+  }
 }
 
 class ClipboardExtension {

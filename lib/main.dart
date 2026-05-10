@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'logic/app_startup.dart';
+import 'models/globals.dart';
 import 'pages/color_picker/color_picker.dart';
 import 'pages/msgbox.dart';
 import 'pages/photo_editor.dart';
@@ -18,16 +19,13 @@ import 'widgets/widgets/focus_fix.dart';
 Future<void> main(List<String> arguments) async {
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
-  final bool wantsScreenCapture = arguments.contains("-capture") || arguments.contains("-screenCapture");
-  final bool freezeScreenCapture = arguments.contains("-freeze");
-  // if (kDebugMode && true && arguments.isEmpty) return startScreenCapture();
   if (arguments.contains("-spotlight")) return startSpotlight();
-  if (wantsScreenCapture) return startScreenCapture(freezeMode: freezeScreenCapture);
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);
+  if (arguments.contains("-screenCapture")) return startScreenCapture();
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);
-
+  if (arguments.contains("-interface")) Globals.currentPage = Pages.interface;
   await AppStartup.registerServices();
 
   if (await AppStartup.checkAdminAndRestart()) return;

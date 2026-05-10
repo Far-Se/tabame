@@ -192,6 +192,11 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         _errorMessage = e is FormatException ? e.message : 'Unable to capture and scan the QR code.';
       });
     } finally {
+      final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
+      final File captureFile = File(capturePath);
+      if (captureFile.existsSync()) {
+        captureFile.deleteSync();
+      }
       if (mounted) {
         setState(() {
           _busy = false;
