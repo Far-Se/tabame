@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -162,7 +160,7 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
     setClipboardText(clipText);
 
     // Save grid.json next to the executable
-    _saveGridJson(capture);
+    Win32Helper.saveGridJson(capture);
 
     setState(() {
       _copied = true;
@@ -233,35 +231,6 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
     top = top.clamp(bounds.top.toDouble(), (bounds.bottom - (_pickerHeight + (_cursorInset / 2))).toDouble());
 
     windowManager.setPosition(Offset(left, top), animate: false);
-  }
-
-  // ── Write grid.json ───────────────────────────────────────────────────────
-
-  void _saveGridJson(CaptureResult capture) {
-    try {
-      final List<dynamic> rows = List<dynamic>.generate(capture.grid.length, (int row) {
-        return List<dynamic>.generate(capture.grid[row].length, (int col) {
-          final PixelColor px = capture.grid[row][col];
-          return <String, Object>{'hex': px.hex, 'r': px.r, 'g': px.g, 'b': px.b};
-        });
-      });
-
-      final Map<String, Object> payload = <String, Object>{
-        'cursor': <String, int>{'x': capture.cursorX, 'y': capture.cursorY},
-        'center': <String, Object>{
-          'hex': capture.center.hex,
-          'r': capture.center.r,
-          'g': capture.center.g,
-          'b': capture.center.b,
-        },
-        'grid': rows,
-      };
-
-      final String exeDir = WinUtils.getTabameAppDataFolder();
-      File('$exeDir/grid.json').writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
-    } catch (_) {
-      // Non-fatal — just skip the file write.
-    }
   }
 
   // ── Exit ──────────────────────────────────────────────────────────────────

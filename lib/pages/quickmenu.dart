@@ -648,8 +648,10 @@ class QuickMenuState extends State<QuickMenu>
                           onEnter: (PointerEnterEvent event) async {
                             Globals.isWindowActive = true;
                             // AllowSetForegroundWindow(pid);
-                            Win32.activateWindow(Win32.hWnd);
-                            _requestQuickMenuFocus();
+                            if (Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+                              Win32.activateWindow(Win32.hWnd);
+                              _requestQuickMenuFocus();
+                            }
                             // await WindowManager.instance.focus();
                           },
                           onHover: (PointerHoverEvent event) {

@@ -103,16 +103,34 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             SwitchListTile(
               title: const Text("Show TaskManager System Usage",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("If Taskmanager is open, put it on at the bottom of the screen",
+              subtitle: const Text("If TaskManger is open, put it on at the bottom of the screen",
                   style: TextStyle(fontSize: 12)),
               secondary: const Icon(Icons.query_stats, size: 20),
               value: userSettings.taskManagerStats,
               onChanged: (bool newValue) async {
                 userSettings.taskManagerStats = newValue;
                 await Boxes.updateSettings("taskManagerStats", userSettings.taskManagerStats);
+                if (newValue == false) {
+                  userSettings.autoOpenTaskManager = false;
+                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                }
                 if (mounted) setState(() {});
               },
             ),
+            if (userSettings.taskManagerStats)
+              SwitchListTile(
+                title:
+                    const Text("Auto start TaskManager", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                subtitle: const Text("Open TaskManager on startup so you can always see PC stats",
+                    style: TextStyle(fontSize: 12)),
+                secondary: const Icon(Icons.dataset_linked, size: 20),
+                value: userSettings.autoOpenTaskManager,
+                onChanged: (bool newValue) async {
+                  userSettings.autoOpenTaskManager = newValue;
+                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                  if (mounted) setState(() {});
+                },
+              ),
             SwitchListTile(
               title: const Text("Tray Bar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: 12)),

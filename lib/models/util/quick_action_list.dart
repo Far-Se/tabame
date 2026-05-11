@@ -15,6 +15,7 @@ import '../../widgets/itzy/quickmenu/button_cli_book.dart';
 import '../../widgets/itzy/quickmenu/button_clipboard_history.dart';
 import '../../widgets/itzy/quickmenu/button_closeonfocus.dart';
 import '../../widgets/itzy/quickmenu/button_color_picker.dart';
+import '../../widgets/itzy/quickmenu/button_color_picker_instant.dart';
 import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
@@ -225,6 +226,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "ColorPickerButton",
     icon: Icons.palette_outlined,
     widget: () => const ColorPickerButton(),
+  ),
+  "ColorPickerInstantButton": QuickAction(
+    name: "ColorPickerInstantButton",
+    icon: Icons.colorize_outlined,
+    widget: () => const ColorPickerInstantButton(),
   ),
   "ScreenDrawButton": QuickAction(
     name: "ScreenDrawButton",

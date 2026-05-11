@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
+import '../../pages/screen_capture.dart';
 import '../globals.dart';
 import '../settings.dart';
 import '../win32/keys.dart';
@@ -657,25 +658,28 @@ class HotKeyInfo {
         WinUtils.startTabame(closeCurrent: false, arguments: "-spotlight");
       }
     },
-    "OpenScreenCapture": () {
-      final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-      } else {
-        // WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
-        Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
-        QuickMenuFunctions.refreshQuickMenu();
-      }
+    "OpenLiveFancyShot": () {
+      // WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
+      Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
+      QuickMenuFunctions.refreshQuickMenu();
     },
-    "OpenScreenCaptureFreeze": () {
-      final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-      } else {
-        Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
-        QuickMenuFunctions.refreshQuickMenu();
-        // WinUtils.startTabame(closeCurrent: false, arguments: "-capture -freeze");
+    "OpenFrozenFancyShot": () async {
+      Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
       }
+      await FancyShotCaptureWidget.captureScreenshots();
+      QuickMenuFunctions.refreshQuickMenu();
+    },
+    "OpenColorPickerInstant": () async {
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+
+      await FancyShotCaptureWidget.captureScreenshots();
+      QuickMenuFunctions.refreshQuickMenu();
     },
     "ShowStartMenu": () {
       int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);

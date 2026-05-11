@@ -1,7 +1,13 @@
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:win32/win32.dart';
+
+import '../../models/classes/boxes/quick_menu_box.dart';
+import '../../models/win32/win_utils.dart';
 
 /// Pixel data for one grid cell.
 class PixelColor {
@@ -134,6 +140,67 @@ class Win32Helper {
     calloc.free(pt);
     calloc.free(mi);
     return result;
+  }
+
+  static void saveGridJson(CaptureResult capture) {
+    try {
+      final List<dynamic> rows = List<dynamic>.generate(capture.grid.length, (int row) {
+        return List<dynamic>.generate(capture.grid[row].length, (int col) {
+          final PixelColor px = capture.grid[row][col];
+          return <String, Object>{'hex': px.hex, 'r': px.r, 'g': px.g, 'b': px.b};
+        });
+      });
+
+      final Map<String, Object> payload = <String, Object>{
+        'cursor': <String, int>{'x': capture.cursorX, 'y': capture.cursorY},
+        'center': <String, Object>{
+          'hex': capture.center.hex,
+          'r': capture.center.r,
+          'g': capture.center.g,
+          'b': capture.center.b,
+        },
+        'grid': rows,
+      };
+
+      final String exeDir = WinUtils.getTabameAppDataFolder();
+      File('$exeDir/grid.json').writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
+    } catch (_) {
+      // Non-fatal — just skip the file write.
+    }
+  }
+
+  static Future<void> instantColorPicker() async {
+    if (QuickMenuFunctions.isQuickMenuVisible) {
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/beep.mp3');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    final CaptureResult capture = Win32Helper.captureGrid();
+    Win32Helper.saveGridJson(capture);
+    QuickMenuFunctions.openQuickMenuWithAction("Color Picker", center: true);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.dispose();
   }
 }
 

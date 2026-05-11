@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
 import 'dart:ffi' hide Size;
 
@@ -61,6 +61,36 @@ int GetWindowLong(int hWnd, int nIndex) => _GetWindowLong(hWnd, nIndex);
 
 final int Function(int, int) _GetWindowLong =
     _user32.lookupFunction<Int32 Function(IntPtr, Int32), int Function(int, int)>('GetWindowLongW');
+
+typedef _DrawIconExNative = Int32 Function(
+  IntPtr hdc,
+  Int32 xLeft,
+  Int32 yTop,
+  IntPtr hIcon,
+  Int32 cxWidth,
+  Int32 cyHeight,
+  Uint32 istepIfAniCur,
+  IntPtr hbrFlickerFreeDraw,
+  Uint32 diFlags,
+);
+typedef DrawIconExDart = int Function(
+  int hdc,
+  int xLeft,
+  int yTop,
+  int hIcon,
+  int cxWidth,
+  int cyHeight,
+  int istepIfAniCur,
+  int hbrFlickerFreeDraw,
+  int diFlags,
+);
+const int DI_NORMAL = 0x0003;
+final DrawIconExDart DrawIconEx = _user32.lookupFunction<_DrawIconExNative, DrawIconExDart>('DrawIconEx');
+
+typedef MessageBeepNative = Int32 Function(Uint32 uType);
+typedef MessageBeepDart = int Function(int uType);
+
+final MessageBeepDart MessageBeep = _user32.lookupFunction<MessageBeepNative, MessageBeepDart>('MessageBeep');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // kernel32.dll

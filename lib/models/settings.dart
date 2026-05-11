@@ -65,6 +65,7 @@ class Settings {
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool taskManagerStats = false;
+  bool autoOpenTaskManager = false;
   bool trktivityEnabled = false;
   bool runAsAdministrator = false;
   bool _hideTabameOnUnfocus = true;
@@ -408,7 +409,7 @@ Future<void> registerAll() async {
     }
   });
   //register
-  await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? false : true);
+  await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? true : false);
   Debug.add("Registered: Boxes");
   //Schedule Theme
   userSettings.setScheduleThemeChange();

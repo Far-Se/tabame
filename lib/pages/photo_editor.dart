@@ -660,6 +660,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
         await windowManager.setSize(Size(value.width + 1, value.height + 1));
         await windowManager.setSize(Size(value.width, value.height));
         Win32.activateWindow(Win32.hWnd);
+        Win32.setCenter(useMouse: true);
       });
     });
   }

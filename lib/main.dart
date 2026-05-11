@@ -27,7 +27,6 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);
-  if (arguments.contains("-interface")) Globals.currentPage = Pages.interface;
   await AppStartup.registerServices();
 
   if (await AppStartup.checkAdminAndRestart()) return;

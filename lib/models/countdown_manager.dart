@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
-import 'package:win32/win32.dart';
+import 'package:just_audio/just_audio.dart';
 
 class CountDown {
   int minutes;
@@ -82,17 +83,29 @@ class CountdownManager extends ChangeNotifier {
     });
   }
 
-  void _finish() {
+  void _finish() async {
     _timer?.cancel();
     _isRunning = false;
     _isPaused = false;
     _totalSecondsRemaining = 0;
     notifyListeners();
 
-    // Audible notification
-    for (int i = 0; i < 3; i++) {
-      Beep(100 + (i * 50), 200);
-    }
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/beep.mp3');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.dispose();
   }
 
   @override

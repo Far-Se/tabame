@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/globals.dart';
-import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../pages/screen_capture.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class PhotoEditorButton extends StatelessWidget {
@@ -30,15 +30,15 @@ class FancyShotButton extends StatelessWidget {
     return QuickActionItem(
       message: freeze ? "Open Frozen Fancyshot" : "Open Live Fancyshot",
       icon: freeze ? const Icon(Icons.center_focus_strong) : const Icon(Icons.center_focus_strong_outlined),
-      onTap: () {
-        final int windowHwnd = Win32.findWindow("Tabame Screen Capture");
-        if (windowHwnd != 0) {
-          Win32.closeWindow(windowHwnd);
-        } else {
-          // WinUtils.startTabame(closeCurrent: false, arguments: freeze ? "-capture -freeze" : "-capture");
-          Globals.quickMenuPage = freeze ? QuickMenuPage.fancyShotFreeze : QuickMenuPage.fancyShotLive;
-          QuickMenuFunctions.refreshQuickMenu();
+      onTap: () async {
+        if (QuickMenuFunctions.isQuickMenuVisible) {
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          await Future<void>.delayed(const Duration(milliseconds: 50));
         }
+        await FancyShotCaptureWidget.captureScreenshots();
+        // WinUtils.startTabame(closeCurrent: false, arguments: freeze ? "-capture -freeze" : "-capture");
+        Globals.quickMenuPage = freeze ? QuickMenuPage.fancyShotFreeze : QuickMenuPage.fancyShotLive;
+        QuickMenuFunctions.refreshQuickMenu();
       },
     );
   }

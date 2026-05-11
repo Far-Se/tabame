@@ -11,6 +11,7 @@ import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
 import '../../win32/win_utils.dart';
+import '../../win32/win32.dart';
 import '../../win32/window.dart';
 import '../app_items.dart';
 import '../hotkeys.dart';
@@ -71,6 +72,7 @@ class Boxes {
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("taskManagerStats", false);
+      await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -139,6 +141,7 @@ class Boxes {
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? userSettings.autoCheckForUpdates
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? userSettings.wallpapersFolder
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? userSettings.runAsAdministrator
+      ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? userSettings.autoOpenTaskManager
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? userSettings.hideTabameOnUnfocus
       ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? userSettings.lastQuickSnapZoneId
       ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? userSettings.quickActionsAtBottom
@@ -265,6 +268,16 @@ class Boxes {
 
     if (userSettings.page == TPage.quickmenu) {
       if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
+      if (userSettings.autoOpenTaskManager) {
+        if (Win32.getProcessIdsByName('taskmgr.exe').isEmpty) {
+          unawaited(Process.start(
+            'cmd',
+            <String>['/c', 'start', '', '/min', 'taskmgr'],
+            mode: ProcessStartMode.detached,
+            runInShell: false,
+          ));
+        }
+      }
       Debug.add("Registered: Tasks");
     }
 
