@@ -114,3 +114,32 @@ static std::vector<WindowData> GetTaskbarWindowsUIA() {
     pTaskList->Release();
     return results;
 }
+
+RECT GetFocusedElementRect() {
+    IUIAutomation* pAutomation = nullptr;
+    IUIAutomationElement* pFocusedElement = nullptr;
+    RECT rect = {};
+
+    CoInitialize(nullptr);
+    CoCreateInstance(
+        CLSID_CUIAutomation, nullptr,
+        CLSCTX_INPROC_SERVER,
+        IID_IUIAutomation,
+        (void**)&pAutomation
+    );
+
+    if (pAutomation) {
+        pAutomation->GetFocusedElement(&pFocusedElement);
+
+        if (pFocusedElement) {
+            RECT bounds;
+            pFocusedElement->get_CurrentBoundingRectangle(&bounds);
+            rect = bounds;
+            pFocusedElement->Release();
+        }
+        pAutomation->Release();
+    }
+
+    CoUninitialize();
+    return rect;
+}

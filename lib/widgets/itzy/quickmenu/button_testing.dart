@@ -37,6 +37,7 @@ class TestingButton extends StatefulWidget {
 }
 
 class _TestingButtonState extends State<TestingButton> {
+  Timer? timer;
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
@@ -47,7 +48,16 @@ class _TestingButtonState extends State<TestingButton> {
           final String res = await WindowsAppButton.getCacheInKb();
           WinUtils.msgBox("Cache", "${WindowsAppButton.iconFutureCache.length} Cache: $res ");
         }
-
+        if (timer != null) {
+          timer?.cancel();
+          timer = null;
+          return;
+        }
+        timer = Timer.periodic(const Duration(milliseconds: 1000), (Timer e) async {
+          final WinRect out = await getFocusedElementRect();
+          print(out);
+        });
+        return;
         final List<AppxPackage> packages = getAllAppxPackages();
         print('Found ${packages.length} WindowsApps packages:\n');
         for (final AppxPackage p in packages) {

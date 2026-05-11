@@ -180,6 +180,15 @@ EMap MonitorCaptureToMap(const MonitorCaptureResult &capture) {
   return m;
 }
 
+EMap RectToMap(const RECT &rect) {
+  EMap m;
+  m[EVal("left")] = EVal(static_cast<int>(rect.left));
+  m[EVal("top")] = EVal(static_cast<int>(rect.top));
+  m[EVal("right")] = EVal(static_cast<int>(rect.right));
+  m[EVal("bottom")] = EVal(static_cast<int>(rect.bottom));
+  return m;
+}
+
 } // namespace Encode
 
 // ===========================================================================
@@ -801,6 +810,11 @@ void ShutdownTaskbarUiaH(Tabamewin32Plugin *, const MethodCall &,
   OK(result, true);
 }
 
+void GetFocusedElementRectH(Tabamewin32Plugin *, const MethodCall &,
+                            MethodResult result) {
+  OK(result, EVal(Encode::RectToMap(GetFocusedElementRect())));
+}
+
 // ===== Extended tray =====
 void EnumAllTrayIconsH(Tabamewin32Plugin *, const MethodCall &,
                        MethodResult result) {
@@ -1042,6 +1056,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"setDesktopWallpaper", Handlers::SetDesktopWallpaperH},
       // Taskbar UIA
       {"getTaskbarItemHelpTexts", Handlers::GetTaskbarItemHelpTextsH},
+      {"getFocusedElementRect", Handlers::GetFocusedElementRectH},
       {"shutdownTaskbarUia", Handlers::ShutdownTaskbarUiaH},
       // Extended tray
       {"enumAllTrayIcons", Handlers::EnumAllTrayIconsH},

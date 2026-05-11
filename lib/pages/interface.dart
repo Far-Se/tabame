@@ -118,19 +118,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   bool bmaCoffeHovered = false;
   File? sponsorImageLight;
   File? sponsorImageDark;
-  int sizeIncrement = 1;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100), () {
-        windowManager.getSize().then((Size value) {
-          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
-          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
-        });
-      });
-    });
+    WinUtils.fixDrawBug();
     if (userSettings.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
     } else if (userSettings.args.contains("-fancyshot")) {

@@ -767,16 +767,7 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
     appState.addListener(_handleAppStateChanged);
     unawaited(_syncWindowForView(appState.view));
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      if (!mounted) return;
-      WidgetsBinding.instance.platformDispatcher.onMetricsChanged?.call();
-      final ui.Size size = await windowManager.getSize();
-      await windowManager.setSize(Size(size.width + 1, size.height + 1));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      await windowManager.setSize(size);
-    });
-
+    WinUtils.fixDrawBug();
     if (widget.preloadedSnapshots.isNotEmpty) {
       // Snapshots passed directly (standalone startScreenCapture path).
       _readySnapshots = Map<int, FrozenMonitorSnapshot>.of(widget.preloadedSnapshots);

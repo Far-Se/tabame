@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/music_server.dart';
@@ -60,7 +59,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     super.initState();
     Debug.add("QuickMenu: Taskbar-Init");
 
-    _initializeWindowSize();
+    WinUtils.fixDrawBug();
     if (mounted) {
       QuickMenuFunctions.addListener(this);
       NativeHooks.addListener(this);
@@ -74,20 +73,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     if (actionName == "action:refreshTaskbar") {
       await _fetchWindows(force: true);
     }
-  }
-
-  int _sizeIncrement = 1;
-  void _initializeWindowSize() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      WidgetsBinding.instance.reassembleApplication();
-      // await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-      if (!mounted) return;
-      final Size size = await WindowManager.instance.getSize();
-      await WindowManager.instance.setSize(Size(size.width + _sizeIncrement, size.height + _sizeIncrement));
-      _sizeIncrement = _sizeIncrement == 1 ? -1 : 1;
-      // await windowManager.setAsFrameless();
-    });
   }
 
   @override

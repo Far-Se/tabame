@@ -15,7 +15,6 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
-import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
@@ -654,15 +653,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
     if (_originalImageBytes != null) {
       _decodeBackground();
     }
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100), () async {
-        final Size value = await windowManager.getSize();
-        await windowManager.setSize(Size(value.width + 1, value.height + 1));
-        await windowManager.setSize(Size(value.width, value.height));
-        Win32.activateWindow(Win32.hWnd);
-        Win32.setCenter(useMouse: true);
-      });
-    });
+    WinUtils.fixDrawBug();
   }
 
   Future<void> _decodeBackground() async {

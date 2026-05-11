@@ -149,4 +149,5 @@ void SetWallpaperColor(int color)
     CoUninitialize();
 }
 
+
 #endif // TABAMEWIN32_SYSTEM_UTILS

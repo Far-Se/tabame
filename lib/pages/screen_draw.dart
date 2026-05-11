@@ -28,6 +28,7 @@ import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
+import '../models/win32/win_utils.dart';
 import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 
@@ -872,7 +873,6 @@ class AnnotationShell extends StatefulWidget {
 class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
   final AnnotationController _ctrl = AnnotationController();
   Timer? _timer;
-  int _sizeIncrement = 1;
   @override
   void initState() {
     super.initState();
@@ -887,14 +887,8 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     Monitor.fetchMonitors();
     checkResize();
     _timer = Timer.periodic(const Duration(milliseconds: 50), (_) => _ticker());
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
 
-      final Size size = await windowManager.getSize();
-      await windowManager.setSize(Size(size.width + _sizeIncrement, size.height + _sizeIncrement));
-      _sizeIncrement = _sizeIncrement == 1 ? -1 : 1;
-    });
+    WinUtils.fixDrawBug(delay: const Duration(milliseconds: 300));
   }
 
   int currentMonitor = 0;

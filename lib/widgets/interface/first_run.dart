@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
@@ -66,14 +65,7 @@ class FirstRunState extends State<FirstRun> {
     WinUtils.setStartUpShortcut(true);
     // Future<void>.delayed(const Duration(seconds: 1), () => downloadTabame());
 
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Future<void>.delayed(const Duration(milliseconds: 100), () {
-        windowManager.getSize().then((Size value) {
-          windowManager.setSize(Size(value.width + sizeIncrement, value.height + sizeIncrement));
-          sizeIncrement = sizeIncrement == 1 ? -1 : 1;
-        });
-      });
-    });
+    WinUtils.fixDrawBug();
   }
 
   @override

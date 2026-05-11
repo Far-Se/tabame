@@ -6,11 +6,13 @@ import 'dart:io';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:local_notifier/local_notifier.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../classes/boxes.dart';
 import '../globals.dart';
@@ -1592,6 +1594,15 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     final Pointer<Utf16> iniPtr = iniPath.toNativeUtf16();
     SetFileAttributes(iniPtr, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
     calloc.free(iniPtr);
+  }
+
+  static void fixDrawBug({Duration delay = const Duration(milliseconds: 100)}) {
+    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
+      await Future<void>.delayed(delay);
+      final Size value = await windowManager.getSize();
+      await windowManager.setSize(Size(value.width + 1, value.height + 1));
+      await windowManager.setSize(Size(value.width, value.height));
+    });
   }
 }
 

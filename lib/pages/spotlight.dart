@@ -15,6 +15,7 @@ import '../models/classes/screen_draw_hotkeys.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
+import '../models/win32/win_utils.dart';
 
 // Adjust this import to your project.
 
@@ -122,15 +123,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   }
 
   void _initializeWindowSize() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // await Future<void>.delayed(const Duration(milliseconds: 40));
-      if (!mounted) return;
-      WidgetsBinding.instance.platformDispatcher.onMetricsChanged?.call();
-      final ui.Size size = await windowManager.getSize();
-      await windowManager.setSize(Size(size.width + 1, size.height + 1));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      await windowManager.setSize(size);
-    });
+    WinUtils.fixDrawBug();
   }
 
   @override
@@ -201,7 +194,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   }
 
   int skip = 0;
-  final double _stepsSkipped = (20 / pollInterval.inMilliseconds);
+  final double _stepsSkipped = (70 / pollInterval.inMilliseconds);
   void _tick() {
     checkResize();
     if (!_enabled || _targetHwnd == 0) return;

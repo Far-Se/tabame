@@ -415,6 +415,11 @@ Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
   return trayInfos;
 }
 
+Future<WinRect> getFocusedElementRect() async {
+  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getFocusedElementRect');
+  return WinRect.fromMap(result);
+}
+
 Future<String> getHwndName(int hWnd) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
@@ -445,6 +450,35 @@ Future<int> getFlutterMainWindow() async {
 
 Future<void> setWindowAsTransparent() async {
   await audioMethodChannel.invokeMethod('setTransparent');
+}
+
+class WinRect {
+  final int left;
+  final int top;
+  final int right;
+  final int bottom;
+
+  const WinRect({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
+
+  int get width => right - left;
+  int get height => bottom - top;
+
+  factory WinRect.fromMap(Map<dynamic, dynamic> map) {
+    return WinRect(
+      left: map['left'] as int? ?? 0,
+      top: map['top'] as int? ?? 0,
+      right: map['right'] as int? ?? 0,
+      bottom: map['bottom'] as int? ?? 0,
+    );
+  }
+
+  @override
+  String toString() => 'WinRect(left: $left, top: $top, right: $right, bottom: $bottom)';
 }
 
 class MonitorCapture {
