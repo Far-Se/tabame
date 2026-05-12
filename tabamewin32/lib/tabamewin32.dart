@@ -540,25 +540,51 @@ class SystemStatsInfo {
       gpuTemp: (map['gpuTemp'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  @override
+  String toString() {
+    return 'SystemStatsInfo(cpuUsage: $cpuUsage, gpuUsage: $gpuUsage, memoryLoad: $memoryLoad, cpuTemp: $cpuTemp, gpuTemp: $gpuTemp)';
+  }
 }
 
-class AppsFolderEntry {
-  const AppsFolderEntry({
+class AppInfo {
+  final String name;
+  final String executable;
+  final String arguments;
+  final String appUserModelId;
+  final String parsingName;
+
+  const AppInfo({
     required this.name,
-    required this.exePathOrAppId,
+    required this.executable,
+    required this.arguments,
+    required this.appUserModelId,
+    required this.parsingName,
   });
 
-  final String name;
-  final String exePathOrAppId;
+  factory AppInfo.fromMap(Map<Object?, Object?> map) => AppInfo(
+        name: (map['name'] as String?) ?? '',
+        executable: (map['executable'] as String?) ?? '',
+        arguments: (map['arguments'] as String?) ?? '',
+        appUserModelId: (map['appUserModelId'] as String?) ?? '',
+        parsingName: (map['parsingName'] as String?) ?? '',
+      );
 
-  bool get isAppUserModelId => exePathOrAppId.isNotEmpty && !exePathOrAppId.contains(r'\');
+  @override
+  String toString() =>
+      '\nAppInfo(name: $name, aumid: $appUserModelId, parsingName: $parsingName, executable: $executable, arguments: $arguments)';
+}
 
-  factory AppsFolderEntry.fromMap(Map<dynamic, dynamic> map) {
-    return AppsFolderEntry(
-      name: map['name'] as String? ?? '',
-      exePathOrAppId: map['exePathOrAppId'] as String? ?? '',
-    );
-  }
+class AppIconData {
+  final Uint8List pixels;
+  final int width;
+  final int height;
+
+  const AppIconData({
+    required this.pixels,
+    required this.width,
+    required this.height,
+  });
 }
 
 Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
@@ -734,18 +760,38 @@ Future<String> pickFolder() async {
   return result;
 }
 
-Future<List<AppsFolderEntry>> getAppsFolderEntries() async {
-  final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('getAppsFolder');
-  if (raw == null) return <AppsFolderEntry>[];
-  return raw.cast<Map<Object?, Object?>>().map(AppsFolderEntry.fromMap).toList();
-}
+class AppEnumeration {
+  AppEnumeration._();
 
-Future<Uint8List?> getAppsFolderIcon(String appName) async {
-  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>(
-    'getAppsFolderIcon',
-    <String, dynamic>{'appName': appName},
-  );
-  return result;
+  static Future<List<AppInfo>> getAllApps() async {
+    final List<Object?>? raw = await audioMethodChannel.invokeMethod<List<Object?>>('getAllApps');
+    if (raw == null) return const <AppInfo>[];
+
+    return raw.whereType<Map<Object?, Object?>>().map(AppInfo.fromMap).toList(growable: false);
+  }
+
+  static Future<AppIconData?> getAppIcon(
+    String parsingName, {
+    int size = 256,
+  }) async {
+    final Map<Object?, Object?>? raw = await audioMethodChannel.invokeMethod<Map<Object?, Object?>>(
+      'getAppIcon',
+      <String, dynamic>{'parsingName': parsingName, 'size': size},
+    );
+    if (raw == null) return null;
+
+    final Object? pixels = raw['pixels'];
+    final int? width = raw['width'] as int?;
+    final int? height = raw['height'] as int?;
+
+    if (pixels == null || width == null || height == null) return null;
+
+    return AppIconData(
+      pixels: pixels is Uint8List ? pixels : Uint8List.fromList((pixels as List).cast<int>()),
+      width: width,
+      height: height,
+    );
+  }
 }
 
 Future<bool> isWindows11() async {

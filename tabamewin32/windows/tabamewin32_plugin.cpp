@@ -205,7 +205,18 @@ EMap SystemStatsToMap(const SystemStats &stats, int memoryLoad) {
 EMap AppInfoToMap(const AppInfo &app) {
   EMap m;
   m[EVal("name")] = EVal(Encoding::WideToUtf8(app.name));
-  m[EVal("exePathOrAppId")] = EVal(Encoding::WideToUtf8(app.exePathOrAppId));
+  m[EVal("executable")] = EVal(Encoding::WideToUtf8(app.executable));
+  m[EVal("arguments")] = EVal(Encoding::WideToUtf8(app.arguments));
+  m[EVal("appUserModelId")] = EVal(Encoding::WideToUtf8(app.appUserModelId));
+  m[EVal("parsingName")] = EVal(Encoding::WideToUtf8(app.parsingName));
+  return m;
+}
+
+EMap AppBitmapToMap(const AppBitmap &bitmap) {
+  EMap m;
+  m[EVal("pixels")] = EVal(bitmap.pixels);
+  m[EVal("width")] = EVal(bitmap.width);
+  m[EVal("height")] = EVal(bitmap.height);
   return m;
 }
 
@@ -651,27 +662,47 @@ void BrowseFolderH(Tabamewin32Plugin *, const MethodCall &,
   OK(result, BrowseFolder());
 }
 
-void GetAppsFolderH(Tabamewin32Plugin *, const MethodCall &,
+void GetAllAppsH(Tabamewin32Plugin *, const MethodCall &,
                     MethodResult result) {
-  const auto apps = GetAllAppsFolder();
-  flutter::EncodableList list;
-  list.reserve(apps.size());
-  for (const auto &app : apps) {
-    list.emplace_back(EVal(Encode::AppInfoToMap(app)));
-    if (app.hIcon)
-      DestroyIcon(app.hIcon);
-  }
-  OK(result, EVal(list));
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result]() {
+    const auto apps = GetAllApps();
+    flutter::EncodableList list;
+    list.reserve(apps.size());
+    for (const auto &app : apps)
+      list.emplace_back(EVal(Encode::AppInfoToMap(app)));
+    shared_result->Success(EVal(std::move(list)));
+  }).detach();
 }
 
-void GetAppsFolderIconH(Tabamewin32Plugin *, const MethodCall &call,
+void GetAppIconH(Tabamewin32Plugin *, const MethodCall &call,
                         MethodResult result) {
-  const auto appName = Encoding::Utf8ToWide(Args::Str(Args::Map(call), "appName"));
-  HICON icon = GetAppIcon(appName);
-  const auto bytes = Encode::IconToBytes(icon);
-  if (icon)
-    DestroyIcon(icon);
-  OK(result, EVal(bytes));
+  const auto &a = Args::Map(call);
+  const auto parsingName = Encoding::Utf8ToWide(Args::Str(a, "parsingName"));
+  int desiredSize = 256;
+  auto sizeIt = a.find(EVal("size"));
+  if (sizeIt != a.end()) {
+    if (std::holds_alternative<int>(sizeIt->second))
+      desiredSize = std::get<int>(sizeIt->second);
+    else if (std::holds_alternative<int64_t>(sizeIt->second))
+      desiredSize = static_cast<int>(std::get<int64_t>(sizeIt->second));
+  }
+
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result, parsingName, desiredSize]() {
+    const auto bitmap = GetAppBitmap(parsingName, desiredSize);
+    if (bitmap.width == 0 || bitmap.pixels.empty()) {
+      shared_result->Success(EVal());
+      return;
+    }
+    shared_result->Success(EVal(Encode::AppBitmapToMap(bitmap)));
+  }).detach();
 }
 
 // ===== Hotkeys =====
@@ -1098,8 +1129,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"toggleMonitorWallpaper", Handlers::ToggleMonitorWallpaperH},
       {"setWallpaperColor", Handlers::SetWallpaperColorH},
       {"browseFolder", Handlers::BrowseFolderH},
-      {"getAppsFolder", Handlers::GetAppsFolderH},
-      {"getAppsFolderIcon", Handlers::GetAppsFolderIconH},
+      {"getAllApps", Handlers::GetAllAppsH},
+      {"getAppIcon", Handlers::GetAppIconH},
       // Hotkeys
       {"hotkeyAdd", Handlers::HotkeyAddH},
       {"hotkeyReset", Handlers::HotkeyResetH},

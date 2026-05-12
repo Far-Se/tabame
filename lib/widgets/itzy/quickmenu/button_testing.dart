@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
@@ -22,6 +24,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/appx_module.dart';
 import '../../../models/win32/mixed.dart';
 // import '../../../models/win32/win32.dart';
+import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../models/win32/window_event.dart';
 import '../../widgets/custom_tooltip.dart';
@@ -38,30 +41,36 @@ class TestingButton extends StatefulWidget {
 
 class _TestingButtonState extends State<TestingButton> {
   Timer? timer;
+  ByteData? xIcon;
+  AppInfo? app;
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
       message: "Testing",
-      icon: const Icon(Icons.science),
+      icon: xIcon != null ? Image.memory(xIcon!.buffer.asUint8List()) : const Icon(Icons.science),
       onTap: () async {
-        final List<AppxPackage> packages = getAllAppxPackages();
-        print('Found ${packages.length} WindowsApps packages:\n');
-        for (final AppxPackage p in packages) {
-          print(p);
+        // final SystemStatsInfo stats = await getSystemStats();
+        final List<AppInfo> apps = await AppEnumeration.getAllApps();
+        // print(stats);
+        // print(apps);
+        // print("---");
+        app = apps[Random().nextInt(apps.length)];
+        print(app);
+        final AppIconData? icon = await AppEnumeration.getAppIcon(app!.parsingName);
+        if (icon != null) {
+          ui.decodeImageFromPixels(
+            icon.pixels,
+            icon.width,
+            icon.height,
+            ui.PixelFormat.bgra8888,
+            (ui.Image img) async {
+              xIcon = await img.toByteData(format: ui.ImageByteFormat.png);
+            },
+          );
         }
-        // 2. Enrich with AUMID + icon from manifest
-        final List<AppxApp> apps = getAllAppxApps(packages);
+        // save icon to file
 
-        for (final AppxApp app in apps) {
-          print('${app.displayName}');
-          print('  AUMID : ${app.aumid}');
-          print('  Icon  : ${app.iconPath ?? "(none found)"}');
-          print('');
-        }
-
-        // 3. Launch by AUMID (exactly like the Start Menu)
-        // final AppxApp outlook = apps.firstWhere((AppxApp a) => a.displayName.contains('Outlook'));
-        // final pid = launchAppxByAumid(outlook.aumid);
+        setState(() {});
         return;
         final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
 
@@ -76,6 +85,8 @@ class _TestingButtonState extends State<TestingButton> {
         return;
       },
       onSecondaryTap: () async {
+        WinUtils.open("shell:AppsFolder\\${app?.appUserModelId ?? "a"}");
+        return;
         final List<TaskbarButtonInfo> taskbar = await TaskbarUia.getButtonInfos();
         for (final TaskbarButtonInfo button in taskbar) {
           print(button);
