@@ -420,6 +420,11 @@ Future<WinRect> getFocusedElementRect() async {
   return WinRect.fromMap(result);
 }
 
+Future<WinRect> getFocusedElementCaretRect() async {
+  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getFocusedElementCaretRect');
+  return WinRect.fromMap(result);
+}
+
 Future<String> getHwndName(int hWnd) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
@@ -505,6 +510,53 @@ class MonitorCapture {
       width: map['width'] as int? ?? 0,
       height: map['height'] as int? ?? 0,
       length: map['length'] as int? ?? pixels.length,
+    );
+  }
+}
+
+class SystemStatsInfo {
+  const SystemStatsInfo({
+    required this.cpuUsage,
+    required this.gpuUsage,
+    required this.memoryLoad,
+    required this.cpuTemp,
+    required this.gpuTemp,
+  });
+
+  final double cpuUsage;
+  final double gpuUsage;
+  final int memoryLoad;
+  final double cpuTemp;
+  final double gpuTemp;
+
+  double get cpuLoadRatio => cpuUsage < 0 ? cpuUsage : cpuUsage / 100.0;
+
+  factory SystemStatsInfo.fromMap(Map<dynamic, dynamic> map) {
+    return SystemStatsInfo(
+      cpuUsage: (map['cpuUsage'] as num?)?.toDouble() ?? ((map['cpuLoad'] as num?)?.toDouble() ?? 0) * 100,
+      gpuUsage: (map['gpuUsage'] as num?)?.toDouble() ?? 0,
+      memoryLoad: map['memoryLoad'] as int? ?? 0,
+      cpuTemp: (map['cpuTemp'] as num?)?.toDouble() ?? 0,
+      gpuTemp: (map['gpuTemp'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class AppsFolderEntry {
+  const AppsFolderEntry({
+    required this.name,
+    required this.exePathOrAppId,
+  });
+
+  final String name;
+  final String exePathOrAppId;
+
+  bool get isAppUserModelId => exePathOrAppId.isNotEmpty && !exePathOrAppId.contains(r'\');
+
+  factory AppsFolderEntry.fromMap(Map<dynamic, dynamic> map) {
+    return AppsFolderEntry(
+      name: map['name'] as String? ?? '',
+      exePathOrAppId: map['exePathOrAppId'] as String? ?? '',
     );
   }
 }
@@ -648,8 +700,17 @@ Future<void> setStartOnStartupAsAdmin(bool enabled, {String? exePath}) async {
 }
 
 Future<List<dynamic>> getSystemUsage() async {
-  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getSystemUsage');
-  return <dynamic>[result["cpuLoad"], result["memoryLoad"]];
+  final SystemStatsInfo result = await getSystemStats();
+  return <dynamic>[result.cpuLoadRatio, result.memoryLoad];
+}
+
+Future<SystemStatsInfo> getSystemStats({bool onlyUsage = true}) async {
+  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod(
+        'getSystemUsage',
+        <String, dynamic>{'onlyUsage': onlyUsage},
+      ) ??
+      <dynamic, dynamic>{};
+  return SystemStatsInfo.fromMap(result);
 }
 
 Future<void> toggleMonitorWallpaper(bool enabled) async {
@@ -670,6 +731,20 @@ Future<void> setWallpaperColor(int color) async {
 
 Future<String> pickFolder() async {
   final String result = await audioMethodChannel.invokeMethod<String>('browseFolder') ?? "";
+  return result;
+}
+
+Future<List<AppsFolderEntry>> getAppsFolderEntries() async {
+  final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('getAppsFolder');
+  if (raw == null) return <AppsFolderEntry>[];
+  return raw.cast<Map<Object?, Object?>>().map(AppsFolderEntry.fromMap).toList();
+}
+
+Future<Uint8List?> getAppsFolderIcon(String appName) async {
+  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>(
+    'getAppsFolderIcon',
+    <String, dynamic>{'appName': appName},
+  );
   return result;
 }
 
@@ -825,7 +900,7 @@ class ClipboardHooks {
 
   static void _dispatchClipboardUpdate() {
     for (final ClipboardEventListener listener in listeners) {
-      if (!listenersObv.contains(listener)) return;
+      if (!listenersObv.contains(listener)) continue;
       listener.onClipboardUpdate();
     }
   }
@@ -859,7 +934,7 @@ class NativeHooks {
     }
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {
-        if (!listenersObv.contains(listener)) return;
+        if (!listenersObv.contains(listener)) continue;
 
         listener.onHotKeyEvent(
           HotkeyEvent(
@@ -881,13 +956,13 @@ class NativeHooks {
     }
     if (call.method == "TrktivityEvent") {
       for (final TabameListener listener in listeners) {
-        if (!listenersObv.contains(listener)) return;
+        if (!listenersObv.contains(listener)) continue;
         listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
       }
     }
     if (call.method == "ViewsEvent") {
       for (final TabameListener listener in listeners) {
-        if (!listenersObv.contains(listener)) return;
+        if (!listenersObv.contains(listener)) continue;
         listener.onViewsEvent(
             ViewsAction.values.firstWhere((ViewsAction element) => element.name == call.arguments["action"]),
             call.arguments["hwnd"]);
@@ -896,13 +971,13 @@ class NativeHooks {
     if (call.method == "WinEvent") {
       if (call.arguments['action'] == "foreground") {
         for (final TabameListener listener in listeners) {
-          if (!listenersObv.contains(listener)) return;
+          if (!listenersObv.contains(listener)) continue;
           listener.onForegroundWindowChanged(call.arguments['hwnd']);
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.foreground);
         }
       } else if (call.arguments['action'] == "namechange") {
         for (final TabameListener listener in listeners) {
-          if (!listenersObv.contains(listener)) return;
+          if (!listenersObv.contains(listener)) continue;
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.nameChange);
         }
       }

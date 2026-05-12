@@ -24,6 +24,7 @@ import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../services/file_indexer.dart';
 import '../services/wallpaper_service.dart';
+import 'emoji_page.dart';
 // import '../widgets/itzy/quickmenu/button_quickactions.dart';
 import 'launcher.dart';
 import 'quickmenu_designs/designs.dart';
@@ -352,7 +353,7 @@ class QuickMenuState extends State<QuickMenu>
         await windowManager.center();
         await windowManager.focus();
         if (mounted) setState(() {});
-      } else {
+      } else if (Globals.quickMenuPage == QuickMenuPage.quickMenu) {
         if (mounted) setState(() {});
         _requestQuickMenuFocus(focusWindow: true);
         final Offset position = Win32.getPosition();
@@ -361,7 +362,8 @@ class QuickMenuState extends State<QuickMenu>
         } else {
           await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
         }
-        Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      } else if (mounted) {
+        setState(() {});
       }
     } else {
       // PaintingBinding.instance.imageCache.clear();
@@ -550,6 +552,9 @@ class QuickMenuState extends State<QuickMenu>
     }
     if (Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
       return const FancyShotCaptureWidget(freezeMode: true);
+    }
+    if (Globals.quickMenuPage == QuickMenuPage.emojiPicker) {
+      return const EmojiPage();
     }
     return Focus(
       focusNode: focusNode,

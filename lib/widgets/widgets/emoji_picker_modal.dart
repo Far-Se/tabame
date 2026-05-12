@@ -4,11 +4,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../models/classes/boxes/boxes_base.dart';
 import '../../models/settings.dart';
 import 'custom_tooltip.dart';
+import 'mix_widgets.dart';
 import 'panel_header.dart';
-
-const String _emojiPackageAssetPath = 'packages/emoji_selector/data/emoji.json';
 
 Future<List<_EmojiEntry>>? _emojiEntriesFuture;
 
@@ -90,10 +90,20 @@ class EmojiPickerModal extends StatefulWidget {
     super.key,
     this.title = 'Pick Emoji',
     this.initialValue = '',
+    this.onEmojiSelected,
+    this.onCloseRequested,
+    this.userPredefined = true,
+    this.showPanelHeader = true,
+    this.quickTip,
   });
 
   final String title;
   final String initialValue;
+  final ValueChanged<String>? onEmojiSelected;
+  final VoidCallback? onCloseRequested;
+  final bool showPanelHeader;
+  final bool userPredefined;
+  final String? quickTip;
 
   @override
   State<EmojiPickerModal> createState() => _EmojiPickerModalState();
@@ -101,11 +111,14 @@ class EmojiPickerModal extends StatefulWidget {
 
 class _EmojiPickerModalState extends State<EmojiPickerModal> {
   late final TextEditingController _searchController;
+  final FocusNode _searchFocus = FocusNode();
   late final TextEditingController _customController;
   late final ScrollController _scrollController;
   late final Future<List<_EmojiEntry>> _emojiFuture;
+  List<_EmojiEntry> _loadedEntries = <_EmojiEntry>[];
 
   int _selectedCategoryIndex = 0;
+  int _selectedSkinToneIndex = 0;
 
   @override
   void initState() {
@@ -114,15 +127,29 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     _customController = TextEditingController(text: widget.initialValue);
     _scrollController = ScrollController();
     _emojiFuture = _loadEmojiEntries();
+    _primeEmojiCache();
     _syncCategoryFromInitialValue();
+    _selectedSkinToneIndex = Boxes.pref.getInt("emojiPickerPreferedSkinTone") ?? 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      _searchFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     _customController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _primeEmojiCache() async {
+    final List<_EmojiEntry> entries = await _emojiFuture;
+    if (!mounted) return;
+    _loadedEntries = entries;
   }
 
   Future<void> _syncCategoryFromInitialValue() async {
@@ -131,6 +158,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
 
     final List<_EmojiEntry> entries = await _emojiFuture;
     if (!mounted) return;
+    _loadedEntries = entries;
 
     for (final _EmojiEntry entry in entries) {
       if (entry.char != currentValue) continue;
@@ -141,10 +169,44 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     }
   }
 
+  void _close() {
+    if (widget.onCloseRequested != null) {
+      widget.onCloseRequested!();
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  void _submitValue(String value) {
+    if (widget.onEmojiSelected != null) {
+      widget.onEmojiSelected!(value);
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  String _getFinalEmoji(_EmojiEntry entry) {
+    if (_selectedSkinToneIndex > 0 && entry.skinVariation.isNotEmpty) {
+      // SkinTones.tones[0] is Yellow (Default)
+      // SkinTones.tones[1-5] correspond to variation indices 0-4
+      final int variationIndex = _selectedSkinToneIndex - 1;
+      if (variationIndex < entry.skinVariation.length) {
+        return entry.skinVariation[variationIndex];
+      }
+    }
+    return entry.char;
+  }
+
   void _submitCustomValue() {
     final String value = _customController.text.trim();
     if (value.isEmpty) return;
-    Navigator.of(context).pop(value);
+    _submitValue(value);
+  }
+
+  void _submitFirstVisibleEmoji() {
+    final List<_EmojiEntry> visibleEntries = _visibleEntries(_loadedEntries);
+    if (visibleEntries.isEmpty) return;
+    _submitValue(_getFinalEmoji(visibleEntries.first));
   }
 
   @override
@@ -154,75 +216,86 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     final Color accent = userSettings.themeColors.accentColor;
     final Color borderColor = scheme.onSurface.withValues(alpha: 0.1);
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 620, maxHeight: 720),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              PanelHeader(
-                title: widget.title,
-                accent: accent,
-                icon: Icons.emoji_emotions_outlined,
-                buttonPressed: () => Navigator.of(context).pop(),
-                buttonIcon: Icons.close_rounded,
-                buttonTooltip: 'Close',
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _buildSearchField(accent, scheme),
-                    const SizedBox(height: 10),
-                    _buildCustomInput(accent, scheme),
-                    const SizedBox(height: 12),
-                    _buildCategoryBar(accent, scheme),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                  child: FutureBuilder<List<_EmojiEntry>>(
-                    future: _emojiFuture,
-                    builder: (BuildContext context, AsyncSnapshot<List<_EmojiEntry>> snapshot) {
-                      if (snapshot.connectionState != ConnectionState.done) {
-                        return _buildLoadingState(accent, scheme);
-                      }
-                      if (snapshot.hasError || !snapshot.hasData) {
-                        return _buildErrorState(accent, scheme);
-                      }
-
-                      final List<_EmojiEntry> visibleEntries = _visibleEntries(snapshot.data!);
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          _buildResultsHeader(
-                            accent,
-                            scheme,
-                            count: visibleEntries.length,
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: visibleEntries.isEmpty
-                                ? _buildEmptyState(accent, scheme)
-                                : _buildEmojiGrid(visibleEntries, accent, scheme),
-                          ),
-                        ],
-                      );
-                    },
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      onKeyEvent: (KeyEvent event) {
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          _close();
+        }
+      },
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 720),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: scheme.surface.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: borderColor, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                if (widget.showPanelHeader)
+                  PanelHeader(
+                    title: widget.title,
+                    accent: accent,
+                    icon: Icons.emoji_emotions_outlined,
+                    buttonPressed: _close,
+                    buttonIcon: Icons.close_rounded,
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _buildSearchField(accent, scheme),
+                      if (widget.userPredefined) ...<Widget>[
+                        const SizedBox(height: 10),
+                        _buildCustomInput(accent, scheme)
+                      ],
+                      const SizedBox(height: 12),
+                      CancelTraversal(child: _buildCategoryBar(accent, scheme)),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    child: FutureBuilder<List<_EmojiEntry>>(
+                      future: _emojiFuture,
+                      builder: (BuildContext context, AsyncSnapshot<List<_EmojiEntry>> snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return _buildLoadingState(accent, scheme);
+                        }
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return _buildErrorState(accent, scheme);
+                        }
+
+                        _loadedEntries = snapshot.data!;
+                        final List<_EmojiEntry> visibleEntries = _visibleEntries(_loadedEntries);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _buildResultsHeader(
+                              accent,
+                              scheme,
+                              count: visibleEntries.length,
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: visibleEntries.isEmpty
+                                  ? _buildEmptyState(accent, scheme)
+                                  : _buildEmojiGrid(visibleEntries, accent, scheme),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -245,8 +318,10 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           Expanded(
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocus,
               autofocus: true,
               onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _submitFirstVisibleEmoji(),
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
@@ -260,20 +335,99 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
             ),
           ),
           if (_searchController.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Clear search',
-              onPressed: () {
-                setState(() {
-                  _searchController.clear();
-                });
-              },
-              icon: Icon(
-                Icons.close_rounded,
-                size: 18,
-                color: scheme.onSurface.withValues(alpha: 0.55),
+            CancelTraversal(
+              child: IconButton(
+                tooltip: 'Clear search',
+                onPressed: () {
+                  setState(() {
+                    _searchController.clear();
+                  });
+                },
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: scheme.onSurface.withValues(alpha: 0.55),
+                ),
               ),
             ),
+          CancelTraversal(child: _buildSkinToneSelector(accent, scheme)),
+          const SizedBox(width: 8),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkinToneSelector(Color accent, ColorScheme scheme) {
+    return PopupMenuButton<int>(
+      tooltip: 'Select skin tone',
+      initialValue: _selectedSkinToneIndex,
+      onSelected: (int index) {
+        Boxes.pref.setInt("emojiPickerPreferedSkinTone", index);
+        setState(() {
+          _selectedSkinToneIndex = index;
+        });
+      },
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: EdgeInsets.zero,
+      itemBuilder: (BuildContext context) {
+        return List<PopupMenuEntry<int>>.generate(SkinTones.tones.length, (int index) {
+          final Color toneColor = SkinTones.tones[index];
+          final bool selected = index == _selectedSkinToneIndex;
+
+          return PopupMenuItem<int>(
+            value: index,
+            height: 40,
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: toneColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: scheme.onSurface.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  index == 0 ? 'Default' : 'Tone $index',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected ? accent : scheme.onSurface,
+                  ),
+                ),
+                if (selected) ...<Widget>[
+                  const Spacer(),
+                  Icon(Icons.check_rounded, size: 14, color: accent),
+                ],
+              ],
+            ),
+          );
+        });
+      },
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: SkinTones.tones[_selectedSkinToneIndex],
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: accent.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: SkinTones.tones[_selectedSkinToneIndex].withValues(alpha: 0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -419,7 +573,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     final String query = _normalizedText(_searchController.text);
     final String label = query.isEmpty
         ? '${_emojiCategoryGroups[_selectedCategoryIndex].label} - $count emoji'
-        : 'Search results - $count match${count == 1 ? '' : 'es'}';
+        : 'Results - $count match${count == 1 ? '' : 'es'}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -435,7 +589,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           ),
           const Spacer(),
           Text(
-            'Tap to use immediately',
+            widget.quickTip ?? 'Tap to use immediately',
             style: TextStyle(
               fontSize: 10,
               color: scheme.onSurface.withValues(alpha: 0.45),
@@ -528,7 +682,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
             entry: entry,
             accent: accent,
             onSurface: scheme.onSurface,
-            onTap: () => Navigator.of(context).pop(entry.char),
+            onTap: () => _submitValue(_getFinalEmoji(entry)),
           );
         },
       ),
@@ -575,37 +729,44 @@ class _EmojiTile extends StatefulWidget {
 
 class _EmojiTileState extends State<_EmojiTile> {
   bool _hovering = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
+    final bool active = _hovering || _focused;
+
     return CustomTooltip(
       message: '${widget.entry.name}\n${widget.entry.category}',
       waitDuration: const Duration(milliseconds: 150),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovering = true),
-        onExit: (_) => setState(() => _hovering = false),
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 130),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovering
-                  ? userSettings.themeColors.accentColor.withValues(alpha: 0.14)
-                  : userSettings.themeColors.accentColor.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _hovering
-                    ? userSettings.themeColors.accentColor.withValues(alpha: 0.34)
-                    : userSettings.themeColors.accentColor.withValues(alpha: 0.10),
+      child: FocusableActionDetector(
+        mouseCursor: SystemMouseCursors.click,
+        onShowFocusHighlight: (bool value) => setState(() => _focused = value),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hovering = true),
+          onExit: (_) => setState(() => _hovering = false),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 130),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active
+                    ? userSettings.themeColors.accentColor.withValues(alpha: 0.14)
+                    : userSettings.themeColors.accentColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: active
+                      ? userSettings.themeColors.accentColor.withValues(alpha: 0.34)
+                      : userSettings.themeColors.accentColor.withValues(alpha: 0.10),
+                ),
               ),
-            ),
-            child: Text(
-              widget.entry.char,
-              style: TextStyle(
-                fontSize: 20,
-                color: _hovering ? userSettings.themeColors.accentColor : widget.onSurface,
+              child: Text(
+                widget.entry.char,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: active ? userSettings.themeColors.accentColor : widget.onSurface,
+                ),
               ),
             ),
           ),
@@ -623,6 +784,7 @@ class _EmojiEntry {
     required this.shortName,
     required this.sortOrder,
     required this.searchIndex,
+    required this.skinVariation,
   });
 
   final String char;
@@ -631,6 +793,7 @@ class _EmojiEntry {
   final String shortName;
   final int sortOrder;
   final String searchIndex;
+  final List<String> skinVariation;
 }
 
 class _EmojiCategoryGroup {
@@ -693,19 +856,32 @@ Future<List<_EmojiEntry>> _loadEmojiEntries() {
 }
 
 Future<List<_EmojiEntry>> _readEmojiEntries() async {
-  final String rawData = await rootBundle.loadString(_emojiPackageAssetPath);
+  final String rawData = await rootBundle.loadString("resources/emoji.json");
   final List<dynamic> decoded = jsonDecode(rawData) as List<dynamic>;
 
   final List<_EmojiEntry> entries = decoded
       .map<_EmojiEntry>((dynamic dynamicEntry) {
+        /*
+
+      u: item.unified,
+      c: item.category,
+      sc: item.subcategory,
+      n: item.name,
+      sn: item.short_name,
+      so: item.sort_order,
+      sk: skin_variation,
+      */
         final Map<String, dynamic> entry = Map<String, dynamic>.from(dynamicEntry as _EmojiJsonEntry);
-        final String char = _unicodeToString((entry['unified'] as String?) ?? '');
-        final String category = (entry['category'] as String?) ?? 'Objects';
-        final String name = ((entry['name'] as String?) ?? '').trim();
-        final String shortName = ((entry['short_name'] as String?) ?? '').trim();
-        final int sortOrder = (entry['sort_order'] as num?)?.toInt() ?? 999999;
+        final String char = _unicodeToString((entry['u'] as String?) ?? '');
+        final String category = (entry['c'] as String?) ?? 'Objects';
+        final String subcategory = (entry['sc'] as String?) ?? 'Objects';
+        final String name = ((entry['n'] as String?) ?? '').trim();
+        final String shortName = ((entry['sn'] as String?) ?? '').trim();
+        final int sortOrder = (entry['so'] as num?)?.toInt() ?? 999999;
+        final List<String> skinVariation =
+            (entry['sk'] as List<dynamic>?)?.map((dynamic e) => _unicodeToString(e as String)).toList() ?? <String>[];
         final String normalizedShortName = shortName.replaceAll('_', ' ');
-        final String searchIndex = _normalizedText('$name $normalizedShortName $category $char');
+        final String searchIndex = _normalizedText('$name $normalizedShortName $category $subcategory $char');
 
         return _EmojiEntry(
           char: char,
@@ -714,6 +890,7 @@ Future<List<_EmojiEntry>> _readEmojiEntries() async {
           shortName: normalizedShortName,
           sortOrder: sortOrder,
           searchIndex: searchIndex,
+          skinVariation: skinVariation,
         );
       })
       .where((_EmojiEntry entry) => entry.char.isNotEmpty)
@@ -757,6 +934,24 @@ String _unicodeToString(String unified) {
   return String.fromCharCodes(
     unified.split('-').map((String code) => int.parse(code, radix: 16)),
   );
+}
+
+class SkinTones {
+  static const Color tone1 = Color.fromRGBO(255, 201, 58, 1);
+  static const Color tone2 = Color.fromRGBO(250, 220, 188, 1);
+  static const Color tone3 = Color.fromRGBO(224, 187, 149, 1);
+  static const Color tone4 = Color.fromRGBO(191, 143, 104, 1);
+  static const Color tone5 = Color.fromRGBO(155, 100, 61, 1);
+  static const Color tone6 = Color.fromRGBO(89, 69, 57, 1);
+
+  static const List<Color> tones = <Color>[
+    SkinTones.tone1,
+    SkinTones.tone2,
+    SkinTones.tone3,
+    SkinTones.tone4,
+    SkinTones.tone5,
+    SkinTones.tone6,
+  ];
 }
 
 typedef _EmojiJsonEntry = Map<dynamic, dynamic>;

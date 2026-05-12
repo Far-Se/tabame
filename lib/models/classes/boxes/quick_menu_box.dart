@@ -78,14 +78,14 @@ class QuickMenuFunctions {
 
   static void requestQuickMenuFocus() {
     for (final QuickMenuTriggers listener in listeners) {
-      if (!_listeners.contains(listener)) return;
+      if (!_listeners.contains(listener)) continue;
       listener.requestQuickMenuFocus();
     }
   }
 
   static void refreshQuickMenu() {
     for (final QuickMenuTriggers listener in _listeners) {
-      if (!_listeners.contains(listener)) return;
+      if (!_listeners.contains(listener)) continue;
       listener.refreshQuickMenu();
     }
   }
@@ -99,7 +99,11 @@ class QuickMenuFunctions {
   static void removeListener(QuickMenuTriggers listener) => _listeners.remove(listener);
 
   static Future<void> toggleQuickMenu(
-      {QuickMenuPage type = QuickMenuPage.quickMenu, bool? visible, bool center = false, bool forcePop = false}) async {
+      {QuickMenuPage type = QuickMenuPage.quickMenu,
+      bool? visible,
+      bool center = false,
+      bool forceReposition = true,
+      bool forcePop = false}) async {
     // if (visible == false /* && (kDebugMode && !Globals.debugHotkeys) */) return;
     if (visible != null) {
       if (visible == false && QuickMenuFunctions.keepOpen) {
@@ -110,13 +114,13 @@ class QuickMenuFunctions {
     isQuickMenuVisible = visible;
     if (Globals.quickMenuPage != type) {
       for (final QuickMenuTriggers listener in _listeners) {
-        if (!_listeners.contains(listener)) return;
+        if (!_listeners.contains(listener)) continue;
         await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
       }
     }
 
     for (final QuickMenuTriggers listener in listeners) {
-      if (!_listeners.contains(listener)) return;
+      if (!_listeners.contains(listener)) continue;
       await listener.onQuickMenuToggled(visible, type);
       if (forcePop) await listener.onQuickMenuMaybePop();
     }
@@ -125,15 +129,19 @@ class QuickMenuFunctions {
       Globals.quickMenuPage = type;
 
       if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
-        triggerQuickAction("action:refreshTaskbar");
+        if (type == QuickMenuPage.quickMenu) {
+          triggerQuickAction("action:refreshTaskbar");
+        }
         Future<void>.delayed(const Duration(milliseconds: 110), () async {
-          if (center) {
-            Win32.setCenter(useMouse: true);
-          } else {
-            await Win32.setMainWindowToMousePos();
+          if (forceReposition) {
+            if (center) {
+              Win32.setCenter(useMouse: true);
+            } else {
+              await Win32.setMainWindowToMousePos();
+            }
           }
           for (final QuickMenuTriggers listener in listeners) {
-            if (!_listeners.contains(listener)) return;
+            if (!_listeners.contains(listener)) continue;
             await listener.onQuickMenuVisible(type, center);
           }
           Win32.setWindowInvisiblity(false);

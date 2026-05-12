@@ -39,7 +39,7 @@ class HotkeyHandler {
         currentVK = -1;
         hotkeyInfo.action = "released";
         for (final TabameListener listener in NativeHooks.listeners) {
-          if (!NativeHooks.listenersObv.contains(listener)) return;
+          if (!NativeHooks.listenersObv.contains(listener)) continue;
           listener.onHotKeyEvent(hotkeyInfo);
         }
         return;

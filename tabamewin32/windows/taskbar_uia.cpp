@@ -143,3 +143,84 @@ RECT GetFocusedElementRect() {
     CoUninitialize();
     return rect;
 }
+
+RECT GetFocusedElementCaretRect() {
+    RECT caretRect = {};
+    IUIAutomation*        pAuto = nullptr;
+    IUIAutomationElement* pElem = nullptr;
+    IUIAutomationTextPattern* pTextPattern = nullptr;
+    IUIAutomationTextRangeArray* pSelection = nullptr;
+    IUIAutomationTextRange* pRange = nullptr;
+
+    CoInitialize(nullptr);
+
+    HRESULT hr = CoCreateInstance(
+        CLSID_CUIAutomation, nullptr,
+        CLSCTX_INPROC_SERVER,
+        IID_IUIAutomation,
+        reinterpret_cast<void**>(&pAuto)
+    );
+    if (FAILED(hr) || !pAuto) goto cleanup;
+
+    // Get focused element
+    if (FAILED(pAuto->GetFocusedElement(&pElem)) || !pElem) goto cleanup;
+
+    // Try to get TextPattern from the focused element
+    hr = pElem->GetCurrentPattern(UIA_TextPatternId,
+                                  reinterpret_cast<IUnknown**>(&pTextPattern));
+    if (FAILED(hr) || !pTextPattern) {
+        // Fallback: element has no text pattern (e.g. a button),
+        // just use the control bounding rect
+        pElem->get_CurrentBoundingRectangle(&caretRect);
+        goto cleanup;
+    }
+
+    // GetSelection returns the caret range when no text is selected
+    // (a degenerate/collapsed range at cursor position)
+    if (FAILED(pTextPattern->GetSelection(&pSelection)) || !pSelection) goto cleanup;
+
+    {
+        int count = 0;
+        pSelection->get_Length(&count);
+        if (count == 0) goto cleanup;
+
+        // Take the first (or only) selection range
+        pSelection->GetElement(0, &pRange);
+        if (!pRange) goto cleanup;
+
+        // Get bounding rectangles of the caret range
+        SAFEARRAY* pRects = nullptr;
+        pRange->GetBoundingRectangles(&pRects);
+
+        if (pRects) {
+            // Each rect = 4 doubles: left, top, width, height
+            double* data = nullptr;
+            SafeArrayAccessData(pRects, reinterpret_cast<void**>(&data));
+
+            long lBound, uBound;
+            SafeArrayGetLBound(pRects, 1, &lBound);
+            SafeArrayGetUBound(pRects, 1, &uBound);
+            long elemCount = uBound - lBound + 1;
+
+            if (elemCount >= 4) {
+                caretRect.left   = static_cast<LONG>(data[0]);
+                caretRect.top    = static_cast<LONG>(data[1]);
+                caretRect.right  = static_cast<LONG>(data[0] + data[2]); // left + width
+                caretRect.bottom = static_cast<LONG>(data[1] + data[3]); // top + height
+            }
+
+            SafeArrayUnaccessData(pRects);
+            SafeArrayDestroy(pRects);
+        }
+    }
+
+cleanup:
+    if (pRange)        pRange->Release();
+    if (pSelection)    pSelection->Release();
+    if (pTextPattern)  pTextPattern->Release();
+    if (pElem)         pElem->Release();
+    if (pAuto)         pAuto->Release();
+    CoUninitialize();
+
+    return caretRect;
+}

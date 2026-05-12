@@ -14,10 +14,10 @@ import 'dart:ffi' hide Size;
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:emoji_selector/emoji_selector.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/src/gestures/events.dart';
 import 'package:image/image.dart' as img;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -26,23 +26,29 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
+import '../models/settings.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
+import '../widgets/widgets/emoji_picker_modal.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 Future<void> startScreenDraw() async {
-  // Load settings and themes only, without
   WidgetsFlutterBinding.ensureInitialized();
   await Boxes.registerBoxes(justLoad: true);
 
-  const WindowOptions windowOptions = WindowOptions(
-    size: Size(1920, 1080),
+  // Use virtual desktop size so the initial window is large enough for all monitors.
+  // setupOverlay() will reposition it precisely after HWND is known.
+  final int vWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  final int vHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+  final WindowOptions windowOptions = WindowOptions(
+    size: Size(vWidth.toDouble(), vHeight.toDouble()),
     center: false,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
@@ -76,12 +82,11 @@ class Win32Window {
     return _hwnd;
   }
 
-  /// Make the window borderless, topmost, and full-screen.
+  /// Make the window borderless, topmost, and spanning all monitors.
   static void setupOverlay() {
     final int hwnd = getHwnd();
     if (hwnd == 0) return;
 
-    // Remove title bar and borders
     final int style = GetWindowLongPtr(hwnd, GWL_STYLE);
     SetWindowLongPtr(
       hwnd,
@@ -89,7 +94,6 @@ class Win32Window {
       style & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU),
     );
 
-    // Add layered + topmost extended styles
     final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
     SetWindowLongPtr(
       hwnd,
@@ -97,19 +101,20 @@ class Win32Window {
       exStyle | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
     );
 
-    // Layered window: full opacity, color key unused
     SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
 
-    // Cover full primary monitor
-    final int screenW = GetSystemMetrics(SM_CXSCREEN);
-    final int screenH = GetSystemMetrics(SM_CYSCREEN);
+    // Span the full virtual desktop (all monitors).
+    final int vLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    final int vTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    final int vWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    final int vHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
     SetWindowPos(
       hwnd,
       HWND_TOPMOST,
-      0,
-      0,
-      screenW,
-      screenH,
+      vLeft,
+      vTop,
+      vWidth,
+      vHeight,
       SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
     );
   }
@@ -303,6 +308,9 @@ class DrawShape {
 
   DrawShape copyWith({
     List<Offset>? points,
+    Color? color,
+    double? strokeWidth,
+    double? opacity,
     bool? selected,
     String? text,
     bool? textBackground,
@@ -317,9 +325,9 @@ class DrawShape {
     return DrawShape(
       tool: tool,
       points: points ?? this.points,
-      color: color,
-      strokeWidth: strokeWidth,
-      opacity: opacity,
+      color: color ?? this.color,
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+      opacity: opacity ?? this.opacity,
       selected: selected ?? this.selected,
       text: text ?? this.text,
       textBackground: textBackground ?? this.textBackground,
@@ -422,10 +430,38 @@ class AnnotationController extends ChangeNotifier {
   void toggleDrawingMode({bool? activated}) {
     drawingModeActive = activated ?? !drawingModeActive;
     if (drawingModeActive) {
+      activeTool = DrawTool.select;
+      selectMode = true;
       Win32Window.disableClickThrough();
       Future<void>.delayed(const Duration(milliseconds: 100), () async {
         await windowManager.show();
         await WindowManager.instance.focus();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        final Pointer<INPUT> inputs = calloc<INPUT>(2);
+
+        // Left button down
+        inputs[0]
+          ..type = INPUT_MOUSE
+          ..mi.dx = 0
+          ..mi.dy = 0
+          ..mi.mouseData = 0
+          ..mi.dwFlags = MOUSEEVENTF_LEFTDOWN
+          ..mi.time = 0
+          ..mi.dwExtraInfo = 0;
+
+        // Left button up
+        inputs[1]
+          ..type = INPUT_MOUSE
+          ..mi.dx = 0
+          ..mi.dy = 0
+          ..mi.mouseData = 0
+          ..mi.dwFlags = MOUSEEVENTF_LEFTUP
+          ..mi.time = 0
+          ..mi.dwExtraInfo = 0;
+
+        SendInput(2, inputs, sizeOf<INPUT>());
+
+        calloc.free(inputs);
       });
     } else {
       Win32Window.enableClickThrough();
@@ -586,7 +622,9 @@ class AnnotationController extends ChangeNotifier {
     _redoStack.clear();
     _shapes.add(DrawShape(
       tool: tool,
-      points: <ui.Offset>[region.topLeft, region.bottomRight],
+      points: tool == DrawTool.imageDraw
+          ? <ui.Offset>[region.topLeft + const Offset(10, 10), region.bottomRight + const Offset(10, 10)]
+          : <ui.Offset>[region.topLeft, region.bottomRight],
       color: strokeColor,
       strokeWidth: strokeWidth,
       opacity: opacity,
@@ -595,6 +633,11 @@ class AnnotationController extends ChangeNotifier {
       imageH: h,
       fillColor: fillColor,
     ));
+    if (tool == DrawTool.imageDraw) {
+      //selectSelecting mode
+      setTool(DrawTool.select);
+      selectShapeAt(region.center);
+    }
     notifyListeners();
   }
 
@@ -687,6 +730,12 @@ class AnnotationController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Remove all committed shapes of [tool]. Used to enforce single-spotlight.
+  void removeShapesOfTool(DrawTool tool) {
+    _shapes.removeWhere((DrawShape s) => s.tool == tool);
+    notifyListeners();
+  }
+
   void redo() {
     if (_redoStack.isEmpty) return;
     _shapes.add(_redoStack.removeLast());
@@ -729,11 +778,15 @@ class AnnotationController extends ChangeNotifier {
   void selectShapeAt(Offset pos) {
     _clearGuideSelection(notify: false);
     for (int i = _shapes.length - 1; i >= 0; i--) {
-      if (_hitTest(_shapes[i], pos)) {
+      final DrawShape s = _shapes[i];
+      if (s.tool == DrawTool.pixelate || s.tool == DrawTool.blur || s.tool == DrawTool.magnifier) {
+        continue;
+      }
+      if (_hitTest(s, pos)) {
         for (DrawShape s in _shapes) {
           s.selected = false;
         }
-        _shapes[i].selected = true;
+        s.selected = true;
         selectedShapeIndex = i;
         notifyListeners();
         return;
@@ -752,6 +805,73 @@ class AnnotationController extends ChangeNotifier {
     _shapes[selectedShapeIndex!] = s.copyWith(
       points: s.points.map((ui.Offset p) => p + delta).toList(),
     );
+    notifyListeners();
+  }
+
+  void resizeElement(Offset pos, Offset delta) {
+    _clearGuideSelection(notify: false);
+
+    // Scroll delta dy > 0 usually means scroll down (shrink), dy < 0 means scroll up (grow).
+    final double scale = (1.0 - (delta.dy / 1000.0)).clamp(0.5, 2.0);
+
+    for (int i = _shapes.length - 1; i >= 0; i--) {
+      final DrawShape s = _shapes[i];
+      if (s.tool == DrawTool.pixelate || s.tool == DrawTool.blur || s.tool == DrawTool.magnifier) {
+        continue;
+      }
+      if (_hitTest(s, pos)) {
+        for (final DrawShape shape in _shapes) {
+          shape.selected = false;
+        }
+
+        // Calculate bounding box center to use as scaling anchor
+        if (s.points.isEmpty) continue;
+        double minX = s.points[0].dx;
+        double maxX = s.points[0].dx;
+        double minY = s.points[0].dy;
+        double maxY = s.points[0].dy;
+        for (final ui.Offset p in s.points) {
+          if (p.dx < minX) minX = p.dx;
+          if (p.dx > maxX) maxX = p.dx;
+          if (p.dy < minY) minY = p.dy;
+          if (p.dy > maxY) maxY = p.dy;
+        }
+        final ui.Offset center = ui.Offset((minX + maxX) / 2, (minY + maxY) / 2);
+
+        // Scale points relative to center
+        final List<ui.Offset> newPoints = s.points.map((ui.Offset p) => center + (p - center) * scale).toList();
+
+        // Also scale font size and stroke width
+        double? newFontSize = s.fontSize;
+        if (newFontSize == null) {
+          if (s.tool == DrawTool.text || s.tool == DrawTool.emoji) {
+            newFontSize = s.strokeWidth * 8 + 12;
+          } else if (s.tool == DrawTool.infoBalloon) {
+            newFontSize = s.strokeWidth * 6 + 12;
+          } else if (s.tool == DrawTool.stepCounter) {
+            newFontSize = 28.0;
+          }
+        }
+
+        if (newFontSize != null) {
+          newFontSize = (newFontSize * scale).clamp(8.0, 500.0);
+        }
+
+        _shapes[i] = s.copyWith(
+          points: newPoints,
+          fontSize: newFontSize,
+          strokeWidth: (s.strokeWidth * scale).clamp(1.0, 100.0),
+          selected: true,
+        );
+        selectedShapeIndex = i;
+        notifyListeners();
+        return;
+      }
+    }
+    for (final DrawShape s in _shapes) {
+      s.selected = false;
+    }
+    selectedShapeIndex = null;
     notifyListeners();
   }
 
@@ -788,7 +908,8 @@ class AnnotationController extends ChangeNotifier {
       return _infoBalloonHitPath(s, a).contains(pos);
     }
     if (s.tool == DrawTool.stepCounter) {
-      return Rect.fromCircle(center: a, radius: 22).contains(pos);
+      final double r = (s.fontSize ?? 28.0) / 2;
+      return Rect.fromCircle(center: a, radius: r + 8).contains(pos);
     }
     // line/ruler/arrow/ellipse: proximity to center
     final ui.Offset center = Offset((a.dx + b.dx) / 2, (a.dy + b.dy) / 2);
@@ -873,48 +994,61 @@ class AnnotationShell extends StatefulWidget {
 class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
   final AnnotationController _ctrl = AnnotationController();
   Timer? _timer;
+
+  /// Virtual-desktop top-left in screen coords (SM_XVIRTUALSCREEN / SM_YVIRTUALSCREEN).
+  late final Offset _virtualOrigin;
+
+  /// Widget-local rect of the monitor the cursor is currently on.
+  Rect _currentMonitorRect = Rect.zero;
+
   @override
   void initState() {
     super.initState();
     NativeHooks.registerCallHandler();
     NativeHooks.addListener(this);
-    // Defer Win32 setup until after the window is rendered
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Win32Window.setupOverlay();
       _ctrl.toggleDrawingMode(activated: true);
       unawaited(_registerScreenDrawHotkeys());
     });
     Monitor.fetchMonitors();
-    checkResize();
+
+    _virtualOrigin = Offset(
+      GetSystemMetrics(SM_XVIRTUALSCREEN).toDouble(),
+      GetSystemMetrics(SM_YVIRTUALSCREEN).toDouble(),
+    );
+
+    _updateCurrentMonitorRect();
     _timer = Timer.periodic(const Duration(milliseconds: 50), (_) => _ticker());
 
     WinUtils.fixDrawBug(delay: const Duration(milliseconds: 300));
   }
 
-  int currentMonitor = 0;
-  Square monitorData = Square(x: 0, y: 0, width: 0, height: 0);
-  final bool _shouldResize = true;
-  Future<void> checkResize() async {
-    if (!_shouldResize || !_ctrl.drawingModeActive) return;
-    final Pointer<POINT> lpPoint = calloc<POINT>();
-    GetCursorPos(lpPoint);
-    final int monitor = MonitorFromPoint(lpPoint.ref, 0);
-    free(lpPoint);
+  int _currentMonitorHandle = 0;
 
-    if (monitor != currentMonitor) {
-      currentMonitor = monitor;
-      monitorData = Monitor.monitorSizes[monitor]!;
-      await WindowManager.instance.setPosition(
-        Offset(monitorData.x.toDouble(), monitorData.y.toDouble()),
+  void _updateCurrentMonitorRect() {
+    final Pointer<POINT> pt = calloc<POINT>();
+    try {
+      if (GetCursorPos(pt) == 0) return;
+      final int handle = MonitorFromPoint(pt.ref, MONITOR_DEFAULTTONEAREST);
+      if (handle == _currentMonitorHandle && !_currentMonitorRect.isEmpty) return;
+      _currentMonitorHandle = handle;
+      final Square? m = Monitor.monitorSizes[handle];
+      if (m == null) return;
+      final Rect r = Rect.fromLTWH(
+        m.x.toDouble() - _virtualOrigin.dx,
+        m.y.toDouble() - _virtualOrigin.dy,
+        m.width.toDouble(),
+        m.height.toDouble(),
       );
-      await WindowManager.instance.setSize(
-        Size(monitorData.width.toDouble(), monitorData.height.toDouble()),
-      );
+      if (r != _currentMonitorRect) setState(() => _currentMonitorRect = r);
+    } finally {
+      calloc.free(pt);
     }
   }
 
   void _ticker() {
-    checkResize();
+    _updateCurrentMonitorRect();
   }
 
   Future<void> _registerScreenDrawHotkeys() async {
@@ -989,7 +1123,11 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
       type: MaterialType.transparency,
       child: ListenableBuilder(
         listenable: _ctrl,
-        builder: (_, __) => AnnotationOverlay(controller: _ctrl),
+        builder: (_, __) => AnnotationOverlay(
+          controller: _ctrl,
+          currentMonitorRect: _currentMonitorRect,
+          virtualOrigin: _virtualOrigin,
+        ),
       ),
     );
   }
@@ -1001,7 +1139,14 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
 
 class AnnotationOverlay extends StatefulWidget {
   final AnnotationController controller;
-  const AnnotationOverlay({super.key, required this.controller});
+  final Rect currentMonitorRect;
+  final Offset virtualOrigin;
+  const AnnotationOverlay({
+    super.key,
+    required this.controller,
+    required this.currentMonitorRect,
+    required this.virtualOrigin,
+  });
 
   @override
   State<AnnotationOverlay> createState() => _AnnotationOverlayState();
@@ -1034,27 +1179,32 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   bool _selectedCaptureRefreshInProgress = false;
   bool _selectedCaptureDragRefreshActive = false;
 
-  // One frozen background per drawing-mode activation / monitor.
-  // Region tools crop from this buffer instead of BitBlt-ing the live overlay.
-  Uint8List? _monitorSnapshotBytes;
-  Rect? _monitorSnapshotScreenRect;
-  int? _monitorSnapshotW;
-  int? _monitorSnapshotH;
-  int? _monitorSnapshotMonitor;
-  bool _snapshotInProgress = false;
-  Uint8List? _captureMonitorSnapshotBytes;
-  Rect? _captureMonitorSnapshotScreenRect;
-  int? _captureMonitorSnapshotW;
-  int? _captureMonitorSnapshotH;
-  int? _captureMonitorSnapshotMonitor;
-  bool _captureMonitorSnapshotInProgress = false;
+  // Single unified virtual-desktop snapshot used by all region tools.
+  // Covers the full multi-monitor area via GDI GetDIBits (includes our drawings).
+  Uint8List? _vdSnapshotBytes; // RGBA pixels
+  Rect? _vdSnapshotRect; // screen rect (physical coords)
+  int? _vdSnapshotW;
+  int? _vdSnapshotH;
+  bool _vdSnapshotInProgress = false;
   bool _lastDrawingModeActive = false;
+
+  // Toolbar real size — measured after first build for crosshair hit-test.
+  final GlobalKey _toolbarKey = GlobalKey();
+  Size _toolbarSize = const Size(52, 600); // sensible fallback
 
   @override
   void initState() {
     super.initState();
     _lastDrawingModeActive = ctrl.drawingModeActive;
     ctrl.addListener(_handleControllerChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureToolbar());
+  }
+
+  void _measureToolbar() {
+    final RenderBox? box = _toolbarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final Size s = box.size;
+    if (s != _toolbarSize) setState(() => _toolbarSize = s);
   }
 
   @override
@@ -1068,21 +1218,17 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   void _handleControllerChanged() {
     if (ctrl.drawingModeActive && !_lastDrawingModeActive) {
       _discardMonitorSnapshot();
+      // Re-measure toolbar once it's built.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _measureToolbar());
     }
     _lastDrawingModeActive = ctrl.drawingModeActive;
   }
 
   void _discardMonitorSnapshot() {
-    _monitorSnapshotBytes = null;
-    _monitorSnapshotScreenRect = null;
-    _monitorSnapshotW = null;
-    _monitorSnapshotH = null;
-    _monitorSnapshotMonitor = null;
-    _captureMonitorSnapshotBytes = null;
-    _captureMonitorSnapshotScreenRect = null;
-    _captureMonitorSnapshotW = null;
-    _captureMonitorSnapshotH = null;
-    _captureMonitorSnapshotMonitor = null;
+    _vdSnapshotBytes = null;
+    _vdSnapshotRect = null;
+    _vdSnapshotW = null;
+    _vdSnapshotH = null;
   }
 
   // For guide dragging hit-test
@@ -1100,6 +1246,14 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   @override
   Widget build(BuildContext context) {
     final ui.Size size = MediaQuery.of(context).size;
+    final Rect monRect = widget.currentMonitorRect;
+
+    // Toolbar and status bar anchor to the active monitor.
+    // Fall back to (8,8) relative to virtual canvas if monRect not yet known.
+    final double toolbarLeft = (monRect.isEmpty ? 0 : monRect.left) + 8;
+    final double toolbarTop = (monRect.isEmpty ? 0 : monRect.top) + 8;
+    final double statusLeft = (monRect.isEmpty ? 0 : monRect.left) + 8;
+    final double statusBottom = monRect.isEmpty ? 8 : (size.height - monRect.bottom) + 8;
 
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
@@ -1107,8 +1261,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       onKeyEvent: _onKeyEvent,
       child: Stack(
         children: <Widget>[
-          // Spotlight is below the annotation painter so existing drawn
-          // elements stay visible over the blurred outside area.
           ListenableBuilder(
             listenable: ctrl,
             builder: (_, __) => Stack(
@@ -1118,30 +1270,33 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                   .toList(),
             ),
           ),
-          // Transparent canvas background
           Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanStart: _onPanStart,
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: _onPanEnd,
-              onTapDown: _onTapDown,
-              onSecondaryTapDown: _onSecondaryTapDown,
-              child: CustomPaint(
-                size: size,
-                painter: AnnotationPainter(
-                  shapes: ctrl.shapes,
-                  currentShape: ctrl.currentShape,
-                  currentEnd: ctrl.currentEnd,
-                  guides: ctrl.guides,
-                  gridVisible: ctrl.gridVisible,
-                  gridSpacing: ctrl.gridSpacing,
-                  drawingMode: ctrl.drawingModeActive,
+            child: Listener(
+              onPointerSignal: (PointerSignalEvent pointerSignal) {
+                if (pointerSignal is PointerScrollEvent) _onScrollEvent(pointerSignal);
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onPanStart: _onPanStart,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+                onTapDown: _onTapDown,
+                onSecondaryTapDown: _onSecondaryTapDown,
+                child: CustomPaint(
+                  size: size,
+                  painter: AnnotationPainter(
+                    shapes: ctrl.shapes,
+                    currentShape: ctrl.currentShape,
+                    currentEnd: ctrl.currentEnd,
+                    guides: ctrl.guides,
+                    gridVisible: ctrl.gridVisible,
+                    gridSpacing: ctrl.gridSpacing,
+                    drawingMode: ctrl.drawingModeActive,
+                  ),
                 ),
               ),
             ),
           ),
-          // Other committed image-backed shapes stay above the base painter.
           ListenableBuilder(
             listenable: ctrl,
             builder: (_, __) => Stack(
@@ -1162,32 +1317,37 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
               shape: _liveRegionShape!,
               rect: Rect.fromPoints(_captureStart!, _captureCurrent!),
             ),
-          // Magnifier lens (circular zoom from live screen capture)
           if (false &&
               ctrl.drawingModeActive &&
               ctrl.activeTool == DrawTool.magnifier &&
               _magnifierShape != null &&
               _magnifierCenter != null)
             _MagnifierLens(center: _magnifierCenter!, shape: _magnifierShape!),
-          // Toolbar (only in drawing mode)
+          // Toolbar anchored to active monitor
           if (ctrl.drawingModeActive)
             Positioned(
-              left: 8,
-              top: 8,
-              child: AnnotationToolbar(controller: ctrl),
+              left: toolbarLeft,
+              top: toolbarTop,
+              child: AnnotationToolbar(key: _toolbarKey, controller: ctrl),
             ),
-          // Status bar
+          // Status bar anchored to active monitor
           if (ctrl.drawingModeActive)
             Positioned(
-              bottom: 8,
-              left: 8,
+              bottom: statusBottom,
+              left: statusLeft,
               child: _StatusBar(controller: ctrl),
             ),
-          // Cursor crosshair hint
+          // Crosshair: knows the toolbar position so it can switch cursor there
           if (ctrl.drawingModeActive && !selectMode)
-            const Positioned.fill(
+            Positioned.fill(
               child: _CrosshairLayer(
                 onHover: null,
+                toolbarRect: Rect.fromLTWH(
+                  toolbarLeft,
+                  toolbarTop,
+                  _toolbarSize.width,
+                  _toolbarSize.height,
+                ),
               ),
             ),
           if (_captureStart != null &&
@@ -1324,7 +1484,10 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
 
     if (_isRegionTool(ctrl.activeTool)) {
+      //hide crosshair
+
       setState(() {
+        selectMode = true;
         _captureStart = pos;
         _captureCurrent = pos;
       });
@@ -1381,7 +1544,17 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     ctrl.updateShape(pos, shiftHeld: _shiftHeld);
   }
 
-  void _onPanEnd(DragEndDetails d) {
+  void _onScrollEvent(PointerScrollEvent e) {
+    if (!ctrl.drawingModeActive) return;
+    if (!selectMode) return;
+
+    final ui.Offset pos = e.localPosition;
+    // final double scrollDelta = e.scrollDelta.dy;
+    // print('pos: $pos scrollDelta: $scrollDelta');
+    ctrl.resizeElement(pos, e.scrollDelta);
+  }
+
+  Future<void> _onPanEnd(DragEndDetails d) async {
     if (!ctrl.drawingModeActive) return;
 
     if (ctrl.activeTool == DrawTool.screenCapture) {
@@ -1392,12 +1565,17 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (_isLiveRegionTool(ctrl.activeTool) && _captureStart != null && _captureCurrent != null) {
       _liveRegionFetchDebounce?.cancel();
       final Rect region = Rect.fromPoints(_captureStart!, _captureCurrent!);
-      if (region.width > 4 && region.height > 4) unawaited(_commitLiveRegion(region));
       setState(() {
         _captureStart = null;
         _captureCurrent = null;
         _liveRegionShape = null;
       });
+      if (region.width > 4 && region.height > 4) {
+        // Await so _commitLiveRegion crops from the current frozen snapshot,
+        // then discard so the *next* drag takes a fresh capture.
+        await _commitLiveRegion(region);
+      }
+      _discardMonitorSnapshot();
       return;
     }
     if (ctrl.activeTool == DrawTool.imageDraw && _captureStart != null && _captureCurrent != null) {
@@ -1507,13 +1685,20 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     int w;
     int h;
     if (ctrl.activeTool == DrawTool.spotlight) {
-      final Size screenSize = MediaQuery.of(context).size;
-      final Rect fullRect = Offset.zero & screenSize;
-      bytes = await _captureScreenRegion(fullRect);
-      w = screenSize.width.round().clamp(1, 100000);
-      h = screenSize.height.round().clamp(1, 100000);
+      // Spotlight needs the full virtual desktop so the blur shader covers all monitors.
+      final Rect vdRect = Rect.fromLTWH(
+        0,
+        0,
+        GetSystemMetrics(SM_CXVIRTUALSCREEN).toDouble(),
+        GetSystemMetrics(SM_CYVIRTUALSCREEN).toDouble(),
+      );
+      bytes = await _captureScreenRegion(vdRect);
+      w = vdRect.width.round().clamp(1, 100000);
+      h = vdRect.height.round().clamp(1, 100000);
     } else if (ctrl.activeTool == DrawTool.blur || ctrl.activeTool == DrawTool.pixelate) {
-      bytes = await _captureMonitorRegion(localRect, force: true);
+      // Never force-refresh mid-drag — always crop from the snapshot taken at
+      // pan-start so we don't re-blur already-blurred pixels (feedback loop).
+      bytes = await _captureMonitorRegion(localRect);
       w = localRect.width.round().clamp(1, 100000);
       h = localRect.height.round().clamp(1, 100000);
     } else {
@@ -1546,14 +1731,22 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     int w, h;
 
     if (ctrl.activeTool == DrawTool.spotlight) {
-      // Capture the full window for spotlight so we can blur the whole background
-      final Size screenSize = MediaQuery.of(context).size;
-      final Rect fullRect = Offset.zero & screenSize;
-      bytes = await _captureScreenRegion(fullRect);
-      w = screenSize.width.round().clamp(1, 100000);
-      h = screenSize.height.round().clamp(1, 100000);
+      // Remove any existing spotlight shape before committing the new one.
+      ctrl.removeShapesOfTool(DrawTool.spotlight);
+      // Capture the full virtual desktop for the spotlight background.
+      final Rect vdRect = Rect.fromLTWH(
+        0,
+        0,
+        GetSystemMetrics(SM_CXVIRTUALSCREEN).toDouble(),
+        GetSystemMetrics(SM_CYVIRTUALSCREEN).toDouble(),
+      );
+      bytes = await _captureScreenRegion(vdRect);
+      w = vdRect.width.round().clamp(1, 100000);
+      h = vdRect.height.round().clamp(1, 100000);
     } else if (ctrl.activeTool == DrawTool.blur || ctrl.activeTool == DrawTool.pixelate) {
-      bytes = await _captureMonitorRegion(region, force: true);
+      // Crop from the same frozen snapshot used during the drag — never re-capture
+      // at commit time (the screen now shows the live preview blur on top).
+      bytes = await _captureMonitorRegion(region);
       w = region.width.round().clamp(1, 100000);
       h = region.height.round().clamp(1, 100000);
     } else {
@@ -1572,6 +1765,11 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   }
 
   Future<void> _captureAndCommitImageDraw(Rect localRect) async {
+    if (ctrl.activeTool == DrawTool.imageDraw) {
+      //selectSelecting mode
+      ctrl.setTool(DrawTool.select);
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     final Uint8List? bytes = await _captureScreenRegion(localRect);
     if (bytes == null) return;
     final int w = localRect.width.round().clamp(1, 100000);
@@ -1581,10 +1779,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 
   // ── Frozen monitor capture helper ──────────────────────────────────────────
 
-  Future<bool> _ensureRegionToolSnapshot(DrawTool tool) {
-    if (_usesCaptureMonitorTool(tool)) return _ensureCaptureMonitorSnapshot();
-    return _ensureMonitorSnapshot();
-  }
+  Future<bool> _ensureRegionToolSnapshot(DrawTool tool) => _ensureVdSnapshot();
 
   void _debounceLiveRegionFetch(Rect region) {
     _liveRegionFetchDebounce?.cancel();
@@ -1593,49 +1788,36 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     });
   }
 
-  Future<bool> _ensureCaptureMonitorSnapshot({bool force = false}) async {
-    if (_captureMonitorSnapshotInProgress) {
-      while (_captureMonitorSnapshotInProgress && mounted) {
+  // ── Unified virtual-desktop snapshot ──────────────────────────────────────
+  // One GDI GetDIBits snapshot of the full virtual desktop per drawing-mode
+  // activation. Includes our own annotations. Works across all monitors.
+
+  Future<bool> _ensureVdSnapshot({bool force = false}) async {
+    if (_vdSnapshotInProgress) {
+      while (_vdSnapshotInProgress && mounted) {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
-      return _captureMonitorSnapshotBytes != null;
+      return _vdSnapshotBytes != null;
     }
+    if (!force && _vdSnapshotBytes != null && _vdSnapshotRect != null) return true;
 
-    final int hwnd = Win32Window.getHwnd();
-    if (hwnd == 0) return false;
-
-    Monitor.fetchMonitors();
-    final int monitor = Monitor.getWindowMonitor(hwnd);
-    if (!force &&
-        _captureMonitorSnapshotBytes != null &&
-        _captureMonitorSnapshotMonitor == monitor &&
-        _captureMonitorSnapshotScreenRect != null) {
-      return true;
-    }
-
-    final Square? m = Monitor.monitorSizes[monitor];
-    if (m == null) return false;
-
-    _captureMonitorSnapshotInProgress = true;
+    _vdSnapshotInProgress = true;
     try {
-      final int monitorIndex = ((Monitor.monitorIds[monitor] ?? 1) - 1).clamp(0, 100000);
-      await excludeWindowFromCapture(hwnd);
-      final MonitorCapture? capture = await captureMonitor(monitorIndex: monitorIndex);
-      if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.pixels.isEmpty) return false;
-
-      _captureMonitorSnapshotBytes = _bgraToRgba(capture.pixels);
-      _captureMonitorSnapshotScreenRect = Rect.fromLTWH(
-        m.x.toDouble(),
-        m.y.toDouble(),
-        m.width.toDouble(),
-        m.height.toDouble(),
+      final Rect vdRect = Rect.fromLTWH(
+        widget.virtualOrigin.dx,
+        widget.virtualOrigin.dy,
+        GetSystemMetrics(SM_CXVIRTUALSCREEN).toDouble(),
+        GetSystemMetrics(SM_CYVIRTUALSCREEN).toDouble(),
       );
-      _captureMonitorSnapshotW = capture.width;
-      _captureMonitorSnapshotH = capture.height;
-      _captureMonitorSnapshotMonitor = monitor;
+      final Uint8List? bytes = _captureScreenRectRgba(vdRect);
+      if (bytes == null) return false;
+      _vdSnapshotBytes = bytes;
+      _vdSnapshotRect = vdRect;
+      _vdSnapshotW = vdRect.width.round();
+      _vdSnapshotH = vdRect.height.round();
       return true;
     } finally {
-      _captureMonitorSnapshotInProgress = false;
+      _vdSnapshotInProgress = false;
     }
   }
 
@@ -1663,73 +1845,50 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
   }
 
-  Uint8List _bgraToRgba(Uint8List bgra) {
-    final Uint8List rgba = Uint8List(bgra.length);
-    for (int i = 0; i < bgra.length; i += 4) {
-      rgba[i] = bgra[i + 2];
-      rgba[i + 1] = bgra[i + 1];
-      rgba[i + 2] = bgra[i];
-      rgba[i + 3] = 255;
-    }
-    return rgba;
+  /// Crop [localRect] (widget-local coords) from the virtual-desktop snapshot.
+  Future<Uint8List?> _captureScreenRegion(Rect localRect) async {
+    if (!await _ensureVdSnapshot()) return null;
+    return _cropFromVdSnapshot(localRect);
   }
 
-  Future<bool> _ensureMonitorSnapshot({bool force = false}) async {
-    if (_snapshotInProgress) {
-      while (_snapshotInProgress && mounted) {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+  /// Like [_captureScreenRegion] but always takes a fresh snapshot first.
+  Future<Uint8List?> _captureMonitorRegion(Rect localRect, {bool force = false}) async {
+    if (!await _ensureVdSnapshot(force: force)) return null;
+    return _cropFromVdSnapshot(localRect);
+  }
+
+  /// Crop [localRect] (widget-local / virtual-canvas coords) from the snapshot.
+  Uint8List? _cropFromVdSnapshot(Rect localRect) {
+    final Uint8List? snap = _vdSnapshotBytes;
+    final Rect? snapRect = _vdSnapshotRect;
+    final int? snapW = _vdSnapshotW;
+    final int? snapH = _vdSnapshotH;
+    if (snap == null || snapRect == null || snapW == null || snapH == null) return null;
+
+    final Rect r = localRect.normalized();
+    final int outW = r.width.round().clamp(1, 100000);
+    final int outH = r.height.round().clamp(1, 100000);
+
+    // Widget-local → screen coords via virtualOrigin.
+    final double screenLeft = r.left + widget.virtualOrigin.dx;
+    final double screenTop = r.top + widget.virtualOrigin.dy;
+
+    final Uint8List out = Uint8List(outW * outH * 4);
+    for (int row = 0; row < outH; row++) {
+      final int sy = (screenTop + row - snapRect.top).round();
+      if (sy < 0 || sy >= snapH) continue;
+      for (int col = 0; col < outW; col++) {
+        final int sx = (screenLeft + col - snapRect.left).round();
+        if (sx < 0 || sx >= snapW) continue;
+        final int srcI = (sy * snapW + sx) * 4;
+        final int dstI = (row * outW + col) * 4;
+        out[dstI] = snap[srcI];
+        out[dstI + 1] = snap[srcI + 1];
+        out[dstI + 2] = snap[srcI + 2];
+        out[dstI + 3] = snap[srcI + 3];
       }
-      return _monitorSnapshotBytes != null;
     }
-
-    final int hwnd = Win32Window.getHwnd();
-    if (hwnd == 0) return false;
-
-    final int monitor = Monitor.getWindowMonitor(hwnd);
-    if (!force &&
-        _monitorSnapshotBytes != null &&
-        _monitorSnapshotMonitor == monitor &&
-        _monitorSnapshotScreenRect != null) {
-      return true;
-    }
-
-    _snapshotInProgress = true;
-    try {
-      Monitor.fetchMonitors();
-      final Square? m = Monitor.monitorSizes[monitor];
-      if (m == null) return false;
-
-      final Rect monitorRect = Rect.fromLTWH(
-        m.x.toDouble(),
-        m.y.toDouble(),
-        m.width.toDouble(),
-        m.height.toDouble(),
-      );
-
-      // Hide the overlay for the one real capture so CAPTUREBLT cannot include
-      // our own blur/pixelate/spotlight pixels. This capture happens only when
-      // the overlay opens / drawing mode becomes active / monitor changes.
-      ShowWindow(hwnd, SW_HIDE);
-      await Future<void>.delayed(const Duration(milliseconds: 60));
-
-      final Uint8List? bytes = _captureScreenRectRgba(monitorRect);
-
-      ShowWindow(hwnd, SW_SHOW);
-      SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-      await WindowManager.instance.focus();
-
-      if (bytes == null) return false;
-      _monitorSnapshotBytes = bytes;
-      _monitorSnapshotScreenRect = monitorRect;
-      _monitorSnapshotW = monitorRect.width.round();
-      _monitorSnapshotH = monitorRect.height.round();
-      _monitorSnapshotMonitor = monitor;
-      return true;
-    } finally {
-      // In case an early return happened while hidden, make the overlay visible again.
-      ShowWindow(hwnd, SW_SHOW);
-      _snapshotInProgress = false;
-    }
+    return out;
   }
 
   Uint8List? _captureScreenRectRgba(Rect screenRect) {
@@ -1774,90 +1933,15 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
   }
 
-  Future<Uint8List?> _captureScreenRegion(Rect localRect) async {
-    if (!await _ensureMonitorSnapshot()) return null;
-
-    final Uint8List? snapshot = _monitorSnapshotBytes;
-    final Rect? snapshotRect = _monitorSnapshotScreenRect;
-    final int? snapshotW = _monitorSnapshotW;
-    final int? snapshotH = _monitorSnapshotH;
-    if (snapshot == null || snapshotRect == null || snapshotW == null || snapshotH == null) return null;
-
-    final Pointer<RECT> windowRect = calloc<RECT>();
-    try {
-      final int hwnd = Win32Window.getHwnd();
-      if (hwnd == 0 || GetWindowRect(hwnd, windowRect) == 0) return null;
-
-      final Rect r = localRect.normalized();
-      final int outW = r.width.round().clamp(1, 100000);
-      final int outH = r.height.round().clamp(1, 100000);
-      final int screenLeft = (windowRect.ref.left + r.left).round();
-      final int screenTop = (windowRect.ref.top + r.top).round();
-
-      final Uint8List out = Uint8List(outW * outH * 4);
-      for (int row = 0; row < outH; row++) {
-        final int sy = screenTop + row - snapshotRect.top.round();
-        if (sy < 0 || sy >= snapshotH) continue;
-        for (int col = 0; col < outW; col++) {
-          final int sx = screenLeft + col - snapshotRect.left.round();
-          if (sx < 0 || sx >= snapshotW) continue;
-          final int srcI = (sy * snapshotW + sx) * 4;
-          final int dstI = (row * outW + col) * 4;
-          out[dstI] = snapshot[srcI];
-          out[dstI + 1] = snapshot[srcI + 1];
-          out[dstI + 2] = snapshot[srcI + 2];
-          out[dstI + 3] = snapshot[srcI + 3];
-        }
-      }
-      return out;
-    } finally {
-      calloc.free(windowRect);
-    }
-  }
-
-  // ── Text dialog ────────────────────────────────────────────────────────────
-
-  Future<Uint8List?> _captureMonitorRegion(Rect localRect, {bool force = false}) async {
-    if (!await _ensureCaptureMonitorSnapshot(force: force)) return null;
-
-    final Uint8List? snapshot = _captureMonitorSnapshotBytes;
-    final Rect? snapshotRect = _captureMonitorSnapshotScreenRect;
-    final int? snapshotW = _captureMonitorSnapshotW;
-    final int? snapshotH = _captureMonitorSnapshotH;
-    if (snapshot == null || snapshotRect == null || snapshotW == null || snapshotH == null) return null;
-
-    final Pointer<RECT> windowRect = calloc<RECT>();
-    try {
-      final int hwnd = Win32Window.getHwnd();
-      if (hwnd == 0 || GetWindowRect(hwnd, windowRect) == 0) return null;
-
-      final Rect r = localRect.normalized();
-      final int outW = r.width.round().clamp(1, 100000);
-      final int outH = r.height.round().clamp(1, 100000);
-      final double screenLeft = windowRect.ref.left + r.left;
-      final double screenTop = windowRect.ref.top + r.top;
-      final double scaleX = snapshotW / snapshotRect.width;
-      final double scaleY = snapshotH / snapshotRect.height;
-
-      final Uint8List out = Uint8List(outW * outH * 4);
-      for (int row = 0; row < outH; row++) {
-        final int sy = ((screenTop + row - snapshotRect.top) * scaleY).floor();
-        if (sy < 0 || sy >= snapshotH) continue;
-        for (int col = 0; col < outW; col++) {
-          final int sx = ((screenLeft + col - snapshotRect.left) * scaleX).floor();
-          if (sx < 0 || sx >= snapshotW) continue;
-          final int srcI = (sy * snapshotW + sx) * 4;
-          final int dstI = (row * outW + col) * 4;
-          out[dstI] = snapshot[srcI];
-          out[dstI + 1] = snapshot[srcI + 1];
-          out[dstI + 2] = snapshot[srcI + 2];
-          out[dstI + 3] = snapshot[srcI + 3];
-        }
-      }
-      return out;
-    } finally {
-      calloc.free(windowRect);
-    }
+  /// Compute the top-left position for a dialog of [dialogWidth] × [dialogHeight]
+  /// so it appears centered on the active monitor.
+  Offset _dialogOffset(double dialogWidth, double dialogHeight) {
+    final Rect m = widget.currentMonitorRect;
+    if (m.isEmpty) return Offset.zero;
+    return Offset(
+      m.left + (m.width - dialogWidth) / 2,
+      m.top + (m.height - dialogHeight) / 2,
+    );
   }
 
   Future<void> _showTextDialog(Offset pos) async {
@@ -1866,124 +1950,136 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     Color localColor = ctrl.textColor ?? ctrl.strokeColor;
     double localSize = ctrl.fontSize;
 
+    // Approximate dialog size (width fixed, height estimated).
+    const double dw = 400;
+    const double dh = 300;
+    final Offset dOff = _dialogOffset(dw, dh);
+
     final String? result = await showDialog<String>(
       context: context,
       barrierColor: Colors.black38,
-      builder: (BuildContext ctx) => StatefulBuilder(
-        builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: Text(
-            ctrl.activeTool == DrawTool.infoBalloon ? 'Info Balloon Text' : 'Enter Text',
-            style: const TextStyle(color: Colors.white),
-          ),
-          content: SizedBox(
-            width: 340,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                TextField(
-                  controller: tc,
-                  autofocus: true,
+      builder: (BuildContext ctx) => Stack(
+        children: <Widget>[
+          Positioned(
+            left: dOff.dx,
+            top: dOff.dy,
+            width: dw,
+            child: StatefulBuilder(
+              builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
+                backgroundColor: userSettings.themeColors.background,
+                insetPadding: EdgeInsets.zero,
+                title: Text(
+                  ctrl.activeTool == DrawTool.infoBalloon ? 'Info Balloon Text' : 'Enter Text',
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    hintText: 'Type here…',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.yellowAccent)),
-                  ),
-                  onSubmitted: (String v) {
-                    ctrl.textBackground = localBg;
-                    ctrl.textColor = localColor;
-                    ctrl.fontSize = localSize;
-                    Navigator.pop(ctx, v);
-                  },
                 ),
-                const SizedBox(height: 12),
-                // Font size slider
-                Row(children: <Widget>[
-                  const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SliderTheme(
-                      data: SliderTheme.of(ctx2).copyWith(
-                        activeTrackColor: Colors.yellowAccent,
-                        thumbColor: Colors.yellowAccent,
-                        inactiveTrackColor: Colors.white24,
+                content: SizedBox(
+                  width: dw,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      TextField(
+                        controller: tc,
+                        autofocus: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: 'Type here…',
+                          hintStyle: TextStyle(color: Colors.white38),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.yellowAccent)),
+                        ),
+                        onSubmitted: (String v) {
+                          ctrl.textBackground = localBg;
+                          ctrl.textColor = localColor;
+                          ctrl.fontSize = localSize;
+                          Navigator.pop(ctx, v);
+                        },
                       ),
-                      child: Slider(
-                        value: localSize,
-                        min: 8,
-                        max: 72,
-                        onChanged: (double v) => setSt(() => localSize = v),
-                      ),
-                    ),
-                  ),
-                  Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ]),
-                const SizedBox(height: 8),
-                // Background toggle + color palette row
-                Row(children: <Widget>[
-                  GestureDetector(
-                    onTap: () => setSt(() => localBg = !localBg),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: localBg ? Colors.white24 : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.white38),
-                      ),
-                      child: Row(children: <Widget>[
-                        Icon(localBg ? Icons.check_box : Icons.check_box_outline_blank,
-                            color: Colors.white70, size: 16),
-                        const SizedBox(width: 4),
-                        const Text('BG', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      const SizedBox(height: 12),
+                      Row(children: <Widget>[
+                        const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(ctx2).copyWith(
+                              activeTrackColor: Colors.yellowAccent,
+                              thumbColor: Colors.yellowAccent,
+                              inactiveTrackColor: Colors.white24,
+                            ),
+                            child: Slider(
+                              value: localSize,
+                              min: 8,
+                              max: 72,
+                              onChanged: (double v) => setSt(() => localSize = v),
+                            ),
+                          ),
+                        ),
+                        Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                       ]),
-                    ),
+                      const SizedBox(height: 8),
+                      Row(children: <Widget>[
+                        GestureDetector(
+                          onTap: () => setSt(() => localBg = !localBg),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: localBg ? Colors.white24 : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.white38),
+                            ),
+                            child: Row(children: <Widget>[
+                              Icon(localBg ? Icons.check_box : Icons.check_box_outline_blank,
+                                  color: Colors.white70, size: 16),
+                              const SizedBox(width: 4),
+                              const Text('BG', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            ]),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: AppColor.palette
+                                  .map((Color c) => GestureDetector(
+                                        onTap: () => setSt(() => localColor = c),
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          margin: const EdgeInsets.only(right: 4),
+                                          decoration: BoxDecoration(
+                                            color: c,
+                                            shape: BoxShape.circle,
+                                            border: localColor == c
+                                                ? Border.all(color: Colors.white, width: 2)
+                                                : Border.all(color: Colors.transparent),
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        ),
+                      ]),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  // Color picker placeholder (palette)
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: AppColor.palette
-                            .map((Color c) => GestureDetector(
-                                  onTap: () => setSt(() => localColor = c),
-                                  child: Container(
-                                    width: 20,
-                                    height: 20,
-                                    margin: const EdgeInsets.only(right: 4),
-                                    decoration: BoxDecoration(
-                                      color: c,
-                                      shape: BoxShape.circle,
-                                      border: localColor == c
-                                          ? Border.all(color: Colors.white, width: 2)
-                                          : Border.all(color: Colors.transparent),
-                                    ),
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                    ),
+                ),
+                actions: <Widget>[
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () {
+                      ctrl.textBackground = localBg;
+                      ctrl.textColor = localColor;
+                      ctrl.fontSize = localSize;
+                      Navigator.pop(ctx, tc.text);
+                    },
+                    child: const Text('OK'),
                   ),
-                ]),
-              ],
+                ],
+              ),
             ),
           ),
-          actions: <Widget>[
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            TextButton(
-              onPressed: () {
-                ctrl.textBackground = localBg;
-                ctrl.textColor = localColor;
-                ctrl.fontSize = localSize;
-                Navigator.pop(ctx, tc.text);
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+        ],
       ),
     );
     if (result != null && result.isNotEmpty) ctrl.commitTextShape(pos, result);
@@ -1993,90 +2089,102 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     String? selectedEmoji;
     double localSize = ctrl.fontSize.clamp(24.0, 160.0);
 
+    const double dw = 480;
+    const double dh = 540;
+    final Offset dOff = _dialogOffset(dw, dh);
+
     final String? result = await showDialog<String>(
       context: context,
       barrierColor: Colors.black38,
-      builder: (BuildContext ctx) => StatefulBuilder(
-        builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Text(
-            'Pick Emoji',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: SizedBox(
-            width: 440,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: Text(
-                    selectedEmoji ?? '🙂',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: localSize),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: <Widget>[
-                    const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(ctx2).copyWith(
-                          activeTrackColor: Colors.yellowAccent,
-                          thumbColor: Colors.yellowAccent,
-                          inactiveTrackColor: Colors.white24,
+      builder: (BuildContext ctx) => Stack(
+        children: <Widget>[
+          Positioned(
+            left: dOff.dx,
+            top: dOff.dy,
+            width: dw,
+            child: StatefulBuilder(
+              builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
+                backgroundColor: userSettings.themeColors.background,
+                insetPadding: EdgeInsets.zero,
+                title: const Text('Pick Emoji', style: TextStyle(color: Colors.white)),
+                content: SizedBox(
+                  width: dw,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: userSettings.themeColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white12),
                         ),
-                        child: Slider(
-                          value: localSize,
-                          min: 24,
-                          max: 160,
-                          onChanged: (double v) => setSt(() => localSize = v),
+                        child: Text(
+                          selectedEmoji ?? '🙂',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: localSize),
                         ),
                       ),
-                    ),
-                    Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 320,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Material(
-                      color: Colors.white,
-                      child: EmojiSelector(
-                        rows: 5,
-                        columns: 8,
-                        onSelected: (EmojiData emoji) => setSt(() => selectedEmoji = emoji.char),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: <Widget>[
+                          const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(ctx2).copyWith(
+                                activeTrackColor: Colors.yellowAccent,
+                                thumbColor: Colors.yellowAccent,
+                                inactiveTrackColor: Colors.white24,
+                              ),
+                              child: Slider(
+                                value: localSize,
+                                min: 24,
+                                max: 160,
+                                onChanged: (double v) => setSt(() => localSize = v),
+                              ),
+                            ),
+                          ),
+                          Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 320,
+                        child: ClipRRect(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: EmojiPickerModal(
+                              title: 'Emoji Picker',
+                              onEmojiSelected: (String e) => setSt(() => selectedEmoji = e),
+                              userPredefined: false,
+                              showPanelHeader: false,
+                              onCloseRequested: () {},
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+                actions: <Widget>[
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: selectedEmoji == null
+                        ? null
+                        : () {
+                            ctrl.fontSize = localSize;
+                            Navigator.pop(ctx, selectedEmoji);
+                          },
+                    child: const Text('Place'),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: <Widget>[
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            TextButton(
-              onPressed: selectedEmoji == null
-                  ? null
-                  : () {
-                      ctrl.fontSize = localSize;
-                      Navigator.pop(ctx, selectedEmoji);
-                    },
-              child: const Text('Place'),
-            ),
-          ],
-        ),
+        ],
       ),
     );
 
@@ -2093,22 +2201,16 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (start == null || current == null) return;
     final Rect localRect = Rect.fromPoints(start, current);
     if (localRect.width < 2 || localRect.height < 2) return;
-    final Pointer<RECT> windowRect = calloc<RECT>();
-    try {
-      final int hwnd = Win32Window.getHwnd();
-      if (hwnd == 0 || GetWindowRect(hwnd, windowRect) == 0) return;
-      final Rect screenRect = Rect.fromLTWH(
-        windowRect.ref.left + localRect.left,
-        windowRect.ref.top + localRect.top,
-        localRect.width,
-        localRect.height,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 90));
-      await ScreenDrawCapture.copyRegionToClipboard(screenRect);
-      await WindowManager.instance.focus();
-    } finally {
-      calloc.free(windowRect);
-    }
+
+    // Widget-local → screen coords. Our window is at virtualOrigin.
+    final Rect screenRect = Rect.fromLTWH(
+      localRect.left + widget.virtualOrigin.dx,
+      localRect.top + widget.virtualOrigin.dy,
+      localRect.width,
+      localRect.height,
+    );
+    await ScreenDrawCapture.copyRegionToClipboard(screenRect);
+    await WindowManager.instance.focus();
   }
 }
 
@@ -2118,27 +2220,33 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 
 class _CrosshairLayer extends StatefulWidget {
   final void Function(Offset)? onHover;
-  const _CrosshairLayer({this.onHover});
+
+  /// Widget-local rect of the toolbar — cursor shows as arrow inside it.
+  final Rect toolbarRect;
+  const _CrosshairLayer({this.onHover, required this.toolbarRect});
   @override
   State<_CrosshairLayer> createState() => _CrosshairLayerState();
 }
 
 class _CrosshairLayerState extends State<_CrosshairLayer> {
   Offset _cursor = Offset.zero;
+  bool _overToolbar = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.precise,
+      cursor: _overToolbar ? SystemMouseCursors.basic : SystemMouseCursors.precise,
       hitTestBehavior: HitTestBehavior.translucent,
       onHover: (PointerHoverEvent e) {
+        final bool over = widget.toolbarRect.contains(e.localPosition);
+        if (over != _overToolbar) setState(() => _overToolbar = over);
         setState(() => _cursor = e.localPosition);
         widget.onHover?.call(e.localPosition);
       },
       child: IgnorePointer(
         ignoring: true,
         child: CustomPaint(
-          painter: _CrosshairPainter(_cursor),
+          painter: _CrosshairPainter(_overToolbar ? null : _cursor),
         ),
       ),
     );
@@ -2146,21 +2254,23 @@ class _CrosshairLayerState extends State<_CrosshairLayer> {
 }
 
 class _CrosshairPainter extends CustomPainter {
-  final Offset pos;
+  /// Null means: don't draw crosshair (cursor is over toolbar).
+  final Offset? pos;
   _CrosshairPainter(this.pos);
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (pos == null) return;
     final ui.Paint paint = Paint()
       ..color = Colors.white.withValues(alpha: 0.35)
       ..strokeWidth = 1;
-    canvas.drawLine(Offset(0, pos.dy), Offset(size.width, pos.dy), paint);
-    canvas.drawLine(Offset(pos.dx, 0), Offset(pos.dx, size.height), paint);
+    canvas.drawLine(Offset(0, pos!.dy), Offset(size.width, pos!.dy), paint);
+    canvas.drawLine(Offset(pos!.dx, 0), Offset(pos!.dx, size.height), paint);
 
-    // Coordinate label
+    // Coordinate label — flip near edges
     final TextPainter tp = TextPainter(
       text: TextSpan(
-        text: '${pos.dx.round()}, ${pos.dy.round()}',
+        text: '${pos!.dx.round()}, ${pos!.dy.round()}',
         style: TextStyle(
           color: Colors.white70,
           fontSize: 14,
@@ -2169,7 +2279,10 @@ class _CrosshairPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, pos + const Offset(8, 8));
+    const double pad = 8;
+    final double lx = (pos!.dx + pad + tp.width > size.width - 4) ? pos!.dx - pad - tp.width : pos!.dx + pad;
+    final double ly = (pos!.dy + pad + tp.height > size.height - 4) ? pos!.dy - pad - tp.height : pos!.dy + pad;
+    tp.paint(canvas, Offset(lx, ly));
   }
 
   @override
@@ -3583,7 +3696,7 @@ class AnnotationPainter extends CustomPainter {
   }
 
   void _drawStepCounter(Canvas canvas, DrawShape s, Offset pos) {
-    const double r = 14.0;
+    final double r = (s.fontSize ?? 28.0) / 2;
     final int num = s.stepNumber ?? 1;
     canvas.drawCircle(pos, r, Paint()..color = s.color);
     canvas.drawCircle(
@@ -3592,11 +3705,11 @@ class AnnotationPainter extends CustomPainter {
         Paint()
           ..color = Colors.black38
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5);
+          ..strokeWidth = (r / 10).clamp(1.0, 4.0));
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: '$num',
-        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.white, fontSize: r * 0.9, fontWeight: FontWeight.bold),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

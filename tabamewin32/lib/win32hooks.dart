@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import './const.win.dart';
-
 import 'tabamewin32.dart';
 
 enum HookTypes {
@@ -85,7 +84,7 @@ class WinHooks {
       event.dwmsEventTime = call.arguments["dwmsEventTime"] as int;
       for (final WinHookEventListener listener in listeners) {
         if (!_winHookListeners.contains(listener)) {
-          return;
+          continue;
         }
         listener.onWinEventInfoReceived(event);
       }
@@ -98,7 +97,7 @@ class WinHooks {
       mouse.type = call.arguments["type"] == "control" ? MouseEvent.control : MouseEvent.watch;
       for (final WinHookEventListener listener in listeners) {
         if (!_winHookListeners.contains(listener)) {
-          return;
+          continue;
         }
         listener.onMouseInfoReceived(mouse);
       }
@@ -144,7 +143,8 @@ class WinHooks {
   /// Sets Mouse Hook Parameters
   /// [button] - The mouse button to watch.
   /// [mouseEvent] - The mouse event to watch. Hold to block propagation, watch to not block.
-  Future<bool?> addMouseHook({required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
+  Future<bool?> addMouseHook(
+      {required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
     await methodChannel.invokeMethod('manageMouseHook', <String, dynamic>{
       "method": "add",
       "button": button.index,
@@ -158,7 +158,8 @@ class WinHooks {
   /// Removes Mouse Hook Parameters
   /// [button] - The mouse button to watch.
   /// [mouseEvent] - The mouse event to watch. Hold to block propagation, watch to not block.
-  Future<bool?> removeMouseHook({required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
+  Future<bool?> removeMouseHook(
+      {required MouseButtons button, MouseEvent mouseEvent = MouseEvent.control, bool reinstallHooks = false}) async {
     await methodChannel.invokeMethod('manageMouseHook', <String, dynamic>{
       "method": "remove",
       "button": button.index,
@@ -205,7 +206,8 @@ class WinHooks {
 
   /// Uninstalls a specific WinHook.
   Future<bool> uninstallSpecificHookID(int hookID, HookTypes hookType) async {
-    await methodChannel.invokeMethod('uninstallSpecificHookID', <String, int>{'hookID': hookID, 'hookType': hookType.index});
+    await methodChannel
+        .invokeMethod('uninstallSpecificHookID', <String, int>{'hookID': hookID, 'hookType': hookType.index});
     return true;
   }
 }

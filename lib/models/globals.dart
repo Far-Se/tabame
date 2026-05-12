@@ -37,6 +37,7 @@ enum QuickMenuPage {
   fancyShotLive,
   fancyShotFreeze,
   colorPicker,
+  emojiPicker,
 }
 
 class Globals {

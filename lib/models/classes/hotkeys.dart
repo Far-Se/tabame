@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
+import '../../pages/color_picker/win32_helper.dart';
 import '../../pages/screen_capture.dart';
 import '../globals.dart';
 import '../settings.dart';
@@ -677,9 +678,15 @@ class HotKeyInfo {
         QuickMenuFunctions.toggleQuickMenu(visible: false);
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
-
-      await FancyShotCaptureWidget.captureScreenshots();
-      QuickMenuFunctions.refreshQuickMenu();
+      await Win32Helper.instantColorPicker();
+    },
+    "OpenEmojiPicker": () async {
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await Future<void>.delayed(const Duration(milliseconds: 160));
+      }
+      await QuickMenuFunctions.toggleQuickMenu(
+          visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
     },
     "ShowStartMenu": () {
       int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);

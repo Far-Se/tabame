@@ -19,7 +19,7 @@ import 'widgets/widgets/focus_fix.dart';
 Future<void> main(List<String> arguments) async {
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
-  // return startPhotoEditor(arguments);
+  // return startScreenDraw();
 
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);

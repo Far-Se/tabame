@@ -56,6 +56,8 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "get_changed_folders.cpp"
 #include "hotkeys.cpp"
 #include "media_session.cpp"
+#include "../system_stats.cpp"
+#include "appsfolder.cpp"
 #include "shell_utils.cpp"
 #include "system_utils.cpp"
 #include "taskbar_uia.cpp"
@@ -189,12 +191,38 @@ EMap RectToMap(const RECT &rect) {
   return m;
 }
 
+EMap SystemStatsToMap(const SystemStats &stats, int memoryLoad) {
+  EMap m;
+  m[EVal("cpuLoad")] = EVal(stats.cpuUsage < 0 ? -1.0 : stats.cpuUsage / 100.0);
+  m[EVal("cpuUsage")] = EVal(stats.cpuUsage);
+  m[EVal("gpuUsage")] = EVal(stats.gpuUsage);
+  m[EVal("cpuTemp")] = EVal(stats.cpuTemp);
+  m[EVal("gpuTemp")] = EVal(stats.gpuTemp);
+  m[EVal("memoryLoad")] = EVal(memoryLoad);
+  return m;
+}
+
+EMap AppInfoToMap(const AppInfo &app) {
+  EMap m;
+  m[EVal("name")] = EVal(Encoding::WideToUtf8(app.name));
+  m[EVal("exePathOrAppId")] = EVal(Encoding::WideToUtf8(app.exePathOrAppId));
+  return m;
+}
+
 } // namespace Encode
 
 // ===========================================================================
 // Plugin implementation
 // ===========================================================================
 namespace tabamewin32 {
+
+namespace {
+HardwareMonitor &GetHardwareMonitor() {
+  static HardwareMonitor monitor;
+  return monitor;
+}
+} // namespace
+
 bool RegisterClipboardUpdateListener(Tabamewin32Plugin *plugin) {
   if (plugin == nullptr || plugin->registrar_ == nullptr ||
       plugin->registrar_->GetView() == nullptr)
@@ -586,16 +614,24 @@ void SetStartOnStartupAsAdminH(Tabamewin32Plugin *, const MethodCall &call,
 }
 
 // ===== System utilities =====
-void GetSystemUsageH(Tabamewin32Plugin *, const MethodCall &,
+void GetSystemUsageH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   MEMORYSTATUSEX statex;
   statex.dwLength = sizeof(statex);
   GlobalMemoryStatusEx(&statex);
 
-  EMap map;
-  map[EVal("cpuLoad")] = EVal(GetCPULoad());
-  map[EVal("memoryLoad")] = EVal(static_cast<int>(statex.dwMemoryLoad));
-  OK(result, EVal(map));
+  bool onlyUsage = true;
+  if (const auto *args = call.arguments();
+      args != nullptr && std::holds_alternative<EMap>(*args)) {
+    const auto &map = std::get<EMap>(*args);
+    auto it = map.find(EVal("onlyUsage"));
+    if (it != map.end() && std::holds_alternative<bool>(it->second))
+      onlyUsage = std::get<bool>(it->second);
+  }
+
+  const auto stats = GetHardwareMonitor().GetStats(onlyUsage);
+  OK(result,
+     EVal(Encode::SystemStatsToMap(stats, static_cast<int>(statex.dwMemoryLoad))));
 }
 
 void ToggleMonitorWallpaperH(Tabamewin32Plugin *, const MethodCall &call,
@@ -613,6 +649,29 @@ void SetWallpaperColorH(Tabamewin32Plugin *, const MethodCall &call,
 void BrowseFolderH(Tabamewin32Plugin *, const MethodCall &,
                    MethodResult result) {
   OK(result, BrowseFolder());
+}
+
+void GetAppsFolderH(Tabamewin32Plugin *, const MethodCall &,
+                    MethodResult result) {
+  const auto apps = GetAllAppsFolder();
+  flutter::EncodableList list;
+  list.reserve(apps.size());
+  for (const auto &app : apps) {
+    list.emplace_back(EVal(Encode::AppInfoToMap(app)));
+    if (app.hIcon)
+      DestroyIcon(app.hIcon);
+  }
+  OK(result, EVal(list));
+}
+
+void GetAppsFolderIconH(Tabamewin32Plugin *, const MethodCall &call,
+                        MethodResult result) {
+  const auto appName = Encoding::Utf8ToWide(Args::Str(Args::Map(call), "appName"));
+  HICON icon = GetAppIcon(appName);
+  const auto bytes = Encode::IconToBytes(icon);
+  if (icon)
+    DestroyIcon(icon);
+  OK(result, EVal(bytes));
 }
 
 // ===== Hotkeys =====
@@ -813,6 +872,10 @@ void ShutdownTaskbarUiaH(Tabamewin32Plugin *, const MethodCall &,
 void GetFocusedElementRectH(Tabamewin32Plugin *, const MethodCall &,
                             MethodResult result) {
   OK(result, EVal(Encode::RectToMap(GetFocusedElementRect())));
+}
+void GetFocusedElementCaretRectH(Tabamewin32Plugin *, const MethodCall &,
+                            MethodResult result) {
+  OK(result, EVal(Encode::RectToMap(GetFocusedElementCaretRect())));
 }
 
 // ===== Extended tray =====
@@ -1035,6 +1098,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"toggleMonitorWallpaper", Handlers::ToggleMonitorWallpaperH},
       {"setWallpaperColor", Handlers::SetWallpaperColorH},
       {"browseFolder", Handlers::BrowseFolderH},
+      {"getAppsFolder", Handlers::GetAppsFolderH},
+      {"getAppsFolderIcon", Handlers::GetAppsFolderIconH},
       // Hotkeys
       {"hotkeyAdd", Handlers::HotkeyAddH},
       {"hotkeyReset", Handlers::HotkeyResetH},
@@ -1057,6 +1122,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       // Taskbar UIA
       {"getTaskbarItemHelpTexts", Handlers::GetTaskbarItemHelpTextsH},
       {"getFocusedElementRect", Handlers::GetFocusedElementRectH},
+      {"getFocusedElementCaretRect", Handlers::GetFocusedElementCaretRectH},
       {"shutdownTaskbarUia", Handlers::ShutdownTaskbarUiaH},
       // Extended tray
       {"enumAllTrayIcons", Handlers::EnumAllTrayIconsH},

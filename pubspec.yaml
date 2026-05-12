@@ -16,7 +16,6 @@ dependencies:
   crypto: ^3.0.7
   cupertino_icons: ^1.0.2
   dropdown_button2: ^2.3.9
-  emoji_selector: ^0.0.6
   encrypt: ^5.0.3
   equatable: ^2.0.3
   ffi: ^2.0.0
@@ -78,6 +77,7 @@ flutter:
     - resources/gradient/
     - resources/devtools.png
     - resources/beep.mp3
+    - resources/emoji.json
     - resources/images/checkerboard.png
 
 msix_config:
