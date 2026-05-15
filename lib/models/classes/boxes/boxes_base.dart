@@ -73,6 +73,8 @@ class Boxes {
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("taskManagerStats", false);
       await pref.setBool("autoOpenTaskManager", false);
+      await pref.setBool("quickClickEnabled", false);
+      await pref.setString("quickClickConfig", jsonEncode(userSettings.quickClickConfig.toMap()));
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -143,6 +145,10 @@ class Boxes {
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? userSettings.runAsAdministrator
       ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? userSettings.launcherFullPopups
       ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? userSettings.autoOpenTaskManager
+      ..quickClickEnabled = pref.getBool("quickClickEnabled") ?? userSettings.quickClickEnabled
+      ..quickClickConfig = pref.getString("quickClickConfig") != null
+          ? QuickClickConfig.fromMap(jsonDecode(pref.getString("quickClickConfig")!) as Map<String, dynamic>)
+          : userSettings.quickClickConfig
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? userSettings.hideTabameOnUnfocus
       ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? userSettings.lastQuickSnapZoneId
       ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? userSettings.quickActionsAtBottom

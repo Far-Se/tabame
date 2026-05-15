@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <optional>
+#include "quickClick/QuickClickController.h"
 
 extern HHOOK gMouseHook;
 extern HWINEVENTHOOK gEventHook;
@@ -31,6 +32,8 @@ namespace tabamewin32
         int clipboard_proc_id_ = -1;
         HWND clipboard_view_hwnd_ = nullptr;
         HWND clipboard_root_hwnd_ = nullptr;
+        std::unique_ptr<QuickClickController> quickClickController_;
+        std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
 
     private:
         // Called when a method is called on this plugin's channel from Dart.

@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -933,6 +934,7 @@ abstract class TabameListener {
   void onTricktivityEvent(String action, String info) {}
   void onWinEventReceived(int hWnd, WinEventType type) {}
   void onViewsEvent(ViewsAction action, int hWnd) {}
+  void onQuickClickEvent(String eventName, Map<String, String> params) {}
 }
 
 abstract class ClipboardEventListener {
@@ -994,7 +996,8 @@ class NativeHooks {
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
-    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent", "ClipboardUpdate"].contains(call.method)) {
+    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent", "ClipboardUpdate", "onQuickClickEvent"]
+        .contains(call.method)) {
       return;
     }
     if (call.method == "ClipboardUpdate") {
@@ -1048,6 +1051,16 @@ class NativeHooks {
           if (!listenersObv.contains(listener)) continue;
           listener.onWinEventReceived(call.arguments['hwnd'], WinEventType.nameChange);
         }
+      }
+    }
+    if (call.method == "onQuickClickEvent") {
+      final Map<dynamic, dynamic> args = call.arguments as Map<dynamic, dynamic>;
+      final String eventName = args["eventName"] as String;
+      final Map<String, String> params = args.map((key, value) => MapEntry(key.toString(), value.toString()))..remove("eventName");
+      QuickClick._handleEvent(eventName, params);
+      for (final TabameListener listener in listeners) {
+        if (!listenersObv.contains(listener)) continue;
+        listener.onQuickClickEvent(eventName, params);
       }
     }
   }
@@ -1442,5 +1455,115 @@ class FolderWatch {
       'removeFoldersFromWatchlist',
       <String, dynamic>{'paths': paths},
     );
+  }
+}
+
+class QuickClickConfig {
+  final String horizontalKeys;
+  final String verticalKeys;
+  final int nudgeAmount;
+  final int doubleClickThresholdMs;
+  final Map<String, List<int>> extraArrowBindings;
+  final int leftClickKey;
+  final int doubleClickKey;
+  final int rightClickKey;
+  final int dragKey;
+  final int scrollUpKey;
+  final int scrollDownKey;
+  final int scrollLeftKey;
+  final int scrollRightKey;
+  final int scrollDelta;
+
+  QuickClickConfig({
+    this.horizontalKeys = '123456789',
+    this.verticalKeys = 'qwertyuio',
+    this.nudgeAmount = 5,
+    this.doubleClickThresholdMs = 400,
+    this.extraArrowBindings = const <String, List<int>>{},
+    this.leftClickKey = 0x11, // VK_CONTROL
+    this.doubleClickKey = 0x11, // VK_CONTROL
+    this.rightClickKey = 0x12, // VK_MENU
+    this.dragKey = 0x12, // VK_MENU
+    this.scrollUpKey = 0xDB, // VK_OEM_4 ([)
+    this.scrollDownKey = 0xDD, // VK_OEM_6 (])
+    this.scrollLeftKey = 0xBA, // VK_OEM_1 (;)
+    this.scrollRightKey = 0xDE, // VK_OEM_7 (')
+    this.scrollDelta = 120, // WHEEL_DELTA
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'horizontalKeys': horizontalKeys,
+      'verticalKeys': verticalKeys,
+      'nudgeAmount': nudgeAmount,
+      'doubleClickThresholdMs': doubleClickThresholdMs,
+      'extraArrowBindings': extraArrowBindings,
+      'leftClickKey': leftClickKey,
+      'doubleClickKey': doubleClickKey,
+      'rightClickKey': rightClickKey,
+      'dragKey': dragKey,
+      'scrollUpKey': scrollUpKey,
+      'scrollDownKey': scrollDownKey,
+      'scrollLeftKey': scrollLeftKey,
+      'scrollRightKey': scrollRightKey,
+      'scrollDelta': scrollDelta,
+    };
+  }
+
+  factory QuickClickConfig.fromMap(Map<String, dynamic> map) {
+    return QuickClickConfig(
+      horizontalKeys: map['horizontalKeys'] ?? '123456789',
+      verticalKeys: map['verticalKeys'] ?? 'qwertyuio',
+      nudgeAmount: map['nudgeAmount'] ?? 5,
+      doubleClickThresholdMs: map['doubleClickThresholdMs'] ?? 400,
+      extraArrowBindings: (map['extraArrowBindings'] as Map<dynamic, dynamic>?)?.map(
+            // ignore: always_specify_types
+            (key, value) => MapEntry(key.toString(), List<int>.from(value)),
+          ) ??
+          const <String, List<int>>{},
+      leftClickKey: map['leftClickKey'] ?? 0x11,
+      doubleClickKey: map['doubleClickKey'] ?? 0x11,
+      rightClickKey: map['rightClickKey'] ?? 0x12,
+      dragKey: map['dragKey'] ?? 0x12,
+      scrollUpKey: map['scrollUpKey'] ?? 0xDB,
+      scrollDownKey: map['scrollDownKey'] ?? 0xDD,
+      scrollLeftKey: map['scrollLeftKey'] ?? 0xBA,
+      scrollRightKey: map['scrollRightKey'] ?? 0xDE,
+      scrollDelta: map['scrollDelta'] ?? 120,
+    );
+  }
+}
+
+class QuickClickEvent {
+  final String name;
+  final Map<String, String> params;
+  QuickClickEvent(this.name, this.params);
+
+  @override
+  String toString() => 'QuickClickEvent(name: $name, params: $params)';
+}
+
+class QuickClick {
+  static final StreamController<QuickClickEvent> _eventController = StreamController<QuickClickEvent>.broadcast();
+  static Stream<QuickClickEvent> get onQuickClickEvent => _eventController.stream;
+
+  static void _handleEvent(String eventName, Map<String, String> params) {
+    _eventController.add(QuickClickEvent(eventName, params));
+  }
+
+  static Future<void> registerQuickClick(QuickClickConfig config) async {
+    await tabameWin32MethodChannel.invokeMethod('registerQuickClick', config.toMap());
+  }
+
+  static Future<void> setQuickClickHotkeys(QuickClickConfig config) async {
+    await tabameWin32MethodChannel.invokeMethod('setQuickClickHotkeys', config.toMap());
+  }
+
+  static Future<void> enableQuickClick() async {
+    await tabameWin32MethodChannel.invokeMethod('enableQuickClick');
+  }
+
+  static Future<void> disableQuickClick() async {
+    await tabameWin32MethodChannel.invokeMethod('disableQuickClick');
   }
 }

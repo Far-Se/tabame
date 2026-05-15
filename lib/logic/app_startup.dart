@@ -139,6 +139,10 @@ class AppStartup {
   static Future<void> finalizeStartup() async {
     Debug.add("Setting transparency");
     await setWindowAsTransparent();
+    if (userSettings.quickClickEnabled) {
+      await QuickClick.registerQuickClick(userSettings.quickClickConfig);
+      await QuickClick.disableQuickClick();
+    }
     Debug.add("Set transparency");
   }
 }

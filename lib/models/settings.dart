@@ -67,6 +67,8 @@ class Settings {
   bool showSystemUsage = false;
   bool taskManagerStats = false;
   bool autoOpenTaskManager = false;
+  bool quickClickEnabled = false;
+  QuickClickConfig quickClickConfig = QuickClickConfig();
   bool trktivityEnabled = false;
   bool runAsAdministrator = false;
   bool _hideTabameOnUnfocus = true;

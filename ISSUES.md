@@ -6,7 +6,7 @@ Ignore this file, it's for me to remember things.
 - Photo editor Panning cand e zoom sau e prea mare, cu wheel press
 - clipboard history tot nu merge cum trebuie
 - La Translate fa templates de multiLanguage. Cu Swap
-- Mouse repositioning ca mouseless: QuickClick.
+- Mouse repositioning ca quickClick: QuickClick.
 - Launcher escape refocus old window
 - Rezolva problema cu crashul la Launcher, iconitele salvate altcumva:
   pentru fisiere cu format standard, refresh la format in fiecare startup.

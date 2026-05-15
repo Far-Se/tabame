@@ -57,6 +57,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "hotkeys.cpp"
 #include "media_session.cpp"
 #include "../system_stats.cpp"
+#include "quickClick/QuickClickController.cpp"
 #include "appsfolder.cpp"
 #include "shell_utils.cpp"
 #include "system_utils.cpp"
@@ -219,6 +220,56 @@ EMap AppBitmapToMap(const AppBitmap &bitmap) {
   m[EVal("width")] = EVal(bitmap.width);
   m[EVal("height")] = EVal(bitmap.height);
   return m;
+}
+
+QuickClickConfig MapToQuickClickConfig(const EMap &m) {
+  QuickClickConfig config;
+  if (m.count(EVal("horizontalKeys"))) {
+    auto s = Args::Str(m, "horizontalKeys");
+    config.horizontalKeys.assign(s.begin(), s.end());
+  }
+  if (m.count(EVal("verticalKeys"))) {
+    auto s = Args::Str(m, "verticalKeys");
+    config.verticalKeys.assign(s.begin(), s.end());
+  }
+  if (m.count(EVal("nudgeAmount")))
+    config.nudgeAmount = Args::Int(m, "nudgeAmount");
+  if (m.count(EVal("doubleClickThresholdMs")))
+    config.doubleClickThresholdMs = Args::Int(m, "doubleClickThresholdMs");
+
+  if (m.count(EVal("leftClickKey")))
+    config.leftClickKey = Args::Int(m, "leftClickKey");
+  if (m.count(EVal("doubleClickKey")))
+    config.doubleClickKey = Args::Int(m, "doubleClickKey");
+  if (m.count(EVal("rightClickKey")))
+    config.rightClickKey = Args::Int(m, "rightClickKey");
+  if (m.count(EVal("dragKey")))
+    config.dragKey = Args::Int(m, "dragKey");
+
+  if (m.count(EVal("scrollUpKey")))
+    config.scrollUpKey = Args::Int(m, "scrollUpKey");
+  if (m.count(EVal("scrollDownKey")))
+    config.scrollDownKey = Args::Int(m, "scrollDownKey");
+  if (m.count(EVal("scrollLeftKey")))
+    config.scrollLeftKey = Args::Int(m, "scrollLeftKey");
+  if (m.count(EVal("scrollRightKey")))
+    config.scrollRightKey = Args::Int(m, "scrollRightKey");
+  if (m.count(EVal("scrollDelta")))
+    config.scrollDelta = Args::Int(m, "scrollDelta");
+
+  if (m.count(EVal("extraArrowBindings"))) {
+    auto &bindings = std::get<EMap>(m.at(EVal("extraArrowBindings")));
+    for (auto const &[k, v] : bindings) {
+      std::string dir = std::get<std::string>(k);
+      auto &list = std::get<flutter::EncodableList>(v);
+      std::vector<int> vks;
+      for (auto const &vk : list)
+        vks.push_back(std::get<int>(vk));
+      config.extraArrowBindings[dir] = vks;
+    }
+  }
+
+  return config;
 }
 
 } // namespace Encode
@@ -1075,6 +1126,54 @@ void GetMediaSessionsH(Tabamewin32Plugin *, const MethodCall &,
   }).detach();
 }
 
+// ===== QuickClick =====
+void RegisterQuickClickH(Tabamewin32Plugin *self, const MethodCall &call,
+                        MethodResult result) {
+  auto &a = Args::Map(call);
+  QuickClickConfig config = Encode::MapToQuickClickConfig(a);
+  if (!self->quickClickController_) {
+    self->quickClickController_ =
+        std::make_unique<QuickClickController>(std::move(config));
+    self->quickClickController_->SetEventCallback([](const std::string &eventName, const std::map<std::string, std::string>& params) {
+      if (channel) {
+        EMap m;
+        m[EVal("eventName")] = EVal(eventName);
+        for (auto const& [k, v] : params) {
+          m[EVal(k)] = EVal(v);
+        }
+        channel->InvokeMethod("onQuickClickEvent", std::make_unique<EVal>(m));
+      }
+    });
+    self->quickClickController_->Start();
+  } else {
+    self->quickClickController_->UpdateConfig(std::move(config));
+  }
+  OK(result, true);
+}
+
+void SetQuickClickHotkeysH(Tabamewin32Plugin *self, const MethodCall &call,
+                          MethodResult result) {
+  if (self->quickClickController_) {
+    self->quickClickController_->UpdateConfig(
+        Encode::MapToQuickClickConfig(Args::Map(call)));
+  }
+  OK(result, true);
+}
+
+void EnableQuickClickH(Tabamewin32Plugin *self, const MethodCall &,
+                      MethodResult result) {
+  if (self->quickClickController_)
+    self->quickClickController_->SetActive(true);
+  OK(result, true);
+}
+
+void DisableQuickClickH(Tabamewin32Plugin *self, const MethodCall &,
+                       MethodResult result) {
+  if (self->quickClickController_)
+    self->quickClickController_->SetActive(false);
+  OK(result, true);
+}
+
 } // namespace Handlers
 
 // -----------------------------------------------------------------------
@@ -1183,6 +1282,11 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"clipboardExtendedStartMonitoring", Handlers::ClipboardExtendedH},
       {"clipboardExtendedStopMonitoring", Handlers::ClipboardExtendedH},
       {"getMediaSessions", Handlers::GetMediaSessionsH},
+      // QuickClick
+      {"registerQuickClick", Handlers::RegisterQuickClickH},
+      {"setQuickClickHotkeys", Handlers::SetQuickClickHotkeysH},
+      {"enableQuickClick", Handlers::EnableQuickClickH},
+      {"disableQuickClick", Handlers::DisableQuickClickH},
   };
   return table;
 }
@@ -1235,6 +1339,8 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     UnhookWindowsHookEx(g_KeyboardHook);
   if (gdiInitialized)
     Gdiplus::GdiplusShutdown(gdiplusToken);
+  if (quickClickController_)
+    quickClickController_->Stop();
   ShutdownTaskbarUia();
 }
 

@@ -4,9 +4,11 @@ import 'dart:ffi' hide Size;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 
@@ -17,12 +19,12 @@ class QuickClickOverlay extends StatefulWidget {
   State<QuickClickOverlay> createState() => _QuickClickOverlayState();
 }
 
-class _QuickClickOverlayState extends State<QuickClickOverlay> {
+class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListener {
   final FocusNode _focusNode = FocusNode();
 
-  final List<String> rows = <String>['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  final List<String> rows = userSettings.quickClickConfig.verticalKeys.split('');
 
-  final List<String> cols = <String>['1', '2', '3', '4', '5', '6', '7', '8'];
+  final List<String> cols = userSettings.quickClickConfig.horizontalKeys.split('');
 
   late double screenWidth;
   late double screenHeight;
@@ -35,6 +37,8 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> {
   @override
   void initState() {
     super.initState();
+    NativeHooks.addListener(this);
+    QuickClick.enableQuickClick();
     _enableDpiAwareness();
 
     currentMonitor = Monitor.getCursorMonitor();
@@ -52,10 +56,33 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> {
     screenWidth = (monitorData.width).toDouble();
     screenHeight = (monitorData.height).toDouble();
 
-    Timer(const Duration(milliseconds: 300), () {
+    Timer(const Duration(milliseconds: 600), () {
       WinUtils.makeWindowClickThrough(true);
       _focusNode.requestFocus();
     });
+  }
+
+  @override
+  void onQuickClickEvent(String eventName, Map<String, String> params) {
+    print(eventName);
+    switch (eventName) {
+      case "dragStart":
+        print("dragStart");
+        break;
+      case "dragEnd":
+        print("dragEnd");
+        break;
+      case "scroll":
+        print("scroll");
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    NativeHooks.removeListener(this);
+    QuickClick.disableQuickClick();
+    super.dispose();
   }
 
   @override
