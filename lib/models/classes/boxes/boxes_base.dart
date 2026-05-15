@@ -10,8 +10,8 @@ import 'package:win32/win32.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
-import '../../win32/win_utils.dart';
 import '../../win32/win32.dart';
+import '../../win32/win_utils.dart';
 import '../../win32/window.dart';
 import '../app_items.dart';
 import '../hotkeys.dart';
@@ -141,6 +141,7 @@ class Boxes {
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? userSettings.autoCheckForUpdates
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? userSettings.wallpapersFolder
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? userSettings.runAsAdministrator
+      ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? userSettings.launcherFullPopups
       ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? userSettings.autoOpenTaskManager
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? userSettings.hideTabameOnUnfocus
       ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? userSettings.lastQuickSnapZoneId
@@ -722,24 +723,7 @@ class Boxes {
     if (_searchFolders.isEmpty) {
       _searchFolders = getSavedMap<SearchFolder>(SearchFolder.fromJson, "searchFolders");
       if (_searchFolders.isEmpty) {
-        return <SearchFolder>[
-          SearchFolder(
-            path: "${Platform.environment['APPDATA']}\\Microsoft\\Windows\\Start Menu\\Programs",
-            includeFolders: false,
-            maxDepth: 3,
-          ),
-          SearchFolder(
-            path: "${Platform.environment['PROGRAMDATA']}\\Microsoft\\Windows\\Start Menu\\Programs",
-            includeFolders: false,
-            maxDepth: 3,
-          ),
-          SearchFolder(
-            path: "${Platform.environment['ProgramFiles']}\\WindowsApps",
-            includeFolders: false,
-            allowedExtensions: <String>[".exe", ".lnk", ".msi", ".bat"],
-            maxDepth: 3,
-          ),
-        ];
+        return <SearchFolder>[];
       }
       return _searchFolders;
     } else {

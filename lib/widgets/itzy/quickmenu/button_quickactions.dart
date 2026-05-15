@@ -346,7 +346,13 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
             name: displayName,
             accent: accent,
             onSurface: onSurface,
-            onTap: () => triggerFirstTappableDescendant(buttonKey.currentContext),
+            onTap: () {
+              triggerFirstTappableDescendant(buttonKey.currentContext);
+              if (displayName == "Quick Menu Design") {
+                Globals.quickMenuPage = QuickMenuPage.quickMenu;
+                QuickMenuFunctions.refreshQuickMenu();
+              }
+            },
             leading: SizedBox(
               width: 20,
               child: Stack(
@@ -643,7 +649,9 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
                 name: displayName,
                 accent: userSettings.themeColors.accentColor,
                 onSurface: widget.onSurface,
-                onTap: () => triggerFirstTappableDescendant(buttonKey.currentContext),
+                onTap: () {
+                  triggerFirstTappableDescendant(buttonKey.currentContext);
+                },
                 leading: Container(
                   constraints: const BoxConstraints(maxWidth: 30, maxHeight: 30),
                   child: KeyedSubtree(

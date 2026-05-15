@@ -91,7 +91,7 @@ enum AudioDeviceType {
   input,
 }
 
-const MethodChannel audioMethodChannel = MethodChannel('tabamewin32');
+const MethodChannel tabameWin32MethodChannel = MethodChannel('tabamewin32');
 
 class Audio {
   static bool canRunAudioModule = false;
@@ -99,7 +99,7 @@ class Audio {
   static Future<bool> detectAudioSupport(AudioDeviceType audioDeviceType) async {
     if (alreadySet) return canRunAudioModule;
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
-    final bool map = await audioMethodChannel.invokeMethod('canAccessAudio', arguments);
+    final bool map = await tabameWin32MethodChannel.invokeMethod('canAccessAudio', arguments);
     canRunAudioModule = map;
     alreadySet = true;
     return map;
@@ -113,7 +113,7 @@ class Audio {
       return <AudioDevice>[];
     }
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
-    final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioDevices', arguments);
+    final Map<dynamic, dynamic> map = await tabameWin32MethodChannel.invokeMethod('enumAudioDevices', arguments);
     List<AudioDevice>? audioDevices = <AudioDevice>[];
     for (String key in map.keys) {
       final AudioDevice audioDevice = AudioDevice();
@@ -138,7 +138,7 @@ class Audio {
     final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
     if (hasDevices.isEmpty) return AudioDevice();
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
-    final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('getDefaultDevice', arguments);
+    final Map<dynamic, dynamic> map = await tabameWin32MethodChannel.invokeMethod('getDefaultDevice', arguments);
     final AudioDevice audioDevice = AudioDevice();
     audioDevice.id = map['id'];
     audioDevice.name = map['name'];
@@ -163,7 +163,7 @@ class Audio {
       'communications': communications,
     };
 
-    final int? result = await audioMethodChannel.invokeMethod<int>('setDefaultAudioDevice', arguments);
+    final int? result = await tabameWin32MethodChannel.invokeMethod<int>('setDefaultAudioDevice', arguments);
     return result as int;
   }
 
@@ -177,7 +177,7 @@ class Audio {
     final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
     if (hasDevices.isEmpty) return 0;
     final Map<String, dynamic> arguments = <String, int>{'deviceType': audioDeviceType.index};
-    final double? result = await audioMethodChannel.invokeMethod<double>('getAudioVolume', arguments);
+    final double? result = await tabameWin32MethodChannel.invokeMethod<double>('getAudioVolume', arguments);
     return result as double;
   }
 
@@ -196,7 +196,7 @@ class Audio {
       'deviceType': audioDeviceType.index,
       'volumeLevel': volume
     };
-    final int? result = await audioMethodChannel.invokeMethod<int>('setAudioVolume', arguments);
+    final int? result = await tabameWin32MethodChannel.invokeMethod<int>('setAudioVolume', arguments);
     return result as int;
   }
 
@@ -210,7 +210,7 @@ class Audio {
       'deviceType': audioDeviceType.index,
       'muteState': muteState
     };
-    final int? result = await audioMethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
+    final int? result = await tabameWin32MethodChannel.invokeMethod<int>('setMuteAudioDevice', arguments);
     return result as int;
   }
 
@@ -224,7 +224,7 @@ class Audio {
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceType': audioDeviceType.index,
     };
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('getMuteAudioDevice', arguments);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('getMuteAudioDevice', arguments);
     return result!;
   }
 
@@ -242,7 +242,7 @@ class Audio {
     };
     final List<AudioDevice> hasDevices = await enumDevices(audioDeviceType) ?? <AudioDevice>[];
     if (hasDevices.isEmpty) return false;
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('switchDefaultDevice', arguments);
     return result as bool;
   }
 
@@ -252,7 +252,7 @@ class Audio {
     }
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = <String, dynamic>{'deviceID': deviceID, 'volumeLevel': volume};
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('setAudioDeviceVolume', arguments);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('setAudioDeviceVolume', arguments);
     return result ?? false;
   }
 
@@ -263,7 +263,7 @@ class Audio {
     final Map<String, dynamic> arguments = <String, dynamic>{
       'deviceID': deviceID,
     };
-    final double? result = await audioMethodChannel.invokeMethod<double>('getAudioDeviceVolume', arguments);
+    final double? result = await tabameWin32MethodChannel.invokeMethod<double>('getAudioDeviceVolume', arguments);
     return result ?? 0.0;
   }
 
@@ -273,7 +273,7 @@ class Audio {
     }
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = <String, dynamic>{'processPath': processPath, 'volumeLevel': volume};
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('setProcessVolumeByPath', arguments);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('setProcessVolumeByPath', arguments);
     return result ?? false;
   }
 
@@ -282,7 +282,7 @@ class Audio {
     if (!canRunAudioModule) {
       return <ProcessVolume>[];
     }
-    final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumAudioMixer');
+    final Map<dynamic, dynamic> map = await tabameWin32MethodChannel.invokeMethod('enumAudioMixer');
     List<ProcessVolume>? processVolumes = <ProcessVolume>[];
     for (int key in map.keys) {
       final ProcessVolume processVolume = ProcessVolume();
@@ -304,7 +304,7 @@ class Audio {
     }
     if (volume > 1) volume = (volume / 100).toDouble();
     final Map<String, dynamic> arguments = <String, dynamic>{'processID': processID, 'volumeLevel': volume};
-    final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('setAudioMixerVolume', arguments);
+    final Map<dynamic, dynamic> map = await tabameWin32MethodChannel.invokeMethod('setAudioMixerVolume', arguments);
     List<ProcessVolume>? processVolumes = <ProcessVolume>[];
     for (int key in map.keys) {
       final ProcessVolume processVolume = ProcessVolume();
@@ -333,7 +333,7 @@ Future<Uint8List?> nativeIconToBytes(String iconLocation, {int iconID = 0}) asyn
     return ___kCacheIcons[iconLocation];
   }
   final Map<String, dynamic> arguments = <String, dynamic>{'iconLocation': iconLocation, 'iconID': iconID};
-  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
+  final Uint8List? result = await tabameWin32MethodChannel.invokeMethod<Uint8List>('iconToBytes', arguments);
   ___kCacheIcons[iconLocation] = result!;
   return result;
 }
@@ -346,14 +346,14 @@ Future<Uint8List?> getExecutableIcon(String iconlocation, {int iconID = 0}) asyn
 Future<Uint8List?> getWindowIcon(int hWnd) async {
   // return Uint8List.fromList([0]);
   final Map<String, dynamic> arguments = <String, dynamic>{'hWnd': hWnd};
-  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);
+  final Uint8List? result = await tabameWin32MethodChannel.invokeMethod<Uint8List>('getWindowIcon', arguments);
   return result;
 }
 
 Future<Uint8List?> getIconPng(int hIcon) async {
   // return Uint8List.fromList([0]);
   final Map<String, dynamic> arguments = <String, dynamic>{'hIcon': hIcon};
-  final Uint8List? result = await audioMethodChannel.invokeMethod<Uint8List>('getIconPng', arguments);
+  final Uint8List? result = await tabameWin32MethodChannel.invokeMethod<Uint8List>('getIconPng', arguments);
   return result;
 }
 
@@ -396,7 +396,7 @@ class TrayInfo {
 }
 
 Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
-  final Map<dynamic, dynamic> map = await audioMethodChannel.invokeMethod('enumTrayIcons');
+  final Map<dynamic, dynamic> map = await tabameWin32MethodChannel.invokeMethod('enumTrayIcons');
   List<TrayInfo> trayInfos = <TrayInfo>[];
   for (int key in map.keys) {
     final TrayInfo trayInfo = TrayInfo();
@@ -416,12 +416,12 @@ Future<List<TrayInfo>> enumTrayIcons({bool filter = false}) async {
 }
 
 Future<WinRect> getFocusedElementRect() async {
-  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getFocusedElementRect');
+  final Map<dynamic, dynamic> result = await tabameWin32MethodChannel.invokeMethod('getFocusedElementRect');
   return WinRect.fromMap(result);
 }
 
 Future<WinRect> getFocusedElementCaretRect() async {
-  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod('getFocusedElementCaretRect');
+  final Map<dynamic, dynamic> result = await tabameWin32MethodChannel.invokeMethod('getFocusedElementCaretRect');
   return WinRect.fromMap(result);
 }
 
@@ -429,7 +429,7 @@ Future<String> getHwndName(int hWnd) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
   };
-  final String result = await audioMethodChannel.invokeMethod<String>('getHwndName', arguments) ?? "-";
+  final String result = await tabameWin32MethodChannel.invokeMethod<String>('getHwndName', arguments) ?? "-";
   return result;
 }
 
@@ -437,7 +437,7 @@ Future<int> findTopWindow(int processID) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'processID': processID,
   };
-  final int result = await audioMethodChannel.invokeMethod<int>('findTopWindow', arguments) ?? 0;
+  final int result = await tabameWin32MethodChannel.invokeMethod<int>('findTopWindow', arguments) ?? 0;
   return result;
 }
 
@@ -445,25 +445,25 @@ Future<void> setTaskbarVisibility(bool state) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'state': state,
   };
-  await audioMethodChannel.invokeMethod('toggleTaskbar', arguments);
+  await tabameWin32MethodChannel.invokeMethod('toggleTaskbar', arguments);
 }
 
 Future<int> getFlutterMainWindow() async {
-  final int result = await audioMethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
+  final int result = await tabameWin32MethodChannel.invokeMethod<int>('getMainHandle') ?? 0;
   return result;
 }
 
 Future<void> setWindowAsTransparent() async {
-  await audioMethodChannel.invokeMethod('setTransparent');
+  await tabameWin32MethodChannel.invokeMethod('setTransparent');
 }
 
 class WinRect {
-  final int left;
-  final int top;
-  final int right;
-  final int bottom;
+  int left;
+  int top;
+  int right;
+  int bottom;
 
-  const WinRect({
+  WinRect({
     required this.left,
     required this.top,
     required this.right,
@@ -575,6 +575,27 @@ class AppInfo {
       '\nAppInfo(name: $name, aumid: $appUserModelId, parsingName: $parsingName, executable: $executable, arguments: $arguments)';
 }
 
+class BrokenAppEntry {
+  final String name;
+  final String appUserModelId;
+  final String parsingPath;
+
+  const BrokenAppEntry({
+    required this.name,
+    required this.appUserModelId,
+    required this.parsingPath,
+  });
+
+  factory BrokenAppEntry.fromMap(Map<Object?, Object?> map) => BrokenAppEntry(
+        name: (map['name'] as String?) ?? '',
+        appUserModelId: (map['appUserModelId'] as String?) ?? '',
+        parsingPath: (map['parsingPath'] as String?) ?? '',
+      );
+
+  @override
+  String toString() => 'BrokenAppEntry(name: $name, aumid: $appUserModelId, parsingPath: $parsingPath)';
+}
+
 class AppIconData {
   final Uint8List pixels;
   final int width;
@@ -588,7 +609,7 @@ class AppIconData {
 }
 
 Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
-  final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+  final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
     'captureMonitor',
     <String, dynamic>{'monitorIndex': monitorIndex},
   );
@@ -597,7 +618,7 @@ Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
 }
 
 Future<MonitorCapture?> captureMonitorBitmapAlternative({required int monitorHandle}) async {
-  final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+  final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
     'captureMonitorBitmapAlternative',
     <String, dynamic>{'monitorHandle': monitorHandle},
   );
@@ -606,7 +627,7 @@ Future<MonitorCapture?> captureMonitorBitmapAlternative({required int monitorHan
 }
 
 Future<bool> excludeWindowFromCapture(int hWnd) async {
-  final bool? result = await audioMethodChannel.invokeMethod<bool>(
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
     'excludeWindowFromCapture',
     <String, dynamic>{'hWnd': hWnd},
   );
@@ -614,7 +635,7 @@ Future<bool> excludeWindowFromCapture(int hWnd) async {
 }
 
 Future<bool> includeWindowFromCapture(int hWnd) async {
-  final bool? result = await audioMethodChannel.invokeMethod<bool>(
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
     'includeWindowFromCapture',
     <String, dynamic>{'hWnd': hWnd},
   );
@@ -622,12 +643,12 @@ Future<bool> includeWindowFromCapture(int hWnd) async {
 }
 
 Future<bool> startKeyboardBlocker() async {
-  final bool? result = await audioMethodChannel.invokeMethod<bool>('startKeyboardBlocker');
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('startKeyboardBlocker');
   return result ?? false;
 }
 
 Future<void> stopKeyboardBlocker() async {
-  await audioMethodChannel.invokeMethod<void>('stopKeyboardBlocker');
+  await tabameWin32MethodChannel.invokeMethod<void>('stopKeyboardBlocker');
 }
 
 Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirection direction}) async {
@@ -635,7 +656,7 @@ Future<bool> moveWindowToDesktopMethod({required int hWnd, required DesktopDirec
     'hWnd': hWnd,
     'direction': direction.index,
   };
-  final bool result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  final bool result = await tabameWin32MethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
   return result;
 }
 
@@ -646,7 +667,7 @@ Future<bool> moveDesktopMethod(DesktopDirection direction) async {
     'hWnd': 0,
     'direction': direction.index,
   };
-  final bool result = await audioMethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
+  final bool result = await tabameWin32MethodChannel.invokeMethod<bool>('moveWindowToDesktop', arguments) ?? false;
   return result;
 }
 
@@ -667,7 +688,7 @@ class Desktop {
       'monitorIndex': monitorIndex,
       'fillMode': fillMode.index,
     };
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('setDesktopWallpaper', arguments);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('setDesktopWallpaper', arguments);
     return result ?? false;
   }
 }
@@ -677,7 +698,7 @@ Future<bool> setSkipTaskbar({required int hWnd, required bool skip}) async {
     'hWnd': hWnd,
     'skip': skip,
   };
-  final bool result = await audioMethodChannel.invokeMethod<bool>('setSkipTaskbar', arguments) ?? false;
+  final bool result = await tabameWin32MethodChannel.invokeMethod<bool>('setSkipTaskbar', arguments) ?? false;
   return result;
 }
 
@@ -685,7 +706,7 @@ Future<String> convertLinkToPath(String lnkPath) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'lnkPath': lnkPath,
   };
-  final String result = await audioMethodChannel.invokeMethod<String>('convertLinkToPath', arguments) ?? "";
+  final String result = await tabameWin32MethodChannel.invokeMethod<String>('convertLinkToPath', arguments) ?? "";
   return result;
 }
 
@@ -697,7 +718,7 @@ Future<void> setStartOnSystemStartup(bool enabled, {String? exePath, int showCmd
     'showCmd': showCmd,
     'args': args,
   };
-  await audioMethodChannel.invokeMethod('setStartOnSystemStartup', arguments);
+  await tabameWin32MethodChannel.invokeMethod('setStartOnSystemStartup', arguments);
   return;
 }
 
@@ -711,7 +732,7 @@ Future<void> createShortcut(String exePath, String destPath,
     'args': args,
     'destExe': destExe,
   };
-  await audioMethodChannel.invokeMethod('createShortcut', arguments);
+  await tabameWin32MethodChannel.invokeMethod('createShortcut', arguments);
   return;
 }
 
@@ -721,7 +742,7 @@ Future<void> setStartOnStartupAsAdmin(bool enabled, {String? exePath}) async {
     'exePath': exePath,
     'enabled': enabled,
   };
-  await audioMethodChannel.invokeMethod<int>('setStartOnStartupAsAdmin', arguments) ?? 0;
+  await tabameWin32MethodChannel.invokeMethod<int>('setStartOnStartupAsAdmin', arguments) ?? 0;
   return;
 }
 
@@ -731,7 +752,7 @@ Future<List<dynamic>> getSystemUsage() async {
 }
 
 Future<SystemStatsInfo> getSystemStats({bool onlyUsage = true}) async {
-  final Map<dynamic, dynamic> result = await audioMethodChannel.invokeMethod(
+  final Map<dynamic, dynamic> result = await tabameWin32MethodChannel.invokeMethod(
         'getSystemUsage',
         <String, dynamic>{'onlyUsage': onlyUsage},
       ) ??
@@ -743,7 +764,7 @@ Future<void> toggleMonitorWallpaper(bool enabled) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,
   };
-  await audioMethodChannel.invokeMethod('toggleMonitorWallpaper', arguments);
+  await tabameWin32MethodChannel.invokeMethod('toggleMonitorWallpaper', arguments);
   return;
 }
 
@@ -751,12 +772,12 @@ Future<void> setWallpaperColor(int color) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'color': color,
   };
-  await audioMethodChannel.invokeMethod('setWallpaperColor', arguments);
+  await tabameWin32MethodChannel.invokeMethod('setWallpaperColor', arguments);
   return;
 }
 
 Future<String> pickFolder() async {
-  final String result = await audioMethodChannel.invokeMethod<String>('browseFolder') ?? "";
+  final String result = await tabameWin32MethodChannel.invokeMethod<String>('browseFolder') ?? "";
   return result;
 }
 
@@ -764,7 +785,7 @@ class AppEnumeration {
   AppEnumeration._();
 
   static Future<List<AppInfo>> getAllApps() async {
-    final List<Object?>? raw = await audioMethodChannel.invokeMethod<List<Object?>>('getAllApps');
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getAllApps');
     if (raw == null) return const <AppInfo>[];
 
     return raw.whereType<Map<Object?, Object?>>().map(AppInfo.fromMap).toList(growable: false);
@@ -772,9 +793,9 @@ class AppEnumeration {
 
   static Future<AppIconData?> getAppIcon(
     String parsingName, {
-    int size = 256,
+    int size = 64,
   }) async {
-    final Map<Object?, Object?>? raw = await audioMethodChannel.invokeMethod<Map<Object?, Object?>>(
+    final Map<Object?, Object?>? raw = await tabameWin32MethodChannel.invokeMethod<Map<Object?, Object?>>(
       'getAppIcon',
       <String, dynamic>{'parsingName': parsingName, 'size': size},
     );
@@ -787,6 +808,7 @@ class AppEnumeration {
     if (pixels == null || width == null || height == null) return null;
 
     return AppIconData(
+      // ignore: always_specify_types
       pixels: pixels is Uint8List ? pixels : Uint8List.fromList((pixels as List).cast<int>()),
       width: width,
       height: height,
@@ -795,7 +817,7 @@ class AppEnumeration {
 }
 
 Future<bool> isWindows11() async {
-  final bool result = await audioMethodChannel.invokeMethod<bool>('isWindows11') ?? true;
+  final bool result = await tabameWin32MethodChannel.invokeMethod<bool>('isWindows11') ?? true;
   return result;
 }
 
@@ -803,7 +825,7 @@ Future<bool> setWindowTheme(int type) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'type': type,
   };
-  final bool? result = await audioMethodChannel.invokeMethod<bool>('setWindowTheme', arguments);
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('setWindowTheme', arguments);
   return result ?? false;
 }
 
@@ -813,14 +835,14 @@ Future<void> enableTrcktivity(bool enabled) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,
   };
-  await audioMethodChannel.invokeMethod('trcktivity', arguments);
+  await tabameWin32MethodChannel.invokeMethod('trcktivity', arguments);
 }
 
 Future<void> enableViews(bool enabled) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,
   };
-  await audioMethodChannel.invokeMethod('views', arguments);
+  await tabameWin32MethodChannel.invokeMethod('views', arguments);
 }
 
 Future<void> nativeShellOpen(String path, {String arguments = "", String workingDirectory = ""}) async {
@@ -829,7 +851,7 @@ Future<void> nativeShellOpen(String path, {String arguments = "", String working
     'arguments': arguments,
     'workingDirectory': workingDirectory,
   };
-  await audioMethodChannel.invokeMethod('shellOpen', mArgs);
+  await tabameWin32MethodChannel.invokeMethod('shellOpen', mArgs);
 }
 
 Future<bool> launchWithExplorer(String file, {String? arguments, String workingDirectory = ""}) async {
@@ -838,7 +860,7 @@ Future<bool> launchWithExplorer(String file, {String? arguments, String workingD
     'arguments': arguments ?? "",
     'workingDirectory': workingDirectory,
   };
-  final bool? result = await audioMethodChannel.invokeMethod<bool>('launchWithExplorer', mArgs);
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('launchWithExplorer', mArgs);
   return result ?? false;
 }
 
@@ -935,12 +957,12 @@ class ClipboardHooks {
   }
 
   static Future<bool> start() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('startClipboardWatcher');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('startClipboardWatcher');
     return result ?? false;
   }
 
   static Future<bool> stop() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('stopClipboardWatcher');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('stopClipboardWatcher');
     return result ?? false;
   }
 
@@ -1031,29 +1053,29 @@ class NativeHooks {
   }
 
   static void registerCallHandler() {
-    audioMethodChannel.setMethodCallHandler(_methodCallHandler);
+    tabameWin32MethodChannel.setMethodCallHandler(_methodCallHandler);
   }
 
   static Future<void> addHotkey(Map<String, dynamic> hotkey) async {
-    await audioMethodChannel.invokeMethod('hotkeyAdd', hotkey);
+    await tabameWin32MethodChannel.invokeMethod('hotkeyAdd', hotkey);
   }
 
   static Future<void> resetHotkeys() async {
-    await audioMethodChannel.invokeMethod('hotkeyReset');
+    await tabameWin32MethodChannel.invokeMethod('hotkeyReset');
   }
 
   static Future<void> hook() async {
-    await audioMethodChannel.invokeMethod('hotkeyHook');
+    await tabameWin32MethodChannel.invokeMethod('hotkeyHook');
     isRegistered = true;
   }
 
   static Future<void> unHook() async {
-    await audioMethodChannel.invokeMethod('hotkeyUnHook');
+    await tabameWin32MethodChannel.invokeMethod('hotkeyUnHook');
     isRegistered = false;
   }
 
   static Future<void> freeHotkeys() async {
-    await audioMethodChannel.invokeMethod('freeHotkey');
+    await tabameWin32MethodChannel.invokeMethod('freeHotkey');
   }
 
   static Future<void> runHotkeys(List<Map<String, dynamic>> hotkeys) async {
@@ -1070,7 +1092,7 @@ Future<bool> enableDebug(String path) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'path': path,
   };
-  await audioMethodChannel.invokeMethod('enableDebug', arguments);
+  await tabameWin32MethodChannel.invokeMethod('enableDebug', arguments);
   return true;
 }
 
@@ -1079,14 +1101,14 @@ class WinClipboard {
     final Map<String, dynamic> arguments = <String, dynamic>{
       'imagePath': path,
     };
-    await audioMethodChannel.invokeMethod('saveClipboardImageAsPngFile', arguments);
+    await tabameWin32MethodChannel.invokeMethod('saveClipboardImageAsPngFile', arguments);
   }
 
   Future<void> copyImageToClipboard(String path) async {
     final Map<String, dynamic> arguments = <String, dynamic>{
       'path': path,
     };
-    await audioMethodChannel.invokeMethod('copyImageToClipboard', arguments);
+    await tabameWin32MethodChannel.invokeMethod('copyImageToClipboard', arguments);
   }
 }
 
@@ -1094,7 +1116,7 @@ class ClipboardExtended {
   ClipboardExtended._();
 
   static Future<bool> copy(String text) async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopy',
       <String, dynamic>{'text': text},
     );
@@ -1102,7 +1124,7 @@ class ClipboardExtended {
   }
 
   static Future<bool> copyRichText({String text = '', String html = ''}) async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyRichText',
       <String, dynamic>{'text': text, 'html': html},
     );
@@ -1119,7 +1141,7 @@ class ClipboardExtended {
     if (html != null) formats['text/html'] = html;
     if (pngBytes != null) formats['image/png'] = pngBytes.toList(growable: false);
 
-    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyMultiple',
       <String, dynamic>{'formats': formats},
     );
@@ -1127,7 +1149,7 @@ class ClipboardExtended {
   }
 
   static Future<bool> copyImage(Uint8List imageBytes) async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyImage',
       <String, dynamic>{'imageBytes': imageBytes.toList(growable: false)},
     );
@@ -1135,7 +1157,7 @@ class ClipboardExtended {
   }
 
   static Future<Map<String, dynamic>> paste() async {
-    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+    final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
       'clipboardExtendedPaste',
     );
     return Map<String, dynamic>.from(result ?? <dynamic, dynamic>{});
@@ -1147,14 +1169,14 @@ class ClipboardExtended {
   }
 
   static Future<Map<String, dynamic>> pasteRichText() async {
-    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+    final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
       'clipboardExtendedPasteRichText',
     );
     return Map<String, dynamic>.from(result ?? <dynamic, dynamic>{});
   }
 
   static Future<Uint8List?> pasteImage() async {
-    final Map<dynamic, dynamic>? result = await audioMethodChannel.invokeMapMethod<dynamic, dynamic>(
+    final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
       'clipboardExtendedPasteImage',
     );
     final dynamic bytes = result?['imageBytes'];
@@ -1164,38 +1186,38 @@ class ClipboardExtended {
   }
 
   static Future<String> getContentType() async {
-    final String? result = await audioMethodChannel.invokeMethod<String>('clipboardExtendedGetContentType');
+    final String? result = await tabameWin32MethodChannel.invokeMethod<String>('clipboardExtendedGetContentType');
     return result ?? 'unknown';
   }
 
   static Future<bool> hasData() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedHasData');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('clipboardExtendedHasData');
     return result ?? false;
   }
 
   static Future<bool> clear() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedClear');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('clipboardExtendedClear');
     return result ?? false;
   }
 
   static Future<int> getDataSize() async {
-    final int? result = await audioMethodChannel.invokeMethod<int>('clipboardExtendedGetDataSize');
+    final int? result = await tabameWin32MethodChannel.invokeMethod<int>('clipboardExtendedGetDataSize');
     return result ?? 0;
   }
 
   static Future<bool> startMonitoring() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedStartMonitoring');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('clipboardExtendedStartMonitoring');
     return result ?? false;
   }
 
   static Future<bool> stopMonitoring() async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>('clipboardExtendedStopMonitoring');
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('clipboardExtendedStopMonitoring');
     return result ?? false;
   }
 }
 
 Future<void> initializeGDI() async {
-  await audioMethodChannel.invokeMethod('initializeGDI');
+  await tabameWin32MethodChannel.invokeMethod('initializeGDI');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1250,7 +1272,7 @@ class TaskbarUia {
   /// An empty list is returned on any error (e.g. COM failure, taskbar not
   /// found).  Simply retry on the next tick — the native layer will reinitialise.
   static Future<List<TaskbarButtonInfo>> getButtonInfos() async {
-    final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('getTaskbarItemHelpTexts');
+    final List<dynamic>? raw = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getTaskbarItemHelpTexts');
     if (raw == null) return <TaskbarButtonInfo>[];
     return raw.cast<Map<Object?, Object?>>().map(TaskbarButtonInfo._fromMap).toList();
   }
@@ -1258,7 +1280,7 @@ class TaskbarUia {
   /// Releases the cached COM objects.  Call when polling stops (e.g. QuickMenu
   /// closed).  The next [getButtonInfos] call reinitialises transparently.
   static Future<void> shutdown() async {
-    await audioMethodChannel.invokeMethod<bool>('shutdownTaskbarUia');
+    await tabameWin32MethodChannel.invokeMethod<bool>('shutdownTaskbarUia');
   }
 }
 
@@ -1353,7 +1375,7 @@ class WinTray {
   /// Each entry includes tooltip, process ID, HWND, GDI hIcon, etc.
   /// To get icon pixel data: `await getIconPng(icon.hIcon)`
   static Future<List<ExtendedTrayIcon>> enumAllIcons() async {
-    final List<dynamic>? raw = await audioMethodChannel.invokeListMethod<dynamic>('enumAllTrayIcons');
+    final List<dynamic>? raw = await tabameWin32MethodChannel.invokeListMethod<dynamic>('enumAllTrayIcons');
     if (raw == null) return <ExtendedTrayIcon>[];
     return raw.cast<Map<Object?, Object?>>().map(ExtendedTrayIcon._fromMap).toList();
   }
@@ -1370,7 +1392,7 @@ class WinTray {
     ExtendedTrayIcon icon, {
     TrayClickType clickType = TrayClickType.left,
   }) async {
-    final bool? result = await audioMethodChannel.invokeMethod<bool>(
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clickTrayNotifyIcon',
       <String, dynamic>{
         'tipName': icon.toolTip,
@@ -1401,14 +1423,14 @@ class FolderWatch {
   /// Returns the list of folders that have changed since the last check.
   /// The internal cache is updated automatically.
   static Future<List<String>> getChangedFolders() async {
-    final List<dynamic>? result = await audioMethodChannel.invokeListMethod<dynamic>('getChangedFolders');
+    final List<dynamic>? result = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getChangedFolders');
     return result?.cast<String>() ?? <String>[];
   }
 
   /// Adds folders to the internal watchlist.
   /// Duplicates are ignored.
   static Future<void> addFoldersToWatchlist(List<String> paths) async {
-    await audioMethodChannel.invokeMethod<void>(
+    await tabameWin32MethodChannel.invokeMethod<void>(
       'addFoldersToWatchlist',
       <String, dynamic>{'paths': paths},
     );
@@ -1416,7 +1438,7 @@ class FolderWatch {
 
   /// Removes folders from the internal watchlist.
   static Future<void> removeFoldersFromWatchlist(List<String> paths) async {
-    await audioMethodChannel.invokeMethod<void>(
+    await tabameWin32MethodChannel.invokeMethod<void>(
       'removeFoldersFromWatchlist',
       <String, dynamic>{'paths': paths},
     );

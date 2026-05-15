@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
@@ -42,6 +43,8 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
   Map<String, String> _defaultPathOverrides = <String, String>{};
   bool _settingsMode = false;
   bool _scanning = false;
+  List<String> _brokenApps = <String>[];
+  bool _scanningBrokenApps = false;
   String? _message;
 
   @override
@@ -53,6 +56,7 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
     _enabledDefaultIds =
         Boxes.pref.getStringList(_enabledDefaultsKey) ?? defaults.map((_CleanupTarget e) => e.id).toList();
     unawaited(_scanAll());
+    unawaited(_scanBrokenApps());
   }
 
   Map<String, String> _loadDefaultPathOverrides() {
@@ -112,6 +116,60 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
 
     if (!mounted) return;
     setState(() => _scanning = false);
+  }
+
+  Future<void> _scanBrokenApps() async {
+    if (!mounted) return;
+    setState(() => _scanningBrokenApps = true);
+    try {
+      final List<String> paths = <String>[
+        "${Platform.environment['APPDATA']}\\Microsoft\\Windows\\Start Menu\\Programs",
+        "${Platform.environment['PROGRAMDATA']}\\Microsoft\\Windows\\Start Menu\\Programs",
+      ];
+      final List<String> invalidLinks = <String>[];
+      for (final String path in paths) {
+        final Directory directory = Directory(path);
+        if (!directory.existsSync()) continue;
+        for (final FileSystemEntity entry in directory.listSync(recursive: true)) {
+          if (entry is File && entry.path.endsWith('.lnk')) {
+            final String lnkPath = await convertLinkToPath(entry.path);
+            if (lnkPath != "" && RegExp(r"^[A-Z]:").hasMatch(lnkPath) && !File(lnkPath).existsSync()) {
+              invalidLinks.add(entry.path);
+            }
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _brokenApps = invalidLinks;
+        _scanningBrokenApps = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _scanningBrokenApps = false);
+    }
+  }
+
+  Future<void> _removeAllBrokenApps() async {
+    setState(() {
+      _scanningBrokenApps = true;
+      _message = "Cleaning broken app entries...";
+    });
+    int total = 0;
+    for (final String path in _brokenApps) {
+      final File file = File(path);
+      if (file.existsSync()) {
+        file.deleteSync();
+        total++;
+      }
+    }
+    if (!mounted) return;
+    await _scanBrokenApps();
+    if (!mounted) return;
+    setState(() {
+      _scanningBrokenApps = false;
+      _message = '$total Broken Links have been removed from Start Menu';
+    });
   }
 
   Future<_CleanupScanResult> _scanTarget(_CleanupTarget target) async {
@@ -368,6 +426,17 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
               ),
             );
           }),
+        // if (_scanningBrokenApps || _brokenApps.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: _BrokenAppsRow(
+            count: _brokenApps.length,
+            scanning: _scanningBrokenApps,
+            accent: accent,
+            onSurface: onSurface,
+            onClear: _brokenApps.isNotEmpty && !_scanningBrokenApps ? () => unawaited(_removeAllBrokenApps()) : null,
+          ),
+        ),
       ],
     );
   }
@@ -841,6 +910,88 @@ class _InfoStrip extends StatelessWidget {
             child: Text(message,
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145))),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BrokenAppsRow extends StatelessWidget {
+  const _BrokenAppsRow({
+    required this.count,
+    required this.scanning,
+    required this.accent,
+    required this.onSurface,
+    this.onClear,
+  });
+
+  final int count;
+  final bool scanning;
+  final Color accent;
+  final Color onSurface;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: (count > 0 ? Colors.orange : accent).withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              count > 0 ? Icons.link_off_rounded : Icons.link_rounded,
+              size: 18,
+              color: count > 0 ? Colors.orange : accent,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "Broken App SymLinks",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: onSurface),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  scanning
+                      ? "Scanning..."
+                      : (count > 0
+                          ? "$count broken Start Menu Symlinks found"
+                          : "No broken symlinks found in Start Menu"),
+                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(140)),
+                ),
+              ],
+            ),
+          ),
+          if (count > 0 && !scanning)
+            IconButton(
+              onPressed: onClear,
+              icon: const Icon(Icons.delete_sweep_rounded),
+              color: Colors.orange,
+              tooltip: "Clear all broken app entries",
+              iconSize: 20,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          if (scanning)
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+            ),
         ],
       ),
     );

@@ -107,6 +107,17 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
               setState(() {});
             },
           ),
+        _buildToggleSetting(
+          title: "Launcher Full Width Popups",
+          subtitle: "Launcher Popups will be full width",
+          value: userSettings.launcherFullPopups,
+          onChanged: (bool v) async {
+            userSettings.launcherFullPopups = v;
+            await Boxes.updateSettings("launcherFullPopups", userSettings.launcherFullPopups);
+            if (!mounted) return;
+            setState(() {});
+          },
+        ),
       ],
     );
   }

@@ -76,6 +76,8 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
         return 0; // suppress Alt-triggered system/menu activation
       }
       break;
+    
+
     case WM_SYSCHAR:
     case WM_SYSDEADCHAR:
     case WM_SYSKEYUP:

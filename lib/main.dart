@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:win32/win32.dart';
 
 import 'logic/app_startup.dart';
 import 'models/globals.dart';
@@ -21,6 +22,7 @@ Future<void> main(List<String> arguments) async {
   AppStartup.parseArguments(arguments);
   // return startScreenDraw();
 
+  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);
   if (arguments.contains("-screenCapture")) return startScreenCapture();

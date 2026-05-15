@@ -27,6 +27,7 @@ import '../services/wallpaper_service.dart';
 import 'emoji_page.dart';
 // import '../widgets/itzy/quickmenu/button_quickactions.dart';
 import 'launcher.dart';
+import 'quickclick.dart';
 import 'quickmenu_designs/designs.dart';
 import 'quicksnap_overlay.dart';
 import 'screen_capture.dart';
@@ -380,6 +381,7 @@ class QuickMenuState extends State<QuickMenu>
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
     // if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     Win32.setWindowInvisiblity(true);
+    if (oldType == QuickMenuPage.quickClick) WinUtils.makeWindowClickThrough(false);
     // SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
   }
 
@@ -455,6 +457,7 @@ class QuickMenuState extends State<QuickMenu>
   void _onWindowBlur() async {}
 
   void _onForegroundWindowChanged(int hWnd) {
+    if (hWnd != Win32.hWnd) Globals.lastFocusedWinHWND = hWnd;
     if (userSettings.hookedWins.containsKey(hWnd)) {
       for (int win in userSettings.hookedWins[hWnd]!) {
         if (Win32.winExists(win)) {
@@ -546,6 +549,9 @@ class QuickMenuState extends State<QuickMenu>
   Widget _mainWidget(BuildContext context) {
     if (Globals.quickMenuPage == QuickMenuPage.quickSnap) {
       return const ViewsScreen();
+    }
+    if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
+      return const QuickClickOverlay();
     }
     if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive) {
       return const FancyShotCaptureWidget(freezeMode: false);

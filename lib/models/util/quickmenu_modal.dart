@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../classes/boxes/boxes_base.dart';
 import '../classes/boxes/quick_menu_box.dart';
 import '../globals.dart';
 import '../settings.dart';
@@ -25,6 +26,9 @@ Future<void> showQuickMenuModal({
   final ({int height, int width}) size = Win32.getSize();
   maxWidth ??= size.width * 0.85;
   if (maxWidth < 280) maxWidth = 280;
+  if (Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups) {
+    maxWidth = Boxes.launcherSizeWidth;
+  }
   return showModalBottomSheet<void>(
     context: context,
     anchorPoint: const Offset(100, 200),
@@ -64,7 +68,9 @@ Future<void> showQuickMenuModal({
               return KeyEventResult.ignored;
             },
             child: FractionallySizedBox(
-              heightFactor: heightFactor,
+              heightFactor: Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups
+                  ? 0.95
+                  : heightFactor,
               child: Theme(
                 data: modalTheme,
                 child: Material(
@@ -99,17 +105,24 @@ Future<void> showQuickMenuModal({
                           padding: const EdgeInsets.all(2.0).copyWith(top: 0),
                           child: Container(
                             width: maxWidth,
-                            constraints: const BoxConstraints(maxHeight: 520, minHeight: 250),
+                            constraints: BoxConstraints(
+                                maxHeight: 520,
+                                minHeight: Globals.quickMenuPage == QuickMenuPage.launcher
+                                    ? Globals.launcherCurrentSize.height + 10
+                                    : Globals.quickMenuCurrentHeight),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               color: surface.withValues(
-                                  alpha: switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
-                                QuickMenuDesigns.modern => 0.95,
-                                QuickMenuDesigns.classic => 0.88,
-                                QuickMenuDesigns.interface => 0.93,
-                                // ignore: unreachable_switch_case
-                                _ => 0.90,
-                              }),
+                                  alpha:
+                                      Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups
+                                          ? 1
+                                          : switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
+                                              QuickMenuDesigns.modern => 0.95,
+                                              QuickMenuDesigns.classic => 0.88,
+                                              QuickMenuDesigns.interface => 0.93,
+                                              // ignore: unreachable_switch_case
+                                              _ => 0.90,
+                                            }),
                               border: Border(
                                 top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
                                 left: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),

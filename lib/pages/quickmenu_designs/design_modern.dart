@@ -31,7 +31,7 @@ class MainMenuModernWidget extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(
         minHeight: 203,
-        maxHeight: MediaQuery.of(context).size.height - 100,
+        maxHeight: MediaQuery.of(context).size.height - 90,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),

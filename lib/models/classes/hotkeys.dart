@@ -688,6 +688,20 @@ class HotKeyInfo {
       await QuickMenuFunctions.toggleQuickMenu(
           visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
     },
+    "OpenQuickClick": () async {
+      if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
+        Win32.setWindowInvisiblity(true);
+        await QuickMenuFunctions.toggleQuickMenu(visible: false);
+        Win32.setWindowInvisiblity(false);
+        return;
+      }
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await Future<void>.delayed(const Duration(milliseconds: 160));
+      }
+      await QuickMenuFunctions.toggleQuickMenu(
+          visible: true, type: QuickMenuPage.quickClick, forcePop: true, forceReposition: false);
+    },
     "ShowStartMenu": () {
       int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
       if (trayWindowHandle != 0) {

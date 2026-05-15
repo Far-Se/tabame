@@ -130,13 +130,13 @@ int LinkToPath(LPCTSTR path, LPTSTR lpszPath, int iPathBufferSize)
         return 0;
     }
 
-    rc = pShellLink->Resolve(nullptr, 0);
-    if (FAILED(rc))
-    {
-        pPersistFile->Release();
-        pShellLink->Release();
-        return 0;
-    }
+    // rc = pShellLink->Resolve(nullptr, 0);
+    // if (FAILED(rc))
+    // {
+    //     pPersistFile->Release();
+    //     pShellLink->Release();
+    //     return 0;
+    // }
 
     rc = pShellLink->GetPath(lpszPath, iPathBufferSize, nullptr, SLGP_SHORTPATH);
 

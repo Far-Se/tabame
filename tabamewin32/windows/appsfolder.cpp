@@ -12,6 +12,7 @@
 #include <future>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -19,9 +20,13 @@
 #pragma comment(lib, "propsys.lib")
 
 using Microsoft::WRL::ComPtr;
+namespace fs = std::filesystem;
 
 struct AppInfo {
     std::wstring name;
+    // For protocol-URI entries (steam://, epicgames://, …) this is the path to
+    // the backing .url file on disk; for Win32 .lnk shortcuts it is the .lnk
+    // path; for plain .exe entries it equals parsingName.
     std::wstring executable;
     std::wstring arguments;
     std::wstring appUserModelId;
@@ -34,18 +39,10 @@ struct AppBitmap {
     int height = 0;
 };
 
-// ---------------------------------------------------------------------------
-// Property key for the executable path stored in the shell item's property
-// store (works for Win32 shortcuts AND packaged apps).
-// PKEY_Link_TargetParsingPath = {B9B4B3FC-2B51-4A42-B5D8-324146AFCF25}, 2
-// ---------------------------------------------------------------------------
-// static const PROPERTYKEY PKEY_Link_TargetParsingPath = {
-//     {0xB9B4B3FC, 0x2B51, 0x4A42, {0xB5, 0xD8, 0x32, 0x41, 0x46, 0xAF, 0xCF, 0x25}}, 2
-// };
-// PKEY_Link_Arguments = {436F2667-14E2-4FEB-B30A-146C53B5B674}, 100
-static const PROPERTYKEY PKEY_Link_Arguments_Custom = {
-    {0x436F2667, 0x14E2, 0x4FEB, {0xB3, 0x0A, 0x14, 0x6C, 0x53, 0xB5, 0xB6, 0x74}}, 100
-};
+// PKEY_Link_TargetParsingPath and PKEY_Link_Arguments are declared extern in
+// propkey.h; their definitions live in propsys.lib (already linked above).
+// We just need the lib to be linked — no local redefinition needed.
+#pragma comment(lib, "propsys.lib") // already listed above, harmless duplicate
 
 namespace detail {
 
@@ -200,10 +197,20 @@ inline std::wstring ReadStringProp(IPropertyStore* store, const PROPERTYKEY& key
 static const PROPERTYKEY PKEY_AppUserModel_PackageInstallPath = {
     {0x9F4C2855, 0x9F79, 0x4B39, {0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3}}, 5
 };
-// // {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 8  — relative exe inside package
+// {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 8  — relative exe inside package
 // static const PROPERTYKEY PKEY_AppUserModel_HostEnvironment = {
 //     {0x9F4C2855, 0x9F79, 0x4B39, {0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3}}, 8
 // };
+
+// Returns true if the string looks like a protocol URI (contains "://" and
+// does NOT look like a Windows file path).
+inline bool IsProtocolUri(const std::wstring& s) {
+    auto pos = s.find(L"://");
+    if (pos == std::wstring::npos) return false;
+    // A file-system path on Windows either starts with a drive letter (C:\)
+    // or a UNC prefix (\\). Neither contains "://".
+    return true;
+}
 
 inline void ResolveExecutableAndArgs(IShellItem* item,
                                      const std::wstring& parsingName,
@@ -216,7 +223,6 @@ inline void ResolveExecutableAndArgs(IShellItem* item,
     // ── (a) Plain .exe in AppsFolder ────────────────────────────────────────
     if (parsingName.size() > 4) {
         auto ext = parsingName.substr(parsingName.size() - 4);
-        // lowercase compare
         for (auto& c : ext) c = static_cast<wchar_t>(towlower(c));
         if (ext == L".exe") {
             outExe = parsingName;
@@ -224,20 +230,51 @@ inline void ResolveExecutableAndArgs(IShellItem* item,
         }
     }
 
-    // ── (b) Shell link (classic Win32 shortcut exposed as app entry) ─────────
-    // Use IShellItem2 property store with the link target key.
+    // Get IShellItem2 once — used in both (b) and (c).
     ComPtr<IShellItem2> item2;
-    if (SUCCEEDED(item->QueryInterface(IID_PPV_ARGS(&item2)))) {
+    item->QueryInterface(IID_PPV_ARGS(&item2));
+
+    // ── (b) Protocol-URI entries (steam://, epicgames://, battle.net://, …) ──
+    // The parsingName IS the URI. The item is backed by a .url Internet
+    // Shortcut file on disk. Read its file-system path from PKEY_ItemPathDisplay
+    // so callers can use it (e.g. to extract the icon).
+    if (IsProtocolUri(parsingName)) {
+        if (item2) {
+            PWSTR filePath = nullptr;
+            // PKEY_ItemPathDisplay is the full file-system path of the item.
+            if (SUCCEEDED(item2->GetString(PKEY_ItemPathDisplay, &filePath))
+                && filePath && filePath[0]) {
+                outExe = filePath; // path to the .url file on disk
+                CoTaskMemFree(filePath);
+                return;
+            }
+            if (filePath) CoTaskMemFree(filePath);
+
+            // Fallback: PKEY_ParsingPath sometimes carries the .url path.
+            PWSTR parsingPath = nullptr;
+            if (SUCCEEDED(item2->GetString(PKEY_ParsingPath, &parsingPath))
+                && parsingPath && parsingPath[0]
+                && !IsProtocolUri(parsingPath)) { // must not be another URI
+                outExe = parsingPath;
+                CoTaskMemFree(parsingPath);
+                return;
+            }
+            if (parsingPath) CoTaskMemFree(parsingPath);
+        }
+        // Could not resolve the .url file path — leave outExe empty.
+        return;
+    }
+
+    // ── (c) Shell link (classic Win32 shortcut exposed as app entry) ─────────
+    if (item2) {
         PWSTR target = nullptr;
         if (SUCCEEDED(item2->GetString(PKEY_Link_TargetParsingPath, &target))
             && target && target[0]) {
             outExe = target;
             CoTaskMemFree(target);
 
-            // Arguments from the same property store
             PWSTR args = nullptr;
-            if (SUCCEEDED(item2->GetString(PKEY_Link_Arguments_Custom, &args))
-                && args) {
+            if (SUCCEEDED(item2->GetString(PKEY_Link_Arguments, &args)) && args) {
                 outArgs = args;
                 CoTaskMemFree(args);
             }
@@ -246,18 +283,14 @@ inline void ResolveExecutableAndArgs(IShellItem* item,
         if (target) CoTaskMemFree(target);
     }
 
-    // ── (c) Packaged (UWP/MSIX) app ─────────────────────────────────────────
-    // Read install path from property store; the actual host exe is
-    // usually not directly walkable without package identity, so we just
-    // return the install root so the caller knows where the app lives.
+    // ── (d) Packaged (UWP/MSIX) app ─────────────────────────────────────────
     ComPtr<IPropertyStore> store;
     if (SUCCEEDED(item->BindToHandler(nullptr, BHID_PropertyStore,
                                       IID_PPV_ARGS(&store)))) {
         std::wstring installPath =
             ReadStringProp(store.Get(), PKEY_AppUserModel_PackageInstallPath);
-        if (!installPath.empty()) {
-            outExe = installPath; // root of the package (closest we can get)
-        }
+        if (!installPath.empty())
+            outExe = installPath;
         // outArgs stays empty — packaged apps are launched via AUMID
     }
 }
@@ -398,14 +431,56 @@ inline AppBitmap GetAppBitmap(const std::wstring& parsingName,
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     const bool weInitCom = SUCCEEDED(hr);
 
-    // First try the fast path: file-system item (ends in .exe or is a real path)
     ComPtr<IShellItem> item;
-    hr = SHCreateItemFromParsingName(parsingName.c_str(), nullptr,
-                                     IID_PPV_ARGS(&item));
-    if (FAILED(hr) || !item) {
-        // Slow path: walk AppsFolder to find the matching virtual item.
-        // This is the path taken for all UWP / MSIX / packaged apps.
-        item = detail::FindItemInAppsFolder(parsingName);
+
+    if (detail::IsProtocolUri(parsingName)) {
+        // Protocol-URI entries (steam://, epicgames://, …) are backed by a
+        // .url Internet Shortcut file.  We must find that file via the
+        // AppsFolder enumerator, read its on-disk path, then create a shell
+        // item from THAT path — the .url file has the icon reference embedded.
+        ComPtr<IShellItem> virtualItem = detail::FindItemInAppsFolder(parsingName);
+        if (virtualItem) {
+            // Read the file-system path of the .url file.
+            ComPtr<IShellItem2> item2;
+            if (SUCCEEDED(virtualItem->QueryInterface(IID_PPV_ARGS(&item2)))) {
+                PWSTR filePath = nullptr;
+                bool gotPath = false;
+
+                if (SUCCEEDED(item2->GetString(PKEY_ItemPathDisplay, &filePath))
+                    && filePath && filePath[0]) {
+                    gotPath = true;
+                }
+                // Fallback key
+                if (!gotPath) {
+                    if (filePath) { CoTaskMemFree(filePath); filePath = nullptr; }
+                    if (SUCCEEDED(item2->GetString(PKEY_ParsingPath, &filePath))
+                        && filePath && filePath[0]
+                        && !detail::IsProtocolUri(filePath)) {
+                        gotPath = true;
+                    }
+                }
+
+                if (gotPath && filePath) {
+                    // Create a shell item from the actual .url file path so
+                    // IShellItemImageFactory can read the embedded icon.
+                    SHCreateItemFromParsingName(filePath, nullptr,
+                                               IID_PPV_ARGS(&item));
+                }
+                if (filePath) CoTaskMemFree(filePath);
+            }
+
+            // If we still don't have a file-based item, try the virtual item
+            // directly — some launchers do register a proper icon factory.
+            if (!item) item = virtualItem;
+        }
+    } else {
+        // Fast path: file-system item (.exe, .lnk, package install path, …)
+        hr = SHCreateItemFromParsingName(parsingName.c_str(), nullptr,
+                                         IID_PPV_ARGS(&item));
+        if (FAILED(hr) || !item) {
+            // Slow path for UWP / MSIX AUMIDs
+            item = detail::FindItemInAppsFolder(parsingName);
+        }
     }
 
     if (item) {
@@ -427,3 +502,4 @@ inline std::future<AppBitmap> GetAppBitmapAsync(const std::wstring& parsingName,
                           return GetAppBitmap(parsingName, desiredSize);
                       });
 }
+

@@ -54,6 +54,7 @@ dependencies:
 
   ffi_leak_tracker: any
   xml: ^6.6.1
+  pool: ^1.5.1
 dev_dependencies:
   build_runner: ^2.1.11
   flutter_lints: ^6.0.0

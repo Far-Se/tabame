@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -90,7 +91,19 @@ class _WeatherPanelState extends State<WeatherPanel> {
           ),
         ),
       ],
-      body: _buildBody(accent, onSurface),
+      body: Shortcuts(
+          shortcuts: <ShortcutActivator, Intent>{
+            const SingleActivator(LogicalKeyboardKey.backspace): VoidCallbackIntent(() {
+              if (_mode == _WeatherMode.detail) {
+                setState(() {
+                  _mode = _WeatherMode.overview;
+                  _selectedLocation = null;
+                });
+              }
+            }),
+          },
+          includeSemantics: false,
+          child: Focus(autofocus: true, focusNode: FocusNode()..requestFocus(), child: _buildBody(accent, onSurface))),
     );
   }
 
@@ -468,39 +481,66 @@ class _WeatherPanelState extends State<WeatherPanel> {
       _scheduleCurrentHourCenter(location, forecast);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _buildCurrentSummary(forecast, accent, onSurface),
-              const SizedBox(height: 10),
-              _buildTabSelector(accent, onSurface),
-            ],
-          ),
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        const SingleActivator(LogicalKeyboardKey.arrowDown): VoidCallbackIntent(
+          () {
+            _detailScrollController.animateTo(
+              _detailScrollController.offset + 30,
+              duration: const Duration(milliseconds: 50),
+              curve: Curves.easeOut,
+            );
+          },
         ),
-        Expanded(
-          child: ListView(
-            controller: _detailScrollController,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            children: _tab == _WeatherTab.today
-                ? forecast.hourly
-                    .map(
-                      (WeatherHour hour) => _buildHourRow(
-                        hour,
-                        accent,
-                        onSurface,
-                        _isCurrentHour(hour, forecast),
-                      ),
-                    )
-                    .toList()
-                : forecast.daily.map((WeatherDay day) => _buildDayRow(day, accent, onSurface)).toList(),
-          ),
+        const SingleActivator(LogicalKeyboardKey.arrowUp): VoidCallbackIntent(
+          () {
+            _detailScrollController.animateTo(
+              _detailScrollController.offset - 30,
+              duration: const Duration(milliseconds: 50),
+              curve: Curves.easeOut,
+            );
+          },
         ),
-      ],
+      },
+      includeSemantics: false,
+      child: Focus(
+        autofocus: true,
+        focusNode: FocusNode()..requestFocus(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _buildCurrentSummary(forecast, accent, onSurface),
+                  const SizedBox(height: 10),
+                  _buildTabSelector(accent, onSurface),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: _detailScrollController,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                children: _tab == _WeatherTab.today
+                    ? forecast.hourly
+                        .map(
+                          (WeatherHour hour) => _buildHourRow(
+                            hour,
+                            accent,
+                            onSurface,
+                            _isCurrentHour(hour, forecast),
+                          ),
+                        )
+                        .toList()
+                    : forecast.daily.map((WeatherDay day) => _buildDayRow(day, accent, onSurface)).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

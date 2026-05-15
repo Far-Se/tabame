@@ -15,9 +15,9 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/src/gestures/events.dart';
 import 'package:image/image.dart' as img;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -247,6 +247,7 @@ enum DrawTool {
   smartDelete,
   spotlight,
   imageDraw,
+  measureDistance,
 }
 
 enum GuideOrientation { horizontal, vertical }
@@ -254,6 +255,7 @@ enum GuideOrientation { horizontal, vertical }
 @immutable
 class AppColor {
   static const List<Color> palette = <ui.Color>[
+    Colors.black,
     Colors.red,
     Colors.orange,
     Colors.yellow,
@@ -262,7 +264,6 @@ class AppColor {
     Colors.blue,
     Colors.purple,
     Colors.white,
-    Colors.black,
   ];
 }
 
@@ -288,6 +289,9 @@ class DrawShape {
   /// For smartDelete: the fill color sampled from the first pixel
   final Color? fillColor;
 
+  /// For text/infoBalloon: explicit background color (null = default black/shape color)
+  final Color? textBgColor;
+
   DrawShape({
     required this.tool,
     required this.points,
@@ -304,6 +308,7 @@ class DrawShape {
     this.imageW,
     this.imageH,
     this.fillColor,
+    this.textBgColor,
   });
 
   DrawShape copyWith({
@@ -321,6 +326,7 @@ class DrawShape {
     int? imageW,
     int? imageH,
     Color? fillColor,
+    Color? textBgColor,
   }) {
     return DrawShape(
       tool: tool,
@@ -338,6 +344,7 @@ class DrawShape {
       imageW: imageW ?? this.imageW,
       imageH: imageH ?? this.imageH,
       fillColor: fillColor ?? this.fillColor,
+      textBgColor: textBgColor ?? this.textBgColor,
     );
   }
 }
@@ -386,6 +393,7 @@ class AnnotationController extends ChangeNotifier {
   bool textBackground = true;
   double fontSize = 16.0;
   Color? textColor; // null = use strokeColor
+  Color? textBgColor; // null = black
 
   // Step counter: auto-incrementing number
   int _stepCount = 1;
@@ -541,8 +549,12 @@ class AnnotationController extends ChangeNotifier {
   void updateShape(Offset pos, {bool shiftHeld = false}) {
     if (currentShape == null) return;
     if (activeTool == DrawTool.pen) {
+      // Distance-gate: only record a new point if it moved at least 3px from the last.
+      // This removes micro-jitter from raw mouse events without losing real direction changes.
+      final List<Offset> existing = currentShape!.points;
+      if (existing.isNotEmpty && (existing.last - pos).distance < 3.0) return;
       currentShape = currentShape!.copyWith(
-        points: <ui.Offset>[...currentShape!.points, pos],
+        points: <ui.Offset>[...existing, pos],
       );
     } else if (activeTool == DrawTool.highlight) {
       final ui.Offset start = currentShape!.points.first;
@@ -569,7 +581,21 @@ class AnnotationController extends ChangeNotifier {
     DrawShape finished;
 
     if (activeTool == DrawTool.pen) {
-      finished = currentShape!;
+      // Apply iterative Laplacian smoothing to the raw pen points before committing.
+      // Each interior point is pulled toward the average of its neighbours.
+      // We run 3 passes with alpha=0.5 — smooths jitter while preserving shape.
+      List<Offset> pts = List<Offset>.from(currentShape!.points);
+      const int passes = 3;
+      const double alpha = 0.5;
+      for (int pass = 0; pass < passes; pass++) {
+        final List<Offset> next = List<Offset>.from(pts);
+        for (int i = 1; i < pts.length - 1; i++) {
+          final Offset avg = (pts[i - 1] + pts[i + 1]) / 2.0;
+          next[i] = pts[i] + (avg - pts[i]) * alpha;
+        }
+        pts = next;
+      }
+      finished = currentShape!.copyWith(points: pts);
     } // endShape()
     else if (activeTool == DrawTool.highlight) {
       finished = currentEnd == null
@@ -612,6 +638,7 @@ class AnnotationController extends ChangeNotifier {
       text: text,
       textBackground: activeTool == DrawTool.emoji ? false : textBackground,
       textColor: textColor,
+      textBgColor: textBgColor,
       fontSize: fontSize,
     ));
     notifyListeners();
@@ -1192,6 +1219,13 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   final GlobalKey _toolbarKey = GlobalKey();
   Size _toolbarSize = const Size(52, 600); // sensible fallback
 
+  // Measure Distance: live cursor position + sampled snapshot for background detection
+  Offset? _measureCursorPos;
+  Uint8List? _measureSnapshotBytes;
+  int? _measureSnapshotW;
+  int? _measureSnapshotH;
+  Rect? _measureSnapshotRect;
+
   @override
   void initState() {
     super.initState();
@@ -1328,7 +1362,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
             Positioned(
               left: toolbarLeft,
               top: toolbarTop,
-              child: AnnotationToolbar(key: _toolbarKey, controller: ctrl),
+              child: AnnotationToolbar(key: _toolbarKey, controller: ctrl, monitorRect: widget.currentMonitorRect),
             ),
           // Status bar anchored to active monitor
           if (ctrl.drawingModeActive)
@@ -1359,6 +1393,30 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                 child: CustomPaint(
                   painter: _CaptureSelectionPainter(Rect.fromPoints(_captureStart!, _captureCurrent!)),
                 ),
+              ),
+            ),
+          // Measure Distance: live hover overlay
+          if (ctrl.drawingModeActive && ctrl.activeTool == DrawTool.measureDistance)
+            Positioned.fill(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.precise,
+                onHover: (PointerHoverEvent e) {
+                  setState(() => _measureCursorPos = e.localPosition);
+                  _ensureMeasureSnapshot();
+                },
+                child: _measureCursorPos != null
+                    ? IgnorePointer(
+                        child: CustomPaint(
+                          painter: _MeasureDistancePainter(
+                            cursor: _measureCursorPos!,
+                            snapshotBytes: _measureSnapshotBytes,
+                            snapshotW: _measureSnapshotW,
+                            snapshotH: _measureSnapshotH,
+                            snapshotRect: _measureSnapshotRect,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ),
         ],
@@ -1410,6 +1468,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         LogicalKeyboardKey.keyD: DrawTool.smartDelete,
         LogicalKeyboardKey.keyO: DrawTool.spotlight,
         LogicalKeyboardKey.keyW: DrawTool.imageDraw,
+        LogicalKeyboardKey.keyV: DrawTool.measureDistance,
       };
       if (toolKeys.containsKey(e.logicalKey)) {
         ctrl.setTool(toolKeys[e.logicalKey]!);
@@ -1464,6 +1523,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       return;
     }
     if (ctrl.activeTool == DrawTool.magnifier) return;
+    if (ctrl.activeTool == DrawTool.measureDistance) return; // handled by MouseRegion hover
 
     final GuideLineModel? hit = _hitGuide(pos);
     if (hit != null) {
@@ -1661,6 +1721,33 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         imageH: (radius * 2).round(),
       );
     });
+  }
+
+  // \u2500\u2500 Measure Distance snapshot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+  bool _measureSnapshotInProgress = false;
+  DateTime _lastMeasureSnapshotTime = DateTime(0);
+
+  Future<void> _ensureMeasureSnapshot() async {
+    final DateTime now = DateTime.now();
+    if (_measureSnapshotBytes != null && now.difference(_lastMeasureSnapshotTime).inSeconds < 2) return;
+    if (_measureSnapshotInProgress) return;
+    _measureSnapshotInProgress = true;
+    try {
+      final Size sz = MediaQuery.of(context).size;
+      final Rect full = Offset.zero & sz;
+      final Uint8List? bytes = await _captureScreenRegion(full);
+      if (bytes == null || !mounted) return;
+      setState(() {
+        _measureSnapshotBytes = bytes;
+        _measureSnapshotW = sz.width.round();
+        _measureSnapshotH = sz.height.round();
+        _measureSnapshotRect = full;
+        _lastMeasureSnapshotTime = DateTime.now();
+      });
+    } finally {
+      _measureSnapshotInProgress = false;
+    }
   }
 
   Future<void> _commitMagnifierAt(Offset center) async {
@@ -1947,7 +2034,10 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   Future<void> _showTextDialog(Offset pos) async {
     final TextEditingController tc = TextEditingController();
     bool localBg = ctrl.textBackground;
-    Color localColor = ctrl.textColor ?? ctrl.strokeColor;
+    // Text color is always the toolbar stroke color — shown as preview only.
+    final Color textFgColor = ctrl.strokeColor;
+    // Background color starts from last used bg or black.
+    Color localBgColor = ctrl.textBgColor ?? Colors.black;
     double localSize = ctrl.fontSize;
 
     // Approximate dialog size (width fixed, height estimated).
@@ -1990,7 +2080,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         ),
                         onSubmitted: (String v) {
                           ctrl.textBackground = localBg;
-                          ctrl.textColor = localColor;
+                          ctrl.textBgColor = localBgColor;
                           ctrl.fontSize = localSize;
                           Navigator.pop(ctx, v);
                         },
@@ -2017,6 +2107,24 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                       ]),
                       const SizedBox(height: 8),
+                      // Text color preview (always from toolbar)
+                      Row(children: <Widget>[
+                        const Text('Text color:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: textFgColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white54, width: 1.5),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text('(from toolbar)', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      ]),
+                      const SizedBox(height: 8),
+                      // Background toggle + background color picker
                       Row(children: <Widget>[
                         GestureDetector(
                           onTap: () => setSt(() => localBg = !localBg),
@@ -2036,30 +2144,31 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: AppColor.palette
-                                  .map((Color c) => GestureDetector(
-                                        onTap: () => setSt(() => localColor = c),
-                                        child: Container(
-                                          width: 20,
-                                          height: 20,
-                                          margin: const EdgeInsets.only(right: 4),
-                                          decoration: BoxDecoration(
-                                            color: c,
-                                            shape: BoxShape.circle,
-                                            border: localColor == c
-                                                ? Border.all(color: Colors.white, width: 2)
-                                                : Border.all(color: Colors.transparent),
+                        if (localBg)
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: AppColor.palette
+                                    .map((Color c) => GestureDetector(
+                                          onTap: () => setSt(() => localBgColor = c),
+                                          child: Container(
+                                            width: 20,
+                                            height: 20,
+                                            margin: const EdgeInsets.only(right: 4),
+                                            decoration: BoxDecoration(
+                                              color: c,
+                                              shape: BoxShape.circle,
+                                              border: localBgColor == c
+                                                  ? Border.all(color: Colors.white, width: 2)
+                                                  : Border.all(color: Colors.white24),
+                                            ),
                                           ),
-                                        ),
-                                      ))
-                                  .toList(),
+                                        ))
+                                    .toList(),
+                              ),
                             ),
                           ),
-                        ),
                       ]),
                     ],
                   ),
@@ -2069,7 +2178,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                   TextButton(
                     onPressed: () {
                       ctrl.textBackground = localBg;
-                      ctrl.textColor = localColor;
+                      ctrl.textBgColor = localBgColor;
                       ctrl.fontSize = localSize;
                       Navigator.pop(ctx, tc.text);
                     },
@@ -3004,7 +3113,8 @@ class _StatusBar extends StatelessWidget {
 
 class AnnotationToolbar extends StatelessWidget {
   final AnnotationController controller;
-  const AnnotationToolbar({super.key, required this.controller});
+  final Rect monitorRect;
+  const AnnotationToolbar({super.key, required this.controller, required this.monitorRect});
 
   @override
   Widget build(BuildContext context) {
@@ -3047,6 +3157,7 @@ class AnnotationToolbar extends StatelessWidget {
               _ToolBtn(Icons.straighten, DrawTool.ruler, controller, 'Ruler (M)'),
               _ToolBtn(Icons.aspect_ratio, DrawTool.sizebox, controller, 'Size Box (B)'),
               _ToolBtn(Icons.linear_scale, DrawTool.guide, controller, 'Guide (U)'),
+              _ToolBtn(Icons.space_bar, DrawTool.measureDistance, controller, 'Measure Distance (V)'),
               const Divider(color: Colors.white24, height: 10),
               // Color: shows current color dot; hover reveals popup palette to the right
               _ColorPopupBtn(controller),
@@ -3058,12 +3169,253 @@ class AnnotationToolbar extends StatelessWidget {
               _ActionBtn(Icons.delete_sweep, 'Clear All', () => controller.clearAll()),
               _ActionBtn(Icons.grid_on, 'Grid (Ctrl+G)', () => controller.toggleGrid()),
               _ActionBtn(Icons.exposure_zero, 'Reset Steps', () => controller.resetStepCounter()),
+              const Divider(color: Colors.white24, height: 10),
+              _InfoBtn(controller, monitorRect),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+// ── Info / hotkeys button ─────────────────────────────────────────────────────
+class _InfoBtn extends StatelessWidget {
+  final AnnotationController ctrl;
+  final Rect monitorRect;
+  const _InfoBtn(this.ctrl, this.monitorRect);
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Hotkeys & Tips',
+      preferBelow: false,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _showHotkeysModal(context),
+        child: Container(
+          width: 36,
+          height: 36,
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            color: Colors.white10,
+          ),
+          child: const Icon(Icons.info_outline, color: Colors.white70, size: 18),
+        ),
+      ),
+    );
+  }
+
+  void _showHotkeysModal(BuildContext context) {
+    const double dw = 520;
+    const double dh = 640;
+    final Offset dOff = monitorRect.isEmpty
+        ? Offset.zero
+        : Offset(
+            monitorRect.left + (monitorRect.width - dw) / 2,
+            monitorRect.top + (monitorRect.height - dh) / 2,
+          );
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Stack(
+        children: <Widget>[
+          Positioned(
+            left: dOff.dx,
+            top: dOff.dy,
+            width: dw,
+            child: const _HotkeysModal(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HotkeysModal extends StatelessWidget {
+  const _HotkeysModal();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 520,
+        constraints: const BoxConstraints(maxHeight: 640),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white24),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(color: Colors.black54, blurRadius: 32, offset: Offset(0, 8)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.white12)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.keyboard, color: Colors.white70, size: 20),
+                  const SizedBox(width: 10),
+                  const Text('Hotkeys & Tips',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close, color: Colors.white54, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            // Scrollable body
+            const Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _HkSection('Tools', <_HkEntry>[
+                      _HkEntry('S', 'Select / move shapes'),
+                      _HkEntry('C', 'Screen capture'),
+                      _HkEntry('P', 'Pen (freehand draw)'),
+                      _HkEntry('H', 'Highlight'),
+                      _HkEntry('L', 'Line'),
+                      _HkEntry('R', 'Rectangle'),
+                      _HkEntry('E', 'Ellipse'),
+                      _HkEntry('A', 'Arrow'),
+                      _HkEntry('T', 'Text'),
+                      _HkEntry('J', 'Emoji'),
+                      _HkEntry('N', 'Step counter'),
+                      _HkEntry('I', 'Info balloon'),
+                      _HkEntry('Z', 'Magnifier'),
+                      _HkEntry('F', 'Blur region'),
+                      _HkEntry('X', 'Pixelate region'),
+                      _HkEntry('D', 'Smart delete'),
+                      _HkEntry('O', 'Spotlight'),
+                      _HkEntry('W', 'Image draw'),
+                      _HkEntry('M', 'Ruler'),
+                      _HkEntry('B', 'Size box'),
+                      _HkEntry('U', 'Guide'),
+                      _HkEntry('V', 'Measure distance'),
+                    ]),
+                    SizedBox(height: 16),
+                    _HkSection('Actions', <_HkEntry>[
+                      _HkEntry('Ctrl + Z', 'Undo'),
+                      _HkEntry('Ctrl + Y', 'Redo'),
+                      _HkEntry('Ctrl + G', 'Toggle grid'),
+                      _HkEntry('Esc', 'Exit drawing mode / deselect'),
+                      _HkEntry('Space', 'Toggle drawing mode on/off'),
+                    ]),
+                    SizedBox(height: 16),
+                    _HkSection('Mouse interactions', <_HkEntry>[
+                      _HkEntry('Right-click shape', 'Delete the shape'),
+                      _HkEntry('Scroll on shape', 'Resize / scale the shape'),
+                      _HkEntry('Drag shape', 'Move the shape (Select tool)'),
+                    ]),
+                    SizedBox(height: 16),
+                    _HkSection('Tips', <_HkEntry>[
+                      _HkEntry('Text color', 'Always uses the active toolbar color'),
+                      _HkEntry('Text background', 'Choose color in the text dialog'),
+                      _HkEntry('Balloon body', 'Choose color in the balloon dialog'),
+                      _HkEntry('Measure distance',
+                          'Hover over an area — measures same-color pixel runs horizontally & vertically'),
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HkSection extends StatelessWidget {
+  final String title;
+  final List<_HkEntry> entries;
+  const _HkSection(this.title, this.entries);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(title,
+            style:
+                const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+        const SizedBox(height: 8),
+        ...entries.map((_HkEntry e) => Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 130),
+                    child: _KeyChip(e.key),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(e.desc, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+}
+
+class _HkEntry {
+  final String key;
+  final String desc;
+  const _HkEntry(this.key, this.desc);
+}
+
+class _KeyChip extends StatelessWidget {
+  final String label;
+  const _KeyChip(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    // Split on "+" but keep multi-word keys whole
+    final List<String> parts = label.split(' + ');
+    if (parts.length == 1) {
+      return _chip(label);
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (int i = 0; i < parts.length; i++) ...<Widget>[
+          if (i > 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3),
+              child: Text('+', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ),
+          _chip(parts[i]),
+        ],
+      ],
+    );
+  }
+
+  Widget _chip(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2D2D4E),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Text(text,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
+      );
 }
 
 /// Shows the current stroke color as a small dot.
@@ -3621,6 +3973,8 @@ class AnnotationPainter extends CustomPainter {
         return;
       case DrawTool.magnifier:
         return; // magnifier is a live widget, not a committed shape
+      case DrawTool.measureDistance:
+        return; // measure distance is a live overlay, no committed shapes
       default:
         break;
     }
@@ -3638,7 +3992,8 @@ class AnnotationPainter extends CustomPainter {
   void _drawText(Canvas canvas, DrawShape s, Offset pos) {
     if (s.text == null || s.text!.isEmpty) return;
     final double fs = s.fontSize ?? (s.strokeWidth * 8 + 12);
-    final Color tc = s.textColor ?? s.color;
+    // Text color = stroke color (the main toolbar color)
+    final Color tc = s.color;
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: s.text,
@@ -3651,9 +4006,11 @@ class AnnotationPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     if (s.textBackground) {
+      // Background color = textBgColor chosen in dialog (defaults to near-black)
+      final Color bgColor = s.textBgColor ?? Colors.black;
       final Rect bg = Rect.fromLTWH(pos.dx - 4, pos.dy - 2, tp.width + 8, tp.height + 4);
       canvas.drawRRect(
-          RRect.fromRectAndRadius(bg, const Radius.circular(4)), Paint()..color = Colors.black.withValues(alpha: 0.72));
+          RRect.fromRectAndRadius(bg, const Radius.circular(4)), Paint()..color = bgColor.withValues(alpha: 0.82));
     }
     tp.paint(canvas, pos);
   }
@@ -3664,7 +4021,9 @@ class AnnotationPainter extends CustomPainter {
     const double tailH = 14.0;
     const double radius = 8.0;
     final double fs = s.fontSize ?? (s.strokeWidth * 6 + 12);
-    final Color tc = s.textColor ?? Colors.white;
+    // Text color = stroke color (main toolbar color), balloon body = textBgColor or s.color
+    final Color tc = s.color;
+    final Color balloonColor = s.textBgColor ?? s.color;
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: s.text,
@@ -3685,7 +4044,7 @@ class AnnotationPainter extends CustomPainter {
       ..lineTo(pos.dx + 8, bubble.bottom)
       ..close();
 
-    canvas.drawPath(path, Paint()..color = s.color.withValues(alpha: 0.9));
+    canvas.drawPath(path, Paint()..color = balloonColor.withValues(alpha: 0.9));
     canvas.drawPath(
         path,
         Paint()
@@ -3778,11 +4137,38 @@ class AnnotationPainter extends CustomPainter {
         break;
       case DrawTool.pen:
         if (points.length < 2) return;
-        final ui.Path path = Path()..moveTo(points.first.dx, points.first.dy);
-        for (int i = 1; i < points.length; i++) {
-          path.lineTo(points[i].dx, points[i].dy);
+        {
+          // Round caps/joins for a natural brush feel
+          final Paint penPaint = Paint()
+            ..color = paint.color
+            ..strokeWidth = paint.strokeWidth
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+
+          final ui.Path penPath = Path()..moveTo(points.first.dx, points.first.dy);
+          if (points.length == 2) {
+            penPath.lineTo(points[1].dx, points[1].dy);
+          } else if (points.length == 3) {
+            penPath.quadraticBezierTo(points[1].dx, points[1].dy, points[2].dx, points[2].dy);
+          } else {
+            // Chordal Catmull-Rom → cubic Bézier.
+            // tension=0.5 gives a natural curve that passes through every point.
+            const double tension = 0.5;
+            for (int i = 0; i < points.length - 1; i++) {
+              final Offset p0 = points[i == 0 ? 0 : i - 1];
+              final Offset p1 = points[i];
+              final Offset p2 = points[i + 1];
+              final Offset p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+              final double cp1x = p1.dx + (p2.dx - p0.dx) * tension / 3.0;
+              final double cp1y = p1.dy + (p2.dy - p0.dy) * tension / 3.0;
+              final double cp2x = p2.dx - (p3.dx - p1.dx) * tension / 3.0;
+              final double cp2y = p2.dy - (p3.dy - p1.dy) * tension / 3.0;
+              penPath.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.dx, p2.dy);
+            }
+          }
+          canvas.drawPath(penPath, penPaint);
         }
-        canvas.drawPath(path, paint);
 // _drawShape() highlight case
       case DrawTool.highlight:
         const double averageLineHeight = 16.0;
@@ -3827,6 +4213,9 @@ class AnnotationPainter extends CustomPainter {
 
       case DrawTool.guide:
         break; // guides drawn separately
+
+      case DrawTool.measureDistance:
+        break; // rendered by the live overlay
 
       default:
         break;
@@ -3878,33 +4267,106 @@ class AnnotationPainter extends CustomPainter {
     final double dist = sqrt(dx * dx + dy * dy);
     final double angleDeg = atan2(dy, dx) * 180 / pi;
 
-    String label;
+    final Offset mid = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
+
     if (tool == DrawTool.sizebox) {
       final ui.Rect r = Rect.fromPoints(start, end);
-      label = 'X:${r.left.round()} Y:${r.top.round()} '
-          'W:${r.width.round()} H:${r.height.round()}';
+      _drawPillLabel(canvas, '${r.width.round()} px', Offset(r.center.dx, r.top), color,
+          anchor: _LabelAnchor.bottomCenter, offsetY: -4);
+      _drawPillLabel(canvas, '${r.height.round()} px', Offset(r.right, r.center.dy), color,
+          anchor: _LabelAnchor.leftCenter, vertical: true, offsetX: 6);
+      _drawPillLabel(canvas, '(${r.left.round()}, ${r.top.round()})', r.topLeft + const Offset(4, 4), color,
+          anchor: _LabelAnchor.topLeft);
+    } else if (tool == DrawTool.ruler) {
+      _drawPillLabel(canvas, '${dist.round()} px', mid, color, anchor: _LabelAnchor.bottomCenter, offsetY: -6);
+      if (dist > 40) {
+        _drawPillLabel(canvas, '${angleDeg.toStringAsFixed(1)}°', end, color,
+            anchor: _LabelAnchor.topLeft, offsetX: 8, offsetY: -8);
+      }
     } else {
-      label = '${dist.round()}px  Δ${dx.round()},${dy.round()}  ${angleDeg.toStringAsFixed(1)}°';
+      _drawPillLabel(canvas, '${dist.round()} px', mid, color, anchor: _LabelAnchor.bottomCenter, offsetY: -6);
     }
-
-    final ui.Offset mid = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
-    _drawLabel(canvas, label, mid + const Offset(6, -14), color);
   }
 
-  void _drawLabel(Canvas canvas, String text, Offset pos, Color color) {
+  void _drawPillLabel(
+    Canvas canvas,
+    String text,
+    Offset pos,
+    Color color, {
+    _LabelAnchor anchor = _LabelAnchor.bottomCenter,
+    bool vertical = false,
+    double offsetX = 0,
+    double offsetY = 0,
+  }) {
+    const double fs = 11.5;
+    const double padH = 7.0;
+    const double padV = 3.5;
+    const double cornerR = 4.0;
+
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          backgroundColor: Colors.black.withValues(alpha: 0.95),
-          fontFamily: 'monospace',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: fs,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas, pos);
+
+    final double w = tp.width + padH * 2;
+    final double h = tp.height + padV * 2;
+
+    canvas.save();
+    if (vertical) {
+      canvas.translate(pos.dx + offsetX, pos.dy + offsetY);
+      canvas.rotate(-pi / 2);
+      canvas.translate(-w / 2, -h / 2);
+    } else {
+      double left = pos.dx + offsetX;
+      double top = pos.dy + offsetY;
+      switch (anchor) {
+        case _LabelAnchor.bottomCenter:
+          left -= w / 2;
+          top -= h;
+          break;
+        case _LabelAnchor.topLeft:
+          break;
+        case _LabelAnchor.leftCenter:
+          top -= h / 2;
+          break;
+      }
+      canvas.translate(left, top);
+    }
+
+    // Shadow
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(1, 1, w, h), const Radius.circular(cornerR)),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.40)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    // Background
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, w, h), const Radius.circular(cornerR)),
+      Paint()..color = color.withValues(alpha: 0.90),
+    );
+    // Border
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, w, h), const Radius.circular(cornerR)),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
+    tp.paint(canvas, const Offset(padH, padV));
+    canvas.restore();
+  }
+
+  void _drawLabel(Canvas canvas, String text, Offset pos, Color color) {
+    _drawPillLabel(canvas, text, pos, color.withValues(alpha: 0.85), anchor: _LabelAnchor.topLeft);
   }
 
   void _paintGuideDistance(Canvas canvas, Offset start, Offset end, Color color, {required Axis axis}) {
@@ -4015,4 +4477,187 @@ class AnnotationPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(AnnotationPainter old) => true;
+}
+
+enum _LabelAnchor { bottomCenter, topLeft, leftCenter }
+
+// ---------------------------------------------------------------------------
+// Measure Distance painter
+// ---------------------------------------------------------------------------
+
+class _MeasureDistancePainter extends CustomPainter {
+  final Offset cursor;
+  final Uint8List? snapshotBytes;
+  final int? snapshotW;
+  final int? snapshotH;
+  final Rect? snapshotRect;
+
+  _MeasureDistancePainter({
+    required this.cursor,
+    required this.snapshotBytes,
+    required this.snapshotW,
+    required this.snapshotH,
+    required this.snapshotRect,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final int cx = cursor.dx.round();
+    final int cy = cursor.dy.round();
+
+    // Draw crosshair lines
+    final Paint crossPaint = Paint()
+      ..color = Colors.cyan.withValues(alpha: 0.6)
+      ..strokeWidth = 1.0;
+    canvas.drawLine(Offset(0, cursor.dy), Offset(size.width, cursor.dy), crossPaint);
+    canvas.drawLine(Offset(cursor.dx, 0), Offset(cursor.dx, size.height), crossPaint);
+
+    // Draw cursor dot
+    canvas.drawCircle(cursor, 4, Paint()..color = Colors.cyan);
+    canvas.drawCircle(
+        cursor,
+        4,
+        Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5);
+
+    if (snapshotBytes == null || snapshotW == null || snapshotH == null) {
+      // No snapshot yet: just show crosshair with "Capturing..." hint
+      _drawMeasurePill(canvas, 'Capturing screen...', cursor + const Offset(12, -24), Colors.cyan);
+      return;
+    }
+
+    final int sw = snapshotW!;
+    final int sh = snapshotH!;
+    final Uint8List bytes = snapshotBytes!;
+
+    Color pixel(int x, int y) {
+      x = x.clamp(0, sw - 1);
+      y = y.clamp(0, sh - 1);
+      final int base = (y * sw + x) * 4;
+      if (base + 3 >= bytes.length) return const Color(0xFF000000);
+      return Color.fromARGB(255, bytes[base], bytes[base + 1], bytes[base + 2]);
+    }
+
+    bool colorSame(Color a, Color b, int thresh) {
+      return (a.red8bit - b.red8bit).abs() < thresh &&
+          (a.green8bit - b.green8bit).abs() < thresh &&
+          (a.blue8bit - b.blue8bit).abs() < thresh;
+    }
+
+    final Color cursorPixel = pixel(cx, cy);
+    const int thresh = 18;
+
+    // --- Horizontal measurement ---
+    // Find leftmost background edge from cursor going left
+    int leftX = cx;
+    while (leftX > 0 && colorSame(pixel(leftX - 1, cy), cursorPixel, thresh)) {
+      leftX--;
+    }
+    // Find rightmost background edge from cursor going right
+    int rightX = cx;
+    while (rightX < sw - 1 && colorSame(pixel(rightX + 1, cy), cursorPixel, thresh)) {
+      rightX++;
+    }
+
+    // --- Vertical measurement ---
+    int topY = cy;
+    while (topY > 0 && colorSame(pixel(cx, topY - 1), cursorPixel, thresh)) {
+      topY--;
+    }
+    int bottomY = cy;
+    while (bottomY < sh - 1 && colorSame(pixel(cx, bottomY + 1), cursorPixel, thresh)) {
+      bottomY++;
+    }
+
+    final int hDist = rightX - leftX;
+    final int vDist = bottomY - topY;
+
+    // --- Draw horizontal span line ---
+    if (hDist > 2) {
+      final Paint spanPaint = Paint()
+        ..color = Colors.cyanAccent.withValues(alpha: 0.85)
+        ..strokeWidth = 2.0;
+      final double y = cursor.dy;
+      canvas.drawLine(Offset(leftX.toDouble(), y), Offset(rightX.toDouble(), y), spanPaint);
+      // End ticks
+      _drawTick(canvas, Offset(leftX.toDouble(), y), Axis.vertical, spanPaint);
+      _drawTick(canvas, Offset(rightX.toDouble(), y), Axis.vertical, spanPaint);
+      // Label above midpoint
+      final double midX = (leftX + rightX) / 2.0;
+      _drawMeasurePill(canvas, '$hDist px', Offset(midX, y - 6), Colors.cyan, anchorBottom: true);
+    }
+
+    // --- Draw vertical span line ---
+    if (vDist > 2) {
+      final Paint spanPaint = Paint()
+        ..color = Colors.greenAccent.withValues(alpha: 0.85)
+        ..strokeWidth = 2.0;
+      final double x = cursor.dx;
+      canvas.drawLine(Offset(x, topY.toDouble()), Offset(x, bottomY.toDouble()), spanPaint);
+      _drawTick(canvas, Offset(x, topY.toDouble()), Axis.horizontal, spanPaint);
+      _drawTick(canvas, Offset(x, bottomY.toDouble()), Axis.horizontal, spanPaint);
+      final double midY = (topY + bottomY) / 2.0;
+      _drawMeasurePill(canvas, '$vDist px', Offset(x + 8, midY), Colors.green);
+    }
+
+    // --- Info box: show both values and cursor position ---
+    final String info = 'H: $hDist px   V: $vDist px   ($cx, $cy)';
+    _drawMeasurePill(canvas, info, cursor + const Offset(12, 14), const Color(0xFF222244));
+  }
+
+  void _drawTick(Canvas canvas, Offset pos, Axis axis, Paint paint) {
+    const double half = 5.0;
+    if (axis == Axis.vertical) {
+      canvas.drawLine(pos + const Offset(0, -half), pos + const Offset(0, half), paint);
+    } else {
+      canvas.drawLine(pos + const Offset(-half, 0), pos + const Offset(half, 0), paint);
+    }
+  }
+
+  void _drawMeasurePill(Canvas canvas, String text, Offset pos, Color bgColor, {bool anchorBottom = false}) {
+    const double fs = 11.5;
+    const double padH = 7.0;
+    const double padV = 3.5;
+    const double cornerR = 4.0;
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(color: Colors.white, fontSize: fs, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final double w = tp.width + padH * 2;
+    final double h = tp.height + padV * 2;
+    final double left = pos.dx;
+    final double top = anchorBottom ? pos.dy - h : pos.dy;
+
+    // Shadow
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(left + 1, top + 1, w, h), const Radius.circular(cornerR)),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    // Background
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(left, top, w, h), const Radius.circular(cornerR)),
+      Paint()..color = bgColor.withValues(alpha: 0.92),
+    );
+    // Border
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(left, top, w, h), const Radius.circular(cornerR)),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
+    tp.paint(canvas, Offset(left + padH, top + padV));
+  }
+
+  @override
+  bool shouldRepaint(_MeasureDistancePainter old) => old.cursor != cursor || old.snapshotBytes != snapshotBytes;
 }

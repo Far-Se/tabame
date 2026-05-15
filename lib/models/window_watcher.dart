@@ -9,7 +9,6 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import 'classes/boxes.dart';
-import 'globals.dart';
 import 'settings.dart';
 import 'win32/imports.dart';
 import 'win32/mixed.dart';
@@ -134,7 +133,7 @@ class WindowWatcher {
     list = <Window>[...newList];
 
     if (_activeWinHandle > -1) {
-      Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
+      // Globals.lastFocusedWinHWND = list[_activeWinHandle].hWnd;
     }
 
     await handleIcons();

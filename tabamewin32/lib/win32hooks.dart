@@ -46,7 +46,7 @@ abstract class WinHookEventListener {
 }
 
 class WinHooks {
-  final MethodChannel methodChannel = audioMethodChannel;
+  final MethodChannel methodChannel = tabameWin32MethodChannel;
   final ObserverList<WinHookEventListener> _winHookListeners = ObserverList<WinHookEventListener>();
   bool hookRunning = false;
 

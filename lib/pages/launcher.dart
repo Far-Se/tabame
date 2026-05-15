@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+import 'package:pool/pool.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
+import 'package:tabamewin32/tabamewin32.dart' as native;
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
@@ -22,6 +26,7 @@ import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import 'interface/result_item_app.dart';
 import 'interface/result_item_bookmark.dart';
 import 'interface/result_item_file.dart';
 import 'interface/result_item_window.dart';
@@ -106,6 +111,9 @@ class Launcher extends StatefulWidget {
 }
 
 class LauncherState extends State<Launcher> with QuickMenuTriggers {
+  static const String _launcherAppIconPrefix = 'app_';
+  static const String _launcherAppsFolderPrefix = r'shell:AppsFolder\';
+
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -121,6 +129,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _launcherFocusRetryTimer;
   LogicalKeyboardKey? _lastPressedKey;
   bool _isRepairingFileIndex = false;
+  bool _isSyncingLauncherAppsCatalog = false;
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   bool _isSearching = false;
@@ -317,12 +326,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       _consumePendingQuickMenuSearchInput();
       _focusNode.requestFocus();
 
-      // Initialize and sync file indexer
-      FileIndexer.instance.sync();
+      unawaited(_refreshLauncherCatalogs());
 
       _onSearchChanged(_controller.text);
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final RenderBox box = context.findRenderObject() as RenderBox;
+      Globals.launcherCurrentSize = box.size;
+    });
     // Re-request focus after the window activation delay settles (the OS
     // Win32.activateWindow call in onQuickMenuShown fires ~100 ms after show).
     Future<void>.delayed(const Duration(milliseconds: 200), () {
@@ -358,6 +370,245 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
     super.dispose();
+  }
+
+  Future<void> _refreshLauncherCatalogs() async {
+    try {
+      await FileIndexer.instance.sync();
+      await _syncLauncherAppsCatalog();
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to refresh launcher catalogs: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    if (!mounted) return;
+    _onSearchChanged(_controller.text);
+  }
+
+  Future<void> _syncLauncherAppsCatalog() async {
+    if (_isSyncingLauncherAppsCatalog) return;
+    _isSyncingLauncherAppsCatalog = true;
+
+    try {
+      final Database db = await FileIndexDb.instance.database;
+      final Directory iconCacheDirectory = await _ensureLauncherIconCacheDirectory();
+      final List<native.AppInfo> apps = _dedupeLauncherApps(await native.AppEnumeration.getAllApps());
+
+      final int rootId = FileIndexDb.instance.findNode(null, FileIndexDb.launcherAppsRootName) ??
+          FileIndexDb.instance.insertNode(
+            null,
+            FileIndexDb.launcherAppsRootName,
+            true,
+            isSearchable: false,
+            entryType: SearchResultEntryType.app,
+          );
+
+      final List<SearchResultNode> existingNodes =
+          FileIndexDb.instance.getChildNodes(rootId).where((SearchResultNode node) => node.isApp).toList();
+      final Map<String, SearchResultNode> existingByAumid = <String, SearchResultNode>{
+        for (final SearchResultNode node in existingNodes)
+          if ((node.appUserModelId ?? '').isNotEmpty) node.appUserModelId!: node,
+      };
+      final Map<String, List<SearchResultNode>> existingByStableIdentity = <String, List<SearchResultNode>>{};
+      for (final SearchResultNode node in existingNodes) {
+        final String stableIdentity = node.stableIdentity ?? '';
+        if (stableIdentity.isEmpty) continue;
+        existingByStableIdentity.putIfAbsent(stableIdentity, () => <SearchResultNode>[]).add(node);
+      }
+
+      final Set<int> matchedNodeIds = <int>{};
+      final Set<String> expectedIconFiles = <String>{
+        for (final native.AppInfo app in apps) _launcherAppIconFileName(app.appUserModelId),
+      };
+
+      db.execute('BEGIN IMMEDIATE TRANSACTION');
+      try {
+        for (final native.AppInfo app in apps) {
+          final String name = app.name.trim().isEmpty ? app.appUserModelId : app.name.trim();
+          final String subtitle = app.executable.trim().isNotEmpty ? app.executable.trim() : app.appUserModelId;
+          final String stableIdentity = _buildLauncherAppStableIdentity(app);
+          final String launchTarget = _buildLauncherAppLaunchTarget(app.appUserModelId);
+
+          SearchResultNode? existingNode = existingByAumid[app.appUserModelId];
+          if (existingNode == null && stableIdentity.isNotEmpty) {
+            final List<SearchResultNode>? candidates = existingByStableIdentity[stableIdentity];
+            while (candidates != null && candidates.isNotEmpty) {
+              final SearchResultNode candidate = candidates.removeAt(0);
+              if (matchedNodeIds.contains(candidate.id)) continue;
+              existingNode = candidate;
+              break;
+            }
+          }
+
+          if (existingNode == null) {
+            final int nodeId = FileIndexDb.instance.insertAppNode(
+              rootId,
+              name: name,
+              launchTarget: launchTarget,
+              parsingName: app.parsingName,
+              appUserModelId: app.appUserModelId,
+              subtitle: subtitle,
+              stableIdentity: stableIdentity,
+            );
+            matchedNodeIds.add(nodeId);
+            continue;
+          }
+
+          matchedNodeIds.add(existingNode.id);
+          FileIndexDb.instance.updateAppNode(
+            id: existingNode.id,
+            parentId: rootId,
+            name: name,
+            launchTarget: launchTarget,
+            parsingName: app.parsingName,
+            appUserModelId: app.appUserModelId,
+            subtitle: subtitle,
+            stableIdentity: stableIdentity,
+          );
+        }
+
+        for (final SearchResultNode node in existingNodes) {
+          if (matchedNodeIds.contains(node.id)) continue;
+          FileIndexDb.instance.deleteNode(node.id);
+        }
+
+        db.execute('COMMIT');
+      } catch (_) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+
+      await _cacheMissingLauncherAppIcons(apps, iconCacheDirectory);
+      await _removeStaleLauncherAppIcons(iconCacheDirectory, expectedIconFiles);
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to sync AppEnumeration catalog: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      _isSyncingLauncherAppsCatalog = false;
+    }
+  }
+
+  List<native.AppInfo> _dedupeLauncherApps(List<native.AppInfo> apps) {
+    final Map<String, native.AppInfo> byAumid = <String, native.AppInfo>{};
+
+    for (final native.AppInfo app in apps) {
+      final String aumid = app.appUserModelId.trim();
+      if (aumid.isEmpty) continue;
+
+      final native.AppInfo? existing = byAumid[aumid];
+      if (existing == null ||
+          (existing.parsingName.trim().isEmpty && app.parsingName.trim().isNotEmpty) ||
+          (existing.executable.trim().isEmpty && app.executable.trim().isNotEmpty)) {
+        byAumid[aumid] = app;
+      }
+    }
+
+    final List<native.AppInfo> deduped = byAumid.values.toList(growable: false);
+    deduped.sort((native.AppInfo a, native.AppInfo b) {
+      final int byName = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      if (byName != 0) return byName;
+      return a.appUserModelId.toLowerCase().compareTo(b.appUserModelId.toLowerCase());
+    });
+    return deduped;
+  }
+
+  Future<Directory> _ensureLauncherIconCacheDirectory() async {
+    final Directory directory = Directory(p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'icon_cache'));
+    if (!await directory.exists()) {
+      await directory.create(recursive: true);
+    }
+    return directory;
+  }
+
+  String _buildLauncherAppLaunchTarget(String appUserModelId) => '$_launcherAppsFolderPrefix$appUserModelId';
+
+  String _buildLauncherAppStableIdentity(native.AppInfo app) {
+    final String executableName = app.executable.trim().isNotEmpty
+        ? p.basenameWithoutExtension(app.executable.trim())
+        : p.basenameWithoutExtension(app.parsingName.trim());
+
+    return <String>[
+      _normalizeLauncherAppIdentityPart(app.name),
+      _normalizeLauncherAppIdentityPart(executableName),
+      _normalizeLauncherAppIdentityPart(app.arguments),
+    ].join('|');
+  }
+
+  String _normalizeLauncherAppIdentityPart(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  String _launcherAppIconHash(String appUserModelId) => appUserModelId.hashCode.toString();
+
+  String _launcherAppIconFileName(String appUserModelId) =>
+      '$_launcherAppIconPrefix${_launcherAppIconHash(appUserModelId)}.png';
+
+  Future<void> _cacheMissingLauncherAppIcons(List<native.AppInfo> apps, Directory iconCacheDirectory) async {
+    final Pool pool = Pool(3);
+
+    await Future.wait(apps.map((native.AppInfo app) async {
+      final File iconFile = File(p.join(iconCacheDirectory.path, _launcherAppIconFileName(app.appUserModelId)));
+      if (await iconFile.exists()) return;
+
+      await pool.withResource(() => _cacheLauncherAppIcon(app, iconFile));
+    }));
+
+    await pool.close();
+  }
+
+  Future<void> _cacheLauncherAppIcon(native.AppInfo app, File iconFile) async {
+    if (app.parsingName.trim().isEmpty) return;
+
+    try {
+      final native.AppIconData? icon = await native.AppEnumeration.getAppIcon(app.parsingName, size: 128);
+      if (icon == null || icon.width <= 0 || icon.height <= 0 || icon.pixels.isEmpty) return;
+
+      final ByteData? pngBytes = await _convertLauncherAppIconToPng(icon);
+      if (pngBytes == null) return;
+
+      await iconFile.writeAsBytes(pngBytes.buffer.asUint8List(), flush: true);
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to cache icon for ${app.appUserModelId}: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<ByteData?> _convertLauncherAppIconToPng(native.AppIconData icon) {
+    final Completer<ByteData?> completer = Completer<ByteData?>();
+
+    ui.decodeImageFromPixels(
+      icon.pixels,
+      icon.width,
+      icon.height,
+      ui.PixelFormat.bgra8888,
+      (ui.Image image) async {
+        try {
+          final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+          completer.complete(data);
+        } catch (error, stackTrace) {
+          completer.completeError(error, stackTrace);
+        } finally {
+          image.dispose();
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
+  Future<void> _removeStaleLauncherAppIcons(Directory iconCacheDirectory, Set<String> expectedIconFiles) async {
+    if (!await iconCacheDirectory.exists()) return;
+
+    await for (final FileSystemEntity entity in iconCacheDirectory.list()) {
+      if (entity is! File) continue;
+      final String fileName = p.basename(entity.path);
+      if (!fileName.startsWith(_launcherAppIconPrefix) || !fileName.endsWith('.png')) continue;
+      if (expectedIconFiles.contains(fileName)) continue;
+
+      try {
+        await entity.delete();
+      } catch (_) {}
+    }
   }
 
   @override
@@ -608,7 +859,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     _setSearching(true);
-    _searchDebounce = Timer(const Duration(milliseconds: 220), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 50), () {
       if (!_isActiveSearch(requestId, query)) return;
       _runSearch(requestId, query, normalizedQuery, searchMode);
     });
@@ -642,7 +893,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _handleBookmarkKindSearch(context, BookmarkResultKind.cliBook);
         break;
       case LauncherSearchMode.appsOnly:
-        _handleBookmarkKindSearch(context, BookmarkResultKind.appItem);
+        _handleAppSearch(context);
         break;
       case LauncherSearchMode.desktopOnly:
         DesktopSearchHandler.handle(context);
@@ -669,6 +920,52 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       kinds: <BookmarkResultKind>{kind},
     ).map(LauncherSearchResultItem.bookmark).toList();
     context.setResults(results, isSearching: false);
+  }
+
+  void _handleAppSearch(LauncherSearchContext context) {
+    final List<LauncherSearchResultItem> bookmarkResults = findBookmarkMatches(
+      context.normalizedQuery,
+      includeAllOnEmpty: context.normalizedQuery.isEmpty,
+      kinds: const <BookmarkResultKind>{BookmarkResultKind.appItem},
+    ).map(LauncherSearchResultItem.bookmark).toList();
+
+    List<SearchResultNode> appNodes;
+    if (context.normalizedQuery.isEmpty) {
+      appNodes = FileIndexDb.instance.getTopOpened(
+        limit: maxLauncherMatches,
+        entryTypes: const <SearchResultEntryType>{SearchResultEntryType.app},
+      );
+
+      if (appNodes.length < maxLauncherMatches) {
+        final int? rootId = FileIndexDb.instance.findNode(null, FileIndexDb.launcherAppsRootName);
+        if (rootId != null) {
+          final Set<String> existingAumids = appNodes
+              .map((SearchResultNode node) => node.appUserModelId ?? '')
+              .where((String appUserModelId) => appUserModelId.isNotEmpty)
+              .toSet();
+
+          for (final SearchResultNode node in FileIndexDb.instance.getChildNodes(rootId)) {
+            final String appUserModelId = node.appUserModelId ?? '';
+            if (!node.isApp || appUserModelId.isEmpty || existingAumids.contains(appUserModelId)) continue;
+            appNodes.add(node);
+            existingAumids.add(appUserModelId);
+            if (appNodes.length >= maxLauncherMatches) break;
+          }
+        }
+      }
+    } else {
+      appNodes = FileIndexDb.instance.search(
+        context.normalizedQuery,
+        limit: maxLauncherMatches,
+        entryTypes: const <SearchResultEntryType>{SearchResultEntryType.app},
+      );
+    }
+
+    final List<LauncherSearchResultItem> appResults = deserializeSearchMatches(appNodes);
+    context.setResults(<LauncherSearchResultItem>[
+      ...bookmarkResults,
+      ...appResults,
+    ], isSearching: false);
   }
 
   void _handleTimerCommand(LauncherSearchContext context) {
@@ -1404,6 +1701,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       _openFile(result.entity!.path, nodeId: result.nodeId);
       return;
     }
+    if (result.isApp) {
+      _openAppResult(result.appResult!, nodeId: result.nodeId);
+      return;
+    }
     if (result.isWindow) {
       _openWindow(result.window!);
       return;
@@ -1458,6 +1759,21 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     userSettings.launcherSearchText = '';
   }
 
+  void _openAppResult(LauncherAppResult app, {int? nodeId}) {
+    if (nodeId != null) {
+      unawaited(_recordFileOpen(nodeId));
+    }
+
+    final String launchTarget =
+        app.appUserModelId.isNotEmpty ? _buildLauncherAppLaunchTarget(app.appUserModelId) : app.launchTarget;
+    if (launchTarget.isEmpty) return;
+
+    WinUtils.open(launchTarget, parseParamaters: false);
+    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    userSettings.launcherSearchText = '';
+  }
+
   Future<void> _recordFileOpen(int nodeId) async {
     try {
       await FileIndexDb.instance.database;
@@ -1486,6 +1802,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     try {
       await FileIndexDb.instance.repair();
       await FileIndexer.instance.fullReindex();
+      await _syncLauncherAppsCatalog();
+      if (mounted) {
+        _onSearchChanged(_controller.text);
+      }
     } catch (error, stackTrace) {
       debugPrint('Launcher: Failed to repair file index DB: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -1785,6 +2105,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                         } else if (result.isFile) {
                                           resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
                                               index, isSelected, isRepeatingKey);
+                                        } else if (result.isApp) {
+                                          resultWidget = _buildAppResult(context, theme, result.appResult!,
+                                              result.nodeId, index, isSelected, isRepeatingKey);
                                         } else if (result.isWindow) {
                                           resultWidget = _buildWindowResult(
                                               context, theme, result.window!, index, isSelected, isRepeatingKey);
@@ -1917,6 +2240,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onTap: () => _openFile(entity.path, nodeId: nodeId),
       onHover: () => _selectResultFromMouse(index),
       onRemoveFromHistory: () {}, // No-op
+    );
+  }
+
+  Widget _buildAppResult(BuildContext context, ThemeData theme, LauncherAppResult app, int? nodeId, int index,
+      bool isSelected, bool isRepeatingKey) {
+    final Color accent = userSettings.themeColors.accentColor;
+    return LauncherAppListItem(
+      app: app,
+      isSelected: isSelected,
+      isRepeating: isRepeatingKey,
+      accent: accent,
+      onSurface: theme.colorScheme.onSurface,
+      onTap: () => _openAppResult(app, nodeId: nodeId),
+      onHover: () => _selectResultFromMouse(index),
     );
   }
 

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -40,10 +39,7 @@ class MixedSearchHandler {
 
     if (showAllHistory) {
       final List<SearchResultNode> topNodes = FileIndexDb.instance.getTopOpened(limit: 20);
-      final List<LauncherSearchResultItem> historyResults = topNodes
-          .map((SearchResultNode node) =>
-              LauncherSearchResultItem.file(node.isDirectory ? Directory(node.path) : File(node.path), node.id))
-          .toList();
+      final List<LauncherSearchResultItem> historyResults = deserializeSearchMatches(topNodes);
       context.setResults(historyResults, isSearching: false);
       return;
     }
@@ -64,15 +60,7 @@ class MixedSearchHandler {
         ? FileIndexDb.instance.search(context.lowerQuery, limit: maxLauncherMatches)
         : <SearchResultNode>[];
 
-    final List<LauncherSearchResultItem> initialFileResults = deserializeFileMatches(
-      dbMatches
-          .map((SearchResultNode node) => <String, Object?>{
-                'path': node.path,
-                'isDirectory': node.isDirectory,
-                'id': node.id,
-              })
-          .toList(),
-    );
+    final List<LauncherSearchResultItem> initialFileResults = deserializeSearchMatches(dbMatches);
 
     final List<LauncherSearchResultItem> results = searchMode == LauncherSearchMode.filesOnly
         ? initialFileResults
@@ -127,8 +115,11 @@ class MixedSearchHandler {
       final List<LauncherSearchResultItem> combinedFileResults =
           List<LauncherSearchResultItem>.from(initialFileResults);
 
-      final Set<String> existingPaths =
-          initialFileResults.map((LauncherSearchResultItem i) => i.entity?.path ?? '').toSet();
+      final Set<String> existingPaths = initialFileResults
+          .where((LauncherSearchResultItem item) => item.isFile)
+          .map((LauncherSearchResultItem i) => i.entity?.path ?? '')
+          .where((String path) => path.isNotEmpty)
+          .toSet();
 
       for (final LauncherSearchResultItem item in backgroundResults) {
         if (combinedFileResults.length >= maxLauncherMatches) break;

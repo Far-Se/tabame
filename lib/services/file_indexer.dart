@@ -103,15 +103,15 @@ class FileIndexer {
     indexedCount.value = 0;
 
     try {
-      Database db = await FileIndexDb.instance.database;
+      await FileIndexDb.instance.database;
       try {
-        db.execute('DELETE FROM nodes');
+        FileIndexDb.instance.deleteRootsByEntryType(SearchResultEntryType.file);
       } catch (e) {
         if (e.toString().contains('malformed')) {
           debugPrint('FileIndexer: Malformed DB during fullReindex, repairing...');
           await FileIndexDb.instance.repair();
-          db = await FileIndexDb.instance.database;
-          // After repair, DB is already empty, no need to DELETE again
+          await FileIndexDb.instance.database;
+          FileIndexDb.instance.deleteRootsByEntryType(SearchResultEntryType.file);
         } else {
           rethrow;
         }

@@ -15,7 +15,7 @@ class BookmarkIcon extends StatelessWidget {
     this.fallbackEmoji = "",
     this.size = 14,
   });
-
+  static final Map<String, String> iconExtCache = <String, String>{};
   final BookmarkInfo mark;
   final String fallbackEmoji;
   final double size;
@@ -43,6 +43,8 @@ class BookmarkIcon extends StatelessWidget {
                 file,
                 width: size,
                 height: size,
+                cacheHeight: size.toInt(),
+                cacheWidth: size.toInt(),
                 fit: BoxFit.contain,
               );
             }
@@ -55,7 +57,13 @@ class BookmarkIcon extends StatelessWidget {
               path.endsWith('.exe') ||
               path.endsWith('.url') ||
               path.endsWith('.lnk'))) {
-        final File file = File('$cachePath/${path.hashCode}.ico');
+        File file = File('$cachePath/${path.hashCode}.ico');
+        if (!path.endsWith('.exe') && !path.endsWith('.url') && !path.endsWith('.lnk')) {
+          final String ext = path.split('.').last;
+          if (iconExtCache.containsKey(ext)) {
+            file = File(iconExtCache[ext]!);
+          }
+        }
         if (file.existsSync()) {
           final DateTime lastModified = file.lastModifiedSync();
           if (DateTime.now().difference(lastModified).inDays < 7) {
@@ -63,6 +71,8 @@ class BookmarkIcon extends StatelessWidget {
               file,
               width: size,
               height: size,
+              cacheHeight: size.toInt(),
+              cacheWidth: size.toInt(),
               fit: BoxFit.contain,
               errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
                 return _buildFallback();
@@ -74,10 +84,25 @@ class BookmarkIcon extends StatelessWidget {
           future: WindowsAppButton.getIcon(path),
           builder: (BuildContext context, AsyncSnapshot<ExtractedIcon> snapshot) {
             if (snapshot.hasData && snapshot.data != null) {
+              if (snapshot.data case final String xpath when xpath.isNotEmpty) {
+                if (!path.endsWith('.exe') && !path.endsWith('.url') && !path.endsWith('.lnk')) {
+                  try {
+                    final String file = path.split('\\').last;
+                    if (file.contains('.')) {
+                      final String ext = file.split('.').last;
+                      if (!iconExtCache.containsKey(ext)) {
+                        iconExtCache[ext] = snapshot.data as String;
+                      }
+                    }
+                  } catch (_) {}
+                }
+              }
               return buildExtractedIcon(
                 snapshot.data,
                 width: size,
                 height: size,
+                cacheHeight: size.toInt(),
+                cacheWidth: size.toInt(),
                 fit: BoxFit.contain,
                 fallback: _buildFallback(),
               );

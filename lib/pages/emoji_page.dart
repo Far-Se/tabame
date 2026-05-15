@@ -15,6 +15,7 @@ import '../models/settings.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
+import '../models/win32/win_utils.dart';
 import '../widgets/widgets/emoji_picker_modal.dart';
 
 class EmojiPage extends StatefulWidget {
@@ -64,12 +65,12 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
   @override
   void onWindowBlur() {
     if (shownDate != null && DateTime.now().millisecondsSinceEpoch - shownDate!.millisecondsSinceEpoch > 600) {
-      _closeEmojiPicker();
+      QuickMenuFunctions.toggleQuickMenu(visible: false);
     }
   }
 
-  void _closeEmojiPicker() {
-    // Globals.quickMenuPage = QuickMenuPage.quickMenu;
+  void _closeEmojiPicker() async {
+    await _refocusPreviousWindow();
     QuickMenuFunctions.toggleQuickMenu(visible: false);
   }
 
@@ -91,9 +92,16 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
       await windowManager.setMinimumSize(const Size(320, 420));
       await windowManager.setSize(const Size(_windowWidth, _windowHeight));
 
-      // final WinRect focusedRect = await getFocusedElementCaretRect();
-      focusedRect = await getFocusedElementRect();
+      focusedRect = await getFocusedElementCaretRect();
+      // focusedRect = await getFocusedElementRect();
       Debug.add("${focusedRect.left} ${focusedRect.top} ${focusedRect.width} ${focusedRect.height}");
+      print("${focusedRect.left} ${focusedRect.top} ${focusedRect.width} ${focusedRect.height}");
+      if (focusedRect.left < 0) {
+        final List<int> mouse = WinUtils.getMousePosXY();
+        focusedRect.left = mouse[0];
+        focusedRect.top = mouse[1] - 30;
+        focusedRect.bottom = mouse[1] + 30;
+      }
       final PointXY anchor = PointXY.from(
         focusedRect.left + math.max(0, focusedRect.width ~/ 2),
         focusedRect.bottom,
@@ -133,6 +141,23 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
     } catch (_) {}
   }
 
+  Future<void> _refocusPreviousWindow() async {
+    final int targetHwnd = Globals.lastFocusedWinHWND;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final Pointer<POINT> cursorPointPointer = calloc<POINT>();
+    cursorPointPointer.ref.x = focusedRect.left;
+    cursorPointPointer.ref.y = focusedRect.bottom;
+
+    final int hWnd = WindowFromPoint(cursorPointPointer.ref);
+    free(cursorPointPointer);
+    if (hWnd != 0) {
+      Win32.activateWindow(hWnd);
+    } else {
+      Win32.activateWindow(targetHwnd);
+    }
+  }
+
   Future<void> _handleEmojiSelected(String emoji) async {
     if (_submitting) return;
     _submitting = true;
@@ -140,23 +165,7 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
     await Clipboard.setData(ClipboardData(text: emoji));
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     await QuickMenuFunctions.toggleQuickMenu(visible: false);
-
-    final int targetHwnd = Globals.lastFocusedWinHWND;
-    if (targetHwnd != 0) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      final Pointer<POINT> cursorPointPointer = calloc<POINT>();
-      cursorPointPointer.ref.x = focusedRect.left;
-      cursorPointPointer.ref.y = focusedRect.bottom;
-
-      final int hWnd = WindowFromPoint(cursorPointPointer.ref);
-      free(cursorPointPointer);
-      if (hWnd != 0) {
-        Win32.activateWindow(hWnd);
-      } else {
-        Win32.activateWindow(targetHwnd);
-      }
-    }
+    await _refocusPreviousWindow();
 
     await Future<void>.delayed(const Duration(milliseconds: 60));
     WinKeys.send("{#CONTROL}V{|}");
@@ -171,6 +180,7 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
         onKeyEvent: (FocusNode x, KeyEvent event) {
           if (event.logicalKey == LogicalKeyboardKey.escape) {
             _closeEmojiPicker();
+
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;

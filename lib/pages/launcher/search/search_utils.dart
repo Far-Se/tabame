@@ -34,6 +34,27 @@ List<LauncherSearchResultItem> composeResults({
   return results;
 }
 
+List<LauncherSearchResultItem> deserializeSearchMatches(List<SearchResultNode> matches) {
+  return matches.map((SearchResultNode entry) {
+    if (entry.isApp) {
+      return LauncherSearchResultItem.app(
+        LauncherAppResult(
+          name: entry.name,
+          launchTarget: entry.launchTarget ?? '',
+          appUserModelId: entry.appUserModelId ?? '',
+          parsingName: entry.parsingName ?? '',
+          subtitle: entry.subtitle ?? '',
+          stableIdentity: entry.stableIdentity ?? '',
+        ),
+        entry.id,
+      );
+    }
+
+    final FileSystemEntity entity = entry.isDirectory ? Directory(entry.path) : File(entry.path);
+    return LauncherSearchResultItem.file(entity, entry.id);
+  }).toList(growable: false);
+}
+
 List<LauncherSearchResultItem> deserializeFileMatches(List<Map<String, Object?>> serializedMatches) {
   return serializedMatches.map((Map<String, Object?> entry) {
     final String path = entry['path']! as String;

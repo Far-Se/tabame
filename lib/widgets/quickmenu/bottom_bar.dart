@@ -53,12 +53,12 @@ class PinnedAndTrayList extends StatelessWidget {
                     ),
                   ),
                   if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  const Flexible(flex: 4, child: TrayBar()),
+                  if (userSettings.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
                 ]
               : <Widget>[
                   if (userSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
                   if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  const Flexible(flex: 4, child: TrayBar()),
+                  if (userSettings.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
                 ],
         ),
       ),

@@ -62,6 +62,7 @@ class Settings {
   bool keepPopupsOpen = true;
   bool expandedTaskbar = true;
   bool bottomBarOnTop = false;
+  bool launcherFullPopups = false;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool taskManagerStats = false;

@@ -20,6 +20,7 @@ import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
+import '../../widgets/itzy/quickmenu/button_emoji.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_launcher.dart';
@@ -94,6 +95,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "CliBookButton",
     icon: Icons.note_alt_outlined,
     widget: () => const CliBookButton(),
+  ),
+  "EmojiButton": QuickAction(
+    name: "EmojiButton",
+    icon: Icons.emoji_emotions_outlined,
+    widget: () => const EmojiButton(),
   ),
   "ClipboardHistoryButton": QuickAction(
     name: "ClipboardHistoryButton",

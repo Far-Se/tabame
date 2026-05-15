@@ -6,9 +6,43 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../win32/win_utils.dart';
 
+enum SearchResultEntryType {
+  file,
+  app,
+}
+
+class SearchResultNode {
+  final int id;
+  final String path;
+  final String name;
+  final bool isDirectory;
+  final SearchResultEntryType entryType;
+  final String? launchTarget;
+  final String? parsingName;
+  final String? appUserModelId;
+  final String? subtitle;
+  final String? stableIdentity;
+
+  const SearchResultNode({
+    required this.id,
+    required this.path,
+    required this.name,
+    required this.isDirectory,
+    this.entryType = SearchResultEntryType.file,
+    this.launchTarget,
+    this.parsingName,
+    this.appUserModelId,
+    this.subtitle,
+    this.stableIdentity,
+  });
+
+  bool get isApp => entryType == SearchResultEntryType.app;
+}
+
 class FileIndexDb {
   FileIndexDb._();
   static final FileIndexDb instance = FileIndexDb._();
+  static const String launcherAppsRootName = '__launcher_apps__';
 
   Database? _db;
   String? _manualPath;
@@ -19,8 +53,6 @@ class FileIndexDb {
     return p.join(appDir.path, dbName);
   }
 
-  /// Sets a manual database path. Useful for background isolates where
-  /// path_provider might not be available.
   void setDatabasePath(String path) {
     _manualPath = path;
   }
@@ -32,40 +64,39 @@ class FileIndexDb {
   }
 
   Future<Database> _initDb() async {
-    String dbPath;
+    final String path;
     if (_manualPath != null) {
-      dbPath = _manualPath!;
+      path = _manualPath!;
     } else {
       final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
-      dbPath = p.join(appDir.path, dbName);
+      path = p.join(appDir.path, dbName);
     }
 
     try {
-      return _openAndSetupDb(dbPath);
+      return _openAndSetupDb(path);
     } catch (e) {
       if (e.toString().contains('malformed')) {
         debugPrint('FileIndexDb: Database is malformed, attempting to recreate...');
         await repair();
-        return _openAndSetupDb(dbPath);
+        return _openAndSetupDb(path);
       }
       rethrow;
     }
   }
 
-  /// Closes and deletes the database files.
   Future<void> repair() async {
     _db?.close();
     _db = null;
 
     final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
-    final String dbPath = p.join(appDir.path, dbName);
+    final String path = p.join(appDir.path, dbName);
 
-    final File dbFile = File(dbPath);
+    final File dbFile = File(path);
     if (await dbFile.exists()) {
       try {
         await dbFile.delete();
-        final File walFile = File('$dbPath-wal');
-        final File shmFile = File('$dbPath-shm');
+        final File walFile = File('$path-wal');
+        final File shmFile = File('$path-shm');
         if (await walFile.exists()) await walFile.delete();
         if (await shmFile.exists()) await shmFile.delete();
       } catch (e) {
@@ -91,12 +122,9 @@ class FileIndexDb {
     }
 
     final Database db = sqlite3.open(dbPath);
-
-    // Enable WAL mode for better concurrency
     db.execute('PRAGMA journal_mode = WAL;');
     db.execute('PRAGMA foreign_keys = ON;');
 
-    // Adjacency list table for memory efficiency
     db.execute('''
       CREATE TABLE IF NOT EXISTS nodes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,22 +133,46 @@ class FileIndexDb {
         is_directory INTEGER NOT NULL,
         times_opened INTEGER NOT NULL DEFAULT 0,
         is_searchable INTEGER NOT NULL DEFAULT 1,
+        entry_type TEXT NOT NULL DEFAULT 'file',
+        launch_target TEXT,
+        parsing_name TEXT,
+        app_user_model_id TEXT,
+        subtitle TEXT,
+        stable_identity TEXT,
         FOREIGN KEY(parent_id) REFERENCES nodes(id) ON DELETE CASCADE
       );
     ''');
 
-    // Migration for existing DBs
     try {
       db.execute('ALTER TABLE nodes ADD COLUMN times_opened INTEGER NOT NULL DEFAULT 0;');
     } catch (_) {}
     try {
       db.execute('ALTER TABLE nodes ADD COLUMN is_searchable INTEGER NOT NULL DEFAULT 1;');
     } catch (_) {}
+    try {
+      db.execute("ALTER TABLE nodes ADD COLUMN entry_type TEXT NOT NULL DEFAULT 'file';");
+    } catch (_) {}
+    try {
+      db.execute('ALTER TABLE nodes ADD COLUMN launch_target TEXT;');
+    } catch (_) {}
+    try {
+      db.execute('ALTER TABLE nodes ADD COLUMN parsing_name TEXT;');
+    } catch (_) {}
+    try {
+      db.execute('ALTER TABLE nodes ADD COLUMN app_user_model_id TEXT;');
+    } catch (_) {}
+    try {
+      db.execute('ALTER TABLE nodes ADD COLUMN subtitle TEXT;');
+    } catch (_) {}
+    try {
+      db.execute('ALTER TABLE nodes ADD COLUMN stable_identity TEXT;');
+    } catch (_) {}
 
-    // Index for fast parent/child lookups
     db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_parent_id ON nodes(parent_id);');
+    db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_entry_type ON nodes(entry_type);');
+    db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_app_user_model_id ON nodes(app_user_model_id);');
+    db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_stable_identity ON nodes(stable_identity);');
 
-    // FTS5 Trigram index for fast fuzzy searching
     try {
       db.execute('''
         CREATE VIRTUAL TABLE IF NOT EXISTS fts_nodes USING fts5(
@@ -131,10 +183,9 @@ class FileIndexDb {
         );
       ''');
 
-      // Trigger to keep FTS in sync
       db.execute('DROP TRIGGER IF EXISTS nodes_ai;');
       db.execute('''
-        CREATE TRIGGER nodes_ai AFTER INSERT ON nodes 
+        CREATE TRIGGER nodes_ai AFTER INSERT ON nodes
         WHEN new.is_searchable = 1
         BEGIN
           INSERT INTO fts_nodes(rowid, name) VALUES (new.id, new.name);
@@ -163,7 +214,6 @@ class FileIndexDb {
     return db;
   }
 
-  /// Returns the total number of nodes under a given root path.
   int getDescendantCount(String path) {
     final Database? db = _db;
     if (db == null) return 0;
@@ -184,18 +234,17 @@ class FileIndexDb {
     return results.first['total'] as int;
   }
 
-  /// Reconstructs the absolute path from a node ID using a Recursive CTE.
   String? getAbsolutePath(int nodeId) {
     final Database? db = _db;
     if (db == null) return null;
 
     final ResultSet results = db.select('''
       WITH RECURSIVE path_cte(id, parent_id, name, full_path) AS (
-        SELECT id, parent_id, name, name 
-        FROM nodes 
+        SELECT id, parent_id, name, name
+        FROM nodes
         WHERE id = ?
         UNION ALL
-        SELECT p.id, p.parent_id, p.name, 
+        SELECT p.id, p.parent_id, p.name,
                p.name || (CASE WHEN p.name LIKE '_:\\' OR p.name LIKE '\\\\%' THEN '' ELSE '\\' END) || c.full_path
         FROM nodes p
         JOIN path_cte c ON c.parent_id = p.id
@@ -207,31 +256,122 @@ class FileIndexDb {
     return results.first['full_path'] as String;
   }
 
-  /// Inserts a node into the database. Returns the new ID.
-  int insertNode(int? parentId, String name, bool isDirectory, {bool isSearchable = true}) {
+  int insertNode(
+    int? parentId,
+    String name,
+    bool isDirectory, {
+    bool isSearchable = true,
+    SearchResultEntryType entryType = SearchResultEntryType.file,
+    String? launchTarget,
+    String? parsingName,
+    String? appUserModelId,
+    String? subtitle,
+    String? stableIdentity,
+    int timesOpened = 0,
+  }) {
     final Database? db = _db;
     if (db == null) throw StateError('FileIndexDb: Database not initialized');
-    final PreparedStatement stmt =
-        db.prepare('INSERT INTO nodes (parent_id, name, is_directory, is_searchable) VALUES (?, ?, ?, ?)');
-    stmt.execute(<Object?>[parentId, name, isDirectory ? 1 : 0, isSearchable ? 1 : 0]);
+    final PreparedStatement stmt = db.prepare('''
+      INSERT INTO nodes (
+        parent_id, name, is_directory, times_opened, is_searchable,
+        entry_type, launch_target, parsing_name, app_user_model_id, subtitle, stable_identity
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''');
+    stmt.execute(<Object?>[
+      parentId,
+      name,
+      isDirectory ? 1 : 0,
+      timesOpened,
+      isSearchable ? 1 : 0,
+      _entryTypeToDbValue(entryType),
+      launchTarget,
+      parsingName,
+      appUserModelId,
+      subtitle,
+      stableIdentity,
+    ]);
     final int id = db.lastInsertRowId;
     stmt.close();
     return id;
   }
 
-  /// Increments the times_opened count for a node.
+  int insertAppNode(
+    int parentId, {
+    required String name,
+    required String launchTarget,
+    required String parsingName,
+    required String appUserModelId,
+    required String subtitle,
+    required String stableIdentity,
+    int timesOpened = 0,
+  }) {
+    return insertNode(
+      parentId,
+      name,
+      false,
+      isSearchable: true,
+      entryType: SearchResultEntryType.app,
+      launchTarget: launchTarget,
+      parsingName: parsingName,
+      appUserModelId: appUserModelId,
+      subtitle: subtitle,
+      stableIdentity: stableIdentity,
+      timesOpened: timesOpened,
+    );
+  }
+
+  void updateAppNode({
+    required int id,
+    required int parentId,
+    required String name,
+    required String launchTarget,
+    required String parsingName,
+    required String appUserModelId,
+    required String subtitle,
+    required String stableIdentity,
+  }) {
+    _db?.execute('''
+      UPDATE nodes
+      SET parent_id = ?,
+          name = ?,
+          is_directory = 0,
+          is_searchable = 1,
+          entry_type = 'app',
+          launch_target = ?,
+          parsing_name = ?,
+          app_user_model_id = ?,
+          subtitle = ?,
+          stable_identity = ?
+      WHERE id = ?
+    ''', <Object?>[
+      parentId,
+      name,
+      launchTarget,
+      parsingName,
+      appUserModelId,
+      subtitle,
+      stableIdentity,
+      id,
+    ]);
+  }
+
   void incrementTimesOpened(int id) {
     _db?.execute('UPDATE nodes SET times_opened = times_opened + 1 WHERE id = ?', <Object?>[id]);
   }
 
-  /// Deletes a node and all its children (via cascade).
   void deleteNode(int id) {
     _db?.execute('DELETE FROM nodes WHERE id = ?', <Object?>[id]);
   }
 
-  /// Deletes all children of a node.
   void deleteChildren(int parentId) {
     _db?.execute('DELETE FROM nodes WHERE parent_id = ?', <Object?>[parentId]);
+  }
+
+  void deleteRootsByEntryType(SearchResultEntryType entryType) {
+    _db?.execute(
+      'DELETE FROM nodes WHERE parent_id IS NULL AND entry_type = ?',
+      <Object?>[_entryTypeToDbValue(entryType)],
+    );
   }
 
   int upsertNode(int? parentId, String name, bool isDirectory, {bool isSearchable = true}) {
@@ -244,8 +384,6 @@ class FileIndexDb {
     _db?.execute('UPDATE nodes SET is_searchable = ? WHERE id = ?', <Object?>[isSearchable ? 1 : 0, id]);
   }
 
-  /// Ensures a full path is indexed, creating parent nodes as needed.
-  /// Returns the ID of the leaf node.
   int? cachePath(
     String rootPath,
     String fullPath,
@@ -256,7 +394,6 @@ class FileIndexDb {
   }) {
     if (!fullPath.startsWith(rootPath)) return null;
 
-    // Ensure root exists
     int? currentId = findNode(null, rootPath);
     currentId ??= insertNode(null, rootPath, true, isSearchable: rootIsSearchable);
 
@@ -269,7 +406,6 @@ class FileIndexDb {
     for (int i = 0; i < segments.length; i++) {
       final String segment = segments[i];
       final bool isLast = i == segments.length - 1;
-      // We assume intermediate segments are directories
       currentId = upsertNode(
         currentId,
         segment,
@@ -281,7 +417,6 @@ class FileIndexDb {
     return currentId;
   }
 
-  /// Finds a node by name and parent.
   int? findNode(int? parentId, String name) {
     final Database? db = _db;
     if (db == null) return null;
@@ -291,77 +426,61 @@ class FileIndexDb {
     return results.first['id'] as int;
   }
 
-  /// Searches for files using fuzzy matching and returns reconstructed paths.
-  List<SearchResultNode> search(String query, {int limit = 20}) {
+  List<SearchResultNode> search(String query, {int limit = 20, Set<SearchResultEntryType>? entryTypes}) {
     final Database? db = _db;
     if (db == null || query.trim().isEmpty) return <SearchResultNode>[];
 
-    // FTS5 Trigram handles partial matches well, but requires at least 3 chars
-    // to avoid errors in MATCH. For shorter queries, we fallback to LIKE.
     final String trimmedQuery = query.trim();
     if (trimmedQuery.length < 3) {
-      return _searchUsingLike(trimmedQuery, limit: limit);
+      return _searchUsingLike(trimmedQuery, limit: limit, entryTypes: entryTypes);
     }
 
     final String ftsQuery = '"${trimmedQuery.replaceAll('"', '""')}"';
-
     try {
-      final ResultSet results = db.select('''
-        WITH RECURSIVE matched_nodes AS (
-          SELECT f.rowid as id 
-          FROM fts_nodes f
-          JOIN nodes n ON f.rowid = n.id
-          WHERE fts_nodes MATCH ? 
-          ORDER BY n.times_opened DESC
-          LIMIT ?
-        ),
-        path_cte(root_id, id, parent_id, name, is_directory, full_path) AS (
-          SELECT n.id, n.id, n.parent_id, n.name, n.is_directory, n.name 
-          FROM nodes n
-          JOIN matched_nodes m ON n.id = m.id
-          UNION ALL
-          SELECT c.root_id, p.id, p.parent_id, p.name, p.is_directory, 
-                 p.name || (CASE WHEN p.name LIKE '_:\\' OR p.name LIKE '\\\\%' THEN '' ELSE '\\' END) || c.full_path 
-          FROM nodes p
-          JOIN path_cte c ON c.parent_id = p.id
-        )
-        SELECT root_id, full_path, is_directory 
-        FROM path_cte 
-        WHERE parent_id IS NULL;
-      ''', <Object?>[ftsQuery, limit]);
+      final List<Object?> args = <Object?>[ftsQuery];
+      final String typeFilter = _entryTypeFilterSql(entryTypes, args, tableAlias: 'n');
+      args.add(limit);
+      final ResultSet rows = db.select('''
+        SELECT
+          n.id,
+          n.name,
+          n.is_directory,
+          n.entry_type,
+          n.launch_target,
+          n.parsing_name,
+          n.app_user_model_id,
+          n.subtitle,
+          n.stable_identity,
+          n.times_opened
+        FROM fts_nodes f
+        JOIN nodes n ON f.rowid = n.id
+        WHERE fts_nodes MATCH ? AND n.is_searchable = 1$typeFilter
+        ORDER BY n.times_opened DESC
+        LIMIT ?
+      ''', args);
 
-      if (results.isNotEmpty) {
-        return results
-            .map((Row row) => SearchResultNode(
-                  id: row['root_id'] as int,
-                  path: row['full_path'] as String,
-                  isDirectory: (row['is_directory'] as int) == 1,
-                ))
-            .toList();
+      if (rows.isNotEmpty) {
+        return _materializeSearchResults(rows);
       }
 
-      // No exact substring match — run fuzzy trigram fallback.
-      return _searchFuzzyFallback(db, trimmedQuery, limit: limit);
-    } catch (e) {
+      return _searchFuzzyFallback(db, trimmedQuery, limit: limit, entryTypes: entryTypes);
+    } catch (_) {
       return <SearchResultNode>[];
     }
   }
 
-  /// Fuzzy fallback: decompose the query into individual trigrams, query each
-  /// separately via FTS5, deduplicate candidates, then rank them in Dart using
-  /// a subsequence check + edit distance so that typos like "chrme" → "chrome"
-  /// still surface relevant results.
-  List<SearchResultNode> _searchFuzzyFallback(Database db, String query, {int limit = 20}) {
-    // Build the set of 3-char windows from the query.
+  List<SearchResultNode> _searchFuzzyFallback(
+    Database db,
+    String query, {
+    int limit = 20,
+    Set<SearchResultEntryType>? entryTypes,
+  }) {
     final List<String> trigrams = <String>[];
     for (int i = 0; i <= query.length - 3; i++) {
       trigrams.add(query.substring(i, i + 3));
     }
     if (trigrams.isEmpty) return <SearchResultNode>[];
 
-    // Candidate pool: fetch nodes matching ANY trigram (limit generously, we'll
-    // re-rank and trim in Dart). Use a large internal cap to avoid too many
-    // round trips while still bounding memory.
     const int candidateCap = 200;
     final Map<int, _FuzzyCandidate> candidatesById = <int, _FuzzyCandidate>{};
 
@@ -369,19 +488,22 @@ class FileIndexDb {
       if (candidatesById.length >= candidateCap) break;
       try {
         final String tq = '"${trigram.replaceAll('"', '""')}"';
+        final List<Object?> args = <Object?>[tq];
+        final String typeFilter = _entryTypeFilterSql(entryTypes, args, tableAlias: 'n');
+        args.add(candidateCap);
         final ResultSet rows = db.select(
           'SELECT f.rowid as id, n.name, n.is_directory, n.times_opened '
           'FROM fts_nodes f JOIN nodes n ON f.rowid = n.id '
-          'WHERE fts_nodes MATCH ? LIMIT ?',
-          <Object?>[tq, candidateCap],
+          'WHERE fts_nodes MATCH ? AND n.is_searchable = 1$typeFilter LIMIT ?',
+          args,
         );
         for (final Row row in rows) {
           final int id = row['id'] as int;
           if (!candidatesById.containsKey(id)) {
             candidatesById[id] = _FuzzyCandidate(
               id: id,
-              name: (row['name'] as String).toLowerCase(),
-              isDirectory: (row['is_directory'] as int) == 1,
+              name: ((row['name'] as String?) ?? '').toLowerCase(),
+              isDirectory: (row['is_directory'] as int? ?? 0) == 1,
               timesOpened: row['times_opened'] as int? ?? 0,
             );
           }
@@ -391,7 +513,6 @@ class FileIndexDb {
 
     if (candidatesById.isEmpty) return <SearchResultNode>[];
 
-    // Score each candidate in Dart.
     final String lowerQuery = query.toLowerCase();
     final List<_FuzzyCandidate> scored = candidatesById.values
         .map((_FuzzyCandidate c) {
@@ -404,67 +525,31 @@ class FileIndexDb {
     if (scored.isEmpty) return <SearchResultNode>[];
 
     scored.sort((_FuzzyCandidate a, _FuzzyCandidate b) => b.score.compareTo(a.score));
-    final List<_FuzzyCandidate> top = scored.take(limit).toList();
-
-    // Resolve full paths via the recursive CTE.
-    final List<SearchResultNode> nodes = <SearchResultNode>[];
-    for (final _FuzzyCandidate c in top) {
-      try {
-        final ResultSet pathRows = db.select('''
-          WITH RECURSIVE path_cte(root_id, id, parent_id, name, is_directory, full_path) AS (
-            SELECT n.id, n.id, n.parent_id, n.name, n.is_directory, n.name 
-            FROM nodes n WHERE n.id = ?
-            UNION ALL
-            SELECT c.root_id, p.id, p.parent_id, p.name, p.is_directory, 
-                   p.name || (CASE WHEN p.name LIKE '_:\\' OR p.name LIKE '\\\\%' THEN '' ELSE '\\' END) || c.full_path 
-            FROM nodes p JOIN path_cte c ON c.parent_id = p.id
-          )
-          SELECT root_id, full_path, is_directory FROM path_cte WHERE parent_id IS NULL;
-        ''', <Object?>[c.id]);
-        if (pathRows.isNotEmpty) {
-          nodes.add(SearchResultNode(
-            id: pathRows.first['root_id'] as int,
-            path: pathRows.first['full_path'] as String,
-            isDirectory: (pathRows.first['is_directory'] as int) == 1,
-          ));
-        }
-      } catch (_) {}
-    }
-    return nodes;
+    final List<int> ids = scored.take(limit).map((_FuzzyCandidate c) => c.id).toList(growable: false);
+    return _materializeNodesById(ids);
   }
 
-  /// Scores how well [name] matches [query].
-  /// Returns 0 if the match is too poor to surface.
-  /// Higher = better match.
   static double _fuzzyScore(String name, String query, int timesOpened) {
-    // Strip extension for scoring (keep ext-less name for comparison).
     final int dotIndex = name.lastIndexOf('.');
     final String stem = dotIndex > 0 ? name.substring(0, dotIndex) : name;
 
-    // 1. Exact substring — highest tier.
     if (name.contains(query)) return 1000.0 + timesOpened;
 
-    // 2. Subsequence match: every character of query appears in order in name.
-    //    This handles skipped letters ("chrme" → "chrome").
     if (_isSubsequence(query, name)) {
-      // Reward shorter names (closer match) and frequency.
       final double density = query.length / name.length;
       return 500.0 + density * 100 + timesOpened;
     }
 
-    // 3. Loose subsequence against stem only (e.g. ignore extension).
     if (stem != name && _isSubsequence(query, stem)) {
       final double density = query.length / stem.length;
       return 450.0 + density * 100 + timesOpened;
     }
 
-    // 4. Trigram overlap ratio: how many 3-char windows of query appear in name.
     final double trigramOverlap = _trigramOverlap(query, name);
     if (trigramOverlap >= 0.5) {
       return 200.0 + trigramOverlap * 100 + timesOpened;
     }
 
-    // 5. Edit distance — only for short names where it makes sense.
     if (name.length <= query.length + 4) {
       final int dist = _editDistance(query, stem.length <= query.length + 2 ? stem : name);
       final int maxAllowed = (query.length / 3).ceil().clamp(1, 3);
@@ -476,7 +561,6 @@ class FileIndexDb {
     return 0.0;
   }
 
-  /// Returns true if every character in [pattern] appears in [text] in order.
   static bool _isSubsequence(String pattern, String text) {
     int pi = 0;
     for (int ti = 0; ti < text.length && pi < pattern.length; ti++) {
@@ -485,7 +569,6 @@ class FileIndexDb {
     return pi == pattern.length;
   }
 
-  /// Returns the fraction of 3-char windows in [query] that appear in [text].
   static double _trigramOverlap(String query, String text) {
     if (query.length < 3) return 0.0;
     int hits = 0;
@@ -496,114 +579,204 @@ class FileIndexDb {
     return hits / total;
   }
 
-  /// Classic Levenshtein edit distance (capped at [maxDist] for performance).
   static int _editDistance(String a, String b, {int maxDist = 4}) {
     if ((a.length - b.length).abs() > maxDist) return maxDist + 1;
-    final List<int> prev = List<int>.generate(b.length + 1, (int i) => i);
-    final List<int> curr = List<int>.filled(b.length + 1, 0);
+    final List<int> previous = List<int>.generate(b.length + 1, (int i) => i);
+    final List<int> current = List<int>.filled(b.length + 1, 0);
     for (int i = 1; i <= a.length; i++) {
-      curr[0] = i;
+      current[0] = i;
       for (int j = 1; j <= b.length; j++) {
-        curr[j] = a[i - 1] == b[j - 1] ? prev[j - 1] : 1 + prev[j - 1].clamp(0, prev[j]).clamp(0, curr[j - 1]);
+        final int cost = a[i - 1] == b[j - 1] ? 0 : 1;
+        current[j] = <int>[
+          current[j - 1] + 1,
+          previous[j] + 1,
+          previous[j - 1] + cost,
+        ].reduce((int x, int y) => x < y ? x : y);
       }
-      prev.setAll(0, curr);
+      previous.setAll(0, current);
     }
-    return prev[b.length];
+    return previous[b.length];
   }
 
-  List<SearchResultNode> _searchUsingLike(String query, {int limit = 20}) {
+  List<SearchResultNode> _searchUsingLike(
+    String query, {
+    int limit = 20,
+    Set<SearchResultEntryType>? entryTypes,
+  }) {
     final Database? db = _db;
     if (db == null) return <SearchResultNode>[];
 
     try {
-      final ResultSet results = db.select('''
-        WITH matched_nodes AS (
-          SELECT id 
-          FROM nodes 
-          WHERE name LIKE ? AND is_searchable = 1
-          ORDER BY times_opened DESC
-          LIMIT ?
-        ),
-        path_cte(root_id, id, parent_id, name, is_directory, full_path) AS (
-          SELECT n.id, n.id, n.parent_id, n.name, n.is_directory, n.name 
-          FROM nodes n
-          JOIN matched_nodes m ON n.id = m.id
-          UNION ALL
-          SELECT c.root_id, p.id, p.parent_id, p.name, p.is_directory, 
-                 p.name || (CASE WHEN p.name LIKE '_:\\' OR p.name LIKE '\\\\%' THEN '' ELSE '\\' END) || c.full_path 
-          FROM nodes p
-          JOIN path_cte c ON c.parent_id = p.id
-        )
-        SELECT root_id, full_path, is_directory 
-        FROM path_cte 
-        WHERE parent_id IS NULL;
-      ''', <Object?>['%$query%', limit]);
-
-      return results
-          .map((Row row) => SearchResultNode(
-                id: row['root_id'] as int,
-                path: row['full_path'] as String,
-                isDirectory: (row['is_directory'] as int) == 1,
-              ))
-          .toList();
-    } catch (e) {
-      print(e);
+      final List<Object?> args = <Object?>['%$query%'];
+      final String typeFilter = _entryTypeFilterSql(entryTypes, args);
+      args.add(limit);
+      final ResultSet rows = db.select('''
+        SELECT
+          id,
+          name,
+          is_directory,
+          entry_type,
+          launch_target,
+          parsing_name,
+          app_user_model_id,
+          subtitle,
+          stable_identity,
+          times_opened
+        FROM nodes
+        WHERE name LIKE ? AND is_searchable = 1$typeFilter
+        ORDER BY times_opened DESC
+        LIMIT ?
+      ''', args);
+      return _materializeSearchResults(rows);
+    } catch (_) {
       return <SearchResultNode>[];
     }
   }
 
-  /// Returns the top N most opened nodes.
-  List<SearchResultNode> getTopOpened({int limit = 20}) {
+  List<SearchResultNode> getTopOpened({int limit = 20, Set<SearchResultEntryType>? entryTypes}) {
     final Database? db = _db;
     if (db == null) return <SearchResultNode>[];
     try {
-      final ResultSet results = db.select('''
-       WITH RECURSIVE path_cte(root_id, id, parent_id, name, is_directory, full_path) AS (
-  SELECT n.id, n.id, n.parent_id, n.name, n.is_directory, n.name 
-  FROM nodes n
-  WHERE n.times_opened > 0 AND n.is_searchable = 1
-  UNION ALL
-  SELECT c.root_id, p.id, p.parent_id, p.name, p.is_directory, 
-         p.name || (CASE WHEN p.name LIKE '_:\\' OR p.name LIKE '\\\\%' THEN '' ELSE '\\' END) || c.full_path 
-  FROM nodes p
-  JOIN path_cte c ON c.parent_id = p.id
-)
-SELECT 
-    root_id, 
-    full_path, 
-    path_cte.is_directory, -- Prefix added here
-    n.times_opened
-FROM path_cte
-JOIN nodes n ON path_cte.root_id = n.id -- Good practice to prefix join keys too
-WHERE path_cte.parent_id IS NULL
-ORDER BY n.times_opened DESC
-LIMIT ?;
-      ''', <Object?>[limit]);
-
-      return results
-          .map((Row row) => SearchResultNode(
-                id: row['root_id'] as int,
-                path: row['full_path'] as String,
-                isDirectory: (row['is_directory'] as int) == 1,
-              ))
-          .toList();
-    } catch (e) {
-      print(e);
+      final List<Object?> args = <Object?>[];
+      final String typeFilter = _entryTypeFilterSql(entryTypes, args);
+      args.add(limit);
+      final ResultSet rows = db.select('''
+        SELECT
+          id,
+          name,
+          is_directory,
+          entry_type,
+          launch_target,
+          parsing_name,
+          app_user_model_id,
+          subtitle,
+          stable_identity,
+          times_opened
+        FROM nodes
+        WHERE times_opened > 0 AND is_searchable = 1$typeFilter
+        ORDER BY times_opened DESC
+        LIMIT ?
+      ''', args);
+      return _materializeSearchResults(rows);
+    } catch (_) {
       return <SearchResultNode>[];
     }
+  }
+
+  List<SearchResultNode> getChildNodes(int parentId) {
+    final Database? db = _db;
+    if (db == null) return <SearchResultNode>[];
+    final ResultSet rows = db.select('''
+      SELECT
+        id,
+        name,
+        is_directory,
+        entry_type,
+        launch_target,
+        parsing_name,
+        app_user_model_id,
+        subtitle,
+        stable_identity,
+        times_opened
+      FROM nodes
+      WHERE parent_id = ?
+      ORDER BY name COLLATE NOCASE
+    ''', <Object?>[parentId]);
+    return _materializeSearchResults(rows);
+  }
+
+  SearchResultNode? getNode(int nodeId) {
+    final Database? db = _db;
+    if (db == null) return null;
+    final ResultSet rows = db.select('''
+      SELECT
+        id,
+        name,
+        is_directory,
+        entry_type,
+        launch_target,
+        parsing_name,
+        app_user_model_id,
+        subtitle,
+        stable_identity,
+        times_opened
+      FROM nodes
+      WHERE id = ?
+      LIMIT 1
+    ''', <Object?>[nodeId]);
+    if (rows.isEmpty) return null;
+    return _materializeSearchResult(rows.first);
+  }
+
+  List<SearchResultNode> _materializeNodesById(Iterable<int> ids) {
+    final List<SearchResultNode> nodes = <SearchResultNode>[];
+    for (final int id in ids) {
+      final SearchResultNode? node = getNode(id);
+      if (node != null) nodes.add(node);
+    }
+    return nodes;
+  }
+
+  List<SearchResultNode> _materializeSearchResults(ResultSet rows) {
+    return rows.map(_materializeSearchResult).toList(growable: false);
+  }
+
+  SearchResultNode _materializeSearchResult(Row row) {
+    final SearchResultEntryType entryType = _entryTypeFromDbValue((row['entry_type'] as String?) ?? 'file');
+    final int id = row['id'] as int;
+    final String name = (row['name'] as String?) ?? '';
+    final bool isDirectory = (row['is_directory'] as int? ?? 0) == 1;
+
+    if (entryType == SearchResultEntryType.app) {
+      return SearchResultNode(
+        id: id,
+        path: (row['launch_target'] as String?) ?? '',
+        name: name,
+        isDirectory: false,
+        entryType: entryType,
+        launchTarget: row['launch_target'] as String?,
+        parsingName: row['parsing_name'] as String?,
+        appUserModelId: row['app_user_model_id'] as String?,
+        subtitle: row['subtitle'] as String?,
+        stableIdentity: row['stable_identity'] as String?,
+      );
+    }
+
+    final String resolvedPath = getAbsolutePath(id) ?? name;
+    return SearchResultNode(
+      id: id,
+      path: resolvedPath,
+      name: name,
+      isDirectory: isDirectory,
+      entryType: entryType,
+    );
+  }
+
+  String _entryTypeFilterSql(Set<SearchResultEntryType>? entryTypes, List<Object?> args, {String tableAlias = ''}) {
+    if (entryTypes == null || entryTypes.isEmpty) return '';
+    final String prefix = tableAlias.isEmpty ? '' : '$tableAlias.';
+    final String placeholders = List<String>.filled(entryTypes.length, '?').join(', ');
+    args.addAll(entryTypes.map(_entryTypeToDbValue));
+    return ' AND ${prefix}entry_type IN ($placeholders)';
+  }
+
+  String _entryTypeToDbValue(SearchResultEntryType entryType) {
+    switch (entryType) {
+      case SearchResultEntryType.app:
+        return 'app';
+      case SearchResultEntryType.file:
+        return 'file';
+    }
+  }
+
+  SearchResultEntryType _entryTypeFromDbValue(String value) {
+    return value == 'app' ? SearchResultEntryType.app : SearchResultEntryType.file;
   }
 
   void close() {
     _db?.close();
     _db = null;
   }
-}
-
-class SearchResultNode {
-  final int id;
-  final String path;
-  final bool isDirectory;
-  SearchResultNode({required this.id, required this.path, required this.isDirectory});
 }
 
 class _FuzzyCandidate {

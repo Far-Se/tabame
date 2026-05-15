@@ -212,6 +212,7 @@ EMap AppInfoToMap(const AppInfo &app) {
   return m;
 }
 
+
 EMap AppBitmapToMap(const AppBitmap &bitmap) {
   EMap m;
   m[EVal("pixels")] = EVal(bitmap.pixels);
@@ -704,7 +705,6 @@ void GetAppIconH(Tabamewin32Plugin *, const MethodCall &call,
     shared_result->Success(EVal(Encode::AppBitmapToMap(bitmap)));
   }).detach();
 }
-
 // ===== Hotkeys =====
 void HotkeyAddH(Tabamewin32Plugin *, const MethodCall &call,
                 MethodResult result) {

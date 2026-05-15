@@ -14,7 +14,11 @@ class PhotoEditorButton extends StatelessWidget {
     return QuickActionItem(
       message: "Open Photo Editor",
       icon: const Icon(Icons.photo_camera_back_outlined),
-      onTap: () {
+      onTap: () async {
+        if (QuickMenuFunctions.isQuickMenuVisible) {
+          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
         WinUtils.startTabame(arguments: "-editor");
       },
     );

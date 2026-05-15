@@ -1604,6 +1604,47 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       await windowManager.setSize(Size(value.width, value.height));
     });
   }
+
+  static void enableClickThrough(int hwnd) {
+    if (hwnd == 0) return;
+
+    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    SetWindowLongPtr(
+      hwnd,
+      GWL_EXSTYLE,
+      exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE,
+    );
+
+    // SetLayeredWindowAttributes(hwnd, 0, 220, LWA_ALPHA);
+
+    // Important: refresh cached window styles
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  }
+
+  /// Disable click-through: window captures mouse again.
+  static void disableClickThrough(int hwnd) {
+    if (hwnd == 0) return;
+
+    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT & ~WS_EX_LAYERED & ~WS_EX_NOACTIVATE);
+
+    // Restore full opacity (or whatever you prefer)
+    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+
+    // Refresh style cache (same as before)
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  }
+
+  static void makeWindowClickThrough(bool clickThrough, {int? hWnd}) {
+    final int targetHwnd = hWnd ?? Win32.hWnd;
+    if (clickThrough) {
+      enableClickThrough(targetHwnd);
+    } else {
+      disableClickThrough(targetHwnd);
+    }
+  }
 }
 
 class ClipboardExtension {

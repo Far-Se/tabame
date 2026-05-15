@@ -8,6 +8,7 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +56,11 @@ class _TestingButtonState extends State<TestingButton> {
         // print(apps);
         // print("---");
         app = apps[Random().nextInt(apps.length)];
+        // app = apps.firstWhereIndexedOrNull((int i, AppInfo e) => e.name.contains("Counter"));
+        if (app == null) return;
         print(app);
+        print(app!.appUserModelId.hashCode.toString());
+        xIcon = null;
         final AppIconData? icon = await AppEnumeration.getAppIcon(app!.parsingName);
         if (icon != null) {
           ui.decodeImageFromPixels(
