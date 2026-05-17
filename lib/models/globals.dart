@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import 'countdown_manager.dart';
 
@@ -53,7 +54,7 @@ class Globals {
   static bool debugHooks = true;
   static bool debugHotkeys = true;
   static String version = "v2.0";
-
+  static WinRect? focusedRect;
   static int virtualDesktop = 0;
 
   static bool changingPages = false;

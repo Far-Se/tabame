@@ -199,7 +199,7 @@ class QuickMenuState extends State<QuickMenu>
           await Win32.setMainWindowToMousePos();
         }
       });
-      Win32.setWindowInvisiblity(false);
+      Win32.setWindowInvisible(false);
     }
     AllowSetForegroundWindow(GetCurrentProcessId());
     _initializeWindowSize();
@@ -380,18 +380,21 @@ class QuickMenuState extends State<QuickMenu>
 
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
     // if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-    Win32.setWindowInvisiblity(true);
+    Win32.setWindowInvisible(true);
     if (oldType == QuickMenuPage.quickClick) WinUtils.makeWindowClickThrough(false);
     // SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
   }
 
   Future<void> _onQuickMenuVisible(QuickMenuPage type, bool center) async {
     // SetLayeredWindowAttributes(Win32.hWnd, 0, 255, LWA_ALPHA);
-    Win32.setWindowInvisiblity(false);
+    Win32.setWindowInvisible(false);
     tryPop = false;
-    Win32.activateWindow(Win32.hWnd);
+    if (type != QuickMenuPage.quickClick) {
+      Win32.activateWindow(Win32.hWnd);
+    }
     Globals.quickMenuPage = type;
     if (type == QuickMenuPage.quickMenu) {
+      WinUtils.makeWindowClickThrough(false);
       final ({int height, int width}) size = Win32.getSize();
       if (size.width != Boxes.quickMenuWidth) {
         WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));

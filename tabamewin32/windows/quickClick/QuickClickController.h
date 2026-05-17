@@ -1,142 +1,114 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <shellscalingapi.h>
-#include <thread>
 #include <atomic>
-#include <vector>
-#include <map>
-#include <string>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
+#include <map>
+#include <shellscalingapi.h>
+#include <string>
+#include <thread>
+#include <vector>
+#include <windows.h>
 
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-struct QuickClickConfig
-{
-    // Grid key arrays
-    std::vector<char> horizontalKeys = { '1','2','3','4','5','6','7','8','9' };
-    std::vector<char> verticalKeys   = { 'q','w','e','r','t','y','u','i','o' };
+struct QuickClickConfig {
+  std::vector<char> horizontalKeys = {'1', '2', '3', '4', '5',
+                                      '6', '7', '8', '9'};
+  std::vector<char> verticalKeys = {'q', 'w', 'e', 'r', 't',
+                                    'y', 'u', 'i', 'o'};
 
-    // Nudge amount in logical pixels
-    int nudgeAmount = 5;
+  int nudgeAmount = 5; // Base speed
+  int doubleClickThresholdMs = 400;
 
-    // Double-click detection window (ms)
-    int doubleClickThresholdMs = 400;
+  std::map<std::string, std::vector<int>> extraArrowBindings = {
+      {"up", {}}, {"down", {}}, {"left", {}}, {"right", {}}};
 
-    // Extra VK bindings for nudge directions (in addition to arrow keys)
-    std::map<std::string, std::vector<int>> extraArrowBindings = {
-        { "up",    {} },
-        { "down",  {} },
-        { "left",  {} },
-        { "right", {} }
-    };
+  int leftClickKey = VK_CONTROL;
+  int rightClickKey = VK_MENU;
+  int dragKey = VK_MENU;
 
-    // Action keys (VK codes, all user-overridable)
-    int leftClickKey   = VK_CONTROL; // single press  → left click
-    int doubleClickKey = VK_CONTROL; // double press  → double click (same key as leftClickKey by default)
-    int rightClickKey  = VK_MENU;    // single press  → right click
-    int dragKey        = VK_MENU;    // hold          → drag        (same key as rightClickKey by default)
+  int scrollUpKey = VK_OEM_4;
+  int scrollDownKey = VK_OEM_6;
+  int scrollLeftKey = VK_OEM_1;
+  int scrollRightKey = VK_OEM_7;
 
-    // Scroll keys (VK codes, user-overridable)
-    int scrollUpKey    = VK_OEM_4;   // [
-    int scrollDownKey  = VK_OEM_6;   // ]
-    int scrollLeftKey  = VK_OEM_1;   // ;
-    int scrollRightKey = VK_OEM_7;   // '
+  int scrollDelta = WHEEL_DELTA;
 
-    // Scroll delta per keypress (WHEEL_DELTA units)
-    int scrollDelta = WHEEL_DELTA;
+  int escapeKey = VK_ESCAPE;
+  int zoneModeKey = 0;
+  int nextMonitorKey = 0;
+  int prevMonitorKey = 0;
+  int toggleOverlayKey = 0;
+  int infoKey = VK_OEM_2; // VK_OEM_2 is usually '/' or '?'
 };
 
-// ---------------------------------------------------------------------------
-// Controller
-// ---------------------------------------------------------------------------
-class QuickClickController
-{
+class QuickClickController {
 public:
-    explicit QuickClickController(QuickClickConfig config = {});
-    ~QuickClickController();
+  explicit QuickClickController(QuickClickConfig config = {});
+  ~QuickClickController();
 
-    // Install the low-level keyboard hook and start the message-pump thread.
-    void Start();
-
-    // Remove the hook and join the thread.
-    void Stop();
-
-    // Toggle whether keystrokes are intercepted.
-    void SetActive(bool active);
-    bool IsActive() const { return active_.load(); }
-
-    // Update configuration.
-    void UpdateConfig(QuickClickConfig config);
-
-    // Set callback for hotkey events.
-    void SetEventCallback(std::function<void(const std::string&, const std::map<std::string, std::string>&)> callback) { eventCallback_ = callback; }
+  void Start();
+  void Stop();
+  void SetActive(bool active);
+  bool IsActive() const { return active_.load(); }
+  void UpdateConfig(QuickClickConfig config);
+  void SetEventCallback(
+      std::function<void(const std::string &,
+                         const std::map<std::string, std::string> &)>
+          callback) {
+    eventCallback_ = callback;
+  }
 
 private:
-    void TriggerEvent(const std::string& eventName, const std::map<std::string, std::string>& params = {}) {
-        if (eventCallback_) eventCallback_(eventName, params);
-    }
-    // ---- Hook plumbing ----
-    static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
-    void HookThreadProc();
+  void TriggerEvent(const std::string &eventName,
+                    const std::map<std::string, std::string> &params = {}) {
+    if (eventCallback_)
+      eventCallback_(eventName, params);
+  }
 
-    // ---- Key dispatch ----
-    // Returns true if the key should be suppressed (not passed to other apps).
-    bool HandleKey(DWORD vkCode, bool keyDown);
+  static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam,
+                                               LPARAM lParam);
+  void HookThreadProc();
 
-    // ---- Grid movement ----
-    void MoveToGridX(int index);
-    void MoveToGridY(int index);
+  // Continuous movement thread logic
+  void MovementThreadProc();
 
-    // ---- Nudge ----
-    void NudgeMouse(int dx, int dy);
+  bool HandleKey(DWORD vkCode, bool keyDown);
+  void MoveToGridX(int index);
+  void MoveToGridY(int index);
+  void PerformRightClick();
+  void SetDragging(bool dragging);
+  void Scroll(int delta, bool horizontal);
+  void CycleMonitor(int direction);
 
-    // ---- Click helpers ----
-    void PerformLeftClick();
-    void PerformRightClick();
-    void PerformDoubleClick();
+  struct MonitorInfo {
+    RECT rect;
+    UINT dpi;
+  };
+  static MonitorInfo GetMonitorUnderCursor();
+  static int ScaleForDpi(int value, UINT dpi);
+  static INPUT MakeMouseInput(DWORD flags, DWORD mouseData = 0, LONG dx = 0,
+                              LONG dy = 0);
 
-    // ---- Drag ----
-    void SetDragging(bool dragging);
+  QuickClickConfig config_;
+  std::atomic<bool> active_{false};
+  std::atomic<bool> isDragging_{false};
+  std::atomic<bool> running_{false};
 
-    // ---- Scroll ----
-    void Scroll(int delta, bool horizontal);
+  // Directional states for diagonal movement
+  std::atomic<bool> moveUp_{false};
+  std::atomic<bool> moveDown_{false};
+  std::atomic<bool> moveLeft_{false};
+  std::atomic<bool> moveRight_{false};
 
-    // ---- Monitor / DPI helpers ----
-    // Returns the rect (in virtual-screen coords) of the monitor under the cursor,
-    // and the DPI of that monitor.
-    struct MonitorInfo { RECT rect; UINT dpi; };
-    static MonitorInfo GetMonitorUnderCursor();
+  HHOOK hook_{nullptr};
+  std::thread hookThread_;
+  std::thread moveThread_;
+  DWORD hookThreadId_{0};
 
-    // Scale a logical pixel delta by the monitor DPI.
-    static int ScaleForDpi(int value, UINT dpi);
-
-    // ---- Utility ----
-    // Build a SendInput structure for a mouse event.
-    static INPUT MakeMouseInput(DWORD flags, DWORD mouseData = 0, LONG dx = 0, LONG dy = 0);
-
-    // ---- State ----
-    QuickClickConfig  config_;
-    std::atomic<bool> active_{ false };
-    std::atomic<bool> isDragging_{ false };
-
-    // Left-click / double-click bookkeeping (tracks leftClickKey / doubleClickKey)
-    DWORD lastClickKeyPressTime_{ 0 };
-    bool  clickKeyPendingSingle_{ false };
-
-    // Drag key state (tracks dragKey)
-    bool dragKeyDown_{ false };
-
-    // Hook & thread
-    HHOOK       hook_{ nullptr };
-    std::thread hookThread_;
-    DWORD       hookThreadId_{ 0 };
-
-    std::function<void(const std::string&, const std::map<std::string, std::string>&)> eventCallback_;
-
-    // Static instance pointer used to bridge the static hook callback.
-    static QuickClickController* s_instance;
+  std::function<void(const std::string &,
+                     const std::map<std::string, std::string> &)>
+      eventCallback_;
+  static QuickClickController *s_instance;
 };

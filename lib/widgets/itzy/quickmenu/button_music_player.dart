@@ -225,6 +225,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
     final bool buffering =
         state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
     final MusicItem? currentItem = _currentQueuedItem();
+    print(currentItem);
 
     if (!buffering || currentItem == null) {
       _cancelBufferingWarning(resetWarnedItem: !buffering);
@@ -267,7 +268,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
       return "Playback is stuck. The file is missing: ${item.title}.";
     }
 
-    return "Playback is stuck. The file may use an unsupported filename or format: ${item.title}.";
+    return "Playback is stuck. The file may use an unsupported filename or format: ${item.localPath}.";
   }
 
   void _cancelBufferingWarning({bool resetWarnedItem = false}) {

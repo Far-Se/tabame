@@ -685,16 +685,21 @@ class HotKeyInfo {
         QuickMenuFunctions.toggleQuickMenu(visible: false);
         await Future<void>.delayed(const Duration(milliseconds: 160));
       }
+
+      Globals.focusedRect = await getFocusedElementCaretRect();
       await QuickMenuFunctions.toggleQuickMenu(
           visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
     },
     "OpenQuickClick": () async {
       if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
-        Win32.setWindowInvisiblity(true);
+        // Win32.setWindowInvisible(true);
+        Win32.setPosition(const Offset(-99999, -99999));
         await QuickMenuFunctions.toggleQuickMenu(visible: false);
-        Win32.setWindowInvisiblity(false);
+        // Win32.setWindowInvisible(false);
         return;
       }
+
+      Win32.setWindowInvisible(true);
       if (QuickMenuFunctions.isQuickMenuVisible) {
         QuickMenuFunctions.toggleQuickMenu(visible: false);
         await Future<void>.delayed(const Duration(milliseconds: 160));

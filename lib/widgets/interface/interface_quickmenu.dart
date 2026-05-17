@@ -250,6 +250,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                       final double width = constraints.maxWidth;
 
                       final int crossAxisCount = switch (width) {
+                        > 1300 => 6,
                         > 900 => 4,
                         > 600 => 3,
                         > 400 => 2,
@@ -258,6 +259,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
 
                       // Aspect ratio adapts so cards don't get too wide/narrow
                       final double aspectRatio = switch (width) {
+                        > 1300 => 1.4,
                         > 900 => 1.6,
                         > 600 => 1.8,
                         > 400 => 1.95,

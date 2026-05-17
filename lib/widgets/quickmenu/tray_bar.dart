@@ -160,7 +160,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                                 info.iconData,
                                 fit: BoxFit.scaleDown,
                                 gaplessPlayback: true,
-                                width: 16,
+                                width: 16.1,
                                 errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
                                     const Icon(
                                   Icons.check_box_outline_blank,
@@ -170,7 +170,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                   ),
                 ),
               ),
-            // const SizedBox(width: 5.1),
+            const SizedBox(width: 5.1),
           ],
         ),
       ),

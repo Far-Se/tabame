@@ -20,7 +20,7 @@ import 'widgets/widgets/focus_fix.dart';
 Future<void> main(List<String> arguments) async {
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
-  // return startScreenDraw();
+  return startSpotlight();
 
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   if (arguments.contains("-spotlight")) return startSpotlight();

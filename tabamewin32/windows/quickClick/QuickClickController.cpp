@@ -1,400 +1,417 @@
 #include "QuickClickController.h"
-#include <stdexcept>
 #include <algorithm>
 #include <cassert>
 
-// Link against Shcore for GetDpiForMonitor
 #pragma comment(lib, "Shcore.lib")
 
-// ---------------------------------------------------------------------------
-// Static instance pointer
-// ---------------------------------------------------------------------------
-QuickClickController* QuickClickController::s_instance = nullptr;
+QuickClickController *QuickClickController::s_instance = nullptr;
 
-// ---------------------------------------------------------------------------
-// Ctor / Dtor
-// ---------------------------------------------------------------------------
 QuickClickController::QuickClickController(QuickClickConfig config)
-    : config_(std::move(config))
-{
-    assert(s_instance == nullptr && "Only one QuickClickController may exist at a time.");
-    s_instance = this;
+    : config_(std::move(config)) {
+  assert(s_instance == nullptr);
+  s_instance = this;
 }
 
-QuickClickController::~QuickClickController()
-{
-    Stop();
-    s_instance = nullptr;
+QuickClickController::~QuickClickController() {
+  Stop();
+  s_instance = nullptr;
 }
 
-// ---------------------------------------------------------------------------
-// Start / Stop / SetActive
-// ---------------------------------------------------------------------------
-void QuickClickController::Start()
-{
-    if (hook_) return;
+void QuickClickController::Start() {
+  if (running_)
+    return;
+  running_ = true;
 
-    hookThread_ = std::thread([this]() { HookThreadProc(); });
+  hookThread_ = std::thread([this]() { HookThreadProc(); });
+  moveThread_ = std::thread([this]() { MovementThreadProc(); });
 
-    while (!hook_)
-        Sleep(1);
+  while (!hook_)
+    Sleep(1);
 }
 
-void QuickClickController::Stop()
-{
-    if (!hookThread_.joinable()) return;
+void QuickClickController::Stop() {
+  running_ = false;
+  if (hookThreadId_)
+    PostThreadMessageW(hookThreadId_, WM_QUIT, 0, 0);
 
-    if (hookThreadId_)
-        PostThreadMessageW(hookThreadId_, WM_QUIT, 0, 0);
-
+  if (hookThread_.joinable())
     hookThread_.join();
-    hook_ = nullptr;
-    hookThreadId_ = 0;
+  if (moveThread_.joinable())
+    moveThread_.join();
+
+  hook_ = nullptr;
 }
 
-void QuickClickController::SetActive(bool active)
-{
-    if (!active && isDragging_.load())
-        SetDragging(false);
-
-    active_.store(active);
+void QuickClickController::SetActive(bool active) {
+  if (!active && isDragging_.load())
+    SetDragging(false);
+  active_.store(active);
 }
 
-void QuickClickController::UpdateConfig(QuickClickConfig config)
-{
-    config_ = std::move(config);
+void QuickClickController::UpdateConfig(QuickClickConfig config) {
+  config_ = std::move(config);
+}
+
+void QuickClickController::HookThreadProc() {
+  hookThreadId_ = GetCurrentThreadId();
+  hook_ = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
+
+  MSG msg{};
+  while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
+    TranslateMessage(&msg);
+    DispatchMessageW(&msg);
+  }
+  UnhookWindowsHookEx(hook_);
 }
 
 // ---------------------------------------------------------------------------
-// Hook thread
+// Movement Loop (Handles Diagonal, Shift Speed, and Triggers)
 // ---------------------------------------------------------------------------
-void QuickClickController::HookThreadProc()
-{
-    hookThreadId_ = GetCurrentThreadId();
+void QuickClickController::MovementThreadProc() {
+  auto lastShiftReset = std::chrono::steady_clock::now();
+  bool shiftWasHeld = false;
 
-    hook_ = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
-    if (!hook_)
-        throw std::runtime_error("SetWindowsHookEx failed");
+  while (running_) {
+    if (active_.load() && (moveUp_ || moveDown_ || moveLeft_ || moveRight_)) {
+      int dx = 0, dy = 0;
+      if (moveUp_)
+        dy -= config_.nudgeAmount;
+      if (moveDown_)
+        dy += config_.nudgeAmount;
+      if (moveLeft_)
+        dx -= config_.nudgeAmount;
+      if (moveRight_)
+        dx += config_.nudgeAmount;
 
-    MSG msg{};
-    while (GetMessageW(&msg, nullptr, 0, 0) > 0)
-    {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
+      int multiplier = 1;
+      bool shiftIsHeld = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+
+      if (shiftIsHeld) {
+        if (!shiftWasHeld) {
+          lastShiftReset = std::chrono::steady_clock::now();
+          shiftWasHeld = true;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now - lastShiftReset)
+                            .count();
+
+        if (duration >= 600) {
+          multiplier = 7;
+        } else if (duration >= 400) {
+          multiplier = 5;
+        } else if (duration >= 200) {
+          multiplier = 3;
+        } else {
+          multiplier = 2;
+        }
+      } else {
+        shiftWasHeld = false;
+      }
+
+      if (dx != 0 || dy != 0) {
+        dx *= multiplier;
+        dy *= multiplier;
+
+        const auto mi = GetMonitorUnderCursor();
+        INPUT inp = MakeMouseInput(MOUSEEVENTF_MOVE, 0, ScaleForDpi(dx, mi.dpi),
+                                   ScaleForDpi(dy, mi.dpi));
+        SendInput(1, &inp, sizeof(INPUT));
+
+        TriggerEvent("nudge", {{"dx", std::to_string(dx)},
+                               {"dy", std::to_string(dy)},
+                               {"multiplier", std::to_string(multiplier)}});
+      }
+    } else {
+      // Reset shift tracking if no movement keys are held
+      shiftWasHeld = false;
     }
-
-    UnhookWindowsHookEx(hook_);
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+  }
 }
 
-// ---------------------------------------------------------------------------
-// Low-level keyboard hook callback (static)
-// ---------------------------------------------------------------------------
-LRESULT CALLBACK QuickClickController::LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
-{
-    if (nCode < 0 || !s_instance || !s_instance->active_.load())
-        return CallNextHookEx(nullptr, nCode, wParam, lParam);
-
-    const auto* kbs = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-    const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
-    const bool keyUp   = (wParam == WM_KEYUP   || wParam == WM_SYSKEYUP);
-
-    if (!keyDown && !keyUp)
-        return CallNextHookEx(nullptr, nCode, wParam, lParam);
-
-    const bool suppress = s_instance->HandleKey(kbs->vkCode, keyDown);
-    if (suppress)
-        return 1;
-
+LRESULT CALLBACK QuickClickController::LowLevelKeyboardProc(int nCode,
+                                                            WPARAM wParam,
+                                                            LPARAM lParam) {
+  if (nCode < 0 || !s_instance || !s_instance->active_.load())
     return CallNextHookEx(nullptr, nCode, wParam, lParam);
+
+  const auto *kbs = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
+  const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+
+  if (s_instance->HandleKey(kbs->vkCode, keyDown))
+    return 1;
+
+  return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }
 
-// ---------------------------------------------------------------------------
-// Central key dispatch
-// ---------------------------------------------------------------------------
-bool QuickClickController::HandleKey(DWORD vkCode, bool keyDown)
-{
-    auto isExtraBinding = [&](const std::string& dir) -> bool {
-        auto it = config_.extraArrowBindings.find(dir);
-        if (it == config_.extraArrowBindings.end()) return false;
-        for (int vk : it->second)
-            if (static_cast<DWORD>(vk) == vkCode) return true;
-        return false;
-    };
+bool QuickClickController::HandleKey(DWORD vkCode, bool keyDown) {
+  DWORD norm = vkCode;
+  if (vkCode == VK_LCONTROL || vkCode == VK_RCONTROL)
+    norm = VK_CONTROL;
+  else if (vkCode == VK_LMENU || vkCode == VK_RMENU)
+    norm = VK_MENU;
+  else if (vkCode == VK_LSHIFT || vkCode == VK_RSHIFT)
+    norm = VK_SHIFT;
 
-    // ----------------------------------------------------------------
-    // Drag key  (hold = drag; configurable, default VK_MENU / Alt)
-    //
-    // When dragKey == rightClickKey (the default), drag takes full
-    // ownership of that VK and right-click is never fired independently.
-    // Assign them different VKs to get both behaviours simultaneously.
-    // ----------------------------------------------------------------
-    if (vkCode == static_cast<DWORD>(config_.dragKey))
-    {
-        if (keyDown && !dragKeyDown_)
-        {
-            dragKeyDown_ = true;
-            SetDragging(true);
-        }
-        else if (!keyDown && dragKeyDown_)
-        {
-            dragKeyDown_ = false;
-            SetDragging(false);
-        }
+  auto isBound = [&](const std::string &dir) {
+    auto it = config_.extraArrowBindings.find(dir);
+    if (it == config_.extraArrowBindings.end())
+      return false;
+    for (int v : it->second)
+      if ((DWORD)v == norm || (DWORD)v == vkCode)
         return true;
-    }
-
-    // ----------------------------------------------------------------
-    // Right-click key  (configurable, default VK_MENU / Alt)
-    // Only reached when rightClickKey differs from dragKey.
-    // ----------------------------------------------------------------
-    if (vkCode == static_cast<DWORD>(config_.rightClickKey))
-    {
-        if (keyDown)
-            PerformRightClick();
-        return true;
-    }
-
-    // ----------------------------------------------------------------
-    // Left-click / double-click key  (configurable, default VK_CONTROL)
-    //
-    // • Same key for both (default): single press = left click,
-    //   two presses within doubleClickThresholdMs = double click.
-    // • Different keys: each fires its action immediately on keydown.
-    // ----------------------------------------------------------------
-    const bool isLeftClickKey   = (vkCode == static_cast<DWORD>(config_.leftClickKey));
-    const bool isDoubleClickKey = (vkCode == static_cast<DWORD>(config_.doubleClickKey));
-
-    if (isLeftClickKey || isDoubleClickKey)
-    {
-        const bool sameKey = (config_.leftClickKey == config_.doubleClickKey);
-
-        if (keyDown)
-        {
-            if (sameKey)
-            {
-                // Double-click detection: two presses within the threshold.
-                const DWORD now     = GetTickCount();
-                const DWORD elapsed = now - lastClickKeyPressTime_;
-
-                if (clickKeyPendingSingle_ &&
-                    elapsed <= static_cast<DWORD>(config_.doubleClickThresholdMs))
-                {
-                    clickKeyPendingSingle_ = false;
-                    PerformDoubleClick();
-                }
-                else
-                {
-                    lastClickKeyPressTime_ = now;
-                    clickKeyPendingSingle_ = true;
-                }
-            }
-            else
-            {
-                // Separate keys: fire immediately, no ambiguity.
-                if (isDoubleClickKey)
-                    PerformDoubleClick();
-                else
-                    PerformLeftClick();
-            }
-        }
-        else // keyUp
-        {
-            // Only relevant in same-key mode: fire single click once the
-            // threshold window expires without a second press.
-            if (sameKey && clickKeyPendingSingle_)
-            {
-                const DWORD elapsed = GetTickCount() - lastClickKeyPressTime_;
-                if (elapsed > static_cast<DWORD>(config_.doubleClickThresholdMs))
-                {
-                    clickKeyPendingSingle_ = false;
-                    PerformLeftClick();
-                }
-            }
-        }
-        return true;
-    }
-
-    // ----------------------------------------------------------------
-    // Only process the rest on keydown events
-    // ----------------------------------------------------------------
-    if (!keyDown)
-        return false;
-
-    // ----------------------------------------------------------------
-    // Scroll keys
-    // ----------------------------------------------------------------
-    if (vkCode == static_cast<DWORD>(config_.scrollUpKey))    { Scroll( config_.scrollDelta, false); return true; }
-    if (vkCode == static_cast<DWORD>(config_.scrollDownKey))  { Scroll(-config_.scrollDelta, false); return true; }
-    if (vkCode == static_cast<DWORD>(config_.scrollLeftKey))  { Scroll(-config_.scrollDelta, true);  return true; }
-    if (vkCode == static_cast<DWORD>(config_.scrollRightKey)) { Scroll( config_.scrollDelta, true);  return true; }
-
-    // ----------------------------------------------------------------
-    // Arrow keys (+ extra bindings) -> nudge
-    // ----------------------------------------------------------------
-    if (vkCode == VK_UP    || isExtraBinding("up"))    { NudgeMouse(0, -config_.nudgeAmount); return true; }
-    if (vkCode == VK_DOWN  || isExtraBinding("down"))  { NudgeMouse(0,  config_.nudgeAmount); return true; }
-    if (vkCode == VK_LEFT  || isExtraBinding("left"))  { NudgeMouse(-config_.nudgeAmount, 0); return true; }
-    if (vkCode == VK_RIGHT || isExtraBinding("right")) { NudgeMouse( config_.nudgeAmount, 0); return true; }
-
-    // ----------------------------------------------------------------
-    // Grid keys
-    // ----------------------------------------------------------------
-    {
-        char ch      = static_cast<char>(vkCode);
-        char chLower = (ch >= 'A' && ch <= 'Z') ? static_cast<char>(ch + 32) : ch;
-
-        for (int i = 0; i < static_cast<int>(config_.horizontalKeys.size()); ++i)
-            if (config_.horizontalKeys[i] == chLower) { MoveToGridX(i); return true; }
-
-        for (int i = 0; i < static_cast<int>(config_.verticalKeys.size()); ++i)
-            if (config_.verticalKeys[i] == chLower)   { MoveToGridY(i); return true; }
-    }
-
     return false;
-}
+  };
 
-// ---------------------------------------------------------------------------
-// Grid movement
-// ---------------------------------------------------------------------------
-void QuickClickController::MoveToGridX(int index)
-{
-    const auto mi    = GetMonitorUnderCursor();
-    const int  total = static_cast<int>(config_.horizontalKeys.size());
-    if (total == 0) return;
-
-    const int monitorWidth = mi.rect.right - mi.rect.left;
-    const int x = mi.rect.left + static_cast<int>((index + 0.5) * monitorWidth / total);
-
-    POINT cur{};
-    GetCursorPos(&cur);
-    SetCursorPos(x, cur.y);
-    TriggerEvent("moveX", {{"index", std::to_string(index)}});
-}
-
-void QuickClickController::MoveToGridY(int index)
-{
-    const auto mi    = GetMonitorUnderCursor();
-    const int  total = static_cast<int>(config_.verticalKeys.size());
-    if (total == 0) return;
-
-    const int monitorHeight = mi.rect.bottom - mi.rect.top;
-    const int y = mi.rect.top + static_cast<int>((index + 0.5) * monitorHeight / total);
-
-    POINT cur{};
-    GetCursorPos(&cur);
-    SetCursorPos(cur.x, y);
-    TriggerEvent("moveY", {{"index", std::to_string(index)}});
-}
-
-// ---------------------------------------------------------------------------
-// Nudge
-// ---------------------------------------------------------------------------
-void QuickClickController::NudgeMouse(int dx, int dy)
-{
-    const auto mi       = GetMonitorUnderCursor();
-    const int  scaledDx = ScaleForDpi(dx, mi.dpi);
-    const int  scaledDy = ScaleForDpi(dy, mi.dpi);
-
-    INPUT inp = MakeMouseInput(MOUSEEVENTF_MOVE, 0,
-                               static_cast<LONG>(scaledDx),
-                               static_cast<LONG>(scaledDy));
+  // 1. Left Click Hold/Release
+  if (norm == (DWORD)config_.leftClickKey ||
+      vkCode == (DWORD)config_.leftClickKey) {
+    INPUT inp =
+        MakeMouseInput(keyDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
     SendInput(1, &inp, sizeof(INPUT));
-    TriggerEvent("nudge", {{"dx", std::to_string(dx)}, {"dy", std::to_string(dy)}});
+
+    TriggerEvent(keyDown ? "leftClickDown" : "leftClickUp");
+    return true; // Blocks both down and up!
+  }
+
+  // 2. Toggle Drag
+  if (norm == (DWORD)config_.dragKey || vkCode == (DWORD)config_.dragKey) {
+    if (keyDown) {
+      SetDragging(!isDragging_.load());
+    }
+    return true; // Blocks both down and up!
+  }
+
+  // 3. Movement Directions (State-based)
+  bool isDir = false;
+  if (vkCode == VK_UP || isBound("up")) {
+    moveUp_ = keyDown;
+    isDir = true;
+  }
+  if (vkCode == VK_DOWN || isBound("down")) {
+    moveDown_ = keyDown;
+    isDir = true;
+  }
+  if (vkCode == VK_LEFT || isBound("left")) {
+    moveLeft_ = keyDown;
+    isDir = true;
+  }
+  if (vkCode == VK_RIGHT || isBound("right")) {
+    moveRight_ = keyDown;
+    isDir = true;
+  }
+  if (isDir)
+    return true; // Blocks both down and up!
+
+  // --- CRITICAL FIX ---
+  // We handle non-movement actions on Key Down, but we must STILL return true
+  // on Key Up so the release event isn't leaked to other applications!
+
+  if (config_.escapeKey != 0 && (norm == (DWORD)config_.escapeKey ||
+                                 vkCode == (DWORD)config_.escapeKey)) {
+    if (keyDown)
+      TriggerEvent("Esc");
+    return true;
+  }
+
+  if (config_.zoneModeKey != 0 && (norm == (DWORD)config_.zoneModeKey ||
+                                   vkCode == (DWORD)config_.zoneModeKey)) {
+    if (keyDown)
+      TriggerEvent("zoneMode");
+    return true;
+  }
+
+  if (config_.nextMonitorKey != 0 &&
+      (norm == (DWORD)config_.nextMonitorKey ||
+       vkCode == (DWORD)config_.nextMonitorKey)) {
+    if (keyDown)
+      CycleMonitor(1);
+    return true;
+  }
+
+  if (config_.prevMonitorKey != 0 &&
+      (norm == (DWORD)config_.prevMonitorKey ||
+       vkCode == (DWORD)config_.prevMonitorKey)) {
+    if (keyDown)
+      CycleMonitor(-1);
+    return true;
+  }
+
+  if (config_.infoKey != 0 &&
+      (norm == (DWORD)config_.infoKey || vkCode == (DWORD)config_.infoKey)) {
+    if (keyDown)
+      TriggerEvent("info");
+    return true;
+  }
+  if (config_.toggleOverlayKey != 0 &&
+      (norm == (DWORD)config_.toggleOverlayKey ||
+       vkCode == (DWORD)config_.toggleOverlayKey)) {
+    if (keyDown)
+      TriggerEvent("overlay");
+    return true;
+  }
+
+  if (norm == (DWORD)config_.rightClickKey) {
+    if (keyDown)
+      PerformRightClick();
+    return true;
+  }
+
+  // Scroll
+  if (norm == (DWORD)config_.scrollUpKey) {
+    if (keyDown)
+      Scroll(config_.scrollDelta, false);
+    return true;
+  }
+  if (norm == (DWORD)config_.scrollDownKey) {
+    if (keyDown)
+      Scroll(-config_.scrollDelta, false);
+    return true;
+  }
+  if (norm == (DWORD)config_.scrollLeftKey) {
+    if (keyDown)
+      Scroll(-config_.scrollDelta, true);
+    return true;
+  }
+  if (norm == (DWORD)config_.scrollRightKey) {
+    if (keyDown)
+      Scroll(config_.scrollDelta, true);
+    return true;
+  }
+
+  // 4. Grid Navigation (Letters & Numbers)
+  UINT charCode = MapVirtualKeyW(vkCode, MAPVK_VK_TO_CHAR);
+  if (charCode != 0) {
+    char chLower = (char)tolower((int)charCode);
+
+    for (int i = 0; i < (int)config_.horizontalKeys.size(); ++i) {
+      if (config_.horizontalKeys[i] == chLower) {
+        if (keyDown)
+          TriggerEvent("moveX", {{"index", std::to_string(i)}});
+        return true; // Block both down and up steps for grid keys!
+      }
+    }
+
+    for (int i = 0; i < (int)config_.verticalKeys.size(); ++i) {
+      if (config_.verticalKeys[i] == chLower) {
+        if (keyDown)
+          TriggerEvent("moveY", {{"index", std::to_string(i)}});
+        return true; // Block both down and up steps for grid keys!
+      }
+    }
+  }
+
+  // Pass through any other key that isn't mapped to QuickClick features
+  return false;
 }
 
-// ---------------------------------------------------------------------------
-// Clicks
-// ---------------------------------------------------------------------------
-void QuickClickController::PerformLeftClick()
-{
-    INPUT inputs[2]{};
-    inputs[0] = MakeMouseInput(MOUSEEVENTF_LEFTDOWN);
-    inputs[1] = MakeMouseInput(MOUSEEVENTF_LEFTUP);
-    SendInput(2, inputs, sizeof(INPUT));
-    TriggerEvent("leftClick");
+void QuickClickController::SetDragging(bool dragging) {
+  isDragging_.store(dragging);
+  INPUT inp =
+      MakeMouseInput(dragging ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
+  SendInput(1, &inp, sizeof(INPUT));
+  TriggerEvent(dragging ? "dragStart" : "dragEnd");
 }
 
-void QuickClickController::PerformRightClick()
-{
-    INPUT inputs[2]{};
-    inputs[0] = MakeMouseInput(MOUSEEVENTF_RIGHTDOWN);
-    inputs[1] = MakeMouseInput(MOUSEEVENTF_RIGHTUP);
-    SendInput(2, inputs, sizeof(INPUT));
-    TriggerEvent("rightClick");
+void QuickClickController::PerformRightClick() {
+  INPUT inputs[2]{};
+  inputs[0] = MakeMouseInput(MOUSEEVENTF_RIGHTDOWN);
+  inputs[1] = MakeMouseInput(MOUSEEVENTF_RIGHTUP);
+  SendInput(2, inputs, sizeof(INPUT));
+  TriggerEvent("rightClick");
 }
 
-void QuickClickController::PerformDoubleClick()
-{
-    INPUT inputs[4]{};
-    inputs[0] = MakeMouseInput(MOUSEEVENTF_LEFTDOWN);
-    inputs[1] = MakeMouseInput(MOUSEEVENTF_LEFTUP);
-    inputs[2] = MakeMouseInput(MOUSEEVENTF_LEFTDOWN);
-    inputs[3] = MakeMouseInput(MOUSEEVENTF_LEFTUP);
-    SendInput(4, inputs, sizeof(INPUT));
-    TriggerEvent("doubleClick");
+void QuickClickController::Scroll(int delta, bool horizontal) {
+  DWORD flags = horizontal ? MOUSEEVENTF_HWHEEL : MOUSEEVENTF_WHEEL;
+  INPUT inp = MakeMouseInput(flags, (DWORD)delta);
+  SendInput(1, &inp, sizeof(INPUT));
+  TriggerEvent("scroll", {{"delta", std::to_string(delta)},
+                          {"horizontal", horizontal ? "true" : "false"}});
 }
 
-// ---------------------------------------------------------------------------
-// Drag
-// ---------------------------------------------------------------------------
-void QuickClickController::SetDragging(bool dragging)
-{
-    if (dragging == isDragging_.load()) return;
-    isDragging_.store(dragging);
+struct MonitorEnumData {
+  std::vector<HMONITOR> monitors;
+};
 
-    INPUT inp = MakeMouseInput(dragging ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
-    SendInput(1, &inp, sizeof(INPUT));
-    TriggerEvent(dragging ? "dragStart" : "dragEnd");
+static BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor,
+                                     LPRECT lprcMonitor, LPARAM dwData) {
+  auto *data = reinterpret_cast<MonitorEnumData *>(dwData);
+  data->monitors.push_back(hMonitor);
+  return TRUE;
 }
 
-// ---------------------------------------------------------------------------
-// Scroll
-// ---------------------------------------------------------------------------
-void QuickClickController::Scroll(int delta, bool horizontal)
-{
-    DWORD flags = horizontal ? MOUSEEVENTF_HWHEEL : MOUSEEVENTF_WHEEL;
-    INPUT inp   = MakeMouseInput(flags, static_cast<DWORD>(delta));
-    SendInput(1, &inp, sizeof(INPUT));
-    TriggerEvent("scroll", {{"delta", std::to_string(delta)}, {"horizontal", horizontal ? "true" : "false"}});
+void QuickClickController::CycleMonitor(int direction) {
+  MonitorEnumData data;
+  EnumDisplayMonitors(NULL, NULL, MonitorEnumProc,
+                      reinterpret_cast<LPARAM>(&data));
+  if (data.monitors.empty())
+    return;
+
+  // Sort monitors left-to-right
+  std::sort(data.monitors.begin(), data.monitors.end(),
+            [](HMONITOR a, HMONITOR b) {
+              MONITORINFO mia{sizeof(mia)}, mib{sizeof(mib)};
+              GetMonitorInfoW(a, &mia);
+              GetMonitorInfoW(b, &mib);
+              if (mia.rcMonitor.left == mib.rcMonitor.left)
+                return mia.rcMonitor.top < mib.rcMonitor.top;
+              return mia.rcMonitor.left < mib.rcMonitor.left;
+            });
+
+  POINT cur{};
+  GetCursorPos(&cur);
+  HMONITOR current = MonitorFromPoint(cur, MONITOR_DEFAULTTONEAREST);
+
+  int currentIndex = 0;
+  for (int i = 0; i < (int)data.monitors.size(); ++i) {
+    if (data.monitors[i] == current) {
+      currentIndex = i;
+      break;
+    }
+  }
+  int monitorCount = static_cast<int>(data.monitors.size());
+
+  if (monitorCount == 0)
+    return;
+
+  int newIndex = (currentIndex + direction + monitorCount) % monitorCount;
+  HMONITOR target = data.monitors[newIndex];
+  MONITORINFO mi{sizeof(mi)};
+  GetMonitorInfoW(target, &mi);
+
+  int centerX =
+      mi.rcMonitor.left + (mi.rcMonitor.right - mi.rcMonitor.left) / 2;
+  int centerY = mi.rcMonitor.top + (mi.rcMonitor.bottom - mi.rcMonitor.top) / 2;
+  SetCursorPos(centerX, centerY);
+
+  TriggerEvent(direction > 0 ? "nextMonitor" : "prevMonitor");
 }
 
-// ---------------------------------------------------------------------------
-// Monitor / DPI helpers
-// ---------------------------------------------------------------------------
-QuickClickController::MonitorInfo QuickClickController::GetMonitorUnderCursor()
-{
-    POINT cursor{};
-    GetCursorPos(&cursor);
-
-    HMONITOR hMon = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
-
-    MONITORINFO mi{};
-    mi.cbSize = sizeof(mi);
-    GetMonitorInfoW(hMon, &mi);
-
-    UINT dpiX = 96, dpiY = 96;
-    GetDpiForMonitor(hMon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
-
-    return { mi.rcMonitor, dpiX };
+QuickClickController::MonitorInfo
+QuickClickController::GetMonitorUnderCursor() {
+  POINT cur{};
+  GetCursorPos(&cur);
+  HMONITOR h = MonitorFromPoint(cur, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO mi{sizeof(mi)};
+  GetMonitorInfoW(h, &mi);
+  UINT dx, dy;
+  GetDpiForMonitor(h, MDT_EFFECTIVE_DPI, &dx, &dy);
+  return {mi.rcMonitor, dx};
 }
 
-int QuickClickController::ScaleForDpi(int value, UINT dpi)
-{
-    return MulDiv(value, static_cast<int>(dpi), 96);
+int QuickClickController::ScaleForDpi(int v, UINT dpi) {
+  return MulDiv(v, (int)dpi, 96);
 }
 
-// ---------------------------------------------------------------------------
-// Utility
-// ---------------------------------------------------------------------------
-INPUT QuickClickController::MakeMouseInput(DWORD flags, DWORD mouseData, LONG dx, LONG dy)
-{
-    INPUT inp{};
-    inp.type           = INPUT_MOUSE;
-    inp.mi.dwFlags     = flags;
-    inp.mi.mouseData   = mouseData;
-    inp.mi.dx          = dx;
-    inp.mi.dy          = dy;
-    inp.mi.time        = 0;
-    inp.mi.dwExtraInfo = 0;
-    return inp;
+INPUT QuickClickController::MakeMouseInput(DWORD flags, DWORD data, LONG dx,
+                                           LONG dy) {
+  INPUT i{};
+  i.type = INPUT_MOUSE;
+  i.mi.dwFlags = flags;
+  i.mi.mouseData = data;
+  i.mi.dx = dx;
+  i.mi.dy = dy;
+  return i;
 }

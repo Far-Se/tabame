@@ -31,7 +31,6 @@ int example()
     //   Alt (hold)  = drag
     //   Alt (tap)   = (absorbed by drag; assign a different key for right click)
     cfg.leftClickKey   = VK_CONTROL;  // tap  → left click
-    cfg.doubleClickKey = VK_CONTROL;  // double-tap → double click (same key = detection active)
     cfg.dragKey        = VK_MENU;     // hold → drag
     cfg.rightClickKey  = VK_MENU;     // when equal to dragKey, right-click is subsumed by drag
 
@@ -42,7 +41,6 @@ int example()
 
     // Example: put double-click on its own key (fires immediately, no timer):
     //   cfg.leftClickKey   = VK_CONTROL; // Ctrl = left click (instant)
-    //   cfg.doubleClickKey = VK_F3;      // F3   = double click (instant)
 
     cfg.doubleClickThresholdMs = 400;
 
@@ -106,13 +104,6 @@ int example()
 // ACTION KEY BEHAVIOUR SUMMARY
 // ===========================================================================
 //
-//  leftClickKey == doubleClickKey  (default, same VK)
-//    Single tap  → left click  (fired on key-up after threshold expires)
-//    Double-tap  → double click (fired on second key-down within threshold)
-//
-//  leftClickKey != doubleClickKey  (separate VKs)
-//    leftClickKey  key-down → left click  (immediate, no timer)
-//    doubleClickKey key-down → double click (immediate, no timer)
 //
 //  dragKey == rightClickKey  (default, same VK)
 //    Hold → drag (LEFTDOWN on key-down, LEFTUP on key-up)

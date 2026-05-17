@@ -264,13 +264,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           QuickMenuFunctions.toggleQuickMenu(visible: false);
           return KeyEventResult.handled;
         }
-        Win32.setWindowInvisiblity(true);
+        Win32.setWindowInvisible(true);
         Timer(const Duration(milliseconds: 100), () {
           WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
           Globals.quickMenuPage = QuickMenuPage.quickMenu;
           userSettings.launcherSearchText = '';
           QuickMenuFunctions.refreshQuickMenu();
-          Win32.setWindowInvisiblity(false);
+          Win32.setWindowInvisible(false);
         });
         return KeyEventResult.handled;
       }
@@ -320,7 +320,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _focusNode.requestFocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Win32.setWindowInvisiblity(false);
+      Win32.setWindowInvisible(false);
       _canConsumePendingInput = true;
       _startWindowRefreshLoop();
       _consumePendingQuickMenuSearchInput();

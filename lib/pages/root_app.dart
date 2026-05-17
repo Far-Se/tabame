@@ -83,9 +83,7 @@ class _TabameState extends State<Tabame> {
                             if (userSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
                               return const Interface();
                             }
-                            if (index == Pages.quickmenu.index) {
-                              return const QuickMenu();
-                            } else if (index == Pages.interface.index) {
+                            if (index == Pages.interface.index) {
                               return const Interface();
                             }
                             return const QuickMenu();

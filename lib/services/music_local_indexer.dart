@@ -143,14 +143,38 @@ class MusicLocalIndexer {
     try {
       await for (final FileSystemEntity entity in scope.list(recursive: true, followLinks: false)) {
         if (entity is! File || !isSupportedAudioFile(entity.path)) continue;
+
+        File fileToProcess = entity;
+        final String oldPath = fileToProcess.path;
+        final String dir = p.dirname(oldPath);
+        final String base = p.basename(oldPath);
+        final String ext = p.extension(oldPath);
+        final String name = p.basenameWithoutExtension(oldPath);
+
+        final String sanitizedName = MusicLibraryDb.sanitize(name);
+        final String newBase = '$sanitizedName$ext';
+
+        if (base != newBase) {
+          final String newPath = p.join(dir, newBase);
+          try {
+            if (!File(newPath).existsSync()) {
+              fileToProcess = await fileToProcess.rename(newPath);
+            } else {
+              debugPrint('MusicLocalIndexer: rename skipped, destination already exists: $newPath');
+            }
+          } catch (e) {
+            debugPrint('MusicLocalIndexer: rename failed for $oldPath: $e');
+          }
+        }
+
         try {
-          final LocalMusicMetadata metadata = await _metadataReader.read(entity, rootPath: rootPath);
+          final LocalMusicMetadata metadata = await _metadataReader.read(fileToProcess, rootPath: rootPath);
           await _db.upsertSong(metadata, indexToken);
           indexed++;
           indexedCount.value++;
         } catch (e) {
           skipped++;
-          debugPrint('MusicLocalIndexer: skipped ${entity.path}: $e');
+          debugPrint('MusicLocalIndexer: skipped ${fileToProcess.path}: $e');
         }
       }
 

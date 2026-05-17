@@ -50,15 +50,15 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 // ---------------------------------------------------------------------------
 // Sub-modules
 // ---------------------------------------------------------------------------
+#include "../system_stats.cpp"
+#include "appsfolder.cpp"
 #include "clipboard.cpp"
 #include "clipboard_extended.cpp"
 #include "desktop_wallpaper.cpp"
 #include "get_changed_folders.cpp"
 #include "hotkeys.cpp"
 #include "media_session.cpp"
-#include "../system_stats.cpp"
 #include "quickClick/QuickClickController.cpp"
-#include "appsfolder.cpp"
 #include "shell_utils.cpp"
 #include "system_utils.cpp"
 #include "taskbar_uia.cpp"
@@ -213,7 +213,6 @@ EMap AppInfoToMap(const AppInfo &app) {
   return m;
 }
 
-
 EMap AppBitmapToMap(const AppBitmap &bitmap) {
   EMap m;
   m[EVal("pixels")] = EVal(bitmap.pixels);
@@ -239,8 +238,6 @@ QuickClickConfig MapToQuickClickConfig(const EMap &m) {
 
   if (m.count(EVal("leftClickKey")))
     config.leftClickKey = Args::Int(m, "leftClickKey");
-  if (m.count(EVal("doubleClickKey")))
-    config.doubleClickKey = Args::Int(m, "doubleClickKey");
   if (m.count(EVal("rightClickKey")))
     config.rightClickKey = Args::Int(m, "rightClickKey");
   if (m.count(EVal("dragKey")))
@@ -256,6 +253,19 @@ QuickClickConfig MapToQuickClickConfig(const EMap &m) {
     config.scrollRightKey = Args::Int(m, "scrollRightKey");
   if (m.count(EVal("scrollDelta")))
     config.scrollDelta = Args::Int(m, "scrollDelta");
+
+  if (m.count(EVal("escapeKey")))
+    config.escapeKey = Args::Int(m, "escapeKey");
+  if (m.count(EVal("zoneModeKey")))
+    config.zoneModeKey = Args::Int(m, "zoneModeKey");
+  if (m.count(EVal("nextMonitorKey")))
+    config.nextMonitorKey = Args::Int(m, "nextMonitorKey");
+  if (m.count(EVal("prevMonitorKey")))
+    config.prevMonitorKey = Args::Int(m, "prevMonitorKey");
+  if (m.count(EVal("toggleOverlayKey")))
+    config.toggleOverlayKey = Args::Int(m, "toggleOverlayKey");
+  if (m.count(EVal("infoKey")))
+    config.infoKey = Args::Int(m, "infoKey");
 
   if (m.count(EVal("extraArrowBindings"))) {
     auto &bindings = std::get<EMap>(m.at(EVal("extraArrowBindings")));
@@ -693,8 +703,8 @@ void GetSystemUsageH(Tabamewin32Plugin *, const MethodCall &call,
   }
 
   const auto stats = GetHardwareMonitor().GetStats(onlyUsage);
-  OK(result,
-     EVal(Encode::SystemStatsToMap(stats, static_cast<int>(statex.dwMemoryLoad))));
+  OK(result, EVal(Encode::SystemStatsToMap(
+                 stats, static_cast<int>(statex.dwMemoryLoad))));
 }
 
 void ToggleMonitorWallpaperH(Tabamewin32Plugin *, const MethodCall &call,
@@ -714,8 +724,7 @@ void BrowseFolderH(Tabamewin32Plugin *, const MethodCall &,
   OK(result, BrowseFolder());
 }
 
-void GetAllAppsH(Tabamewin32Plugin *, const MethodCall &,
-                    MethodResult result) {
+void GetAllAppsH(Tabamewin32Plugin *, const MethodCall &, MethodResult result) {
   auto shared_result =
       std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
           std::move(result));
@@ -731,7 +740,7 @@ void GetAllAppsH(Tabamewin32Plugin *, const MethodCall &,
 }
 
 void GetAppIconH(Tabamewin32Plugin *, const MethodCall &call,
-                        MethodResult result) {
+                 MethodResult result) {
   const auto &a = Args::Map(call);
   const auto parsingName = Encoding::Utf8ToWide(Args::Str(a, "parsingName"));
   int desiredSize = 256;
@@ -956,7 +965,7 @@ void GetFocusedElementRectH(Tabamewin32Plugin *, const MethodCall &,
   OK(result, EVal(Encode::RectToMap(GetFocusedElementRect())));
 }
 void GetFocusedElementCaretRectH(Tabamewin32Plugin *, const MethodCall &,
-                            MethodResult result) {
+                                 MethodResult result) {
   OK(result, EVal(Encode::RectToMap(GetFocusedElementCaretRect())));
 }
 
@@ -1128,22 +1137,25 @@ void GetMediaSessionsH(Tabamewin32Plugin *, const MethodCall &,
 
 // ===== QuickClick =====
 void RegisterQuickClickH(Tabamewin32Plugin *self, const MethodCall &call,
-                        MethodResult result) {
+                         MethodResult result) {
   auto &a = Args::Map(call);
   QuickClickConfig config = Encode::MapToQuickClickConfig(a);
   if (!self->quickClickController_) {
     self->quickClickController_ =
         std::make_unique<QuickClickController>(std::move(config));
-    self->quickClickController_->SetEventCallback([](const std::string &eventName, const std::map<std::string, std::string>& params) {
-      if (channel) {
-        EMap m;
-        m[EVal("eventName")] = EVal(eventName);
-        for (auto const& [k, v] : params) {
-          m[EVal(k)] = EVal(v);
-        }
-        channel->InvokeMethod("onQuickClickEvent", std::make_unique<EVal>(m));
-      }
-    });
+    self->quickClickController_->SetEventCallback(
+        [](const std::string &eventName,
+           const std::map<std::string, std::string> &params) {
+          if (channel) {
+            EMap m;
+            m[EVal("eventName")] = EVal(eventName);
+            for (auto const &[k, v] : params) {
+              m[EVal(k)] = EVal(v);
+            }
+            channel->InvokeMethod("onQuickClickEvent",
+                                  std::make_unique<EVal>(m));
+          }
+        });
     self->quickClickController_->Start();
   } else {
     self->quickClickController_->UpdateConfig(std::move(config));
@@ -1152,7 +1164,7 @@ void RegisterQuickClickH(Tabamewin32Plugin *self, const MethodCall &call,
 }
 
 void SetQuickClickHotkeysH(Tabamewin32Plugin *self, const MethodCall &call,
-                          MethodResult result) {
+                           MethodResult result) {
   if (self->quickClickController_) {
     self->quickClickController_->UpdateConfig(
         Encode::MapToQuickClickConfig(Args::Map(call)));
@@ -1161,14 +1173,14 @@ void SetQuickClickHotkeysH(Tabamewin32Plugin *self, const MethodCall &call,
 }
 
 void EnableQuickClickH(Tabamewin32Plugin *self, const MethodCall &,
-                      MethodResult result) {
+                       MethodResult result) {
   if (self->quickClickController_)
     self->quickClickController_->SetActive(true);
   OK(result, true);
 }
 
 void DisableQuickClickH(Tabamewin32Plugin *self, const MethodCall &,
-                       MethodResult result) {
+                        MethodResult result) {
   if (self->quickClickController_)
     self->quickClickController_->SetActive(false);
   OK(result, true);

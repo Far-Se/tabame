@@ -196,6 +196,10 @@ class MusicItem {
       starsCount: starsCount,
     );
   }
+  @override
+  String toString() {
+    return 'MusicItem{id: $id, title: $title, artist: $artist, album: $album, localPath: $localPath}';
+  }
 }
 
 class MusicPlaylist {

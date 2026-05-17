@@ -894,17 +894,27 @@ class Win32 {
     return true;
   }
 
-  static void setWindowInvisiblity(bool invisibility, {int? hWnd}) {
+  static void setWindowInvisible(bool invisible, {int? hWnd}) {
     hWnd ??= Win32.hWnd;
-    if (invisibility) {
-      final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-      SetWindowLongPtr(hWnd, GWL_EXSTYLE, exstyle | WS_EX_LAYERED);
+
+    final int exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+
+    // Always keep layered enabled
+    SetWindowLongPtr(hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
+
+    if (invisible) {
+      // Fully transparent
       SetLayeredWindowAttributes(hWnd, 0, 0, LWA_ALPHA);
     } else {
-      final int exstyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-      SetWindowLongPtr(hWnd, GWL_EXSTYLE, exstyle & ~WS_EX_LAYERED);
+      // Fully visible
       SetLayeredWindowAttributes(hWnd, 0, 255, LWA_ALPHA);
     }
+
+    // Force style refresh
+    SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE);
+
+    // Optional redraw
+    RedrawWindow(hWnd, nullptr, 0, RDW_INVALIDATE | RDW_UPDATENOW);
   }
 
   static void setClipHeight(int height, {int? hWnd}) {

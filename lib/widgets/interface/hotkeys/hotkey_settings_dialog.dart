@@ -520,25 +520,39 @@ class HotKeySettingsState extends State<HotKeySettings> {
     final Color accent = userSettings.themeColors.accentColor;
 
     return Expanded(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        decoration: BoxDecoration(
-          color: isActive ? accent.withAlpha(25) : colors.onSurface.withAlpha(10),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isActive ? accent.withAlpha(180) : colors.onSurface.withAlpha(12),
-            width: 1,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
-            color: isActive ? accent : colors.onSurfaceVariant.withAlpha(80),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () {
+            if (listeningToHotkey) return;
+            if (hotkey.modifiers.contains(label)) {
+              hotkey.modifiers.remove(label);
+            } else {
+              hotkey.modifiers.add(label);
+            }
+            setState(() {});
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              color: isActive ? accent.withAlpha(25) : colors.onSurface.withAlpha(10),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isActive ? accent.withAlpha(180) : colors.onSurface.withAlpha(12),
+                width: 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+                color: isActive ? accent : colors.onSurfaceVariant.withAlpha(80),
+              ),
+            ),
           ),
         ),
       ),

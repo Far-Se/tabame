@@ -11,7 +11,9 @@ import '../../models/classes/screen_draw_hotkeys.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/keys.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/info_text.dart';
+import '../widgets/text_input.dart';
 import 'hotkeys/hotkey_action_editor.dart';
 import 'hotkeys/hotkey_settings_dialog.dart';
 
@@ -78,8 +80,12 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _buildInterfaceHeader(context, colors, texts),
-        _buildScreenDrawHotkeysTile(colors, texts),
-        _buildQuickClickHotkeysTile(colors, texts),
+        Row(
+          children: <Widget>[
+            Expanded(child: _buildScreenDrawHotkeysTile(colors, texts)),
+            Expanded(child: _buildQuickClickHotkeysTile(colors, texts)),
+          ],
+        ),
         Expanded(
           child: remap.isEmpty ? _buildEmptyState(colors, texts) : _buildHotkeyContent(colors, texts),
         ),
@@ -103,6 +109,38 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   }
 
   Widget _buildQuickClickHotkeysSubPage(ColorScheme colors, TextTheme texts) {
+    // Find or lazily create the QuickClick trigger hotkey entry.
+    int quickClickIndex = remap.indexWhere(
+      (Hotkeys h) => h.keymaps.isNotEmpty && h.keymaps[0].name == "QuickClick",
+    );
+    if (quickClickIndex == -1) {
+      remap.add(Hotkeys(
+        key: "",
+        modifiers: <String>[],
+        prohibited: <String>[],
+        noopScreenBusy: false,
+        keymaps: <KeyMap>[
+          KeyMap(
+            name: "QuickClick",
+            enabled: true,
+            boundToRegion: false,
+            windowUnderMouse: false,
+            region: Region(),
+            windowsInfo: <String>["any"],
+            triggerInfo: <int>[],
+            actions: <KeyAction>[
+              KeyAction(type: ActionType.tabameFunction, value: "OpenQuickClick"),
+            ],
+            triggerType: TriggerType.press,
+            variableCheck: <String>["", ""],
+          ),
+        ],
+      ));
+      Boxes.updateSettings("remap", jsonEncode(remap));
+      quickClickIndex = remap.length - 1;
+    }
+    final Hotkeys quickClickHotkey = remap[quickClickIndex];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -112,7 +150,12 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
           icon: Icons.mouse_outlined,
           onBack: () => setState(() => _showQuickClickHotkeys = false),
         ),
-        const Expanded(child: QuickClickHotkeysPage()),
+        Expanded(
+          child: QuickClickHotkeysPage(
+            quickClickHotkey: quickClickHotkey,
+            onTapTrigger: () => _openHotkeySettings(quickClickIndex),
+          ),
+        ),
       ],
     );
   }
@@ -1338,7 +1381,14 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
 }
 
 class QuickClickHotkeysPage extends StatefulWidget {
-  const QuickClickHotkeysPage({super.key});
+  const QuickClickHotkeysPage({
+    super.key,
+    required this.quickClickHotkey,
+    required this.onTapTrigger,
+  });
+
+  final Hotkeys quickClickHotkey;
+  final VoidCallback onTapTrigger;
 
   @override
   State<QuickClickHotkeysPage> createState() => _QuickClickHotkeysPageState();
@@ -1423,32 +1473,97 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
+        // ── Trigger Hotkey field ──────────────────────────────────────
+        Builder(
+          builder: (BuildContext context) {
+            final ColorScheme colors2 = Theme.of(context).colorScheme;
+            final TextTheme texts2 = Theme.of(context).textTheme;
+            final Color accent = userSettings.themeColors.accentColor;
+            final Hotkeys qch = widget.quickClickHotkey;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: InkWell(
+                onTap: widget.onTapTrigger,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: colors2.onSurface.withAlpha(8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colors2.onSurface.withAlpha(18)),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: accent.withAlpha(20),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.keyboard_rounded, size: 18, color: accent),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              "Trigger hotkey",
+                              style: texts2.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              qch.hotkey.isEmpty ? "No hotkey set — tap to configure" : qch.displayHotkey.toUpperCase(),
+                              style: texts2.bodySmall?.copyWith(
+                                color: qch.hotkey.isEmpty ? colors2.onSurfaceVariant.withAlpha(140) : accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.tune_rounded, size: 18, color: colors2.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
 
         _buildSectionHeader(texts, colors, "GENERAL SETTINGS"),
         _buildSettingRow(
           "Horizontal Keys",
           "Keys mapped to horizontal grid positions",
-          child: _ConfigTextField(
+          child: CustomTextInput(
+            labelText: "",
             value: _config.horizontalKeys,
             onChanged: (String val) =>
-                _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['horizontalKeys'] = val)),
+                setState(() => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['horizontalKeys'] = val))),
           ),
         ),
         _buildSettingRow(
           "Vertical Keys",
           "Keys mapped to vertical grid positions",
-          child: _ConfigTextField(
+          child: CustomTextInput(
+            labelText: "",
             value: _config.verticalKeys,
-            onChanged: (String val) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['verticalKeys'] = val)),
+            onChanged: (String val) =>
+                setState(() => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['verticalKeys'] = val))),
           ),
         ),
         _buildSettingRow(
           "Nudge Amount",
           "Pixels to move when using arrow keys",
-          child: _ConfigNumberField(
-            value: _config.nudgeAmount,
-            onChanged: (int val) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['nudgeAmount'] = val)),
+          child: CustomTextInput(
+            value: _config.nudgeAmount.toString(),
+            labelText: "",
+            onChanged: (String val) {
+              setState(() =>
+                  _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['nudgeAmount'] = int.tryParse(val) ?? 3)));
+            },
           ),
         ),
 
@@ -1460,11 +1575,6 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
           (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['leftClickKey'] = vk)),
         ),
         _buildHotkeyRow(
-          "Double Click",
-          _config.doubleClickKey,
-          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['doubleClickKey'] = vk)),
-        ),
-        _buildHotkeyRow(
           "Right Click / Context",
           _config.rightClickKey,
           (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['rightClickKey'] = vk)),
@@ -1473,6 +1583,37 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
           "Drag / Hold",
           _config.dragKey,
           (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['dragKey'] = vk)),
+        ),
+
+        _buildHotkeyRow(
+          "Escape / Back",
+          _config.escapeKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['escapeKey'] = vk)),
+        ),
+        _buildHotkeyRow(
+          "Toggle Zone Mode",
+          _config.zoneModeKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['zoneModeKey'] = vk)),
+        ),
+        _buildHotkeyRow(
+          "Move to Next Monitor",
+          _config.nextMonitorKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['nextMonitorKey'] = vk)),
+        ),
+        _buildHotkeyRow(
+          "Move to Previous Monitor",
+          _config.prevMonitorKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['prevMonitorKey'] = vk)),
+        ),
+        _buildHotkeyRow(
+          "Toggle Overlay",
+          _config.toggleOverlayKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['toggleOverlayKey'] = vk)),
+        ),
+        _buildHotkeyRow(
+          "Show Info",
+          _config.infoKey,
+          (int vk) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['infoKey'] = vk)),
         ),
 
         const SizedBox(height: 24),
@@ -1500,12 +1641,70 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
         _buildSettingRow(
           "Scroll Amount",
           "Wheel delta per scroll action",
-          child: _ConfigNumberField(
-            value: _config.scrollDelta,
-            onChanged: (int val) => _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['scrollDelta'] = val)),
+          child: CustomTextInput(
+            value: _config.scrollDelta.toString(),
+            labelText: "",
+            onChanged: (String val) =>
+                _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['scrollDelta'] = int.tryParse(val) ?? 3)),
           ),
         ),
+
+        const SizedBox(height: 24),
+        _buildSectionHeader(texts, colors, "ARROW BINDINGS"),
+        _buildArrowBindingRow("Up Arrow", "up", _config.extraArrowBindings),
+        _buildArrowBindingRow("Down Arrow", "down", _config.extraArrowBindings),
+        _buildArrowBindingRow("Left Arrow", "left", _config.extraArrowBindings),
+        _buildArrowBindingRow("Right Arrow", "right", _config.extraArrowBindings),
       ],
+    );
+  }
+
+  Widget _buildArrowBindingRow(
+    String title,
+    String direction,
+    Map<String, List<int>> extraArrowBindings,
+  ) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final TextTheme texts = Theme.of(context).textTheme;
+    final List<int> currentVks = extraArrowBindings[direction] ?? <int>[];
+    final int currentVk = currentVks.isNotEmpty ? currentVks[0] : 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.onSurface.withAlpha(8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.onSurface.withAlpha(18)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title, style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(
+                    currentVk == 0 ? "Not set" : WinKeys.vk(currentVk).replaceAll("VK_", ""),
+                    style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            _QuickClickHotkeySelector(
+              currentVk: currentVk,
+              onChanged: (int vk) {
+                final Map<String, List<int>> updated = Map<String, List<int>>.from(extraArrowBindings)
+                  ..[direction] = vk == 0 ? <int>[] : <int>[vk];
+                _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['extraArrowBindings'] = updated));
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1596,50 +1795,6 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
   }
 }
 
-class _ConfigTextField extends StatelessWidget {
-  const _ConfigTextField({required this.value, required this.onChanged});
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: value,
-      onFieldSubmitted: onChanged,
-      style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
-  }
-}
-
-class _ConfigNumberField extends StatelessWidget {
-  const _ConfigNumberField({required this.value, required this.onChanged});
-  final int value;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: value.toString(),
-      keyboardType: TextInputType.number,
-      onFieldSubmitted: (String val) {
-        final int? parsed = int.tryParse(val);
-        if (parsed != null) onChanged(parsed);
-      },
-      style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
-  }
-}
-
 class _QuickClickHotkeySelector extends StatefulWidget {
   const _QuickClickHotkeySelector({required this.currentVk, required this.onChanged});
   final int currentVk;
@@ -1653,6 +1808,26 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
   bool _listening = false;
   final FocusNode _focusNode = FocusNode();
 
+  // Sorted, deduplicated display names (VK_ stripped)
+  static final List<String> _keyNames = () {
+    final Map<int, String> seen = <int, String>{};
+    for (final MapEntry<String, int> e in keyMap.entries) {
+      // Keep the first (shortest / canonical) name per VK value
+      if (!seen.containsKey(e.value)) {
+        seen[e.value] = e.key.replaceFirst('VK_', '');
+      }
+    }
+    final List<String> names = seen.values.toList(); //..sort();
+    return names;
+  }();
+
+  static int _nameToVk(String name) =>
+      keyMap['VK_$name'] ??
+      keyMap.entries
+          .firstWhere((MapEntry<String, int> e) => e.key.replaceFirst('VK_', '') == name,
+              orElse: () => const MapEntry<String, int>('', 0))
+          .value;
+
   void _startListening() {
     setState(() => _listening = true);
     _focusNode.requestFocus();
@@ -1662,26 +1837,45 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
     if (!_listening) return KeyEventResult.ignored;
 
     if (event is KeyDownEvent) {
+      print(event.logicalKey);
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         setState(() => _listening = false);
         return KeyEventResult.handled;
       }
 
-      final String label = event.logicalKey.keyLabel.toUpperCase();
       int? vk;
 
-      // Try exact match in keyMap
-      vk = keyMap["VK_$label"];
+      // Explicitly handle modifiers as they often have labels like "Control Left"
+      if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+          event.logicalKey == LogicalKeyboardKey.controlRight ||
+          event.logicalKey == LogicalKeyboardKey.control) {
+        vk = 0x11; // VK_CONTROL
+      } else if (event.logicalKey == LogicalKeyboardKey.altLeft ||
+          event.logicalKey == LogicalKeyboardKey.altRight ||
+          event.logicalKey == LogicalKeyboardKey.alt) {
+        vk = 0x12; // VK_MENU (ALT)
+      } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+          event.logicalKey == LogicalKeyboardKey.shiftRight ||
+          event.logicalKey == LogicalKeyboardKey.shift) {
+        vk = 0x10; // VK_SHIFT
+      } else {
+        final String label = event.logicalKey.keyLabel.toUpperCase().replaceAll(" ", "");
 
-      // Try some common replacements if not found
-      if (vk == null) {
-        if (label == "CONTROL") vk = 0x11;
-        if (label == "ALT") vk = 0x12;
-        if (label == "SHIFT") vk = 0x10;
-        if (label == "[") vk = 0xDB;
-        if (label == "]") vk = 0xDD;
-        if (label == ";") vk = 0xBA;
-        if (label == "'") vk = 0xDE;
+        // Try exact match in keyMap
+        vk = keyMap["VK_$label"];
+
+        // Try some common replacements if not found
+        if (vk == null) {
+          if (label == "CONTROL") vk = 0x11;
+          if (label == "ALT") vk = 0x12;
+          if (label == "SHIFT") vk = 0x10;
+          if (label == "[") vk = 0xDB;
+          if (label == "]") vk = 0xDD;
+          if (label == ";") vk = 0xBA;
+          if (label == "'") vk = 0xDE;
+          if (label == "\"") vk = 0xDE;
+          if (label == "=") vk = 0xBB;
+        }
       }
 
       if (vk != null) {
@@ -1695,14 +1889,56 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: _focusNode,
-      onKeyEvent: _handleKey,
-      child: OutlinedButton.icon(
-        onPressed: _startListening,
-        icon: Icon(_listening ? Icons.sensors_rounded : Icons.edit_rounded, size: 16),
-        label: Text(_listening ? "Listening..." : "Set key"),
-      ),
+    // Current display name (stripped of VK_), or null if 0 / unset
+    final String? currentName = widget.currentVk == 0 ? null : WinKeys.vk(widget.currentVk).replaceFirst('VK_', '');
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // ── Dropdown picker ───────────────────────────────────────────
+        DropdownButton<String>(
+          value: _keyNames.contains(currentName) ? currentName : null,
+          hint: const Text("—", style: TextStyle(fontSize: 13)),
+          isDense: true,
+          underline: const SizedBox.shrink(),
+          items: <DropdownMenuItem<String>>[
+            const DropdownMenuItem<String>(
+              value: null,
+              child: Text("(none)", style: TextStyle(fontSize: 13)),
+            ),
+            ..._keyNames.map(
+              (String name) => DropdownMenuItem<String>(
+                value: name,
+                child: Text(name, style: const TextStyle(fontSize: 13)),
+              ),
+            ),
+          ],
+          onChanged: (String? name) {
+            if (name == null) {
+              widget.onChanged(0);
+            } else {
+              widget.onChanged(_nameToVk(name));
+            }
+          },
+        ),
+        const SizedBox(width: 8),
+        // ── Press-to-set button ───────────────────────────────────────
+        Focus(
+          focusNode: _focusNode,
+          onKeyEvent: _handleKey,
+          child: IconButton(
+            onPressed: _startListening,
+            icon: CustomTooltip(
+              message: _listening ? "Listening..." : "Set key",
+              child: Icon(
+                Icons.sensors_rounded,
+                size: 16,
+                color: _listening ? userSettings.themeColors.accentColor : userSettings.themeColors.textColor,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

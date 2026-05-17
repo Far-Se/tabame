@@ -522,7 +522,7 @@ extension StringExtension on String {
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 
-  String toUperCaseAll() => toUpperCase();
+  String toUpperCaseAll() => toUpperCase();
   String toUpperCaseEach() => split(" ").map((String str) => str.toUpperCaseFirst()).join(" ");
   String numberFormat({int minNr = 10}) {
     return (int.parse(this) / minNr).toDouble().toString().replaceAll('.', '');

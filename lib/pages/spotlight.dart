@@ -198,19 +198,15 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   void _tick() {
     checkResize();
     if (!_enabled || _targetHwnd == 0) return;
-    skip++;
-    if (skip >= _stepsSkipped) {
-      skip = 0;
-      _captureMonitorSnapshot(force: true);
-    }
 
     final Rect? screenRect = _getWindowRect(_targetHwnd);
     if (screenRect == null) return;
-
     final Rect localRect = _screenRectToMonitorLocal(screenRect);
 
     if (_spotlightRect != localRect && mounted) {
+      // Window moved/resized — recapture background
       setState(() => _spotlightRect = localRect);
+      _captureMonitorSnapshot(); // only on actual change
     }
   }
 
@@ -362,6 +358,8 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   }
 
   Future<void> _captureMonitorSnapshot({bool force = false}) async {
+    return;
+    // ignore: dead_code
     if (_snapshotInProgress) return;
     if (!_enabled && !force) return;
     if (_overlayHwnd == 0) return;
@@ -498,17 +496,16 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
                 width: double.infinity,
                 height: double.infinity,
               )
-            : CustomPaint(
-                painter: _PrivacySpotlightPainter(
-                  enabled: _enabled,
-                  bgImage: _monitorImage,
-                  bgImageW: _monitorImageW,
-                  bgImageH: _monitorImageH,
-                  spotlightRect: _spotlightRect,
-                  blurSigma: _blurSigma,
-                  dimOpacity: _dimOpacity,
+            : BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 3, sigmaY: 5),
+                child: CustomPaint(
+                  painter: _PrivacySpotlightPainter(
+                    enabled: _enabled,
+                    spotlightRect: _spotlightRect,
+                    dimOpacity: _dimOpacity,
+                  ),
+                  child: const SizedBox.expand(),
                 ),
-                child: const SizedBox.expand(),
               ),
       ),
     );
@@ -517,20 +514,12 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
 
 class _PrivacySpotlightPainter extends CustomPainter {
   final bool enabled;
-  final ui.Image? bgImage;
-  final int bgImageW;
-  final int bgImageH;
   final Rect? spotlightRect;
-  final double blurSigma;
   final double dimOpacity;
 
   const _PrivacySpotlightPainter({
     required this.enabled,
-    required this.bgImage,
-    required this.bgImageW,
-    required this.bgImageH,
     required this.spotlightRect,
-    required this.blurSigma,
     required this.dimOpacity,
   });
 
@@ -548,49 +537,13 @@ class _PrivacySpotlightPainter extends CustomPainter {
       ..addRect(spotRect)
       ..fillType = PathFillType.evenOdd;
 
-    if (bgImage != null) {
-      final Rect src = Rect.fromLTWH(
-        0,
-        0,
-        bgImageW.toDouble(),
-        bgImageH.toDouble(),
-      );
+    // Just a solid dim — no blur, no screenshot needed
+    canvas.drawPath(
+      outside,
+      Paint()..color = Colors.black.withValues(alpha: dimOpacity),
+    );
 
-      canvas.save();
-      canvas.clipPath(outside);
-
-      canvas.saveLayer(
-        full,
-        Paint()
-          ..imageFilter = ui.ImageFilter.blur(
-            sigmaX: blurSigma,
-            sigmaY: blurSigma + (blurSigma * 0.06),
-            tileMode: TileMode.clamp,
-          ),
-      );
-
-      canvas.drawImageRect(
-        bgImage!,
-        src,
-        full,
-        Paint()..filterQuality = FilterQuality.high,
-      );
-
-      canvas.restore();
-
-      canvas.drawPath(
-        outside,
-        Paint()..color = Colors.black.withValues(alpha: dimOpacity),
-      );
-
-      canvas.restore();
-    } else {
-      canvas.drawPath(
-        outside,
-        Paint()..color = Colors.black.withValues(alpha: 0.45),
-      );
-    }
-
+    // Spotlight border
     canvas.drawRect(
       spotRect,
       Paint()
@@ -602,12 +555,6 @@ class _PrivacySpotlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PrivacySpotlightPainter old) {
-    return old.enabled != enabled ||
-        old.bgImage != bgImage ||
-        old.bgImageW != bgImageW ||
-        old.bgImageH != bgImageH ||
-        old.spotlightRect != spotlightRect ||
-        old.blurSigma != blurSigma ||
-        old.dimOpacity != dimOpacity;
+    return old.enabled != enabled || old.spotlightRect != spotlightRect || old.dimOpacity != dimOpacity;
   }
 }

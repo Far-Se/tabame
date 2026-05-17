@@ -1056,7 +1056,9 @@ class NativeHooks {
     if (call.method == "onQuickClickEvent") {
       final Map<dynamic, dynamic> args = call.arguments as Map<dynamic, dynamic>;
       final String eventName = args["eventName"] as String;
-      final Map<String, String> params = args.map((key, value) => MapEntry(key.toString(), value.toString()))..remove("eventName");
+      // ignore: always_specify_types
+      final Map<String, String> params = args.map((key, value) => MapEntry(key.toString(), value.toString()))
+        ..remove("eventName");
       QuickClick._handleEvent(eventName, params);
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) continue;
@@ -1465,7 +1467,6 @@ class QuickClickConfig {
   final int doubleClickThresholdMs;
   final Map<String, List<int>> extraArrowBindings;
   final int leftClickKey;
-  final int doubleClickKey;
   final int rightClickKey;
   final int dragKey;
   final int scrollUpKey;
@@ -1473,6 +1474,12 @@ class QuickClickConfig {
   final int scrollLeftKey;
   final int scrollRightKey;
   final int scrollDelta;
+  final int escapeKey;
+  final int zoneModeKey;
+  final int nextMonitorKey;
+  final int prevMonitorKey;
+  final int toggleOverlayKey;
+  final int infoKey;
 
   QuickClickConfig({
     this.horizontalKeys = '123456789',
@@ -1481,7 +1488,6 @@ class QuickClickConfig {
     this.doubleClickThresholdMs = 400,
     this.extraArrowBindings = const <String, List<int>>{},
     this.leftClickKey = 0x11, // VK_CONTROL
-    this.doubleClickKey = 0x11, // VK_CONTROL
     this.rightClickKey = 0x12, // VK_MENU
     this.dragKey = 0x12, // VK_MENU
     this.scrollUpKey = 0xDB, // VK_OEM_4 ([)
@@ -1489,6 +1495,12 @@ class QuickClickConfig {
     this.scrollLeftKey = 0xBA, // VK_OEM_1 (;)
     this.scrollRightKey = 0xDE, // VK_OEM_7 (')
     this.scrollDelta = 120, // WHEEL_DELTA
+    this.escapeKey = 0x1B, // VK_ESCAPE
+    this.zoneModeKey = 0,
+    this.nextMonitorKey = 0,
+    this.prevMonitorKey = 0,
+    this.toggleOverlayKey = 0,
+    this.infoKey = 0xBF, // VK_OEM_2
   });
 
   Map<String, dynamic> toMap() {
@@ -1499,7 +1511,6 @@ class QuickClickConfig {
       'doubleClickThresholdMs': doubleClickThresholdMs,
       'extraArrowBindings': extraArrowBindings,
       'leftClickKey': leftClickKey,
-      'doubleClickKey': doubleClickKey,
       'rightClickKey': rightClickKey,
       'dragKey': dragKey,
       'scrollUpKey': scrollUpKey,
@@ -1507,6 +1518,12 @@ class QuickClickConfig {
       'scrollLeftKey': scrollLeftKey,
       'scrollRightKey': scrollRightKey,
       'scrollDelta': scrollDelta,
+      'escapeKey': escapeKey,
+      'zoneModeKey': zoneModeKey,
+      'nextMonitorKey': nextMonitorKey,
+      'prevMonitorKey': prevMonitorKey,
+      'toggleOverlayKey': toggleOverlayKey,
+      'infoKey': infoKey,
     };
   }
 
@@ -1522,7 +1539,6 @@ class QuickClickConfig {
           ) ??
           const <String, List<int>>{},
       leftClickKey: map['leftClickKey'] ?? 0x11,
-      doubleClickKey: map['doubleClickKey'] ?? 0x11,
       rightClickKey: map['rightClickKey'] ?? 0x12,
       dragKey: map['dragKey'] ?? 0x12,
       scrollUpKey: map['scrollUpKey'] ?? 0xDB,
@@ -1530,6 +1546,12 @@ class QuickClickConfig {
       scrollLeftKey: map['scrollLeftKey'] ?? 0xBA,
       scrollRightKey: map['scrollRightKey'] ?? 0xDE,
       scrollDelta: map['scrollDelta'] ?? 120,
+      escapeKey: map['escapeKey'] ?? 0x1B,
+      zoneModeKey: map['zoneModeKey'] ?? 0,
+      nextMonitorKey: map['nextMonitorKey'] ?? 0,
+      prevMonitorKey: map['prevMonitorKey'] ?? 0,
+      toggleOverlayKey: map['toggleOverlayKey'] ?? 0,
+      infoKey: map['infoKey'] ?? 0xBF,
     );
   }
 }

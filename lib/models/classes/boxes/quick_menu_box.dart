@@ -144,7 +144,7 @@ class QuickMenuFunctions {
             if (!_listeners.contains(listener)) continue;
             await listener.onQuickMenuVisible(type, center);
           }
-          Win32.setWindowInvisiblity(false);
+          Win32.setWindowInvisible(false);
           shownTime = DateTime.now().millisecondsSinceEpoch;
         });
       } else {
