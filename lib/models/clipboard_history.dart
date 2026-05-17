@@ -189,7 +189,6 @@ class ClipboardHistoryStore {
       int skipCount = 0;
 
       for (final String line in reversed) {
-        if (entries.length >= limit) break;
         final String trimmed = line.trim();
         if (trimmed.isEmpty) continue;
 
@@ -201,11 +200,13 @@ class ClipboardHistoryStore {
             if (!text.contains(q)) continue;
           }
 
+          // Apply offset before limit so we never exit early while still skipping.
           if (skipCount < offset) {
             skipCount++;
             continue;
           }
 
+          if (entries.length >= limit) break;
           entries.add(ClipboardHistoryEntry.fromMap(map, truncate: true));
         } catch (_) {}
       }
@@ -251,6 +252,60 @@ class ClipboardHistoryStore {
 
   @Deprecated("Use loadPaged or loadPinned instead")
   static Future<List<ClipboardHistoryEntry>> load() async => loadPaged(limit: 99999);
+
+  /// Load ALL history entries from disk without any truncation.
+  /// Must be used whenever entries will be rewritten back to disk,
+  /// to avoid permanently losing content that exceeds the display limit.
+  static Future<List<ClipboardHistoryEntry>> _loadAllFull() async {
+    try {
+      final File file = File(historyFilePath);
+      if (!file.existsSync()) return <ClipboardHistoryEntry>[];
+      final List<String> lines = await file.readAsLines();
+      final List<ClipboardHistoryEntry> entries = <ClipboardHistoryEntry>[];
+      for (final String line in lines) {
+        final String trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        try {
+          entries.add(
+            ClipboardHistoryEntry.fromMap(
+              jsonDecode(trimmed) as Map<String, dynamic>,
+              truncate: false,
+            ),
+          );
+        } catch (_) {}
+      }
+      return entries;
+    } catch (error) {
+      Debug.print('ClipboardHistory: _loadAllFull failed $error');
+      return <ClipboardHistoryEntry>[];
+    }
+  }
+
+  /// Load ALL pinned entries from disk without any truncation.
+  static Future<List<ClipboardHistoryEntry>> _loadPinnedFull() async {
+    try {
+      final File file = File(pinnedFilePath);
+      if (!file.existsSync()) return <ClipboardHistoryEntry>[];
+      final List<String> lines = await file.readAsLines();
+      final List<ClipboardHistoryEntry> entries = <ClipboardHistoryEntry>[];
+      for (final String line in lines) {
+        final String trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        try {
+          entries.add(
+            ClipboardHistoryEntry.fromMap(
+              jsonDecode(trimmed) as Map<String, dynamic>,
+              truncate: false,
+            ),
+          );
+        } catch (_) {}
+      }
+      return entries;
+    } catch (error) {
+      Debug.print('ClipboardHistory: _loadPinnedFull failed $error');
+      return <ClipboardHistoryEntry>[];
+    }
+  }
 
   /// Record the current clipboard contents.
   ///
@@ -298,17 +353,14 @@ class ClipboardHistoryStore {
   /// Prune entries older than [cacheDays] from disk and delete orphaned/expired images.
   ///
   /// Call this when the user explicitly requests it (e.g. "Prune History" button).
-  /// Prune entries older than [cacheDays] from disk and delete orphaned/expired images.
-  ///
-  /// Call this when the user explicitly requests it (e.g. "Prune History" button).
   static Future<void> clearCache() async {
     try {
-      final List<ClipboardHistoryEntry> all = await loadPaged(limit: 99999);
+      final List<ClipboardHistoryEntry> all = await _loadAllFull();
       final DateTime cutoff = DateTime.now().subtract(Duration(days: cacheDays));
 
       final List<ClipboardHistoryEntry> keptHistory =
           all.where((ClipboardHistoryEntry e) => e.createdAt.isAfter(cutoff)).toList();
-      final List<ClipboardHistoryEntry> pinned = await loadPinned();
+      final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
 
       // Rewrite the history file with only the kept entries.
       await _rewriteFile(keptHistory, historyFilePath);
@@ -329,7 +381,8 @@ class ClipboardHistoryStore {
   static Future<void> copyEntry(ClipboardHistoryEntry entry) async {
     // Fetch full content if truncated
     ClipboardHistoryEntry? fullEntry = entry;
-    if (entry.textLength != null && (entry.text.length < entry.textLength!)) {
+    if ((entry.textLength != null && entry.text.length < entry.textLength!) ||
+        (entry.htmlLength != null && entry.html.length < entry.htmlLength!)) {
       fullEntry = await getFullEntry(entry.id);
     }
     if (fullEntry == null) return;
@@ -349,11 +402,11 @@ class ClipboardHistoryStore {
 
   /// Remove a single entry from disk.
   static Future<void> remove(ClipboardHistoryEntry entry) async {
-    final List<ClipboardHistoryEntry> all = await loadPaged(limit: 99999);
+    final List<ClipboardHistoryEntry> all = await _loadAllFull();
     final List<ClipboardHistoryEntry> next = all.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
     await _rewriteFile(next, historyFilePath);
 
-    final List<ClipboardHistoryEntry> pinned = await loadPinned();
+    final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
     if (pinned.any((ClipboardHistoryEntry e) => e.id == entry.id)) {
       final List<ClipboardHistoryEntry> nextPinned =
           pinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
@@ -377,8 +430,8 @@ class ClipboardHistoryStore {
     if (full == null) return;
 
     // 2. Remove from both files
-    final List<ClipboardHistoryEntry> allPinned = await loadPinned();
-    final List<ClipboardHistoryEntry> allHistory = await loadPaged(limit: 99999);
+    final List<ClipboardHistoryEntry> allPinned = await _loadPinnedFull();
+    final List<ClipboardHistoryEntry> allHistory = await _loadAllFull();
 
     final List<ClipboardHistoryEntry> nextPinned =
         allPinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
@@ -434,7 +487,7 @@ class ClipboardHistoryStore {
     if (_recentCacheLoaded) return;
     _recentCacheLoaded = true;
     try {
-      final List<ClipboardHistoryEntry> all = await load();
+      final List<ClipboardHistoryEntry> all = await _loadAllFull();
       _recentCache
         ..clear()
         ..addAll(all.take(_recentCacheSize));
@@ -460,13 +513,8 @@ class ClipboardHistoryStore {
 
     final File file = File(path ?? historyFilePath);
     final StringBuffer buffer = StringBuffer();
-    // When rewriting, we want to keep the full entries.
-    // However, the 'entries' list might have been truncated if coming from loadPaged.
-    // If so, we must ensure we have the full ones.
-    // BUT usually _rewriteFile is called after loadPaged(limit: 99999) which we'll fix.
 
     for (final ClipboardHistoryEntry entry in entries) {
-      // Ensure we're saving the original state
       buffer.writeln(jsonEncode(entry.toMap()));
     }
     await file.writeAsString(buffer.toString(), flush: true);
@@ -664,7 +712,8 @@ class ClipboardHistoryStore {
 
   static bool _isDuplicate(ClipboardHistoryEntry next, ClipboardHistoryEntry old) {
     if (next.type != old.type) return false;
-    if (next.type == ClipboardHistoryType.image) return next.byteLength == old.byteLength;
+    if (next.type == ClipboardHistoryType.image)
+      return next.byteLength == old.byteLength && next.imagePath == old.imagePath;
     return next.text == old.text && next.html == old.html;
   }
 

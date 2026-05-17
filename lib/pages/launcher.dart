@@ -262,6 +262,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (kReleaseMode) {
           QuickMenuFunctions.toggleQuickMenu(visible: false);
+          Win32.activateWindow(Globals.lastFocusedWinHWND);
           return KeyEventResult.handled;
         }
         Win32.setWindowInvisible(true);

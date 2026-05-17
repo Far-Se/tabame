@@ -1817,7 +1817,7 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
         seen[e.value] = e.key.replaceFirst('VK_', '');
       }
     }
-    final List<String> names = seen.values.toList(); //..sort();
+    final List<String> names = seen.values.toList()..sort();
     return names;
   }();
 

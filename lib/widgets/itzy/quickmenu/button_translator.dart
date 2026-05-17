@@ -31,6 +31,7 @@ class TranslatorPanel extends StatefulWidget {
 
 class _TranslatorPanelState extends State<TranslatorPanel> {
   static const String _targetsKey = "translatorTargetLanguages";
+  static const String _fromKey = "translatorFromLanguage";
   static const List<String> _defaultTargets = <String>["en", "ro"];
 
   final TextEditingController _inputController = TextEditingController();
@@ -40,6 +41,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
 
   final Map<String, _TranslationResult> _results = <String, _TranslationResult>{};
   List<String> _targetLanguages = <String>[];
+  String _fromLanguage = 'auto';
   bool _settingsMode = false;
   bool _translating = false;
   int _requestToken = 0;
@@ -49,6 +51,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
   void initState() {
     super.initState();
     _targetLanguages = _loadTargets();
+    _fromLanguage = _loadFrom();
     _languageSearchController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -78,6 +81,17 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     await Boxes.updateSettings(_targetsKey, _targetLanguages);
   }
 
+  String _loadFrom() {
+    final String? saved = Boxes.pref.getString(_fromKey);
+    if (saved == null) return 'auto';
+    if (saved == 'auto') return 'auto';
+    return GoogleTranslator.languages.containsKey(saved) ? saved : 'auto';
+  }
+
+  Future<void> _saveFrom(String code) async {
+    await Boxes.updateSettings(_fromKey, code);
+  }
+
   Future<void> _translate() async {
     final String text = _inputController.text.trim();
     if (text.isEmpty) {
@@ -99,17 +113,27 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
       _results.clear();
     });
 
-    for (final String language in _targetLanguages) {
-      try {
-        final GoogleTranslateResponse response = await _translator.translate(text, from: "auto", to: language);
-        if (!mounted || token != _requestToken) return;
-        setState(() {
-          _results[language] = _TranslationResult(text: response.text, detectedLanguage: response.from.language.iso);
-        });
-      } catch (error) {
-        if (!mounted || token != _requestToken) return;
-        setState(() => _results[language] = _TranslationResult(error: error.toString()));
-      }
+    const int batchSize = 3;
+    for (int i = 0; i < _targetLanguages.length; i += batchSize) {
+      final List<String> batch = _targetLanguages.sublist(
+        i,
+        (i + batchSize).clamp(0, _targetLanguages.length),
+      );
+
+      await Future.wait(batch.map((String language) async {
+        try {
+          final GoogleTranslateResponse response = await _translator.translate(text, from: _fromLanguage, to: language);
+          if (!mounted || token != _requestToken) return;
+          setState(() {
+            _results[language] = _TranslationResult(text: response.text, detectedLanguage: response.from.language.iso);
+          });
+        } catch (error) {
+          if (!mounted || token != _requestToken) return;
+          setState(() => _results[language] = _TranslationResult(error: error.toString()));
+        }
+      }));
+
+      if (!mounted || token != _requestToken) return;
     }
 
     if (!mounted || token != _requestToken) return;
@@ -216,6 +240,16 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
             ),
           ),
           const SizedBox(height: 10),
+          _FromLanguageRow(
+            fromLanguage: _fromLanguage,
+            accent: accent,
+            onSurface: onSurface,
+            onChanged: (String code) {
+              setState(() => _fromLanguage = code);
+              unawaited(_saveFrom(code));
+            },
+          ),
+          const SizedBox(height: 8),
           Row(
             children: <Widget>[
               Expanded(
@@ -402,6 +436,86 @@ class _TargetSummary extends StatelessWidget {
             Icon(Icons.tune_rounded, size: 14, color: accent),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FromLanguageRow extends StatelessWidget {
+  const _FromLanguageRow({
+    required this.fromLanguage,
+    required this.accent,
+    required this.onSurface,
+    required this.onChanged,
+  });
+
+  final String fromLanguage;
+  final Color accent;
+  final Color onSurface;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, String> languages = <String, String>{
+      'auto': 'Auto-Detect',
+      ...GoogleTranslator.languages..remove('auto'),
+    };
+    final String label = languages[fromLanguage] ?? fromLanguage.toUpperCase();
+
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.input_rounded, size: 16, color: accent),
+          const SizedBox(width: 8),
+          Text(
+            "From:",
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: fromLanguage,
+                isDense: true,
+                isExpanded: true,
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
+                icon: Icon(Icons.expand_more_rounded, size: 16, color: accent),
+                items: languages.entries.map((MapEntry<String, String> entry) {
+                  return DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text(
+                      entry.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  if (value != null) onChanged(value);
+                },
+                selectedItemBuilder: (_) => languages.entries.map((_) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

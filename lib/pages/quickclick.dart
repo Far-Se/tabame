@@ -406,6 +406,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
                   .map((MapEntry<String, List<int>> e) => "${e.key}: ${WinKeys.vk(e.value[0])}")
                   .join(", "),
             ),
+            _infoRow("Toggle Overlay", WinKeys.vk(config.toggleOverlayKey)),
             _infoRow("Toggle Zone Mode", WinKeys.vk(config.zoneModeKey)),
             _infoRow("Next Monitor", WinKeys.vk(config.nextMonitorKey)),
             _infoRow("Prev Monitor", WinKeys.vk(config.prevMonitorKey)),

@@ -127,7 +127,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
       if (!mounted) return;
       setState(() {
         _historyEntries.addAll(more);
-        _pageOffset = newOffset;
+        _pageOffset += more.length;
         if (more.length < 30) _hasMore = false;
         _loadingMore = false;
       });
@@ -206,7 +206,6 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
             onPressed: () async {
               if ((_historyEntries.isEmpty && _pinnedEntries.isEmpty) || _loading) return;
               await _clear();
-              setState(() {});
             },
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 30, minHeight: 30),

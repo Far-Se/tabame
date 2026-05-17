@@ -97,14 +97,10 @@ void QuickClickController::MovementThreadProc() {
                             now - lastShiftReset)
                             .count();
 
-        if (duration >= 600) {
-          multiplier = 7;
-        } else if (duration >= 400) {
-          multiplier = 5;
-        } else if (duration >= 200) {
-          multiplier = 3;
+        if (duration >= 1000) {
+          multiplier = 8;
         } else {
-          multiplier = 2;
+          multiplier = 5;
         }
       } else {
         shiftWasHeld = false;

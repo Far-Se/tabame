@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -611,6 +612,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   bool _captureMoreBusy = false;
   bool _presetBusy = false;
   double _zoomFactor = 1.0;
+  final ScrollController _verticalScrollCtrl = ScrollController();
+  final ScrollController _horizontalScrollCtrl = ScrollController();
 
   void _zoomIn() {
     setState(() {
@@ -851,6 +854,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
     _ctrl.removeListener(_handleControllerChanged);
     _focusNode.dispose();
     _ctrl.dispose();
+    _verticalScrollCtrl.dispose();
+    _horizontalScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -920,65 +925,81 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                         final Size viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
                                         final Size canvasSize = viewportSize * _zoomFactor;
 
-                                        return Scrollbar(
-                                          controller: ScrollController(),
-                                          child: SingleChildScrollView(
-                                            scrollDirection: Axis.horizontal,
+                                        return Listener(
+                                          onPointerSignal: (PointerSignalEvent event) {
+                                            if (event is PointerScrollEvent) {
+                                              final bool altHeld = HardwareKeyboard.instance.isAltPressed;
+                                              final ScrollController target =
+                                                  altHeld ? _horizontalScrollCtrl : _verticalScrollCtrl;
+                                              final double delta =
+                                                  altHeld ? event.scrollDelta.dy : event.scrollDelta.dy;
+                                              final double newOffset =
+                                                  (target.offset + delta).clamp(0.0, target.position.maxScrollExtent);
+                                              target.jumpTo(newOffset);
+                                            }
+                                          },
+                                          child: Scrollbar(
+                                            controller: _verticalScrollCtrl,
                                             child: SingleChildScrollView(
-                                              scrollDirection: Axis.vertical,
-                                              child: Container(
-                                                width: max(viewportSize.width, canvasSize.width),
-                                                height: max(viewportSize.height, canvasSize.height),
-                                                alignment: Alignment.center,
-                                                child: Stack(
-                                                  children: <Widget>[
-                                                    SizedBox(
-                                                      width: canvasSize.width,
-                                                      height: canvasSize.height,
-                                                      child: _backgroundImage == null
-                                                          ? (_originalImageBytes == null
-                                                              ? _buildNoPhotoPlaceholder()
-                                                              : const Center(
-                                                                  child: SizedBox(
-                                                                    width: 40,
-                                                                    height: 40,
-                                                                    child: CircularProgressIndicator(),
-                                                                  ),
-                                                                ))
-                                                          : GestureDetector(
-                                                              behavior: HitTestBehavior.translucent,
-                                                              onPanStart: (DragStartDetails details) =>
-                                                                  _onPanStart(details, canvasSize),
-                                                              onPanUpdate: (DragUpdateDetails details) =>
-                                                                  _onPanUpdate(details, canvasSize),
-                                                              onPanEnd: _onPanEnd,
-                                                              onTapDown: (TapDownDetails details) =>
-                                                                  _onTapDown(details, canvasSize),
-                                                              onSecondaryTapDown: (TapDownDetails details) {
-                                                                final Offset? imagePos =
-                                                                    _viewToImage(details.localPosition, canvasSize);
-                                                                if (imagePos != null) _ctrl.deleteShapeAt(imagePos);
-                                                              },
-                                                              child: ListenableBuilder(
-                                                                listenable: _ctrl,
-                                                                builder: (_, __) => CustomPaint(
-                                                                  size: canvasSize,
-                                                                  painter: _EditorPainter(
-                                                                    shapes: _ctrl.shapes,
-                                                                    currentShape: _ctrl.currentShape,
-                                                                    currentEnd: _ctrl.currentEnd,
-                                                                    backgroundImage: _backgroundImage,
-                                                                    shapeImages: _shapeImages,
-                                                                    gridVisible: _ctrl.gridVisible,
-                                                                    dragStart: _dragStart,
-                                                                    dragCurrent: _dragCurrent,
-                                                                    isRegionDrag: _isRegionDragging,
+                                              scrollDirection: Axis.horizontal,
+                                              controller: _horizontalScrollCtrl,
+                                              child: SingleChildScrollView(
+                                                scrollDirection: Axis.vertical,
+                                                controller: _verticalScrollCtrl,
+                                                child: Container(
+                                                  width: max(viewportSize.width, canvasSize.width),
+                                                  height: max(viewportSize.height, canvasSize.height),
+                                                  alignment: Alignment.center,
+                                                  child: Stack(
+                                                    children: <Widget>[
+                                                      SizedBox(
+                                                        width: canvasSize.width,
+                                                        height: canvasSize.height,
+                                                        child: _backgroundImage == null
+                                                            ? (_originalImageBytes == null
+                                                                ? _buildNoPhotoPlaceholder()
+                                                                : const Center(
+                                                                    child: SizedBox(
+                                                                      width: 40,
+                                                                      height: 40,
+                                                                      child: CircularProgressIndicator(),
+                                                                    ),
+                                                                  ))
+                                                            : GestureDetector(
+                                                                behavior: HitTestBehavior.translucent,
+                                                                onPanStart: (DragStartDetails details) =>
+                                                                    _onPanStart(details, canvasSize),
+                                                                onPanUpdate: (DragUpdateDetails details) =>
+                                                                    _onPanUpdate(details, canvasSize),
+                                                                onPanEnd: _onPanEnd,
+                                                                onTapDown: (TapDownDetails details) =>
+                                                                    _onTapDown(details, canvasSize),
+                                                                onSecondaryTapDown: (TapDownDetails details) {
+                                                                  final Offset? imagePos =
+                                                                      _viewToImage(details.localPosition, canvasSize);
+                                                                  if (imagePos != null) _ctrl.deleteShapeAt(imagePos);
+                                                                },
+                                                                child: ListenableBuilder(
+                                                                  listenable: _ctrl,
+                                                                  builder: (_, __) => CustomPaint(
+                                                                    size: canvasSize,
+                                                                    painter: _EditorPainter(
+                                                                      shapes: _ctrl.shapes,
+                                                                      currentShape: _ctrl.currentShape,
+                                                                      currentEnd: _ctrl.currentEnd,
+                                                                      backgroundImage: _backgroundImage,
+                                                                      shapeImages: _shapeImages,
+                                                                      gridVisible: _ctrl.gridVisible,
+                                                                      dragStart: _dragStart,
+                                                                      dragCurrent: _dragCurrent,
+                                                                      isRegionDrag: _isRegionDragging,
+                                                                    ),
                                                                   ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                    ),
-                                                  ],
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ),

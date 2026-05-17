@@ -47,14 +47,20 @@ namespace
         }
     }
 
-    bool IsRgbBlackFrame(const std::vector<uint8_t>& pixels)
+    bool IsRgbBlackFrame(const std::vector<uint8_t>& pixels, int width, int height)
     {
-        for (size_t i = 0; i + 2 < pixels.size(); i += 4)
+        if (pixels.empty() || width <= 0 || height <= 0) return true;
+        const int stepX = width / 8;
+        const int stepY = height / 8;
+        if (stepX <= 0 || stepY <= 0) return false;
+        for (int gy = 0; gy < 8; gy++)
+        for (int gx = 0; gx < 8; gx++)
         {
-            if (pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0)
+            int idx = ((gy * stepY) * width + (gx * stepX)) * 4;
+            if (pixels[idx] != 0 || pixels[idx + 1] != 0 || pixels[idx + 2] != 0)
                 return false;
         }
-        return !pixels.empty();
+        return true;
     }
 
     bool EnsureWinRtInitialized()
@@ -277,7 +283,7 @@ namespace
                 MonitorCaptureResult candidate;
                 if (!CopyCaptureFrameToPixels(device, context, frame, candidate))
                     continue;
-                if (IsRgbBlackFrame(candidate.pixels))
+                if (IsRgbBlackFrame(candidate.pixels, candidate.width, candidate.height))
                     continue;
 
                 result = std::move(candidate);
@@ -306,6 +312,8 @@ namespace
         ID3D11Device* device = nullptr;
         ID3D11DeviceContext* context = nullptr;
         IDXGIOutputDuplication* duplication = nullptr;
+        ID3D11Texture2D* stagingTexture = nullptr;
+        D3D11_TEXTURE2D_DESC stagingDesc = {};
         int width = 0;
         int height = 0;
         std::vector<uint8_t> cachedPixels;
@@ -317,6 +325,7 @@ namespace
 
         void Reset()
         {
+            ReleaseIfSet(stagingTexture);
             ReleaseIfSet(duplication);
             ReleaseIfSet(context);
             ReleaseIfSet(device);
@@ -365,6 +374,7 @@ namespace
             output->GetDesc(&outputDesc);
             width = outputDesc.DesktopCoordinates.right - outputDesc.DesktopCoordinates.left;
             height = outputDesc.DesktopCoordinates.bottom - outputDesc.DesktopCoordinates.top;
+            cachedPixels.reserve(static_cast<size_t>(width) * height * 4);
 
             hr = output->QueryInterface(__uuidof(IDXGIOutput1), reinterpret_cast<void**>(&output1));
             if (FAILED(hr))
@@ -392,10 +402,8 @@ namespace
         bool CopyFrameToCache(IDXGIResource* desktopResource)
         {
             ID3D11Texture2D* gpuTexture = nullptr;
-            ID3D11Texture2D* stagingTexture = nullptr;
             D3D11_MAPPED_SUBRESOURCE mapped = {};
             D3D11_TEXTURE2D_DESC desc = {};
-            D3D11_TEXTURE2D_DESC stagingDesc = {};
             std::vector<uint8_t> framePixels;
 
             HRESULT hr = desktopResource->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&gpuTexture));
@@ -404,15 +412,19 @@ namespace
 
             gpuTexture->GetDesc(&desc);
 
-            stagingDesc = desc;
-            stagingDesc.Usage = D3D11_USAGE_STAGING;
-            stagingDesc.BindFlags = 0;
-            stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            stagingDesc.MiscFlags = 0;
+            if (!stagingTexture || stagingDesc.Width != desc.Width || stagingDesc.Height != desc.Height)
+            {
+                ReleaseIfSet(stagingTexture);
+                stagingDesc = desc;
+                stagingDesc.Usage = D3D11_USAGE_STAGING;
+                stagingDesc.BindFlags = 0;
+                stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+                stagingDesc.MiscFlags = 0;
 
-            hr = device->CreateTexture2D(&stagingDesc, nullptr, &stagingTexture);
-            if (FAILED(hr))
-                goto fail;
+                hr = device->CreateTexture2D(&stagingDesc, nullptr, &stagingTexture);
+                if (FAILED(hr))
+                    goto fail;
+            }
 
             context->CopyResource(stagingTexture, gpuTexture);
 
@@ -420,33 +432,30 @@ namespace
             if (FAILED(hr))
                 goto fail;
 
-            framePixels.resize(width * height * 4);
+            framePixels.resize(static_cast<size_t>(width) * height * 4);
             for (int y = 0; y < height; y++)
             {
                 memcpy(
-                    framePixels.data() + y * width * 4,
-                    static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch,
-                    width * 4);
+                    framePixels.data() + static_cast<size_t>(y) * width * 4,
+                    static_cast<uint8_t*>(mapped.pData) + static_cast<size_t>(y) * mapped.RowPitch,
+                    static_cast<size_t>(width) * 4);
             }
 
             context->Unmap(stagingTexture, 0);
             mapped.pData = nullptr;
-            if (IsRgbBlackFrame(framePixels))
+            if (IsRgbBlackFrame(framePixels, width, height))
             {
-                ReleaseIfSet(stagingTexture);
                 ReleaseIfSet(gpuTexture);
                 return false;
             }
 
             cachedPixels = std::move(framePixels);
-            ReleaseIfSet(stagingTexture);
             ReleaseIfSet(gpuTexture);
             return true;
 
         fail:
             if (stagingTexture && mapped.pData)
                 context->Unmap(stagingTexture, 0);
-            ReleaseIfSet(stagingTexture);
             ReleaseIfSet(gpuTexture);
             return false;
         }
@@ -487,7 +496,8 @@ namespace
             if (cachedPixels.empty())
                 return false;
 
-            result.pixels = cachedPixels;
+            result.pixels = std::move(cachedPixels);
+            cachedPixels.clear();
             result.width = width;
             result.height = height;
             return true;
