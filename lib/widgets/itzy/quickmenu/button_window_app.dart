@@ -122,6 +122,7 @@ class _IconWorkerPool {
     return completer.future.whenComplete(timeout.cancel);
   }
 }
+
 // ── Extension-type icon cache (with TTL) ─────────────────────────────────────
 
 class _ExtIconEntry {
@@ -207,6 +208,11 @@ class WindowsAppButton extends StatefulWidget {
   // Per-path cache for files whose icon is file-specific (.exe, .lnk, etc.).
   static final Map<String, Future<ExtractedIcon>> iconFutureCache = <String, Future<ExtractedIcon>>{};
 
+  // Tracks which paths in iconFutureCache have already resolved.
+  // We can't ask a Future if it's complete directly in Dart, so we maintain
+  // this set ourselves inside the .then() callback.
+  static final Set<String> _resolvedPaths = <String>{};
+
   final String path;
   final String? arguments;
   final VoidCallback? onTap;
@@ -231,9 +237,6 @@ class WindowsAppButton extends StatefulWidget {
     }
 
     // ── Extension-type cache (e.g. .mp3, .txt, .pdf …) ──────────────────────
-    // For generic file types the OS always returns the same icon regardless of
-    // the specific file, so we key on the extension instead of the full path.
-    // The cache expires after 15 minutes so a changed default-app is picked up.
     final String? extKey = _ExtIconCache.extensionKey(path);
     if (extKey != null) {
       if (_ExtIconCache.instance.has(extKey)) {
@@ -258,21 +261,30 @@ class WindowsAppButton extends StatefulWidget {
     }
 
     // ── Per-path cache (.exe, .lnk, directories …) ───────────────────────────
+    //
+    // Only evict when over the limit, and only evict entries that have already
+    // resolved. Evicting an in-flight future would leave any widget still
+    // awaiting it hanging forever — the .then() would never fire because the
+    // future object was removed from the cache but the worker still owns it.
     if (iconFutureCache.length > 100) {
-      iconFutureCache.remove(iconFutureCache.keys.first);
+      _evictOneResolvedEntry();
     }
+
     return iconFutureCache.putIfAbsent(
       path,
       () {
-        return _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
+        final Future<ExtractedIcon> future =
+            _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
+          // Mark resolved regardless of outcome so eviction can find this entry.
+          _resolvedPaths.add(path);
           if (result == null) {
-            iconFutureCache.remove(path);
+            // Keep a resolved-null sentinel so we don't re-request on every
+            // rebuild — the widget will just show the placeholder.
             return null;
           }
           if (result is Uint8List) {
             final String hash = crypto.md5.convert(result).toString();
             if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
-              iconFutureCache.remove(path);
               return null;
             }
           }
@@ -280,11 +292,33 @@ class WindowsAppButton extends StatefulWidget {
         }).catchError((Object error, StackTrace stackTrace) {
           Debug.add('Icon extraction failed for $path: $error');
           Debug.add('$stackTrace');
-          iconFutureCache.remove(path);
+          // Mark resolved on error too so the eviction set stays consistent.
+          _resolvedPaths.add(path);
           return null as ExtractedIcon;
         });
+        return future;
       },
     );
+  }
+
+  /// Evict the oldest resolved entry from [iconFutureCache].
+  ///
+  /// We track resolved paths in [_resolvedPaths] (populated inside each
+  /// future's .then/.catchError) so we never have to inspect a Future's
+  /// completion state directly — Dart provides no synchronous API for that.
+  /// Evicting only resolved entries means we never yank a future out from
+  /// under a widget that is still awaiting it.
+  static void _evictOneResolvedEntry() {
+    // iconFutureCache is a LinkedHashMap — keys are in insertion order, so
+    // the first resolved key we find is the oldest one.
+    for (final String key in iconFutureCache.keys.toList()) {
+      if (_resolvedPaths.contains(key)) {
+        iconFutureCache.remove(key);
+        _resolvedPaths.remove(key);
+        return;
+      }
+    }
+    // All entries are still in-flight — nothing safe to evict this cycle.
   }
 
   static int getCacheSize() {
@@ -355,15 +389,20 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
     // Record which path this load is for so we can detect stale results.
     _loadingFor = displayPath;
 
+    // Capture the expected path in a local variable so the closure below
+    // always compares against the path it was started for, not whatever
+    // _loadingFor happens to be when the future resolves.
+    final String expectedPath = displayPath;
+
     WindowsAppButton.getIcon(displayPath).then((ExtractedIcon? result) {
       // Discard the result if the widget is gone or has already moved on to a
-      // different path — this is the core fix for the crash.
-      if (!mounted || _loadingFor != displayPath) return;
+      // different path.
+      if (!mounted || _loadingFor != expectedPath) return;
       setState(() => _icon = result);
     }).catchError((Object error, StackTrace stackTrace) {
       Debug.add('_startLoad error for $displayPath: $error');
       Debug.add('$stackTrace');
-      if (!mounted || _loadingFor != displayPath) return;
+      if (!mounted || _loadingFor != expectedPath) return;
       setState(() => _icon = null);
     });
   }

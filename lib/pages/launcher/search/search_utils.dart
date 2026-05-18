@@ -148,15 +148,19 @@ List<Window> findWindowMatches(String query, {bool includeAllOnEmpty = false}) {
     return windows;
   }
 
+  // Normalise here so callers don't have to — guards against any call site
+  // that passes a mixed-case query and would otherwise get zero matches.
+  final String lowerQuery = query.toLowerCase();
+
   final List<Window> matches = windows.where((Window window) {
     final String title = window.title.toLowerCase();
     final String exe = window.process.exe.toLowerCase();
     final String path = window.process.exePath.toLowerCase();
-    return title.contains(query) || exe.contains(query) || path.contains(query);
+    return title.contains(lowerQuery) || exe.contains(lowerQuery) || path.contains(lowerQuery);
   }).toList();
 
   matches.sort((Window a, Window b) {
-    final int rank = windowMatchRank(a, query).compareTo(windowMatchRank(b, query));
+    final int rank = windowMatchRank(a, lowerQuery).compareTo(windowMatchRank(b, lowerQuery));
     if (rank != 0) return rank;
     return a.title.toLowerCase().compareTo(b.title.toLowerCase());
   });
@@ -374,6 +378,10 @@ void _recursiveSyncAndSearch(
           });
         }
       }
+
+      // Re-check the time limit after the potentially-slow cachePath DB write
+      // so we don't overshoot the 2s budget before reaching the recursion guard.
+      if (stopwatch.elapsedMilliseconds > 2000) return;
 
       if (isDir && (maxDepth == null || currentDepth < maxDepth)) {
         _recursiveSyncAndSearch(

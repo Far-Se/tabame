@@ -10,7 +10,11 @@ class DesktopSearchHandler {
   static void handle(LauncherSearchContext context) {
     context.setSearching(true);
     Timer(const Duration(milliseconds: 150), () async {
-      if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) return;
+      // Guard before the async gap.
+      if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
+        context.setSearching(false);
+        return;
+      }
 
       final String desktopPath = WinUtils.getKnownFolderCLSID(0x0000);
       final List<Map<String, Object?>> desktopSearchFolders = <Map<String, Object?>>[
@@ -35,7 +39,13 @@ class DesktopSearchHandler {
         );
       } catch (_) {}
 
-      if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) return;
+      // Guard after the async gap: the query may have changed or the widget
+      // may have been disposed while compute was running.
+      if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
+        // setSearching is a no-op when isDisposed.
+        context.setSearching(false);
+        return;
+      }
 
       List<LauncherSearchResultItem> results = deserializeFileMatches(serializedMatches);
       results = results.where((LauncherSearchResultItem result) {
@@ -44,6 +54,7 @@ class DesktopSearchHandler {
         return entity.uri.pathSegments.isEmpty || entity.uri.pathSegments.last.toLowerCase() != 'desktop.ini';
       }).toList(growable: false);
 
+      // setResults is a no-op when isDisposed.
       context.setResults(results, isSearching: false, resetSelection: false);
     });
   }

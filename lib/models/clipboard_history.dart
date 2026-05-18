@@ -712,8 +712,9 @@ class ClipboardHistoryStore {
 
   static bool _isDuplicate(ClipboardHistoryEntry next, ClipboardHistoryEntry old) {
     if (next.type != old.type) return false;
-    if (next.type == ClipboardHistoryType.image)
+    if (next.type == ClipboardHistoryType.image) {
       return next.byteLength == old.byteLength && next.imagePath == old.imagePath;
+    }
     return next.text == old.text && next.html == old.html;
   }
 

@@ -130,6 +130,7 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
           whenComplete: () => Globals.audioBoxVisible = false,
         );
       },
+      hoverColor: Theme.of(context).colorScheme.primary,
       onVerticalDragStart: (_) => _dragAccumulator = 0,
       onVerticalDragEnd: (_) => _dragAccumulator = 0,
       onVerticalDragUpdate: _handleVolumeDrag,

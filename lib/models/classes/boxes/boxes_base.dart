@@ -370,10 +370,12 @@ class Boxes {
       shutDownWarningTimer = Timer(Duration(milliseconds: warningDelayMs), () {
         WinUtils.msgBox("Shutting Down", "Your PC will close in 1 minute.\nYou can cancel it from the Quick Menu.",
             speak: "Shutting Down Alert");
+        QuickMenuFunctions.triggerQuickAction('shutdown');
       });
     } else if (millisecondsUntilShutdown > 0 && millisecondsUntilShutdown <= 60000) {
       WinUtils.msgBox("Shutting Down", "Your PC will close in 1 minute.\nYou can cancel it from the Quick Menu.",
           speak: "Shutting Down Alert");
+      QuickMenuFunctions.triggerQuickAction('shutdown');
     }
 
     shutDownTimer = Timer(Duration(milliseconds: millisecondsUntilShutdown), () async {

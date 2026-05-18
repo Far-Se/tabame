@@ -113,6 +113,7 @@ class Launcher extends StatefulWidget {
 class LauncherState extends State<Launcher> with QuickMenuTriggers {
   static const String _launcherAppIconPrefix = 'app_';
   static const String _launcherAppsFolderPrefix = r'shell:AppsFolder\';
+  final LauncherSearchToken _searchToken = LauncherSearchToken();
 
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -350,6 +351,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void dispose() {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     QuickMenuFunctions.removeListener(this);
+    _searchToken.dispose();
 
     userSettings.launcherSearchText = '';
     Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
@@ -870,6 +872,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (!_isActiveSearch(requestId, query)) return;
 
     final LauncherSearchContext context = LauncherSearchContext(
+      token: _searchToken,
       buildContext: this.context,
       requestId: requestId,
       query: query,
@@ -930,42 +933,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       kinds: const <BookmarkResultKind>{BookmarkResultKind.appItem},
     ).map(LauncherSearchResultItem.bookmark).toList();
 
-    List<SearchResultNode> appNodes;
-    if (context.normalizedQuery.isEmpty) {
-      appNodes = FileIndexDb.instance.getTopOpened(
-        limit: maxLauncherMatches,
-        entryTypes: const <SearchResultEntryType>{SearchResultEntryType.app},
-      );
-
-      if (appNodes.length < maxLauncherMatches) {
-        final int? rootId = FileIndexDb.instance.findNode(null, FileIndexDb.launcherAppsRootName);
-        if (rootId != null) {
-          final Set<String> existingAumids = appNodes
-              .map((SearchResultNode node) => node.appUserModelId ?? '')
-              .where((String appUserModelId) => appUserModelId.isNotEmpty)
-              .toSet();
-
-          for (final SearchResultNode node in FileIndexDb.instance.getChildNodes(rootId)) {
-            final String appUserModelId = node.appUserModelId ?? '';
-            if (!node.isApp || appUserModelId.isEmpty || existingAumids.contains(appUserModelId)) continue;
-            appNodes.add(node);
-            existingAumids.add(appUserModelId);
-            if (appNodes.length >= maxLauncherMatches) break;
-          }
-        }
-      }
-    } else {
-      appNodes = FileIndexDb.instance.search(
-        context.normalizedQuery,
-        limit: maxLauncherMatches,
-        entryTypes: const <SearchResultEntryType>{SearchResultEntryType.app},
-      );
-    }
-
-    final List<LauncherSearchResultItem> appResults = deserializeSearchMatches(appNodes);
     context.setResults(<LauncherSearchResultItem>[
       ...bookmarkResults,
-      ...appResults,
     ], isSearching: false);
   }
 

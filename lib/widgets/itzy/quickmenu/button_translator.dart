@@ -36,13 +36,14 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
 
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _languageSearchController = TextEditingController();
+  final TextEditingController _fromSearchController = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
   final GoogleTranslator _translator = GoogleTranslator();
 
   final Map<String, _TranslationResult> _results = <String, _TranslationResult>{};
   List<String> _targetLanguages = <String>[];
   String _fromLanguage = 'auto';
-  bool _settingsMode = false;
+  _PanelView _view = _PanelView.translator;
   bool _translating = false;
   int _requestToken = 0;
   String? _statusMessage;
@@ -53,6 +54,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     _targetLanguages = _loadTargets();
     _fromLanguage = _loadFrom();
     _languageSearchController.addListener(() => setState(() {}));
+    _fromSearchController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _inputFocus.requestFocus();
@@ -64,6 +66,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     _translator.close();
     _inputController.dispose();
     _languageSearchController.dispose();
+    _fromSearchController.dispose();
     _inputFocus.dispose();
     super.dispose();
   }
@@ -100,7 +103,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     }
     if (_targetLanguages.isEmpty) {
       setState(() {
-        _settingsMode = true;
+        _view = _PanelView.targetSettings;
         _statusMessage = "Choose at least one target language.";
       });
       return;
@@ -189,17 +192,44 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     final Color accent = userSettings.themeColors.accentColor;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
+    final String title;
+    final IconData icon;
+    final IconData buttonIcon;
+    final String buttonTooltip;
+    final VoidCallback buttonPressed;
+
+    switch (_view) {
+      case _PanelView.targetSettings:
+        title = "Target Languages";
+        icon = Icons.tune_rounded;
+        buttonIcon = Icons.translate_rounded;
+        buttonTooltip = "Translator";
+        buttonPressed = () => setState(() => _view = _PanelView.translator);
+      case _PanelView.fromSettings:
+        title = "Source Language";
+        icon = Icons.input_rounded;
+        buttonIcon = Icons.translate_rounded;
+        buttonTooltip = "Translator";
+        buttonPressed = () => setState(() => _view = _PanelView.translator);
+      case _PanelView.translator:
+        title = "Translator";
+        icon = Icons.translate_rounded;
+        buttonIcon = Icons.tune_rounded;
+        buttonTooltip = "Target languages";
+        buttonPressed = () => setState(() => _view = _PanelView.targetSettings);
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         PanelHeader(
-          title: _settingsMode ? "Translator Settings" : "Translator",
+          title: title,
           accent: accent,
-          icon: _settingsMode ? Icons.tune_rounded : Icons.translate_rounded,
-          buttonIcon: _settingsMode ? Icons.translate_rounded : Icons.tune_rounded,
-          buttonTooltip: _settingsMode ? "Translator" : "Settings",
-          buttonPressed: () => setState(() => _settingsMode = !_settingsMode),
+          icon: icon,
+          buttonIcon: buttonIcon,
+          buttonTooltip: buttonTooltip,
+          buttonPressed: buttonPressed,
         ),
         if (_translating) LinearProgressIndicator(minHeight: 1.5, color: accent),
         Flexible(
@@ -207,7 +237,11 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
             type: MaterialType.transparency,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 160),
-              child: _settingsMode ? _buildSettings(accent, onSurface) : _buildTranslator(accent, onSurface),
+              child: switch (_view) {
+                _PanelView.translator => _buildTranslator(accent, onSurface),
+                _PanelView.targetSettings => _buildTargetSettings(accent, onSurface),
+                _PanelView.fromSettings => _buildFromSettings(accent, onSurface),
+              },
             ),
           ),
         ),
@@ -240,14 +274,11 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
             ),
           ),
           const SizedBox(height: 10),
-          _FromLanguageRow(
+          _FromSummary(
             fromLanguage: _fromLanguage,
             accent: accent,
             onSurface: onSurface,
-            onChanged: (String code) {
-              setState(() => _fromLanguage = code);
-              unawaited(_saveFrom(code));
-            },
+            onTap: () => setState(() => _view = _PanelView.fromSettings),
           ),
           const SizedBox(height: 8),
           Row(
@@ -257,7 +288,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
                   targetLanguages: _targetLanguages,
                   accent: accent,
                   onSurface: onSurface,
-                  onTap: () => setState(() => _settingsMode = true),
+                  onTap: () => setState(() => _view = _PanelView.targetSettings),
                 ),
               ),
               const SizedBox(width: 8),
@@ -302,7 +333,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     );
   }
 
-  Widget _buildSettings(Color accent, Color onSurface) {
+  Widget _buildTargetSettings(Color accent, Color onSurface) {
     final String query = _languageSearchController.text.trim().toLowerCase();
     final List<MapEntry<String, String>> languages = GoogleTranslator.languages.entries
         .where((MapEntry<String, String> entry) => entry.key != "auto")
@@ -349,9 +380,82 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
                 code: language.key,
                 name: language.value,
                 selected: selected,
+                singleSelect: false,
                 accent: accent,
                 onSurface: onSurface,
                 onTap: () => unawaited(_toggleTarget(language.key)),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFromSettings(Color accent, Color onSurface) {
+    final String query = _fromSearchController.text.trim().toLowerCase();
+
+    // "auto" entry first, then all real languages
+    final List<MapEntry<String, String>> allLanguages = <MapEntry<String, String>>[
+      const MapEntry<String, String>('auto', 'Auto-Detect'),
+      ...GoogleTranslator.languages.entries.where((MapEntry<String, String> e) => e.key != 'auto'),
+    ];
+
+    final List<MapEntry<String, String>> languages = allLanguages
+        .where(
+          (MapEntry<String, String> entry) =>
+              query.isEmpty || entry.key.toLowerCase().contains(query) || entry.value.toLowerCase().contains(query),
+        )
+        .take(81)
+        .toList(growable: false);
+
+    final String selectedLabel = _fromLanguage == 'auto'
+        ? 'Auto-Detect'
+        : (GoogleTranslator.languages[_fromLanguage] ?? _fromLanguage.toUpperCase());
+
+    return Column(
+      key: const ValueKey<String>("fromSettings"),
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: TextField(
+            controller: _fromSearchController,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(
+              hint: "Search languages",
+              icon: Icons.search_rounded,
+              accent: accent,
+              onSurface: onSurface,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: _InfoStrip(
+            message: "Source: $selectedLabel",
+            accent: accent,
+            onSurface: onSurface,
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+            itemCount: languages.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
+            itemBuilder: (BuildContext context, int index) {
+              final MapEntry<String, String> language = languages[index];
+              final bool selected = _fromLanguage == language.key;
+              return _LanguageRow(
+                code: language.key,
+                name: language.value,
+                selected: selected,
+                singleSelect: true,
+                accent: accent,
+                onSurface: onSurface,
+                onTap: () {
+                  setState(() => _fromLanguage = language.key);
+                  unawaited(_saveFrom(language.key));
+                },
               );
             },
           ),
@@ -382,6 +486,8 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     );
   }
 }
+
+enum _PanelView { translator, targetSettings, fromSettings }
 
 class _TranslationResult {
   const _TranslationResult({this.text, this.detectedLanguage, this.error});
@@ -441,81 +547,56 @@ class _TargetSummary extends StatelessWidget {
   }
 }
 
-class _FromLanguageRow extends StatelessWidget {
-  const _FromLanguageRow({
+class _FromSummary extends StatelessWidget {
+  const _FromSummary({
     required this.fromLanguage,
     required this.accent,
     required this.onSurface,
-    required this.onChanged,
+    required this.onTap,
   });
 
   final String fromLanguage;
   final Color accent;
   final Color onSurface;
-  final ValueChanged<String> onChanged;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, String> languages = <String, String>{
-      'auto': 'Auto-Detect',
-      ...GoogleTranslator.languages..remove('auto'),
-    };
-    final String label = languages[fromLanguage] ?? fromLanguage.toUpperCase();
+    final String label = fromLanguage == 'auto'
+        ? 'Auto-Detect'
+        : (GoogleTranslator.languages[fromLanguage] ?? fromLanguage.toUpperCase());
 
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: onSurface.withAlpha(7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: onSurface.withAlpha(16)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Icon(Icons.input_rounded, size: 16, color: accent),
-          const SizedBox(width: 8),
-          Text(
-            "From:",
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: fromLanguage,
-                isDense: true,
-                isExpanded: true,
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
-                icon: Icon(Icons.expand_more_rounded, size: 16, color: accent),
-                items: languages.entries.map((MapEntry<String, String> entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.key,
-                    child: Text(
-                      entry.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? value) {
-                  if (value != null) onChanged(value);
-                },
-                selectedItemBuilder: (_) => languages.entries.map((_) {
-                  return Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
-                    ),
-                  );
-                }).toList(),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: onSurface.withAlpha(7),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: onSurface.withAlpha(16)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.input_rounded, size: 16, color: accent),
+            const SizedBox(width: 8),
+            Text(
+              "From:",
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
               ),
             ),
-          ),
-        ],
+            Icon(Icons.chevron_right_rounded, size: 16, color: accent),
+          ],
+        ),
       ),
     );
   }
@@ -598,6 +679,7 @@ class _LanguageRow extends StatelessWidget {
     required this.code,
     required this.name,
     required this.selected,
+    required this.singleSelect,
     required this.accent,
     required this.onSurface,
     required this.onTap,
@@ -606,12 +688,16 @@ class _LanguageRow extends StatelessWidget {
   final String code;
   final String name;
   final bool selected;
+  final bool singleSelect;
   final Color accent;
   final Color onSurface;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final IconData icon = singleSelect
+        ? (selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded)
+        : (selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -625,7 +711,7 @@ class _LanguageRow extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Icon(
-              selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              icon,
               size: 17,
               color: selected ? accent : onSurface.withAlpha(100),
             ),

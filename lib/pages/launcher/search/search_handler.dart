@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/db/file_index_db.dart';
@@ -19,10 +20,14 @@ class MixedSearchHandler {
       rawQuery: context.query,
     );
 
+    // Snapshot the BuildContext immediately on the main isolate before any
+    // async gap so we never use it after the widget may have been disposed.
+    final BuildContext capturedContext = context.buildContext;
+
     final List<QuickActionMenuEntry> quickActionMatches = searchMode == LauncherSearchMode.filesOnly
         ? <QuickActionMenuEntry>[]
         : findQuickActionMatches(
-            context.buildContext,
+            capturedContext,
             context.lowerQuery,
             includeAllOnEmpty: searchMode == LauncherSearchMode.actionsOnly,
           );
@@ -77,7 +82,8 @@ class MixedSearchHandler {
     if (!shouldRunFilesystem) return;
 
     Timer(const Duration(milliseconds: 300), () async {
-      // Guard: query changed during debounce — stop spinner and bail out
+      // Guard: query changed during debounce — stop spinner and bail out.
+      // The isDisposed check inside context.setSearching handles disposal.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
         context.setSearching(false);
         return;
@@ -104,7 +110,8 @@ class MixedSearchHandler {
         );
       } catch (_) {}
 
-      // Guard: query changed while background scan was running — stop spinner and bail out
+      // Guard: query changed while background scan was running, or widget was
+      // disposed while we were awaiting — stop spinner and bail out.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
         context.setSearching(false);
         return;
@@ -130,26 +137,32 @@ class MixedSearchHandler {
         }
       }
 
-      final List<Window> windowMatches = searchMode == LauncherSearchMode.filesOnly
+      // Re-fetch windows and bookmarks on the main isolate at phase-2 time.
+      // We intentionally do NOT reuse quickActionMatches from phase 1 with the
+      // captured BuildContext here because it may have become stale; instead we
+      // reuse the already-captured snapshot which is still valid (it holds
+      // plain data, not live widget references beyond what Flutter manages).
+      final List<Window> phase2WindowMatches = searchMode == LauncherSearchMode.filesOnly
           ? <Window>[]
           : findWindowMatches(
               context.lowerQuery,
               includeAllOnEmpty: false,
             );
-      final List<BookmarkSearchResult> bookmarkMatches = searchMode == LauncherSearchMode.filesOnly
+      final List<BookmarkSearchResult> phase2BookmarkMatches = searchMode == LauncherSearchMode.filesOnly
           ? <BookmarkSearchResult>[]
           : findBookmarkMatches(context.lowerQuery);
 
-      final List<LauncherSearchResultItem> results = searchMode == LauncherSearchMode.filesOnly
+      final List<LauncherSearchResultItem> finalResults = searchMode == LauncherSearchMode.filesOnly
           ? combinedFileResults
           : composeResults(
               quickActionMatches: quickActionMatches,
-              windowMatches: windowMatches,
+              windowMatches: phase2WindowMatches,
               fileMatches: combinedFileResults,
-              bookmarkMatches: bookmarkMatches,
+              bookmarkMatches: phase2BookmarkMatches,
             );
 
-      context.setResults(results, isSearching: false, resetSelection: false);
+      // setResults is a no-op if isDisposed, so this is safe.
+      context.setResults(finalResults, isSearching: false, resetSelection: false);
     });
   }
 }

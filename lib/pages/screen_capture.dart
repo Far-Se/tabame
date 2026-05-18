@@ -31,6 +31,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart' as intl;
+import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
@@ -1890,6 +1891,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     //   await windowManager.focus();
     //   return;
     // }
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/beep.mp3');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    player.dispose();
     closeMainWindow();
   }
 
