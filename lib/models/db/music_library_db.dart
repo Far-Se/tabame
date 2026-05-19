@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -94,6 +95,7 @@ class MusicLibraryDb {
   static const String folderIdPrefix = 'local:folder:';
 
   Database? _db;
+  Completer<Database>? _dbCompleter;
   String? _manualPath;
   String dbName = 'music_library.db';
 
@@ -109,8 +111,17 @@ class MusicLibraryDb {
 
   Future<Database> get database async {
     if (_db != null) return _db!;
-    _db = _openAndSetupDb(dbPath);
-    return _db!;
+    if (_dbCompleter != null) return _dbCompleter!.future;
+    _dbCompleter = Completer<Database>();
+    try {
+      _db = _openAndSetupDb(dbPath);
+      _dbCompleter!.complete(_db!);
+    } catch (e, stack) {
+      final Completer<Database> failed = _dbCompleter!;
+      _dbCompleter = null;
+      failed.completeError(e, stack);
+    }
+    return _dbCompleter!.future;
   }
 
   Database _openAndSetupDb(String path) {
@@ -572,7 +583,7 @@ class MusicLibraryDb {
       return null;
     }
 
-    for (final String name in const <String>['album', 'cover']) {
+    for (final String name in const <String>['album', 'cover', 'Folder', 'folder']) {
       for (final String extension in const <String>['png', 'jpg', 'jpeg']) {
         final String? path = filesByName['$name.$extension'];
         if (path != null) return path;
@@ -823,6 +834,7 @@ class MusicLibraryDb {
   void close() {
     _db?.close();
     _db = null;
+    _dbCompleter = null;
   }
 
   MusicItem _songFromRow(Row row) {
@@ -906,11 +918,20 @@ class MusicLibraryDb {
       'SELECT id FROM playlist_songs WHERE playlist_id = ? ORDER BY position',
       <Object?>[playlistId],
     );
-    for (int index = 0; index < rows.length; index++) {
-      db.execute(
-        'UPDATE playlist_songs SET position = ? WHERE id = ?',
-        <Object?>[index, rows[index]['id'] as int],
-      );
+    db.execute('BEGIN');
+    try {
+      for (int index = 0; index < rows.length; index++) {
+        db.execute(
+          'UPDATE playlist_songs SET position = ? WHERE id = ?',
+          <Object?>[index, rows[index]['id'] as int],
+        );
+      }
+      db.execute('COMMIT');
+    } catch (e) {
+      try {
+        db.execute('ROLLBACK');
+      } catch (_) {}
+      rethrow;
     }
   }
 }

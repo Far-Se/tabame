@@ -33,7 +33,10 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
   static const String _targetsKey = "translatorTargetLanguages";
   static const String _fromKey = "translatorFromLanguage";
   static const List<String> _defaultTargets = <String>["en", "ro"];
+  static const String _recentFromKey = "translatorRecentFromLanguages";
+  static const int _maxRecentFrom = 5;
 
+  List<String> _recentFromLanguages = <String>[];
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _languageSearchController = TextEditingController();
   final TextEditingController _fromSearchController = TextEditingController();
@@ -51,6 +54,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
   @override
   void initState() {
     super.initState();
+    _recentFromLanguages = _loadRecentFrom();
     _targetLanguages = _loadTargets();
     _fromLanguage = _loadFrom();
     _languageSearchController.addListener(() => setState(() {}));
@@ -69,6 +73,28 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     _fromSearchController.dispose();
     _inputFocus.dispose();
     super.dispose();
+  }
+
+  List<String> _loadRecentFrom() {
+    final List<String>? saved = Boxes.pref.getStringList(_recentFromKey);
+    if (saved == null) return <String>[];
+    return saved.where((String code) => code == 'auto' || GoogleTranslator.languages.containsKey(code)).toList();
+  }
+
+  Future<void> _saveRecentFrom() async {
+    await Boxes.updateSettings(_recentFromKey, _recentFromLanguages);
+  }
+
+  void _addToRecentFrom(String code) {
+    setState(() {
+      _recentFromLanguages
+        ..remove(code)
+        ..insert(0, code);
+      if (_recentFromLanguages.length > _maxRecentFrom) {
+        _recentFromLanguages = _recentFromLanguages.sublist(0, _maxRecentFrom);
+      }
+    });
+    unawaited(_saveRecentFrom());
   }
 
   List<String> _loadTargets() {
@@ -125,10 +151,15 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
 
       await Future.wait(batch.map((String language) async {
         try {
-          final GoogleTranslateResponse response = await _translator.translate(text, from: _fromLanguage, to: language);
+          if (_fromLanguage == language) return;
+          final GoogleTranslateResponse response =
+              await _translator.translate(text, from: _fromLanguage, to: language, raw: true);
           if (!mounted || token != _requestToken) return;
           setState(() {
-            _results[language] = _TranslationResult(text: response.text, detectedLanguage: response.from.language.iso);
+            _results[language] = _TranslationResult(
+              text: response.text,
+              detectedLanguage: _fromLanguage == 'auto' ? response.from.language.iso : null,
+            );
           });
         } catch (error) {
           if (!mounted || token != _requestToken) return;
@@ -416,6 +447,63 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     return Column(
       key: const ValueKey<String>("fromSettings"),
       children: <Widget>[
+        if (_recentFromLanguages.isNotEmpty) ...<Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Text(
+              "Recent",
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: onSurface.withAlpha(110)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 32,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: _recentFromLanguages.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (BuildContext context, int index) {
+                final String code = _recentFromLanguages[index];
+                final String name =
+                    code == 'auto' ? 'Auto-Detect' : (GoogleTranslator.languages[code] ?? code.toUpperCase());
+                final bool selected = _fromLanguage == code;
+                return InkWell(
+                  onTap: () {
+                    _addToRecentFrom(code);
+                    setState(() {
+                      _fromLanguage = code;
+                      _view = _PanelView.translator;
+                      _fromSearchController.clear();
+                    });
+                    unawaited(_saveFrom(code));
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? accent.withAlpha(22) : onSurface.withAlpha(8),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: selected ? accent.withAlpha(80) : onSurface.withAlpha(18),
+                      ),
+                    ),
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? accent : onSurface.withAlpha(160),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: TextField(
@@ -438,26 +526,34 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
           ),
         ),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-            itemCount: languages.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 6),
-            itemBuilder: (BuildContext context, int index) {
-              final MapEntry<String, String> language = languages[index];
-              final bool selected = _fromLanguage == language.key;
-              return _LanguageRow(
-                code: language.key,
-                name: language.value,
-                selected: selected,
-                singleSelect: true,
-                accent: accent,
-                onSurface: onSurface,
-                onTap: () {
-                  setState(() => _fromLanguage = language.key);
-                  unawaited(_saveFrom(language.key));
-                },
-              );
-            },
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+              itemCount: languages.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (BuildContext context, int index) {
+                final MapEntry<String, String> language = languages[index];
+                final bool selected = _fromLanguage == language.key;
+                return _LanguageRow(
+                  code: language.key,
+                  name: language.value,
+                  selected: selected,
+                  singleSelect: true,
+                  accent: accent,
+                  onSurface: onSurface,
+                  onTap: () {
+                    _addToRecentFrom(language.key);
+                    setState(() {
+                      _fromLanguage = language.key;
+                      _view = _PanelView.translator; // Automatically return to the main panel
+                      _fromSearchController.clear();
+                    });
+                    unawaited(_saveFrom(language.key));
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -621,7 +717,6 @@ class _TranslationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String title = GoogleTranslator.languages[code] ?? code.toUpperCase();
     final bool hasError = result.error != null;
-
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -641,7 +736,7 @@ class _TranslationCard extends StatelessWidget {
                 child: Text(
                   result.detectedLanguage == null || result.detectedLanguage!.isEmpty
                       ? title
-                      : "$title · from ${result.detectedLanguage}",
+                      : "$title · from ${GoogleTranslator.languages[result.detectedLanguage] ?? result.detectedLanguage!.toUpperCase()}",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: onSurface.withAlpha(150)),

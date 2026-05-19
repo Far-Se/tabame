@@ -954,7 +954,7 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
       return '${(entry.byteLength / 1024).toStringAsFixed(1)} KB image';
     }
     final String source = entry.text.isNotEmpty ? entry.text : entry.html;
-    return source.replaceAll(RegExp(r'\s+'), ' ').trim().truncate(96, suffix: "...");
+    return source.replaceAll(RegExp(r'\s+'), ' ').trim() + ((entry.textLength ?? 0) > source.length ? '...' : '');
   }
 
   IconData _typeIcon(ClipboardHistoryEntry entry) {

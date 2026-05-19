@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'custom_tooltip.dart';
 
 class ModernDropdownItem<T> {
@@ -21,6 +20,12 @@ class ModernDropdown<T> extends StatelessWidget {
   final String? labelText;
   final Widget? prefixIcon;
   final bool isExpanded;
+  final double height;
+  final double itemHeight;
+
+  // Custom decoration parameters
+  final BoxDecoration? decoration;
+  final ShapeBorder? dropdownMenuEntriesShape;
 
   const ModernDropdown({
     super.key,
@@ -29,7 +34,11 @@ class ModernDropdown<T> extends StatelessWidget {
     required this.onChanged,
     this.labelText,
     this.prefixIcon,
+    this.height = 48,
+    this.itemHeight = 40,
     this.isExpanded = true,
+    this.decoration,
+    this.dropdownMenuEntriesShape,
   });
 
   @override
@@ -40,6 +49,19 @@ class ModernDropdown<T> extends StatelessWidget {
     final ModernDropdownItem<T> selectedItem = items.firstWhere(
       (ModernDropdownItem<T> item) => item.value == value,
       orElse: () => items.first,
+    );
+
+    // Default decoration if none is passed via parameters
+    final BoxDecoration defaultDecoration = BoxDecoration(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: colors.outlineVariant.withAlpha(100)),
+    );
+
+    // Default popup menu border if none is passed via parameters
+    final ShapeBorder defaultMenuShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: colors.outlineVariant.withAlpha(100)),
     );
 
     return Column(
@@ -56,76 +78,69 @@ class ModernDropdown<T> extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        Theme(
-          data: Theme.of(context).copyWith(
-            hoverColor: colors.primary.withAlpha(0),
-            splashColor: colors.primary.withAlpha(0),
-          ),
-          child: CustomTooltip(
-            message: labelText ?? "Select option",
-            child: PopupMenuButton<T>(
-              onSelected: onChanged,
-              tooltip: "",
-              offset: const Offset(0, 0),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: colors.outlineVariant.withAlpha(100)),
-              ),
-              elevation: 8,
-              shadowColor: Colors.black.withAlpha(100),
-              position: PopupMenuPosition.under,
-              itemBuilder: (BuildContext context) => items.map((ModernDropdownItem<T> item) {
-                final bool isSelected = item.value == value;
-                return PopupMenuItem<T>(
-                  value: item.value,
-                  height: 40,
-                  child: Row(
-                    children: <Widget>[
-                      if (item.icon != null) ...<Widget>[
-                        Icon(item.icon, size: 18, color: isSelected ? colors.primary : colors.onSurfaceVariant),
-                        const SizedBox(width: 12),
-                      ],
-                      Text(
-                        item.label,
-                        style: texts.bodyMedium?.copyWith(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? colors.primary : colors.onSurface,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
-                    ],
-                  ),
-                );
-              }).toList(),
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.outlineVariant.withAlpha(100)),
-                ),
+        CustomTooltip(
+          message: labelText ?? "Select option",
+          child: PopupMenuButton<T>(
+            onSelected: onChanged,
+            tooltip: "",
+            offset: const Offset(0, 0),
+            shape: dropdownMenuEntriesShape ?? defaultMenuShape,
+            elevation: 8,
+            borderRadius: BorderRadius.circular(12),
+            shadowColor: Colors.black.withAlpha(100),
+            position: PopupMenuPosition.under,
+            itemBuilder: (BuildContext context) => items.map((ModernDropdownItem<T> item) {
+              final bool isSelected = item.value == value;
+              return PopupMenuItem<T>(
+                value: item.value,
+                height: itemHeight,
                 child: Row(
                   children: <Widget>[
-                    if (prefixIcon != null) ...<Widget>[
-                      prefixIcon!,
+                    if (item.icon != null) ...<Widget>[
+                      Icon(
+                        item.icon,
+                        size: 18,
+                        color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 12),
                     ],
-                    if (selectedItem.icon != null && prefixIcon == null) ...<Widget>[
-                      Icon(selectedItem.icon, size: 18, color: colors.primary),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: Text(
-                        selectedItem.label,
-                        style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      item.label,
+                      style: texts.bodyMedium?.copyWith(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? colors.primary : colors.onSurface,
                       ),
                     ),
-                    Icon(Icons.unfold_more_rounded, size: 18, color: colors.onSurfaceVariant),
+                    const Spacer(),
+                    if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
                   ],
                 ),
+              );
+            }).toList(),
+            child: Container(
+              height: height,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: decoration ?? defaultDecoration,
+              child: Row(
+                mainAxisSize: isExpanded ? MainAxisSize.max : MainAxisSize.min,
+                children: <Widget>[
+                  if (prefixIcon != null) ...<Widget>[
+                    prefixIcon!,
+                    const SizedBox(width: 12),
+                  ],
+                  if (selectedItem.icon != null && prefixIcon == null) ...<Widget>[
+                    Icon(selectedItem.icon, size: 18, color: colors.primary),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Text(
+                      selectedItem.label,
+                      style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.unfold_more_rounded, size: 18, color: colors.onSurfaceVariant),
+                ],
               ),
             ),
           ),

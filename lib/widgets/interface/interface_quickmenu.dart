@@ -222,88 +222,91 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
         ),
 
         // --- Compact Grid ---
-        Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Icon(Icons.search_off_rounded, size: 48, color: onSurface.withValues(alpha: 0.1)),
-                      const SizedBox(height: 16),
-                      Text(
-                        "No settings match your hunt.",
-                        style: TextStyle(color: onSurface.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Try a different keyword or browse the grid.",
-                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.2)),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 5, 20, 40),
-                  child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
-                      final double width = constraints.maxWidth;
-
-                      final int crossAxisCount = switch (width) {
-                        > 1300 => 6,
-                        > 900 => 4,
-                        > 600 => 3,
-                        > 400 => 2,
-                        _ => 1,
-                      };
-
-                      // Aspect ratio adapts so cards don't get too wide/narrow
-                      final double aspectRatio = switch (width) {
-                        > 1300 => 1.4,
-                        > 900 => 1.6,
-                        > 600 => 1.8,
-                        > 400 => 1.95,
-                        _ => 3.2, // single column → wider, shorter cards
-                      };
-
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: aspectRatio,
+        Material(
+          type: MaterialType.transparency,
+          child: Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(Icons.search_off_rounded, size: 48, color: onSurface.withValues(alpha: 0.1)),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No settings match your hunt.",
+                          style: TextStyle(color: onSurface.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
                         ),
-                        itemCount: filtered.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final _SettingsPage page = filtered[index];
-                          return TweenAnimationBuilder<double>(
-                            duration: Duration(milliseconds: 300 + (index * 40)),
-                            curve: Curves.easeOutQuart,
-                            tween: Tween<double>(begin: 0.0, end: 1.0),
-                            builder: (BuildContext context, double value, Widget? child) {
-                              return Opacity(
-                                opacity: value,
-                                child: Transform.translate(
-                                  offset: Offset(0, 15 * (1 - value)),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: _NavigationTile(
-                              page: page,
-                              onTap: () {
-                                final int realIndex = _pages.indexOf(page);
-                                setState(() => _selectedPage = realIndex);
+                        const SizedBox(height: 4),
+                        Text(
+                          "Try a different keyword or browse the grid.",
+                          style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.2)),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 5, 20, 40),
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        final double width = constraints.maxWidth;
+
+                        final int crossAxisCount = switch (width) {
+                          > 1300 => 6,
+                          > 900 => 4,
+                          > 600 => 3,
+                          > 400 => 2,
+                          _ => 1,
+                        };
+
+                        // Aspect ratio adapts so cards don't get too wide/narrow
+                        final double aspectRatio = switch (width) {
+                          > 1300 => 1.4,
+                          > 900 => 1.6,
+                          > 600 => 1.8,
+                          > 400 => 1.95,
+                          _ => 3.2, // single column → wider, shorter cards
+                        };
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: aspectRatio,
+                          ),
+                          itemCount: filtered.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final _SettingsPage page = filtered[index];
+                            return TweenAnimationBuilder<double>(
+                              duration: Duration(milliseconds: 300 + (index * 40)),
+                              curve: Curves.easeOutQuart,
+                              tween: Tween<double>(begin: 0.0, end: 1.0),
+                              builder: (BuildContext context, double value, Widget? child) {
+                                return Opacity(
+                                  opacity: value,
+                                  child: Transform.translate(
+                                    offset: Offset(0, 15 * (1 - value)),
+                                    child: child,
+                                  ),
+                                );
                               },
-                            ),
-                          );
-                        },
-                      );
-                    },
+                              child: _NavigationTile(
+                                page: page,
+                                onTap: () {
+                                  final int realIndex = _pages.indexOf(page);
+                                  setState(() => _selectedPage = realIndex);
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
+          ),
         ),
       ],
     );

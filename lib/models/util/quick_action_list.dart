@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
+import '../../pages/subscriptions/subscription_panel.dart';
 import '../../widgets/itzy/quickmenu/button_always_awake.dart';
 import '../../widgets/itzy/quickmenu/button_app_audio.dart';
 import '../../widgets/itzy/quickmenu/button_apps.dart';
@@ -95,6 +96,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     name: "CliBookButton",
     icon: Icons.note_alt_outlined,
     widget: () => const CliBookButton(),
+  ),
+  "SubscriptionButton": QuickAction(
+    name: "SubscriptionButton",
+    icon: Icons.subscriptions_outlined,
+    widget: () => const SubscriptionPanelButton(),
   ),
   "EmojiButton": QuickAction(
     name: "EmojiButton",

@@ -47,8 +47,8 @@ class MusicArtworkCache {
     final String smallPath = p.join(cacheDirectory.path, '$hash-$smallSize.jpg');
     final String largePath = p.join(cacheDirectory.path, '$hash-$largeSize.jpg');
 
-    _writeThumbnail(decoded, smallPath, smallSize);
-    _writeThumbnail(decoded, largePath, largeSize);
+    await _writeThumbnail(decoded, smallPath, smallSize);
+    await _writeThumbnail(decoded, largePath, largeSize);
 
     final MusicArtworkRecord record = MusicArtworkRecord(
       artworkHash: hash,
@@ -126,7 +126,7 @@ class MusicArtworkCache {
     }
   }
 
-  static void _writeThumbnail(img.Image decoded, String targetPath, int size) {
+  static Future<void> _writeThumbnail(img.Image decoded, String targetPath, int size) async {
     final File target = File(targetPath);
     if (target.existsSync()) return;
 
@@ -135,7 +135,7 @@ class MusicArtworkCache {
       size: size,
       interpolation: img.Interpolation.average,
     );
-    target.writeAsBytesSync(img.encodeJpg(thumbnail, quality: jpegQuality), flush: false);
+    await target.writeAsBytes(img.encodeJpg(thumbnail, quality: jpegQuality), flush: false);
   }
 }
 

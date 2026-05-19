@@ -143,12 +143,27 @@ class MusicServerManager {
       final List<dynamic>? rawIds = decoded['songIds'] as List<dynamic>?;
       if (rawIds == null || rawIds.isEmpty) return false;
 
-      final List<MusicItem> restored = <MusicItem>[];
-      for (final dynamic rawId in rawIds) {
-        final String songId = rawId.toString();
-        final MusicItem? item = await getSongDetails(songId);
-        if (item != null && item.streamUrl != null) restored.add(item);
+      // Fast path: restore directly from the saved snapshot without network/DB round-trips.
+      final List<dynamic>? snapshot = decoded['snapshot'] as List<dynamic>?;
+      List<MusicItem> restored = <MusicItem>[];
+      if (snapshot != null && snapshot.length == rawIds.length) {
+        for (final dynamic raw in snapshot) {
+          if (raw is Map<String, dynamic>) {
+            final MusicItem item = MusicItem.fromMap(raw);
+            if (item.streamUrl != null) restored.add(item);
+          }
+        }
       }
+
+      // Slow path fallback: fetch each song individually (e.g. snapshot missing or corrupt).
+      if (restored.isEmpty) {
+        for (final dynamic rawId in rawIds) {
+          final String songId = rawId.toString();
+          final MusicItem? item = await getSongDetails(songId);
+          if (item != null && item.streamUrl != null) restored.add(item);
+        }
+      }
+
       if (restored.isEmpty) return false;
 
       final int initialIndex = decoded['currentIndex'] is int ? decoded['currentIndex'] as int : 0;
@@ -894,8 +909,7 @@ class MusicServerManager {
   }
 
   static bool _durationNeedsRefresh(dynamic raw) {
-    if (raw == null) return false;
-    return _durationFromSeconds(raw) == null;
+    return raw == null || _durationFromSeconds(raw) == null;
   }
 
   static Duration? _durationFromSeconds(dynamic raw, {Duration maxDuration = _maxSongDuration}) {
@@ -916,7 +930,7 @@ class MusicServerManager {
 
   static String createSalt() {
     const String chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final Random rnd = Random();
+    final Random rnd = Random.secure();
     return String.fromCharCodes(Iterable<int>.generate(6, (int _) => chars.codeUnitAt(rnd.nextInt(chars.length))));
   }
 

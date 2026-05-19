@@ -135,49 +135,62 @@ class MusicLocalIndexer {
     if (!await scope.exists()) return const MusicIndexResult(indexedCount: 0, skippedCount: 0);
 
     final String indexToken = DateTime.now().microsecondsSinceEpoch.toString();
-    final Database database = await _db.database;
     int indexed = 0;
     int skipped = 0;
 
+    // Phase 1: collect all metadata outside any transaction so that
+    // artwork DB writes (upsertArtworkRecord) on the same connection
+    // don't execute inside an open transaction.
+    final List<LocalMusicMetadata> collected = <LocalMusicMetadata>[];
+    await for (final FileSystemEntity entity in scope.list(recursive: true, followLinks: false)) {
+      if (entity is! File || !isSupportedAudioFile(entity.path)) continue;
+
+      File fileToProcess = entity;
+      final String oldPath = fileToProcess.path;
+      final String dir = p.dirname(oldPath);
+      final String base = p.basename(oldPath);
+      final String ext = p.extension(oldPath);
+      final String name = p.basenameWithoutExtension(oldPath);
+
+      final String sanitizedName = MusicLibraryDb.sanitize(name);
+      final String newBase = '$sanitizedName$ext';
+
+      if (base != newBase) {
+        final String newPath = p.join(dir, newBase);
+        try {
+          if (!File(newPath).existsSync()) {
+            fileToProcess = await fileToProcess.rename(newPath);
+          } else {
+            debugPrint('MusicLocalIndexer: rename skipped, destination already exists: $newPath');
+          }
+        } catch (e) {
+          debugPrint('MusicLocalIndexer: rename failed for $oldPath: $e');
+        }
+      }
+
+      try {
+        final LocalMusicMetadata metadata = await _metadataReader.read(fileToProcess, rootPath: rootPath);
+        collected.add(metadata);
+      } catch (e) {
+        skipped++;
+        debugPrint('MusicLocalIndexer: skipped ${fileToProcess.path}: $e');
+      }
+    }
+
+    // Phase 2: write all collected metadata in a single transaction.
+    final Database database = await _db.database;
     database.execute('BEGIN TRANSACTION');
     try {
-      await for (final FileSystemEntity entity in scope.list(recursive: true, followLinks: false)) {
-        if (entity is! File || !isSupportedAudioFile(entity.path)) continue;
-
-        File fileToProcess = entity;
-        final String oldPath = fileToProcess.path;
-        final String dir = p.dirname(oldPath);
-        final String base = p.basename(oldPath);
-        final String ext = p.extension(oldPath);
-        final String name = p.basenameWithoutExtension(oldPath);
-
-        final String sanitizedName = MusicLibraryDb.sanitize(name);
-        final String newBase = '$sanitizedName$ext';
-
-        if (base != newBase) {
-          final String newPath = p.join(dir, newBase);
-          try {
-            if (!File(newPath).existsSync()) {
-              fileToProcess = await fileToProcess.rename(newPath);
-            } else {
-              debugPrint('MusicLocalIndexer: rename skipped, destination already exists: $newPath');
-            }
-          } catch (e) {
-            debugPrint('MusicLocalIndexer: rename failed for $oldPath: $e');
-          }
-        }
-
+      for (final LocalMusicMetadata metadata in collected) {
         try {
-          final LocalMusicMetadata metadata = await _metadataReader.read(fileToProcess, rootPath: rootPath);
           await _db.upsertSong(metadata, indexToken);
           indexed++;
           indexedCount.value++;
         } catch (e) {
           skipped++;
-          debugPrint('MusicLocalIndexer: skipped ${fileToProcess.path}: $e');
+          debugPrint('MusicLocalIndexer: upsert failed for ${metadata.path}: $e');
         }
       }
-
       await _db.deleteSongsNotIndexedInScope(rootPath: rootPath, scopePath: scopePath, indexToken: indexToken);
       database.execute('COMMIT');
     } catch (e) {

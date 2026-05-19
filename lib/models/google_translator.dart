@@ -354,17 +354,18 @@ class GoogleTranslator {
 
     bool languageDidYouMean = false;
     String languageIso = '';
-    if (body is List && body.length > 8 && body[8] is List && body[8].isNotEmpty && body[8][0] is List) {
-      final String? detected = body.length > 2 ? body[2]?.toString() : '';
-      final String suggested = body[8][0][0]?.toString() ?? '';
-      if (detected == suggested) {
-        languageIso = detected!;
-      } else {
-        languageDidYouMean = true;
-        languageIso = suggested;
-      }
-    } else if (body is List && body.length > 2 && body[2] != null) {
+    if (body is List && body.length > 2 && body[2] != null) {
       languageIso = body[2].toString();
+    }
+
+    // body[8] is Google's "did you mean this language?" suggestion — only flag it,
+    // don't replace the detected language with it
+    if (body is List && body.length > 8 && body[8] is List && body[8].isNotEmpty && body[8][0] is List) {
+      final String suggested = body[8][0][0]?.toString() ?? '';
+      if (suggested.isNotEmpty && suggested != languageIso) {
+        languageDidYouMean = true;
+        // Do NOT override languageIso here
+      }
     }
 
     String correctedText = '';

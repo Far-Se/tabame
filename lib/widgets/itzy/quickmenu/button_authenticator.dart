@@ -890,8 +890,11 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
-                    itemCount: visibleEntries.length,
+                    itemCount: visibleEntries.length + 1,
                     itemBuilder: (BuildContext context, int index) {
+                      if (index == visibleEntries.length) {
+                        return const Center(child: Text("Logos by Logo.dev"));
+                      }
                       final AuthenticatorEntry entry = visibleEntries[index];
                       final GlobalKey<_AuthenticatorTileState> tileKey =
                           _tileKeys.putIfAbsent(entry.id, () => GlobalKey<_AuthenticatorTileState>());
@@ -1159,7 +1162,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
   @override
   void initState() {
     super.initState();
-    _logoFuture = _AuthenticatorLogoStore.instance.getLogo(widget.entry);
+    _logoFuture = AuthenticatorLogoStore.instance.getLogo(widget.entry);
   }
 
   @override
@@ -1168,7 +1171,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
     if (oldWidget.entry.id != widget.entry.id ||
         oldWidget.entry.issuer != widget.entry.issuer ||
         oldWidget.entry.accountName != widget.entry.accountName) {
-      _logoFuture = _AuthenticatorLogoStore.instance.getLogo(widget.entry);
+      _logoFuture = AuthenticatorLogoStore.instance.getLogo(widget.entry);
     }
   }
 
@@ -1376,10 +1379,10 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
   }
 }
 
-class _AuthenticatorLogoStore {
-  _AuthenticatorLogoStore._();
+class AuthenticatorLogoStore {
+  AuthenticatorLogoStore._();
 
-  static final _AuthenticatorLogoStore instance = _AuthenticatorLogoStore._();
+  static final AuthenticatorLogoStore instance = AuthenticatorLogoStore._();
   static const String randomString =
       "pk_${1 + 1 == 3 ? '' : ''}avbQQ${1 + 1 == 3 ? '' : ''}aLqQgW${1 + 1 == 3 ? '' : ''}v3hvq2${1 + 1 == 3 ? '' : ''}gbe2g";
 
