@@ -1083,7 +1083,7 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     final List<Map<String, dynamic>> hotkeys = <Map<String, dynamic>>[];
     for (final ScreenDrawHotkeyBinding binding in Boxes.screenDrawHotkeys) {
       if (!binding.enabled || !binding.isScreenDraw) continue;
-      final int? keyVk = keyMap["VK_${binding.key.toUpperCase()}"];
+      final int? keyVk = Hotkeys.keyToVirtualKey(binding.key);
       if (keyVk == null) continue;
       hotkeys.add(<String, dynamic>{
         "name": binding.actionId,

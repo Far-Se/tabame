@@ -15,6 +15,7 @@ import 'pages/photo_editor.dart';
 import 'pages/root_app.dart';
 import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
+import 'pages/screen_recording.dart';
 import 'pages/spotlight.dart';
 import 'widgets/widgets/focus_fix.dart';
 
@@ -30,6 +31,7 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);
   if (arguments.contains("-screenCapture")) return startScreenCapture();
+  if (arguments.contains("-screenRecording")) return startScreenRecordingPage();
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);

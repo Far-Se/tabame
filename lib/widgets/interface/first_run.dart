@@ -831,7 +831,7 @@ class FirstRunState extends State<FirstRun> {
     if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
     _restoreCurrentSpecialBinding();
 
-    hotkey = k.logicalKey.keyLabel;
+    hotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
     modifiers = Hotkeys.normalizeModifiers(modifier);
     FocusScope.of(context).unfocus();
     listeningToHotkey = false;

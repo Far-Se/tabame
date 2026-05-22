@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
@@ -41,6 +42,33 @@ class Hotkeys {
     doubleAltKey: "Double Alt",
     rightAltKey: "Right Alt",
     rightControlKey: "Right Control",
+  };
+  static const Map<String, String> namedKeyAliases = <String, String>{
+    ' ': 'SPACE',
+    'SPACEBAR': 'SPACE',
+    'ESC': 'ESCAPE',
+    'ENTER': 'RETURN',
+    'BACKSPACE': 'BACK',
+    'DEL': 'DELETE',
+    'PAGEUP': 'PRIOR',
+    'PAGEDOWN': 'NEXT',
+  };
+  static const Map<String, String> namedKeyDisplayLabels = <String, String>{
+    'SPACE': 'Space',
+    'ESCAPE': 'Escape',
+    'RETURN': 'Enter',
+    'BACK': 'Backspace',
+    'PRIOR': 'Page Up',
+    'NEXT': 'Page Down',
+    'LEFT': 'Left',
+    'RIGHT': 'Right',
+    'UP': 'Up',
+    'DOWN': 'Down',
+    'INSERT': 'Insert',
+    'DELETE': 'Delete',
+    'HOME': 'Home',
+    'END': 'End',
+    'TAB': 'Tab',
   };
 
   String key;
@@ -78,9 +106,42 @@ class Hotkeys {
     return orderedModifiers;
   }
 
+  static String normalizeKeyName(String key) {
+    if (key.isEmpty) return '';
+    final String trimmed = key.trim();
+    if (key == ' ' || trimmed.isEmpty) return 'SPACE';
+
+    final String normalized = trimmed.toUpperCase();
+    return namedKeyAliases[normalized] ?? normalized;
+  }
+
+  static String keyFromLogicalKey(LogicalKeyboardKey logicalKey) {
+    if (logicalKey == LogicalKeyboardKey.space) return 'SPACE';
+    if (logicalKey == LogicalKeyboardKey.enter || logicalKey == LogicalKeyboardKey.numpadEnter) return 'RETURN';
+    if (logicalKey == LogicalKeyboardKey.escape) return 'ESCAPE';
+    if (logicalKey == LogicalKeyboardKey.backspace) return 'BACK';
+    if (logicalKey == LogicalKeyboardKey.delete) return 'DELETE';
+    if (logicalKey == LogicalKeyboardKey.insert) return 'INSERT';
+    if (logicalKey == LogicalKeyboardKey.home) return 'HOME';
+    if (logicalKey == LogicalKeyboardKey.end) return 'END';
+    if (logicalKey == LogicalKeyboardKey.pageUp) return 'PRIOR';
+    if (logicalKey == LogicalKeyboardKey.pageDown) return 'NEXT';
+    if (logicalKey == LogicalKeyboardKey.arrowLeft) return 'LEFT';
+    if (logicalKey == LogicalKeyboardKey.arrowRight) return 'RIGHT';
+    if (logicalKey == LogicalKeyboardKey.arrowUp) return 'UP';
+    if (logicalKey == LogicalKeyboardKey.arrowDown) return 'DOWN';
+    if (logicalKey == LogicalKeyboardKey.tab) return 'TAB';
+    return normalizeKeyName(logicalKey.keyLabel);
+  }
+
+  static int? keyToVirtualKey(String key) {
+    final String normalized = normalizeKeyName(key);
+    return keyMap['VK_$normalized'];
+  }
+
   static String formatHotkey({required String key, Iterable<String> modifiers = const <String>[]}) {
     final List<String> normalizedModifiers = normalizeModifiers(modifiers);
-    final String normalizedKey = key.toUpperCase();
+    final String normalizedKey = normalizeKeyName(key);
 
     if (normalizedModifiers.isNotEmpty) return '${normalizedModifiers.join('+')}+$normalizedKey';
     if (normalizedKey.isNotEmpty) return normalizedKey;
@@ -89,12 +150,21 @@ class Hotkeys {
 
   static bool isSpecialBindingKey(String key) => specialBindingKeys.contains(key);
 
-  static String displayKey(String key) => specialBindingLabels[key] ?? key;
+  static String displayKey(String key) {
+    if (specialBindingLabels.containsKey(key)) return specialBindingLabels[key]!;
+
+    final String normalizedKey = normalizeKeyName(key);
+    return namedKeyDisplayLabels[normalizedKey] ?? normalizedKey;
+  }
 
   static String formatHotkeyLabel({required String key, Iterable<String> modifiers = const <String>[]}) {
     final List<String> normalizedModifiers = normalizeModifiers(modifiers);
-    if (normalizedModifiers.isEmpty && isSpecialBindingKey(key)) return displayKey(key);
-    return formatHotkey(key: key, modifiers: normalizedModifiers);
+    final String displayKeyLabel = displayKey(key);
+
+    if (normalizedModifiers.isEmpty && isSpecialBindingKey(key)) return displayKeyLabel;
+    if (normalizedModifiers.isNotEmpty) return '${normalizedModifiers.join('+')}+$displayKeyLabel';
+    if (displayKeyLabel.isNotEmpty) return displayKeyLabel;
+    return "NoKey";
   }
 
   // --------------------------------------------------------------------------
@@ -661,6 +731,14 @@ class HotKeyInfo {
         Win32.closeWindow(windowHwnd);
       } else {
         WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw");
+      }
+    },
+    "OpenScreenRecording": () {
+      final int windowHwnd = Win32.findWindow("Tabame Screen Recording");
+      if (windowHwnd != 0) {
+        Win32.closeWindow(windowHwnd);
+      } else {
+        WinUtils.startTabame(closeCurrent: false, arguments: "-screenRecording");
       }
     },
     "OpenSpotlight": () {

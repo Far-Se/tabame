@@ -1207,11 +1207,10 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
 
       if (_isModifier(event.logicalKey)) return KeyEventResult.handled;
 
-      final String keyLabel = event.logicalKey.keyLabel;
       final List<String> modifiers = Hotkeys.normalizeModifiers(_pressedModifiers);
       final ScreenDrawHotkeyBinding updated = ScreenDrawHotkeyBinding(
         actionId: _binding.actionId,
-        key: keyLabel,
+        key: Hotkeys.keyFromLogicalKey(event.logicalKey),
         modifiers: modifiers,
         enabled: _binding.enabled,
       );

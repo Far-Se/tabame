@@ -316,6 +316,17 @@ namespace
         }
     }
 
+    std::wstring NormalizePressedKeyName(DWORD vkCode, std::wstring keyName)
+    {
+        if (vkCode == VK_SPACE)
+            return L"SPACE";
+
+        if (keyName == L"SPACEBAR")
+            return L"SPACE";
+
+        return keyName;
+    }
+
     bool ActiveHotkeyUsesWindowsKey()
     {
         const Hotkey *activeHotkey = GetActiveHotkey();
@@ -881,6 +892,7 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
         std::transform(keyName.begin(), keyName.end(), keyName.begin(),
                        [](wchar_t c) -> wchar_t
                        { return static_cast<wchar_t>(::toupper(c)); });
+        keyName = NormalizePressedKeyName(keyInfo.vkCode, std::move(keyName));
 
         pressedHotkey.append(keyName);
 

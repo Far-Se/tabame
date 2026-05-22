@@ -77,8 +77,7 @@ class HotkeyHandler {
   // ── Action: pressedKbd ────────────────────────────────────────────────────
 
   void _handleKbdPress(HotkeyEvent event, Hotkeys hotkey) {
-    final int vk =
-        keyMap.containsKey('VK_${hotkey.key.toUpperCase()}') ? keyMap['VK_${hotkey.key.toUpperCase()}']! : -1;
+    final int vk = Hotkeys.keyToVirtualKey(hotkey.key) ?? -1;
     if (vk == -1) return;
     _currentVK = vk;
 

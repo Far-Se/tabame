@@ -9,3 +9,6 @@ Ignore this file, it's for me to remember things.
 - Button Fancyshot screenshots sa listeze capturile pe luna.
 - Launcher: Change Theme Mode doenst update text color.
 - Image Converter: Watch out folders and convert them from format X to Y.
+- Hotkey: add space too, like ctrl+space.
+- Launcher: window focus de la Window Search nu focuseaza cu adevarat, ramane pe tabame. Fa refetch continuu.
+- Double press fix.

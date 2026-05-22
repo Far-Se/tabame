@@ -24,8 +24,7 @@ class HotkeyHandler {
     //* Keyboard listen to release
     if (hotkeyInfo.action == "pressedKbd") {
       //
-      final int key =
-          keyMap.containsKey("VK_${hotkey.key.toUpperCase()}") ? keyMap["VK_${hotkey.key.toUpperCase()}"]! : -1;
+      final int key = Hotkeys.keyToVirtualKey(hotkey.key) ?? -1;
       if (key == -1) return;
       currentVK = key;
 

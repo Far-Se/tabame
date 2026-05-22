@@ -26,9 +26,10 @@ class WinHotkeys {
         allHotkeys.add(<String, dynamic>{
           "name": hotkey.name,
           "hotkey": hotkeys.hotkey.toUpperCase(),
-          "keyVK": keyMap.containsKey("VK_${hotkeys.key.toUpperCase()}") ? keyMap["VK_${hotkeys.key.toUpperCase()}"] : -1,
+          "keyVK": Hotkeys.keyToVirtualKey(hotkeys.key) ?? -1,
           "modifisers": hotkeys.modifiers.isNotEmpty ? hotkeys.modifiers.join('+').toUpperCase() : "noModifiers",
-          "listenToMovement": hotkeys.keymaps.any((KeyMap e) => e.triggerType == TriggerType.movement && e.triggerInfo[2] == -1),
+          "listenToMovement":
+              hotkeys.keymaps.any((KeyMap e) => e.triggerType == TriggerType.movement && e.triggerInfo[2] == -1),
           "matchWindowBy": hotkey.windowsInfo[0] == "any" ? "" : hotkey.windowsInfo[0],
           "matchWindowText": hotkey.windowsInfo[1],
           "activateWindowUnderCursor": hotkey.windowUnderMouse,

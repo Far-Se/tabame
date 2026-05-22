@@ -41,6 +41,7 @@
 #pragma comment(lib, "ole32")
 #pragma comment(lib, "shell32")
 #include "audio.cpp"
+#include "screen_recording.cpp"
 
 // ---------------------------------------------------------------------------
 // Method channel (shared with sub-modules)
@@ -182,6 +183,28 @@ EMap MonitorCaptureToMap(const MonitorCaptureResult &capture) {
   m[EVal("width")] = EVal(capture.width);
   m[EVal("height")] = EVal(capture.height);
   m[EVal("length")] = EVal(static_cast<int>(capture.pixels.size()));
+  return m;
+}
+
+EMap ScreenRecordingStatusToMap(const ScreenRecordingStatus &status) {
+  EMap m;
+  m[EVal("isRecording")] = EVal(status.isRecording);
+  m[EVal("outputPath")] = EVal(status.outputPath);
+  m[EVal("audioMode")] = EVal(status.audioMode);
+  m[EVal("elapsedMs")] = EVal(static_cast<int64_t>(status.elapsedMs));
+  m[EVal("frameCount")] = EVal(status.frameCount);
+  m[EVal("droppedFrames")] = EVal(status.droppedFrames);
+  m[EVal("width")] = EVal(status.width);
+  m[EVal("height")] = EVal(status.height);
+  return m;
+}
+
+EMap ScreenRecordingStopResultToMap(const ScreenRecordingStopResult &result) {
+  EMap m;
+  m[EVal("success")] = EVal(result.success);
+  m[EVal("filePath")] = EVal(result.filePath);
+  m[EVal("durationMs")] = EVal(static_cast<int64_t>(result.durationMs));
+  m[EVal("frameCount")] = EVal(result.frameCount);
   return m;
 }
 
@@ -1053,6 +1076,82 @@ void IncludeWindowFromCaptureH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, IncludeWindowFromCapture(hwnd));
 }
 
+void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
+                           MethodResult result) {
+  auto &a = Args::Map(call);
+  screen_recording::Config config;
+  const std::string targetType = Args::Str(a, "targetType");
+  if (targetType == "monitor") {
+    config.targetType = screen_recording::TargetType::Monitor;
+  } else if (targetType == "window") {
+    config.targetType = screen_recording::TargetType::Window;
+  } else {
+    config.targetType = screen_recording::TargetType::Region;
+  }
+
+  config.region.left = a.count(EVal("regionLeft")) ? Args::Int(a, "regionLeft") : 0;
+  config.region.top = a.count(EVal("regionTop")) ? Args::Int(a, "regionTop") : 0;
+  config.region.right =
+      config.region.left + (a.count(EVal("regionWidth")) ? Args::Int(a, "regionWidth") : 0);
+  config.region.bottom =
+      config.region.top + (a.count(EVal("regionHeight")) ? Args::Int(a, "regionHeight") : 0);
+  config.monitorHandle =
+      a.count(EVal("monitorHandle")) ? Args::Int64(a, "monitorHandle") : 0;
+  config.hWnd = a.count(EVal("hWnd")) ? Args::Int64(a, "hWnd") : 0;
+  config.outputPath = Encoding::Utf8ToWide(Args::Str(a, "outputPath"));
+  config.frameRate = a.count(EVal("frameRate")) ? Args::Int(a, "frameRate") : 30;
+  config.videoBitrateMbps =
+      a.count(EVal("videoBitrateMbps")) ? Args::Int(a, "videoBitrateMbps") : 12;
+  config.captureCursor =
+      !a.count(EVal("captureCursor")) || Args::Bool(a, "captureCursor");
+  config.captureBorder =
+      a.count(EVal("captureBorder")) && Args::Bool(a, "captureBorder");
+  config.audioMode =
+      a.count(EVal("audioMode")) ? Args::Str(a, "audioMode") : "none";
+  if (a.count(EVal("micDeviceId")))
+    config.micDeviceId = Encoding::Utf8ToWide(Args::Str(a, "micDeviceId"));
+  if (a.count(EVal("systemAudioDeviceId")))
+    config.systemAudioDeviceId =
+        Encoding::Utf8ToWide(Args::Str(a, "systemAudioDeviceId"));
+
+  std::string errorCode;
+  std::string errorMessage;
+  if (!StartScreenRecording(config, errorCode, errorMessage)) {
+    result->Error(errorCode, errorMessage);
+    return;
+  }
+  OK(result, EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
+}
+
+void StopScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+                          MethodResult result) {
+  ScreenRecordingStopResult stopResult;
+  std::string errorCode;
+  std::string errorMessage;
+  if (!StopScreenRecording(stopResult, errorCode, errorMessage)) {
+    result->Error(errorCode, errorMessage);
+    return;
+  }
+  OK(result, EVal(Encode::ScreenRecordingStopResultToMap(stopResult)));
+}
+
+void CancelScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+                            MethodResult result) {
+  std::string errorCode;
+  std::string errorMessage;
+  if (!CancelScreenRecording(errorCode, errorMessage)) {
+    result->Error(errorCode, errorMessage);
+    return;
+  }
+  OK(result, true);
+}
+
+void GetScreenRecordingStatusH(Tabamewin32Plugin *, const MethodCall &,
+                               MethodResult result) {
+  OK(result,
+     EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
+}
+
 // ===== Changed Folders =====
 void GetChangedFoldersH(Tabamewin32Plugin *, const MethodCall &,
                         MethodResult result) {
@@ -1317,6 +1416,10 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
        Handlers::CaptureMonitorBitmapAlternativeH},
       {"excludeWindowFromCapture", Handlers::ExcludeWindowFromCaptureH},
       {"includeWindowFromCapture", Handlers::IncludeWindowFromCaptureH},
+      {"startScreenRecording", Handlers::StartScreenRecordingH},
+      {"stopScreenRecording", Handlers::StopScreenRecordingH},
+      {"cancelScreenRecording", Handlers::CancelScreenRecordingH},
+      {"getScreenRecordingStatus", Handlers::GetScreenRecordingStatusH},
       {"getChangedFolders", Handlers::GetChangedFoldersH},
       {"addFoldersToWatchlist", Handlers::AddFoldersToWatchlistH},
       {"removeFoldersFromWatchlist", Handlers::RemoveFoldersFromWatchlistH},
@@ -1397,6 +1500,7 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     Gdiplus::GdiplusShutdown(gdiplusToken);
   if (quickClickController_)
     quickClickController_->Stop();
+  ShutdownScreenRecording();
   ShutdownTaskbarUia();
 }
 

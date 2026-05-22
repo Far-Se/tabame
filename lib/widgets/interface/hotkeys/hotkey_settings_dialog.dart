@@ -78,8 +78,6 @@ class HotKeySettingsState extends State<HotKeySettings> {
   KeyEventResult _handleHotkeyKeyEvent(FocusNode node, KeyEvent event) {
     if (!listeningToHotkey) return KeyEventResult.ignored;
 
-    final String keyLabel = event.logicalKey.keyLabel;
-
     setState(() {
       _pressedModifiers.clear();
       if (HardwareKeyboard.instance.isControlPressed) _pressedModifiers.add("CTRL");
@@ -108,11 +106,12 @@ class HotKeySettingsState extends State<HotKeySettings> {
       }
 
       // Finalize capture
+      final String keyName = Hotkeys.keyFromLogicalKey(event.logicalKey);
       setState(() {
         hotkey.modifiers = Hotkeys.normalizeModifiers(_pressedModifiers.toList());
-        hotkey.key = keyLabel;
+        hotkey.key = keyName;
         listeningToHotkey = false;
-        _conflictMessage = _getConflictMessage(keyLabel, _pressedModifiers.toList());
+        _conflictMessage = _getConflictMessage(keyName, _pressedModifiers.toList());
         _updateSpecialBindings();
       });
       FocusScope.of(context).unfocus();

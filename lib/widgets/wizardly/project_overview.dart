@@ -1074,7 +1074,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 **${result!.files.length.decimal}** files found with **${result!.totalLines.decimal}** lines in total, of these, **${result!.totalCode.decimal}** are code lines, **${result!.totalNonCode.decimal}** are non-code lines, **${result!.totalComments.decimal}** are comments, and **${result!.totalEmpty.decimal}** are empty lines.
 
 There is a total of **${result!.totalChars.decimal}** characters.
-*That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70 chars each), **${((result!.totalChars / 250).floor()).decimal} pages** or **${(result!.totalChars / 250 / 400).toStringAsFixed(1)} books**!*
+That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70 chars each), **${((result!.totalChars / 250).floor()).decimal} pages** or **${(result!.totalChars / 250 / 400).toStringAsFixed(1)} books**!
 ''',
         styleSheet: MarkdownStyleSheet(
           h3: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),

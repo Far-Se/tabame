@@ -48,6 +48,11 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE
   d3d11
   dxgi
   windowsapp
+  mf
+  mfplat
+  mfreadwrite
+  mfuuid
+  evr
   pdh
   wbemuuid
   shlwapi

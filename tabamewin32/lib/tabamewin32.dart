@@ -515,6 +515,161 @@ class MonitorCapture {
   }
 }
 
+enum ScreenRecordingTargetType {
+  region,
+  monitor,
+  window,
+}
+
+enum ScreenRecordingAudioMode {
+  none,
+  system,
+  mic,
+  systemAndMic,
+}
+
+extension on ScreenRecordingTargetType {
+  String get wireName {
+    switch (this) {
+      case ScreenRecordingTargetType.region:
+        return 'region';
+      case ScreenRecordingTargetType.monitor:
+        return 'monitor';
+      case ScreenRecordingTargetType.window:
+        return 'window';
+    }
+  }
+}
+
+extension on ScreenRecordingAudioMode {
+  String get wireName {
+    switch (this) {
+      case ScreenRecordingAudioMode.none:
+        return 'none';
+      case ScreenRecordingAudioMode.system:
+        return 'system';
+      case ScreenRecordingAudioMode.mic:
+        return 'mic';
+      case ScreenRecordingAudioMode.systemAndMic:
+        return 'systemAndMic';
+    }
+  }
+}
+
+class ScreenRecordingConfig {
+  const ScreenRecordingConfig({
+    required this.targetType,
+    required this.outputPath,
+    this.regionLeft,
+    this.regionTop,
+    this.regionWidth,
+    this.regionHeight,
+    this.monitorHandle,
+    this.hWnd,
+    this.frameRate = 30,
+    this.videoBitrateMbps = 12,
+    this.captureCursor = true,
+    this.captureBorder = false,
+    this.audioMode = ScreenRecordingAudioMode.none,
+    this.micDeviceId,
+    this.systemAudioDeviceId,
+  });
+
+  final ScreenRecordingTargetType targetType;
+  final String outputPath;
+  final int? regionLeft;
+  final int? regionTop;
+  final int? regionWidth;
+  final int? regionHeight;
+  final int? monitorHandle;
+  final int? hWnd;
+  final int frameRate;
+  final int videoBitrateMbps;
+  final bool captureCursor;
+  final bool captureBorder;
+  final ScreenRecordingAudioMode audioMode;
+  final String? micDeviceId;
+  final String? systemAudioDeviceId;
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'targetType': targetType.wireName,
+        'outputPath': outputPath,
+        'regionLeft': regionLeft,
+        'regionTop': regionTop,
+        'regionWidth': regionWidth,
+        'regionHeight': regionHeight,
+        'monitorHandle': monitorHandle,
+        'hWnd': hWnd,
+        'frameRate': frameRate,
+        'videoBitrateMbps': videoBitrateMbps,
+        'captureCursor': captureCursor,
+        'captureBorder': captureBorder,
+        'audioMode': audioMode.wireName,
+        'micDeviceId': micDeviceId,
+        'systemAudioDeviceId': systemAudioDeviceId,
+        'recordingFormat': 'mp4',
+        'encoder': 'h264',
+      }..removeWhere((Object key, Object? value) => value == null);
+}
+
+class ScreenRecordingStatus {
+  const ScreenRecordingStatus({
+    required this.isRecording,
+    required this.outputPath,
+    required this.audioMode,
+    required this.elapsedMs,
+    required this.frameCount,
+    required this.droppedFrames,
+    required this.width,
+    required this.height,
+  });
+
+  final bool isRecording;
+  final String outputPath;
+  final String audioMode;
+  final int elapsedMs;
+  final int frameCount;
+  final int droppedFrames;
+  final int width;
+  final int height;
+
+  factory ScreenRecordingStatus.fromMap(Map<dynamic, dynamic> map) {
+    return ScreenRecordingStatus(
+      isRecording: map['isRecording'] as bool? ?? false,
+      outputPath: map['outputPath'] as String? ?? '',
+      audioMode: map['audioMode'] as String? ?? 'none',
+      elapsedMs: (map['elapsedMs'] as num?)?.toInt() ?? 0,
+      frameCount: (map['frameCount'] as num?)?.toInt() ?? 0,
+      droppedFrames: (map['droppedFrames'] as num?)?.toInt() ?? 0,
+      width: (map['width'] as num?)?.toInt() ?? 0,
+      height: (map['height'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ScreenRecordingStopResult {
+  const ScreenRecordingStopResult({
+    required this.success,
+    required this.filePath,
+    required this.durationMs,
+    required this.frameCount,
+  });
+
+  final bool success;
+  final String filePath;
+  final int durationMs;
+  final int frameCount;
+
+  factory ScreenRecordingStopResult.fromMap(Map<dynamic, dynamic> map) {
+    return ScreenRecordingStopResult(
+      success: map['success'] as bool? ?? false,
+      filePath: map['filePath'] as String? ?? '',
+      durationMs: (map['durationMs'] as num?)?.toInt() ?? 0,
+      frameCount: (map['frameCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class SystemStatsInfo {
   const SystemStatsInfo({
     required this.cpuUsage,
@@ -616,6 +771,31 @@ Future<MonitorCapture?> captureMonitor({int monitorIndex = 0}) async {
   );
   if (result == null) return null;
   return MonitorCapture._fromMap(result);
+}
+
+Future<ScreenRecordingStatus> startScreenRecording(ScreenRecordingConfig config) async {
+  final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
+    'startScreenRecording',
+    config.toMap(),
+  );
+  return ScreenRecordingStatus.fromMap(result ?? const <String, dynamic>{});
+}
+
+Future<ScreenRecordingStopResult> stopScreenRecording() async {
+  final Map<dynamic, dynamic>? result =
+      await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>('stopScreenRecording');
+  return ScreenRecordingStopResult.fromMap(result ?? const <String, dynamic>{});
+}
+
+Future<bool> cancelScreenRecording() async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('cancelScreenRecording');
+  return result ?? false;
+}
+
+Future<ScreenRecordingStatus> getScreenRecordingStatus() async {
+  final Map<dynamic, dynamic>? result =
+      await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>('getScreenRecordingStatus');
+  return ScreenRecordingStatus.fromMap(result ?? const <String, dynamic>{});
 }
 
 Future<MonitorCapture?> captureMonitorBitmapAlternative({required int monitorHandle}) async {
