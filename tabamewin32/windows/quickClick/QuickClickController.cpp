@@ -74,15 +74,6 @@ void QuickClickController::MovementThreadProc() {
   while (running_) {
     if (active_.load() && (moveUp_ || moveDown_ || moveLeft_ || moveRight_)) {
       int dx = 0, dy = 0;
-      if (moveUp_)
-        dy -= config_.nudgeAmount;
-      if (moveDown_)
-        dy += config_.nudgeAmount;
-      if (moveLeft_)
-        dx -= config_.nudgeAmount;
-      if (moveRight_)
-        dx += config_.nudgeAmount;
-
       int multiplier = 1;
       bool shiftIsHeld = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
@@ -92,18 +83,25 @@ void QuickClickController::MovementThreadProc() {
           shiftWasHeld = true;
         }
 
-        auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            now - lastShiftReset)
-                            .count();
-
-        if (duration >= 1000) {
-          multiplier = 8;
-        } else {
-          multiplier = 5;
-        }
+        if (moveUp_)
+          dy -= config_.shiftNudgeAmount;
+        if (moveDown_)
+          dy += config_.shiftNudgeAmount;
+        if (moveLeft_)
+          dx -= config_.shiftNudgeAmount;
+        if (moveRight_)
+          dx += config_.shiftNudgeAmount;
       } else {
         shiftWasHeld = false;
+
+        if (moveUp_)
+          dy -= config_.nudgeAmount;
+        if (moveDown_)
+          dy += config_.nudgeAmount;
+        if (moveLeft_)
+          dx -= config_.nudgeAmount;
+        if (moveRight_)
+          dx += config_.nudgeAmount;
       }
 
       if (dx != 0 || dy != 0) {

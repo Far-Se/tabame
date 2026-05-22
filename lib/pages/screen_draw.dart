@@ -33,6 +33,7 @@ import '../models/win32/win_utils.dart';
 import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import '../widgets/widgets/emoji_picker_modal.dart';
+import 'color_picker/win32_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -1376,6 +1377,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
             Positioned.fill(
               child: _CrosshairLayer(
                 onHover: null,
+                justTheMouse: <DrawTool>[
+                  DrawTool.magnifier,
+                  DrawTool.screenCapture,
+                  DrawTool.imageDraw,
+                  DrawTool.smartDelete,
+                ].contains(ctrl.activeTool),
                 toolbarRect: Rect.fromLTWH(
                   toolbarLeft,
                   toolbarTop,
@@ -2320,6 +2327,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     );
     await ScreenDrawCapture.copyRegionToClipboard(screenRect);
     await WindowManager.instance.focus();
+    await Win32Helper.playBeepSound();
   }
 }
 
@@ -2332,7 +2340,12 @@ class _CrosshairLayer extends StatefulWidget {
 
   /// Widget-local rect of the toolbar — cursor shows as arrow inside it.
   final Rect toolbarRect;
-  const _CrosshairLayer({this.onHover, required this.toolbarRect});
+  final bool justTheMouse;
+  const _CrosshairLayer({
+    this.onHover,
+    required this.toolbarRect,
+    required this.justTheMouse,
+  });
   @override
   State<_CrosshairLayer> createState() => _CrosshairLayerState();
 }
@@ -2354,9 +2367,11 @@ class _CrosshairLayerState extends State<_CrosshairLayer> {
       },
       child: IgnorePointer(
         ignoring: true,
-        child: CustomPaint(
-          painter: _CrosshairPainter(_overToolbar ? null : _cursor),
-        ),
+        child: widget.justTheMouse
+            ? const SizedBox.shrink()
+            : CustomPaint(
+                painter: _CrosshairPainter(_overToolbar ? null : _cursor),
+              ),
       ),
     );
   }

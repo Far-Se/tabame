@@ -639,6 +639,10 @@ class HotKeySettingsState extends State<HotKeySettings> {
         return "Forward thumb button (Mouse Button 5).";
       case Hotkeys.doubleAltKey:
         return "Tap Alt once, then press again within 100ms.";
+      case Hotkeys.rightAltKey:
+        return "Press the Right Alt key to trigger this action.";
+      case Hotkeys.rightControlKey:
+        return "Press the Right Control key to trigger this action.";
       default:
         return "Custom hardware trigger for this remapping.";
     }

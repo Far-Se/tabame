@@ -222,29 +222,29 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
         ),
 
         // --- Compact Grid ---
-        Material(
-          type: MaterialType.transparency,
-          child: Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(Icons.search_off_rounded, size: 48, color: onSurface.withValues(alpha: 0.1)),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No settings match your hunt.",
-                          style: TextStyle(color: onSurface.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Try a different keyword or browse the grid.",
-                          style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.2)),
-                        ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(Icons.search_off_rounded, size: 48, color: onSurface.withValues(alpha: 0.1)),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No settings match your hunt.",
+                        style: TextStyle(color: onSurface.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Try a different keyword or browse the grid.",
+                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.2)),
+                      ),
+                    ],
+                  ),
+                )
+              : Material(
+                  type: MaterialType.transparency,
+                  child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(20, 5, 20, 40),
                     child: LayoutBuilder(
@@ -306,7 +306,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                       },
                     ),
                   ),
-          ),
+                ),
         ),
       ],
     );

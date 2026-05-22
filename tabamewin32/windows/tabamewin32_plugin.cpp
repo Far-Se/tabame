@@ -39,6 +39,7 @@
 #include "virtdesktop.cpp"
 #pragma warning(pop)
 #pragma comment(lib, "ole32")
+#pragma comment(lib, "shell32")
 #include "audio.cpp"
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "hotkeys.cpp"
 #include "media_session.cpp"
 #include "quickClick/QuickClickController.cpp"
+#include "shellContextMenu/ShellContextMenu.cpp"
 #include "shell_utils.cpp"
 #include "system_utils.cpp"
 #include "taskbar_uia.cpp"
@@ -233,6 +235,8 @@ QuickClickConfig MapToQuickClickConfig(const EMap &m) {
   }
   if (m.count(EVal("nudgeAmount")))
     config.nudgeAmount = Args::Int(m, "nudgeAmount");
+  if (m.count(EVal("shiftNudgeAmount")))
+    config.shiftNudgeAmount = Args::Int(m, "shiftNudgeAmount");
   if (m.count(EVal("doubleClickThresholdMs")))
     config.doubleClickThresholdMs = Args::Int(m, "doubleClickThresholdMs");
 
@@ -1186,6 +1190,44 @@ void DisableQuickClickH(Tabamewin32Plugin *self, const MethodCall &,
   OK(result, true);
 }
 
+void GetShellMenuItemsH(Tabamewin32Plugin *, const MethodCall &call,
+                        MethodResult result) {
+  auto &a = Args::Map(call);
+  auto path = Encoding::Utf8ToWide(Args::Str(a, "path"));
+  auto items = ShellContextMenu::GetMenuItems(path);
+  flutter::EncodableList list;
+  list.reserve(items.size());
+  for (const auto &item : items) {
+    EMap m;
+    m[EVal("id")] = EVal(item.id);
+    m[EVal("label")] = EVal(Encoding::WideToUtf8(item.label));
+    m[EVal("verb")] = EVal(Encoding::WideToUtf8(item.verb));
+    m[EVal("enabled")] = EVal(item.enabled);
+    if (item.hIcon) {
+      m[EVal("iconBytes")] = EVal(Encode::IconToBytes(item.hIcon));
+      if (item.hIcon && item.ownsIcon) {
+        DestroyIcon(item.hIcon);
+      }
+    } else {
+      m[EVal("iconBytes")] = EVal();
+    }
+    list.emplace_back(EVal(m));
+  }
+  OK(result, EVal(list));
+}
+
+void InvokeShellMenuItemH(Tabamewin32Plugin *, const MethodCall &call,
+                          MethodResult result) {
+  auto &a = Args::Map(call);
+  auto path = Encoding::Utf8ToWide(Args::Str(a, "path"));
+  auto verb = Encoding::Utf8ToWide(Args::Str(a, "verb"));
+  int id = Args::Int(a, "id");
+  int hWndInt = Args::Int(a, "hWnd");
+
+  HWND hWnd = reinterpret_cast<HWND>(static_cast<intptr_t>(hWndInt));
+  OK(result, ShellContextMenu::Invoke(path, verb, id, hWnd));
+}
+
 } // namespace Handlers
 
 // -----------------------------------------------------------------------
@@ -1299,6 +1341,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"setQuickClickHotkeys", Handlers::SetQuickClickHotkeysH},
       {"enableQuickClick", Handlers::EnableQuickClickH},
       {"disableQuickClick", Handlers::DisableQuickClickH},
+      {"getShellMenuItems", Handlers::GetShellMenuItemsH},
+      {"invokeShellMenuItem", Handlers::InvokeShellMenuItemH},
   };
   return table;
 }

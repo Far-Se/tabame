@@ -19,6 +19,7 @@ struct QuickClickConfig {
                                     'y', 'u', 'i', 'o'};
 
   int nudgeAmount = 5; // Base speed
+  int shiftNudgeAmount = 25;
   int doubleClickThresholdMs = 400;
 
   std::map<std::string, std::vector<int>> extraArrowBindings = {

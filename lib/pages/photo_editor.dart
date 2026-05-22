@@ -550,6 +550,43 @@ class EditorController extends ChangeNotifier {
     final double snapped = (angle / (pi / 4)).round() * (pi / 4);
     return Offset(start.dx + cos(snapped) * len, start.dy + sin(snapped) * len);
   }
+
+  // Public hit test proxy for hover/scroll evaluation
+  bool hitTestShapeForResize(EditorShape shape, Offset pos) {
+    return _hitTest(shape, pos);
+  }
+
+  // Allows updating element sizes interactively (e.g., text font sizes, strokes, or region box scales)
+  void updateShapeSizeAtIndex(int index, double newSize) {
+    if (index < 0 || index >= _shapes.length) return;
+    final EditorShape s = _shapes[index];
+
+    if (s.tool == EditorTool.text || s.tool == EditorTool.infoBalloon || s.tool == EditorTool.emoji) {
+      _shapes[index] = s.copyWith(fontSize: newSize);
+    } else {
+      // If drawing lines/shapes/boxes, resize their layout path presentation thickness
+      _shapes[index] = EditorShape(
+        id: s.id,
+        tool: s.tool,
+        points: s.points,
+        color: s.color,
+        strokeWidth: (newSize / 8).clamp(1.0, 30.0), // map size factor seamlessly down to scale
+        opacity: s.opacity,
+        selected: s.selected,
+        text: s.text,
+        textBackground: s.textBackground,
+        textColor: s.textColor,
+        fontSize: s.fontSize,
+        fontFamily: s.fontFamily,
+        stepNumber: s.stepNumber,
+        imageBytes: s.imageBytes,
+        imageW: s.imageW,
+        imageH: s.imageH,
+        fillColor: s.fillColor,
+      );
+    }
+    notifyListeners();
+  }
 }
 
 Rect _fitImageRect(Size viewportSize, ui.Image? image, {Rect? override}) {
@@ -614,6 +651,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   double _zoomFactor = 1.0;
   final ScrollController _verticalScrollCtrl = ScrollController();
   final ScrollController _horizontalScrollCtrl = ScrollController();
+  Offset? _middleMouseStart;
 
   void _zoomIn() {
     setState(() {
@@ -928,15 +966,81 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                         return Listener(
                                           onPointerSignal: (PointerSignalEvent event) {
                                             if (event is PointerScrollEvent) {
+                                              final bool ctrlHeld = HardwareKeyboard.instance.isControlPressed;
+
+                                              // 2. Ctrl + Scroll Wheel to Zoom In / Zoom Out
+                                              if (ctrlHeld) {
+                                                if (event.scrollDelta.dy < 0) {
+                                                  _zoomIn();
+                                                } else if (event.scrollDelta.dy > 0) {
+                                                  _zoomOut();
+                                                }
+                                                return; // Absorb event to prevent standard list scrolling
+                                              }
+
+                                              // 3. Select Mode Element Resize via Hover Scroll
+                                              if (_selectMode || _ctrl.activeTool == EditorTool.select) {
+                                                final Offset? imagePos = _viewToImage(event.localPosition, canvasSize);
+                                                if (imagePos != null) {
+                                                  // Iterate backwards to hit test the top-most elements first
+                                                  for (int i = _ctrl.shapes.length - 1; i >= 0; i--) {
+                                                    // Check if mouse is hovering over this element
+                                                    if (_ctrl.hitTestShapeForResize(_ctrl.shapes[i], imagePos)) {
+                                                      setState(() {
+                                                        final EditorShape shape = _ctrl.shapes[i];
+                                                        // Determine baseline dimension size
+                                                        final double currentSize =
+                                                            shape.fontSize ?? (shape.strokeWidth * 8 + 12);
+                                                        final double delta = event.scrollDelta.dy < 0 ? 2.0 : -2.0;
+                                                        final double newSize = (currentSize + delta).clamp(8.0, 200.0);
+
+                                                        _ctrl.updateShapeSizeAtIndex(i, newSize);
+                                                      });
+                                                      return; // Size adjustment complete
+                                                    }
+                                                  }
+                                                }
+                                              }
+
+                                              // Fallback: Default workspace scrolling
                                               final bool altHeld = HardwareKeyboard.instance.isAltPressed;
                                               final ScrollController target =
                                                   altHeld ? _horizontalScrollCtrl : _verticalScrollCtrl;
-                                              final double delta =
-                                                  altHeld ? event.scrollDelta.dy : event.scrollDelta.dy;
+                                              final double delta = event.scrollDelta.dy;
                                               final double newOffset =
                                                   (target.offset + delta).clamp(0.0, target.position.maxScrollExtent);
                                               target.jumpTo(newOffset);
                                             }
+                                          },
+                                          onPointerDown: (PointerDownEvent event) {
+                                            // 1. Detect Middle Mouse Button down click
+                                            if (event.buttons == kMiddleMouseButton) {
+                                              _middleMouseStart = event.position;
+                                            }
+                                          },
+                                          onPointerMove: (PointerMoveEvent event) {
+                                            // 1. Process active panning when dragging with Middle Mouse Button held
+                                            if (_middleMouseStart != null) {
+                                              final Offset delta = event.position - _middleMouseStart!;
+                                              _middleMouseStart = event.position; // Track relative continuous delta
+
+                                              if (_verticalScrollCtrl.hasClients) {
+                                                _verticalScrollCtrl.jumpTo(
+                                                  (_verticalScrollCtrl.offset - delta.dy)
+                                                      .clamp(0.0, _verticalScrollCtrl.position.maxScrollExtent),
+                                                );
+                                              }
+                                              if (_horizontalScrollCtrl.hasClients) {
+                                                _horizontalScrollCtrl.jumpTo(
+                                                  (_horizontalScrollCtrl.offset - delta.dx)
+                                                      .clamp(0.0, _horizontalScrollCtrl.position.maxScrollExtent),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          onPointerUp: (PointerUpEvent event) {
+                                            // 1. Release middle mouse pan tracking
+                                            _middleMouseStart = null;
                                           },
                                           child: Scrollbar(
                                             controller: _verticalScrollCtrl,
@@ -967,11 +1071,20 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                                                   ))
                                                             : GestureDetector(
                                                                 behavior: HitTestBehavior.translucent,
-                                                                onPanStart: (DragStartDetails details) =>
-                                                                    _onPanStart(details, canvasSize),
-                                                                onPanUpdate: (DragUpdateDetails details) =>
-                                                                    _onPanUpdate(details, canvasSize),
-                                                                onPanEnd: _onPanEnd,
+                                                                onPanStart: (DragStartDetails details) {
+                                                                  if (_middleMouseStart != null)
+                                                                    return; // Ignore drag if panning instead
+                                                                  _onPanStart(details, canvasSize);
+                                                                },
+                                                                onPanUpdate: (DragUpdateDetails details) {
+                                                                  if (_middleMouseStart != null)
+                                                                    return; // Ignore drag if panning instead
+                                                                  _onPanUpdate(details, canvasSize);
+                                                                },
+                                                                onPanEnd: (DragEndDetails details) {
+                                                                  if (_middleMouseStart != null) return;
+                                                                  _onPanEnd(details);
+                                                                },
                                                                 onTapDown: (TapDownDetails details) =>
                                                                     _onTapDown(details, canvasSize),
                                                                 onSecondaryTapDown: (TapDownDetails details) {

@@ -46,6 +46,8 @@ enum QuickMenuDesigns {
 
 enum LightSwitchMode { off, fixed, sunrise }
 
+final ThemeColors theme = userSettings.themeColors;
+
 class Settings {
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;

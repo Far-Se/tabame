@@ -104,6 +104,14 @@ class Globals {
     quickMenuSearchInputVersion.value++;
   }
 
+  static void setLauncherPretext(String actionName) {
+    final String normalized = actionName.trim();
+    if (normalized.isEmpty) return;
+    _pendingLauncherQuickAction = normalized;
+    _pendingQuickMenuSearchInput = "$normalized";
+    quickMenuSearchInputVersion.value++;
+  }
+
   static String takeQuickMenuSearchInput() {
     final String value = _pendingQuickMenuSearchInput;
     _pendingQuickMenuSearchInput = "";

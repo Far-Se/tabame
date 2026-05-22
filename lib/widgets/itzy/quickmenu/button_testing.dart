@@ -50,32 +50,27 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!.buffer.asUint8List()) : const Icon(Icons.science),
       onTap: () async {
-        // final SystemStatsInfo stats = await getSystemStats();
-        final List<AppInfo> apps = await AppEnumeration.getAllApps();
-        // print(stats);
-        // print(apps);
-        // print("---");
-        app = apps[Random().nextInt(apps.length)];
-        // app = apps.firstWhereIndexedOrNull((int i, AppInfo e) => e.name.contains("Counter"));
-        if (app == null) return;
-        print(app);
-        print(app!.appUserModelId.hashCode.toString());
-        xIcon = null;
-        final AppIconData? icon = await AppEnumeration.getAppIcon(app!.parsingName);
-        if (icon != null) {
-          ui.decodeImageFromPixels(
-            icon.pixels,
-            icon.width,
-            icon.height,
-            ui.PixelFormat.bgra8888,
-            (ui.Image img) async {
-              xIcon = await img.toByteData(format: ui.ImageByteFormat.png);
-            },
-          );
+        const String path = 'C:\\Windows\\System32\\notepad.exe';
+        print("Querying context menu items for $path...");
+        try {
+          final List<ShellMenuItem> items = await ShellContextMenu.getMenuItems(path);
+          print("Found ${items.length} items:");
+          for (final ShellMenuItem item in items) {
+            print(
+                "  - ID: ${item.id}, Label: ${item.label}, Verb: ${item.verb}, Enabled: ${item.enabled}, Icon bytes size: ${item.iconBytes?.length}");
+          }
+          if (items.isNotEmpty) {
+            final ShellMenuItem openItem = items.firstWhere(
+              (ShellMenuItem e) => e.verb == 'open' || e.label.toLowerCase().contains('open'),
+              orElse: () => items.first,
+            );
+            print("Invoking: ${openItem.label} (Verb: ${openItem.verb}, ID: ${openItem.id})");
+            final bool success = await ShellContextMenu.invoke(path, Win32.hWnd, verb: openItem.verb, id: openItem.id);
+            print("Invoke success: $success");
+          }
+        } catch (e) {
+          print("Error testing context menu: $e");
         }
-        // save icon to file
-
-        setState(() {});
         return;
         final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
 

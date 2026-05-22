@@ -191,6 +191,7 @@ class WinUtils {
 
   // Startup, desktop, and taskbar helpers
   static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
+    if  (kDebugMode)  return;
     exePath ??= Platform.resolvedExecutable;
     setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
@@ -1644,6 +1645,24 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     } else {
       disableClickThrough(targetHwnd);
     }
+  }
+
+  static void minimizeWindow(int hwnd) {
+    ShowWindow(hwnd, SW_MINIMIZE);
+  }
+
+  /// Maximizes the window if not maximized,
+  /// otherwise restores it.
+  static void maximizeOrRestoreWindow(int hwnd) {
+    if (IsZoomed(hwnd) != 0) {
+      // Window is maximized -> restore
+      ShowWindow(hwnd, SW_RESTORE);
+    } else {
+      // Window is normal/minimized -> maximize
+      ShowWindow(hwnd, SW_MAXIMIZE);
+    }
+
+    SetForegroundWindow(hwnd);
   }
 }
 

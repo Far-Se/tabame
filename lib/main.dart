@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
 import 'logic/app_startup.dart';
+import 'logic/error_handler.dart';
 import 'models/globals.dart';
 import 'pages/color_picker/color_picker.dart';
 import 'pages/msgbox.dart';
@@ -23,6 +24,9 @@ Future<void> main(List<String> arguments) async {
   // return startSpotlight();
 
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+  // FlutterError.onError = handleErrors;
+  // PlatformDispatcher.instance.onError = handlePlatformErrors;
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);
   if (arguments.contains("-screenCapture")) return startScreenCapture();

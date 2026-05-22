@@ -711,9 +711,11 @@ class _HotkeyCardState extends State<_HotkeyCard> {
       child: Icon(
         widget.keymap.key.startsWith("MouseButton")
             ? Icons.mouse_rounded
-            : widget.keymap.key == Hotkeys.doubleAltKey
+            : (widget.keymap.key == Hotkeys.doubleAltKey || widget.keymap.key == Hotkeys.rightAltKey)
                 ? Icons.keyboard_option_key_rounded
-                : Icons.keyboard_rounded,
+                : (widget.keymap.key == Hotkeys.rightControlKey)
+                    ? Icons.keyboard_control_key_rounded
+                    : Icons.keyboard_rounded,
         color: widget.colors.onPrimaryContainer,
         size: 20,
       ),
@@ -884,10 +886,12 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
         } catch (_) {
           return "Click";
         }
-      case ActionType.openQuickMenupage:
+      case ActionType.openQuickMenuPage:
         return "Open: ${a.value}";
       case ActionType.wait:
         return "Wait: ${a.value}ms";
+      case ActionType.openLauncherWithPrefix:
+        return "Launcher: ${a.value}";
       // ignore: unreachable_switch_default
       default:
         return a.type.name.splitAndUpcase;
@@ -1556,14 +1560,31 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
         ),
         _buildSettingRow(
           "Nudge Amount",
-          "Pixels to move when using arrow keys",
-          child: CustomTextInput(
-            value: _config.nudgeAmount.toString(),
-            labelText: "",
-            onChanged: (String val) {
-              setState(() =>
-                  _updateConfig(QuickClickConfig.fromMap(_config.toMap()..['nudgeAmount'] = int.tryParse(val) ?? 3)));
-            },
+          "Pixels to move when using arrow keys / Shift + arrow keys",
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: CustomTextInput(
+                  value: _config.nudgeAmount.toString(),
+                  labelText: "Normal",
+                  onChanged: (String val) {
+                    setState(() => _updateConfig(
+                        QuickClickConfig.fromMap(_config.toMap()..['nudgeAmount'] = int.tryParse(val) ?? 3)));
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: CustomTextInput(
+                  value: _config.shiftNudgeAmount.toString(),
+                  labelText: "Shift",
+                  onChanged: (String val) {
+                    setState(() => _updateConfig(
+                        QuickClickConfig.fromMap(_config.toMap()..['shiftNudgeAmount'] = int.tryParse(val) ?? 25)));
+                  },
+                ),
+              ),
+            ],
           ),
         ),
 

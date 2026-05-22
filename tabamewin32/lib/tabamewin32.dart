@@ -1464,6 +1464,7 @@ class QuickClickConfig {
   final String horizontalKeys;
   final String verticalKeys;
   final int nudgeAmount;
+  final int shiftNudgeAmount;
   final int doubleClickThresholdMs;
   final Map<String, List<int>> extraArrowBindings;
   final int leftClickKey;
@@ -1485,6 +1486,7 @@ class QuickClickConfig {
     this.horizontalKeys = '123456789',
     this.verticalKeys = 'qwertyuio',
     this.nudgeAmount = 5,
+    this.shiftNudgeAmount = 25,
     this.doubleClickThresholdMs = 400,
     this.extraArrowBindings = const <String, List<int>>{},
     this.leftClickKey = 0x11, // VK_CONTROL
@@ -1508,6 +1510,7 @@ class QuickClickConfig {
       'horizontalKeys': horizontalKeys,
       'verticalKeys': verticalKeys,
       'nudgeAmount': nudgeAmount,
+      'shiftNudgeAmount': shiftNudgeAmount,
       'doubleClickThresholdMs': doubleClickThresholdMs,
       'extraArrowBindings': extraArrowBindings,
       'leftClickKey': leftClickKey,
@@ -1532,6 +1535,7 @@ class QuickClickConfig {
       horizontalKeys: map['horizontalKeys'] ?? '123456789',
       verticalKeys: map['verticalKeys'] ?? 'qwertyuio',
       nudgeAmount: map['nudgeAmount'] ?? 5,
+      shiftNudgeAmount: map['shiftNudgeAmount'] ?? 25,
       doubleClickThresholdMs: map['doubleClickThresholdMs'] ?? 400,
       extraArrowBindings: (map['extraArrowBindings'] as Map<dynamic, dynamic>?)?.map(
             // ignore: always_specify_types
@@ -1587,5 +1591,65 @@ class QuickClick {
 
   static Future<void> disableQuickClick() async {
     await tabameWin32MethodChannel.invokeMethod('disableQuickClick');
+  }
+}
+
+class ShellMenuItem {
+  final int id;
+  final String label;
+  final String verb;
+  final bool enabled;
+  final Uint8List? iconBytes;
+
+  const ShellMenuItem({
+    required this.id,
+    required this.label,
+    required this.verb,
+    required this.enabled,
+    this.iconBytes,
+  });
+
+  factory ShellMenuItem.fromMap(Map<Object?, Object?> map) {
+    final dynamic rawIconBytes = map['iconBytes'];
+    final Uint8List? iconBytes = rawIconBytes is Uint8List
+        ? rawIconBytes
+        : (rawIconBytes is List<dynamic> ? Uint8List.fromList(rawIconBytes.cast<int>()) : null);
+
+    return ShellMenuItem(
+      id: map['id'] as int? ?? -1,
+      label: map['label'] as String? ?? '',
+      verb: map['verb'] as String? ?? '',
+      enabled: map['enabled'] as bool? ?? false,
+      iconBytes: iconBytes,
+    );
+  }
+
+  @override
+  String toString() => 'ShellMenuItem(id: $id, label: $label, verb: $verb, enabled: $enabled)';
+}
+
+class ShellContextMenu {
+  ShellContextMenu._();
+
+  static Future<List<ShellMenuItem>> getMenuItems(String path) async {
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>(
+      'getShellMenuItems',
+      <String, dynamic>{'path': path},
+    );
+    if (raw == null) return const <ShellMenuItem>[];
+    return raw.whereType<Map<Object?, Object?>>().map(ShellMenuItem.fromMap).toList(growable: false);
+  }
+
+  static Future<bool> invoke(String path, int hWnd, {String verb = '', int id = -1}) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'invokeShellMenuItem',
+      <String, dynamic>{
+        'path': path,
+        'verb': verb,
+        'id': id,
+        'hWnd': hWnd,
+      },
+    );
+    return result ?? false;
   }
 }

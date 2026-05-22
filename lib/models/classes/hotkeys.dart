@@ -26,15 +26,21 @@ class Hotkeys {
   static const String mouseButton4Key = "MouseButton4";
   static const String mouseButton5Key = "MouseButton5";
   static const String doubleAltKey = "DoubleAlt";
+  static const String rightAltKey = "RightAlt";
+  static const String rightControlKey = "RightControl";
   static const List<String> specialBindingKeys = <String>[
     mouseButton4Key,
     mouseButton5Key,
     doubleAltKey,
+    rightAltKey,
+    rightControlKey,
   ];
   static const Map<String, String> specialBindingLabels = <String, String>{
     mouseButton4Key: "Mouse Button 4",
     mouseButton5Key: "Mouse Button 5",
     doubleAltKey: "Double Alt",
+    rightAltKey: "Right Alt",
+    rightControlKey: "Right Control",
   };
 
   String key;
@@ -364,7 +370,7 @@ class KeyMap with TabameListener {
           }
           WinKeys.send(action.value);
           break;
-        case ActionType.openQuickMenupage:
+        case ActionType.openQuickMenuPage:
           if (HotKeyInfo.quickMenuPopups.contains(action.value)) {
             if (action.value == "Interface") {
               QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true);
@@ -386,6 +392,11 @@ class KeyMap with TabameListener {
           break;
         case ActionType.setVar:
           if (action.value.isNotEmpty) _processSetVar(action.value);
+          break;
+        case ActionType.openLauncherWithPrefix:
+          if (action.value.isNotEmpty) {
+            QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true, useSlash: false);
+          }
           break;
       }
     }
@@ -577,8 +588,9 @@ enum ActionType {
   tabameFunction,
   setVar,
   sendClick,
-  openQuickMenupage,
+  openQuickMenuPage,
   wait,
+  openLauncherWithPrefix,
 }
 
 class HotKeyInfo {
@@ -772,8 +784,9 @@ class HotKeyInfo {
     ActionType.sendKeys: Icons.keyboard,
     ActionType.setVar: Icons.tune,
     ActionType.tabameFunction: Icons.functions,
-    ActionType.openQuickMenupage: Icons.apps,
+    ActionType.openQuickMenuPage: Icons.apps,
     ActionType.wait: Icons.timer_sharp,
+    ActionType.openLauncherWithPrefix: Icons.menu_book,
   };
   static const Map<TriggerType, IconData> triggerTypeIcons = <TriggerType, IconData>{
     TriggerType.press: Icons.touch_app,

@@ -98,14 +98,21 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
 
     return Material(
       color: Colors.transparent,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            for (final AppCategory category in categories) _buildCategory(category),
-            const SizedBox(height: 10)
-          ],
-        ),
+      child: Column(
+        children: [
+          PanelHeader(title: "Apps", accent: userSettings.themeColors.accentColor, icon: Icons.apps),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final AppCategory category in categories) _buildCategory(category),
+                  const SizedBox(height: 10)
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

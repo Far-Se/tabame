@@ -133,6 +133,7 @@ class SavedStore {
     if (localDataFile != null && localDataFile.existsSync()) {
       final String stringMap = localDataFile.readAsStringSync();
       if (stringMap.isNotEmpty) {
+        File("$fileName.bk").writeAsStringSync(stringMap);
         final Object? data = json.decode(stringMap);
         if (data is Map) {
           preferences = data.cast<String, Object>();

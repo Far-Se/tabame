@@ -758,6 +758,99 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
     if (keyInfo.flags & LLKHF_INJECTED)
         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
 
+    const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+    const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
+
+    if (keyInfo.vkCode == VK_RMENU && HasRegisteredHotkey(L"RIGHTALT"))
+    {
+        if (keyDown)
+        {
+            if (!hotkeyPressed)
+            {
+                if (CheckForPressedHotKey(L"RIGHTALT"))
+                {
+                    if (!ShouldSuppressHotkey())
+                    {
+                        const Hotkey *activeHotkey = GetActiveHotkey();
+                        if (activeHotkey != nullptr)
+                        {
+                            HotKeyEvent(activeHotkey->name, "pressed");
+                            return -1;
+                        }
+                    }
+                    ResetActiveHotkeyState();
+                }
+            }
+            else
+            {
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTALT")
+                {
+                    return -1;
+                }
+            }
+        }
+        else if (keyUp)
+        {
+            if (hotkeyPressed)
+            {
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTALT")
+                {
+                    HotKeyEvent(activeHotkey->name, "released");
+                    ResetActiveHotkeyState();
+                    return -1;
+                }
+            }
+        }
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+
+    if (keyInfo.vkCode == VK_RCONTROL && HasRegisteredHotkey(L"RIGHTCONTROL"))
+    {
+        if (keyDown)
+        {
+            if (!hotkeyPressed)
+            {
+                if (CheckForPressedHotKey(L"RIGHTCONTROL"))
+                {
+                    if (!ShouldSuppressHotkey())
+                    {
+                        const Hotkey *activeHotkey = GetActiveHotkey();
+                        if (activeHotkey != nullptr)
+                        {
+                            HotKeyEvent(activeHotkey->name, "pressed");
+                            return -1;
+                        }
+                    }
+                    ResetActiveHotkeyState();
+                }
+            }
+            else
+            {
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTCONTROL")
+                {
+                    return -1;
+                }
+            }
+        }
+        else if (keyUp)
+        {
+            if (hotkeyPressed)
+            {
+                const Hotkey *activeHotkey = GetActiveHotkey();
+                if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTCONTROL")
+                {
+                    HotKeyEvent(activeHotkey->name, "released");
+                    ResetActiveHotkeyState();
+                    return -1;
+                }
+            }
+        }
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+
     LRESULT doubleAltResult = 0;
     if (TryHandleDoubleAltGesture(wParam, keyInfo, doubleAltResult))
         return doubleAltResult;

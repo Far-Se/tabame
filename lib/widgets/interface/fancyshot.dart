@@ -18,26 +18,42 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/win32/win_utils.dart';
 
+enum UploadHostType {
+  /// Custom PowerShell command supplied by the user.
+  custom,
+
+  /// catbox.moe anonymous upload via HTTP multipart.
+  catbox,
+}
+
 class ScreenCaptureUploadHost {
   ScreenCaptureUploadHost({
     required this.id,
     required this.name,
     required this.command,
+    this.uploadType = UploadHostType.custom,
   });
 
   final String id;
   final String name;
   final String command;
+  final UploadHostType uploadType;
+
+  /// True for the built-in hosts that ship with the app.
+  /// Built-in hosts cannot be deleted from the dialog.
+  bool get isBuiltIn => uploadType != UploadHostType.custom;
 
   ScreenCaptureUploadHost copyWith({
     String? id,
     String? name,
     String? command,
+    UploadHostType? uploadType,
   }) {
     return ScreenCaptureUploadHost(
       id: id ?? this.id,
       name: name ?? this.name,
       command: command ?? this.command,
+      uploadType: uploadType ?? this.uploadType,
     );
   }
 
@@ -46,14 +62,24 @@ class ScreenCaptureUploadHost {
       'id': id,
       'name': name,
       'command': command,
+      'uploadType': uploadType.name,
     };
   }
 
   factory ScreenCaptureUploadHost.fromMap(Map<String, dynamic> map) {
+    UploadHostType type = UploadHostType.custom;
+    final String? typeName = map['uploadType'] as String?;
+    if (typeName != null) {
+      type = UploadHostType.values.firstWhere(
+        (UploadHostType e) => e.name == typeName,
+        orElse: () => UploadHostType.custom,
+      );
+    }
     return ScreenCaptureUploadHost(
       id: (map['id'] ?? DateTime.now().microsecondsSinceEpoch.toString()) as String,
       name: (map['name'] ?? '') as String,
       command: (map['command'] ?? '') as String,
+      uploadType: type,
     );
   }
 
@@ -62,6 +88,18 @@ class ScreenCaptureUploadHost {
   factory ScreenCaptureUploadHost.fromJson(String source) {
     return ScreenCaptureUploadHost.fromMap(jsonDecode(source) as Map<String, dynamic>);
   }
+
+  // ── Built-in host definitions ─────────────────────────────────────────────
+
+  static ScreenCaptureUploadHost get catbox => ScreenCaptureUploadHost(
+        id: 'builtin:catbox',
+        name: 'catbox.moe',
+        command: '',
+        uploadType: UploadHostType.catbox,
+      );
+
+  /// All built-in hosts in display order.
+  static List<ScreenCaptureUploadHost> get builtInHosts => <ScreenCaptureUploadHost>[catbox];
 }
 
 class Fancyshot extends StatefulWidget {
@@ -355,12 +393,13 @@ class FancyshotState extends State<Fancyshot> {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints outer) {
-        // Compute the natural (scale=1) canvas size to find the fit scale
+        // Compute the natural (scale=1) canvas size to find the fit scale.
+        // frameW/frameH must match _mainLayerSize exactly (scale=1):
+        //   capture + imagePadding*2  (frameBorderWidth is inset, not additive)
         final double scaledW = srcW * filters.imageScale;
         final double scaledH = srcH * filters.imageScale;
-        final double frameW = scaledW + filters.imagePadding * 2 + filters.frameBorderWidth * 2;
-        final double frameH =
-            scaledH + filters.imagePadding * 2 + (filters.showBrowserFrame ? 32 : 0) + filters.frameBorderWidth * 2;
+        final double frameW = scaledW + filters.imagePadding * 2;
+        final double frameH = scaledH + filters.imagePadding * 2 + (filters.showBrowserFrame ? 32 : 0);
         double naturalW = frameW + filters.backgroundPadding * 2;
         double naturalH = frameH + filters.backgroundPadding * 2;
         final double? ratio = <int, double>{1: 1, 2: 3 / 2, 3: 4 / 3, 4: 16 / 9, 5: 9 / 16}[filters.aspectRatio];
@@ -1628,7 +1667,9 @@ class _UploadHostsDialogState extends State<_UploadHostsDialog> {
   @override
   void initState() {
     super.initState();
-    _drafts = widget.initialHosts.map(_UploadHostDraft.new).toList();
+    // Only show custom (user-defined) hosts in the editable list.
+    // Built-in hosts are shown separately as read-only.
+    _drafts = widget.initialHosts.where((ScreenCaptureUploadHost h) => !h.isBuiltIn).map(_UploadHostDraft.new).toList();
     if (_drafts.isEmpty) _drafts.add(_UploadHostDraft(_newHost()));
   }
 
@@ -1738,58 +1779,122 @@ class _UploadHostsDialogState extends State<_UploadHostsDialog> {
               ),
             ),
             Flexible(
-              child: ListView.separated(
+              child: ListView(
                 padding: const EdgeInsets.all(20),
-                itemCount: _drafts.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (BuildContext context, int index) {
-                  final _UploadHostDraft draft = _drafts[index];
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.06)),
+                children: <Widget>[
+                  // ── Built-in hosts (read-only) ──────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'BUILT-IN HOSTS',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: colorScheme.onSurface.withValues(alpha: 0.45),
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Text(
-                              'Host ${index + 1}',
-                              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  ...ScreenCaptureUploadHost.builtInHosts.map((ScreenCaptureUploadHost host) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.14)),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(Icons.cloud_done_outlined, size: 18, color: colorScheme.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              host.name,
+                              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                             ),
-                            const Spacer(),
-                            IconButton(
-                              tooltip: 'Delete host',
-                              onPressed: _drafts.length == 1 ? null : () => _removeDraft(draft),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: draft.nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Name',
-                            hintText: 'My Uploader',
+                            child: Text(
+                              'Built-in',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: draft.commandController,
-                          minLines: 2,
-                          maxLines: 4,
-                          decoration: const InputDecoration(
-                            labelText: 'CLI',
-                            hintText: 'python "C:\\scripts\\upload.py" --file \${file}',
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  // ── Custom hosts (user-defined) ────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      'CUSTOM HOSTS',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: colorScheme.onSurface.withValues(alpha: 0.45),
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  ..._drafts.asMap().entries.map((MapEntry<int, _UploadHostDraft> entry) {
+                    final int index = entry.key;
+                    final _UploadHostDraft draft = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.06)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              Text(
+                                'Custom Host ${index + 1}',
+                                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                tooltip: 'Delete host',
+                                onPressed: () => _removeDraft(draft),
+                                icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: draft.nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Name',
+                              hintText: 'My Uploader',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: draft.commandController,
+                            minLines: 2,
+                            maxLines: 4,
+                            decoration: const InputDecoration(
+                              labelText: 'CLI',
+                              hintText: r'python "C:\scripts\upload.py" --file ${file}',
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
             Container(
@@ -1801,7 +1906,7 @@ class _UploadHostsDialogState extends State<_UploadHostsDialog> {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      'Only hosts with both a name and a command are saved.',
+                      'Built-in hosts cannot be removed. Custom hosts need both a name and a CLI command to be saved.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
@@ -2077,17 +2182,24 @@ class FancyShotProfile {
 
 class FancyShot {
   static List<ScreenCaptureUploadHost> loadUploadHosts() {
-    return Boxes.getSavedMap<ScreenCaptureUploadHost>(
+    final List<ScreenCaptureUploadHost> custom = Boxes.getSavedMap<ScreenCaptureUploadHost>(
       ScreenCaptureUploadHost.fromJson,
       "screenCaptureUploadHosts",
       def: <ScreenCaptureUploadHost>[],
     );
+    // Built-in hosts are always prepended; user-defined custom hosts follow.
+    return <ScreenCaptureUploadHost>[
+      ...ScreenCaptureUploadHost.builtInHosts,
+      ...custom.where((ScreenCaptureUploadHost h) => !h.isBuiltIn),
+    ];
   }
 
   static Future<void> saveUploadHosts(List<ScreenCaptureUploadHost> hosts) {
+    // Only persist user-defined custom hosts; built-in hosts are always re-injected at load time.
+    final List<ScreenCaptureUploadHost> custom = hosts.where((ScreenCaptureUploadHost h) => !h.isBuiltIn).toList();
     return Boxes.updateSettings(
       "screenCaptureUploadHosts",
-      jsonEncode(hosts.map((ScreenCaptureUploadHost host) => host.toJson()).toList()),
+      jsonEncode(custom.map((ScreenCaptureUploadHost host) => host.toJson()).toList()),
     );
   }
 
@@ -2185,23 +2297,31 @@ class FancyShot {
     final Color bgColor = Color(hex);
     final ScreenshotController screenshotController = ScreenshotController();
 
-    return screenshotController.captureFromWidget(
+    // Compute the exact canvas size at scale=1 so captureFromLongWidget receives
+    // tight constraints.  captureFromWidget does NOT support constraints; using
+    // captureFromLongWidget avoids the unbounded-viewport black-bitmap bug that
+    // occurs with large/wide images.
+    final _FancyShotFrameSurface surface = _FancyShotFrameSurface(
+      captureImage: Image.memory(captureBytes, fit: BoxFit.fill, filterQuality: FilterQuality.high),
+      captureBytesForBackground: captureBytes,
+      profile: profile,
+      surfaceColor: bgColor,
+      sourceWidth: photo.width.toDouble(),
+      sourceHeight: photo.height.toDouble(),
+    );
+    final Size canvasSize = surface.canvasSize;
+
+    return screenshotController.captureFromLongWidget(
       MediaQuery(
         data: const MediaQueryData(),
         child: Material(
           color: Colors.transparent,
-          child: _FancyShotFrameSurface(
-            captureImage: Image.memory(captureBytes, fit: BoxFit.fill, filterQuality: FilterQuality.high),
-            captureBytesForBackground: captureBytes,
-            profile: profile,
-            surfaceColor: bgColor,
-            sourceWidth: photo.width.toDouble(),
-            sourceHeight: photo.height.toDouble(),
-          ),
+          child: surface,
         ),
       ),
       pixelRatio: 1.0,
-      delay: const Duration(milliseconds: 20),
+      delay: Duration(milliseconds: (canvasSize.width >= 1000 || canvasSize.height >= 1000) ? 80 : 20),
+      constraints: BoxConstraints.tight(canvasSize),
     );
   }
 
@@ -2325,14 +2445,26 @@ class _FancyShotFrameSurface extends StatelessWidget {
         sourceHeight * profile.imageScale * scale,
       );
 
+  // The main layer's outer dimensions: capture + imagePadding on all sides +
+  // optional browser bar height.
+  // NOTE: frameBorderWidth is an *inset* BoxDecoration border — it does NOT
+  // expand the container, so it must NOT be included in the size calculation.
+  // When showBrowserFrame is true the top imagePadding is suppressed (the bar
+  // itself acts as the top spacing) so only bottom imagePadding is counted.
   Size get _mainLayerSize {
-    final double outset = (profile.imagePadding + profile.frameBorderWidth) * 2 * scale;
+    final double hPad = profile.imagePadding * 2 * scale; // horizontal: left+right
+    final double vPad = profile.showBrowserFrame
+        ? profile.imagePadding * scale // bottom only (top=0)
+        : profile.imagePadding * 2 * scale; // top+bottom
     final double browserBar = profile.showBrowserFrame ? 32.0 * scale : 0.0;
     return Size(
-      _captureSize.width + outset,
-      _captureSize.height + outset + browserBar,
+      _captureSize.width + hPad,
+      _captureSize.height + vPad + browserBar,
     );
   }
+
+  // Public alias used by renderPresetCapture to pass explicit constraints.
+  Size get canvasSize => _canvasSize;
 
   Size get _canvasSize {
     final double bp = profile.backgroundPadding * 2 * scale;
@@ -2422,7 +2554,6 @@ class _FancyShotFrameSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Size capture = _captureSize;
-    final Size main = _mainLayerSize;
     final Size canvas = _canvasSize;
     final BorderRadius radius = BorderRadius.circular(profile.borderRadius * scale);
 
@@ -2469,14 +2600,14 @@ class _FancyShotFrameSurface extends StatelessWidget {
           // Optional browser chrome bar
           if (profile.showBrowserFrame)
             Container(
-              width: main.width,
+              width: capture.width + profile.imagePadding * 2 * scale,
               height: 32 * scale,
               padding: EdgeInsets.symmetric(horizontal: 14 * scale),
               decoration: BoxDecoration(
                 color: const Color(0xFFEBEBEB),
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(profile.borderRadius),
-                  topRight: Radius.circular(profile.borderRadius),
+                  topLeft: Radius.circular(profile.borderRadius * scale),
+                  topRight: Radius.circular(profile.borderRadius * scale),
                 ),
                 border: Border(
                   bottom: BorderSide(
@@ -2496,9 +2627,19 @@ class _FancyShotFrameSurface extends StatelessWidget {
               ),
             ),
 
-          // imagePadding sits between the mainLayer edge and the capturedImageLayer
+          // imagePadding sits between the mainLayer edge and the capturedImageLayer.
+          // When the browser bar is visible it already occupies the top space,
+          // so we suppress the top padding to avoid a double-gap that pushes the
+          // image down and causes overflow.
           Padding(
-            padding: EdgeInsets.all(profile.imagePadding * scale),
+            padding: profile.showBrowserFrame
+                ? EdgeInsets.fromLTRB(
+                    profile.imagePadding * scale,
+                    0,
+                    profile.imagePadding * scale,
+                    profile.imagePadding * scale,
+                  )
+                : EdgeInsets.all(profile.imagePadding * scale),
             child: capturedImageLayer,
           ),
         ],

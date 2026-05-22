@@ -931,6 +931,14 @@ class Win32 {
 
     SetWindowRgn(hWnd, region, TRUE);
   }
+
+  static Future<List<ShellMenuItem>> getShellMenuItems(String path) async {
+    return await ShellContextMenu.getMenuItems(path);
+  }
+
+  static Future<bool> invokeShellMenuItem(String path, int hWnd, {String verb = '', int id = -1}) async {
+    return await ShellContextMenu.invoke(path, hWnd, verb: verb, id: id);
+  }
 }
 
 enum Scripts {

@@ -44,6 +44,37 @@ class HotKeyActionState extends State<HotKeyAction> {
     super.dispose();
   }
 
+  String _generateDynamicFallbackName() {
+    String actionDescription = "Empty Action";
+
+    if (widget.hotkey.actions.isNotEmpty) {
+      final KeyAction firstAction = widget.hotkey.actions.first;
+      final String typeName = firstAction.type.name.splitAndUpcase;
+
+      // Customize context based on what the action actually is
+      if (firstAction.type == ActionType.hotkey) {
+        actionDescription = "$typeName: ${firstAction.value.toUpperCase()}";
+      } else if (firstAction.type == ActionType.sendClick && firstAction.value.isNotEmpty) {
+        try {
+          final ClickAction click = ClickAction.fromJson(firstAction.value);
+          actionDescription = "$typeName: ${click.x}, ${click.y}";
+        } catch (_) {
+          actionDescription = typeName;
+        }
+      } else if (firstAction.value.isNotEmpty) {
+        // General fallback for simple text/string parameters
+        actionDescription = "$typeName: ${firstAction.value}";
+      } else {
+        actionDescription = typeName;
+      }
+    }
+
+    // Grab the trigger mechanism string
+    final String triggerMechanism = HotKeyInfo.triggers[widget.hotkey.triggerType.index];
+
+    return "$actionDescription Via $triggerMechanism";
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
@@ -117,6 +148,12 @@ class HotKeyActionState extends State<HotKeyAction> {
                             Expanded(
                               child: FilledButton.icon(
                                 onPressed: () {
+                                  // Validate name criteria: change if empty or matches "Default Shortcut"
+                                  final String trimmedName = widget.hotkey.name.trim();
+                                  if (trimmedName.isEmpty || trimmedName.toLowerCase() == "default shortcut") {
+                                    widget.hotkey.name = _generateDynamicFallbackName();
+                                  }
+
                                   widget.onSaved(widget.hotkey);
                                   Navigator.of(context).pop();
                                 },
@@ -277,12 +314,13 @@ class HotKeyActionState extends State<HotKeyAction> {
             ),
           ),
           const SizedBox(width: 16),
-          _HotKeyHeaderButton(
-            tooltip: "Mouse Utilities",
-            onPressed: () => setState(() => _showUtilities = !_showUtilities),
-            icon: _showUtilities ? Icons.visibility_off_rounded : Icons.mouse_rounded,
-            isActive: _showUtilities,
-          ),
+          if (!_showUtilities)
+            _HotKeyHeaderButton(
+              tooltip: "Mouse Utilities",
+              onPressed: () => setState(() => _showUtilities = !_showUtilities),
+              icon: _showUtilities ? Icons.visibility_off_rounded : Icons.mouse_rounded,
+              isActive: _showUtilities,
+            ),
           const SizedBox(width: 4),
           _HotKeyHeaderButton(
             tooltip: "Close Editor",
@@ -869,7 +907,7 @@ class HotKeyActionState extends State<HotKeyAction> {
             .map((String v) => ModernDropdownItem<String>(value: v, label: v.splitAndUpcase))
             .toList(),
       );
-    } else if (action.type == ActionType.openQuickMenupage) {
+    } else if (action.type == ActionType.openQuickMenuPage) {
       return Material(
         type: MaterialType.transparency,
         child: ModernDropdown<String>(
@@ -884,6 +922,12 @@ class HotKeyActionState extends State<HotKeyAction> {
         value: action.value,
         onChanged: (String v) => action.value = v,
         keyboardType: TextInputType.number,
+      );
+    } else if (action.type == ActionType.openLauncherWithPrefix) {
+      return CustomTextInput(
+        labelText: "Pretext",
+        value: action.value,
+        onChanged: (String v) => action.value = v,
       );
     }
     return CustomTextInput(
@@ -1123,10 +1167,12 @@ class _ActionStepCardState extends State<_ActionStepCard> with SingleTickerProvi
                                         widget.action.value = "{#CTRL}A{^CTRL}deleted";
                                       } else if (widget.action.type == ActionType.tabameFunction) {
                                         widget.action.value = HotKeyInfo.tabameFunctions[0];
-                                      } else if (widget.action.type == ActionType.openQuickMenupage) {
+                                      } else if (widget.action.type == ActionType.openQuickMenuPage) {
                                         widget.action.value = HotKeyInfo.quickMenuPopups[0];
                                       } else if (widget.action.type == ActionType.wait) {
                                         widget.action.value = "1000";
+                                      } else if (widget.action.type == ActionType.openLauncherWithPrefix) {
+                                        widget.action.value = "";
                                       }
                                       widget.onChanged();
                                     },

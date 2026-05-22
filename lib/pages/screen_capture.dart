@@ -23,7 +23,7 @@ import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
-
+import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -1094,8 +1094,8 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         (ScreenCaptureUploadHost host) => CaptureActionChoice(
           id: CaptureActionChoice.uploadHostId(host.id),
           title: host.name,
-          subtitle: 'Run custom uploader command',
-          icon: Icons.cloud_upload_outlined,
+          subtitle: host.isBuiltIn ? 'Upload via ${host.name}' : 'Run custom uploader command',
+          icon: host.isBuiltIn ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
           uploadHost: host,
         ),
       ),
@@ -1337,48 +1337,60 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     }
   }
 
+  /// Capture [screenRect] from all frozen monitor snapshots that intersect it.
+  ///
+  /// Each monitor snapshot covers its own portion of the virtual desktop.
+  /// Pixels that fall inside [screenRect] are copied from whichever snapshot
+  /// owns them, so a selection that spans two (or more) monitors produces a
+  /// seamlessly composited output image.  Regions not covered by any snapshot
+  /// (e.g. the gap between two non-adjacent monitors) are left as transparent
+  /// black.
   Future<Uint8List?> _captureFrozenRegionToPng(Rect screenRect) async {
-    final Rect normalizedRect = screenRect.normalized();
-    final Pointer<RECT> rectPtr = calloc<RECT>()
-      ..ref.left = normalizedRect.left.round()
-      ..ref.top = normalizedRect.top.round()
-      ..ref.right = normalizedRect.right.round()
-      ..ref.bottom = normalizedRect.bottom.round();
+    final Rect sel = screenRect.normalized();
 
-    late final int monitorHandle;
-    try {
-      monitorHandle = MonitorFromRect(rectPtr, 2);
-    } finally {
-      calloc.free(rectPtr);
-    }
-
-    final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
-    if (snapshot == null) return null;
-
-    final Rect safeRect = normalizedRect.intersect(snapshot.screenRect);
-    if (safeRect.isEmpty) return null;
-
-    final int outputWidth = normalizedRect.width.round().clamp(1, 1000000);
-    final int outputHeight = normalizedRect.height.round().clamp(1, 1000000);
-    final double scaleX = snapshot.pixelWidth / snapshot.screenRect.width;
-    final double scaleY = snapshot.pixelHeight / snapshot.screenRect.height;
+    final int outputWidth = sel.width.round().clamp(1, 1000000);
+    final int outputHeight = sel.height.round().clamp(1, 1000000);
     final Uint8List outputRgba = Uint8List(outputWidth * outputHeight * 4);
 
-    for (int row = 0; row < outputHeight; row++) {
-      final int sy = ((normalizedRect.top + row - snapshot.screenRect.top) * scaleY).floor();
-      if (sy < 0 || sy >= snapshot.pixelHeight) continue;
-      for (int col = 0; col < outputWidth; col++) {
-        final int sx = ((normalizedRect.left + col - snapshot.screenRect.left) * scaleX).floor();
-        if (sx < 0 || sx >= snapshot.pixelWidth) continue;
-        final int srcIndex = (sy * snapshot.pixelWidth + sx) * 4;
-        final int dstIndex = (row * outputWidth + col) * 4;
-        outputRgba[dstIndex] = snapshot.rgbaBytes[srcIndex];
-        outputRgba[dstIndex + 1] = snapshot.rgbaBytes[srcIndex + 1];
-        outputRgba[dstIndex + 2] = snapshot.rgbaBytes[srcIndex + 2];
-        outputRgba[dstIndex + 3] = snapshot.rgbaBytes[srcIndex + 3];
+    // Iterate every available snapshot and blit the portion that overlaps sel.
+    // A selection that spans two monitors will hit two snapshots here.
+    bool anyHit = false;
+    for (final int monitorHandle in List<int>.from(_frozenMonitorSnapshots.keys)) {
+      final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
+      if (snapshot == null) continue;
+
+      final Rect intersection = sel.intersect(snapshot.screenRect);
+      if (intersection.isEmpty) continue;
+      anyHit = true;
+
+      // Per-monitor DPI scale (pixelWidth may differ from screenRect.width on
+      // HiDPI displays).
+      final double scaleX = snapshot.pixelWidth / snapshot.screenRect.width;
+      final double scaleY = snapshot.pixelHeight / snapshot.screenRect.height;
+
+      // Destination pixel range inside outputRgba that this monitor covers.
+      final int dstColStart = (intersection.left - sel.left).round();
+      final int dstRowStart = (intersection.top - sel.top).round();
+      final int dstColEnd = (intersection.right - sel.left).round();
+      final int dstRowEnd = (intersection.bottom - sel.top).round();
+
+      for (int dstRow = dstRowStart; dstRow < dstRowEnd; dstRow++) {
+        final int sy =
+            ((sel.top + dstRow - snapshot.screenRect.top) * scaleY).floor().clamp(0, snapshot.pixelHeight - 1);
+        for (int dstCol = dstColStart; dstCol < dstColEnd; dstCol++) {
+          final int sx =
+              ((sel.left + dstCol - snapshot.screenRect.left) * scaleX).floor().clamp(0, snapshot.pixelWidth - 1);
+          final int srcIndex = (sy * snapshot.pixelWidth + sx) * 4;
+          final int dstIndex = (dstRow * outputWidth + dstCol) * 4;
+          outputRgba[dstIndex] = snapshot.rgbaBytes[srcIndex];
+          outputRgba[dstIndex + 1] = snapshot.rgbaBytes[srcIndex + 1];
+          outputRgba[dstIndex + 2] = snapshot.rgbaBytes[srcIndex + 2];
+          outputRgba[dstIndex + 3] = snapshot.rgbaBytes[srcIndex + 3];
+        }
       }
     }
 
+    if (!anyHit) return null;
     return ScreenCapture.encodeRgbaToPng(outputRgba, outputWidth, outputHeight);
   }
 
@@ -1899,6 +1911,126 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   Future<bool> _runUploadHost(ScreenCaptureUploadHost host, String filePath) async {
+    switch (host.uploadType) {
+      case UploadHostType.catbox:
+        return _uploadToCatbox(filePath);
+      case UploadHostType.custom:
+        return _runCustomUploadCommand(host, filePath);
+    }
+  }
+
+  /// Upload [filePath] to catbox.moe anonymously.
+  /// Opens the returned URL in the browser and copies it to clipboard.
+  Future<bool> _uploadToCatbox(String filePath) async {
+    setState(() => _applyingPreset = true); // reuse loading indicator
+    try {
+      final File file = File(filePath);
+      if (!file.existsSync()) {
+        if (mounted) {
+          await showDialog<void>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Upload Failed'),
+              content: Text('File not found:\n$filePath'),
+              actions: <Widget>[
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              ],
+            ),
+          );
+        }
+        return false;
+      }
+
+      final HttpClient client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 30);
+
+      final Uri uri = Uri.parse('https://catbox.moe/user/api.php');
+      final HttpClientRequest request = await client.postUrl(uri);
+
+      // Build multipart/form-data manually.
+      final String boundary = '----TabameBoundary${DateTime.now().millisecondsSinceEpoch}';
+      request.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
+
+      final BytesBuilder body = BytesBuilder();
+      void addField(String name, String value) {
+        body.add(utf8.encode('--$boundary\r\n'));
+        body.add(utf8.encode('Content-Disposition: form-data; name="$name"\r\n\r\n'));
+        body.add(utf8.encode('$value\r\n'));
+      }
+
+      addField('reqtype', 'fileupload');
+      // Anonymous upload — no userhash needed.
+
+      final Uint8List fileBytes = file.readAsBytesSync();
+      final String fileName = file.path.split(Platform.pathSeparator).last;
+      body.add(utf8.encode('--$boundary\r\n'));
+      body.add(utf8.encode('Content-Disposition: form-data; name="fileToUpload"; filename="$fileName"\r\n'));
+      body.add(utf8.encode('Content-Type: image/png\r\n\r\n'));
+      body.add(fileBytes);
+      body.add(utf8.encode('\r\n'));
+      body.add(utf8.encode('--$boundary--\r\n'));
+
+      final Uint8List bodyBytes = body.toBytes();
+      request.headers.set(HttpHeaders.contentLengthHeader, bodyBytes.length.toString());
+      request.add(bodyBytes);
+
+      final HttpClientResponse response = await request.close();
+      final String responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+
+      if (response.statusCode == 200 && responseBody.startsWith('https://')) {
+        final String url = responseBody.trim();
+        // Copy URL to clipboard.
+        ClipboardExtended.copy(url);
+        // Open in default browser.
+        await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
+        if (mounted) {
+          setState(() => _applyingPreset = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Uploaded: $url  •  URL copied to clipboard'),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        return true;
+      } else {
+        if (mounted) {
+          setState(() => _applyingPreset = false);
+          await showDialog<void>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('catbox.moe Upload Failed'),
+              content: Text('HTTP ${response.statusCode}\n\n$responseBody'),
+              actions: <Widget>[
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              ],
+            ),
+          );
+        }
+        return false;
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _applyingPreset = false);
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('catbox.moe Upload Error'),
+            content: Text('$error'),
+            actions: <Widget>[
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            ],
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _applyingPreset = false);
+    }
+  }
+
+  Future<bool> _runCustomUploadCommand(ScreenCaptureUploadHost host, String filePath) async {
     try {
       final String escapedFilePath = filePath.replaceAll("'", "''");
       final String resolvedCommand = host.command.contains(r'${file}')
@@ -2535,9 +2667,30 @@ class _CrosshairCursorState extends State<_CrosshairCursor> {
   /// Desktop HWND — excluded.
   final int _desktopHwnd = GetDesktopWindow();
 
+  /// Read the current cursor position from Win32 and convert it to
+  /// widget-local coordinates (screen − virtualOrigin).
+  Offset _cursorToLocal() {
+    final Pointer<POINT> pt = calloc<POINT>();
+    try {
+      if (GetCursorPos(pt) != 0) {
+        return Offset(
+          pt.ref.x.toDouble() - widget.virtualOrigin.dx,
+          pt.ref.y.toDouble() - widget.virtualOrigin.dy,
+        );
+      }
+    } finally {
+      calloc.free(pt);
+    }
+    return Offset.zero;
+  }
+
   @override
   void initState() {
     super.initState();
+    // Seed _pos with the real cursor position so the magnifier and crosshair
+    // appear at the correct location on the very first frame, without waiting
+    // for the first onHover event.
+    _pos = _cursorToLocal();
     _refreshWindows();
     // Refresh window list periodically so new windows are picked up.
     _refreshTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
@@ -2600,11 +2753,14 @@ class _CrosshairCursorState extends State<_CrosshairCursor> {
       bottom -= border.bottom;
 
       // Physical → logical widget-local.
+      // Round to nearest integer *before* subtracting virtualOrigin so that
+      // sub-pixel rounding errors from the DPI division do not accumulate into
+      // a ±1 px border around the captured window.
       final Rect logRect = Rect.fromLTRB(
-        left / scaleX - widget.virtualOrigin.dx,
-        top / scaleY - widget.virtualOrigin.dy,
-        right / scaleX - widget.virtualOrigin.dx,
-        bottom / scaleY - widget.virtualOrigin.dy,
+        (left / scaleX).roundToDouble() - widget.virtualOrigin.dx,
+        (top / scaleY).roundToDouble() - widget.virtualOrigin.dy,
+        (right / scaleX).roundToDouble() - widget.virtualOrigin.dx,
+        (bottom / scaleY).roundToDouble() - widget.virtualOrigin.dy,
       );
 
       entries.add(_WindowEntry(hwnd, logRect));

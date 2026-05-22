@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
-import '../../pages/subscriptions/subscription_panel.dart';
 import '../../widgets/itzy/quickmenu/button_always_awake.dart';
 import '../../widgets/itzy/quickmenu/button_app_audio.dart';
 import '../../widgets/itzy/quickmenu/button_apps.dart';
@@ -37,6 +36,7 @@ import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
+import '../../widgets/itzy/quickmenu/button_subscription.dart';
 import '../../widgets/itzy/quickmenu/button_task_manager.dart';
 import '../../widgets/itzy/quickmenu/button_timers.dart';
 import '../../widgets/itzy/quickmenu/button_timezone.dart';

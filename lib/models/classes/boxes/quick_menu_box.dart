@@ -10,22 +10,6 @@ import '../../win32/win32.dart';
 import '../saved_maps.dart';
 import 'boxes_base.dart';
 
-// --------------------------------------------------------------------------
-// QuickMenu
-// --------------------------------------------------------------------------
-
-mixin class QuickMenuTriggers {
-  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {}
-  Future<void> onQuickMenuMaybePop() async {}
-  Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {}
-  Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {}
-  void refreshQuickMenu() async {}
-  void onVerticalArrow(bool up) {}
-  void onEnter() {}
-  void onQuickActionExecute(String actionName) {}
-  void requestQuickMenuFocus() {}
-}
-
 class QuickMenuFunctions {
   static bool isQuickMenuVisible = true;
   static bool keepOpen = false;
@@ -33,6 +17,37 @@ class QuickMenuFunctions {
   static int shownTime = 0;
 
   static int taskBarSelectedIdx = -1;
+
+  static final ObserverList<QuickMenuTriggers> _listeners = ObserverList<QuickMenuTriggers>();
+
+  static bool get hasListeners => _listeners.isNotEmpty;
+
+  static List<QuickMenuTriggers> get listeners => List<QuickMenuTriggers>.from(_listeners);
+
+  static void addListener(QuickMenuTriggers listener) => _listeners.add(listener);
+
+  static void onEnter() {
+    for (final QuickMenuTriggers listener in _listeners) {
+      listener.onEnter();
+    }
+  }
+
+  static void onVerticalArrow(bool up) {
+    for (final QuickMenuTriggers listener in _listeners) {
+      listener.onVerticalArrow(up);
+    }
+  }
+
+  static Future<void> openQuickMenuWithAction(String actionName, {bool center = false, bool useSlash = true}) async {
+    await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher, forcePop: true);
+    if (useSlash) {
+      Globals.setLauncherQuickAction(actionName);
+    } else {
+      Globals.setLauncherPretext(actionName);
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    Globals.clearQuickMenuSearchInput();
+  }
 
   static void randomizeBackdrop() {
     final ThemeColors currentTheme = userSettings.themeColors;
@@ -54,27 +69,14 @@ class QuickMenuFunctions {
     }
   }
 
-  static void resetKeyboardSelection() {
-    taskBarSelectedIdx = -1;
-  }
-
-  static void onVerticalArrow(bool up) {
+  static void refreshQuickMenu() {
     for (final QuickMenuTriggers listener in _listeners) {
-      listener.onVerticalArrow(up);
+      if (!_listeners.contains(listener)) continue;
+      listener.refreshQuickMenu();
     }
   }
 
-  static void onEnter() {
-    for (final QuickMenuTriggers listener in _listeners) {
-      listener.onEnter();
-    }
-  }
-
-  static void triggerQuickAction(String actionName) {
-    for (final QuickMenuTriggers listener in _listeners) {
-      listener.onQuickActionExecute(actionName);
-    }
-  }
+  static void removeListener(QuickMenuTriggers listener) => _listeners.remove(listener);
 
   static void requestQuickMenuFocus() {
     for (final QuickMenuTriggers listener in listeners) {
@@ -83,20 +85,9 @@ class QuickMenuFunctions {
     }
   }
 
-  static void refreshQuickMenu() {
-    for (final QuickMenuTriggers listener in _listeners) {
-      if (!_listeners.contains(listener)) continue;
-      listener.refreshQuickMenu();
-    }
+  static void resetKeyboardSelection() {
+    taskBarSelectedIdx = -1;
   }
-
-  static final ObserverList<QuickMenuTriggers> _listeners = ObserverList<QuickMenuTriggers>();
-  static List<QuickMenuTriggers> get listeners => List<QuickMenuTriggers>.from(_listeners);
-
-  static bool get hasListeners => _listeners.isNotEmpty;
-
-  static void addListener(QuickMenuTriggers listener) => _listeners.add(listener);
-  static void removeListener(QuickMenuTriggers listener) => _listeners.remove(listener);
 
   static Future<void> toggleQuickMenu(
       {QuickMenuPage type = QuickMenuPage.quickMenu,
@@ -159,11 +150,25 @@ class QuickMenuFunctions {
     }
   }
 
-  static Future<void> openQuickMenuWithAction(String actionName, {bool center = false}) async {
-    await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher, forcePop: true);
-
-    Globals.setLauncherQuickAction(actionName);
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    Globals.clearQuickMenuSearchInput();
+  static void triggerQuickAction(String actionName) {
+    for (final QuickMenuTriggers listener in _listeners) {
+      listener.onQuickActionExecute(actionName);
+    }
   }
+}
+
+// --------------------------------------------------------------------------
+// QuickMenu
+// --------------------------------------------------------------------------
+
+mixin class QuickMenuTriggers {
+  void onEnter() {}
+  void onQuickActionExecute(String actionName) {}
+  Future<void> onQuickMenuMaybePop() async {}
+  Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {}
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {}
+  Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {}
+  void onVerticalArrow(bool up) {}
+  void refreshQuickMenu() async {}
+  void requestQuickMenuFocus() {}
 }

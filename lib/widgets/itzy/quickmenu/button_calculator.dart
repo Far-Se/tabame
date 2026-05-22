@@ -110,14 +110,14 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     if (input.isEmpty) return null;
 
     try {
-      if (input.startsWith('c ') || input.startsWith('currency ')) {
-        final String cmd = input.replaceFirst(RegExp(r'^currency\s+|^c\s+'), '');
-        final String target = Boxes.pref.getString(CurrencyConverterService.toKey) ?? 'eur';
+      if (input.startsWith('c ') || input.startsWith('currency ') || input.startsWith('cur ')) {
+        final String cmd = input.replaceFirst(RegExp(r'^currency\s+|^c\s+|^cur\s+'), '');
+        final String target = Boxes.pref.getString(CurrencyConverterService.toKey) ?? 'usd';
         final CurrencyConversionResult res =
             await CurrencyConverterService().convert(cmd, defaultTargetCurrency: target);
         return (value: res.convertedAmount, display: res.convertedLabel);
-      } else if (input.startsWith('unit ')) {
-        final String cmd = input.replaceFirst(RegExp(r'^unit\s+'), '');
+      } else if (input.startsWith('unit ') || input.startsWith('u ')) {
+        final String cmd = input.replaceFirst(RegExp(r'^unit\s+|^u\s+'), '');
         final ParserResult res = await Parsers().unit(cmd);
         if (res.results.isNotEmpty) {
           final double? val = double.tryParse(res.results.first.split(' ').first.replaceAll(',', ''));
@@ -125,6 +125,9 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
             return (value: val, display: res.results.first);
           }
         }
+      } else if (input == "clear") {
+        _clearAll();
+        setState(() => _controller.text = "");
       } else {
         String cmd = input;
         if (input.startsWith('c ')) cmd = input.substring(2);
@@ -241,7 +244,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
 
     final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
 
-    // Check for assignment (e.g., a = /cur 100 USD to EUR or a = 10 + 20)
+    // Check for assignment (e.g., a = /c 100 USD to EUR or a = 10 + 20)
     String? assignedName;
     String finalExpression = val;
 
@@ -360,7 +363,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                   "Advanced Converters",
                   "Start with '/' to use unit or currency converters. "
                       "Use '\$var' to reference your variables.",
-                  <String>["/c 100 USD to EUR", "/c \$a RON to USD", "/unit 10 km to miles", "/unit \$b kg to g"],
+                  <String>["/c 100 USD to EUR", "/c \$a RON to USD", "/unit 10 km to miles", "/u \$b kg to g"],
                   accent,
                   onSurface,
                 ),

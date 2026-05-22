@@ -118,7 +118,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   bool bmaCoffeHovered = false;
   File? sponsorImageLight;
   File? sponsorImageDark;
-
+  bool hideSidebar = false;
   @override
   void initState() {
     super.initState();
@@ -131,6 +131,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
     } else if (Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
+      hideSidebar = true;
     }
     if (currentPage == -1) currentPage = 0; // Default to Home if-1
     page = PageController(initialPage: currentPage);
@@ -400,95 +401,82 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                 //#h green
                                                 // if (!userSettings.args.contains("-wizardly")) //2 commented this
                                                 //1 Sidebar
-                                                Material(
-                                                  type: MaterialType.transparency,
-                                                  child: Container(
-                                                    width: 220,
-                                                    height: double.infinity,
-                                                    decoration: BoxDecoration(
-                                                      color: Theme.of(context).colorScheme.surface.withAlpha(150),
-                                                      border: Border(
-                                                        right: BorderSide(
-                                                          color: Theme.of(context).dividerColor.withAlpha(20),
-                                                          width: 1,
+                                                if (!hideSidebar)
+                                                  Material(
+                                                    type: MaterialType.transparency,
+                                                    child: Container(
+                                                      width: 220,
+                                                      height: double.infinity,
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context).colorScheme.surface.withAlpha(150),
+                                                        border: Border(
+                                                          right: BorderSide(
+                                                            color: Theme.of(context).dividerColor.withAlpha(20),
+                                                            width: 1,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                    child: Column(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      mainAxisSize: MainAxisSize.max,
-                                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                      children: <Widget>[
-                                                        const SizedBox(height: 15),
-                                                        Flexible(
-                                                          fit: FlexFit.tight,
-                                                          child: MouseScrollWidget(
-                                                            scrollDirection: Axis.vertical,
-                                                            child: Column(
-                                                              mainAxisAlignment: MainAxisAlignment.start,
-                                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                              children: <Widget>[
-                                                                IgnorePointer(
-                                                                  ignoring: Boxes.remap.isEmpty,
-                                                                  child: ListView.builder(
-                                                                    scrollDirection: Axis.vertical,
-                                                                    itemCount: pages.length,
-                                                                    shrinkWrap: true,
-                                                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                                                    physics: const ClampingScrollPhysics(),
-                                                                    itemBuilder: (BuildContext context, int index) {
-                                                                      final PageClass pageItem = pages[index];
-                                                                      if (pageItem.title == "FirstRun") {
-                                                                        return const SizedBox();
-                                                                      }
-                                                                      final bool isActive = currentPage == index;
-                                                                      return Container(
-                                                                        margin: const EdgeInsets.symmetric(vertical: 2),
-                                                                        child: InkWell(
-                                                                          onTap: () {
-                                                                            setState(() => currentPage = index);
-                                                                          },
-                                                                          borderRadius: BorderRadius.circular(8),
-                                                                          child: AnimatedContainer(
-                                                                            duration: const Duration(milliseconds: 200),
-                                                                            padding: const EdgeInsets.symmetric(
-                                                                                vertical: 10, horizontal: 12),
-                                                                            decoration: BoxDecoration(
-                                                                              color: isActive
-                                                                                  ? Theme.of(context)
-                                                                                      .colorScheme
-                                                                                      .primary
-                                                                                      .withAlpha(30)
-                                                                                  : Colors.transparent,
-                                                                              borderRadius: BorderRadius.circular(8),
-                                                                            ),
-                                                                            child: Row(
-                                                                              mainAxisAlignment:
-                                                                                  MainAxisAlignment.start,
-                                                                              crossAxisAlignment:
-                                                                                  CrossAxisAlignment.center,
-                                                                              mainAxisSize: MainAxisSize.min,
-                                                                              children: <Widget>[
-                                                                                Icon(
-                                                                                  pageItem.icon,
-                                                                                  size: 20,
-                                                                                  color: isActive
-                                                                                      ? Theme.of(context)
-                                                                                          .colorScheme
-                                                                                          .primary
-                                                                                      : Theme.of(context)
-                                                                                          .colorScheme
-                                                                                          .onSurface
-                                                                                          .withAlpha(180),
-                                                                                ),
-                                                                                const SizedBox(width: 12),
-                                                                                Text(
-                                                                                  pageItem.title!,
-                                                                                  style: TextStyle(
-                                                                                    fontSize: 14,
-                                                                                    fontWeight: isActive
-                                                                                        ? FontWeight.w600
-                                                                                        : FontWeight.w400,
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        mainAxisSize: MainAxisSize.max,
+                                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                        children: <Widget>[
+                                                          const SizedBox(height: 15),
+                                                          Flexible(
+                                                            fit: FlexFit.tight,
+                                                            child: MouseScrollWidget(
+                                                              scrollDirection: Axis.vertical,
+                                                              child: Column(
+                                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                                children: <Widget>[
+                                                                  IgnorePointer(
+                                                                    ignoring: Boxes.remap.isEmpty,
+                                                                    child: ListView.builder(
+                                                                      scrollDirection: Axis.vertical,
+                                                                      itemCount: pages.length,
+                                                                      shrinkWrap: true,
+                                                                      padding:
+                                                                          const EdgeInsets.symmetric(horizontal: 10),
+                                                                      physics: const ClampingScrollPhysics(),
+                                                                      itemBuilder: (BuildContext context, int index) {
+                                                                        final PageClass pageItem = pages[index];
+                                                                        if (pageItem.title == "FirstRun") {
+                                                                          return const SizedBox();
+                                                                        }
+                                                                        final bool isActive = currentPage == index;
+                                                                        return Container(
+                                                                          margin:
+                                                                              const EdgeInsets.symmetric(vertical: 2),
+                                                                          child: InkWell(
+                                                                            onTap: () {
+                                                                              setState(() => currentPage = index);
+                                                                            },
+                                                                            borderRadius: BorderRadius.circular(8),
+                                                                            child: AnimatedContainer(
+                                                                              duration:
+                                                                                  const Duration(milliseconds: 200),
+                                                                              padding: const EdgeInsets.symmetric(
+                                                                                  vertical: 10, horizontal: 12),
+                                                                              decoration: BoxDecoration(
+                                                                                color: isActive
+                                                                                    ? Theme.of(context)
+                                                                                        .colorScheme
+                                                                                        .primary
+                                                                                        .withAlpha(30)
+                                                                                    : Colors.transparent,
+                                                                                borderRadius: BorderRadius.circular(8),
+                                                                              ),
+                                                                              child: Row(
+                                                                                mainAxisAlignment:
+                                                                                    MainAxisAlignment.start,
+                                                                                crossAxisAlignment:
+                                                                                    CrossAxisAlignment.center,
+                                                                                mainAxisSize: MainAxisSize.min,
+                                                                                children: <Widget>[
+                                                                                  Icon(
+                                                                                    pageItem.icon,
+                                                                                    size: 20,
                                                                                     color: isActive
                                                                                         ? Theme.of(context)
                                                                                             .colorScheme
@@ -498,144 +486,162 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                                             .onSurface
                                                                                             .withAlpha(180),
                                                                                   ),
-                                                                                ),
-                                                                                if (isActive) ...<Widget>[
-                                                                                  const Spacer(),
-                                                                                  Container(
-                                                                                    width: 4,
-                                                                                    height: 16,
-                                                                                    decoration: BoxDecoration(
-                                                                                      color: Theme.of(context)
-                                                                                          .colorScheme
-                                                                                          .primary,
-                                                                                      borderRadius:
-                                                                                          BorderRadius.circular(2),
+                                                                                  const SizedBox(width: 12),
+                                                                                  Text(
+                                                                                    pageItem.title!,
+                                                                                    style: TextStyle(
+                                                                                      fontSize: 14,
+                                                                                      fontWeight: isActive
+                                                                                          ? FontWeight.w600
+                                                                                          : FontWeight.w400,
+                                                                                      color: isActive
+                                                                                          ? Theme.of(context)
+                                                                                              .colorScheme
+                                                                                              .primary
+                                                                                          : Theme.of(context)
+                                                                                              .colorScheme
+                                                                                              .onSurface
+                                                                                              .withAlpha(180),
                                                                                     ),
                                                                                   ),
+                                                                                  if (isActive) ...<Widget>[
+                                                                                    const Spacer(),
+                                                                                    Container(
+                                                                                      width: 4,
+                                                                                      height: 16,
+                                                                                      decoration: BoxDecoration(
+                                                                                        color: Theme.of(context)
+                                                                                            .colorScheme
+                                                                                            .primary,
+                                                                                        borderRadius:
+                                                                                            BorderRadius.circular(2),
+                                                                                      ),
+                                                                                    ),
+                                                                                  ],
                                                                                 ],
-                                                                              ],
+                                                                              ),
                                                                             ),
                                                                           ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          // Bottom Actions
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(10),
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                              children: <Widget>[
+                                                                if (sponsor.enabled) ...<Widget>[
+                                                                  InkWell(
+                                                                    onTap: () => WinUtils.open(sponsor.url),
+                                                                    borderRadius: BorderRadius.circular(8),
+                                                                    child: Container(
+                                                                      padding: const EdgeInsets.all(8),
+                                                                      child: Column(
+                                                                        children: <Widget>[
+                                                                          Text(
+                                                                            "Sponsored by",
+                                                                            style: TextStyle(
+                                                                              fontSize: 10,
+                                                                              fontStyle: FontStyle.italic,
+                                                                              color: Theme.of(context)
+                                                                                  .colorScheme
+                                                                                  .onSurface
+                                                                                  .withAlpha(100),
+                                                                            ),
+                                                                          ),
+                                                                          const SizedBox(height: 4),
+                                                                          if (sponsorImageLight != null)
+                                                                            Image.file(
+                                                                              userSettings.themeType == ThemeType.light
+                                                                                  ? sponsorImageLight!
+                                                                                  : sponsorImageDark!,
+                                                                              height: 40,
+                                                                              fit: BoxFit.contain,
+                                                                            ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(height: 8),
+                                                                ],
+                                                                InkWell(
+                                                                  onTap: () {
+                                                                    showDialog(
+                                                                      context: context,
+                                                                      builder: (BuildContext context) => AlertDialog(
+                                                                        title: const Text("Exit Tabame?"),
+                                                                        content: const Text(
+                                                                            "This will close the whole application. Continue?"),
+                                                                        actions: <Widget>[
+                                                                          TextButton(
+                                                                            onPressed: () =>
+                                                                                Navigator.of(context).pop(),
+                                                                            child: const Text("Cancel"),
+                                                                          ),
+                                                                          ElevatedButton(
+                                                                            onPressed: () {
+                                                                              WinUtils.closeAllTabameExProcesses();
+                                                                              exit(0);
+                                                                            },
+                                                                            style: ElevatedButton.styleFrom(
+                                                                              backgroundColor: Theme.of(context)
+                                                                                  .colorScheme
+                                                                                  .errorContainer,
+                                                                              foregroundColor: Theme.of(context)
+                                                                                  .colorScheme
+                                                                                  .onErrorContainer,
+                                                                            ),
+                                                                            child: const Text("Full Exit"),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                  child: Container(
+                                                                    padding: const EdgeInsets.symmetric(
+                                                                        vertical: 10, horizontal: 12),
+                                                                    decoration: BoxDecoration(
+                                                                      border: Border.all(
+                                                                          color: Theme.of(context)
+                                                                              .colorScheme
+                                                                              .error
+                                                                              .withAlpha(50)),
+                                                                      borderRadius: BorderRadius.circular(8),
+                                                                    ),
+                                                                    child: Row(
+                                                                      children: <Widget>[
+                                                                        Icon(Icons.power_settings_new_rounded,
+                                                                            size: 18,
+                                                                            color: Theme.of(context).colorScheme.error),
+                                                                        const SizedBox(width: 12),
+                                                                        Text(
+                                                                          "Full Exit",
+                                                                          style: TextStyle(
+                                                                            fontSize: 14,
+                                                                            color: Theme.of(context).colorScheme.error,
+                                                                            fontWeight: FontWeight.w500,
+                                                                          ),
                                                                         ),
-                                                                      );
-                                                                    },
+                                                                      ],
+                                                                    ),
                                                                   ),
                                                                 ),
+                                                                const SizedBox(height: 4),
+                                                                const _BMACFooter(),
                                                               ],
                                                             ),
                                                           ),
-                                                        ),
-                                                        // Bottom Actions
-                                                        Padding(
-                                                          padding: const EdgeInsets.all(10),
-                                                          child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                            children: <Widget>[
-                                                              if (sponsor.enabled) ...<Widget>[
-                                                                InkWell(
-                                                                  onTap: () => WinUtils.open(sponsor.url),
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.all(8),
-                                                                    child: Column(
-                                                                      children: <Widget>[
-                                                                        Text(
-                                                                          "Sponsored by",
-                                                                          style: TextStyle(
-                                                                            fontSize: 10,
-                                                                            fontStyle: FontStyle.italic,
-                                                                            color: Theme.of(context)
-                                                                                .colorScheme
-                                                                                .onSurface
-                                                                                .withAlpha(100),
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(height: 4),
-                                                                        if (sponsorImageLight != null)
-                                                                          Image.file(
-                                                                            userSettings.themeType == ThemeType.light
-                                                                                ? sponsorImageLight!
-                                                                                : sponsorImageDark!,
-                                                                            height: 40,
-                                                                            fit: BoxFit.contain,
-                                                                          ),
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(height: 8),
-                                                              ],
-                                                              InkWell(
-                                                                onTap: () {
-                                                                  showDialog(
-                                                                    context: context,
-                                                                    builder: (BuildContext context) => AlertDialog(
-                                                                      title: const Text("Exit Tabame?"),
-                                                                      content: const Text(
-                                                                          "This will close the whole application. Continue?"),
-                                                                      actions: <Widget>[
-                                                                        TextButton(
-                                                                          onPressed: () => Navigator.of(context).pop(),
-                                                                          child: const Text("Cancel"),
-                                                                        ),
-                                                                        ElevatedButton(
-                                                                          onPressed: () {
-                                                                            WinUtils.closeAllTabameExProcesses();
-                                                                            exit(0);
-                                                                          },
-                                                                          style: ElevatedButton.styleFrom(
-                                                                            backgroundColor: Theme.of(context)
-                                                                                .colorScheme
-                                                                                .errorContainer,
-                                                                            foregroundColor: Theme.of(context)
-                                                                                .colorScheme
-                                                                                .onErrorContainer,
-                                                                          ),
-                                                                          child: const Text("Full Exit"),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  );
-                                                                },
-                                                                borderRadius: BorderRadius.circular(8),
-                                                                child: Container(
-                                                                  padding: const EdgeInsets.symmetric(
-                                                                      vertical: 10, horizontal: 12),
-                                                                  decoration: BoxDecoration(
-                                                                    border: Border.all(
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .error
-                                                                            .withAlpha(50)),
-                                                                    borderRadius: BorderRadius.circular(8),
-                                                                  ),
-                                                                  child: Row(
-                                                                    children: <Widget>[
-                                                                      Icon(Icons.power_settings_new_rounded,
-                                                                          size: 18,
-                                                                          color: Theme.of(context).colorScheme.error),
-                                                                      const SizedBox(width: 12),
-                                                                      Text(
-                                                                        "Full Exit",
-                                                                        style: TextStyle(
-                                                                          fontSize: 14,
-                                                                          color: Theme.of(context).colorScheme.error,
-                                                                          fontWeight: FontWeight.w500,
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              const SizedBox(height: 4),
-                                                              const _BMACFooter(),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
                                                 //#e
                                                 //1 Pages
                                                 //#h white

@@ -10,6 +10,7 @@ import 'package:pool/pool.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:tabamewin32/tabamewin32.dart' as native;
 import 'package:window_manager/window_manager.dart';
+import 'launcher_actions_panel.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/converter.dart';
@@ -255,11 +256,42 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       prefix: r'$',
       icon: Icons.functions_rounded,
     )),
+    const LauncherSearchResultItem.info(LauncherInfoResult(
+      id: 'ctrlKInfo',
+      title: 'Ctrl+K',
+      subtitle: 'Opens Actions Menu for a specific result',
+      icon: Icons.menu_rounded,
+    )),
   ];
+
+  void _openActionsForActiveResult() {
+    if (_results.isEmpty) return;
+
+    final int idx = _activeIndexNotifier.value.clamp(0, _results.length - 1);
+    final LauncherSearchResultItem item = _results[idx];
+
+    // Shortcuts and info rows have no meaningful actions.
+    if (item.isShortcut || item.isInfo) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      builder: (_) => ActionsPanelScaffold(item: item),
+    );
+  }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
       // Escape: go back to quickmenu
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.keyK &&
+          HardwareKeyboard.instance.isControlPressed) {
+        _openActionsForActiveResult();
+        setState(() {});
+        return KeyEventResult.handled;
+      }
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (kReleaseMode) {
           QuickMenuFunctions.toggleQuickMenu(visible: false);
@@ -2099,7 +2131,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                           child: MouseRegion(
                                             onHover: (PointerHoverEvent event) =>
                                                 _selectResultFromPointerHover(event, index),
-                                            child: resultWidget,
+                                            child: Stack(
+                                              alignment: Alignment.centerRight,
+                                              children: <Widget>[
+                                                resultWidget,
+                                              ],
+                                            ),
                                           ),
                                         );
                                       },
@@ -2389,6 +2426,69 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onSurface: theme.colorScheme.onSurface,
       onTap: () => _openWindow(window),
       onHover: () => _selectResultFromMouse(index),
+    );
+  }
+}
+
+class _ActionsHintBadge extends StatefulWidget {
+  const _ActionsHintBadge({
+    required this.accent,
+    required this.onSurface,
+    required this.onTap,
+  });
+
+  final Color accent;
+  final Color onSurface;
+  final VoidCallback onTap;
+
+  @override
+  State<_ActionsHintBadge> createState() => _ActionsHintBadgeState();
+}
+
+class _ActionsHintBadgeState extends State<_ActionsHintBadge> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: _hovered ? widget.accent.withAlpha(40) : widget.accent.withAlpha(18),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: widget.accent.withAlpha(_hovered ? 80 : 40),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.bolt_rounded,
+                size: 10,
+                color: widget.accent.withAlpha(200),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'Ctrl+K',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: widget.accent.withAlpha(200),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
