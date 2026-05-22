@@ -6,6 +6,7 @@ import 'package:win32/win32.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/custom_tooltip.dart';
+import '../widgets/mini_switch.dart';
 
 class HostsEditor extends StatefulWidget {
   const HostsEditor({super.key});
@@ -339,7 +340,7 @@ class _HostRowState extends State<HostRow> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
-                Switch(
+                MiniToggleSwitch(
                   value: enabled,
                   onChanged: widget.canSaveHosts
                       ? (bool value) {

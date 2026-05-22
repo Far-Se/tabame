@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/util/app_opacity.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -753,7 +754,7 @@ class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
           ),
           Transform.scale(
             scale: 0.8,
-            child: Switch(value: value, onChanged: onChanged),
+            child: MiniToggleSwitch(value: value, onChanged: onChanged),
           ),
         ],
       ),

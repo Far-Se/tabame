@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -141,7 +142,7 @@ class HotkeyHandler {
       if (triggered) {
         _mousePressOrigin = event.mouse.end; // reset baseline so steps feel continuous
         _firedMovement[event.hotkey] = 1;
-        await keyMap.applyActions();
+        await keyMap.applyActions(TriggerType.movement);
       }
     }
   }
@@ -192,7 +193,7 @@ class HotkeyHandler {
           (dir == 3 && diff.y > 0 && diffY.isBetweenEqual(minDist, maxDist)); // down
 
       if (triggered) {
-        await keyMap.applyActions();
+        await keyMap.applyActions(TriggerType.movement);
         return true;
       }
     }
@@ -209,7 +210,7 @@ class HotkeyHandler {
     for (final KeyMap keyMap in durationMaps) {
       if (!keyMap.isMouseInRegion) continue;
       if (heldMs.isBetweenEqual(keyMap.triggerInfo[0], keyMap.triggerInfo[1])) {
-        await keyMap.applyActions();
+        await keyMap.applyActions(TriggerType.duration);
         return true;
       }
     }
@@ -230,7 +231,7 @@ class HotkeyHandler {
 
       final int elapsed = event.time.end - _doublePressTimestamps[hotkey.hotkey]!;
       if (elapsed < 300) {
-        await keyMap.applyActions();
+        await keyMap.applyActions(TriggerType.doublePress);
         _doublePressTimestamps.remove(hotkey.hotkey);
         return true;
       } else {
@@ -254,28 +255,35 @@ class HotkeyHandler {
       if (hotkey.hasDoublePress) {
         _doublePressTimestamps[hotkey.hotkey] = event.time.end;
       }
-      await keyMap.applyActions();
+      await keyMap.applyActions(TriggerType.press);
       return true;
     }
     return false;
   }
+
+  final Map<String, Timer> _pendingPressTimers = <String, Timer>{};
 
   /// Returns `true` if a global double-press action fired.
   Future<bool> _tryDispatchDoublePress(HotkeyEvent event, Hotkeys hotkey) async {
     if (!_doublePressTimestamps.containsKey(hotkey.hotkey)) return false;
 
     final List<KeyMap> doublePressKeys = hotkey.getDoublePress;
+    final int elapsed = event.time.end - _doublePressTimestamps[hotkey.hotkey]!;
+
     for (final KeyMap keyMap in doublePressKeys) {
       if (!keyMap.isMouseInRegion) continue;
-
-      final int elapsed = event.time.end - _doublePressTimestamps[hotkey.hotkey]!;
       if (elapsed < 300) {
-        await keyMap.applyActions();
+        // Cancel pending single press
+        _pendingPressTimers[hotkey.hotkey]?.cancel();
+        _pendingPressTimers.remove(hotkey.hotkey);
+
         _doublePressTimestamps.remove(hotkey.hotkey);
+
+        await keyMap.applyActions(TriggerType.doublePress);
         return true;
       }
     }
-    _doublePressTimestamps.remove(hotkey.hotkey);
+
     return false;
   }
 
@@ -287,12 +295,47 @@ class HotkeyHandler {
       if (!keyMap.isMouseInRegion) continue;
       if (event.name.isNotEmpty && keyMap.name != event.name) continue;
 
+      // OLD BEHAVIOR:
+      // Execute immediately even if double-press exists.
+      if (!hotkey.waitForDoublePress) {
+        if (hotkey.hasDoublePress) {
+          _doublePressTimestamps[hotkey.hotkey] = event.time.end;
+        }
+
+        await keyMap.applyActions(TriggerType.press);
+        return true;
+      }
+
+      // NEW BEHAVIOR:
+      // Wait briefly to determine if this becomes a double press.
       if (hotkey.hasDoublePress) {
         _doublePressTimestamps[hotkey.hotkey] = event.time.end;
+
+        // Cancel previous pending single-press timer.
+        _pendingPressTimers[hotkey.hotkey]?.cancel();
+
+        _pendingPressTimers[hotkey.hotkey] = Timer(
+          const Duration(milliseconds: 300),
+          () async {
+            // No second press happened.
+            if (_doublePressTimestamps.containsKey(hotkey.hotkey)) {
+              _doublePressTimestamps.remove(hotkey.hotkey);
+
+              await keyMap.applyActions(TriggerType.press);
+            }
+
+            _pendingPressTimers.remove(hotkey.hotkey);
+          },
+        );
+
+        return true;
       }
-      await keyMap.applyActions();
+
+      // No double-press mappings -> execute immediately.
+      await keyMap.applyActions(TriggerType.press);
       return true;
     }
+
     return false;
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
+import '../../widgets/mini_switch.dart';
 
 class QuickmenuGeneralSettingsPage extends StatefulWidget {
   const QuickmenuGeneralSettingsPage({super.key});
@@ -246,11 +247,10 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
                   ],
                 ),
               ),
-              Switch(
+              MiniToggleSwitch(
                 value: value,
                 onChanged: onChanged,
                 activeThumbColor: theme.colorScheme.primary,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ],
           ),

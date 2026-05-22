@@ -13,6 +13,7 @@ import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/util/color_picker_controller.dart';
 import '../../models/win32/win_utils.dart';
 import 'custom_tooltip.dart';
+import 'mini_switch.dart';
 import 'panel_header.dart';
 import 'windows_scroll.dart';
 
@@ -1001,10 +1002,9 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                 ),
               ),
               const SizedBox(width: 8),
-              Switch(
+              MiniToggleSwitch(
                 value: format.enabled,
                 onChanged: (bool value) => _setFormatEnabled(format.id, value),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               if (!format.isBuiltIn) ...<Widget>[
                 const SizedBox(width: 4),

@@ -76,6 +76,7 @@ class Hotkeys {
   List<KeyMap> keymaps;
   List<String> prohibited;
   bool noopScreenBusy;
+  bool waitForDoublePress;
 
   Hotkeys({
     required this.key,
@@ -83,6 +84,7 @@ class Hotkeys {
     required this.keymaps,
     required this.prohibited,
     required this.noopScreenBusy,
+    required this.waitForDoublePress,
   });
 
   // --------------------------------------------------------------------------
@@ -214,6 +216,7 @@ class Hotkeys {
     List<KeyMap>? keymaps,
     List<String>? prohibited,
     bool? noopScreenBusy,
+    bool? waitForDoublePress,
   }) {
     return Hotkeys(
       key: key ?? this.key,
@@ -221,6 +224,7 @@ class Hotkeys {
       keymaps: keymaps ?? this.keymaps.map((KeyMap km) => km.copyWith()).toList(),
       prohibited: prohibited ?? List<String>.from(this.prohibited),
       noopScreenBusy: noopScreenBusy ?? this.noopScreenBusy,
+      waitForDoublePress: waitForDoublePress ?? this.waitForDoublePress,
     );
   }
 
@@ -231,6 +235,7 @@ class Hotkeys {
       'keymaps': keymaps.map((KeyMap keyMap) => keyMap.toMap()).toList(),
       'prohibited': prohibited,
       'noopScreenBusy': noopScreenBusy,
+      'waitForDoublePress': waitForDoublePress,
     };
   }
 
@@ -245,6 +250,7 @@ class Hotkeys {
       ),
       prohibited: List<String>.from(map['prohibited'] ?? const <String>[]),
       noopScreenBusy: (map['noopScreenBusy'] ?? false) as bool,
+      waitForDoublePress: (map['waitForDoublePress'] ?? false) as bool,
     );
   }
 
@@ -259,7 +265,7 @@ class Hotkeys {
 
   @override
   String toString() {
-    return 'Hotkeys(key: $key, modifiers: $modifiers, keymaps: $keymaps, prohibited: $prohibited, noopScreenBusy: $noopScreenBusy)';
+    return 'Hotkeys(key: $key, modifiers: $modifiers, keymaps: $keymaps, prohibited: $prohibited, noopScreenBusy: $noopScreenBusy, waitForDoublePress: $waitForDoublePress)';
   }
 
   @override
@@ -270,12 +276,18 @@ class Hotkeys {
         listEquals(other.modifiers, modifiers) &&
         listEquals(other.keymaps, keymaps) &&
         listEquals(other.prohibited, prohibited) &&
-        other.noopScreenBusy == noopScreenBusy;
+        other.noopScreenBusy == noopScreenBusy &&
+        other.waitForDoublePress == waitForDoublePress;
   }
 
   @override
   int get hashCode {
-    return key.hashCode ^ modifiers.hashCode ^ keymaps.hashCode ^ prohibited.hashCode ^ noopScreenBusy.hashCode;
+    return key.hashCode ^
+        modifiers.hashCode ^
+        keymaps.hashCode ^
+        prohibited.hashCode ^
+        noopScreenBusy.hashCode ^
+        waitForDoublePress.hashCode;
   }
 }
 
@@ -365,7 +377,7 @@ class KeyMap with TabameListener {
   // Purpose: Validate runtime conditions and execute the configured keymap actions.
   // --------------------------------------------------------------------------
 
-  Future<void> applyActions() async {
+  Future<void> applyActions(TriggerType type) async {
     if (variableCheck.isNotEmpty && variableCheck[0].isNotEmpty) {
       final String storedVariableValue = Boxes.pref.getString("k_${variableCheck[0]}") ?? "";
       if (storedVariableValue.isNotEmpty) {
@@ -418,15 +430,15 @@ class KeyMap with TabameListener {
       }
 
       if (GetForegroundWindow() == targetWindowHandle) {
-        await applyActionsForWindow();
+        await applyActionsForWindow(type);
       }
       return;
     }
 
-    await applyActionsForWindow();
+    await applyActionsForWindow(type);
   }
 
-  Future<void> applyActionsForWindow() async {
+  Future<void> applyActionsForWindow(TriggerType type) async {
     for (final KeyAction action in actions) {
       switch (action.type) {
         case ActionType.hotkey:
@@ -817,10 +829,16 @@ class HotKeyInfo {
     "ShowLastActiveWindow": () {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.focusSecondWindow();
+      Future<void>.delayed(const Duration(milliseconds: 50), () {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+      });
     },
     "ShowSecondWindowUnderCursor": () {
       QuickMenuFunctions.toggleQuickMenu(visible: false);
       WindowWatcher.showSecondWindowUnderCursor();
+      Future<void>.delayed(const Duration(milliseconds: 50), () {
+        QuickMenuFunctions.toggleQuickMenu(visible: false);
+      });
     },
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),

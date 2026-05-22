@@ -12,7 +12,6 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
-import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';

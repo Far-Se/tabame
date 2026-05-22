@@ -9,11 +9,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:zip_flutter/zip_flutter.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
+import '../widgets/custom_text_field.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/popup_dialog.dart';
 
@@ -161,7 +163,14 @@ String _normalizeProjectPath(String folder, String path) {
 }
 
 List<String> _splitProjectSetting(String setting) {
-  return setting.split(';').map((String value) => value.trim()).where((String value) => value.isNotEmpty).toList();
+  final List<String> caca = setting
+      .split(RegExp(r'[;,]+'))
+      .map((String value) => value.trim())
+      .where((String value) => value.isNotEmpty)
+      .toList();
+  print("BAGAMAIS PULA");
+  print(caca);
+  return caca;
 }
 
 bool _isSimpleClocDirExclude(String pattern) {
@@ -593,8 +602,8 @@ class ProjectOverviewWidget extends StatefulWidget {
 
 class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   final TextEditingController _folderController = TextEditingController();
-  final TextEditingController _includeController = TextEditingController();
-  final TextEditingController _excludeController = TextEditingController();
+  String includeFiles = "";
+  String excludeFiles = "";
   final TextEditingController _gitLinkController = TextEditingController();
 
   final List<int> extensionColors = <int>[
@@ -626,9 +635,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   void initState() {
     super.initState();
     _folderController.text = Boxes.pref.getString("projectOverviewFolder") ?? "";
-    _includeController.text = Boxes.pref.getString("projectOverviewIncluded") ?? "";
-    _excludeController.text =
-        Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{5,}$";
+    includeFiles = Boxes.pref.getString("projectOverviewIncluded") ?? "";
+    excludeFiles = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{5,}$";
 
     if (userSettings.args.contains("-wizardly")) {
       _folderController.text = userSettings.args[0].replaceAll('"', '');
@@ -638,8 +646,6 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   @override
   void dispose() {
     _folderController.dispose();
-    _includeController.dispose();
-    _excludeController.dispose();
     _gitLinkController.dispose();
     super.dispose();
   }
@@ -651,8 +657,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       return;
     }
 
-    Boxes.updateSettings("projectOverviewIncluded", _includeController.text);
-    Boxes.updateSettings("projectOverviewExcluded", _excludeController.text);
+    Boxes.updateSettings("projectOverviewIncluded", includeFiles);
+    Boxes.updateSettings("projectOverviewExcluded", excludeFiles);
 
     setState(() {
       isAnalyzing = true;
@@ -662,8 +668,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
     final ProjectAnalysisArgs args = ProjectAnalysisArgs(
       folder: folder,
-      included: _includeController.text,
-      excluded: _excludeController.text,
+      included: includeFiles,
+      excluded: excludeFiles,
       useGitIgnore: projectUseGitIgnore,
       useCloc: projectUseCloc,
     );
@@ -967,10 +973,18 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Expanded(child: _buildFilterInput("Include Extensions", _includeController, "dart;js;css", onSurface)),
+                Expanded(
+                  child: _buildFilterInput("Include Extensions", includeFiles, (String string) {
+                    includeFiles = string;
+                    // setState(() {});
+                  }, "dart;js;css"),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: _buildFilterInput("Exclude Patterns", _excludeController, "node_modules;build", onSurface)),
+                    child: _buildFilterInput("Exclude Patterns", excludeFiles, (String string) {
+                  excludeFiles = string;
+                  // setState(() {});
+                }, "node_modules;build")),
               ],
             ),
             const SizedBox(height: 12),
@@ -993,17 +1007,11 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     );
   }
 
-  Widget _buildFilterInput(String label, TextEditingController controller, String hint, Color onSurface) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        floatingLabelStyle: TextStyle(color: userSettings.themeColors.accentColor),
-      ),
+  Widget _buildFilterInput(String label, String value, Function(String val) onChanged, String hintText) {
+    return CustomTextField(
+      labelText: label,
+      onChanged: onChanged,
+      value: value,
     );
   }
 
@@ -1397,6 +1405,58 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     if (mounted) setState(() {});
   }
 
+  Stream<double> extractWithProgress({
+    required String zipPath,
+    required String destinationPath,
+  }) async* {
+    // 1. Open the zip file in read-only mode
+    final ZipFile zip = ZipFile.open(zipPath, mode: ZipOpenMode.readonly);
+
+    try {
+      // 2. Fetch all entries to know the total count
+      final List<ZipEntry> entries = zip.getAllEntries();
+      final int totalFiles = entries.length;
+
+      if (totalFiles == 0) {
+        yield 1.0;
+        return;
+      }
+
+      // 3. Ensure the destination directory exists
+      final Directory destDir = Directory(destinationPath);
+      if (!await destDir.exists()) {
+        await destDir.create(recursive: true);
+      }
+
+      // 4. Extract each entry sequentially and yield progress// 4. Extract each entry sequentially and yield progress
+      for (int i = 0; i < totalFiles; i++) {
+        final ZipEntry entry = entries[i];
+
+        // Construct the absolute output path for this file/directory
+        final String outputPath = '$destinationPath/${entry.name}';
+
+        // Check if the entry represents a directory
+        if (entry.name.endsWith('/')) {
+          await Directory(outputPath).create(recursive: true);
+        } else {
+          // Ensure parent directory exists for the file
+          final File file = File(outputPath);
+          await file.parent.create(recursive: true);
+
+          // Write the decompressed bytes to disk
+          await file.writeAsBytes(entry.read());
+        }
+
+        // 5. Calculate and yield progress (0.0 to 1.0)
+        double progress = (i + 1) / totalFiles;
+        yield progress;
+      }
+    } finally {
+      // Always close the zip handle to prevent memory leaks or file locking
+      zip.close();
+    }
+  }
+
   void _startDownload() async {
     final String link = _linkController.text.trim();
     if (link.isEmpty) return;
@@ -1426,14 +1486,24 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
       return;
     }
 
-    final String zipFile = "$baseDir\\temp_archive.zip";
+    final String zipFileName = "$baseDir\\temp_archive.zip";
     try {
-      await _downloadFile(repoUrl, zipFile, () async {
+      await _downloadFile(repoUrl, zipFileName, () async {
         setState(() => downloadMessage = "Extracting...");
-        WinUtils.open("powershell.exe",
-            arguments:
-                '-Command "Expand-Archive -LiteralPath \'$zipFile\' -DestinationPath \'$baseDir\' -Force; Remove-Item \'$zipFile\'"');
-        await Future<void>.delayed(const Duration(seconds: 2));
+        final Stream<double> extractionStream = extractWithProgress(
+          zipPath: zipFileName,
+          destinationPath: baseDir,
+        );
+        double lastUpdatedProgress = 0.0;
+        await for (final double progress in extractionStream) {
+          if (progress - lastUpdatedProgress >= 0.005 || progress == 1.0) {
+            lastUpdatedProgress = progress;
+            setState(() {
+              downloadMessage = 'Extracting: ${(progress * 100).toStringAsFixed(1)}%';
+            });
+          }
+        }
+
         _loadLocalSaves();
         setState(() {
           isDownloading = false;
@@ -1511,7 +1581,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
           const Text("Locally Saved Projects", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           SizedBox(
-            height: 100,
+            height: 50,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: allDirs.length,
@@ -1520,10 +1590,22 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
                 final String name = path.split(r'\').last;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: ActionChip(
-                    avatar: const Icon(Icons.folder_zip_rounded, size: 16),
-                    label: Text(name, style: const TextStyle(fontSize: 12)),
-                    onPressed: () => widget.onSelected(path),
+                  child: CustomTooltip(
+                    message: "Right Click to Delete",
+                    child: GestureDetector(
+                      onSecondaryTapUp: (TapUpDetails e) {
+                        if (!Directory('$baseDir\\$name').existsSync()) return;
+                        Directory('$baseDir\\$name').deleteSync(recursive: true);
+                        setState(() {
+                          allDirs.remove(path);
+                        });
+                      },
+                      child: ActionChip(
+                        avatar: const Icon(Icons.folder_zip_rounded, size: 16),
+                        label: Text(name, style: const TextStyle(fontSize: 12)),
+                        onPressed: () => widget.onSelected(path),
+                      ),
+                    ),
                   ),
                 );
               },

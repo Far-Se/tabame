@@ -16,6 +16,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../services/music_local_indexer.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/mix_widgets.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/quick_menu_panel.dart';

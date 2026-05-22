@@ -9,6 +9,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -809,7 +810,7 @@ class _DefaultFolderRow extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               padding: EdgeInsets.zero,
             ),
-          Switch(value: enabled, activeThumbColor: accent, onChanged: onChanged),
+          MiniToggleSwitch(value: enabled, activeThumbColor: accent, onChanged: onChanged),
         ],
       ),
     );

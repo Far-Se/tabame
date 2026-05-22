@@ -7,6 +7,7 @@ import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../widgets/emoji_picker_modal.dart';
 import '../../widgets/inkwell_button.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 
 class BookmarkEditor extends StatefulWidget {
@@ -202,11 +203,10 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                               ],
                             ),
                           ),
-                          Switch(
+                          MiniToggleSwitch(
                             value: _preferInputIcon,
                             onChanged: (bool val) => setState(() => _preferInputIcon = val),
                             activeThumbColor: userSettings.themeColors.accentColor,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                         ],
                       ),

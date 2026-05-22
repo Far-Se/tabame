@@ -5,6 +5,7 @@ import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../widgets/color_picker.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/text_input.dart';
 
 class ViewsInterface extends StatefulWidget {
@@ -406,10 +407,9 @@ class ViewsInterfaceState extends State<ViewsInterface> {
             Expanded(child: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
             Transform.scale(
               scale: 0.7,
-              child: Switch(
+              child: MiniToggleSwitch(
                 value: value,
                 onChanged: onChanged,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ],

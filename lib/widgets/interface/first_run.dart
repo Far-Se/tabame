@@ -15,6 +15,7 @@ import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/info_widget.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
 
 class FirstRun extends StatefulWidget {
@@ -791,7 +792,7 @@ class FirstRunState extends State<FirstRun> {
             ),
           ),
           const SizedBox(width: 12),
-          Switch(
+          MiniToggleSwitch(
             value: value,
             activeThumbColor: accent,
             onChanged: onChanged,

@@ -13,6 +13,7 @@ import '../../models/util/main_hotkey.dart';
 import '../../models/win32/keys.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/info_text.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/text_input.dart';
 import 'hotkeys/hotkey_action_editor.dart';
 import 'hotkeys/hotkey_settings_dialog.dart';
@@ -119,6 +120,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
         modifiers: <String>[],
         prohibited: <String>[],
         noopScreenBusy: false,
+        waitForDoublePress: false,
         keymaps: <KeyMap>[
           KeyMap(
             name: "QuickClick",
@@ -380,6 +382,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
       modifiers: <String>[],
       prohibited: <String>[],
       noopScreenBusy: false,
+      waitForDoublePress: false,
       keymaps: <KeyMap>[
         KeyMap(
           name: "Default Shortcut",
@@ -1300,7 +1303,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
                     ],
                   ),
                 ),
-                Switch(
+                MiniToggleSwitch(
                   value: _binding.enabled,
                   onChanged: (bool enabled) {
                     widget.onChanged(ScreenDrawHotkeyBinding(
@@ -1466,7 +1469,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                 ),
               ),
               const SizedBox(width: 16),
-              Switch(
+              MiniToggleSwitch(
                 value: _enabled,
                 onChanged: (bool value) {
                   setState(() => _enabled = value);

@@ -17,6 +17,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/win32/win_utils.dart';
+import '../widgets/mini_switch.dart';
 
 enum UploadHostType {
   /// Custom PowerShell command supplied by the user.
@@ -1379,7 +1380,7 @@ class _ToggleTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Switch(
+          MiniToggleSwitch(
             value: value,
             onChanged: onChanged,
           ),

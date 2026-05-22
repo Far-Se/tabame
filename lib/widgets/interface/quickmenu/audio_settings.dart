@@ -10,6 +10,7 @@ import '../../../models/settings.dart';
 import '../../../models/theme.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../widgets/mini_switch.dart';
 import '../interface_quickmenu.dart';
 
 class QuickmenuAudioSettingsPage extends StatefulWidget {
@@ -116,11 +117,10 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                 ],
               ),
             ),
-            Switch(
+            MiniToggleSwitch(
               value: value,
               onChanged: onChanged,
               activeThumbColor: theme.colorScheme.primary,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],
         ),
@@ -564,7 +564,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                             ],
                           ),
                         ),
-                        Switch(
+                        MiniToggleSwitch(
                           value: userSettings.volumeSetBack,
                           onChanged: (bool value) async {
                             userSettings.volumeSetBack = value;

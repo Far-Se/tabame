@@ -1816,9 +1816,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
   }
 
-  void _openWindow(Window window) {
+  void _openWindow(Window window) async {
+    await QuickMenuFunctions.toggleQuickMenu(visible: false);
     Win32.activateWindow(window.hWnd);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
     Globals.lastFocusedWinHWND = window.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';

@@ -9,6 +9,7 @@ import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/mix_widgets.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/quick_menu_panel.dart';
@@ -238,7 +239,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
           icon: Icons.history_toggle_off_rounded,
           title: "Clipboard history",
           subtitle: _enabled ? "New clipboard changes are saved." : "Clipboard changes are ignored.",
-          trailing: Switch(
+          trailing: MiniToggleSwitch(
             value: _enabled,
             activeThumbColor: accent,
             onChanged: _toggleEnabled,

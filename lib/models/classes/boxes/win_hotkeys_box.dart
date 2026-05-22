@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../globals.dart';
-import '../../win32/keys.dart';
 import '../hotkeys.dart';
 import '../boxes.dart';
 

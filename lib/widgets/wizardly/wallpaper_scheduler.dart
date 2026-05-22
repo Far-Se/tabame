@@ -10,6 +10,7 @@ import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../../models/win32/mixed.dart';
 import '../../services/wallpaper_service.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/modern_dropdown.dart';
 
 class WallpaperScheduler extends StatefulWidget {
@@ -213,7 +214,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Switch(
+            leading: MiniToggleSwitch(
               value: s.enabled,
               activeThumbColor: accent,
               onChanged: (bool val) {

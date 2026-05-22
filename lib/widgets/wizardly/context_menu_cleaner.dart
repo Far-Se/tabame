@@ -8,6 +8,7 @@ import '../../models/win32/win_utils.dart';
 import '../../models/wizardly/context_menu_item.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/extracted_icon.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/text_input.dart';
 
 class ContextMenuCleaner extends StatefulWidget {
@@ -383,7 +384,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
               ),
               CustomTooltip(
                 message: item.isEnabled ? "Disable Item" : "Enable Item",
-                child: Switch(
+                child: MiniToggleSwitch(
                   value: item.isEnabled,
                   onChanged: (bool val) async {
                     await item.toggle();

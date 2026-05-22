@@ -27,7 +27,6 @@ import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
 import '../models/settings.dart';
-import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/widgets/color_picker.dart';

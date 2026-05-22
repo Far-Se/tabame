@@ -13,6 +13,7 @@ import '../../../models/util/app_opacity.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/emoji_picker_modal.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -700,11 +701,10 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                 ],
               ),
             ),
-            Switch(
+            MiniToggleSwitch(
               value: isSelected,
               onChanged: (_) => onTap(),
               activeThumbColor: accent,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],
         ),
@@ -788,8 +788,7 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                         : Colors.transparent,
                     border: Border(
                         bottom: BorderSide(
-                            color:
-                                userSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded ? 0.15 : 0),
+                            color: userSettings.themeColors.accentColor.withValues(alpha: widget.isExpanded ? 0.15 : 0),
                             width: 1)),
                   ),
                   child: Row(

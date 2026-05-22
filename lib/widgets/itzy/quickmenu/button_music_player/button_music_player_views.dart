@@ -1440,7 +1440,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Switch(
+                MiniToggleSwitch(
                   value: userSettings.showMusicPlayerInTaskbar,
                   activeThumbColor: accent,
                   onChanged: (bool val) async {

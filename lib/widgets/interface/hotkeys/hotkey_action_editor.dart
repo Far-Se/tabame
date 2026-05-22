@@ -7,6 +7,7 @@ import '../../../models/classes/hotkeys.dart';
 import '../../../models/settings.dart';
 import '../../widgets/checkbox_widget.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/modern_dropdown.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/text_input.dart';
@@ -365,7 +366,7 @@ class HotKeyActionState extends State<HotKeyAction> {
             icon: Icons.mouse_rounded,
             title: "Focus Mouse",
             subtitle: "Activate window under cursor",
-            trailing: Switch(
+            trailing: MiniToggleSwitch(
               value: widget.hotkey.windowUnderMouse,
               onChanged: (bool e) => setState(() => widget.hotkey.windowUnderMouse = e),
             ),
@@ -514,7 +515,7 @@ class HotKeyActionState extends State<HotKeyAction> {
           icon: Icons.fullscreen_exit_rounded,
           title: "Screen Region",
           subtitle: "Restrict hotkey to area",
-          trailing: Switch(
+          trailing: MiniToggleSwitch(
             onChanged: (bool e) => setState(() => widget.hotkey.boundToRegion = !widget.hotkey.boundToRegion),
             value: widget.hotkey.boundToRegion,
           ),
@@ -610,7 +611,7 @@ class HotKeyActionState extends State<HotKeyAction> {
           icon: Icons.tune_rounded,
           title: "Variable Dependency",
           subtitle: "Trigger if variable matches",
-          trailing: Switch(
+          trailing: MiniToggleSwitch(
             onChanged: (bool e) => setState(() => variableCheck = e),
             value: variableCheck,
           ),
@@ -703,7 +704,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                   icon: Icons.gesture_rounded,
                   title: "Real-time Tracking",
                   subtitle: "Execute continuously on movement",
-                  trailing: Switch(
+                  trailing: MiniToggleSwitch(
                     onChanged: (bool e) => setState(() => widget.hotkey.triggerInfo[2] = e ? -1 : 0),
                     value: widget.hotkey.triggerInfo[2] == -1,
                   ),
@@ -772,7 +773,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                 icon: Icons.window_rounded,
                 title: "Active Only",
                 subtitle: "",
-                trailing: Switch(
+                trailing: MiniToggleSwitch(
                     value: click.currentWindow,
                     onChanged: (bool v) {
                       click.currentWindow = v;

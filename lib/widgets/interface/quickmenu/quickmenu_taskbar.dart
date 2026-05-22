@@ -8,6 +8,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/window_watcher.dart';
+import '../../widgets/mini_switch.dart';
 
 class QuickmenuTaskbar extends StatefulWidget {
   const QuickmenuTaskbar({super.key});
@@ -612,9 +613,10 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
             ),
             Transform.scale(
               scale: 0.8,
-              child: Switch(
+              child: MiniToggleSwitch(
                 value: value,
                 onChanged: onChanged,
+                activeThumbColor: null,
               ),
             ),
           ],

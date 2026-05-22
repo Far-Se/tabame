@@ -7,6 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/windows_scroll.dart';
 import '../grid_settings.dart';
 
@@ -65,7 +66,7 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
               ),
               Transform.scale(
                 scale: 0.8,
-                child: Switch(
+                child: MiniToggleSwitch(
                   value: userSettings.quickSnapOverlay,
                   onChanged: (bool value) {
                     setState(() {

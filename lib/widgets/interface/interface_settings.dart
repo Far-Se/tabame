@@ -14,6 +14,7 @@ import '../../models/util/solar_calculator.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/custom_tooltip.dart';
+import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
 
 class _AppOpacity {
@@ -516,8 +517,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                     Expanded(
                         child: _timeChip("Light Mode", userSettings.themeScheduleMin.formatTime(), _pickThemeStart)),
                     const SizedBox(width: 10),
-                    Expanded(
-                        child: _timeChip("Dark Mode", userSettings.themeScheduleMax.formatTime(), _pickThemeEnd)),
+                    Expanded(child: _timeChip("Dark Mode", userSettings.themeScheduleMax.formatTime(), _pickThemeEnd)),
                   ],
                 ),
               ),
@@ -812,7 +812,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
             trailing,
           ],
           const SizedBox(width: 10),
-          Switch(value: value, onChanged: onChanged),
+          MiniToggleSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );
