@@ -254,18 +254,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                         final int crossAxisCount = switch (width) {
                           > 1300 => 6,
                           > 900 => 4,
-                          > 600 => 3,
-                          > 400 => 2,
-                          _ => 1,
-                        };
-
-                        // Aspect ratio adapts so cards don't get too wide/narrow
-                        final double aspectRatio = switch (width) {
-                          > 1300 => 1.4,
-                          > 900 => 1.6,
-                          > 600 => 1.8,
-                          > 400 => 1.95,
-                          _ => 3.2, // single column → wider, shorter cards
+                          _ => 3,
                         };
 
                         return GridView.builder(
@@ -275,7 +264,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                             crossAxisCount: crossAxisCount,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: aspectRatio,
+                            mainAxisExtent: 125, // 👈 THIS is the fixed height you want
                           ),
                           itemCount: filtered.length,
                           itemBuilder: (BuildContext context, int index) {
@@ -293,12 +282,15 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                                   ),
                                 );
                               },
-                              child: _NavigationTile(
-                                page: page,
-                                onTap: () {
-                                  final int realIndex = _pages.indexOf(page);
-                                  setState(() => _selectedPage = realIndex);
-                                },
+                              child: SizedBox(
+                                height: 60,
+                                child: _NavigationTile(
+                                  page: page,
+                                  onTap: () {
+                                    final int realIndex = _pages.indexOf(page);
+                                    setState(() => _selectedPage = realIndex);
+                                  },
+                                ),
                               ),
                             );
                           },

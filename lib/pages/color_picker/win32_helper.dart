@@ -180,7 +180,7 @@ class Win32Helper {
 
   static Future<void> instantColorPicker() async {
     if (QuickMenuFunctions.isQuickMenuVisible) {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     final AudioPlayer player = AudioPlayer();

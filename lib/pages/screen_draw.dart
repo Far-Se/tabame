@@ -1430,10 +1430,15 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     );
   }
 
+  Timer? timer;
   void _onKeyEvent(KeyEvent e) {
     _shiftHeld = HardwareKeyboard.instance.isShiftPressed;
-
-    if (e is KeyDownEvent) {
+    if (e is KeyUpEvent) {
+      if (e.logicalKey == LogicalKeyboardKey.escape) {
+        timer?.cancel();
+        ctrl.toggleVisibility();
+      }
+    } else if (e is KeyDownEvent) {
       final bool lCtrl = HardwareKeyboard.instance.isControlPressed;
       // In-app shortcuts (focus required)
       if (lCtrl) {
@@ -1447,9 +1452,11 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       }
       if (e.logicalKey == LogicalKeyboardKey.delete) ctrl.deleteSelected();
       if (e.logicalKey == LogicalKeyboardKey.escape) {
+        timer = Timer(const Duration(milliseconds: 400), () {
+          WindowManager.instance.close();
+        });
         // ctrl.currentShape = null;
         // ctrl.notifyListeners();
-        ctrl.toggleVisibility();
       }
       // Tool shortcuts
       final Map<LogicalKeyboardKey, DrawTool> toolKeys = <LogicalKeyboardKey, DrawTool>{
@@ -1624,7 +1631,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (!ctrl.drawingModeActive) return;
 
     if (ctrl.activeTool == DrawTool.screenCapture) {
-      unawaited(_copyCaptureSelection());
+      Timer(const Duration(milliseconds: 70), () => unawaited(_copyCaptureSelection()));
       return;
     }
 

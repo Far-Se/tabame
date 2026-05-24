@@ -132,7 +132,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
           });
         } else {
           Win32.setPosition(const Offset(-99999, -99999));
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
         }
         break;
 

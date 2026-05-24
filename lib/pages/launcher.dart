@@ -171,6 +171,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       handler: _buildFunctionReindexResults,
     ),
     _LauncherFunctionCommand(
+      name: 'reload',
+      description: 'Reload Hotkeys',
+      usage: r'$reload settings',
+      icon: Icons.manage_search_rounded,
+      handler: _buildFunctionReloadSettingsResults,
+    ),
+    _LauncherFunctionCommand(
       name: 'unit',
       description: 'Convert units',
       usage: r'$unit 10 km to mi',
@@ -294,7 +301,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       }
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (kReleaseMode) {
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
           Win32.activateWindow(Globals.lastFocusedWinHWND);
           return KeyEventResult.handled;
         }
@@ -1086,7 +1093,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (kReleaseMode) {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
     }
   }
 
@@ -1267,6 +1274,31 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       }
     }
     _finishLauncherFunctionExecution();
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionReloadSettingsResults(String input) async {
+    if (input.trim().toLowerCase() != 'settings') {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-reload-help',
+          title: r'Type $reload settings',
+          subtitle: 'This command needs the full target before it can run.',
+          icon: Icons.keyboard_outlined,
+        )),
+      ];
+    }
+    return <LauncherSearchResultItem>[
+      LauncherSearchResultItem.quickAction(_buildFunctionAction(
+        id: 'function-reload-settings',
+        title: 'Reload settings',
+        icon: Icons.keyboard_outlined,
+        subtitle: '',
+        searchTerms: const <String>['reload', 'settings'],
+        onExecute: () {
+          Boxes.reloadSettings();
+        },
+      )),
+    ];
   }
 
   Future<List<LauncherSearchResultItem>> _buildFunctionReindexResults(String input) async {
@@ -1639,6 +1671,50 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     _maybeExecutePendingLauncherQuickAction();
+    unawaited(_pruneStaleFileResults(results));
+  }
+
+  /// Checks file/folder results for existence after they are displayed.
+  /// Runs fully async without blocking — stale entries are removed from both
+  /// the DB and the visible results list.
+  Future<void> _pruneStaleFileResults(List<LauncherSearchResultItem> snapshot) async {
+    // Collect only items that represent real filesystem paths.
+    final List<LauncherSearchResultItem> fileItems =
+        snapshot.where((LauncherSearchResultItem r) => r.isFile && r.entity != null).toList();
+    if (fileItems.isEmpty) return;
+
+    final List<LauncherSearchResultItem> stale = <LauncherSearchResultItem>[];
+
+    for (final LauncherSearchResultItem item in fileItems) {
+      final FileSystemEntityType type = await FileSystemEntity.type(item.entity!.path);
+      if (type == FileSystemEntityType.notFound) {
+        stale.add(item);
+      }
+    }
+
+    if (stale.isEmpty) return;
+    if (!mounted) return;
+
+    // Remove stale entries from the database.
+    for (final LauncherSearchResultItem item in stale) {
+      final int? nodeId = item.nodeId;
+      if (nodeId == null) continue;
+      try {
+        FileIndexDb.instance.deleteNode(nodeId);
+      } catch (error) {
+        debugPrint('Launcher: Failed to delete stale node $nodeId from DB: $error');
+      }
+    }
+
+    // Update the visible results only if the list has not already changed.
+    if (!mounted || !identical(_results, snapshot)) return;
+
+    final Set<String> staleIds = stale.map((LauncherSearchResultItem r) => r.id).toSet();
+    final List<LauncherSearchResultItem> pruned =
+        _results.where((LauncherSearchResultItem r) => !staleIds.contains(r.id)).toList();
+
+    if (pruned.length == _results.length) return;
+    _setResults(pruned, resetSelection: false);
   }
 
   void _maybeExecutePendingLauncherQuickAction() {
@@ -1731,16 +1807,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
         WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         userSettings.launcherSearchText = '';
       case BookmarkResultKind.cliBook:
         // Copy the CLI command to clipboard.
         Clipboard.setData(ClipboardData(text: result.cli!.value));
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         userSettings.launcherSearchText = '';
       case BookmarkResultKind.appItem:
         WinUtils.open(result.app!.path, arguments: result.app!.arguments);
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         userSettings.launcherSearchText = '';
     }
   }
@@ -1756,7 +1832,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     } else {
       WinUtils.open(path);
     }
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -1771,7 +1847,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (launchTarget.isEmpty) return;
 
     WinUtils.open(launchTarget, parseParamaters: false);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -1817,7 +1893,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _openWindow(Window window) async {
-    await QuickMenuFunctions.toggleQuickMenu(visible: false);
+    await QuickMenuFunctions.hideQuickMenu();
     Win32.activateWindow(window.hWnd);
     Globals.lastFocusedWinHWND = window.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
@@ -1865,7 +1941,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _openNotionResult(NotionResult result) {
     if (result.url.isEmpty) return;
     WinUtils.open(result.url);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -1938,6 +2014,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => _focusNode.requestFocus(),
+        onSecondaryTap: () {
+          _openActionsForActiveResult();
+        },
         child: Container(
           constraints: const BoxConstraints(minHeight: 360),
           decoration: BoxDecoration(

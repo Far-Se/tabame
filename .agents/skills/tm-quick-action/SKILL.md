@@ -8,6 +8,7 @@ description: Build or revise Tabame quick menu top-bar buttons in `lib/widgets/i
 Build new Tabame quick menu buttons by matching the existing launcher-to-modal structure and the established panel styling used in bookmarks, apps, vault, currency converter, and timezone.
 
 Use these files as the baseline references:
+
 - `lib/widgets/itzy/quickmenu/button_bookmarks.dart`
 - `lib/widgets/itzy/quickmenu/button_apps.dart`
 - `lib/widgets/itzy/quickmenu/button_vault.dart`
@@ -37,6 +38,7 @@ class ExampleButton extends StatelessWidget {
 ```
 
 Follow this split:
+
 - Keep the top-bar button thin. It should declare the label, icon, and modal entry point only.
 - Put state, async work, controllers, and layout logic inside the panel widget.
 - Prefer `StatelessWidget` for the launcher unless the button itself owns transient state.
@@ -47,6 +49,7 @@ Follow this split:
 Every new quick menu button **must** be registered in two global files to enable hotkey mapping and action discovery:
 
 ### 1. Register for Hotkeys
+
 Add your unique page key (e.g., `"Example"`) to the `quickMenuPages` list in `lib/models/classes/hotkeys.dart`:
 
 ```dart
@@ -57,6 +60,7 @@ static const List<String> quickMenuPages = <String>[
 ```
 
 ### 2. Register for Action Map
+
 Import your launcher button and add an entry to the `quickActionsMap` in `lib/models/util/quick_action_list.dart`:
 
 ```dart
@@ -114,6 +118,7 @@ class _ExamplePanelState extends State<ExamplePanel> {
 ```
 
 Prefer this hierarchy:
+
 - `PanelHeader` first.
 - `Flexible` body second.
 - `SingleChildScrollView`, `ListView`, or `MouseScrollWidget` inside the body depending on content density.
@@ -132,6 +137,7 @@ Match the existing quick menu visual language:
 - Keep the panel visually dense but not cramped. Existing panels feel quick, utility-first, and desktop-oriented.
 
 Use these reference-specific patterns:
+
 - `button_bookmarks.dart`: compact hover rows, light accent bar, grouped sections, restrained text.
 - `button_apps.dart`: collapsible category sections, grid-or-list body, simple empty state, low-noise chrome.
 - `button_vault.dart`: stateful multi-step panel flow, header actions that change with mode, inline error strip.
@@ -149,9 +155,9 @@ Design the panel for quick execution, not deep navigation:
 - Do not hide critical actions behind hover-only affordances if the action is essential.
 - Use hover feedback on desktop rows and cards. Existing buttons rely on subtle hover tint plus optional accent bar or trailing icon.
 - For list items, wrap items that do not need to be traversed with arrows/tabs with CancelTraversal(child:).
-For button actions:
+  For button actions:
 - Launch apps and files with `WinUtils.open(...)`.
-- Close the quick menu after external execution with `QuickMenuFunctions.toggleQuickMenu(visible: false)` when that matches existing behavior.
+- Close the quick menu after external execution with `QuickMenuFunctions.hideQuickMenu()` when that matches existing behavior.
 - Persist settings with `Boxes.updateSettings(...)` and mirror to in-memory state.
 
 ## State And Async Guidance
@@ -159,6 +165,7 @@ For button actions:
 Keep expensive work out of build methods unless it is trivial and synchronous.
 
 Prefer these patterns:
+
 - Load data in `initState()` when the panel opens.
 - Store transient UI mode in the panel state object.
 - Use request tokens or freshness checks for overlapping async work, like the currency converter.
@@ -167,6 +174,7 @@ Prefer these patterns:
 - Use placeholder, loading, and empty states deliberately. Every complex panel in the references has at least one.
 
 Avoid these patterns:
+
 - Heavy decode, scanning, or network work directly inside `build()`.
 - Rewriting controller text from `build()`.
 - Opening a modal from inside a top-bar button and then embedding another unnecessary modal flow immediately after.
@@ -182,6 +190,7 @@ Choose the body layout based on the job:
 - Use a two-mode or tab-like layout when the feature has a main workflow and a configuration workflow, like timezone.
 
 If the panel risks becoming long or multi-purpose:
+
 - Keep one primary mode visible by default.
 - Move setup and management into a secondary mode or settings toggle.
 - Keep the header title and action icon synced with the current mode.
@@ -191,6 +200,7 @@ If the panel risks becoming long or multi-purpose:
 Always design all three when the panel depends on data.
 
 Follow these conventions:
+
 - Empty state: centered icon, one short heading or sentence, one short guidance line at most.
 - Error state: inline strip or compact message, not a full-screen takeover unless the whole panel is blocked.
 - Loading state: spinner or progress indicator near the active section, not a large blocking overlay unless required.
@@ -213,7 +223,6 @@ Before finishing a new quick menu button:
 10. Confirm the result still feels like a desktop utility tool, not a generic mobile card stack.
 11. Confirm the page key is added to `quickMenuPages` in `lib/models/classes/hotkeys.dart`.
 12. Confirm the button is added to `quickActionsMap` in `lib/models/util/quick_action_list.dart`.
-
 
 ## Practical Defaults
 

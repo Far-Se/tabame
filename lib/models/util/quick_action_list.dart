@@ -22,6 +22,7 @@ import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
 import '../../widgets/itzy/quickmenu/button_emoji.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
+import '../../widgets/itzy/quickmenu/button_fancyshot_browser.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_launcher.dart';
 import '../../widgets/itzy/quickmenu/button_media_control.dart';
@@ -33,6 +34,7 @@ import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
@@ -249,6 +251,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.draw_outlined,
     widget: () => const ScreenDrawButton(),
   ),
+  "ScreenRecordingButton": QuickAction(
+    name: "ScreenRecordingButton",
+    icon: Icons.camera,
+    widget: () => const ScreenRecordingButton(),
+  ),
   "SpotlightButton": QuickAction(
     name: "SpotlightButton",
     icon: Icons.featured_video_rounded,
@@ -269,6 +276,12 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.photo_camera_back_outlined,
     widget: () => const PhotoEditorButton(),
   ),
+  "FancyShotBrowserButton": QuickAction(
+    name: "FancyShotBrowserButton",
+    icon: Icons.photo_album_outlined,
+    widget: () => const FancyShotBrowserButton(),
+  ),
+
   "PinWindowButton": QuickAction(
     name: "PinWindowButton",
     icon: Icons.pin_end,

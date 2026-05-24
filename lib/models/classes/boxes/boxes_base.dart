@@ -886,6 +886,7 @@ class Boxes {
     return _workspaces;
   }
 
+  static void reloadSettings() {}
   // --------------------------------------------------------------------------
   // Group: Quick timer runtime management
   // Purpose: Create, restore, and execute active quick timers.

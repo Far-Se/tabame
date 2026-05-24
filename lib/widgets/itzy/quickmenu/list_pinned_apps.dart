@@ -28,7 +28,7 @@ class PinnedApps extends StatelessWidget {
             onSecondaryTap: () {
               final int x = pinned.indexWhere((String element) => element == item);
               WinKeys.send("{#WIN}{#ALT}${x + 1}");
-              if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
             },
             child: _PinnedAppButton(path: item),
           )
@@ -55,7 +55,7 @@ class _PinnedAppButton extends StatelessWidget {
         child: InkWell(
           onTap: () {
             WinUtils.open(path);
-            if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+            if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2.0),
@@ -78,7 +78,7 @@ class _PinnedAppButton extends StatelessWidget {
           return InkWell(
             onTap: () {
               WinUtils.open(path);
-              if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2.0),

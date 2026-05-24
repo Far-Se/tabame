@@ -60,7 +60,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               label: "Move",
                               accent: accent,
                               onTap: () async {
-                                await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                await QuickMenuFunctions.hideQuickMenu();
                                 Future<void>.delayed(
                                     const Duration(milliseconds: 200),
                                     () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.left,
@@ -105,7 +105,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               accent: accent,
                               isRightAligned: true,
                               onTap: () async {
-                                await QuickMenuFunctions.toggleQuickMenu(visible: false);
+                                await QuickMenuFunctions.hideQuickMenu();
                                 Future<void>.delayed(
                                     const Duration(milliseconds: 200),
                                     () => Win32.moveWindowToDesktop(window.hWnd, DesktopDirection.right,

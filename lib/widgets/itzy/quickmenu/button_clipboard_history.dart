@@ -155,7 +155,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
   Future<void> _copy(ClipboardHistoryEntry entry) async {
     await ClipboardHistoryStore.copyEntry(entry);
     if (!mounted) return;
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   Future<void> _delete(ClipboardHistoryEntry entry) async {
@@ -181,7 +181,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
   void _openImageFile(ClipboardHistoryEntry entry) {
     if (entry.imagePath.isEmpty || !File(entry.imagePath).existsSync()) return;
     WinUtils.open('explorer.exe', arguments: '/select,"${entry.imagePath}"', parseParamaters: false);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   @override

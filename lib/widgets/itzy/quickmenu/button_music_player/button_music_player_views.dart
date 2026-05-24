@@ -326,7 +326,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     }
 
     WinUtils.open('explorer.exe', arguments: '/select,"$path"', parseParamaters: false);
-    if (!kDebugMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+    if (!kDebugMode) QuickMenuFunctions.hideQuickMenu();
   }
 
   MusicItem? _findExactMusicItem(List<MusicItem> items, String label, MusicItemType type) {

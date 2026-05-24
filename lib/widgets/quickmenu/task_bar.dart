@@ -90,7 +90,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       if (_keepFetching && !_fetching) {
         if (GetForegroundWindow() != Win32.hWnd && userSettings.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
           if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 400) {
-            QuickMenuFunctions.toggleQuickMenu(visible: false);
+            QuickMenuFunctions.hideQuickMenu();
           }
         }
         _fetchWindows();
@@ -218,7 +218,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
     }
     Win32.activateWindow(window.hWnd);
-    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
     Globals.lastFocusedWinHWND = window.hWnd;
   }
 
@@ -747,7 +747,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
       WinKeys.send("{#CTRL}{#SHIFT}{ESCAPE}");
     }
     Win32.activateWindow(widget.window.hWnd);
-    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
     Globals.lastFocusedWinHWND = widget.window.hWnd;
   }
 

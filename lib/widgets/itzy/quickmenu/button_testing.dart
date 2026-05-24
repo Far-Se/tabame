@@ -1,37 +1,16 @@
-// ignore_for_file: dead_code, unused_import
+// ignore_for_file: unused_import, dead_code
 
 import 'dart:async';
-import 'dart:convert';
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:isolate';
-import 'dart:math';
-import 'dart:ui' as ui;
 
-import 'package:collection/collection.dart';
-import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
-import 'package:xml/xml.dart';
+import 'package:flutter/src/widgets/_window.dart';
 
-import '../../../models/classes/boxes.dart';
-import '../../../models/classes/boxes/quick_menu_box.dart';
-import '../../../models/classes/hotkeys.dart';
-import '../../../models/globals.dart';
-import '../../../models/settings.dart';
-import '../../../models/win32/appx_module.dart';
-import '../../../models/win32/mixed.dart';
 // import '../../../models/win32/win32.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
-import '../../../models/win32/window_event.dart';
-import '../../widgets/custom_tooltip.dart';
 import '../../widgets/quick_actions_item.dart';
-import 'button_apps.dart';
-import 'button_window_app.dart';
 
 class TestingButton extends StatefulWidget {
   const TestingButton({super.key});

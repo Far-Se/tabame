@@ -315,6 +315,6 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
 
   void _launchApp(AppItem item) {
     WinUtils.open(item.path, arguments: item.arguments);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 }

@@ -45,6 +45,7 @@ import '../models/win32/screenshot.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
+import '../widgets/widgets/custom_tooltip.dart';
 import 'photo_editor.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -267,6 +268,17 @@ class Settings {
   static String? getString(String key) => _data[key] as String?;
   static void setString(String key, String value) {
     _data[key] = value;
+    save();
+  }
+
+  static int getCaptureDelaySeconds() {
+    final dynamic raw = _data['captureDelaySeconds'];
+    if (raw is int) return raw;
+    return 0;
+  }
+
+  static void setCaptureDelaySeconds(int value) {
+    _data['captureDelaySeconds'] = value;
     save();
   }
 }
@@ -960,13 +972,15 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   List<FancyShotProfile> _fancyShotProfiles = <FancyShotProfile>[];
   List<ScreenCaptureUploadHost> _uploadHosts = <ScreenCaptureUploadHost>[];
   String? _selectedFancyShotPresetName;
+  int _captureDelaySeconds = 0;
+  int? _countdownValue;
   Offset? _captureStart;
   Offset? _captureCurrent;
   bool _capturing = false;
   bool _captureEnabled = true;
   bool _applyingPreset = false;
   Timer? _tickerTimer;
-  final Set<String> _pressedScreenCaptureHotkeys = <String>{};
+  // final Set<String> _pressedScreenCaptureHotkeys = <String>{};
   final Map<int, FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, FrozenMonitorSnapshot>{};
   final Map<int, ui.Image> _frozenMonitorImages = <int, ui.Image>{};
   final Set<int> _frozenMonitorImageLoadsInProgress = <int>{};
@@ -1032,6 +1046,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     if (fancySaved != "" && _fancyShotProfiles.any((FancyShotProfile e) => e.name == fancySaved)) {
       _selectedFancyShotPresetName = fancySaved;
     }
+    _captureDelaySeconds = Settings.getCaptureDelaySeconds();
     _tickerTimer = Timer.periodic(const Duration(milliseconds: 80), (_) => _ticker());
 
     // Seed the frozen snapshot maps with any snapshots captured at startup.
@@ -1103,7 +1118,6 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   void _ticker() {
-    // _handleScreenDrawHotkeys();
     if (widget.freezeMode || _liveSnapshotReady) {
       unawaited(_syncVisibleFrozenMonitor());
     }
@@ -1226,6 +1240,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                 currentActionId: _captureActionId,
                 fancyShotPresets: _fancyShotProfiles.map((FancyShotProfile p) => p.name).toList(),
                 currentPresetName: _selectedFancyShotPresetName,
+                currentDelay: _captureDelaySeconds,
                 onActionChanged: (String actionId) {
                   Settings.setString("screenCaptureModeKey", actionId);
                   setState(() => _captureActionId = actionId);
@@ -1234,6 +1249,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                   if (presetName == "none") presetName = "";
                   Settings.setString("screenCaptureFancyShot", presetName ?? "");
                   setState(() => _selectedFancyShotPresetName = presetName);
+                },
+                onDelayChanged: (int v) {
+                  Settings.setCaptureDelaySeconds(v);
+                  setState(() => _captureDelaySeconds = v);
                 },
               ),
             ),
@@ -1394,23 +1413,6 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     return ScreenCapture.encodeRgbaToPng(outputRgba, outputWidth, outputHeight);
   }
 
-  void _handleScreenDrawHotkeys() {
-    const String hotkey = 'CTRL+ALT+V';
-    final bool pressed = _isHotkeyPressed(
-      keyVk: 0x56,
-      ctrl: true,
-      alt: true,
-    );
-    if (!pressed) {
-      _pressedScreenCaptureHotkeys.remove(hotkey);
-      return;
-    }
-    if (_pressedScreenCaptureHotkeys.contains(hotkey)) return;
-
-    _pressedScreenCaptureHotkeys.add(hotkey);
-    _toggleScreenCaptureEnabled();
-  }
-
   bool _isHotkeyPressed(
       {required int keyVk, bool ctrl = false, bool alt = false, bool shift = false, bool win = false}) {
     if (GetKeyState(keyVk) >= 0) return false;
@@ -1455,7 +1457,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       Navigator.of(context).maybePop();
       QuickMenuFunctions.refreshQuickMenu();
       await Future<void>.delayed(const Duration(milliseconds: 200));
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
     } else {
       windowManager.close();
     }
@@ -1563,7 +1565,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                     _resetLiveSnapshot();
                     return;
                   }
-                  unawaited(_doCapture(localRect));
+                  unawaited(_doCaptureWithDelay(localRect));
                 }
               },
               child: GestureDetector(
@@ -1603,14 +1605,14 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                     final Rect? winRect = _clickedWindowRect;
                     _clickedWindowRect = null;
                     if (winRect != null && !winRect.isEmpty) {
-                      await _doCapture(winRect);
+                      await _doCaptureWithDelay(winRect);
                     } else if (!widget.freezeMode) {
                       _resetLiveSnapshot();
                     }
                     return;
                   }
                   _clickedWindowRect = null;
-                  await _doCapture(localRect);
+                  await _doCaptureWithDelay(localRect);
                 },
                 child: CustomPaint(
                   size: size,
@@ -1731,9 +1733,71 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                 ),
               ),
             ),
+
+          // Countdown overlay — shown when _captureDelaySeconds > 0 and ticking.
+          if (_countdownValue != null)
+            Positioned(
+              left: _currentMonitorRect.left,
+              top: _currentMonitorRect.top,
+              width: _currentMonitorRect.width,
+              height: _currentMonitorRect.height,
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$_countdownValue',
+                    style: const TextStyle(
+                      fontSize: 120,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: <Shadow>[
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 24,
+                          offset: Offset(0, 4),
+                        ),
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 8,
+                          offset: Offset(0, 0),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _doCaptureWithDelay(Rect rect) async {
+    if (_captureDelaySeconds == 0) {
+      await _doCapture(rect);
+      return;
+    }
+
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/beep.mp3');
+    // Disable capture interaction while countdown runs.
+    setState(() => _captureEnabled = false);
+    for (int i = _captureDelaySeconds; i > 0; i--) {
+      setState(() => _countdownValue = i);
+
+      player.seek(Duration.zero).then((_) => player.play());
+      // await player.play();
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+    await player.seek(Duration.zero);
+    await player.play();
+    setState(() {
+      _countdownValue = null;
+      _captureEnabled = true;
+    });
+    await player.dispose();
+    await _doCapture(rect);
   }
 
   Future<void> _doCapture(Rect localRect) async {
@@ -2255,22 +2319,39 @@ class _CaptureSettingsButtonState extends State<_CaptureSettingsButton> {
   }
 }
 
-class _CaptureSettingsModal extends StatelessWidget {
+class _CaptureSettingsModal extends StatefulWidget {
   final List<CaptureActionChoice> captureChoices;
   final String currentActionId;
   final List<String> fancyShotPresets;
   final String? currentPresetName;
+  final int currentDelay;
   final ValueChanged<String> onActionChanged;
   final ValueChanged<String?> onPresetChanged;
+  final ValueChanged<int> onDelayChanged;
 
   const _CaptureSettingsModal({
     required this.captureChoices,
     required this.currentActionId,
     required this.fancyShotPresets,
     required this.currentPresetName,
+    required this.currentDelay,
     required this.onActionChanged,
     required this.onPresetChanged,
+    required this.onDelayChanged,
   });
+
+  @override
+  State<_CaptureSettingsModal> createState() => _CaptureSettingsModalState();
+}
+
+class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
+  late int _selectedDelay;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDelay = widget.currentDelay;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2317,6 +2398,79 @@ class _CaptureSettingsModal extends StatelessWidget {
               ),
             ),
             const Divider(height: 1, color: Colors.white10),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  CustomTooltip(
+                    message: 'Frozen Capture',
+                    child: IconButton(
+                      icon: const Icon(Icons.center_focus_strong, size: 14, color: Colors.greenAccent),
+                      onPressed: () async {
+                        Navigator.of(context).maybePop();
+                        QuickMenuFunctions.hideQuickMenu();
+                        await Future<void>.delayed(const Duration(milliseconds: 100));
+                        Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
+                        await FancyShotCaptureWidget.captureScreenshots();
+                        QuickMenuFunctions.refreshQuickMenu();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  CustomTooltip(
+                    message: "Live Capture",
+                    child: IconButton(
+                      icon: const Icon(Icons.center_focus_strong_outlined, size: 14, color: Colors.greenAccent),
+                      onPressed: () async {
+                        Navigator.of(context).maybePop();
+                        QuickMenuFunctions.hideQuickMenu();
+                        await Future<void>.delayed(const Duration(milliseconds: 100));
+                        Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
+                        QuickMenuFunctions.refreshQuickMenu();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  CustomTooltip(
+                    message: "Open ScreenDraw",
+                    child: IconButton(
+                      icon: const Icon(Icons.draw_outlined, size: 14),
+                      onPressed: () {
+                        Navigator.of(context).maybePop();
+                        QuickMenuFunctions.hideQuickMenu();
+                        WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw");
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  CustomTooltip(
+                    message: "Open Screen Recording",
+                    child: IconButton(
+                      icon: const Icon(Icons.radio_button_checked, size: 14),
+                      onPressed: () {
+                        Navigator.of(context).maybePop();
+                        QuickMenuFunctions.hideQuickMenu();
+                        WinUtils.startTabame(closeCurrent: false, arguments: "-screenRecording");
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  CustomTooltip(
+                    message: "Open Spotlight",
+                    child: IconButton(
+                      icon: const Icon(Icons.highlight_alt, size: 14),
+                      onPressed: () {
+                        Navigator.of(context).maybePop();
+                        QuickMenuFunctions.hideQuickMenu();
+                        WinUtils.startTabame(closeCurrent: false, arguments: "-spotlight");
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Colors.white10),
 
             // Actions Section
             _buildSectionLabel(label: 'AFTER CAPTURE', icon: Icons.bolt_outlined),
@@ -2324,15 +2478,15 @@ class _CaptureSettingsModal extends StatelessWidget {
               child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: captureChoices.map((CaptureActionChoice choice) {
-                  final bool selected = choice.id == currentActionId;
+                children: widget.captureChoices.map((CaptureActionChoice choice) {
+                  final bool selected = choice.id == widget.currentActionId;
                   return _ModalChoiceRow(
                     icon: choice.icon,
                     title: choice.title,
                     subtitle: choice.subtitle,
                     selected: selected,
                     onTap: () {
-                      onActionChanged(choice.id);
+                      widget.onActionChanged(choice.id);
                       Navigator.pop(context);
                     },
                   );
@@ -2354,21 +2508,21 @@ class _CaptureSettingsModal extends StatelessWidget {
                     icon: Icons.block,
                     title: 'None',
                     subtitle: 'Use raw captured image',
-                    selected: (currentPresetName ?? '').isEmpty,
+                    selected: (widget.currentPresetName ?? '').isEmpty,
                     onTap: () {
-                      onPresetChanged(null);
+                      widget.onPresetChanged(null);
                       Navigator.pop(context);
                     },
                   ),
-                  ...fancyShotPresets.map((String name) {
-                    final bool selected = name == currentPresetName;
+                  ...widget.fancyShotPresets.map((String name) {
+                    final bool selected = name == widget.currentPresetName;
                     return _ModalChoiceRow(
                       icon: Icons.auto_awesome,
                       title: name,
                       subtitle: 'Apply visual framing',
                       selected: selected,
                       onTap: () {
-                        onPresetChanged(name);
+                        widget.onPresetChanged(name);
                         Navigator.pop(context);
                       },
                     );
@@ -2377,7 +2531,32 @@ class _CaptureSettingsModal extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: Colors.white10),
+
+            // Capture Delay Section
+            _buildSectionLabel(label: 'CAPTURE DELAY', icon: Icons.timer_outlined),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+              child: Row(
+                children: <int>[0, 3, 5, 10].map((int seconds) {
+                  final bool selected = _selectedDelay == seconds;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: _DelayButton(
+                        label: seconds == 0 ? '0s' : '${seconds}s',
+                        selected: selected,
+                        onTap: () {
+                          setState(() => _selectedDelay = seconds);
+                          widget.onDelayChanged(seconds);
+                        },
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
@@ -2401,6 +2580,59 @@ class _CaptureSettingsModal extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DelayButton extends StatefulWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DelayButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<_DelayButton> createState() => _DelayButtonState();
+}
+
+class _DelayButtonState extends State<_DelayButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = userSettings.theme.accentColor;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? accent.withValues(alpha: 0.18)
+                : (_hovered ? Colors.white.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.03)),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.selected ? accent.withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: widget.selected ? Colors.white : Colors.white60,
+              fontSize: 13,
+              fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2440,7 +2672,7 @@ class _ModalChoiceRowState extends State<_ModalChoiceRow> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           margin: const EdgeInsets.symmetric(vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: widget.selected
                 ? accent.withValues(alpha: 0.12)
@@ -2479,13 +2711,13 @@ class _ModalChoiceRowState extends State<_ModalChoiceRow> {
                         fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      widget.subtitle,
-                      style: const TextStyle(
-                        color: Colors.white38,
-                        fontSize: 11,
-                      ),
-                    ),
+                    // Text(
+                    //   widget.subtitle,
+                    //   style: const TextStyle(
+                    //     color: Colors.white38,
+                    //     fontSize: 11,
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -2757,10 +2989,10 @@ class _CrosshairCursorState extends State<_CrosshairCursor> {
       // sub-pixel rounding errors from the DPI division do not accumulate into
       // a ±1 px border around the captured window.
       final Rect logRect = Rect.fromLTRB(
-        (left / scaleX).roundToDouble() - widget.virtualOrigin.dx,
-        (top / scaleY).roundToDouble() - widget.virtualOrigin.dy,
-        (right / scaleX).roundToDouble() - widget.virtualOrigin.dx,
-        (bottom / scaleY).roundToDouble() - widget.virtualOrigin.dy,
+        (left / scaleX).roundToDouble() - widget.virtualOrigin.dx + 1,
+        (top / scaleY).roundToDouble() - widget.virtualOrigin.dy + 1,
+        (right / scaleX).roundToDouble() - widget.virtualOrigin.dx - 1,
+        (bottom / scaleY).roundToDouble() - widget.virtualOrigin.dy - 1,
       );
 
       entries.add(_WindowEntry(hwnd, logRect));

@@ -362,7 +362,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
           onReorderActions: (int old, int neu) => _onReorderActions(keymap, old, neu),
         );
       },
-      onReorder: (int oldIndex, int newIndex) {
+      onReorderItem: (int oldIndex, int newIndex) {
         setState(() {
           if (oldIndex < newIndex) newIndex -= 1;
           final Hotkeys item = remap.removeAt(oldIndex);
@@ -691,7 +691,7 @@ class _HotkeyCardState extends State<_HotkeyCard> {
                                     onDelete: () => widget.onDeleteAction(actionIndex),
                                   );
                                 },
-                                onReorder: widget.onReorderActions,
+                                onReorderItem: widget.onReorderActions,
                               ),
                       )
                     : const SizedBox.shrink(),

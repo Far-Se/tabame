@@ -56,7 +56,8 @@ Future<int> interfaceWindowSetup() async {
   await WindowManager.instance.setAlwaysOnTop(false);
   await WindowManager.instance.setAspectRatio(0);
   if (kDebugMode) await WindowManager.instance.setTitle("Tabame - Interface");
-  await WindowManager.instance.setSize(Size(monitor.width / 1.8, monitor.height / 1.3));
+  await WindowManager.instance.setSize(Size(
+      (monitor.width / 1.8).clamp(360, 1000).floorToDouble(), (monitor.height / 1.3).clamp(500, 760).floorToDouble()));
   Win32.setCenter(useMouse: true, hwnd: Win32.hWnd);
   return 1;
 }

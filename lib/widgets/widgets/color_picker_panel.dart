@@ -275,7 +275,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             onPressed: widget.onPickRequested ??
                 () {
                   WinUtils.startTabame(closeCurrent: false, arguments: "-colorPicker");
-                  QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  QuickMenuFunctions.hideQuickMenu();
                 },
             icon: const Icon(Icons.colorize_rounded, size: 14),
             label: const Text("Pick color"),

@@ -459,7 +459,7 @@ class _NotionWidgetState extends State<NotionWidget> {
         if (last.id == pageId) {
           if (last.url != null) {
             WinUtils.open(last.url!);
-            if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+            if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
           }
           setState(() {
             _breadcrumbs.removeLast();
@@ -852,7 +852,7 @@ class _NotionWidgetState extends State<NotionWidget> {
 
   void _openItem(NotionResult item) {
     if (item.url.isNotEmpty) {
-      if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+      if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
       WinUtils.open(item.url);
     }
   }

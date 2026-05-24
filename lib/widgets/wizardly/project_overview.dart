@@ -1011,6 +1011,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     return CustomTextField(
       labelText: label,
       onChanged: onChanged,
+      hintText: hintText,
       value: value,
     );
   }

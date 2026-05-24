@@ -719,7 +719,7 @@ class HotKeyInfo {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         final Offset position = Win32.getPosition();
         if (position.dx < -99) return QuickMenuFunctions.toggleQuickMenu(visible: true);
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         if (GetForegroundWindow() == Win32.hWnd) WindowWatcher.focusFirstWindow();
         return () => <dynamic, dynamic>{};
       }
@@ -729,7 +729,7 @@ class HotKeyInfo {
     "OpenLauncher": () {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         if (Globals.quickMenuPage == QuickMenuPage.launcher) {
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
           return () => <dynamic, dynamic>{};
         }
       }
@@ -761,30 +761,34 @@ class HotKeyInfo {
         WinUtils.startTabame(closeCurrent: false, arguments: "-spotlight");
       }
     },
-    "OpenLiveFancyShot": () {
+    "OpenLiveFancyShot": () async {
       // WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
+      if (QuickMenuFunctions.isQuickMenuVisible) {
+        QuickMenuFunctions.hideQuickMenu();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
       QuickMenuFunctions.refreshQuickMenu();
     },
     "OpenFrozenFancyShot": () async {
-      Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
+      Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
       await FancyShotCaptureWidget.captureScreenshots();
       QuickMenuFunctions.refreshQuickMenu();
     },
     "OpenColorPickerInstant": () async {
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       await Win32Helper.instantColorPicker();
     },
     "OpenEmojiPicker": () async {
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         await Future<void>.delayed(const Duration(milliseconds: 160));
       }
 
@@ -796,14 +800,14 @@ class HotKeyInfo {
       if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
         // Win32.setWindowInvisible(true);
         Win32.setPosition(const Offset(-99999, -99999));
-        await QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await QuickMenuFunctions.hideQuickMenu();
         // Win32.setWindowInvisible(false);
         return;
       }
 
       Win32.setWindowInvisible(true);
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
         await Future<void>.delayed(const Duration(milliseconds: 160));
       }
       await QuickMenuFunctions.toggleQuickMenu(
@@ -827,17 +831,17 @@ class HotKeyInfo {
       }
     },
     "ShowLastActiveWindow": () {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
       WindowWatcher.focusSecondWindow();
       Future<void>.delayed(const Duration(milliseconds: 50), () {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
       });
     },
     "ShowSecondWindowUnderCursor": () {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
       WindowWatcher.showSecondWindowUnderCursor();
       Future<void>.delayed(const Duration(milliseconds: 50), () {
-        QuickMenuFunctions.toggleQuickMenu(visible: false);
+        QuickMenuFunctions.hideQuickMenu();
       });
     },
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),

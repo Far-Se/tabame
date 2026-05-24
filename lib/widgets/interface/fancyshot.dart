@@ -459,47 +459,65 @@ class FancyshotState extends State<Fancyshot> {
   }
 
   Widget _buildProfileLibrary(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            height: 80,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: profiles.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (BuildContext context, int index) {
-                if (index == 0) {
-                  return _CreateProfileCard(
-                    controller: textEditingController,
-                    onCreate: () => _createProfile(),
-                  );
-                }
-
-                final FancyShotProfile profile = profiles[index - 1];
-                return SizedBox(
-                  width: 244,
-                  child: _ProfileEntryCard(
-                    profile: profile,
-                    selected: profile.name == selectedProfile,
-                    onTap: () => _selectProfile(profile.name),
-                    onDelete: profile.name != 'Default' ? () => _deleteProfile(profile) : null,
-                    onDuplicate: () => _createProfile(source: profile),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
+            children: <Widget>[
+              // ── Create tile (first) ──────────────────────────────────────
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: _ProfileCreateTile(
+                  controller: textEditingController,
+                  onCreate: () => _createProfile(),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // ── One tile per profile ─────────────────────────────────────
+              ...profiles.expand((FancyShotProfile profile) {
+                return <Widget>[
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
+                    child: _ProfileListTile(
+                      key: ValueKey<String>(profile.name),
+                      profile: profile,
+                      selected: profile.name == selectedProfile,
+                      onTap: () => _selectProfile(profile.name),
+                      onDelete: profile.name != 'Default' ? () => _deleteProfile(profile) : null,
+                      onClone: () => _createProfile(source: profile),
+                      onRename: (String newName) async {
+                        final String sanitized = newName.trim();
+                        if (sanitized.isEmpty || sanitized == profile.name) return;
+                        final String validatedName = _uniqueProfileName(sanitized);
+                        setState(() {
+                          final int pIndex = profiles.indexWhere((FancyShotProfile p) => p.name == profile.name);
+                          if (pIndex >= 0) profiles[pIndex].name = validatedName;
+                          if (selectedProfile == profile.name) {
+                            selectedProfile = validatedName;
+                            filters.name = validatedName;
+                          }
+                        });
+                        await _persistProfilesNow();
+                      },
+                    ),
                   ),
-                );
-              },
-            ),
+                  const SizedBox(width: 6),
+                ];
+              }),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1053,8 +1071,9 @@ class _CompactTextField extends StatelessWidget {
   }
 }
 
-class _CreateProfileCard extends StatelessWidget {
-  const _CreateProfileCard({
+/// Create-profile tile — same row style as [_ProfileListTile], first in the list.
+class _ProfileCreateTile extends StatelessWidget {
+  const _ProfileCreateTile({
     required this.controller,
     required this.onCreate,
   });
@@ -1068,65 +1087,38 @@ class _CreateProfileCard extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
 
     return Container(
-      width: 332,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[
-            colorScheme.primary.withValues(alpha: 0.15),
-            colorScheme.surfaceContainerHigh,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.20)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.12)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  onSubmitted: (_) => onCreate(),
-                  decoration: InputDecoration(
-                    labelText: 'Profile Name',
-                    hintText: 'Campaign Polish',
-                    isDense: true,
-                    filled: true,
-                    fillColor: colorScheme.surface.withValues(alpha: 0.74),
-                    prefixIcon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.10)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
-                    ),
-                  ),
-                ),
+          Icon(Icons.bookmark_add_outlined, size: 13, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onSubmitted: (_) => onCreate(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                fontSize: 12,
               ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add_rounded, size: 20),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'New profile…',
               ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          _TileButton(
+            icon: Icons.add_rounded,
+            tooltip: 'Create profile',
+            onPressed: onCreate,
           ),
         ],
       ),
@@ -1134,20 +1126,81 @@ class _CreateProfileCard extends StatelessWidget {
   }
 }
 
-class _ProfileEntryCard extends StatelessWidget {
-  const _ProfileEntryCard({
+/// Compact single-row list tile for a profile entry.
+/// Shows: [selected indicator] [Profile Name] [Rename] [Clone] [Delete]
+class _ProfileListTile extends StatefulWidget {
+  const _ProfileListTile({
+    super.key,
     required this.profile,
     required this.selected,
     required this.onTap,
     this.onDelete,
-    required this.onDuplicate,
+    required this.onClone,
+    required this.onRename,
   });
 
   final FancyShotProfile profile;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
-  final VoidCallback onDuplicate;
+  final VoidCallback onClone;
+  final ValueChanged<String> onRename;
+
+  @override
+  State<_ProfileListTile> createState() => _ProfileListTileState();
+}
+
+class _ProfileListTileState extends State<_ProfileListTile> {
+  late final TextEditingController _renameController;
+  final FocusNode _focusNode = FocusNode();
+  bool _isRenaming = false;
+  // Guards against _commitRename firing more than once per rename session
+  // (e.g. onSubmitted AND the subsequent blur both trying to commit).
+  bool _renameCommitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _renameController = TextEditingController(text: widget.profile.name);
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _isRenaming) {
+        _commitRename();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_ProfileListTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile.name != widget.profile.name && !_focusNode.hasFocus) {
+      _renameController.text = widget.profile.name;
+    }
+  }
+
+  @override
+  void dispose() {
+    _renameController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _startRename() {
+    _renameController.text = widget.profile.name;
+    _renameCommitted = false;
+    setState(() => _isRenaming = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+      _renameController.selection = TextSelection(baseOffset: 0, extentOffset: _renameController.text.length);
+    });
+  }
+
+  void _commitRename() {
+    if (_renameCommitted) return;
+    _renameCommitted = true;
+    final String newName = _renameController.text;
+    setState(() => _isRenaming = false);
+    widget.onRename(newName);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1155,78 +1208,127 @@ class _ProfileEntryCard extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
 
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        duration: const Duration(milliseconds: 120),
+        height: 34,
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.12)
-              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.26),
-          borderRadius: BorderRadius.circular(16),
+          color: widget.selected ? colorScheme.primary.withValues(alpha: 0.10) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? colorScheme.primary.withValues(alpha: 0.34) : colorScheme.outline.withValues(alpha: 0.08),
+            color: widget.selected ? colorScheme.primary.withValues(alpha: 0.30) : Colors.transparent,
+            width: 1.0,
           ),
-          boxShadow: selected
-              ? <BoxShadow>[
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    profile.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (selected) Icon(Icons.check_circle_rounded, size: 18, color: colorScheme.primary),
-              ],
+            // Selected indicator dot
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.15),
+              ),
             ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                IconButton.filledTonal(
-                  onPressed: onDuplicate,
-                  tooltip: 'Duplicate profile',
-                  icon: const Icon(Icons.copy_all_rounded, size: 16),
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(),
-                  style: IconButton.styleFrom(
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
-                ),
-                if (onDelete != null) ...<Widget>[
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    onPressed: onDelete,
-                    tooltip: 'Delete profile',
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.5),
-                      foregroundColor: colorScheme.error,
+
+            // Profile name / inline rename field
+            Expanded(
+              child: _isRenaming
+                  ? TextField(
+                      controller: _renameController,
+                      focusNode: _focusNode,
+                      onSubmitted: (_) => _commitRename(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    )
+                  : Text(
+                      widget.profile.name,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
+                        fontSize: 12,
+                        color: widget.selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.85),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ],
             ),
+
+            // Action buttons
+            const SizedBox(width: 4),
+            _TileButton(
+              icon: Icons.drive_file_rename_outline_rounded,
+              tooltip: 'Rename',
+              onPressed: _startRename,
+            ),
+            const SizedBox(width: 2),
+            _TileButton(
+              icon: Icons.copy_all_rounded,
+              tooltip: 'Clone',
+              onPressed: widget.onClone,
+            ),
+            if (widget.onDelete != null) ...<Widget>[
+              const SizedBox(width: 2),
+              _TileButton(
+                icon: Icons.delete_outline_rounded,
+                tooltip: 'Delete',
+                onPressed: widget.onDelete!,
+                isDestructive: true,
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tiny icon button used inside [_ProfileListTile].
+class _TileButton extends StatelessWidget {
+  const _TileButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 500),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: isDestructive
+            ? colorScheme.errorContainer.withValues(alpha: 0.35)
+            : colorScheme.onSurface.withValues(alpha: 0.07),
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Icon(
+            icon,
+            size: 14,
+            color: isDestructive
+                ? colorScheme.error.withValues(alpha: 0.75)
+                : colorScheme.onSurface.withValues(alpha: 0.50),
+          ),
         ),
       ),
     );

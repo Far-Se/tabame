@@ -238,7 +238,76 @@ Cleanup:
 
   return result;
 }
+#include <comdef.h>
+#include <shldisp.h> // Shell COM interfaces
 
+bool ShellExecuteViaExplorer(const std::wstring &path,
+                             const std::wstring &verb) {
+  HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  bool comInit = SUCCEEDED(hr);
+
+  if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+    return false;
+
+  CLSID clsid;
+  hr = CLSIDFromProgID(L"Shell.Application", &clsid);
+  if (FAILED(hr))
+    return false;
+
+  IDispatch *shellApp = nullptr;
+  hr = CoCreateInstance(clsid, nullptr, CLSCTX_LOCAL_SERVER, IID_IDispatch,
+                        (void **)&shellApp);
+  if (FAILED(hr) || !shellApp)
+    return false;
+
+  // Get ShellExecute method
+  DISPID dispid;
+  LPOLESTR name = const_cast<LPOLESTR>(L"ShellExecute");
+
+  hr =
+      shellApp->GetIDsOfNames(IID_NULL, &name, 1, LOCALE_USER_DEFAULT, &dispid);
+  if (FAILED(hr)) {
+    shellApp->Release();
+    return false;
+  }
+
+  // Prepare arguments (ShellExecute takes: file, args, dir, verb, show)
+  VARIANT args[5];
+  for (auto &v : args)
+    VariantInit(&v);
+
+  args[4].vt = VT_BSTR;
+  args[4].bstrVal = SysAllocString(path.c_str());
+
+  args[3].vt = VT_BSTR;
+  args[3].bstrVal = SysAllocString(L"");
+
+  args[2].vt = VT_BSTR;
+  args[2].bstrVal = SysAllocString(L"");
+
+  args[1].vt = VT_BSTR;
+  args[1].bstrVal = SysAllocString(verb.c_str());
+
+  args[0].vt = VT_I4;
+  args[0].lVal = SW_SHOWNORMAL;
+
+  DISPPARAMS dp = {};
+  dp.cArgs = 5;
+  dp.rgvarg = args;
+
+  hr = shellApp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD,
+                        &dp, nullptr, nullptr, nullptr);
+
+  for (auto &v : args)
+    VariantClear(&v);
+
+  shellApp->Release();
+
+  if (comInit && hr != RPC_E_CHANGED_MODE)
+    CoUninitialize();
+
+  return SUCCEEDED(hr);
+}
 // ============================================================
 // INVOKE (LEGACY EXECUTION)
 // ============================================================

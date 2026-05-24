@@ -34,7 +34,7 @@ class OpenSettingsButton extends StatelessWidget {
               //   return;
               // }
               if (kReleaseMode) {
-                QuickMenuFunctions.toggleQuickMenu(visible: false);
+                QuickMenuFunctions.hideQuickMenu();
                 int hWnd = Win32.findWindow("Tabame - Interface");
                 if (hWnd == 0) {
                   WinUtils.startTabame(closeCurrent: false, arguments: "-interface");

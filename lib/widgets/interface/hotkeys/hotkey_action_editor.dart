@@ -652,8 +652,10 @@ class HotKeyActionState extends State<HotKeyAction> {
           labelText: "Trigger Mechanism",
           value: HotKeyInfo.triggers[widget.hotkey.triggerType.index],
           prefixIcon: const Icon(Icons.bolt_rounded, size: 20),
-          onChanged: (String? n) =>
-              setState(() => widget.hotkey.triggerType = TriggerType.values[HotKeyInfo.triggers.indexOf(n ?? "Press")]),
+          onChanged: (String? n) => setState(() {
+            widget.hotkey.triggerType = TriggerType.values[HotKeyInfo.triggers.indexOf(n ?? "Press")];
+            widget.hotkey.triggerInfo = <int>[0, 0, 0];
+          }),
           items: HotKeyInfo.triggers.map((String v) {
             return ModernDropdownItem<String>(
               value: v,

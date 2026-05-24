@@ -12,11 +12,11 @@ class EmojiButton extends StatelessWidget {
 
   Future<void> _handleEmojiSelected(String emoji) async {
     await Clipboard.setData(ClipboardData(text: emoji));
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   Future<void> _closeEmojiPicker() async {
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   @override

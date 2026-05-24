@@ -452,11 +452,21 @@ class Win32 {
   }
 
   static void surfaceWindow(int hWnd) {
-    // ShowWindow(hWnd, SW_SHOWNOACTIVATE);
     ShowWindow(hWnd, SW_SHOWNA);
 
-    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    // 1. Get the current extended window styles
+    // Note: GetWindowLongPtr is used for 64-bit compatibility
+    final int exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+
+    // 2. Check if the WS_EX_TOPMOST bitwise flag is set
+    if ((exStyle & WS_EX_TOPMOST) != 0) {
+      // It's already topmost, so only set it to TOPMOST to bring it to the front
+      SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    } else {
+      // It's a normal window, do the quick toggle trick
+      SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+      SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
   }
 
   static void setAlwaysOnTop(int hWnd, {bool? alwaysOnTop}) {
@@ -937,7 +947,33 @@ class Win32 {
   }
 
   static Future<bool> invokeShellMenuItem(String path, int hWnd, {String verb = '', int id = -1}) async {
+    if (WinUtils.isAdministrator()) {
+      runTabameWithParams(
+          <String, dynamic>{"run": "shellMenuItem", "path": path, "hwnd": hWnd, "verb": verb, "id": id});
+      return true;
+    }
     return await ShellContextMenu.invoke(path, hWnd, verb: verb, id: id);
+  }
+
+  static void runTabameWithParams(Map<String, dynamic> params) {
+    final String arguments =
+        params.entries.where((MapEntry<String, dynamic> e) => e.value != null).map((MapEntry<String, dynamic> e) {
+      final String key = '-${e.key}';
+      final dynamic value = e.value;
+
+      // Quote strings and escape quotes inside them
+      if (value is String) {
+        final String escaped = value.replaceAll('"', r'\"');
+        return '$key "$escaped"';
+      }
+
+      return '$key $value';
+    }).join(' ');
+
+    WinUtils.open(
+      Platform.resolvedExecutable,
+      arguments: arguments,
+    );
   }
 }
 

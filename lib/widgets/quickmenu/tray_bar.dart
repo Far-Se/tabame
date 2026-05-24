@@ -108,7 +108,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
             for (final TrayBarInfo info in tray)
               GestureDetector(
                 onSecondaryTap: () async {
-                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
                   // WinTray.click(info, clickType: TrayClickType.right);
                   // final List<TrayInfo> icons = await enumTrayIcons();
                   // final TrayInfo? thisTray = icons.firstWhereOrNull((TrayInfo e) => e.processID == info.processID);
@@ -125,24 +125,24 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                   PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
                 },
                 onLongPress: () {
-                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
                   WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
                 },
                 onSecondaryLongPress: () async {
-                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
                   WinTray.click(info, clickType: TrayClickType.right);
                 },
                 onTertiaryTapUp: (TapUpDetails e) {
-                  if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
                   WinTray.click(info, clickType: TrayClickType.middle);
                 },
                 child: InkWell(
                   onTap: () async {
-                    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
                     sendClick(info, TrayClickType.left);
                   },
                   onDoubleTap: () async {
-                    if (kReleaseMode) QuickMenuFunctions.toggleQuickMenu(visible: false);
+                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
 
                     PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
                     PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);

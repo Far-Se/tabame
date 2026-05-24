@@ -46,6 +46,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
@@ -155,6 +156,9 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
       _loading = false;
     });
   }
+  // Inside _ActionsPanelScaffoldState:
+
+  bool _isKeyboardNavigating = false; // <-- Add this flag
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
@@ -169,6 +173,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
       setState(() {
+        _isKeyboardNavigating = true; // <-- Lock out mouse hover
         if (_activeIndex < _filteredActions.length - 1) _activeIndex++;
       });
       _scrollToActive();
@@ -177,6 +182,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       setState(() {
+        _isKeyboardNavigating = true; // <-- Lock out mouse hover
         if (_activeIndex > 0) _activeIndex--;
       });
       _scrollToActive();
@@ -192,24 +198,43 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
   }
 
   void _scrollToActive() {
-    const double itemH = 48.0;
-    final double target = _activeIndex * itemH;
-    final double viewportH = _scrollController.hasClients ? _scrollController.position.viewportDimension : 300;
-    final double offset = _scrollController.hasClients ? _scrollController.offset : 0;
+    if (!_scrollController.hasClients || _filteredActions.isEmpty) return;
 
-    if (target < offset) {
-      _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOutCubic,
-      );
-    } else if (target + itemH > offset + viewportH) {
-      _scrollController.animateTo(
-        target + itemH - viewportH,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOutCubic,
-      );
+    const double regularItemH = 48.0;
+    const double separatorH = 25.0;
+
+    // 1. Calculate the exact top boundary of the active item
+    double targetTop = 0.0;
+    for (int i = 0; i < _activeIndex; i++) {
+      if (_filteredActions[i].isSeparator) {
+        targetTop += separatorH;
+      } else {
+        targetTop += regularItemH;
+      }
     }
+
+    // 2. Determine the height of the current active item itself
+    final double activeItemH = _filteredActions[_activeIndex].isSeparator ? separatorH : regularItemH;
+
+    // 3. Calculate where the item's middle point sits in the list
+    final double itemCenter = targetTop + (activeItemH / 2);
+
+    // 4. Determine the viewport metrics
+    final double viewportH = _scrollController.position.viewportDimension;
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+
+    // 5. Center the item by subtracting half of the viewport height
+    double idealOffset = itemCenter - (viewportH / 2);
+
+    // 6. Clamp the offset so it stays within valid scrollable boundaries
+    idealOffset = idealOffset.clamp(0.0, maxScroll);
+
+    // 7. Smoothly glide to the centered target
+    _scrollController.animateTo(
+      idealOffset,
+      duration: const Duration(milliseconds: 50), // Slightly prolonged for a smoother glide effect
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _execute(int index) async {
@@ -222,6 +247,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
     }
 
     await action.onExecute(context);
+    if (!kDebugMode) QuickMenuFunctions.hideQuickMenu();
   }
 
   @override
@@ -275,6 +301,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             }
 
                             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                              _isKeyboardNavigating = true;
                               setState(() {
                                 if (_activeIndex < _filteredActions.length - 1) {
                                   _activeIndex++;
@@ -287,6 +314,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             }
 
                             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                              _isKeyboardNavigating = true;
                               setState(() {
                                 if (_activeIndex > 0) {
                                   _activeIndex--;
@@ -357,6 +385,8 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                         ),
                       )
                     else
+                      // Inside ActionsPanelScaffold's build() method:
+
                       Flexible(
                         child: Material(
                           type: MaterialType.transparency,
@@ -364,8 +394,19 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             actions: _filteredActions,
                             activeIndex: _activeIndex,
                             scrollController: _scrollController,
-                            onHover: (int i) => setState(() => _activeIndex = i),
+                            // Only allow hover updates if we aren't mid-keyboard-navigation
+                            onHover: (int i) {
+                              if (!_isKeyboardNavigating) {
+                                setState(() => _activeIndex = i);
+                              }
+                            },
                             onTap: _execute,
+                            // Re-enable mouse tracking as soon as the user physically moves their pointer
+                            onMouseMove: () {
+                              if (_isKeyboardNavigating) {
+                                setState(() => _isKeyboardNavigating = false);
+                              }
+                            },
                             accent: accent,
                             theme: theme,
                           ),
@@ -597,6 +638,7 @@ class _KbdHint extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Actions list
 // ─────────────────────────────────────────────────────────────────────────────
+// Update your _ActionsList widget to look like this:
 
 class _ActionsList extends StatelessWidget {
   const _ActionsList({
@@ -607,6 +649,7 @@ class _ActionsList extends StatelessWidget {
     required this.onTap,
     required this.accent,
     required this.theme,
+    required this.onMouseMove, // <-- Add this callback
   });
 
   final List<LauncherAction> actions;
@@ -614,53 +657,58 @@ class _ActionsList extends StatelessWidget {
   final ScrollController scrollController;
   final ValueChanged<int> onHover;
   final ValueChanged<int> onTap;
+  final VoidCallback onMouseMove; // <-- Add this callback
   final Color accent;
   final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      controller: scrollController,
-      shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      itemCount: actions.length,
-      itemBuilder: (BuildContext ctx, int i) {
-        final LauncherAction action = actions[i];
-        final bool isActive = i == activeIndex;
+    return MouseRegion(
+      // Triggers ONLY when the physical mouse moves over this region
+      onHover: (_) => onMouseMove(),
+      child: ListView.builder(
+        controller: scrollController,
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        itemCount: actions.length,
+        itemBuilder: (BuildContext ctx, int i) {
+          final LauncherAction action = actions[i];
+          final bool isActive = i == activeIndex;
 
-        // Separator
-        if (action.isSeparator) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              children: <Widget>[
-                Expanded(child: Divider(height: 1, color: theme.colorScheme.onSurface.withAlpha(20))),
-                if (action.label.isNotEmpty) ...<Widget>[
-                  const SizedBox(width: 8),
-                  Text(
-                    action.label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withAlpha(60),
-                      fontSize: 10,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+          if (action.isSeparator) {
+            // ... (keep separator code exactly as it is)
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: <Widget>[
                   Expanded(child: Divider(height: 1, color: theme.colorScheme.onSurface.withAlpha(20))),
+                  if (action.label.isNotEmpty) ...<Widget>[
+                    const SizedBox(width: 8),
+                    Text(
+                      action.label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(60),
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Divider(height: 1, color: theme.colorScheme.onSurface.withAlpha(20))),
+                  ],
                 ],
-              ],
-            ),
-          );
-        }
+              ),
+            );
+          }
 
-        return _ActionTile(
-          action: action,
-          isActive: isActive,
-          accent: accent,
-          theme: theme,
-          onHover: () => onHover(i),
-          onTap: () => onTap(i),
-        );
-      },
+          return _ActionTile(
+            action: action,
+            isActive: isActive,
+            accent: accent,
+            theme: theme,
+            onHover: () => onHover(i),
+            onTap: () => onTap(i),
+          );
+        },
+      ),
     );
   }
 }
@@ -1117,6 +1165,11 @@ class LauncherActionsBuilder {
         onExecute: (_) => Clipboard.setData(ClipboardData(text: path)),
       ),
       LauncherAction(
+        label: 'Copy File',
+        icon: Icons.content_paste_go_outlined,
+        onExecute: (_) => ClipboardExtension.copyFile(path),
+      ),
+      LauncherAction(
         label: 'Copy Filename',
         icon: Icons.title_rounded,
         subtitle: p.basename(path),
@@ -1128,7 +1181,9 @@ class LauncherActionsBuilder {
     // ── Shell context-menu items ──
     final List<ShellMenuItem> shellActions = await ShellContextMenu.getMenuItems(path);
     final List<LauncherAction> newList = <LauncherAction>[];
+    print(shellActions);
     for (final ShellMenuItem action in shellActions) {
+      if (<String>["Cut", "Copy"].contains(action.verb)) continue;
       newList.add(LauncherAction(
         label: action.label,
         icon: action.iconBytes == null ? _iconForVerb(action.label) : null,
@@ -1211,18 +1266,14 @@ class LauncherActionsBuilder {
         },
       ),
       LauncherAction(
-        label: 'Open in VS Code',
-        icon: Icons.code_rounded,
-        subtitle: 'code .',
-        onExecute: (_) {
-          WinUtils.open('code', arguments: '"$path"', parseParamaters: true);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
         label: 'Copy Path',
         icon: Icons.content_copy_rounded,
         onExecute: (_) => Clipboard.setData(ClipboardData(text: path)),
+      ),
+      LauncherAction(
+        label: 'Copy Folder',
+        icon: Icons.content_paste_go_outlined,
+        onExecute: (_) => ClipboardExtension.copyFolder(path),
       ),
       LauncherAction(
         label: 'Copy Folder Name',
@@ -1240,6 +1291,7 @@ class LauncherActionsBuilder {
     final List<ShellMenuItem> shellActions = await ShellContextMenu.getMenuItems(path);
     final List<LauncherAction> newList = <LauncherAction>[];
     for (final ShellMenuItem action in shellActions) {
+      if (<String>["Cut", "Copy"].contains(action.label)) continue;
       newList.add(LauncherAction(
         label: action.label,
         icon: action.iconBytes == null ? _iconForVerb(action.label) : null,
@@ -1552,7 +1604,7 @@ class LauncherActionsBuilder {
 
   static void _closeLauncher() {
     // Mirrors the pattern used throughout launcher.dart.
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }

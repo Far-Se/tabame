@@ -511,8 +511,8 @@ class QuickMenuState extends State<QuickMenu>
         QuickMenuFunctions.isQuickMenuVisible &&
         Globals.quickMenuPage == QuickMenuPage.quickMenu &&
         !QuickMenuFunctions.keepOpen) {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
-      Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.toggleQuickMenu(visible: false));
+      QuickMenuFunctions.hideQuickMenu();
+      Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.hideQuickMenu());
     }
   }
 
@@ -589,7 +589,7 @@ class QuickMenuState extends State<QuickMenu>
             //if (!Navigator.of(context).canPop()) {
             // Navigator.of(context).pop();
             // } else {
-            QuickMenuFunctions.toggleQuickMenu(visible: false);
+            QuickMenuFunctions.hideQuickMenu();
             //}
           }
           //_requestQuickMenuFocus(focusWindow: true);
@@ -637,7 +637,7 @@ class QuickMenuState extends State<QuickMenu>
       child: GestureDetector(
         onTap: () {
           if (userSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
-            QuickMenuFunctions.toggleQuickMenu(visible: false);
+            QuickMenuFunctions.hideQuickMenu();
           }
         },
         child: Scaffold(

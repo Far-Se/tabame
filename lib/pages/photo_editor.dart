@@ -1072,13 +1072,15 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                                                             : GestureDetector(
                                                                 behavior: HitTestBehavior.translucent,
                                                                 onPanStart: (DragStartDetails details) {
-                                                                  if (_middleMouseStart != null)
+                                                                  if (_middleMouseStart != null) {
                                                                     return; // Ignore drag if panning instead
+                                                                  }
                                                                   _onPanStart(details, canvasSize);
                                                                 },
                                                                 onPanUpdate: (DragUpdateDetails details) {
-                                                                  if (_middleMouseStart != null)
+                                                                  if (_middleMouseStart != null) {
                                                                     return; // Ignore drag if panning instead
+                                                                  }
                                                                   _onPanUpdate(details, canvasSize);
                                                                 },
                                                                 onPanEnd: (DragEndDetails details) {

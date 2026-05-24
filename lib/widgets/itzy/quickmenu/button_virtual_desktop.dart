@@ -14,11 +14,11 @@ class VirtualDesktopButton extends StatelessWidget {
       message: "Move Desktop",
       icon: const Icon(Icons.display_settings_outlined),
       onTap: () async {
-        await QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await QuickMenuFunctions.hideQuickMenu();
         Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.right));
       },
       onSecondaryTap: () async {
-        await QuickMenuFunctions.toggleQuickMenu(visible: false);
+        await QuickMenuFunctions.hideQuickMenu();
         Future<void>.delayed(const Duration(milliseconds: 200), () => WinUtils.moveDesktop(DesktopDirection.left));
       },
     );

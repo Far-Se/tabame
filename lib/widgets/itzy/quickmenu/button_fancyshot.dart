@@ -16,7 +16,7 @@ class PhotoEditorButton extends StatelessWidget {
       icon: const Icon(Icons.photo_camera_back_outlined),
       onTap: () async {
         if (QuickMenuFunctions.isQuickMenuVisible) {
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
           await Future<void>.delayed(const Duration(milliseconds: 50));
         }
         WinUtils.startTabame(arguments: "-editor");
@@ -36,7 +36,7 @@ class FancyShotButton extends StatelessWidget {
       icon: freeze ? const Icon(Icons.center_focus_strong) : const Icon(Icons.center_focus_strong_outlined),
       onTap: () async {
         if (QuickMenuFunctions.isQuickMenuVisible) {
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
           await Future<void>.delayed(const Duration(milliseconds: 50));
         }
         await FancyShotCaptureWidget.captureScreenshots();

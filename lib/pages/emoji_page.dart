@@ -65,13 +65,13 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
   @override
   void onWindowBlur() {
     if (shownDate != null && DateTime.now().millisecondsSinceEpoch - shownDate!.millisecondsSinceEpoch > 600) {
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
     }
   }
 
   void _closeEmojiPicker() async {
     await _refocusPreviousWindow();
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   @override
@@ -164,7 +164,7 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
 
     await Clipboard.setData(ClipboardData(text: emoji));
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    await QuickMenuFunctions.toggleQuickMenu(visible: false);
+    await QuickMenuFunctions.hideQuickMenu();
     await _refocusPreviousWindow();
 
     await Future<void>.delayed(const Duration(milliseconds: 60));

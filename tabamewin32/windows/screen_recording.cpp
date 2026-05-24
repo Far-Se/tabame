@@ -31,8 +31,8 @@
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Graphics.Capture.h>
-#include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
+#include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/base.h>
 
 #include "include/encoding.h"
@@ -95,7 +95,7 @@ struct Config {
 };
 
 struct CoTaskMemFreeDeleter {
-  void operator()(WAVEFORMATEX* format) const {
+  void operator()(WAVEFORMATEX *format) const {
     if (format != nullptr) {
       CoTaskMemFree(format);
     }
@@ -124,7 +124,8 @@ static bool EnsureWinRtInitialized() {
   static HRESULT initResult = E_FAIL;
   std::call_once(initOnce, []() {
     initResult = RoInitialize(RO_INIT_MULTITHREADED);
-    if (initResult == RPC_E_CHANGED_MODE) initResult = S_OK;
+    if (initResult == RPC_E_CHANGED_MODE)
+      initResult = S_OK;
   });
   return SUCCEEDED(initResult);
 }
@@ -136,11 +137,13 @@ static bool EnsureMediaFoundationStarted() {
   return SUCCEEDED(mfResult);
 }
 
-static bool CreateD3D11Device(winrt::com_ptr<ID3D11Device>& device,
-                              winrt::com_ptr<ID3D11DeviceContext>& context) {
+static bool CreateD3D11Device(winrt::com_ptr<ID3D11Device> &device,
+                              winrt::com_ptr<ID3D11DeviceContext> &context) {
   static const D3D_FEATURE_LEVEL kFeatureLevels[] = {
-      D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
-      D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
+      D3D_FEATURE_LEVEL_11_1,
+      D3D_FEATURE_LEVEL_11_0,
+      D3D_FEATURE_LEVEL_10_1,
+      D3D_FEATURE_LEVEL_10_0,
   };
 
   D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -149,25 +152,28 @@ static bool CreateD3D11Device(winrt::com_ptr<ID3D11Device>& device,
       nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, kFeatureLevels,
       static_cast<UINT>(std::size(kFeatureLevels)), D3D11_SDK_VERSION,
       device.put(), &featureLevel, context.put());
-  if (SUCCEEDED(hr)) return true;
+  if (SUCCEEDED(hr))
+    return true;
 
-  hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, flags,
-                         kFeatureLevels,
-                         static_cast<UINT>(std::size(kFeatureLevels)),
-                         D3D11_SDK_VERSION, device.put(), &featureLevel,
-                         context.put());
+  hr = D3D11CreateDevice(
+      nullptr, D3D_DRIVER_TYPE_WARP, nullptr, flags, kFeatureLevels,
+      static_cast<UINT>(std::size(kFeatureLevels)), D3D11_SDK_VERSION,
+      device.put(), &featureLevel, context.put());
   return SUCCEEDED(hr);
 }
 
-static winrt::com_ptr<ID3D11Texture2D> GetTextureFromFrame(
-    const Direct3D11CaptureFrame& frame) {
-  if (!frame) return nullptr;
+static winrt::com_ptr<ID3D11Texture2D>
+GetTextureFromFrame(const Direct3D11CaptureFrame &frame) {
+  if (!frame)
+    return nullptr;
   IDirect3DSurface surface = frame.Surface();
-  if (!surface) return nullptr;
+  if (!surface)
+    return nullptr;
 
-  winrt::com_ptr<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>
-      access =
-          surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
+  winrt::com_ptr<
+      ::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>
+      access = surface.as<::Windows::Graphics::DirectX::Direct3D11::
+                              IDirect3DDxgiInterfaceAccess>();
   winrt::com_ptr<ID3D11Texture2D> sourceTexture;
   if (FAILED(access->GetInterface(__uuidof(ID3D11Texture2D),
                                   sourceTexture.put_void()))) {
@@ -182,10 +188,10 @@ static GraphicsCaptureItem CreateItemForMonitor(HMONITOR monitor) {
   GraphicsCaptureItem item{nullptr};
   const HRESULT hr = interop->CreateForMonitor(
       monitor,
-      winrt::guid_of<
-          winrt::Windows::Graphics::Capture::IGraphicsCaptureItem>(),
+      winrt::guid_of<winrt::Windows::Graphics::Capture::IGraphicsCaptureItem>(),
       winrt::put_abi(item));
-  if (FAILED(hr)) return nullptr;
+  if (FAILED(hr))
+    return nullptr;
   return item;
 }
 
@@ -195,14 +201,14 @@ static GraphicsCaptureItem CreateItemForWindow(HWND hwnd) {
   GraphicsCaptureItem item{nullptr};
   const HRESULT hr = interop->CreateForWindow(
       hwnd,
-      winrt::guid_of<
-          winrt::Windows::Graphics::Capture::IGraphicsCaptureItem>(),
+      winrt::guid_of<winrt::Windows::Graphics::Capture::IGraphicsCaptureItem>(),
       winrt::put_abi(item));
-  if (FAILED(hr)) return nullptr;
+  if (FAILED(hr))
+    return nullptr;
   return item;
 }
 
-static RECT ClampRectToSize(const RECT& rect, int width, int height) {
+static RECT ClampRectToSize(const RECT &rect, int width, int height) {
   RECT out = rect;
   out.left = std::clamp(out.left, 0L, static_cast<LONG>(width));
   out.top = std::clamp(out.top, 0L, static_cast<LONG>(height));
@@ -211,41 +217,45 @@ static RECT ClampRectToSize(const RECT& rect, int width, int height) {
   return out;
 }
 
-static bool DeviceExists(EDataFlow flow, const std::wstring& requestedId) {
-  if (requestedId.empty()) return true;
+static bool DeviceExists(EDataFlow flow, const std::wstring &requestedId) {
+  if (requestedId.empty())
+    return true;
   const auto devices = EnumAudioDevices(flow);
-  for (const auto& device : devices) {
-    if (device.id == requestedId) return true;
+  for (const auto &device : devices) {
+    if (device.id == requestedId)
+      return true;
   }
   return false;
 }
 
-static float ReadPcmSample(const BYTE* sampleBytes, int bitsPerSample) {
+static float ReadPcmSample(const BYTE *sampleBytes, int bitsPerSample) {
   switch (bitsPerSample) {
-    case 8:
-      return (static_cast<int>(*sampleBytes) - 128) / 128.0f;
-    case 16: {
-      const int16_t value = *reinterpret_cast<const int16_t*>(sampleBytes);
-      return value / 32768.0f;
-    }
-    case 24: {
-      int32_t value = (static_cast<int32_t>(sampleBytes[0])) |
-                      (static_cast<int32_t>(sampleBytes[1]) << 8) |
-                      (static_cast<int32_t>(sampleBytes[2]) << 16);
-      if ((value & 0x800000) != 0) value |= ~0xFFFFFF;
-      return value / 8388608.0f;
-    }
-    case 32: {
-      const int32_t value = *reinterpret_cast<const int32_t*>(sampleBytes);
-      return value / 2147483648.0f;
-    }
-    default:
-      return 0.0f;
+  case 8:
+    return (static_cast<int>(*sampleBytes) - 128) / 128.0f;
+  case 16: {
+    const int16_t value = *reinterpret_cast<const int16_t *>(sampleBytes);
+    return value / 32768.0f;
+  }
+  case 24: {
+    int32_t value = (static_cast<int32_t>(sampleBytes[0])) |
+                    (static_cast<int32_t>(sampleBytes[1]) << 8) |
+                    (static_cast<int32_t>(sampleBytes[2]) << 16);
+    if ((value & 0x800000) != 0)
+      value |= ~0xFFFFFF;
+    return value / 8388608.0f;
+  }
+  case 32: {
+    const int32_t value = *reinterpret_cast<const int32_t *>(sampleBytes);
+    return value / 2147483648.0f;
+  }
+  default:
+    return 0.0f;
   }
 }
 
-static std::vector<float> ConvertCapturedFramesToStereoFloat(
-    const BYTE* data, UINT32 frames, const WAVEFORMATEX* format, DWORD flags) {
+static std::vector<float>
+ConvertCapturedFramesToStereoFloat(const BYTE *data, UINT32 frames,
+                                   const WAVEFORMATEX *format, DWORD flags) {
   std::vector<float> output;
   output.resize(static_cast<size_t>(frames) * 2, 0.0f);
   if ((flags & AUDCLNT_BUFFERFLAGS_SILENT) != 0 || data == nullptr ||
@@ -257,8 +267,8 @@ static std::vector<float> ConvertCapturedFramesToStereoFloat(
   int validBitsPerSample = format->wBitsPerSample;
   if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
       format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)) {
-    const auto* extensible =
-        reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(format);
+    const auto *extensible =
+        reinterpret_cast<const WAVEFORMATEXTENSIBLE *>(format);
     subtype = extensible->SubFormat;
     validBitsPerSample = extensible->Samples.wValidBitsPerSample > 0
                              ? extensible->Samples.wValidBitsPerSample
@@ -272,23 +282,24 @@ static std::vector<float> ConvertCapturedFramesToStereoFloat(
                                        static_cast<int>(format->nBlockAlign));
 
   for (UINT32 frame = 0; frame < frames; ++frame) {
-    const BYTE* frameData = data + static_cast<size_t>(frame) * bytesPerFrame;
+    const BYTE *frameData = data + static_cast<size_t>(frame) * bytesPerFrame;
     float left = 0.0f;
     float right = 0.0f;
 
     for (int channel = 0; channel < channels; ++channel) {
-      const BYTE* sampleBytes =
+      const BYTE *sampleBytes =
           frameData + channel * (format->wBitsPerSample / 8);
       float sample = 0.0f;
       if (isFloat && format->wBitsPerSample == 32) {
-        sample = *reinterpret_cast<const float*>(sampleBytes);
+        sample = *reinterpret_cast<const float *>(sampleBytes);
       } else {
         sample = ReadPcmSample(sampleBytes, validBitsPerSample);
       }
 
       if (channel == 0) {
         left = sample;
-        if (channels == 1) right = sample;
+        if (channels == 1)
+          right = sample;
       } else if (channel == 1) {
         right = sample;
       }
@@ -301,9 +312,11 @@ static std::vector<float> ConvertCapturedFramesToStereoFloat(
   return output;
 }
 
-static std::vector<float> ResampleStereoToTargetRate(
-    AudioSource& source, const std::vector<float>& stereoFrames) {
-  if (stereoFrames.empty()) return {};
+static std::vector<float>
+ResampleStereoToTargetRate(AudioSource &source,
+                           const std::vector<float> &stereoFrames) {
+  if (stereoFrames.empty())
+    return {};
 
   if (source.sampleRate == kAudioSampleRate) {
     return stereoFrames;
@@ -348,9 +361,9 @@ static std::vector<float> ResampleStereoToTargetRate(
 }
 
 class ScreenRecordingSession {
- public:
-  bool Start(const Config& config, std::string& errorCode,
-             std::string& errorMessage) {
+public:
+  bool Start(const Config &config, std::string &errorCode,
+             std::string &errorMessage) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (isRecording_) {
       errorCode = "ALREADY_RECORDING";
@@ -479,11 +492,13 @@ class ScreenRecordingSession {
         if (wait != WAIT_OBJECT_0 || !audioInitSucceeded_) {
           errorCode =
               audioErrorCode_.empty() ? "AUDIO_INIT_FAILED" : audioErrorCode_;
-          errorMessage = audioErrorMessage_.empty()
-                             ? "Unable to initialize the audio capture pipeline."
-                             : audioErrorMessage_;
+          errorMessage =
+              audioErrorMessage_.empty()
+                  ? "Unable to initialize the audio capture pipeline."
+                  : audioErrorMessage_;
           stopRequested_ = true;
-          if (audioThread_.joinable()) audioThread_.join();
+          if (audioThread_.joinable())
+            audioThread_.join();
           CleanupResourcesLocked();
           return false;
         }
@@ -494,17 +509,18 @@ class ScreenRecordingSession {
           item_.Size());
       session_ = framePool_.CreateCaptureSession(item_);
       session_.IsCursorCaptureEnabled(normalized.captureCursor);
-      frameArrivedToken_ = framePool_.FrameArrived([this](auto&&, auto&&) {
-        if (frameEvent_) SetEvent(frameEvent_.get());
+      frameArrivedToken_ = framePool_.FrameArrived([this](auto &&, auto &&) {
+        if (frameEvent_)
+          SetEvent(frameEvent_.get());
       });
       session_.StartCapture();
       frameThread_ = std::thread([this]() { FrameLoop(); });
     } catch (...) {
       errorCode = "CAPTURE_START_FAILED";
-      errorMessage =
-          "Unable to start the Windows Graphics Capture session.";
+      errorMessage = "Unable to start the Windows Graphics Capture session.";
       stopRequested_ = true;
-      if (audioThread_.joinable()) audioThread_.join();
+      if (audioThread_.joinable())
+        audioThread_.join();
       CleanupResourcesLocked();
       return false;
     }
@@ -512,12 +528,12 @@ class ScreenRecordingSession {
     return true;
   }
 
-  bool Stop(ScreenRecordingStopResult& result, std::string& errorCode,
-            std::string& errorMessage) {
+  bool Stop(ScreenRecordingStopResult &result, std::string &errorCode,
+            std::string &errorMessage) {
     return Finish(false, result, errorCode, errorMessage);
   }
 
-  bool Cancel(std::string& errorCode, std::string& errorMessage) {
+  bool Cancel(std::string &errorCode, std::string &errorMessage) {
     ScreenRecordingStopResult ignored;
     return Finish(true, ignored, errorCode, errorMessage);
   }
@@ -533,10 +549,9 @@ class ScreenRecordingSession {
     status.width = outputWidth_;
     status.height = outputHeight_;
     if (isRecording_) {
-      status.elapsedMs =
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now() - startTime_)
-              .count();
+      status.elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - startTime_)
+                             .count();
     }
     return status;
   }
@@ -548,15 +563,16 @@ class ScreenRecordingSession {
     Finish(true, ignored, code, message);
   }
 
- private:
+private:
   struct HandleCloser {
     void operator()(HANDLE handle) const {
-      if (handle != nullptr) CloseHandle(handle);
+      if (handle != nullptr)
+        CloseHandle(handle);
     }
   };
 
-  bool Finish(bool cancel, ScreenRecordingStopResult& result,
-              std::string& errorCode, std::string& errorMessage) {
+  bool Finish(bool cancel, ScreenRecordingStopResult &result,
+              std::string &errorCode, std::string &errorMessage) {
     std::unique_lock<std::mutex> lock(mutex_);
     if (!isRecording_) {
       errorCode = "NOT_RECORDING";
@@ -566,28 +582,31 @@ class ScreenRecordingSession {
 
     cancelRequested_ = cancel;
     stopRequested_ = true;
-    if (frameEvent_) SetEvent(frameEvent_.get());
+    if (frameEvent_)
+      SetEvent(frameEvent_.get());
 
     std::thread frameThread = std::move(frameThread_);
     std::thread audioThread = std::move(audioThread_);
     lock.unlock();
 
-    if (frameThread.joinable()) frameThread.join();
-    if (audioThread.joinable()) audioThread.join();
+    if (frameThread.joinable())
+      frameThread.join();
+    if (audioThread.joinable())
+      audioThread.join();
 
     lock.lock();
     HRESULT finalizeHr = S_OK;
     {
       std::lock_guard<std::mutex> sinkLock(sinkWriterMutex_);
-      if (sinkWriter_) finalizeHr = sinkWriter_->Finalize();
+      if (sinkWriter_)
+        finalizeHr = sinkWriter_->Finalize();
     }
     result.success = SUCCEEDED(finalizeHr) && !cancelRequested_;
     result.filePath = Encoding::WideToUtf8(captureConfig_.outputPath);
     result.frameCount = frameCount_.load();
-    result.durationMs =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime_)
-            .count();
+    result.durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - startTime_)
+                            .count();
 
     if (cancelRequested_) {
       _wremove(captureConfig_.outputPath.c_str());
@@ -604,8 +623,8 @@ class ScreenRecordingSession {
     return true;
   }
 
-  bool ResolveCaptureItemLocked(const Config& config, std::string& errorCode,
-                                std::string& errorMessage) {
+  bool ResolveCaptureItemLocked(const Config &config, std::string &errorCode,
+                                std::string &errorMessage) {
     sourceRect_ = {0, 0, 0, 0};
     targetWindow_ = nullptr;
 
@@ -694,8 +713,8 @@ class ScreenRecordingSession {
     return true;
   }
 
-  bool InitializeSinkWriterLocked(const Config& config, std::string& errorCode,
-                                  std::string& errorMessage) {
+  bool InitializeSinkWriterLocked(const Config &config, std::string &errorCode,
+                                  std::string &errorMessage) {
     winrt::com_ptr<IMFAttributes> attributes;
     if (FAILED(MFCreateAttributes(attributes.put(), 4))) {
       errorCode = "MF_ATTRIBUTES_FAILED";
@@ -756,8 +775,7 @@ class ScreenRecordingSession {
     MFSetAttributeRatio(videoInputType.get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
 
     if (FAILED(sinkWriter_->SetInputMediaType(videoStreamIndex_,
-                                              videoInputType.get(),
-                                              nullptr))) {
+                                              videoInputType.get(), nullptr))) {
       errorCode = "SET_INPUT_TYPE_FAILED";
       errorMessage = "Unable to set the video input type for recording.";
       return false;
@@ -782,8 +800,8 @@ class ScreenRecordingSession {
       audioOutputType->SetUINT32(MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION,
                                  0x29);
 
-      if (FAILED(
-              sinkWriter_->AddStream(audioOutputType.get(), &audioStreamIndex_))) {
+      if (FAILED(sinkWriter_->AddStream(audioOutputType.get(),
+                                        &audioStreamIndex_))) {
         errorCode = "ADD_AUDIO_STREAM_FAILED";
         errorMessage = "Unable to add the AAC audio stream.";
         return false;
@@ -808,9 +826,8 @@ class ScreenRecordingSession {
                                 kAudioSampleRate * kAudioChannels *
                                     kAudioBitsPerSample / 8);
 
-      if (FAILED(sinkWriter_->SetInputMediaType(audioStreamIndex_,
-                                                audioInputType.get(),
-                                                nullptr))) {
+      if (FAILED(sinkWriter_->SetInputMediaType(
+              audioStreamIndex_, audioInputType.get(), nullptr))) {
         errorCode = "SET_AUDIO_INPUT_FAILED";
         errorMessage = "Unable to set the PCM audio input type.";
         return false;
@@ -826,13 +843,12 @@ class ScreenRecordingSession {
     return true;
   }
 
-  bool InitializeAudioSource(AudioSource& source, std::string& errorCode,
-                             std::string& errorMessage) {
+  bool InitializeAudioSource(AudioSource &source, std::string &errorCode,
+                             std::string &errorMessage) {
     winrt::com_ptr<IMMDeviceEnumerator> enumerator;
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
-                                  CLSCTX_INPROC_SERVER,
-                                  __uuidof(IMMDeviceEnumerator),
-                                  enumerator.put_void());
+    HRESULT hr = CoCreateInstance(
+        __uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER,
+        __uuidof(IMMDeviceEnumerator), enumerator.put_void());
     if (FAILED(hr)) {
       errorCode = "AUDIO_ENUMERATOR_FAILED";
       errorMessage = "Unable to create the audio device enumerator.";
@@ -865,17 +881,16 @@ class ScreenRecordingSession {
     desired.nChannels = kAudioChannels;
     desired.nSamplesPerSec = kAudioSampleRate;
     desired.wBitsPerSample = 32;
-    desired.nBlockAlign =
-        desired.nChannels * desired.wBitsPerSample / 8;
+    desired.nBlockAlign = desired.nChannels * desired.wBitsPerSample / 8;
     desired.nAvgBytesPerSec = desired.nSamplesPerSec * desired.nBlockAlign;
     desired.cbSize = 0;
 
-    WAVEFORMATEX* closestMatch = nullptr;
+    WAVEFORMATEX *closestMatch = nullptr;
     hr = source.client->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &desired,
                                           &closestMatch);
     if (hr == S_OK) {
-      source.format.reset(
-          reinterpret_cast<WAVEFORMATEX*>(CoTaskMemAlloc(sizeof(WAVEFORMATEX))));
+      source.format.reset(reinterpret_cast<WAVEFORMATEX *>(
+          CoTaskMemAlloc(sizeof(WAVEFORMATEX))));
       if (!source.format) {
         errorCode = "AUDIO_FORMAT_FAILED";
         errorMessage = "Unable to allocate the desired audio format.";
@@ -886,17 +901,19 @@ class ScreenRecordingSession {
       source.format.reset(closestMatch);
       closestMatch = nullptr;
     } else {
-      WAVEFORMATEX* mixFormat = nullptr;
+      WAVEFORMATEX *mixFormat = nullptr;
       hr = source.client->GetMixFormat(&mixFormat);
       if (FAILED(hr) || mixFormat == nullptr) {
         errorCode = "AUDIO_FORMAT_FAILED";
         errorMessage = "Unable to determine the device mix format.";
-        if (closestMatch != nullptr) CoTaskMemFree(closestMatch);
+        if (closestMatch != nullptr)
+          CoTaskMemFree(closestMatch);
         return false;
       }
       source.format.reset(mixFormat);
     }
-    if (closestMatch != nullptr) CoTaskMemFree(closestMatch);
+    if (closestMatch != nullptr)
+      CoTaskMemFree(closestMatch);
 
     source.sampleRate =
         (std::max)(1, static_cast<int>(source.format->nSamplesPerSec));
@@ -904,7 +921,8 @@ class ScreenRecordingSession {
         (std::max)(1, static_cast<int>(source.format->nChannels));
 
     DWORD streamFlags = 0;
-    if (source.loopback) streamFlags |= AUDCLNT_STREAMFLAGS_LOOPBACK;
+    if (source.loopback)
+      streamFlags |= AUDCLNT_STREAMFLAGS_LOOPBACK;
     hr = source.client->Initialize(AUDCLNT_SHAREMODE_SHARED, streamFlags, 0, 0,
                                    source.format.get(), nullptr);
     if (FAILED(hr)) {
@@ -931,21 +949,22 @@ class ScreenRecordingSession {
     return true;
   }
 
-  bool PumpAudioPackets(AudioSource& source) {
+  bool PumpAudioPackets(AudioSource &source) {
     UINT32 packetFrames = 0;
     HRESULT hr = source.capture->GetNextPacketSize(&packetFrames);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+      return false;
 
     while (SUCCEEDED(hr) && packetFrames > 0) {
-      BYTE* data = nullptr;
+      BYTE *data = nullptr;
       UINT32 frames = 0;
       DWORD flags = 0;
       hr = source.capture->GetBuffer(&data, &frames, &flags, nullptr, nullptr);
-      if (FAILED(hr)) return false;
+      if (FAILED(hr))
+        return false;
 
-      std::vector<float> stereoFloat =
-          ConvertCapturedFramesToStereoFloat(data, frames, source.format.get(),
-                                            flags);
+      std::vector<float> stereoFloat = ConvertCapturedFramesToStereoFloat(
+          data, frames, source.format.get(), flags);
       source.capture->ReleaseBuffer(frames);
 
       stereoFloat = ResampleStereoToTargetRate(source, stereoFloat);
@@ -960,7 +979,8 @@ class ScreenRecordingSession {
   }
 
   bool WriteMixedAudioChunk(int framesToWrite) {
-    if (framesToWrite <= 0) return true;
+    if (framesToWrite <= 0)
+      return true;
 
     std::vector<int16_t> pcm;
     pcm.resize(static_cast<size_t>(framesToWrite) * kAudioChannels, 0);
@@ -969,7 +989,7 @@ class ScreenRecordingSession {
       float left = 0.0f;
       float right = 0.0f;
 
-      for (AudioSource& source : audioSources_) {
+      for (AudioSource &source : audioSources_) {
         if (source.pendingStereo.size() >= 2) {
           left += source.pendingStereo[0];
           right += source.pendingStereo[1];
@@ -989,21 +1009,23 @@ class ScreenRecordingSession {
     winrt::com_ptr<IMFMediaBuffer> buffer;
     HRESULT hr = MFCreateMemoryBuffer(
         static_cast<DWORD>(pcm.size() * sizeof(int16_t)), buffer.put());
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+      return false;
 
-    BYTE* data = nullptr;
+    BYTE *data = nullptr;
     DWORD maxLength = 0;
     DWORD currentLength = 0;
     hr = buffer->Lock(&data, &maxLength, &currentLength);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+      return false;
     std::memcpy(data, pcm.data(), pcm.size() * sizeof(int16_t));
     buffer->Unlock();
-    buffer->SetCurrentLength(
-        static_cast<DWORD>(pcm.size() * sizeof(int16_t)));
+    buffer->SetCurrentLength(static_cast<DWORD>(pcm.size() * sizeof(int16_t)));
 
     winrt::com_ptr<IMFSample> sample;
     hr = MFCreateSample(sample.put());
-    if (FAILED(hr) || FAILED(sample->AddBuffer(buffer.get()))) return false;
+    if (FAILED(hr) || FAILED(sample->AddBuffer(buffer.get())))
+      return false;
 
     const LONGLONG sampleTime =
         audioFramesWritten_ * 10'000'000LL / kAudioSampleRate;
@@ -1016,19 +1038,21 @@ class ScreenRecordingSession {
       std::lock_guard<std::mutex> lock(sinkWriterMutex_);
       hr = sinkWriter_->WriteSample(audioStreamIndex_, sample.get());
     }
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+      return false;
 
     audioFramesWritten_ += framesToWrite;
     return true;
   }
 
-  void SignalAudioInitFailure(const std::string& code,
-                              const std::string& message) {
+  void SignalAudioInitFailure(const std::string &code,
+                              const std::string &message) {
     audioErrorCode_ = code;
     audioErrorMessage_ = message;
     audioInitSucceeded_ = false;
     audioInitDone_ = true;
-    if (audioInitEvent_) SetEvent(audioInitEvent_.get());
+    if (audioInitEvent_)
+      SetEvent(audioInitEvent_.get());
   }
 
   void AudioLoop() {
@@ -1071,12 +1095,13 @@ class ScreenRecordingSession {
       audioSources_.push_back(std::move(mic));
     }
 
-    for (AudioSource& source : audioSources_) {
+    for (AudioSource &source : audioSources_) {
       if (FAILED(source.client->Start())) {
         SignalAudioInitFailure("AUDIO_START_FAILED",
                                "Unable to start one of the audio streams.");
-        for (AudioSource& started : audioSources_) {
-          if (started.client) started.client->Stop();
+        for (AudioSource &started : audioSources_) {
+          if (started.client)
+            started.client->Stop();
         }
         CoUninitialize();
         return;
@@ -1085,17 +1110,19 @@ class ScreenRecordingSession {
 
     audioInitSucceeded_ = true;
     audioInitDone_ = true;
-    if (audioInitEvent_) SetEvent(audioInitEvent_.get());
+    if (audioInitEvent_)
+      SetEvent(audioInitEvent_.get());
 
     while (!stopRequested_) {
       bool ok = true;
-      for (AudioSource& source : audioSources_) {
+      for (AudioSource &source : audioSources_) {
         ok = PumpAudioPackets(source) && ok;
       }
-      if (!ok) break;
+      if (!ok)
+        break;
 
       bool canWrite = true;
-      for (AudioSource& source : audioSources_) {
+      for (AudioSource &source : audioSources_) {
         if (static_cast<int>(source.pendingStereo.size() / 2) <
             kAudioChunkFrames) {
           canWrite = false;
@@ -1103,23 +1130,26 @@ class ScreenRecordingSession {
         }
       }
       if (canWrite) {
-        if (!WriteMixedAudioChunk(kAudioChunkFrames)) break;
+        if (!WriteMixedAudioChunk(kAudioChunkFrames))
+          break;
       } else {
         Sleep(5);
       }
     }
 
-    for (AudioSource& source : audioSources_) {
-      if (source.client) source.client->Stop();
+    for (AudioSource &source : audioSources_) {
+      if (source.client)
+        source.client->Stop();
     }
 
     bool hasPending = true;
     while (hasPending) {
       hasPending = false;
       int maxFrames = 0;
-      for (AudioSource& source : audioSources_) {
+      for (AudioSource &source : audioSources_) {
         maxFrames =
-            (std::max)(maxFrames, static_cast<int>(source.pendingStereo.size() / 2));
+            (std::max)(maxFrames,
+                       static_cast<int>(source.pendingStereo.size() / 2));
       }
       if (maxFrames > 0) {
         hasPending = true;
@@ -1137,6 +1167,13 @@ class ScreenRecordingSession {
   }
 
   void FrameLoop() {
+    // Interval in microseconds between frames at the configured frame rate.
+    const int64_t frameIntervalUs =
+        1'000'000LL / (std::max)(1, captureConfig_.frameRate);
+    // Timestamp of the last frame we actually encoded, in microseconds
+    // since the recording start.
+    int64_t nextFrameDeadlineUs = 0;
+
     while (!stopRequested_) {
       if (targetWindow_ != nullptr && !IsWindow(targetWindow_)) {
         stopRequested_ = true;
@@ -1144,33 +1181,60 @@ class ScreenRecordingSession {
       }
 
       const DWORD waitResult = WaitForSingleObject(frameEvent_.get(), 250);
-      if (waitResult != WAIT_OBJECT_0) continue;
+      if (waitResult != WAIT_OBJECT_0)
+        continue;
 
+      // Drain all pending frames but only encode the most recent one
+      // that falls on or after the next scheduled deadline.
       try {
+        Direct3D11CaptureFrame latestFrame{nullptr};
         Direct3D11CaptureFrame frame = framePool_.TryGetNextFrame();
-        if (frame) {
-          ProcessFrame(frame);
+        while (frame) {
+          latestFrame = std::move(frame);
+          frame = framePool_.TryGetNextFrame();
         }
+        if (!latestFrame)
+          continue;
+
+        // Check wall-clock time to decide whether we should encode this frame.
+        const int64_t elapsedUs =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - startTime_)
+                .count();
+
+        if (elapsedUs >= nextFrameDeadlineUs) {
+          ProcessFrame(latestFrame);
+          // Advance deadline; don't let it drift behind real time if we're
+          // slow.
+          nextFrameDeadlineUs += frameIntervalUs;
+          if (nextFrameDeadlineUs < elapsedUs) {
+            nextFrameDeadlineUs = elapsedUs + frameIntervalUs;
+          }
+        }
+        // else: frame arrived too early — drop it (skips frame, no slow-mo)
       } catch (...) {
         ++droppedFrames_;
       }
     }
 
     try {
-      if (framePool_) framePool_.FrameArrived(frameArrivedToken_);
+      if (framePool_)
+        framePool_.FrameArrived(frameArrivedToken_);
     } catch (...) {
     }
     try {
-      if (session_) session_.Close();
+      if (session_)
+        session_.Close();
     } catch (...) {
     }
     try {
-      if (framePool_) framePool_.Close();
+      if (framePool_)
+        framePool_.Close();
     } catch (...) {
     }
   }
 
-  void ProcessFrame(const Direct3D11CaptureFrame& frame) {
+  void ProcessFrame(const Direct3D11CaptureFrame &frame) {
     winrt::com_ptr<ID3D11Texture2D> sourceTexture = GetTextureFromFrame(frame);
     if (!sourceTexture) {
       ++droppedFrames_;
@@ -1204,17 +1268,19 @@ class ScreenRecordingSession {
     const RECT clamped =
         ClampRectToSize(sourceRect_, static_cast<int>(desc.Width),
                         static_cast<int>(desc.Height));
-    const int copyWidth = (std::min)(
-        outputWidth_, static_cast<int>(clamped.right - clamped.left));
-    const int copyHeight = (std::min)(
-        outputHeight_, static_cast<int>(clamped.bottom - clamped.top));
+    const int copyWidth =
+        (std::min)(outputWidth_,
+                   static_cast<int>(clamped.right - clamped.left));
+    const int copyHeight =
+        (std::min)(outputHeight_,
+                   static_cast<int>(clamped.bottom - clamped.top));
 
     for (int y = 0; y < copyHeight; ++y) {
-      const uint8_t* src =
-          static_cast<const uint8_t*>(mapped.pData) +
+      const uint8_t *src =
+          static_cast<const uint8_t *>(mapped.pData) +
           static_cast<size_t>(clamped.top + y) * mapped.RowPitch +
           static_cast<size_t>(clamped.left) * 4;
-      uint8_t* dst = argb.data() + static_cast<size_t>(y) * outputWidth_ * 4;
+      uint8_t *dst = argb.data() + static_cast<size_t>(y) * outputWidth_ * 4;
       std::memcpy(dst, src, static_cast<size_t>(copyWidth) * 4);
     }
     d3dContext_->Unmap(stagingTexture_.get(), 0);
@@ -1226,7 +1292,7 @@ class ScreenRecordingSession {
       return;
     }
 
-    BYTE* data = nullptr;
+    BYTE *data = nullptr;
     DWORD maxLength = 0;
     DWORD currentLength = 0;
     if (FAILED(buffer->Lock(&data, &maxLength, &currentLength))) {
@@ -1244,9 +1310,8 @@ class ScreenRecordingSession {
       return;
     }
 
-    const LONGLONG sampleTime =
-        static_cast<LONGLONG>(frameCount_.load()) * 10'000'000LL /
-        captureConfig_.frameRate;
+    const LONGLONG sampleTime = static_cast<LONGLONG>(frameCount_.load()) *
+                                10'000'000LL / captureConfig_.frameRate;
     const LONGLONG sampleDuration = 10'000'000LL / captureConfig_.frameRate;
     sample->SetSampleTime(sampleTime);
     sample->SetSampleDuration(sampleDuration);
@@ -1264,8 +1329,7 @@ class ScreenRecordingSession {
   }
 
   bool EnsureStagingTexture(int width, int height) {
-    if (stagingTexture_ && stagingWidth_ == width &&
-        stagingHeight_ == height) {
+    if (stagingTexture_ && stagingWidth_ == width && stagingHeight_ == height) {
       return true;
     }
     stagingTexture_ = nullptr;
@@ -1283,8 +1347,8 @@ class ScreenRecordingSession {
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     desc.BindFlags = 0;
     desc.MiscFlags = 0;
-    return SUCCEEDED(d3dDevice_->CreateTexture2D(&desc, nullptr,
-                                                 stagingTexture_.put()));
+    return SUCCEEDED(
+        d3dDevice_->CreateTexture2D(&desc, nullptr, stagingTexture_.put()));
   }
 
   void CleanupResourcesLocked() {
@@ -1305,11 +1369,13 @@ class ScreenRecordingSession {
     audioErrorCode_.clear();
     audioErrorMessage_.clear();
     try {
-      if (framePool_) framePool_.Close();
+      if (framePool_)
+        framePool_.Close();
     } catch (...) {
     }
     try {
-      if (session_) session_.Close();
+      if (session_)
+        session_.Close();
     } catch (...) {
     }
     framePool_ = nullptr;
@@ -1363,27 +1429,27 @@ class ScreenRecordingSession {
   winrt::com_ptr<IMFSinkWriter> sinkWriter_;
 };
 
-ScreenRecordingSession& GetSession() {
+ScreenRecordingSession &GetSession() {
   static ScreenRecordingSession session;
   return session;
 }
 
-}  // namespace screen_recording
+} // namespace screen_recording
 
-static bool StartScreenRecording(const screen_recording::Config& config,
-                                 std::string& errorCode,
-                                 std::string& errorMessage) {
+static bool StartScreenRecording(const screen_recording::Config &config,
+                                 std::string &errorCode,
+                                 std::string &errorMessage) {
   return screen_recording::GetSession().Start(config, errorCode, errorMessage);
 }
 
-static bool StopScreenRecording(ScreenRecordingStopResult& result,
-                                std::string& errorCode,
-                                std::string& errorMessage) {
+static bool StopScreenRecording(ScreenRecordingStopResult &result,
+                                std::string &errorCode,
+                                std::string &errorMessage) {
   return screen_recording::GetSession().Stop(result, errorCode, errorMessage);
 }
 
-static bool CancelScreenRecording(std::string& errorCode,
-                                  std::string& errorMessage) {
+static bool CancelScreenRecording(std::string &errorCode,
+                                  std::string &errorMessage) {
   return screen_recording::GetSession().Cancel(errorCode, errorMessage);
 }
 

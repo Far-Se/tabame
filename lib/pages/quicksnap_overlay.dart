@@ -450,7 +450,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
     // BUG FIX #6: reset selecting so a ghost selection isn't active on reopen.
     selecting = false;
     Win32.setPosition(const Offset(-99999, -99999));
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   @override

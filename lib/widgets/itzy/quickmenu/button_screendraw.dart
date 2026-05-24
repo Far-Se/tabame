@@ -18,7 +18,7 @@ class ScreenDrawButton extends StatelessWidget {
         if (windowHwnd != 0) {
           Win32.closeWindow(windowHwnd);
         } else {
-          QuickMenuFunctions.toggleQuickMenu(visible: false);
+          QuickMenuFunctions.hideQuickMenu();
           WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw");
         }
       },

@@ -191,7 +191,7 @@ class WinUtils {
 
   // Startup, desktop, and taskbar helpers
   static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
-    if  (kDebugMode)  return;
+    if (kDebugMode) return;
     exePath ??= Platform.resolvedExecutable;
     setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
@@ -1709,6 +1709,93 @@ class ClipboardExtension {
       if (result == 0) {
         GlobalFree(hMem);
         throw Exception('Failed to set clipboard file data.');
+      }
+    } finally {
+      CloseClipboard();
+    }
+  }
+
+  static Future<void> copyFolder(String folderPath) async {
+    // Normalize path: remove trailing separator if present
+    final String normalizedPath =
+        folderPath.endsWith(Platform.pathSeparator) ? folderPath.substring(0, folderPath.length - 1) : folderPath;
+
+    final List<int> pathUnits = normalizedPath.codeUnits;
+
+    // DROPFILES struct + wide-char path + double null terminator
+    final int bytesNeeded = sizeOf<DROPFILES>() + ((pathUnits.length + 2) * sizeOf<Uint16>());
+
+    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
+    if (hMem.address == 0) {
+      throw Exception('Failed to allocate clipboard memory.');
+    }
+
+    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
+    if (dropFiles.address == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to lock clipboard memory.');
+    }
+
+    try {
+      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
+      dropFiles.ref.pt.x = 0;
+      dropFiles.ref.pt.y = 0;
+      dropFiles.ref.fNC = 0;
+      dropFiles.ref.fWide = 1; // Wide-char (UTF-16) paths
+
+      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
+
+      for (int i = 0; i < pathUnits.length; i++) {
+        fileListPtr[i] = pathUnits[i];
+      }
+      // Double null terminator required by DROPFILES spec
+      fileListPtr[pathUnits.length] = 0;
+      fileListPtr[pathUnits.length + 1] = 0;
+    } finally {
+      GlobalUnlock(hMem);
+    }
+
+    // --- Open clipboard with retry (another window may hold it briefly) ---
+    int opened = 0;
+    for (int attempt = 0; attempt < 5 && opened == 0; attempt++) {
+      opened = OpenClipboard(NULL);
+      if (opened == 0) sleep(const Duration(milliseconds: 50));
+    }
+    if (opened == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to open clipboard after retries.');
+    }
+
+    try {
+      EmptyClipboard();
+
+      // CF_HDROP works for both files and folders — Explorer will happily
+      // paste a folder just like a file drop.
+      final int result = SetClipboardData(CF_HDROP, hMem.address);
+      if (result == 0) {
+        GlobalFree(hMem);
+        throw Exception('Failed to set clipboard folder data.');
+      }
+
+      // ----------------------------------------------------------------
+      // BONUS: set the "Preferred DropEffect" so the shell knows whether
+      // this should be a Copy (DROPEFFECT_COPY = 1) or Cut/Move (= 2).
+      // Without this some apps default to Move on paste.
+      // ----------------------------------------------------------------
+      const int DROPEFFECT_COPY = 1;
+      const int CF_PREFERREDDROPEFFECT = 0xC004; // well-known registered format
+
+      final Pointer<NativeType> hEffect = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeOf<Uint32>());
+      if (hEffect.address != 0) {
+        final Pointer<Uint32> effectPtr = GlobalLock(hEffect).cast<Uint32>();
+        if (effectPtr.address != 0) {
+          effectPtr.value = DROPEFFECT_COPY;
+          GlobalUnlock(hEffect);
+          SetClipboardData(CF_PREFERREDDROPEFFECT, hEffect.address);
+          // Ownership transferred to clipboard; do NOT free hEffect.
+        } else {
+          GlobalFree(hEffect);
+        }
       }
     } finally {
       CloseClipboard();

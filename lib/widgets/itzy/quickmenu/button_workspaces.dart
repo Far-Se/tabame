@@ -122,7 +122,7 @@ class _WorkspacesPanelState extends State<WorkspacesPanel> {
           _launchStatus = '';
         });
       }
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
     }
   }
 

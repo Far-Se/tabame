@@ -89,6 +89,8 @@ class QuickMenuFunctions {
     taskBarSelectedIdx = -1;
   }
 
+  static Future<void> hideQuickMenu() async => await toggleQuickMenu(visible: false);
+
   static Future<void> toggleQuickMenu(
       {QuickMenuPage type = QuickMenuPage.quickMenu,
       bool? visible,

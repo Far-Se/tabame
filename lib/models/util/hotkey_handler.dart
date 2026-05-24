@@ -8,7 +8,6 @@ import '../classes/boxes.dart';
 import '../classes/hotkeys.dart';
 import '../globals.dart';
 import '../settings.dart';
-import '../win32/keys.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HotkeyHandler

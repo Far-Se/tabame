@@ -4,6 +4,7 @@ import '../../models/settings.dart';
 
 class CustomTextField extends StatefulWidget {
   final String labelText;
+  final String? hintText;
   final String? value;
   final void Function(String val) onChanged;
   final IconData? iconData;
@@ -11,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   const CustomTextField({
     super.key,
     required this.labelText,
+    this.hintText,
     this.iconData,
     this.icon,
     this.value,
@@ -53,6 +55,7 @@ class CustomTextFieldState extends State<CustomTextField> {
 
             // Use labelText instead of hintText
             labelText: widget.labelText,
+            hintText: widget.hintText,
 
             // Makes label float when text exists
             floatingLabelBehavior: FloatingLabelBehavior.auto,

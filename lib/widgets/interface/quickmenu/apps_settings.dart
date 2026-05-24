@@ -470,7 +470,7 @@ ${jsonEncode(appData)}
                   message: "Create your first category bucket here, then drag apps from the deck.",
                 )
               : ReorderableListView.builder(
-                  onReorder: _onCategoriesReorder,
+                  onReorderItem: _onCategoriesReorder,
                   buildDefaultDragHandles: false,
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
                   itemCount: categoryItems.length,

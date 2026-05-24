@@ -92,7 +92,10 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
         id: "OpenFancyShotFolder",
         title: "Open FancyShot Screenshots folder",
         searchTerms: <String>["fancyshot", "screenshot"],
-        onExecute: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+        onExecute: () {
+          WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+          QuickMenuFunctions.hideQuickMenu();
+        },
         builder: (BuildContext context) {
           return _QuickActionListItem(
             name: "Open FancyShot Screenshots folder",
@@ -102,7 +105,10 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
               width: 18,
               child: Icon(Icons.open_in_browser, size: 14, color: onSurface),
             ),
-            onTap: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+            onTap: () async {
+              WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+              QuickMenuFunctions.hideQuickMenu();
+            },
           );
         },
       ),
@@ -518,7 +524,7 @@ void executeQuickActionValue(int value) {
       WinUtils.toggleHiddenFiles();
       break;
     case 8:
-      QuickMenuFunctions.toggleQuickMenu(visible: false);
+      QuickMenuFunctions.hideQuickMenu();
       WinUtils.screenCapture()
           .then((bool value) => WinUtils.startTabame(closeCurrent: false, arguments: "-interface -fancyshot"));
       break;

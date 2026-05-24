@@ -17,9 +17,11 @@ import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
 import 'pages/screen_recording.dart';
 import 'pages/spotlight.dart';
+import 'run.dart';
 import 'widgets/widgets/focus_fix.dart';
 
 Future<void> main(List<String> arguments) async {
+  if (arguments.contains("-run")) return startRun(arguments);
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
   // return startSpotlight();

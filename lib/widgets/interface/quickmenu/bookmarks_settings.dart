@@ -115,7 +115,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                             },
                           );
                         },
-                        onReorder: (int oldIndex, int newIndex) async {
+                        onReorderItem: (int oldIndex, int newIndex) async {
                           if (oldIndex < newIndex) newIndex -= 1;
                           final BookmarkGroup item = bookmarks.removeAt(oldIndex);
                           bookmarks.insert(newIndex, item);
@@ -899,7 +899,7 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                         buildDefaultDragHandles: false,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: widget.project.bookmarks.length,
-                        onReorder: widget.onReorderBookmarks,
+                        onReorderItem: widget.onReorderBookmarks,
                         itemBuilder: (BuildContext context, int index) {
                           final BookmarkInfo item = widget.project.bookmarks[index];
                           return _BookmarkItemTile(

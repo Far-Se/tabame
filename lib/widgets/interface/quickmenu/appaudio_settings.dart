@@ -1,3 +1,5 @@
+// ignore_for_file: non_const_argument_for_const_parameter
+
 import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
@@ -211,7 +213,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                 final AppAudioControl control = appAudioControls[index];
                 return _buildControlCard(control, index);
               },
-              onReorder: (int oldIndex, int newIndex) {
+              onReorderItem: (int oldIndex, int newIndex) {
                 if (oldIndex < newIndex) newIndex -= 1;
                 final AppAudioControl item = appAudioControls.removeAt(oldIndex);
                 appAudioControls.insert(newIndex, item);

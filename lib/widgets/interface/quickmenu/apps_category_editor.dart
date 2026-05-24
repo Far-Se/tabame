@@ -264,7 +264,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                       padding: const EdgeInsets.all(8),
                       itemCount: draft.items.length,
                       buildDefaultDragHandles: false,
-                      onReorder: (int oldIndex, int newIndex) {
+                      onReorderItem: (int oldIndex, int newIndex) {
                         setState(() {
                           if (newIndex > oldIndex) newIndex -= 1;
                           final AppItem item = draft.items.removeAt(oldIndex);

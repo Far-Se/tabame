@@ -150,7 +150,7 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
 
   void _openBookmark(BookmarkInfo mark) {
     WinUtils.open(mark.stringToExecute, parseParamaters: true);
-    QuickMenuFunctions.toggleQuickMenu(visible: false);
+    QuickMenuFunctions.hideQuickMenu();
   }
 
   String _randomGroupEmoji() => _groupEmojis[_random.nextInt(_groupEmojis.length)];
