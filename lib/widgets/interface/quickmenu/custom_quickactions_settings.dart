@@ -172,7 +172,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
         return _buildActionCard(context, index, action);
       },
       itemCount: quickActions.length,
-      onReorder: (int oldIndex, int newIndex) {
+      onReorderItem: (int oldIndex, int newIndex) {
         if (oldIndex < newIndex) newIndex -= 1;
         final QuickActions item = quickActions.removeAt(oldIndex);
         quickActions.insert(newIndex, item);

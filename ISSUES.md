@@ -9,5 +9,5 @@ Ignore this file, it's for me to remember things.
 - Launcher: Posibil ca crashul e de la indexing in timp ce cauti.
 - Launcher: Tot nu arata rezultatele dupa timesOpened.
 - Launcher: din Shell Exec daca deschid zed, il deschide cu admin perms - deschide tabame cu un -run params si custom params dupa pentru non elevated.
-- Launcher: Reload Hotkeys.
+- Launcher: Reload Settings.
 - Hotkeys: nu merge cand e doar una dar speciala gen Numpad 0

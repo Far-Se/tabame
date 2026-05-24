@@ -64,7 +64,7 @@ class _QuickmenuRemindersSettingsPageState extends State<QuickmenuRemindersSetti
                             onDelete: () => _confirmDelete(context, index),
                           );
                         },
-                        onReorder: (int oldIndex, int newIndex) async {
+                        onReorderItem: (int oldIndex, int newIndex) async {
                           if (oldIndex < newIndex) newIndex -= 1;
                           final Reminder item = reminders.removeAt(oldIndex);
                           reminders.insert(newIndex, item);

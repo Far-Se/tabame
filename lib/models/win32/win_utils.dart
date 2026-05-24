@@ -1782,16 +1782,16 @@ class ClipboardExtension {
       // this should be a Copy (DROPEFFECT_COPY = 1) or Cut/Move (= 2).
       // Without this some apps default to Move on paste.
       // ----------------------------------------------------------------
-      const int DROPEFFECT_COPY = 1;
-      const int CF_PREFERREDDROPEFFECT = 0xC004; // well-known registered format
+      const int dropEffectCopy = 1;
+      const int cfPrefferedDropEffect = 0xC004; // well-known registered format
 
       final Pointer<NativeType> hEffect = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeOf<Uint32>());
       if (hEffect.address != 0) {
         final Pointer<Uint32> effectPtr = GlobalLock(hEffect).cast<Uint32>();
         if (effectPtr.address != 0) {
-          effectPtr.value = DROPEFFECT_COPY;
+          effectPtr.value = dropEffectCopy;
           GlobalUnlock(hEffect);
-          SetClipboardData(CF_PREFERREDDROPEFFECT, hEffect.address);
+          SetClipboardData(cfPrefferedDropEffect, hEffect.address);
           // Ownership transferred to clipboard; do NOT free hEffect.
         } else {
           GlobalFree(hEffect);

@@ -89,7 +89,7 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _folders.length,
-                  onReorder: (int oldIndex, int newIndex) {
+                  onReorderItem: (int oldIndex, int newIndex) {
                     setState(() {
                       if (oldIndex < newIndex) newIndex -= 1;
                       final SearchFolder item = _folders.removeAt(oldIndex);

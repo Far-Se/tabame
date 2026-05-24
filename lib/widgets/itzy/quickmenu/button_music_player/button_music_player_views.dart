@@ -787,7 +787,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                               child: ListView.builder(
                                 itemCount: visibleEntries.length,
                                 itemExtent: 36,
-                                cacheExtent: 144,
+                                // cacheExtent: 144,
+                                scrollCacheExtent: const ScrollCacheExtent.pixels(144),
                                 itemBuilder: (BuildContext context, int index) {
                                   final _QueueEntry entry = visibleEntries[index];
                                   return _CompactQueueRow(

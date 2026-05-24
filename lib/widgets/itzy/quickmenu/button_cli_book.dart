@@ -515,7 +515,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
               itemCount: category.items.length,
-              onReorder: (int oldIdx, int newIdx) {
+              onReorderItem: (int oldIdx, int newIdx) {
                 setState(() {
                   if (newIdx > oldIdx) newIdx -= 1;
                   final CliBookItem item = category.items.removeAt(oldIdx);
@@ -775,7 +775,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: cliBook.length,
                               buildDefaultDragHandles: false,
-                              onReorder: (int oldIdx, int newIdx) {
+                              onReorderItem: (int oldIdx, int newIdx) {
                                 setState(() {
                                   if (newIdx > oldIdx) newIdx -= 1;
                                   final CliBookCategory item = cliBook.removeAt(oldIdx);

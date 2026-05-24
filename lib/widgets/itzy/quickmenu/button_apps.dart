@@ -99,7 +99,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
     return Material(
       color: Colors.transparent,
       child: Column(
-        children: [
+        children: <Widget>[
           PanelHeader(title: "Apps", accent: userSettings.themeColors.accentColor, icon: Icons.apps),
           Expanded(
             child: SingleChildScrollView(

@@ -213,7 +213,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                   physics: const NeverScrollableScrollPhysics(),
                   dragStartBehavior: DragStartBehavior.down,
                   itemCount: pinnedApps.length,
-                  onReorder: _reorderPinnedApps,
+                  onReorderItem: _reorderPinnedApps,
                   itemBuilder: (BuildContext context, int index) => _buildPinnedAppItem(index),
                 );
               },
