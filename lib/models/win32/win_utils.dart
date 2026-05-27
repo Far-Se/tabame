@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:ffi/ffi.dart';
@@ -1663,6 +1664,23 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     }
 
     SetForegroundWindow(hwnd);
+  }
+
+  static void copySqlite3IfItDoesntExistForFuckSake() {
+    if (Platform.isWindows) {
+      final String exeDir = p.dirname(Platform.resolvedExecutable);
+      final String dllPath = p.join(exeDir, 'sqlite3.dll');
+      if (!File(dllPath).existsSync()) {
+        final String fallbackDll = p.join(exeDir, 'windows', 'sqlite3.dll');
+        if (File(fallbackDll).existsSync()) {
+          try {
+            File(fallbackDll).renameSync(dllPath);
+          } catch (e) {
+            debugPrint('FileIndexDb: Error moving sqlite3.dll: $e');
+          }
+        }
+      }
+    }
   }
 }
 

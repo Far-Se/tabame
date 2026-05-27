@@ -89,7 +89,12 @@ class QuickMenuFunctions {
     taskBarSelectedIdx = -1;
   }
 
-  static Future<void> hideQuickMenu() async => await toggleQuickMenu(visible: false);
+  static Future<void> hideQuickMenu() async {
+    if (Globals.quickMenuPage == QuickMenuPage.launcher) {
+      Future<void>.delayed(const Duration(milliseconds: 50), () => Win32.activateWindow(Globals.lastFocusedWinHWND));
+    }
+    await toggleQuickMenu(visible: false);
+  }
 
   static Future<void> toggleQuickMenu(
       {QuickMenuPage type = QuickMenuPage.quickMenu,

@@ -10,6 +10,7 @@ import 'package:pool/pool.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:tabamewin32/tabamewin32.dart' as native;
 import 'package:window_manager/window_manager.dart';
+import '../models/tray_watcher.dart';
 import 'launcher_actions_panel.dart';
 
 import '../models/classes/boxes.dart';
@@ -714,6 +715,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (_activeIndexNotifier.value > 0) {
         _activeIndexNotifier.value--;
         _scrollToActiveIndex();
+      } else {
+        _activeIndexNotifier.value = _results.length - 1;
+        _scrollToActiveIndex();
       }
     }
   }
@@ -797,28 +801,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Timer? _searchDebounce;
   Timer? _windowRefreshTimer;
-  String _lastWindowSnapshot = '';
   String _lastScrollResetQuery = '';
   int _searchRequestId = 0;
-
-  String _buildWindowSnapshot() {
-    return WindowWatcher.list
-        .map((Window window) => '${window.hWnd}|${window.title}|${window.process.exe}|${window.isPinned}')
-        .join('||');
-  }
-
+  // Remove this field entirely:
+  // And _startWindowRefreshLoop becomes simply:
   void _startWindowRefreshLoop() {
     _windowRefreshTimer?.cancel();
-    _lastWindowSnapshot = _buildWindowSnapshot();
     _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
       if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
       final bool updated = await WindowWatcher.fetchWindows();
+      if (WindowWatcher.list.any((Window e) => e.process.exe.toLowerCase() == "taskmgr.exe")) await Tray.fetchTray();
       if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
-
-      final String nextSnapshot = _buildWindowSnapshot();
-      if (nextSnapshot == _lastWindowSnapshot) return;
-      _lastWindowSnapshot = nextSnapshot;
 
       _refreshVisibleWindowResults();
     });
@@ -832,22 +826,38 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       for (final Window window in WindowWatcher.list) window.hWnd: window,
     };
 
-    final List<LauncherSearchResultItem> nextResults = _results.map((LauncherSearchResultItem result) {
+    final List<LauncherSearchResultItem> nextResults = <LauncherSearchResultItem>[];
+
+    for (final LauncherSearchResultItem result in _results) {
       final Window? currentWindow = result.window;
-      if (currentWindow == null) return result;
 
-      final Window? latestWindow = latestWindows[currentWindow.hWnd];
-      if (latestWindow == null) return result;
-
-      if (latestWindow.title != currentWindow.title ||
-          latestWindow.process.exe != currentWindow.process.exe ||
-          latestWindow.isPinned != currentWindow.isPinned) {
-        changed = true;
-        return LauncherSearchResultItem.window(latestWindow);
+      // Not a window item — keep as-is
+      if (currentWindow == null) {
+        nextResults.add(result);
+        continue;
       }
 
-      return result;
-    }).toList(growable: false);
+      final Window? latestWindow = latestWindows[currentWindow.hWnd];
+
+      // Window no longer exists — drop it
+      if (latestWindow == null) {
+        changed = true;
+        continue;
+      }
+
+      // Window exists but something changed — update it
+      if (latestWindow.title != currentWindow.title ||
+          latestWindow.process.exe != currentWindow.process.exe ||
+          latestWindow.isPinned != currentWindow.isPinned ||
+          latestWindow.helpText != currentWindow.helpText) {
+        changed = true;
+        nextResults.add(LauncherSearchResultItem.window(latestWindow));
+        continue;
+      }
+
+      // Unchanged — keep as-is
+      nextResults.add(result);
+    }
 
     if (!changed || !mounted) return;
     _setResults(nextResults, resetSelection: false);

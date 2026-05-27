@@ -106,20 +106,7 @@ class FileIndexDb {
   }
 
   Database _openAndSetupDb(String dbPath) {
-    if (Platform.isWindows) {
-      final String exeDir = p.dirname(Platform.resolvedExecutable);
-      final String dllPath = p.join(exeDir, 'sqlite3.dll');
-      if (!File(dllPath).existsSync()) {
-        final String fallbackDll = p.join(exeDir, 'windows', 'sqlite3.dll');
-        if (File(fallbackDll).existsSync()) {
-          try {
-            File(fallbackDll).renameSync(dllPath);
-          } catch (e) {
-            debugPrint('FileIndexDb: Error moving sqlite3.dll: $e');
-          }
-        }
-      }
-    }
+    WinUtils.copySqlite3IfItDoesntExistForFuckSake();
 
     final Database db = sqlite3.open(dbPath);
     db.execute('PRAGMA journal_mode = WAL;');

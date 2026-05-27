@@ -21,6 +21,8 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
 
   final ScrollController _activeScrollController = ScrollController();
   final ScrollController _disabledScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  String _disabledSearchQuery = '';
   final GlobalKey _activeColumnKey = GlobalKey();
   final GlobalKey _disabledColumnKey = GlobalKey();
 
@@ -59,6 +61,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
   void dispose() {
     _activeScrollController.dispose();
     _disabledScrollController.dispose();
+    _searchController.dispose();
     _scrollTimer?.cancel();
     super.dispose();
   }
@@ -167,7 +170,14 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                   child: Listener(
                     onPointerMove: (PointerMoveEvent e) => _handlePointerMove(e, false),
                     onPointerUp: (_) => _stopAutoScroll(),
-                    child: _buildColumn(context, false, disabledItems),
+                    child: _buildColumn(
+                        context,
+                        false,
+                        _disabledSearchQuery.isEmpty
+                            ? disabledItems
+                            : disabledItems
+                                .where((String item) => item.toLowerCase().contains(_disabledSearchQuery))
+                                .toList()),
                   ),
                 ),
               ],
@@ -180,26 +190,74 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
 
   Widget _buildHeader(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final Color onSurface = theme.colorScheme.onSurface;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          Text(
-            "TOOLBAR ORCHESTRATOR",
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -1,
-            ),
+          // Title + subheader
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                "TOOLBAR ORCHESTRATOR",
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                "Curate your top-bar priority and active states",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.hintColor.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            "Curate your top-bar priority and active states",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.hintColor.withValues(alpha: 0.8),
+          const Spacer(),
+          // Search field — filters the Disabled list
+          SizedBox(
+            width: 220,
+            height: 36,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (String value) => setState(() => _disabledSearchQuery = value.toLowerCase()),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: onSurface),
+              decoration: InputDecoration(
+                hintText: 'Search disabled…',
+                hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.4)),
+                prefixIcon: Icon(Icons.search_rounded, size: 16, color: onSurface.withValues(alpha: 0.4)),
+                suffixIcon: _disabledSearchQuery.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          setState(() => _disabledSearchQuery = '');
+                        },
+                        child: Icon(Icons.close_rounded, size: 14, color: onSurface.withValues(alpha: 0.5)),
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                filled: true,
+                fillColor: onSurface.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 1.5),
+                ),
+              ),
             ),
           ),
         ],
@@ -263,6 +321,14 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                             color: isActive ? primary : onSurface.withValues(alpha: 0.6),
                           ),
                         ),
+                        if (!isActive)
+                          InkWell(
+                            onTap: () {
+                              disabledItems.sort((String a, String b) => a.compareTo(b));
+                              setState(() {});
+                            },
+                            child: const Text("Sort"),
+                          ),
                         if (isActive)
                           Text(
                             "Order implies priority. Drag on top of other QuickAction to reorder",

@@ -1871,11 +1871,12 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       await windowManager.focus();
       if (!mounted) return;
 
-      // In live mode, reset the snapshot state before showing the result so
-      // that if the user recaptures the overlay is clean.
-      if (!widget.freezeMode) {
-        _resetLiveSnapshot();
-      }
+      // NOTE: Do NOT reset the live snapshot here.
+      // Keeping _liveSnapshotReady = true means the frozen background stays
+      // visible while the post-capture modal is on screen, eliminating the
+      // flash caused by the overlay disappearing before the modal appears.
+      // _resetLiveSnapshot() is called from _handleCaptureResult (for
+      // non-modal paths) or from the modal's onClose callback instead.
 
       await _handleCaptureResult(
         pngBytes: outputBytes,
@@ -1925,6 +1926,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     );
 
     if (choice.uploadHost != null) {
+      if (!widget.freezeMode) _resetLiveSnapshot();
       final bool started = await _runUploadHost(choice.uploadHost!, filePath);
       if (started) await _finishPostCaptureAction();
       return;
@@ -1932,6 +1934,8 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
     switch (choice.mode ?? CaptureActionMode.ask) {
       case CaptureActionMode.ask:
+        // Keep the frozen background alive — _resetLiveSnapshot() is called
+        // from the modal's onClose so the overlay stays until modal closes.
         _showCaptureModal(
           pngBytes,
           filePath,
@@ -1942,14 +1946,17 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         );
         return;
       case CaptureActionMode.copyImageToClipboard:
+        if (!widget.freezeMode) _resetLiveSnapshot();
         await ScreenCapture.copyPngToClipboard(pngBytes);
         await _finishPostCaptureAction();
         return;
       case CaptureActionMode.copyImageFileToClipboard:
+        if (!widget.freezeMode) _resetLiveSnapshot();
         await ScreenCapture.copyFileToClipboard(filePath);
         await _finishPostCaptureAction();
         return;
       case CaptureActionMode.openPhotoEditor:
+        if (!widget.freezeMode) _resetLiveSnapshot();
         await openPhotoEditorForCapture(
           filePath: editorFilePath,
           bytes: editorPngBytes,
@@ -2149,16 +2156,22 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     final double top =
         _currentMonitorRect.isEmpty ? 0 : (_currentMonitorRect.top + (_currentMonitorRect.height * 0.18));
 
-    showDialog<void>(
+    showGeneralDialog<void>(
       context: context,
+      barrierLabel: 'capture_modal',
+      barrierDismissible: false,
       barrierColor: Colors.black54,
-      builder: (BuildContext ctx) => Stack(
+      transitionDuration: const Duration(milliseconds: 220),
+      transitionBuilder: (BuildContext ctx, Animation<double> anim, Animation<double> _, Widget child) {
+        return FadeTransition(opacity: anim, child: child);
+      },
+      pageBuilder: (BuildContext ctx, _, __) => Stack(
         children: <Widget>[
           Positioned(
             left: left,
             top: top,
             width: modalWidth,
-            child: _CaptureModal(
+            child: _AnimatedCaptureModal(
               pngBytes: pngBytes,
               filePath: filePath,
               editorPngBytes: editorPngBytes,
@@ -2166,6 +2179,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
               imageW: w,
               imageH: h,
               onClose: () {
+                if (!widget.freezeMode) _resetLiveSnapshot();
                 closeMainWindow();
               },
             ),
@@ -3220,6 +3234,81 @@ class _CrosshairPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CrosshairPainter old) =>
       old.pos != pos || old.frozenSnapshots != frozenSnapshots || old.freezeMode != freezeMode;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Post-capture modal — animated wrapper
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Wraps [_CaptureModal] with a smooth fade + slide-up entrance animation so
+/// the modal appears gracefully instead of popping in abruptly.
+class _AnimatedCaptureModal extends StatefulWidget {
+  final Uint8List pngBytes;
+  final String filePath;
+  final Uint8List editorPngBytes;
+  final String editorFilePath;
+  final int imageW;
+  final int imageH;
+  final Function() onClose;
+
+  const _AnimatedCaptureModal({
+    required this.onClose,
+    required this.pngBytes,
+    required this.filePath,
+    required this.editorPngBytes,
+    required this.editorFilePath,
+    required this.imageW,
+    required this.imageH,
+  });
+
+  @override
+  State<_AnimatedCaptureModal> createState() => _AnimatedCaptureModalState();
+}
+
+class _AnimatedCaptureModalState extends State<_AnimatedCaptureModal> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(
+        position: _slide,
+        child: _CaptureModal(
+          pngBytes: widget.pngBytes,
+          filePath: widget.filePath,
+          editorPngBytes: widget.editorPngBytes,
+          editorFilePath: widget.editorFilePath,
+          imageW: widget.imageW,
+          imageH: widget.imageH,
+          onClose: widget.onClose,
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

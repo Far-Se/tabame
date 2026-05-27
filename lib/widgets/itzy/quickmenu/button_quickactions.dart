@@ -91,7 +91,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
       QuickActionMenuEntry(
         id: "OpenFancyShotFolder",
         title: "Open FancyShot Screenshots folder",
-        searchTerms: <String>["fancyshot", "screenshot"],
+        searchTerms: <String>["fancyshot", "screenshot", "open fancyshot screenshot folder", "folder"],
         onExecute: () {
           WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots');
           QuickMenuFunctions.hideQuickMenu();
@@ -340,12 +340,12 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
     if (action == null) continue;
 
     final String displayName =
-        action.name.replaceAll("Button", "").replaceAllMapped(RegExp(r"([A-Z])"), (Match m) => " ${m.group(1)}").trim();
+        widgetName.replaceAll("Button", "").replaceAllMapped(RegExp(r"([A-Z])"), (Match m) => " ${m.group(1)}").trim();
     entries.add(
       QuickActionMenuEntry(
         id: "standard-$widgetName",
         title: displayName,
-        searchTerms: <String>[displayName, action.name, widgetName],
+        searchTerms: <String>[displayName, widgetName],
         builder: (BuildContext context) {
           final GlobalKey buttonKey = GlobalKey();
           return _QuickActionListItem(
@@ -625,10 +625,11 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
       "AppAudioControl4",
       "AppAudioControl5",
     ];
-    for (String x in showWidgetsNames) {
-      if (forbiddenButtons.contains(x)) continue;
-      if (widgets.containsKey(x)) {
-        activeActions.add(widgets[x]!);
+    for (String widgetName in showWidgetsNames) {
+      if (forbiddenButtons.contains(widgetName)) continue;
+      if (widgets.containsKey(widgetName)) {
+        widgets[widgetName]!.name = widgetName;
+        activeActions.add(widgets[widgetName]!);
       }
     }
   }
@@ -646,7 +647,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
             mainAxisSize: MainAxisSize.min,
             children: List<Widget>.generate(activeActions.length, (int i) {
               final QuickAction action = activeActions[i];
-              String displayName = action.name
+              String displayName = (action.name ?? "Unknown")
                   .replaceAll("Button", "")
                   .replaceAllMapped(RegExp(r"([A-Z])"), (Match m) => " ${m.group(1)}")
                   .trim();

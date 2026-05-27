@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:tabamewin32/tabamewin32.dart';
+
 import 'models/win32/win32.dart' show Win32;
+import 'models/win32/win_utils.dart';
 
 Future<void> startRun(List<String> arguments) async {
+  Win32.getMainHandle();
   final ArgParser parser = ArgParser();
   parser.parseArgs(arguments);
   String runType = parser.getArg('run') ?? 'Default';
@@ -13,8 +17,12 @@ Future<void> startRun(List<String> arguments) async {
     final String path = parser.getArg('path') ?? "";
     final String verb = parser.getArg('verb') ?? "";
     final int id = int.tryParse(parser.getArg('id') ?? "-1") ?? -1;
-    final int hWnd = int.tryParse(parser.getArg('hwnd') ?? "-1") ?? -1;
-    Win32.invokeShellMenuItem(path, hWnd, verb: verb, id: id);
+    final int hWnd = Win32.hWnd; // int.tryParse(parser.getArg('hwnd') ?? "-1") ?? -1;
+    File(r"E:\out.log").writeAsStringSync("$path, $verb, $id, $hWnd,\n");
+    // Win32.invokeShellMenuItem(path, hWnd, verb: verb, id: id);
+    await ShellContextMenu.getMenuItems(path);
+    ShellContextMenu.invoke(path, hWnd, verb: verb, id: id);
+    WinUtils.msgBox("Run", "$path \n $verb $id $hWnd");
     exit(0);
   }
 

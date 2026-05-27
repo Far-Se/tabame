@@ -164,8 +164,14 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
   }
 
   Future<void> _pickFolder() async {
+    QuickMenuFunctions.keepOpen = true;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select wallpapers folder';
     final Directory? dir = dirPicker.getDirectory();
+
+    Timer(const Duration(milliseconds: 1000), () async {
+      QuickMenuFunctions.keepOpen = false;
+    });
     if (dir == null || dir.path.isEmpty) return;
 
     _folderPath = dir.path;

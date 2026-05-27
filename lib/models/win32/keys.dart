@@ -8,210 +8,6 @@ import 'package:win32/win32.dart';
 import '../settings.dart';
 import 'imports.dart';
 
-enum KeySentMode {
-  normal,
-  down,
-  up,
-}
-
-class WinKeys {
-  /// Send Keys as Keyboard {#KEY} to send down {^KEY} to sendUp
-  /// [keys] is a string that contains the keys to send.
-  /// Format: {SPECIAL_KEY} to send special keys like CTRL WIN ALT etc.
-  /// Format: add before special key # to send key down, and ^ to send key up like `{#CTRL}A{^CTRL}empty`
-  /// Format: add {|} to clear down keys
-  static bool send(String keys) {
-    keys = keys.toUpperCase();
-    //AB{#}{CTRL}{SHIFT}E{|}{#}{CTRL}EF{^}{CTRL}
-    const Map<String, String> types = <String, String>{'|': 'reset', '#': 'down', '^': 'up'};
-    final List<String> map = <String>[];
-    for (int i = 0; i < keys.length; i++) {
-      final String c = keys[i];
-      if (c == '{') {
-        final int end = keys.indexOf('}', i);
-        if (end == -1) {
-          return false;
-        }
-        String key = keys.substring(i + 1, end);
-        if (key.contains("CTRL")) key = key.replaceAll("CTRL", "CONTROL");
-        if (key.contains("ALT")) key = key.replaceAll("MENU", "MENU");
-
-        if (key == " ") key = "space";
-        i = end;
-        if (<String>['|', '#', '^'].contains(key[0]) && key.length > 1) {
-          map.add("MODE_${types[key[0]]}");
-          key = key.substring(1);
-        }
-        if (key == '|') {
-          map.add("MODE_${types[key]}");
-        } else {
-          if (<String>["MENU", "CONTROL", "WIN", "SHIFT"].contains(key)) key = "L$key";
-          map.add("VK_$key");
-        }
-      } else {
-        map.add("VK_$c");
-      }
-    }
-    return sendList(map);
-  }
-
-  /// Save as above but as a list of keys
-  static bool sendList(List<String> keys) {
-    if (keys.isEmpty) return false;
-    List<String> downKeys = <String>[];
-    KeySentMode mode = KeySentMode.normal;
-    for (int i = 0; i < keys.length; i++) {
-      final String key = keys[i];
-      if (key == "MODE_down") {
-        mode = KeySentMode.down;
-      } else if (key == "MODE_up") {
-        mode = KeySentMode.up;
-      } else if (key == "MODE_reset") {
-        for (String element in downKeys) {
-          single(element, KeySentMode.up);
-        }
-        downKeys = <String>[];
-      } else {
-        if (mode == KeySentMode.down) {
-          downKeys.add(key);
-          single(key, KeySentMode.down);
-          mode = KeySentMode.normal;
-        } else if (mode == KeySentMode.up) {
-          downKeys.remove(key);
-          single(key, KeySentMode.up);
-        } else {
-          single(key, KeySentMode.normal);
-        }
-      }
-    }
-    bool result = true;
-    for (String element in downKeys) {
-      final bool r = single(element, KeySentMode.up);
-      if (r == false) result = false;
-    }
-    return result;
-  }
-
-  /// Send a single key
-  /// [key] is the key to send.
-  /// [mode] is the mode to send the key.
-  /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
-  static bool singleEvent(String key, KeySentMode mode) {
-    int keyValue = keyMap[key] ?? 0;
-    if (keyValue == 0) {
-      throw ("no key $key");
-      // return false;
-    }
-    if (mode == KeySentMode.up) {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-    } else {
-      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | 0, 0);
-      if (mode == KeySentMode.normal) {
-        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-      }
-    }
-    return true;
-  }
-
-  static const Map<String, int> mouseVK = <String, int>{
-    "VK_LMB": MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP,
-    "VK_RMB": MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP,
-    "VK_MMB": MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP,
-  };
-
-  /// Send a single key
-  /// [key] is the key to send.
-  /// [mode] is the mode to send the key.
-  /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
-  static bool single(String key, KeySentMode mode) {
-    if (mouseVK.containsKey(key)) {
-      final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_MOUSE;
-
-      input.ref.mi.dwFlags = (MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
-      input.ref.mi.mouseData = 0;
-      input.ref.mi.dwExtraInfo = NULL;
-      input.ref.mi.time = 0;
-      SendInput(1, input, sizeOf<INPUT>());
-      free(input);
-      return true;
-    }
-    if (key == "VK_MSU" || key == "VK_MSD") {
-      final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_MOUSE;
-
-      input.ref.mi.dwFlags = MOUSEEVENTF_WHEEL;
-      input.ref.mi.mouseData = key == "VK_MSU" ? 120 : -120;
-      input.ref.mi.dwExtraInfo = NULL;
-      input.ref.mi.time = 0;
-      SendInput(1, input, sizeOf<INPUT>());
-      free(input);
-      return true;
-    }
-    int keyValue = keyMap[key] ?? 0;
-    if (keyValue == 0) {
-      Debug.add("no key $key");
-      // return false;
-    }
-    final Pointer<INPUT> input = calloc<INPUT>();
-    input.ref.type = INPUT_KEYBOARD;
-    int dwFlags = 0;
-    if (mode == KeySentMode.up) {
-      dwFlags |= KEYEVENTF_KEYUP;
-    }
-
-    // Add extended key flag for keys that require it
-    final List<int> extendedKeys = <int>[
-      18, // VK_MENU
-      165, // VK_RMENU
-      163, // VK_RCONTROL
-      33, // VK_PRIOR (Page Up)
-      34, // VK_NEXT (Page Down)
-      35, // VK_END
-      36, // VK_HOME
-      37, // VK_LEFT
-      38, // VK_UP
-      39, // VK_RIGHT
-      40, // VK_DOWN
-      45, // VK_INSERT
-      46, // VK_DELETE
-      91, // VK_LWIN
-      92, // VK_RWIN
-      111, // VK_DIVIDE
-      144, // VK_NUMLOCK
-    ];
-
-    if (extendedKeys.contains(keyValue)) {
-      dwFlags |= KEYEVENTF_EXTENDEDKEY;
-    }
-
-    input.ref.ki.dwFlags = dwFlags;
-    input.ref.ki.wScan = MapVirtualKey(keyValue, 0);
-    // input.ref.ki.dwFlags = 0; // See docs for flags (mm keys may need Extended key flag)
-    // input.ref.ki.time = 0;
-    input.ref.ki.wVk = keyValue;
-    SendInput(1, input, sizeOf<INPUT>());
-    free(input);
-    if (mode == KeySentMode.normal) {
-      final Pointer<INPUT> input = calloc<INPUT>();
-      input.ref.type = INPUT_KEYBOARD;
-      input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
-      input.ref.ki.wVk = keyValue;
-      SendInput(1, input, sizeOf<INPUT>());
-    }
-    return true;
-  }
-
-  static String vk(int vk) {
-    for (String key in keyMap.keys) {
-      if (keyMap[key] == vk) {
-        return key;
-      }
-    }
-    return "VK_";
-  }
-}
-
 // #region (collapsed) Key Map
 const Map<String, int> keyMap = <String, int>{
   "VK_LBUTTON": 1,
@@ -401,6 +197,12 @@ const Map<String, int> keyMap = <String, int>{
   "VK_OEM_CLEAR": 254,
 };
 
+enum KeySentMode {
+  normal,
+  down,
+  up,
+}
+
 class VK {
   static const String LBUTTON = "VK_LBUTTON";
   static const String RBUTTON = "VK_RBUTTON";
@@ -534,5 +336,268 @@ class VK {
   static const String PROCESSKEY = "VK_PROCESSKEY";
   static const String ICO_CLEAR = "VK_ICO_CLEAR";
   static const String PACKET = "VK_PACKET";
+}
+
+class WinKeys {
+  static const Map<String, int> mouseVK = <String, int>{
+    "VK_LMB": MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP,
+    "VK_RMB": MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP,
+    "VK_MMB": MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP,
+  };
+
+  static List<int> getPressedKeys() {
+    final List<int> pressedKeys = <int>[];
+
+    for (int vk = 1; vk <= 0xFE; vk++) {
+      final int state = GetAsyncKeyState(vk);
+
+      // High-order bit set = key is down
+      if ((state & 0x8000) != 0) {
+        pressedKeys.add(vk);
+      }
+    }
+
+    return pressedKeys;
+  }
+
+  static void releaseAllKeys() {
+    final List<int> keys = <int>[
+      for (int vk = 1; vk <= 254; vk++) vk,
+    ];
+
+    final Pointer<INPUT> inputs = calloc<INPUT>(keys.length);
+
+    for (int i = 0; i < keys.length; i++) {
+      inputs[i].type = INPUT_KEYBOARD;
+      inputs[i].ki.wVk = keys[i];
+      inputs[i].ki.wScan = 0;
+      inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
+      inputs[i].ki.time = 0;
+      inputs[i].ki.dwExtraInfo = 0;
+    }
+
+    SendInput(keys.length, inputs, sizeOf<INPUT>());
+    free(inputs);
+  }
+
+  /// Releases all currently pressed keys.
+  static void releaseAllPressedKeys() {
+    final List<int> keys = getPressedKeys();
+
+    for (final int vk in keys) {
+      releaseKey(vk);
+    }
+  }
+
+  /// Releases a single key.
+  static void releaseKey(int virtualKey) {
+    final Pointer<INPUT> input = calloc<INPUT>();
+
+    input.ref.type = INPUT_KEYBOARD;
+    input.ref.ki.wVk = virtualKey;
+    input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(1, input, sizeOf<INPUT>());
+
+    calloc.free(input);
+  }
+
+  static void safeSendHotkey(Function() hotkeyBuilder) {
+    releaseAllPressedKeys();
+    return hotkeyBuilder();
+    // releaseAllKeys();
+    // Future<void>.delayed(const Duration(milliseconds: 10), () => hotkeyBuilder());
+  }
+
+  /// Send Keys as Keyboard {#KEY} to send down {^KEY} to sendUp
+  /// [keys] is a string that contains the keys to send.
+  /// Format: {SPECIAL_KEY} to send special keys like CTRL WIN ALT etc.
+  /// Format: add before special key # to send key down, and ^ to send key up like `{#CTRL}A{^CTRL}empty`
+  /// Format: add {|} to clear down keys
+  static bool send(String keys) {
+    keys = keys.toUpperCase();
+    //AB{#}{CTRL}{SHIFT}E{|}{#}{CTRL}EF{^}{CTRL}
+    const Map<String, String> types = <String, String>{'|': 'reset', '#': 'down', '^': 'up'};
+    final List<String> map = <String>[];
+    for (int i = 0; i < keys.length; i++) {
+      final String c = keys[i];
+      if (c == '{') {
+        final int end = keys.indexOf('}', i);
+        if (end == -1) {
+          return false;
+        }
+        String key = keys.substring(i + 1, end);
+        if (key.contains("CTRL")) key = key.replaceAll("CTRL", "CONTROL");
+        if (key.contains("ALT")) key = key.replaceAll("ALT", "MENU");
+
+        if (key == " ") key = "space";
+        i = end;
+        if (<String>['|', '#', '^'].contains(key[0]) && key.length > 1) {
+          map.add("MODE_${types[key[0]]}");
+          key = key.substring(1);
+        }
+        if (key == '|') {
+          map.add("MODE_${types[key]}");
+        } else {
+          if (<String>["MENU", "CONTROL", "WIN", "SHIFT"].contains(key)) key = "L$key";
+          map.add("VK_$key");
+        }
+      } else {
+        map.add("VK_$c");
+      }
+    }
+    return sendList(map);
+  }
+
+  /// Save as above but as a list of keys
+  static bool sendList(List<String> keys) {
+    if (keys.isEmpty) return false;
+    List<String> downKeys = <String>[];
+    KeySentMode mode = KeySentMode.normal;
+    for (int i = 0; i < keys.length; i++) {
+      final String key = keys[i];
+      if (key == "MODE_down") {
+        mode = KeySentMode.down;
+      } else if (key == "MODE_up") {
+        mode = KeySentMode.up;
+      } else if (key == "MODE_reset") {
+        for (String element in downKeys) {
+          single(element, KeySentMode.up);
+        }
+        downKeys = <String>[];
+      } else {
+        if (mode == KeySentMode.down) {
+          downKeys.add(key);
+          single(key, KeySentMode.down);
+          mode = KeySentMode.normal;
+        } else if (mode == KeySentMode.up) {
+          downKeys.remove(key);
+          single(key, KeySentMode.up);
+        } else {
+          single(key, KeySentMode.normal);
+        }
+      }
+    }
+    bool result = true;
+    for (String element in downKeys) {
+      final bool r = single(element, KeySentMode.up);
+      if (r == false) result = false;
+    }
+    return result;
+  }
+
+  /// Send a single key
+  /// [key] is the key to send.
+  /// [mode] is the mode to send the key.
+  /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
+  static bool single(String key, KeySentMode mode) {
+    if (mouseVK.containsKey(key)) {
+      final Pointer<INPUT> input = calloc<INPUT>();
+      input.ref.type = INPUT_MOUSE;
+
+      // input.ref.mi.dwFlags = (MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP);
+      input.ref.mi.dwFlags = mouseVK[key] ?? MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP;
+      input.ref.mi.mouseData = 0;
+      input.ref.mi.dwExtraInfo = NULL;
+      input.ref.mi.time = 0;
+      SendInput(1, input, sizeOf<INPUT>());
+      free(input);
+      return true;
+    }
+    if (key == "VK_MSU" || key == "VK_MSD") {
+      final Pointer<INPUT> input = calloc<INPUT>();
+      input.ref.type = INPUT_MOUSE;
+
+      input.ref.mi.dwFlags = MOUSEEVENTF_WHEEL;
+      input.ref.mi.mouseData = key == "VK_MSU" ? 120 : -120;
+      input.ref.mi.dwExtraInfo = NULL;
+      input.ref.mi.time = 0;
+      SendInput(1, input, sizeOf<INPUT>());
+      free(input);
+      return true;
+    }
+    int keyValue = keyMap[key] ?? 0;
+    if (keyValue == 0) {
+      Debug.add("no key $key");
+      // return false;
+    }
+    final Pointer<INPUT> input = calloc<INPUT>();
+    input.ref.type = INPUT_KEYBOARD;
+    int dwFlags = 0;
+    if (mode == KeySentMode.up) {
+      dwFlags |= KEYEVENTF_KEYUP;
+    }
+
+    // Add extended key flag for keys that require it
+    final List<int> extendedKeys = <int>[
+      18, // VK_MENU
+      165, // VK_RMENU
+      163, // VK_RCONTROL
+      33, // VK_PRIOR (Page Up)
+      34, // VK_NEXT (Page Down)
+      35, // VK_END
+      36, // VK_HOME
+      37, // VK_LEFT
+      38, // VK_UP
+      39, // VK_RIGHT
+      40, // VK_DOWN
+      45, // VK_INSERT
+      46, // VK_DELETE
+      91, // VK_LWIN
+      92, // VK_RWIN
+      111, // VK_DIVIDE
+      144, // VK_NUMLOCK
+    ];
+
+    if (extendedKeys.contains(keyValue)) {
+      dwFlags |= KEYEVENTF_EXTENDEDKEY;
+    }
+
+    input.ref.ki.dwFlags = dwFlags;
+    input.ref.ki.wScan = MapVirtualKey(keyValue, 0);
+    // input.ref.ki.dwFlags = 0; // See docs for flags (mm keys may need Extended key flag)
+    // input.ref.ki.time = 0;
+    input.ref.ki.wVk = keyValue;
+    SendInput(1, input, sizeOf<INPUT>());
+    free(input);
+    if (mode == KeySentMode.normal) {
+      final Pointer<INPUT> input = calloc<INPUT>();
+      input.ref.type = INPUT_KEYBOARD;
+      input.ref.ki.dwFlags = KEYEVENTF_KEYUP;
+      input.ref.ki.wVk = keyValue;
+      SendInput(1, input, sizeOf<INPUT>());
+    }
+    return true;
+  }
+
+  /// Send a single key
+  /// [key] is the key to send.
+  /// [mode] is the mode to send the key.
+  /// [mode] can be [KeySentMode.normal], [KeySentMode.down] or [KeySentMode.up]
+  static bool singleEvent(String key, KeySentMode mode) {
+    int keyValue = keyMap[key] ?? 0;
+    if (keyValue == 0) {
+      throw ("no key $key");
+      // return false;
+    }
+    if (mode == KeySentMode.up) {
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    } else {
+      keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | 0, 0);
+      if (mode == KeySentMode.normal) {
+        keybd_event(keyValue, MapVirtualKey(keyValue, 0), KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+      }
+    }
+    return true;
+  }
+
+  static String vk(int vk) {
+    for (String key in keyMap.keys) {
+      if (keyMap[key] == vk) {
+        return key;
+      }
+    }
+    return "VK_";
+  }
 }
 // #endregion

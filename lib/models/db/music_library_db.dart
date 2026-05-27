@@ -127,7 +127,7 @@ class MusicLibraryDb {
   Database _openAndSetupDb(String path) {
     final File dbFile = File(path);
     if (!dbFile.parent.existsSync()) dbFile.parent.createSync(recursive: true);
-
+    WinUtils.copySqlite3IfItDoesntExistForFuckSake();
     final Database db = sqlite3.open(path);
     db.execute('PRAGMA cache_size = -2000;'); // Limit to 2 MB (default is 2000 pages)
     db.execute('PRAGMA temp_store = MEMORY;');

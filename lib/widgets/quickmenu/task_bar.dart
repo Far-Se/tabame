@@ -90,6 +90,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       if (_keepFetching && !_fetching) {
         if (GetForegroundWindow() != Win32.hWnd && userSettings.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
           if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 400) {
+            _keepFetching = false;
             QuickMenuFunctions.hideQuickMenu();
           }
         }

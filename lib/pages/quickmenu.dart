@@ -551,18 +551,23 @@ class QuickMenuState extends State<QuickMenu>
 
   Widget _mainWidget(BuildContext context) {
     if (Globals.quickMenuPage == QuickMenuPage.quickSnap) {
+      Navigator.of(context).maybePop();
       return const ViewsScreen();
     }
     if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
+      Navigator.of(context).maybePop();
       return const QuickClickOverlay();
     }
     if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive) {
+      Navigator.of(context).maybePop();
       return const FancyShotCaptureWidget(freezeMode: false);
     }
     if (Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
+      Navigator.of(context).maybePop();
       return const FancyShotCaptureWidget(freezeMode: true);
     }
     if (Globals.quickMenuPage == QuickMenuPage.emojiPicker) {
+      Navigator.of(context).maybePop();
       return const EmojiPage();
     }
     return Focus(

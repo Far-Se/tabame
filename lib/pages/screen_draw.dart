@@ -406,6 +406,9 @@ class AnnotationController extends ChangeNotifier {
   // Pending text/balloon callback (set by overlay, consumed here)
   String? pendingText;
 
+  /// When true, the overlay will close the app after the next screen capture.
+  bool captureAndClose = false;
+
   // Shapes
   final List<DrawShape> _shapes = <DrawShape>[];
   final List<DrawShape> _redoStack = <DrawShape>[];
@@ -1631,7 +1634,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (!ctrl.drawingModeActive) return;
 
     if (ctrl.activeTool == DrawTool.screenCapture) {
-      Timer(const Duration(milliseconds: 70), () => unawaited(_copyCaptureSelection()));
+      unawaited(_copyCaptureSelection());
       return;
     }
 
@@ -1647,6 +1650,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         // Await so _commitLiveRegion crops from the current frozen snapshot,
         // then discard so the *next* drag takes a fresh capture.
         await _commitLiveRegion(region);
+        // Auto-select Select mode so the toolbar highlights correctly.
+        ctrl.setTool(DrawTool.select);
       }
       _discardMonitorSnapshot();
       return;
@@ -2320,6 +2325,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       _captureStart = null;
       _captureCurrent = null;
     });
+    Future<void>.delayed(const Duration(milliseconds: 100));
     if (start == null || current == null) return;
     final Rect localRect = Rect.fromPoints(start, current);
     if (localRect.width < 2 || localRect.height < 2) return;
@@ -2332,6 +2338,15 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       localRect.height,
     );
     await ScreenDrawCapture.copyRegionToClipboard(screenRect);
+
+    final bool shouldClose = ctrl.captureAndClose;
+    ctrl.captureAndClose = false; // consume the flag
+
+    if (shouldClose) {
+      await windowManager.close();
+      return;
+    }
+
     await WindowManager.instance.focus();
     await Win32Helper.playBeepSound();
   }
@@ -3073,7 +3088,10 @@ class _CaptureSelectionPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    label.paint(canvas, rect.topLeft + const Offset(6, 6));
+    // Paint the label above the selection rect so it's never captured in the screenshot.
+    final double labelX = rect.left + 6;
+    final double labelY = rect.top - label.height - 6;
+    label.paint(canvas, Offset(labelX, labelY < 0 ? rect.bottom + 4 : labelY));
   }
 
   @override
@@ -3154,7 +3172,22 @@ class AnnotationToolbar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               _ToolBtn(Icons.mouse_rounded, DrawTool.select, controller, 'Select (S)'),
-              _ToolBtn(Icons.screenshot_monitor_rounded, DrawTool.screenCapture, controller, 'Screen Capture (C)'),
+              _ToolBtnWithPopup(
+                icon: Icons.screenshot_monitor_rounded,
+                tool: DrawTool.screenCapture,
+                ctrl: controller,
+                tooltip: 'Screen Capture (C)',
+                popupActions: <_PopupAction>[
+                  _PopupAction(
+                    icon: Icons.screenshot_monitor_rounded,
+                    label: 'Capture & Close',
+                    onTap: () {
+                      controller.setTool(DrawTool.screenCapture);
+                      controller.captureAndClose = true;
+                    },
+                  ),
+                ],
+              ),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.edit, DrawTool.pen, controller, 'Pen (P)'),
               _ToolBtn(Icons.highlight, DrawTool.highlight, controller, 'Highlight (H)'),
@@ -3165,7 +3198,19 @@ class AnnotationToolbar extends StatelessWidget {
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.text_fields, DrawTool.text, controller, 'Text (T)'),
               _ToolBtn(Icons.emoji_emotions_outlined, DrawTool.emoji, controller, 'Emoji (J)'),
-              _ToolBtn(Icons.format_list_numbered, DrawTool.stepCounter, controller, 'Step Counter (N)'),
+              _ToolBtnWithPopup(
+                icon: Icons.format_list_numbered,
+                tool: DrawTool.stepCounter,
+                ctrl: controller,
+                tooltip: 'Step Counter (N)',
+                popupActions: <_PopupAction>[
+                  _PopupAction(
+                    icon: Icons.exposure_zero,
+                    label: 'Reset Steps',
+                    onTap: () => controller.resetStepCounter(),
+                  ),
+                ],
+              ),
               _ToolBtn(Icons.chat_bubble_outline, DrawTool.infoBalloon, controller, 'Info Balloon (I)'),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.search, DrawTool.magnifier, controller, 'Magnifier (Z)'),
@@ -3189,7 +3234,6 @@ class AnnotationToolbar extends StatelessWidget {
               _ActionBtn(Icons.redo, 'Redo (Ctrl+Y)', () => controller.redo()),
               _ActionBtn(Icons.delete_sweep, 'Clear All', () => controller.clearAll()),
               _ActionBtn(Icons.grid_on, 'Grid (Ctrl+G)', () => controller.toggleGrid()),
-              _ActionBtn(Icons.exposure_zero, 'Reset Steps', () => controller.resetStepCounter()),
               const Divider(color: Colors.white24, height: 10),
               _InfoBtn(controller, monitorRect),
             ],
@@ -3849,6 +3893,151 @@ class _WidthPopupBtnState extends State<_WidthPopupBtn> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Popup-action descriptor — used by _ToolBtnWithPopup
+// ---------------------------------------------------------------------------
+
+/// A single extra action shown in the hover popup of a tool button.
+class _PopupAction {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PopupAction({required this.icon, required this.label, required this.onTap});
+}
+
+// ---------------------------------------------------------------------------
+// Tool button with hover popup for extra actions
+// ---------------------------------------------------------------------------
+
+/// Wraps a normal [_ToolBtn] and, on hover, shows a compact panel to the
+/// right containing one or more [_PopupAction] buttons.
+///
+/// Pattern is identical to [_ColorPopupBtn] / [_WidthPopupBtn] — uses
+/// [CompositedTransformTarget] + [OverlayEntry] so the popup floats above
+/// the toolbar's scroll container without clipping.
+///
+/// To add popup actions to any future tool button, simply swap it for a
+/// [_ToolBtnWithPopup] and pass the desired [popupActions] list.
+class _ToolBtnWithPopup extends StatefulWidget {
+  final IconData icon;
+  final DrawTool tool;
+  final AnnotationController ctrl;
+  final String tooltip;
+  final List<_PopupAction> popupActions;
+
+  const _ToolBtnWithPopup({
+    required this.icon,
+    required this.tool,
+    required this.ctrl,
+    required this.tooltip,
+    required this.popupActions,
+  });
+
+  @override
+  State<_ToolBtnWithPopup> createState() => _ToolBtnWithPopupState();
+}
+
+class _ToolBtnWithPopupState extends State<_ToolBtnWithPopup> {
+  Timer? _closeTimer;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+
+  void _show() {
+    _closeTimer?.cancel();
+    if (_overlayEntry != null) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        width: 180,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(40, -4),
+          child: MouseRegion(
+            onEnter: (_) => _show(),
+            onExit: (_) => _scheduleHide(),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: widget.popupActions.map((_PopupAction action) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(5),
+                      onTap: () {
+                        action.onTap();
+                        _scheduleHide();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(action.icon, size: 15, color: Colors.white70),
+                            const SizedBox(width: 7),
+                            Flexible(
+                              child: Text(
+                                action.label,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _scheduleHide() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 220), () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _closeTimer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: MouseRegion(
+        onEnter: (_) => _show(),
+        onExit: (_) => _scheduleHide(),
+        child: _ToolBtn(widget.icon, widget.tool, widget.ctrl, widget.tooltip),
       ),
     );
   }

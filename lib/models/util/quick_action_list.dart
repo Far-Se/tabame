@@ -24,6 +24,8 @@ import '../../widgets/itzy/quickmenu/button_emoji.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot_browser.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
+// import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
+import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
 import '../../widgets/itzy/quickmenu/button_launcher.dart';
 import '../../widgets/itzy/quickmenu/button_media_control.dart';
 import '../../widgets/itzy/quickmenu/button_memo.dart';
@@ -55,13 +57,13 @@ import '../../widgets/itzy/quickmenu/button_workspaces.dart';
 import '../../widgets/itzy/quickmenu/toggle_windows_theme.dart';
 
 class QuickAction {
-  String name;
+  String? name;
   IconData icon;
   Widget Function() widget;
   VoidCallback? onExecute;
 
   QuickAction({
-    required this.name,
+    this.name,
     required this.icon,
     required this.widget,
     this.onExecute,
@@ -70,295 +72,241 @@ class QuickAction {
 
 final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "LauncherButton": QuickAction(
-    name: "LauncherButton",
     icon: Icons.search,
     widget: () => const LauncherButton(),
   ),
   "AudioButton": QuickAction(
-    name: "AudioButton",
     icon: Icons.volume_up,
     widget: () => const AudioButton(),
   ),
   "MediaControlButton": QuickAction(
-    name: "MediaControlButton",
     icon: Icons.play_arrow,
     widget: () => const MediaControlButton(),
   ),
   "TimersButton": QuickAction(
-    name: "TimersButton",
     icon: Icons.timer_sharp,
     widget: () => const TimersButton(),
   ),
   "BookmarksButton": QuickAction(
-    name: "BookmarksButton",
     icon: Icons.folder_copy_outlined,
     widget: () => const BookmarksButton(),
   ),
   "CliBookButton": QuickAction(
-    name: "CliBookButton",
     icon: Icons.note_alt_outlined,
     widget: () => const CliBookButton(),
   ),
   "SubscriptionButton": QuickAction(
-    name: "SubscriptionButton",
     icon: Icons.subscriptions_outlined,
     widget: () => const SubscriptionPanelButton(),
   ),
   "EmojiButton": QuickAction(
-    name: "EmojiButton",
     icon: Icons.emoji_emotions_outlined,
     widget: () => const EmojiButton(),
   ),
   "ClipboardHistoryButton": QuickAction(
-    name: "ClipboardHistoryButton",
     icon: Icons.content_paste_search_rounded,
     widget: () => const ClipboardHistoryButton(),
   ),
   "ClearKeyboardButton": QuickAction(
-    name: "ClearKeyboardButton",
     icon: Icons.keyboard_hide_rounded,
     widget: () => const ClearKeyboardButton(),
   ),
   "VaultButton": QuickAction(
-    name: "VaultButton",
     icon: Icons.lock_rounded,
     widget: () => const VaultsButton(),
   ),
   "TaskManagerButton": QuickAction(
-    name: "TaskManagerButton",
     icon: Icons.app_registration,
     widget: () => const TaskManagerButton(),
   ),
   "AppsButton": QuickAction(
-    name: "AppsButton",
     icon: Icons.apps,
     widget: () => const AppsButton(),
   ),
   "MusicServerButton": QuickAction(
-    name: "MusicServerButton",
     icon: Icons.library_music_outlined,
     widget: () => const MusicServerButton(),
   ),
   "VirtualDesktopButton": QuickAction(
-    name: "VirtualDesktopButton",
     icon: Icons.display_settings_outlined,
     widget: () => const VirtualDesktopButton(),
   ),
   "ToggleTaskbarButton": QuickAction(
-    name: "ToggleTaskbarButton",
     icon: Icons.call_to_action_outlined,
     widget: () => const ToggleTaskbarButton(),
   ),
   "ToggleWallpaperModeButton": QuickAction(
-    name: "ToggleWallpaperModeButton",
     icon: Icons.wallpaper_rounded,
     widget: () => const ToggleWallpaperModeButton(),
   ),
   //! Audio Control
   "AppAudioControl1": QuickAction(
-    name: "App Audio Control 1",
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 0),
   ),
   "AppAudioControl2": QuickAction(
-    name: "App Audio Control 2",
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 1),
   ),
   "AppAudioControl3": QuickAction(
-    name: "App Audio Control 3",
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 2),
   ),
   "AppAudioControl4": QuickAction(
-    name: "App Audio Control 4",
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 3),
   ),
   "AppAudioControl5": QuickAction(
-    name: "App Audio Control 5",
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 4),
   ),
   //! Rest
   "MemosButton": QuickAction(
-    name: "MemosButton",
     icon: Icons.note_alt_outlined,
     widget: () => const MemosButton(),
   ),
   "NotionButton": QuickAction(
-    name: "NotionButton",
     icon: Icons.description_rounded,
     widget: () => const NotionButton(),
   ),
   "WallpapersButton": QuickAction(
-    name: "WallpapersButton",
     icon: Icons.photo_library_outlined,
     widget: () => const WallpapersButton(),
   ),
   "CalculatorButton": QuickAction(
-    name: "CalculatorButton",
     icon: Icons.calculate_outlined,
     widget: () => const CalculatorButton(),
   ),
   "TimeZoneButton": QuickAction(
-    name: "TimeZoneButton",
     icon: Icons.public_rounded,
     widget: () => const TimeZoneButton(),
   ),
   "CurrencyConverterButton": QuickAction(
-    name: "CurrencyConverterButton",
     icon: Icons.currency_exchange_rounded,
     widget: () => const CurrencyConverterButton(),
   ),
   "DiskCleanupButton": QuickAction(
-    name: "DiskCleanupButton",
     icon: Icons.cleaning_services_rounded,
     widget: () => const DiskCleanupButton(),
   ),
   "TranslatorButton": QuickAction(
-    name: "TranslatorButton",
     icon: Icons.translate_rounded,
     widget: () => const TranslatorButton(),
   ),
   "WeatherButton": QuickAction(
-    name: "WeatherButton",
     icon: Icons.wb_cloudy_rounded,
     widget: () => const WeatherButton(),
   ),
   "AuthenticatorButton": QuickAction(
-    name: "AuthenticatorButton",
     icon: Icons.shield_outlined,
     widget: () => const AuthenticatorButton(),
   ),
   "QrScannerButton": QuickAction(
-    name: "QrScannerButton",
     icon: Icons.qr_code_scanner_rounded,
     widget: () => const QrScannerButton(),
   ),
   "ColorPickerButton": QuickAction(
-    name: "ColorPickerButton",
     icon: Icons.palette_outlined,
     widget: () => const ColorPickerButton(),
   ),
   "ColorPickerInstantButton": QuickAction(
-    name: "ColorPickerInstantButton",
     icon: Icons.colorize_outlined,
     widget: () => const ColorPickerInstantButton(),
   ),
   "ScreenDrawButton": QuickAction(
-    name: "ScreenDrawButton",
     icon: Icons.draw_outlined,
     widget: () => const ScreenDrawButton(),
   ),
   "ScreenRecordingButton": QuickAction(
-    name: "ScreenRecordingButton",
     icon: Icons.camera,
     widget: () => const ScreenRecordingButton(),
   ),
   "SpotlightButton": QuickAction(
-    name: "SpotlightButton",
     icon: Icons.featured_video_rounded,
     widget: () => const SpotlightButton(),
   ),
   "FancyShotLiveButton": QuickAction(
-    name: "FancyShotLiveButton",
     icon: Icons.center_focus_strong_outlined,
     widget: () => const FancyShotButton(),
   ),
   "FancyShotFreezeButton": QuickAction(
-    name: "FancyShotFreezeButton",
     icon: Icons.center_focus_strong,
     widget: () => const FancyShotButton(freeze: true),
   ),
   "PhotoEditorButton": QuickAction(
-    name: "PhotoEditorButton",
     icon: Icons.photo_camera_back_outlined,
     widget: () => const PhotoEditorButton(),
   ),
   "FancyShotBrowserButton": QuickAction(
-    name: "FancyShotBrowserButton",
     icon: Icons.photo_album_outlined,
     widget: () => const FancyShotBrowserButton(),
   ),
+  "ImageConverterButton": QuickAction(
+    icon: Icons.transform_rounded,
+    widget: () => const ImageConverterButton(),
+  ),
 
   "PinWindowButton": QuickAction(
-    name: "PinWindowButton",
     icon: Icons.pin_end,
     widget: () => const PinWindowButton(),
   ),
   "MicMuteButton": QuickAction(
-    name: "MicMuteButton",
     icon: Icons.mic,
     widget: () => const MicMuteButton(),
   ),
   "AlwaysAwakeButton": QuickAction(
-    name: "AlwaysAwakeButton",
     icon: Icons.running_with_errors,
     widget: () => const AlwaysAwakeButton(),
   ),
   "HideDesktopFilesButton": QuickAction(
-    name: "HideDesktopFilesButton",
     icon: Icons.hide_image,
     widget: () => const HideDesktopFilesButton(),
   ),
   "ToggleHiddenFilesButton": QuickAction(
-    name: "ToggleHiddenFilesButton",
     icon: Icons.folder_off,
     widget: () => const ToggleHiddenFilesButton(),
   ),
   "QuickActionsMenuButton": QuickAction(
-    name: "QuickActionsMenuButton",
     icon: Icons.grid_view,
     widget: () => const QuickActionsMenuButton(),
   ),
   "ToggleDesktopButton": QuickAction(
-    name: "ToggleDesktopButton",
     icon: Icons.desktop_windows_rounded,
     widget: () => const ToggleDesktopButton(),
   ),
   "ToggleWindowsThemeButton": QuickAction(
-    name: "ToggleWindowsThemeButton",
     icon: Icons.desktop_windows_rounded,
     widget: () => const ToggleWindowsThemeButton(),
   ),
   "CountdownButton": QuickAction(
-    name: "CountdownButton",
     icon: Icons.hourglass_bottom_rounded,
     widget: () => const CountdownButton(),
   ),
   "CustomCharsButton": QuickAction(
-    name: "CustomCharsButton",
     icon: Icons.format_quote,
     widget: () => const CustomCharsButton(),
   ),
   "ShutDownButton": QuickAction(
-    name: "ShutDownButton",
     icon: Icons.power_settings_new_rounded,
     widget: () => const ShutDownButton(),
   ),
   "CloseOnFocusLossButton": QuickAction(
-    name: "CloseOnFocusLossButton",
     icon: Icons.visibility,
     widget: () => const CloseOnFocusLossButton(),
   ),
   "ChangeThemeButton": QuickAction(
-    name: "ChangeThemeButton",
     icon: Icons.theater_comedy_sharp,
     widget: () => const ChangeThemeButton(),
   ),
   "QuickMenuDesignButton": QuickAction(
-    name: "QuickMenuDesignButton",
     icon: Icons.palette_rounded,
     widget: () => const QuickMenuDesignButton(),
   ),
   "DesktopFilesButton": QuickAction(
-    name: "DesktopFilesButton",
     icon: Icons.desktop_windows_outlined,
     widget: () => const DesktopFilesButton(),
   ),
   "WorkspacesButton": QuickAction(
-    name: "WorkspacesButton",
     icon: Icons.dashboard_customize_outlined,
     widget: () => const WorkspacesButton(),
   ),

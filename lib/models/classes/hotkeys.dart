@@ -44,14 +44,96 @@ class Hotkeys {
     rightControlKey: "Right Control",
   };
   static const Map<String, String> namedKeyAliases = <String, String>{
+    // Existing
     ' ': 'SPACE',
     'SPACEBAR': 'SPACE',
+
     'ESC': 'ESCAPE',
     'ENTER': 'RETURN',
     'BACKSPACE': 'BACK',
     'DEL': 'DELETE',
+
     'PAGEUP': 'PRIOR',
     'PAGEDOWN': 'NEXT',
+
+    'LEFT ARROW': 'LEFT',
+    'RIGHT ARROW': 'RIGHT',
+    'UP ARROW': 'UP',
+    'DOWN ARROW': 'DOWN',
+
+    // Extra common navigation aliases
+    'INS': 'INSERT',
+    'PGUP': 'PRIOR',
+    'PGDN': 'NEXT',
+
+    // Modifier keys
+    'CTRL': 'CONTROL',
+    'LEFT CTRL': 'LCONTROL',
+    'RIGHT CTRL': 'RCONTROL',
+
+    'LEFT CONTROL': 'LCONTROL',
+    'RIGHT CONTROL': 'RCONTROL',
+
+    'ALT': 'MENU',
+    'LEFT ALT': 'LMENU',
+    'RIGHT ALT': 'RMENU',
+
+    'SHIFT': 'SHIFT',
+    'LEFT SHIFT': 'LSHIFT',
+    'RIGHT SHIFT': 'RSHIFT',
+
+    'WIN': 'LWIN',
+    'LEFT WIN': 'LWIN',
+    'RIGHT WIN': 'RWIN',
+
+    'CMD': 'LWIN',
+    'COMMAND': 'LWIN',
+
+    // Locks
+    'CAPSLOCK': 'CAPITAL',
+    'NUMLOCK': 'NUMLOCK',
+    'SCROLLLOCK': 'SCROLL',
+
+    // Print/system
+    'PRINTSCREEN': 'SNAPSHOT',
+    'PRTSC': 'SNAPSHOT',
+    'PRTSCN': 'SNAPSHOT',
+
+    // Numpad operators
+    'NUM *': 'NUMPADMULTIPLY',
+    'NUM +': 'NUMPADADD',
+    'NUM -': 'NUMPADSUBTRACT',
+    'NUM /': 'NUMPADDIVIDE',
+    'NUM .': 'NUMPADDECIMAL',
+
+    'NUMPAD *': 'NUMPADMULTIPLY',
+    'NUMPAD +': 'NUMPADADD',
+    'NUMPAD -': 'NUMPADSUBTRACT',
+    'NUMPAD /': 'NUMPADDIVIDE',
+    'NUMPAD .': 'NUMPADDECIMAL',
+
+    // Numpad digits
+    'NUM 0': 'NUMPAD0',
+    'NUM 1': 'NUMPAD1',
+    'NUM 2': 'NUMPAD2',
+    'NUM 3': 'NUMPAD3',
+    'NUM 4': 'NUMPAD4',
+    'NUM 5': 'NUMPAD5',
+    'NUM 6': 'NUMPAD6',
+    'NUM 7': 'NUMPAD7',
+    'NUM 8': 'NUMPAD8',
+    'NUM 9': 'NUMPAD9',
+
+    'NUMPAD 0': 'NUMPAD0',
+    'NUMPAD 1': 'NUMPAD1',
+    'NUMPAD 2': 'NUMPAD2',
+    'NUMPAD 3': 'NUMPAD3',
+    'NUMPAD 4': 'NUMPAD4',
+    'NUMPAD 5': 'NUMPAD5',
+    'NUMPAD 6': 'NUMPAD6',
+    'NUMPAD 7': 'NUMPAD7',
+    'NUMPAD 8': 'NUMPAD8',
+    'NUMPAD 9': 'NUMPAD9',
   };
   static const Map<String, String> namedKeyDisplayLabels = <String, String>{
     'SPACE': 'Space',
@@ -69,6 +151,22 @@ class Hotkeys {
     'HOME': 'Home',
     'END': 'End',
     'TAB': 'Tab',
+    'NUMPAD0': 'Numpad 0',
+    'NUMPAD1': 'Numpad 1',
+    'NUMPAD2': 'Numpad 2',
+    'NUMPAD3': 'Numpad 3',
+    'NUMPAD4': 'Numpad 4',
+    'NUMPAD5': 'Numpad 5',
+    'NUMPAD6': 'Numpad 6',
+    'NUMPAD7': 'Numpad 7',
+    'NUMPAD8': 'Numpad 8',
+    'NUMPAD9': 'Numpad 9',
+    'NUMPADADD': 'Numpad +',
+    'NUMPADSUBTRACT': 'Numpad -',
+    'NUMPADMULTIPLY': 'Numpad *',
+    'NUMPADDIVIDE': 'Numpad /',
+    'NUMPADDECIMAL': 'Numpad .',
+    'NUMPADSEPARATOR': 'Numpad Separator',
   };
 
   String key;
@@ -133,6 +231,22 @@ class Hotkeys {
     if (logicalKey == LogicalKeyboardKey.arrowUp) return 'UP';
     if (logicalKey == LogicalKeyboardKey.arrowDown) return 'DOWN';
     if (logicalKey == LogicalKeyboardKey.tab) return 'TAB';
+    if (logicalKey == LogicalKeyboardKey.numpad0) return 'NUMPAD0';
+    if (logicalKey == LogicalKeyboardKey.numpad1) return 'NUMPAD1';
+    if (logicalKey == LogicalKeyboardKey.numpad2) return 'NUMPAD2';
+    if (logicalKey == LogicalKeyboardKey.numpad3) return 'NUMPAD3';
+    if (logicalKey == LogicalKeyboardKey.numpad4) return 'NUMPAD4';
+    if (logicalKey == LogicalKeyboardKey.numpad5) return 'NUMPAD5';
+    if (logicalKey == LogicalKeyboardKey.numpad6) return 'NUMPAD6';
+    if (logicalKey == LogicalKeyboardKey.numpad7) return 'NUMPAD7';
+    if (logicalKey == LogicalKeyboardKey.numpad8) return 'NUMPAD8';
+    if (logicalKey == LogicalKeyboardKey.numpad9) return 'NUMPAD9';
+    if (logicalKey == LogicalKeyboardKey.numpadAdd) return 'NUMPADADD';
+    if (logicalKey == LogicalKeyboardKey.numpadSubtract) return 'NUMPADSUBTRACT';
+    if (logicalKey == LogicalKeyboardKey.numpadMultiply) return 'NUMPADMULTIPLY';
+    if (logicalKey == LogicalKeyboardKey.numpadDivide) return 'NUMPADDIVIDE';
+    if (logicalKey == LogicalKeyboardKey.numpadDecimal) return 'NUMPADDECIMAL';
+    if (logicalKey == LogicalKeyboardKey.numpadComma) return 'NUMPADSEPARATOR';
     return normalizeKeyName(logicalKey.keyLabel);
   }
 
@@ -450,11 +564,12 @@ class KeyMap with TabameListener {
             if (trayWindowHandle == 0) trayWindowHandle = GetDesktopWindow();
             SetForegroundWindow(trayWindowHandle);
           }
-          WinKeys.send(action.value);
+          WinKeys.safeSendHotkey(() => WinKeys.send(action.value));
+
           break;
         case ActionType.openQuickMenuPage:
           if (HotKeyInfo.quickMenuPopups.contains(action.value)) {
-            if (action.value == "Interface") {
+            if (action.value == "Interface" || action.value == "Launcher") {
               QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true);
             } else {
               QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true);
@@ -486,7 +601,9 @@ class KeyMap with TabameListener {
 
   void _processHotkey(String value) {
     final String serialized = value.split('+').map((String p) => p.length > 1 ? "{#$p}" : p).join();
-    WinKeys.send(serialized);
+
+    WinKeys.safeSendHotkey(() => WinKeys.send(serialized));
+    // WinKeys.send(serialized);
   }
 
   void _processSendClick(String value) {
@@ -730,6 +847,8 @@ class HotKeyInfo {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         if (Globals.quickMenuPage == QuickMenuPage.launcher) {
           QuickMenuFunctions.hideQuickMenu();
+
+          Win32.activateWindow(Globals.lastFocusedWinHWND);
           return () => <dynamic, dynamic>{};
         }
       }

@@ -1094,31 +1094,35 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
   }
 
   Widget _buildStatsDashboard(Color accent, Color onSurface) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 5,
-      padding: const EdgeInsets.all(0),
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      childAspectRatio: 1.8,
-      children: <Widget>[
-        _buildMetricCard("Total Lines", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
-        CustomTooltip(
-          message: "All characters divided by 70",
-          child: _buildMetricCard("Compacted Lns", result!.compactedLines.floor().decimal, Icons.compress_rounded,
-              Colors.purple, onSurface),
+    return SizedBox(
+      height: 100, // Forces the overall GridView container height
+      child: GridView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(0),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          mainAxisExtent: 100, // <--- Forces each item to be exactly 100px tall
         ),
-        CustomTooltip(
-          message: "${result!.totalComments.formatNum()} Comment Lines",
-          child: _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%",
-              Icons.comment_bank_rounded, Colors.green, onSurface),
-        ),
-        _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined,
-            Colors.orange, onSurface),
-        _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns",
-            Icons.file_present_rounded, Colors.blue, onSurface),
-      ],
+        children: <Widget>[
+          _buildMetricCard("Total Lines", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),
+          CustomTooltip(
+            message: "All characters divided by 70",
+            child: _buildMetricCard("Compacted Lns", result!.compactedLines.floor().decimal, Icons.compress_rounded,
+                Colors.purple, onSurface),
+          ),
+          CustomTooltip(
+            message: "${result!.totalComments.formatNum()} Comment Lines",
+            child: _buildMetricCard("Comment Density", "${result!.commentDensity.toStringAsFixed(1)}%",
+                Icons.comment_bank_rounded, Colors.green, onSurface),
+          ),
+          _buildMetricCard("Code Intensity", "${result!.codeIntensity.toStringAsFixed(1)} ch/ln", Icons.bolt_outlined,
+              Colors.orange, onSurface),
+          _buildMetricCard("Avg. File Length", "${result!.avgLinesPerFile.floor().decimal} lns",
+              Icons.file_present_rounded, Colors.blue, onSurface),
+        ],
+      ),
     );
   }
 

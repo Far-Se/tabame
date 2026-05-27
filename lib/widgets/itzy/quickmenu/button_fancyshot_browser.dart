@@ -1,14 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:pool/pool.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-
 // ─────────────────────────────────────────────
 //  Button
 // ─────────────────────────────────────────────
@@ -48,6 +48,14 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
   /// null = month list view; non-null = files view for that month folder
   String? _selectedMonthFolder;
 
+  // ── WebP conversion state ─────────────────
+  bool _isConverting = false;
+  int _convertTotal = 0;
+  int _convertDone = 0;
+  double _convertFileProgress = 0.0; // 0..1 for current file
+  String _convertStatus = '';
+  bool _convertCancelled = false;
+
   List<Directory> _monthFolders = <Directory>[];
   List<File> _files = <File>[];
 
@@ -57,6 +65,111 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
   void initState() {
     super.initState();
     _loadMonths();
+  }
+
+  // ── WebP conversion ───────────────────────
+
+  bool get _isWebpFolder => _selectedMonthFolder != null;
+  List<int> utf16(String input) {
+    final List<int> bytes = <int>[];
+    for (int i = 0; i < input.length; i++) {
+      final int code = input.codeUnitAt(i);
+      bytes.add(code & 0xFF);
+      bytes.add((code >> 8) & 0xFF);
+    }
+    return bytes;
+  }
+
+  List<File> get _pngFiles => _files.where((File f) => _extension(f.path) == '.png').toList();
+  // ignore: unused_element
+  Future<void> _startWebpConversion() async {
+    if (_selectedMonthFolder != null) await _loadFiles(_selectedMonthFolder!);
+    final List<File> pngs = _pngFiles;
+    if (pngs.isEmpty) return;
+
+    setState(() {
+      _isConverting = true;
+      _convertTotal = pngs.length;
+      _convertDone = 0;
+      _convertFileProgress = 0.0;
+      _convertCancelled = false;
+      _convertStatus = 'Converting: 0 / $_convertTotal files done';
+    });
+
+    // Create a pool of concurrent workers (3-4 is ideal for CPU-bound ffmpeg tasks)
+    final Pool pool = Pool(4);
+    final List<Future<void>> futures = [];
+
+    for (int i = 0; i < pngs.length; i++) {
+      final File src = pngs[i];
+
+      final Future<void> task = pool.withResource(() async {
+        if (_convertCancelled) return;
+
+        final String srcPath = src.path;
+        final String dstPath = srcPath.replaceAll(RegExp(r'\.png$', caseSensitive: false), '.webp');
+
+        bool success = false;
+        try {
+          // Run ffmpeg directly. Process.run is fast and self-contained.
+          final ProcessResult result = await Process.run('ffmpeg', <String>[
+            '-y',
+            '-i',
+            srcPath,
+            '-c:v',
+            'libwebp',
+            '-lossless',
+            '1',
+            '-compression_level',
+            '6',
+            dstPath,
+          ]);
+
+          success = result.exitCode == 0 && await File(dstPath).exists();
+        } catch (_) {
+          success = false;
+        }
+
+        if (success && !_convertCancelled) {
+          try {
+            await src.delete();
+          } catch (_) {}
+        }
+
+        // Update total progress state as each file finishes
+        if (mounted && !_convertCancelled) {
+          setState(() {
+            _convertDone++;
+            _convertFileProgress = (_convertDone / _convertTotal).clamp(0.0, 1.0);
+            _convertStatus = 'Converting: $_convertDone / $_convertTotal files done';
+          });
+        }
+      });
+
+      futures.add(task);
+    }
+
+    // Wait for all concurrent operations to wrap up
+    await Future.wait(futures);
+    await pool.close();
+
+    // Final UI state update
+    if (mounted) {
+      setState(() {
+        _isConverting = false;
+        _convertStatus = _convertCancelled
+            ? 'Cancelled. $_convertDone file(s) converted.'
+            : 'Done! All $_convertTotal file(s) converted.';
+      });
+      if (_selectedMonthFolder != null) _loadFiles(_selectedMonthFolder!);
+    }
+  }
+
+  void _cancelConversion() {
+    setState(() {
+      _convertCancelled = true;
+      _convertStatus = 'Cancelling…';
+    });
   }
 
   // ── Helpers ───────────────────────────────
@@ -98,7 +211,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
     });
   }
 
-  void _loadFiles(String monthFolderPath) {
+  Future<void> _loadFiles(String monthFolderPath) async {
     final Directory dir = Directory(monthFolderPath);
     if (!dir.existsSync()) {
       setState(() {
@@ -108,17 +221,34 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       return;
     }
 
-    final List<File> files = dir
-        .listSync(followLinks: false)
-        .whereType<File>()
-        .where((File f) => _isMediaFile(f.path))
-        .toList()
-      ..sort((File a, File b) => b.statSync().changed.compareTo(a.statSync().changed));
+    // 1. Stream the files asynchronously to prevent UI blocking
+    final List<File> files = <File>[];
+    await for (final FileSystemEntity entity in dir.list(followLinks: false)) {
+      if (entity is File && _isMediaFile(entity.path)) {
+        files.add(entity);
+      }
+    }
 
-    setState(() {
-      _selectedMonthFolder = monthFolderPath;
-      _files = files;
-    });
+    // 2. Fetch all file stats concurrently in the background
+    final List<FileStat> stats = await Future.wait(
+      files.map((File f) => f.stat()),
+    );
+
+    // 3. Pair files with their stats and sort them (Newest first)
+    final List<MapEntry<File, FileStat>> paired = List<MapEntry<File, FileStat>>.generate(
+      files.length,
+      (int i) => MapEntry<File, FileStat>(files[i], stats[i]),
+    )..sort((MapEntry<File, FileStat> a, MapEntry<File, FileStat> b) {
+        return b.value.changed.compareTo(a.value.changed);
+      });
+
+    // 4. Update the state once everything is loaded
+    if (mounted) {
+      setState(() {
+        _selectedMonthFolder = monthFolderPath;
+        _files = paired.map((MapEntry<File, FileStat> e) => e.key).toList();
+      });
+    }
   }
 
   void _switchMediaType(_MediaType type) {
@@ -161,12 +291,26 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
             icon: _mediaType == _MediaType.screenshots ? Icons.photo_camera_outlined : Icons.videocam_outlined,
             extraActions: _selectedMonthFolder != null
                 ? <Widget>[
+                    if (_isWebpFolder && !_isConverting && _pngFiles.isNotEmpty)
+                      IconButton(
+                        icon: Icon(Icons.auto_fix_high_rounded, size: 18, color: accent),
+                        tooltip: 'Convert all PNGs to WebP',
+                        onPressed: _startWebpConversion,
+                        splashRadius: 18,
+                      ),
+                    if (_isConverting)
+                      IconButton(
+                        icon: const Icon(Icons.stop_circle_outlined, size: 18, color: Colors.redAccent),
+                        tooltip: 'Cancel conversion',
+                        onPressed: _cancelConversion,
+                        splashRadius: 18,
+                      ),
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       tooltip: 'Back',
-                      onPressed: _loadMonths,
+                      onPressed: _isConverting ? null : _loadMonths,
                       splashRadius: 18,
-                    )
+                    ),
                   ]
                 : null),
 
@@ -195,6 +339,18 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
         ),
 
         const SizedBox(height: 4),
+
+        // ── WebP conversion progress banner ──
+        if (_isWebpFolder && (_isConverting || _convertStatus.isNotEmpty))
+          _WebpProgressBanner(
+            isConverting: _isConverting,
+            done: _convertDone,
+            total: _convertTotal,
+            fileProgress: _convertFileProgress,
+            status: _convertStatus,
+            accent: accent,
+            onSurface: onSurface,
+          ),
 
         // ── Content ──
         Flexible(
@@ -289,10 +445,10 @@ class _TypeButton extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 14),
-        label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+        label: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         style: TextButton.styleFrom(
           backgroundColor: active ? accent.withAlpha(30) : accent.withAlpha(8),
-          foregroundColor: active ? accent : Theme.of(context).colorScheme.onSurface.withAlpha(160),
+          foregroundColor: Theme.of(context).colorScheme.onSurface.withAlpha(160),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           minimumSize: const Size(0, 32),
           shape: RoundedRectangleBorder(
@@ -383,7 +539,7 @@ class _MonthRowState extends State<_MonthRow> {
                     child: Text(
                       '${widget.count}',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: widget.accent,
                       ),
@@ -644,6 +800,102 @@ class _ThumbError extends StatelessWidget {
         Icons.broken_image_outlined,
         size: 20,
         color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  WebP conversion progress banner
+// ─────────────────────────────────────────────
+
+class _WebpProgressBanner extends StatelessWidget {
+  const _WebpProgressBanner({
+    required this.isConverting,
+    required this.done,
+    required this.total,
+    required this.fileProgress,
+    required this.status,
+    required this.accent,
+    required this.onSurface,
+  });
+
+  final bool isConverting;
+  final int done;
+  final int total;
+  final double fileProgress;
+  final String status;
+  final Color accent;
+  final Color onSurface;
+
+  @override
+  Widget build(BuildContext context) {
+    // Overall progress: each completed file is 1 unit, current file adds fractional
+    final double overall = total == 0 ? 0 : ((done + fileProgress) / total).clamp(0.0, 1.0);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent.withAlpha(60)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              if (isConverting) ...<Widget>[
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.8,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ] else ...<Widget>[
+                Icon(Icons.check_circle_outline_rounded, size: 14, color: accent),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: onSurface.withAlpha(220),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isConverting)
+                Text(
+                  '${(overall * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: accent,
+                  ),
+                ),
+            ],
+          ),
+          if (isConverting) ...<Widget>[
+            const SizedBox(height: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: overall,
+                minHeight: 4,
+                backgroundColor: accent.withAlpha(30),
+                valueColor: AlwaysStoppedAnimation<Color>(accent),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
