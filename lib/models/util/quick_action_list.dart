@@ -290,7 +290,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.power_settings_new_rounded,
     widget: () => const ShutDownButton(),
   ),
-  "CloseOnFocusLossButton": QuickAction(
+  "CloseOnFocusLossButton (Ctrl+H)": QuickAction(
     icon: Icons.visibility,
     widget: () => const CloseOnFocusLossButton(),
   ),

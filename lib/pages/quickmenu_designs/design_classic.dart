@@ -30,6 +30,7 @@ class MainMenuClassicWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 100,
       ),
       child: ClipRRect(
+        borderRadius: BorderRadius.circular(User.theme.borderRadius),
         child: Stack(
           children: <Widget>[
             // Background Layer

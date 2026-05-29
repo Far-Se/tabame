@@ -7,7 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/db/file_index_db.dart';
 import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
-import '../../interface/result_item_bookmark.dart';
+import '../../launcher/result/result_item_bookmark.dart';
 import '../../launcher_search_models.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';

@@ -65,13 +65,14 @@ class TrianglePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = color;
-    final Path path = Path();
-    path.moveTo(0, 0);
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width / 2, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
+    final Paint paint = Paint()..color = color.withValues(alpha: 0.3);
+    // final Path path = Path();
+    // path.moveTo(0, 0);
+    // path.lineTo(size.width, 0);
+    // path.lineTo(size.width / 2, size.height);
+    // path.close();
+    // canvas.drawPath(path, paint);
+    canvas.drawCircle(Offset(size.width - 2, 2), size.width / 2, paint);
   }
 
   @override

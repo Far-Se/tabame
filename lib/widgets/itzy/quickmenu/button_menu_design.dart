@@ -8,6 +8,7 @@ import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
+import '../../../pages/launcher/launcher_design.dart';
 import '../../interface/theme_setup.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
@@ -44,11 +45,13 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   late _QuickMenuPaletteMode _paletteMode;
   late final List<Map<ColorSwatch<Object>, String>> _lightPresets;
   late final List<Map<ColorSwatch<Object>, String>> _darkPresets;
-  final ScrollController _designScrollController = ScrollController();
-
+  LauncherDesign launcherDesign = LauncherDesign.classic;
   @override
   void initState() {
     super.initState();
+
+    final int savedIndex = Boxes.pref.getInt('launcherDesign') ?? 0;
+    launcherDesign = LauncherDesign.values[savedIndex.clamp(0, LauncherDesign.values.length - 1)];
     _paletteMode =
         userSettings.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
     _lightPresets = <Map<ColorSwatch<Object>, String>>[
@@ -65,7 +68,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
 
   @override
   void dispose() {
-    _designScrollController.dispose();
     super.dispose();
   }
 
@@ -211,9 +213,11 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _buildDesignsCard(accent, onSurface),
+                _buildDesignsCard("QuickMenu", accent, onSurface),
                 const SizedBox(height: 8),
-                _buildOpacityCard(accent, onSurface),
+                _buildDesignsCard("Launcher", accent, onSurface),
+                const SizedBox(height: 8),
+                _buildPanelTintCard(accent, onSurface),
                 const SizedBox(height: 8),
                 if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
                   _buildBackdropOpacityCard(accent, onSurface),
@@ -226,6 +230,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   );
                 }),
                 const SizedBox(height: 8),
+                _buildBorderRadiusCard(accent, onSurface),
+                const SizedBox(height: 8),
                 _buildTransparencyGradientCard(accent, onSurface),
               ],
             ),
@@ -235,7 +241,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     );
   }
 
-  Widget _buildDesignsCard(Color accent, Color onSurface) {
+  Widget _buildDesignsCard(String type, Color accent, Color onSurface) {
+    final bool isQuickMenu = type == "QuickMenu";
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       decoration: _cardDecoration(onSurface, accent: accent),
@@ -243,7 +250,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            "Design Type",
+            isQuickMenu ? "QuickMenu Design Type" : "Launcher Design Type",
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -253,47 +260,54 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           const SizedBox(height: 7),
           SizedBox(
             height: 38,
-            child: Listener(
-              onPointerSignal: (PointerSignalEvent event) {
-                if (event is! PointerScrollEvent || !_designScrollController.hasClients) return;
-                final double target =
-                    (_designScrollController.offset + event.scrollDelta.dy + event.scrollDelta.dx).clamp(
-                  _designScrollController.position.minScrollExtent,
-                  _designScrollController.position.maxScrollExtent,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              dragStartBehavior: DragStartBehavior.down,
+              physics: const ClampingScrollPhysics(),
+              itemCount: isQuickMenu ? QuickMenuDesigns.values.length : LauncherDesign.values.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (BuildContext context, int index) {
+                QuickMenuDesigns design = QuickMenuDesigns.classic;
+                bool selected = isQuickMenu
+                    ? userSettings.currentQuickMenuDesign == design
+                    : launcherDesign == LauncherDesign.values[index];
+
+                if (isQuickMenu) {
+                  design = QuickMenuDesigns.values[index];
+                  selected = userSettings.currentQuickMenuDesign == design;
+                }
+                return ChoiceChip(
+                  label: isQuickMenu
+                      ? Text(_designTitle(design))
+                      : Text(LauncherDesign.values[index].name.toUpperCaseFirst()),
+                  selected: selected,
+                  onSelected: selected
+                      ? null
+                      : (_) async {
+                          if (isQuickMenu) {
+                            _switchDesign(design);
+                          } else {
+                            await Boxes.pref.setInt("launcherDesign", index);
+                            launcherDesign = LauncherDesign.values[index];
+                            setState(() {});
+                          }
+                        },
+                  visualDensity: VisualDensity.compact,
+                  labelStyle: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? accent : onSurface,
+                  ),
+                  labelPadding: const EdgeInsets.all(0),
+                  showCheckmark: false,
+                  selectedColor: accent.withAlpha(18),
+                  side: BorderSide(
+                    color: selected ? accent.withAlpha(70) : onSurface.withAlpha(20),
+                  ),
+                  backgroundColor: onSurface.withAlpha(8),
                 );
-                _designScrollController.jumpTo(target);
               },
-              child: ListView.separated(
-                controller: _designScrollController,
-                scrollDirection: Axis.horizontal,
-                primary: false,
-                dragStartBehavior: DragStartBehavior.down,
-                physics: const ClampingScrollPhysics(),
-                itemCount: QuickMenuDesigns.values.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (BuildContext context, int index) {
-                  final QuickMenuDesigns design = QuickMenuDesigns.values[index];
-                  final bool selected = userSettings.currentQuickMenuDesign == design;
-                  return ChoiceChip(
-                    label: Text(_designTitle(design)),
-                    selected: selected,
-                    onSelected: selected ? null : (_) => _switchDesign(design),
-                    visualDensity: VisualDensity.compact,
-                    labelStyle: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? accent : onSurface,
-                    ),
-                    labelPadding: const EdgeInsets.all(0),
-                    showCheckmark: false,
-                    selectedColor: accent.withAlpha(18),
-                    side: BorderSide(
-                      color: selected ? accent.withAlpha(70) : onSurface.withAlpha(20),
-                    ),
-                    backgroundColor: onSurface.withAlpha(8),
-                  );
-                },
-              ),
             ),
           ),
         ],
@@ -301,7 +315,66 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     );
   }
 
-  Widget _buildOpacityCard(Color accent, Color onSurface) {
+  Widget _buildBorderRadiusCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 6),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Border Radius",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Set the border radius for the QuickMenu.",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: onSurface.withAlpha(150),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildMetaChip(
+                label: "${_selectedTheme.borderRadius}",
+                background: accent.withAlpha(18),
+                foreground: accent.withAlpha(220),
+              ),
+            ],
+          ),
+          Slider(
+            min: 0,
+            max: 40,
+            value: _selectedTheme.borderRadius.toDouble().clamp(0, 40),
+            activeColor: accent,
+            inactiveColor: accent.withAlpha(40),
+            onChanged: (double value) {
+              setState(() => _selectedTheme.borderRadius = value.floorToDouble());
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+            },
+            onChangeEnd: (double value) async {
+              _selectedTheme.borderRadius = value.floorToDouble();
+              await _persistThemeChanges();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPanelTintCard(Color accent, Color onSurface) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 6),
       decoration: _cardDecoration(onSurface, accent: accent),

@@ -32,7 +32,8 @@ enum QuickMenuDesigns {
   classic,
   modern,
   interface,
-  matrix;
+  matrix,
+  serene;
 
   String get name {
     return switch (this) {
@@ -40,13 +41,17 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.classic => "Classic",
       QuickMenuDesigns.interface => "Interface",
       QuickMenuDesigns.matrix => "Matrix",
+      QuickMenuDesigns.serene => "Serene",
     };
   }
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
 
-final ThemeColors theme = userSettings.themeColors;
+class User {
+  static ThemeColors get theme => userSettings.themeColors;
+  static Settings get s => userSettings;
+}
 
 class Settings {
   List<String> args = <String>[];
@@ -158,6 +163,7 @@ class Settings {
     String entryFontFamily = 'Jura',
     int entryFontWeight = 700,
     bool entryFontItalic = false,
+    double borderRadius = 10,
   }) {
     return ThemeColors(
       background: background,
@@ -170,6 +176,7 @@ class Settings {
       entryFontFamily: entryFontFamily,
       entryFontWeight: entryFontWeight,
       entryFontItalic: entryFontItalic,
+      borderRadius: borderRadius,
     );
   }
 
@@ -183,6 +190,7 @@ class Settings {
           gradientAlpha: 200,
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
+          borderRadius: 12,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xFF0A0A0A),
@@ -191,6 +199,7 @@ class Settings {
           gradientAlpha: 20,
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
+          borderRadius: 12,
         ),
       ),
       QuickMenuDesigns.classic.name: QuickMenuDesignThemeSet(
@@ -202,6 +211,7 @@ class Settings {
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 0,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff171317),
@@ -211,6 +221,7 @@ class Settings {
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 0,
         ),
       ),
       QuickMenuDesigns.interface.name: QuickMenuDesignThemeSet(
@@ -223,6 +234,7 @@ class Settings {
           uiFontWeight: 500,
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 22,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff101923),
@@ -233,6 +245,7 @@ class Settings {
           uiFontWeight: 500,
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 22,
         ),
       ),
       QuickMenuDesigns.matrix.name: QuickMenuDesignThemeSet(
@@ -245,6 +258,7 @@ class Settings {
           uiFontWeight: 500,
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 12,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff000000),
@@ -255,6 +269,31 @@ class Settings {
           uiFontWeight: 500,
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
+          borderRadius: 12,
+        ),
+      ),
+      QuickMenuDesigns.serene.name: QuickMenuDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF5F0EB),
+          textColor: const Color(0xff2C2118),
+          accentColor: const Color(0xffB07D4F),
+          gradientAlpha: 180,
+          uiFontFamily: 'Nunito',
+          uiFontWeight: 400,
+          entryFontFamily: 'Nunito',
+          entryFontWeight: 600,
+          borderRadius: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff161618),
+          textColor: const Color(0xffEDE8E3),
+          accentColor: const Color(0xff445E91),
+          gradientAlpha: 58,
+          uiFontFamily: 'Nunito',
+          uiFontWeight: 400,
+          entryFontFamily: 'Nunito',
+          entryFontWeight: 600,
+          borderRadius: 10,
         ),
       ),
     };

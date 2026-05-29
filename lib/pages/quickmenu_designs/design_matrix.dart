@@ -104,10 +104,10 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                           accent.withValues(alpha: userSettings.themeColors.gradientAlpha / 255.0),
                           surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 1.0),
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(User.theme.borderRadius),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(User.theme.borderRadius),
                         child: Stack(
                           children: <Widget>[
                             if (userSettings.themeColors.backdropType.isNotEmpty)
@@ -120,7 +120,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                             Positioned.fill(
                               child: IgnorePointer(
                                 child: CustomPaint(
-                                  painter: _GridPainter(accent.withValues(alpha: 0.08)),
+                                  painter: _GridPainter(accent.withValues(alpha: 0.07)),
                                 ),
                               ),
                             ),
@@ -217,7 +217,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
         padding: padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onSurface.withAlpha(8), // Subtle tint even if backdrop fails
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(User.theme.borderRadius),
           border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(18)),
         ),
         child: child,
@@ -234,7 +234,7 @@ class MatrixFloatingClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     final Path path = Path();
     for (final Rect rect in rects) {
-      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(10)));
+      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(User.theme.borderRadius)));
     }
     return path;
   }

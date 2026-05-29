@@ -1089,17 +1089,22 @@ void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
     config.targetType = screen_recording::TargetType::Region;
   }
 
-  config.region.left = a.count(EVal("regionLeft")) ? Args::Int(a, "regionLeft") : 0;
-  config.region.top = a.count(EVal("regionTop")) ? Args::Int(a, "regionTop") : 0;
+  config.region.left =
+      a.count(EVal("regionLeft")) ? Args::Int(a, "regionLeft") : 0;
+  config.region.top =
+      a.count(EVal("regionTop")) ? Args::Int(a, "regionTop") : 0;
   config.region.right =
-      config.region.left + (a.count(EVal("regionWidth")) ? Args::Int(a, "regionWidth") : 0);
+      config.region.left +
+      (a.count(EVal("regionWidth")) ? Args::Int(a, "regionWidth") : 0);
   config.region.bottom =
-      config.region.top + (a.count(EVal("regionHeight")) ? Args::Int(a, "regionHeight") : 0);
+      config.region.top +
+      (a.count(EVal("regionHeight")) ? Args::Int(a, "regionHeight") : 0);
   config.monitorHandle =
       a.count(EVal("monitorHandle")) ? Args::Int64(a, "monitorHandle") : 0;
   config.hWnd = a.count(EVal("hWnd")) ? Args::Int64(a, "hWnd") : 0;
   config.outputPath = Encoding::Utf8ToWide(Args::Str(a, "outputPath"));
-  config.frameRate = a.count(EVal("frameRate")) ? Args::Int(a, "frameRate") : 30;
+  config.frameRate =
+      a.count(EVal("frameRate")) ? Args::Int(a, "frameRate") : 30;
   config.videoBitrateMbps =
       a.count(EVal("videoBitrateMbps")) ? Args::Int(a, "videoBitrateMbps") : 12;
   config.captureCursor =
@@ -1120,7 +1125,8 @@ void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
     result->Error(errorCode, errorMessage);
     return;
   }
-  OK(result, EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
+  OK(result,
+     EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
 }
 
 void StopScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,

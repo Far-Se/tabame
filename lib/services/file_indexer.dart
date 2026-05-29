@@ -194,6 +194,9 @@ class FileIndexer {
       final List<FileSystemEntity> entities = await dir.list(recursive: false, followLinks: false).toList();
       for (final FileSystemEntity entity in entities) {
         final String name = _getBasename(entity.path);
+        if (config.excludePath != null && RegExp(config.excludePath!, caseSensitive: false).hasMatch(entity.path)) {
+          continue;
+        }
         final bool isDir = entity is Directory;
 
         if (isDir) {

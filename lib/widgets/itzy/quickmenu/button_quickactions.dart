@@ -125,7 +125,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
       ].contains(e.key);
     }).map((MapEntry<String, dynamic> e) {
       final String displayName =
-          e.key.replaceAllMapped(RegExp(r"([A-Z])", caseSensitive: true), (Match m) => " ${m.group(1)}").trim();
+          e.key.replaceAllMapped(RegExp(r"(?<=[a-z])[A-Z]"), (Match m) => " ${m.group(0)}").trim();
       return QuickActionMenuEntry(
         id: "hotkey-${e.key}",
         title: displayName,
@@ -920,7 +920,7 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
+                        color: _hovered ? User.theme.textColor : User.theme.textColor.withAlpha(200),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),

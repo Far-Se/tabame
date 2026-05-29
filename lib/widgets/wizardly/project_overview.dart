@@ -1095,7 +1095,7 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
 
   Widget _buildStatsDashboard(Color accent, Color onSurface) {
     return SizedBox(
-      height: 100, // Forces the overall GridView container height
+      height: 90,
       child: GridView(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(0),
@@ -1103,7 +1103,7 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
           crossAxisCount: 5,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          mainAxisExtent: 100, // <--- Forces each item to be exactly 100px tall
+          mainAxisExtent: 60,
         ),
         children: <Widget>[
           _buildMetricCard("Total Lines", result!.totalLines.decimal, Icons.reorder_rounded, accent, onSurface),

@@ -10,6 +10,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -100,7 +101,6 @@ Future<Uint8List> _ffmpegEncode({
     // Codec / quality flags per format
     switch (format) {
       case ImgFormat.jpg:
-      case ImgFormat.jfif:
         // qscale:v 2–31; map quality 1-100 → qscale 31-2
         final int q = (31 - (quality / 100.0 * 29).round()).clamp(2, 31);
         args.addAll(<String>['-q:v', '$q']);
@@ -131,11 +131,11 @@ Future<Uint8List> _ffmpegEncode({
 //  Data models
 // ─────────────────────────────────────────────
 
-enum ImgFormat { jpg, png, webp, jfif }
+enum ImgFormat { jpg, png, webp }
 
 extension ImgFormatExt on ImgFormat {
   String get label => name.toUpperCase();
-  String get ext => name == 'jfif' ? 'jfif' : name;
+  String get ext => name;
 }
 
 enum ResizeMode { none, percentage, targetWidth }
@@ -451,6 +451,36 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
     });
   }
 
+  // ── Copy helpers ──────────────────────────
+
+  /// Copies the raw image bytes to the clipboard as a BMP/DIB (what Windows
+  /// expects for CF_DIB). Uses an ffmpeg BMP re-encode pass identical to the
+  /// one used in the converter.
+  Future<void> _copyImageToClipboard(File file) async {
+    Directory? tmp;
+    try {
+      tmp = await Directory.systemTemp.createTemp('imgconv_cp_');
+      final String srcExt = file.path.contains('.') ? '.${file.path.split('.').last.toLowerCase()}' : '.png';
+      final File tmpSrc = File('${tmp.path}\\src$srcExt');
+      await tmpSrc.writeAsBytes(await file.readAsBytes());
+      final File tmpBmp = File('${tmp.path}\\out.bmp');
+      final ProcessResult r = await _runFfmpeg(<String>['-y', '-i', tmpSrc.path, tmpBmp.path]);
+      if (r.exitCode != 0) throw Exception('ffmpeg failed: ${r.stderr}');
+      await ClipboardExtended.copyImage(await tmpBmp.readAsBytes());
+    } catch (_) {
+      // Silently ignore — could add a snackbar here if desired
+    } finally {
+      tmp?.delete(recursive: true).catchError((_) => Directory(''));
+    }
+  }
+
+  /// Copies the file path string to the system clipboard.
+  Future<void> _copyImageFileToClipboard(File file) async {
+    try {
+      await ClipboardExtension.copyFile(file.path);
+    } catch (_) {}
+  }
+
   // ── Convert ───────────────────────────────
 
   void _openConverter({bool clipboardImage = false}) {
@@ -462,7 +492,11 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
           clipboardBytes: _clipboardBytes,
           clipboardTempFile: _clipboardImageFile,
         ),
-      );
+      ).then((_) {
+        if (!mounted) return;
+        _checkClipboard();
+        _loadWatchedFolderImages();
+      });
       return;
     }
     if (_selected.isEmpty) return;
@@ -473,7 +507,11 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
     showQuickMenuModal(
       context: context,
       child: _ConverterPage(files: targets),
-    );
+    ).then((_) {
+      if (!mounted) return;
+      _checkClipboard();
+      _loadWatchedFolderImages();
+    });
   }
   // ── Build ─────────────────────────────────
 
@@ -586,6 +624,8 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
                       _files.removeAt(i);
                       _selected.remove(i);
                     }),
+                    onCopyImage: () => _copyImageToClipboard(f),
+                    onCopyImageFile: () => _copyImageFileToClipboard(f),
                   );
                 }),
             ],
@@ -762,7 +802,10 @@ class _ConverterPageState extends State<_ConverterPage> {
       _resizeMode = p.resizeMode;
       _resizePercent = p.resizePercent;
       _resizeWidth = p.resizeWidth ?? 1920;
-      _outputMode = p.outputMode;
+      // "Same folder as original" is invalid for clipboard sources — fall back
+      // to clipboard output mode in that case.
+      final bool isClipboardSource = widget.clipboardBytes != null;
+      _outputMode = (isClipboardSource && p.outputMode == OutputMode.sameFolder) ? OutputMode.clipboard : p.outputMode;
       _outputFolder = p.outputFolder;
       _widthCtrl.text = '$_resizeWidth';
       _percentCtrl.text = '$_resizePercent';
@@ -814,8 +857,8 @@ class _ConverterPageState extends State<_ConverterPage> {
   // ── Convert ───────────────────────────────
 
   /// Builds a collision-free output [File] for the given source index.
-  File _outputFile(int sourceIndex, String dir) {
-    final bool isClipboard = sourceIndex >= widget.files.length;
+  File _outputFile(int sourceIndex, String dir, {bool isClipboardEntry = false}) {
+    final bool isClipboard = isClipboardEntry || sourceIndex < 0 || sourceIndex >= widget.files.length;
     final String baseName = isClipboard
         ? 'clipboard_image'
         : widget.files[sourceIndex].uri.pathSegments.last.replaceAll(RegExp(r'\.[^.]+$'), '');
@@ -824,8 +867,8 @@ class _ConverterPageState extends State<_ConverterPage> {
     if (!isClipboard && _outputMode == OutputMode.sameFolder) {
       final String srcExt = _ext(widget.files[sourceIndex].path);
       final bool clash = srcExt == '.${_format.ext}' ||
-          (srcExt == '.jpg' && _format == ImgFormat.jfif) ||
-          (srcExt == '.jpeg' && _format == ImgFormat.jfif);
+          (srcExt == '.jpg' && _format == ImgFormat.jpg) ||
+          (srcExt == '.jpeg' && _format == ImgFormat.jpg);
       if (clash) stem = '${baseName}_converted';
     }
 
@@ -838,14 +881,14 @@ class _ConverterPageState extends State<_ConverterPage> {
     return out;
   }
 
-  String _outputDir(int sourceIndex) {
+  String _outputDir(int sourceIndex, {bool isClipboardEntry = false}) {
     if (_outputMode == OutputMode.specificFolder && _outputFolder != null) {
       return _outputFolder!;
     }
-    if (sourceIndex < widget.files.length) {
+    if (!isClipboardEntry && sourceIndex >= 0 && sourceIndex < widget.files.length) {
       return widget.files[sourceIndex].parent.path;
     }
-    // clipboard + sameFolder → Desktop
+    // clipboard + sameFolder (or no valid file) → Desktop
     return '${Platform.environment['USERPROFILE'] ?? 'C:\\Users\\Public'}\\Desktop';
   }
 
@@ -893,6 +936,16 @@ class _ConverterPageState extends State<_ConverterPage> {
       _convertTotal = sources.length;
     });
 
+    // Nothing to convert — surface a clear message instead of crashing.
+    if (sources.isEmpty) {
+      setState(() {
+        _converting = false;
+        _statusMessage = 'No images to convert.';
+        _statusIsError = true;
+      });
+      return;
+    }
+
     final List<String> savedPaths = <String>[];
     final List<String> errors = <String>[];
     final bool hasClipboardSource = widget.clipboardTempFile != null || widget.clipboardBytes != null;
@@ -904,7 +957,12 @@ class _ConverterPageState extends State<_ConverterPage> {
       final File? srcFile = sources[i].file;
       final String label = sources[i].label;
       final String srcExt = sources[i].srcExt;
-      final int fileIndex = i - (hasClipboardSource ? 1 : 0);
+      // fileIndex is the index into widget.files; clipboard is index -1 (sentinel).
+      // When hasClipboardSource the first source (i==0) is the clipboard entry,
+      // so file entries start at i==1 → fileIndex = i-1 = 0, 1, 2, …
+      // For clipboard itself fileIndex = -1, which _outputDir/_outputFile handle.
+      final int fileIndex = hasClipboardSource ? i - 1 : i;
+      final bool isClipboardEntry = hasClipboardSource && i == 0;
 
       try {
         final Uint8List srcBytes = srcFile != null ? await srcFile.readAsBytes() : sources[i].bytes!;
@@ -920,21 +978,34 @@ class _ConverterPageState extends State<_ConverterPage> {
         );
 
         if (_outputMode == OutputMode.clipboard) {
-          // ClipboardExtended.copyImage on Windows expects a file path,
-          // not raw bytes — write to a temp file first, then pass the path.
-          final Directory tmpOut = await Directory.systemTemp.createTemp('imgconv_out_');
-          final File tmpOutFile = File('${tmpOut.path}\\out.${_format.ext}');
-          await tmpOutFile.writeAsBytes(encoded);
+          // ClipboardExtended.copyImage on Windows requires raw BMP/DIB bytes
+          // (CF_DIB). Formats like WebP or PNG cannot be pasted directly — we
+          // re-encode the output to BMP via a second ffmpeg pass, then copy.
+          Directory? tmpOut;
           try {
-            await ClipboardExtended.copyImage(encoded);
+            tmpOut = await Directory.systemTemp.createTemp('imgconv_out_');
+            final File tmpSrcFile = File('${tmpOut.path}\\src.${_format.ext}');
+            await tmpSrcFile.writeAsBytes(encoded);
+            final File tmpBmpFile = File('${tmpOut.path}\\out.bmp');
+            final ProcessResult bmpResult = await _runFfmpeg(<String>[
+              '-y',
+              '-i',
+              tmpSrcFile.path,
+              tmpBmpFile.path,
+            ]);
+            if (bmpResult.exitCode != 0) {
+              throw Exception('ffmpeg BMP pass failed (exit ${bmpResult.exitCode}):\n${bmpResult.stderr}');
+            }
+            final Uint8List bmpBytes = await tmpBmpFile.readAsBytes();
+            await ClipboardExtended.copyImage(bmpBytes);
           } finally {
-            tmpOut.delete(recursive: true).catchError((_) => Directory(''));
+            tmpOut?.delete(recursive: true).catchError((_) => Directory(''));
           }
           savedPaths.add('clipboard');
         } else {
-          final String dir = _outputDir(fileIndex);
+          final String dir = _outputDir(fileIndex, isClipboardEntry: isClipboardEntry);
           await Directory(dir).create(recursive: true);
-          final File outFile = _outputFile(fileIndex, dir);
+          final File outFile = _outputFile(fileIndex, dir, isClipboardEntry: isClipboardEntry);
           await outFile.writeAsBytes(encoded);
           savedPaths.add(outFile.path);
         }
@@ -1141,7 +1212,11 @@ class _ConverterPageState extends State<_ConverterPage> {
                   _SectionLabel(label: 'Output', accent: accent),
                   const SizedBox(height: 6),
                   Column(
-                    children: OutputMode.values.map((OutputMode m) {
+                    children: OutputMode.values
+                        // "Same folder as original" is meaningless for a clipboard
+                        // source — hide it so the user can't select a broken option.
+                        .where((OutputMode m) => !(widget.clipboardBytes != null && m == OutputMode.sameFolder))
+                        .map((OutputMode m) {
                       return _OutputModeRow(
                         mode: m,
                         selected: _outputMode == m,
@@ -1323,7 +1398,7 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label,
       style: TextStyle(
-          fontSize: 11, fontWeight: FontWeight.w700, color: theme.textColor.withAlpha(150), letterSpacing: 0.4),
+          fontSize: 11, fontWeight: FontWeight.w700, color: User.theme.textColor.withAlpha(150), letterSpacing: 0.4),
     );
   }
 }
@@ -1376,7 +1451,7 @@ class _FormatButton extends StatelessWidget {
       onPressed: onTap,
       style: TextButton.styleFrom(
         backgroundColor: active ? accent.withAlpha(30) : accent.withAlpha(8),
-        foregroundColor: theme.textColor.withAlpha(150),
+        foregroundColor: User.theme.textColor.withAlpha(150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         minimumSize: Size.zero,
         shape: RoundedRectangleBorder(
@@ -1800,6 +1875,8 @@ class _FileRow extends StatefulWidget {
     required this.onTap,
     required this.onConvertSingle,
     required this.onRemove,
+    required this.onCopyImage,
+    required this.onCopyImageFile,
   });
 
   final File file;
@@ -1809,6 +1886,8 @@ class _FileRow extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onConvertSingle;
   final VoidCallback onRemove;
+  final VoidCallback onCopyImage;
+  final VoidCallback onCopyImageFile;
 
   @override
   State<_FileRow> createState() => _FileRowState();
@@ -1817,7 +1896,23 @@ class _FileRow extends StatefulWidget {
 class _FileRowState extends State<_FileRow> {
   bool _hovered = false;
 
+  /// Full filename, e.g. "testimage.webp"
   String get _name => widget.file.path.split(RegExp(r'[\\/]')).last;
+
+  /// Extension including dot, e.g. ".webp" (lower-case).
+  String get _ext {
+    final String n = _name;
+    final int dot = n.lastIndexOf('.');
+    return dot == -1 ? '' : n.substring(dot).toLowerCase();
+  }
+
+  /// Stem without extension, e.g. "testimage".
+  String get _stem {
+    final String n = _name;
+    final int dot = n.lastIndexOf('.');
+    return dot == -1 ? n : n.substring(0, dot);
+  }
+
   String get _dir => widget.file.parent.path;
   String get _fileSize {
     try {
@@ -1889,20 +1984,38 @@ class _FileRowState extends State<_FileRow> {
                 ),
                 const SizedBox(width: 10),
 
-                // Info
                 // ── Info (File name & Directory) ──
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        _name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
-                          color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(210),
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      // Extension-preserving overflow: stem is clipped, ext is
+                      // always shown. e.g. "testest....webp" instead of "testest..."
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Flexible(
+                            child: Text(
+                              _stem,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
+                                color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(210),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                          if (_ext.isNotEmpty)
+                            Text(
+                              _ext,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
+                                color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(210),
+                              ),
+                            ),
+                        ],
                       ),
                       Text(
                         _dir,
@@ -1913,46 +2026,73 @@ class _FileRowState extends State<_FileRow> {
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
 
                 // ── File Size / Hover Actions Stack ──
-                SizedBox(
-                  width: 50, // Give it a fixed width so it occupies stable space
+                // On hover: show three icon buttons (copy image, copy file, convert).
+                // At rest: show file size.
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 130),
+                  width: _hovered ? 82 : 44,
                   height: 28,
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      // 1. File Size Label (Visible by default, fades out on hover)
-                      AnimatedOpacity(
-                        duration: const Duration(milliseconds: 130),
-                        opacity: _hovered ? 0.0 : 1.0,
-                        child: Text(
-                          _fileSize,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: widget.onSurface.withAlpha(140),
-                            fontWeight: FontWeight.w500,
+                  // ClipRect ensures children never paint or lay out outside
+                  // the container bounds during the width animation.
+                  child: ClipRect(
+                    child: OverflowBox(
+                      maxWidth: 82,
+                      alignment: Alignment.centerRight,
+                      child: Stack(
+                        alignment: Alignment.centerRight,
+                        children: <Widget>[
+                          // File size — fades out on hover
+                          AnimatedOpacity(
+                            duration: const Duration(milliseconds: 130),
+                            opacity: _hovered ? 0.0 : 1.0,
+                            child: Text(
+                              _fileSize,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: widget.onSurface.withAlpha(140),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                            ),
                           ),
-                          maxLines: 1,
-                        ),
-                      ),
 
-                      // 2. Action Button (Hidden by default, fades in on hover over the text)
-                      AnimatedOpacity(
-                        duration: const Duration(milliseconds: 130),
-                        opacity: _hovered ? 1.0 : 0.0,
-                        // IgnorePointer prevents accidental clicks when it's hidden
-                        child: IgnorePointer(
-                          ignoring: !_hovered,
-                          child: _RowAction(
-                            icon: Icons.auto_fix_high_rounded,
-                            tooltip: 'Convert this image',
-                            accent: widget.accent,
-                            onTap: widget.onConvertSingle,
+                          // Action buttons — fade in on hover
+                          AnimatedOpacity(
+                            duration: const Duration(milliseconds: 130),
+                            opacity: _hovered ? 1.0 : 0.0,
+                            child: IgnorePointer(
+                              ignoring: !_hovered,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  _RowAction(
+                                    icon: Icons.copy_rounded,
+                                    tooltip: 'Copy image to clipboard',
+                                    accent: widget.accent,
+                                    onTap: widget.onCopyImage,
+                                  ),
+                                  _RowAction(
+                                    icon: Icons.file_copy_outlined,
+                                    tooltip: 'Copy image file',
+                                    accent: widget.accent,
+                                    onTap: widget.onCopyImageFile,
+                                  ),
+                                  _RowAction(
+                                    icon: Icons.auto_fix_high_rounded,
+                                    tooltip: 'Convert this image',
+                                    accent: widget.accent,
+                                    onTap: widget.onConvertSingle,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
 
@@ -2082,7 +2222,25 @@ class _FolderRowState extends State<_FolderRow> {
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: widget.accent),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
+              // Delete button — shown on hover
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 130),
+                opacity: _hovered ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_hovered,
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                    tooltip: 'Remove watched folder',
+                    splashRadius: 14,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                    color: Colors.red.withAlpha(180),
+                    onPressed: widget.onRemove,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
             ],
           ),
         ),

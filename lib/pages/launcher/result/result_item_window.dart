@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../models/settings.dart';
-import '../../models/win32/window.dart';
-import '../../models/window_watcher.dart';
-import '../../widgets/widgets/extracted_icon.dart';
+import '../../../models/settings.dart';
+import '../../../models/win32/window.dart';
+import '../../../models/window_watcher.dart';
+import '../../../widgets/widgets/extracted_icon.dart';
 
 /// A single window result row in the launcher list.
 ///

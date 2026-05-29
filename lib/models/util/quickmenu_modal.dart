@@ -121,7 +121,7 @@ Future<void> showQuickMenuModal({
                                               QuickMenuDesigns.classic => 0.88,
                                               QuickMenuDesigns.interface => 0.93,
                                               // ignore: unreachable_switch_case
-                                              _ => 0.90,
+                                              _ => 0.95,
                                             }),
                               border: Border(
                                 top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),

@@ -814,6 +814,9 @@ class Win32 {
           verticalPosition -= 70;
           horizontalPosition -= 10;
           break;
+        case QuickMenuDesigns.serene:
+          verticalPosition -= 40;
+          break;
       }
     }
     await WindowManager.instance.setPosition(Offset(horizontalPosition + 1, verticalPosition));

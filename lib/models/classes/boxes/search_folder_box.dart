@@ -11,6 +11,7 @@ class SearchFolder {
   final bool includeFiles;
   final List<String> allowedExtensions; // Should include the dot, e.g., '.exe'
   final int? maxDepth;
+  final String? excludePath;
 
   SearchFolder({
     required this.path,
@@ -18,6 +19,7 @@ class SearchFolder {
     this.includeFiles = true,
     this.allowedExtensions = const <String>[],
     this.maxDepth,
+    this.excludePath,
   });
 
   SearchFolder copyWith({
@@ -26,6 +28,7 @@ class SearchFolder {
     bool? includeFiles,
     List<String>? allowedExtensions,
     int? maxDepth,
+    String? excludePath,
   }) {
     return SearchFolder(
       path: path ?? this.path,
@@ -33,6 +36,7 @@ class SearchFolder {
       includeFiles: includeFiles ?? this.includeFiles,
       allowedExtensions: allowedExtensions ?? this.allowedExtensions,
       maxDepth: maxDepth ?? this.maxDepth,
+      excludePath: excludePath ?? this.excludePath,
     );
   }
 
@@ -43,6 +47,7 @@ class SearchFolder {
       'includeFiles': includeFiles,
       'allowedExtensions': allowedExtensions,
       'maxDepth': maxDepth,
+      'excludePath': excludePath,
     };
   }
 
@@ -53,6 +58,7 @@ class SearchFolder {
       includeFiles: (map['includeFiles'] ?? false) as bool,
       allowedExtensions: List<String>.from((map['allowedExtensions'] ?? const <String>[]) as List<dynamic>),
       maxDepth: map['maxDepth'] != null ? map['maxDepth'] as int : null,
+      excludePath: map['excludePath'] != null ? map['excludePath'] as String : null,
     );
   }
 
@@ -62,7 +68,7 @@ class SearchFolder {
 
   @override
   String toString() {
-    return 'SearchFolder(path: $path, includeFolders: $includeFolders, includeFiles: $includeFiles, allowedExtensions: $allowedExtensions, maxDepth: $maxDepth)';
+    return 'SearchFolder(path: $path, includeFolders: $includeFolders, includeFiles: $includeFiles, allowedExtensions: $allowedExtensions, maxDepth: $maxDepth, excludePath: $excludePath)';
   }
 
   @override
@@ -72,12 +78,18 @@ class SearchFolder {
     return other.path == path &&
         other.includeFolders == includeFolders &&
         other.includeFiles == includeFiles &&
+        other.excludePath == excludePath &&
         listEquals(other.allowedExtensions, allowedExtensions) &&
         other.maxDepth == maxDepth;
   }
 
   @override
   int get hashCode {
-    return path.hashCode ^ includeFolders.hashCode ^ includeFiles.hashCode ^ allowedExtensions.hashCode ^ maxDepth.hashCode;
+    return path.hashCode ^
+        includeFolders.hashCode ^
+        includeFiles.hashCode ^
+        excludePath.hashCode ^
+        allowedExtensions.hashCode ^
+        maxDepth.hashCode;
   }
 }

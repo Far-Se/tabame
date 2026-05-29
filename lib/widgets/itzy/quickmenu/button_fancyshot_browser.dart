@@ -98,7 +98,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
 
     // Create a pool of concurrent workers (3-4 is ideal for CPU-bound ffmpeg tasks)
     final Pool pool = Pool(4);
-    final List<Future<void>> futures = [];
+    final List<Future<void>> futures = <Future<void>>[];
 
     for (int i = 0; i < pngs.length; i++) {
       final File src = pngs[i];

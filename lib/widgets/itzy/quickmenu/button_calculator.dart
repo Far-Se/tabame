@@ -372,7 +372,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                   "Management",
                   "Assign or update variables manually by writing '[a-z]=expression'. "
                       "Click on any history entry's expression to edit it.",
-                  <String>["a = 50", "a = b * 10", "Click entry to edit"],
+                  <String>["a = 50", "a = b * 10", "Click entry to edit", "/clear - clears the history"],
                   accent,
                   onSurface,
                 ),

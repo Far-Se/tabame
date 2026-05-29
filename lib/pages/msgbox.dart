@@ -11,6 +11,8 @@ import '../models/theme.dart';
 const Size _messageBoxSize = Size(420, 280);
 
 Future<void> showMessage(List<String> arguments) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   const WindowOptions windowOptions = WindowOptions(
     size: _messageBoxSize,
     center: true,

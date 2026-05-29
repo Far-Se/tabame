@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../models/classes/saved_maps.dart';
-import '../../models/settings.dart';
-import '../../widgets/itzy/quickmenu/bookmark_icon.dart';
+import '../../../models/classes/saved_maps.dart';
+import '../../../models/settings.dart';
+import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
 
 // ---------------------------------------------------------------------------
 // File icon helper
@@ -123,10 +123,7 @@ class LauncherListItem extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          // Show shortened path when selected — replaces the
-                          // old _hovered-only truncation. The full path is
-                          // always readable via ellipsis when not selected.
-                          isSelected ? path.lastChars(40) : path,
+                          path,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

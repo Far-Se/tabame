@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../models/win32/win_utils.dart';
-import '../../widgets/widgets/custom_tooltip.dart';
-import '../launcher_search_models.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../../widgets/widgets/custom_tooltip.dart';
+import '../../launcher_search_models.dart';
 
 class AppResultIcon extends StatelessWidget {
   const AppResultIcon({

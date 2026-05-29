@@ -64,7 +64,7 @@ import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
-import 'interface/result_item_bookmark.dart';
+import 'launcher/result/result_item_bookmark.dart';
 import 'launcher_search_models.dart';
 
 class ActionsPanelScaffold extends StatefulWidget {

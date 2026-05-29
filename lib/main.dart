@@ -21,7 +21,6 @@ import 'run.dart';
 import 'widgets/widgets/focus_fix.dart';
 
 Future<void> main(List<String> arguments) async {
-  if (arguments.contains("-run")) return startRun(arguments);
   await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
   // return startSpotlight();
@@ -37,6 +36,7 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);
+  if (arguments.contains("-run")) return showRunStatus(arguments);
   await AppStartup.registerServices();
 
   if (await AppStartup.checkAdminAndRestart()) return;

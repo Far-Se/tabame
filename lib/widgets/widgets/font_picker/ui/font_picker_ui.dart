@@ -567,7 +567,7 @@ class _FontPickerUIState extends State<FontPickerUI> {
     'Hind Siliguri',
     'Hind Vadodara',
     'Holtwood One SC',
-    'Homemade Apple',
+    'Homemade Serene',
     'Homenaje',
     'Hubballi',
     'Hurricane',

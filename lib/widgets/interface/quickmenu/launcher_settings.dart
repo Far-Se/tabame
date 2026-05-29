@@ -511,6 +511,7 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
   late TextEditingController _pathController;
   late TextEditingController _extensionsController;
   late TextEditingController _depthController;
+  late TextEditingController _excludeController;
 
   @override
   void initState() {
@@ -520,6 +521,32 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
     _pathController = TextEditingController(text: _folder.path);
     _extensionsController = TextEditingController(text: _folder.allowedExtensions.join(", "));
     _depthController = TextEditingController(text: _folder.maxDepth?.toString() ?? "");
+    _excludeController = TextEditingController(text: _folder.excludePath?.toString() ?? "");
+
+    _excludeController.addListener(_validateRegex);
+  }
+
+  String? _regexError;
+  Timer? _debounce;
+
+  void _validateRegex() {
+    _debounce?.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final String text = _excludeController.text;
+      if (text.isEmpty) {
+        setState(() => _regexError = null);
+        return;
+      }
+
+      try {
+        RegExp(text);
+        setState(() => _regexError = null);
+      } catch (e) {
+        setState(() => _regexError = "Invalid regex: $e");
+      }
+    });
   }
 
   void _setExtensions(String extList) {
@@ -613,41 +640,75 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
           ),
           const SizedBox(height: 16),
           // Extensions
-          TextField(
-            controller: _extensionsController,
-            decoration: InputDecoration(
-              labelText: "File Extensions (comma separated)",
-              hintText: ".exe, .lnk, .dart",
-              filled: true,
-              fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              prefixIcon: const Icon(Icons.extension_rounded, size: 18),
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Presets
-          Wrap(
-            spacing: 8,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif"),
-              _presetChip("⚙️ Apps", ".exe,.msi,.bat,.ps1,.lnk"),
-              _presetChip("📄 Docs", ".pdf,.docx,.txt,.md,.rtf"),
-              _presetChip("🎬 Video", ".mp4,.mkv,.avi,.mov"),
-              _presetChip("💻 Code", ".dart,.js,.py,.cpp,.html"),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    TextField(
+                      controller: _extensionsController,
+                      decoration: InputDecoration(
+                        labelText: "File Extensions (comma separated)",
+                        hintText: ".exe, .lnk, .dart",
+                        filled: true,
+                        fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                        border:
+                            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        prefixIcon: const Icon(Icons.extension_rounded, size: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Presets
+                    Wrap(
+                      spacing: 8,
+                      children: <Widget>[
+                        _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif"),
+                        _presetChip("⚙️ Apps", ".exe,.msi,.bat,.ps1,.lnk"),
+                        _presetChip("📄 Docs", ".pdf,.docx,.txt,.md,.rtf"),
+                        _presetChip("🎬 Video", ".mp4,.mkv,.avi,.mov"),
+                        _presetChip("💻 Code", ".dart,.js,.py,.cpp,.html"),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Depth
+              Expanded(
+                child: TextField(
+                  controller: _depthController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Search Depth (Empty = Recursive)",
+                    hintText: "1 = This folder only",
+                    filled: true,
+                    fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    prefixIcon: const Icon(Icons.layers_rounded, size: 18),
+                  ),
+                ),
+              ),
             ],
           ),
+
           const SizedBox(height: 16),
-          // Depth
           TextField(
-            controller: _depthController,
-            keyboardType: TextInputType.number,
+            controller: _excludeController,
             decoration: InputDecoration(
-              labelText: "Search Depth (Empty = Recursive)",
-              hintText: "1 = This folder only",
+              labelText: "Exclude path (regex aware)",
+              hintText: r"\Wnode_modules\W|\Wbuild\W|\Wdll$|\Wbin\W",
               filled: true,
               fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
               prefixIcon: const Icon(Icons.layers_rounded, size: 18),
+              errorText: _regexError?.replaceAll("\n", " - "),
             ),
           ),
           const SizedBox(height: 24),
@@ -658,19 +719,22 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
               TextButton(onPressed: widget.onCancel, child: const Text("Discard")),
               const SizedBox(width: 12),
               FilledButton(
-                onPressed: () {
-                  if (_pathController.text.isEmpty) return;
-                  final List<String> exts = _extensionsController.text
-                      .split(",")
-                      .map((String e) => e.trim())
-                      .where((String e) => e.isNotEmpty)
-                      .toList();
-                  widget.onSaved(_folder.copyWith(
-                    path: _pathController.text,
-                    allowedExtensions: exts,
-                    maxDepth: int.tryParse(_depthController.text),
-                  ));
-                },
+                onPressed: _regexError != null
+                    ? null
+                    : () {
+                        if (_pathController.text.isEmpty) return;
+                        final List<String> exts = _extensionsController.text
+                            .split(",")
+                            .map((String e) => e.trim())
+                            .where((String e) => e.isNotEmpty)
+                            .toList();
+                        widget.onSaved(_folder.copyWith(
+                          path: _pathController.text,
+                          allowedExtensions: exts,
+                          maxDepth: int.tryParse(_depthController.text),
+                          excludePath: _excludeController.text,
+                        ));
+                      },
                 style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../models/classes/app_items.dart';
-import '../../models/classes/saved_maps.dart';
-import '../../models/settings.dart';
-import '../../widgets/itzy/quickmenu/bookmark_icon.dart';
-import '../../widgets/widgets/custom_tooltip.dart';
+import '../../../models/classes/app_items.dart';
+import '../../../models/classes/saved_maps.dart';
+import '../../../models/settings.dart';
+import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
+import '../../../widgets/widgets/custom_tooltip.dart';
 
 // ---------------------------------------------------------------------------
 // Bookmark search result union type
@@ -217,7 +217,7 @@ class _KindBadge extends StatelessWidget {
       case BookmarkResultKind.bookmark:
         label = 'BM';
         icon = Icons.bookmark_rounded;
-        color = Colors.deepPurple;
+        color = const Color(0xFF8F83D8);
       case BookmarkResultKind.cliBook:
         label = 'CLI';
         icon = Icons.terminal_rounded;

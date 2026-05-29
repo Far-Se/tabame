@@ -39,12 +39,13 @@ class MiniToggleSwitch extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: value
-                ? (activeTrackColor ?? activeThumbColor ?? theme.accentColor).withAlpha(40)
+                ? (activeTrackColor ?? activeThumbColor ?? User.theme.accentColor).withAlpha(40)
                 : colors.onSurface.withAlpha(20),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color:
-                  value ? (activeThumbColor ?? theme.accentColor).withAlpha(100) : colors.outlineVariant.withAlpha(40),
+              color: value
+                  ? (activeThumbColor ?? User.theme.accentColor).withAlpha(100)
+                  : colors.outlineVariant.withAlpha(40),
             ),
           ),
           child: AnimatedAlign(
@@ -55,7 +56,7 @@ class MiniToggleSwitch extends StatelessWidget {
               width: 12,
               height: 12,
               decoration: BoxDecoration(
-                color: value ? (activeThumbColor ?? theme.accentColor) : colors.onSurfaceVariant.withAlpha(100),
+                color: value ? (activeThumbColor ?? User.theme.accentColor) : colors.onSurfaceVariant.withAlpha(100),
                 shape: BoxShape.circle,
               ),
             ),

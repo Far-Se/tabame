@@ -265,21 +265,38 @@ class Settings {
     }
   }
 
+  // --- String Getters / Setters ---
   static String? getString(String key) => _data[key] as String?;
+
   static void setString(String key, String value) {
     _data[key] = value;
     save();
   }
 
+  // --- Boolean Getters / Setters ---
+  static bool? getBool(String key) => _data[key] as bool?;
+
+  static void setBool(String key, bool value) {
+    _data[key] = value;
+    save();
+  }
+
+  // --- Integer Getters / Setters ---
+  static int? getInt(String key) => _data[key] as int?;
+
+  static void setInt(String key, int value) {
+    _data[key] = value;
+    save();
+  }
+
+  // --- Specific Settings ---
   static int getCaptureDelaySeconds() {
-    final dynamic raw = _data['captureDelaySeconds'];
-    if (raw is int) return raw;
-    return 0;
+    // Reuses the new getInt helper with a fallback default of 0
+    return getInt('captureDelaySeconds') ?? 0;
   }
 
   static void setCaptureDelaySeconds(int value) {
-    _data['captureDelaySeconds'] = value;
-    save();
+    setInt('captureDelaySeconds', value);
   }
 }
 
@@ -434,9 +451,8 @@ class ScreenCapture {
       dir.createSync(recursive: true);
       WinUtils.setSortByDateModifiedDesc(dir.path);
     }
-
-    final String ts =
-        DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-').replaceFirst(RegExp(r'^.*?T'), '');
+    DateTime now = DateTime.now();
+    final String ts = intl.DateFormat('d EEEE HH-mm-ss').format(now);
     final String path = '${dir.path}\\$ts.png';
     await File(path).writeAsBytes(pngBytes);
     return path;

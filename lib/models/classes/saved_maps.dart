@@ -420,6 +420,7 @@ class ThemeColors {
   List<double> panelOpacityPoints;
   String panelOpacityBegin;
   String panelOpacityEnd;
+  double borderRadius;
   ThemeColors({
     required this.background,
     required this.gradientAlpha,
@@ -437,6 +438,7 @@ class ThemeColors {
     this.panelOpacityPoints = const <double>[0.0, 1.0, 1.0, 1.0],
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
+    this.borderRadius = 10.0,
   });
 
 // #region (collapsed) [ThemeColors]
@@ -459,6 +461,7 @@ class ThemeColors {
     List<double>? panelOpacityPoints,
     String? panelOpacityBegin,
     String? panelOpacityEnd,
+    double? borderRadius,
   }) {
     return ThemeColors(
       background: background ?? this.background,
@@ -477,6 +480,7 @@ class ThemeColors {
       panelOpacityPoints: panelOpacityPoints ?? this.panelOpacityPoints,
       panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
       panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
+      borderRadius: borderRadius ?? this.borderRadius,
     );
   }
 
@@ -498,6 +502,7 @@ class ThemeColors {
       'panelOpacityPoints': panelOpacityPoints,
       'panelOpacityBegin': panelOpacityBegin,
       'panelOpacityEnd': panelOpacityEnd,
+      'borderRadius': borderRadius,
     };
   }
 
@@ -521,6 +526,7 @@ class ThemeColors {
               const <double>[0.0, 1.0, 1.0, 1.0]),
       panelOpacityBegin: (map['panelOpacityBegin'] ?? 'Top Left') as String,
       panelOpacityEnd: (map['panelOpacityEnd'] ?? 'Bottom Right') as String,
+      borderRadius: (map['borderRadius'] as num?)?.toDouble() ?? 10.0,
     );
   }
 
@@ -530,7 +536,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius)';
   }
 
   @override
@@ -552,6 +558,7 @@ class ThemeColors {
         other.backdropOpacity == backdropOpacity &&
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
+        other.borderRadius == borderRadius &&
         other.panelOpacityEnd == panelOpacityEnd;
   }
 
@@ -569,6 +576,7 @@ class ThemeColors {
         entryFontItalic.hashCode ^
         backdropImages.hashCode ^
         backdropType.hashCode ^
+        borderRadius.hashCode ^
         panelOpacityPoints.hashCode;
   }
 // #endregion

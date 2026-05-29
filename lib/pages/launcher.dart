@@ -19,7 +19,6 @@ import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
-import '../models/theme.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
@@ -28,10 +27,10 @@ import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
-import 'interface/result_item_app.dart';
-import 'interface/result_item_bookmark.dart';
-import 'interface/result_item_file.dart';
-import 'interface/result_item_window.dart';
+import 'launcher/result/result_item_app.dart';
+import 'launcher/result/result_item_bookmark.dart';
+import 'launcher/result/result_item_file.dart';
+import 'launcher/result/result_item_window.dart';
 import 'launcher/search/bookmarks_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
 import 'launcher/search/launcher_search_context.dart';
@@ -39,8 +38,11 @@ import 'launcher/search/search_handler.dart';
 import 'launcher/search/search_utils.dart';
 import 'launcher/search/windows_search_handler.dart';
 import 'launcher_search_models.dart';
+import 'launcher/launcher_design.dart';
+import 'launcher/launcher_design_builder.dart';
+import 'launcher/result/results_item_serene.dart';
 
-export 'interface/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
+export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
 
 // Constants
 // ---------------------------------------------------------------------------
@@ -124,6 +126,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   final ValueNotifier<bool> _isRepeatingKey = ValueNotifier<bool>(false);
   final Map<String, GlobalKey> _quickActionKeys = <String, GlobalKey>{};
   final Map<String, GlobalKey> _resultKeys = <String, GlobalKey>{};
+  String? _infoText;
+  IconData? _infoIcon;
   String? _quickActionSplashId;
   bool _mouseSelectionEnabled = true;
   Offset? _lastMousePosition;
@@ -133,6 +137,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   LogicalKeyboardKey? _lastPressedKey;
   bool _isRepairingFileIndex = false;
   bool _isSyncingLauncherAppsCatalog = false;
+  LauncherDesign _design = LauncherDesign.serene;
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   bool _isSearching = false;
@@ -171,13 +176,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.manage_search_rounded,
       handler: _buildFunctionReindexResults,
     ),
-    _LauncherFunctionCommand(
-      name: 'reload',
-      description: 'Reload Hotkeys',
-      usage: r'$reload settings',
-      icon: Icons.manage_search_rounded,
-      handler: _buildFunctionReloadSettingsResults,
-    ),
+    // _LauncherFunctionCommand(
+    //   name: 'reload',
+    //   description: 'Reload Hotkeys',
+    //   usage: r'$reload settings',
+    //   icon: Icons.manage_search_rounded,
+    //   handler: _buildFunctionReloadSettingsResults,
+    // ),
     _LauncherFunctionCommand(
       name: 'unit',
       description: 'Convert units',
@@ -271,6 +276,31 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.menu_rounded,
     )),
   ];
+  void _copyItem() {
+    if (_results.isEmpty) return;
+
+    final int idx = _activeIndexNotifier.value.clamp(0, _results.length - 1);
+    final LauncherSearchResultItem item = _results[idx];
+
+    // Shortcuts and info rows have no meaningful actions.
+    if (item.isShortcut || item.isInfo) return;
+    if (item.isFile && item.entity != null) {
+      final bool isDir = item.entity is Directory;
+      isDir ? ClipboardExtension.copyFolder(item.entity!.path) : ClipboardExtension.copyFile(item.entity!.path);
+      _infoText = "${isDir ? "Folder" : "File"} Copied";
+      _infoIcon = isDir ? Icons.folder_rounded : Icons.file_copy_rounded;
+      // final String oldTitle = item.bookmarkResult!.bookmark!.title;
+      // item.bookmarkResult!.bookmark!.title = "Copied";
+      if (mounted) setState(() {});
+      Future<void>.delayed(const Duration(milliseconds: 500), () {
+        _infoText = null;
+        _infoIcon = null;
+        // item.bookmarkResult!.bookmark!.title = oldTitle;
+        if (mounted) setState(() {});
+      });
+      // item.
+    }
+  }
 
   void _openActionsForActiveResult() {
     if (_results.isEmpty) return;
@@ -297,6 +327,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           event.logicalKey == LogicalKeyboardKey.keyK &&
           HardwareKeyboard.instance.isControlPressed) {
         _openActionsForActiveResult();
+        setState(() {});
+        return KeyEventResult.handled;
+      }
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.keyC &&
+          HardwareKeyboard.instance.isControlPressed) {
+        _copyItem();
         setState(() {});
         return KeyEventResult.handled;
       }
@@ -351,7 +388,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void initState() {
     super.initState();
     QuickMenuFunctions.addListener(this);
-
+    final int savedIndex = Boxes.pref.getInt('launcherDesign') ?? 0;
+    _design = LauncherDesign.values[savedIndex.clamp(0, LauncherDesign.values.length - 1)];
     _controller.text = userSettings.launcherSearchText;
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
@@ -371,6 +409,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       unawaited(_refreshLauncherCatalogs());
 
       _onSearchChanged(_controller.text);
+      Future<void>.delayed(const Duration(milliseconds: 4),
+          () => _controller.selection = TextSelection.collapsed(offset: _controller.text.length));
+      // setState(() {});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -382,7 +423,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Future<void>.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         windowManager.focus();
-        _focusNode.requestFocus();
+        _resetSelection();
       }
     });
   }
@@ -678,7 +719,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (!_canFocusLauncher) return;
       if (focusWindow) unawaited(windowManager.focus());
       if (!_focusNode.hasPrimaryFocus) {
-        _focusNode.requestFocus();
+        _resetSelection();
       }
     }
 
@@ -707,19 +748,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
     if (key == LogicalKeyboardKey.arrowDown) {
-      if (_activeIndexNotifier.value < _results.length - 1) {
-        _activeIndexNotifier.value++;
-        _scrollToActiveIndex();
-      }
+      _activeIndexNotifier.value = ((_activeIndexNotifier.value + 1) % _results.length).toInt();
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      if (_activeIndexNotifier.value > 0) {
-        _activeIndexNotifier.value--;
-        _scrollToActiveIndex();
-      } else {
-        _activeIndexNotifier.value = _results.length - 1;
-        _scrollToActiveIndex();
-      }
+      _activeIndexNotifier.value = ((_activeIndexNotifier.value - 1 + _results.length) % _results.length).toInt();
     }
+    _scrollToActiveIndex();
   }
 
   void _scrollToActiveIndex() {
@@ -1099,7 +1132,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (mounted) {
       _controller.clear();
       _setResults(_launcherShortcuts, isSearching: false);
-      _focusNode.requestFocus();
+      _resetSelection();
     }
 
     if (kReleaseMode) {
@@ -1187,7 +1220,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
         _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
         _onSearchChanged(_controller.text);
-        _focusNode.requestFocus();
+        _resetSelection();
       },
     );
   }
@@ -1286,6 +1319,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _finishLauncherFunctionExecution();
   }
 
+  // ignore: unused_element
   Future<List<LauncherSearchResultItem>> _buildFunctionReloadSettingsResults(String input) async {
     if (input.trim().toLowerCase() != 'settings') {
       return <LauncherSearchResultItem>[
@@ -1772,7 +1806,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     _onSearchChanged(_controller.text);
-    _focusNode.requestFocus();
+    _resetSelection();
   }
 
   void _onSubmitted(String query) {
@@ -1810,7 +1844,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       _runQuickAction(result.quickAction!);
     }
 
-    _focusNode.requestFocus();
+    _resetSelection();
   }
 
   void _openBookmarkResult(BookmarkSearchResult result) {
@@ -2007,9 +2041,26 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     triggerFirstTappableDescendant(actionKey.currentContext);
   }
 
+  void handlePostFrameCallback(TextSelection savedSelection) {
+    if (savedSelection.isValid) {
+      _controller.selection = savedSelection;
+    } else {
+      // Fallback: collapse to end if previous selection was invalid
+      final int len = _controller.text.length;
+      _controller.selection = TextSelection.collapsed(offset: len);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
+  void _resetSelection() {
+    final TextSelection savedSelection = _controller.selection;
+    _focusNode.requestFocus();
+
+    Future<void>.delayed(const Duration(milliseconds: 4), () => handlePostFrameCallback(savedSelection));
+    WidgetsBinding.instance.addPostFrameCallback((_) => handlePostFrameCallback(savedSelection));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2023,230 +2074,368 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTap: () => _focusNode.requestFocus(),
+        onTap: () {
+          _resetSelection();
+        },
         onSecondaryTap: () {
           _openActionsForActiveResult();
         },
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 360),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[
-                theme.colorScheme.surface.withAlpha(245),
-                Color.alphaBlend(accent.withAlpha(24), theme.colorScheme.surface),
-                Color.alphaBlend(accent.withAlpha(10), theme.colorScheme.surface),
-              ],
-            ),
-            border: Border.all(color: accent.withAlpha(28)),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withAlpha(18),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // Search bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface.withAlpha(210),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withAlpha(32)),
-                ),
-                child: Row(
+        child: _design == LauncherDesign.serene
+            ? SereneLauncherFrame(
+                accent: accent,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2.0),
-                      child: GestureDetector(
+                    // Search bar
+
+                    _design.buildSearchBar(
+                      surface: theme.colorScheme.surface,
+                      accent: accent,
+                      onSurface: onSurface,
+                      dragHandle: GestureDetector(
                         behavior: HitTestBehavior.translucent,
-                        onPanStart: (DragStartDetails details) {
-                          windowManager.startDragging();
-                        },
-                        child: Icon(Icons.search_rounded, size: 20, color: accent),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          TextField(
-                            controller: _controller,
-                            focusNode: _focusNode,
-                            autofocus: true,
-                            onTapOutside: (_) => _focusNode.requestFocus(),
-                            // Keep keyboard focus on the search field after Enter.
-                            onEditingComplete: () {},
-                            decoration: InputDecoration(
-                              hintText: 'Search files and quick actions...',
-                              hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                                color: onSurface.withAlpha(105),
-                                fontWeight: FontWeight.w400,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.only(top: 2),
-                            ),
-                            onChanged: _onSearchChanged,
-                            onSubmitted: (String value) => _onSubmitted(value),
-                            style: TextStyle(
-                              fontFamily: userSettings.themeColors.entryFontFamily,
-                              fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
-                              fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                              color: onSurface,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_isSearching)
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: accent.withAlpha(100),
+                        onPanStart: (_) => windowManager.startDragging(),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: _design == LauncherDesign.serene ? 22 : 20,
+                          color: _design == LauncherDesign.serene ? onSurface.withAlpha(160) : accent,
                         ),
                       ),
+                      textField: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: onSurface,
+                          fontSize: _design == LauncherDesign.serene ? 16 : 15,
+                          fontWeight: _design == LauncherDesign.serene ? FontWeight.w400 : null,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search applications, files, bookmarks...',
+                          hintStyle: TextStyle(color: onSurface.withAlpha(70)),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.only(
+                            left: 0,
+                            top: 6,
+                            bottom: 6,
+                            right: _infoText != null ? 120 : 8,
+                          ),
+                        ),
+                        onChanged: _onSearchChanged,
+                        onSubmitted: _onSubmitted,
+                      ),
+                      trailingBadge: _infoText != null ? _buildInfoBadge(accent, onSurface) : null,
+                      isSearching: _isSearching,
+                    ),
+                    // Results area
+                    Material(
+                      type: MaterialType.transparency,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 260, maxHeight: 320),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (!hasInput && _results.isNotEmpty)
+                              _design.buildSectionHeader(label: 'Results', accent: accent),
+                            if (Boxes.searchFolders.isEmpty &&
+                                (_searchMode == LauncherSearchMode.filesOnly ||
+                                    _searchMode == LauncherSearchMode.mixed))
+                              Expanded(
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Icon(Icons.folder_off_rounded, size: 48, color: accent.withAlpha(40)),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No Search Folders Configured',
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            color: onSurface.withAlpha(180),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: onSurface.withAlpha(100),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ValueListenableBuilder<int>(
+                                    valueListenable: _activeIndexNotifier,
+                                    builder: (BuildContext context, int activeIndex, Widget? child) {
+                                      return ValueListenableBuilder<bool>(
+                                        valueListenable: _isRepeatingKey,
+                                        builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                                          return ListView.builder(
+                                            controller: _scrollController,
+                                            shrinkWrap: true,
+                                            itemCount: _results.length,
+                                            itemBuilder: (BuildContext context, int index) {
+                                              final LauncherSearchResultItem result = _results[index];
+                                              final bool isSelected = index == activeIndex;
+                                              late final Widget resultWidget;
+                                              if (result.isShortcut) {
+                                                resultWidget = _buildShortcutResult(context, theme, result.shortcut!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else if (result.isFile) {
+                                                resultWidget = _buildFileResult(context, theme, result.entity!,
+                                                    result.nodeId, index, isSelected, isRepeatingKey);
+                                              } else if (result.isApp) {
+                                                resultWidget = _buildAppResult(context, theme, result.appResult!,
+                                                    result.nodeId, index, isSelected, isRepeatingKey);
+                                              } else if (result.isWindow) {
+                                                resultWidget = _buildWindowResult(
+                                                    context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                              } else if (result.isBookmark) {
+                                                resultWidget = _buildBookmarkResult(context, theme,
+                                                    result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                              } else if (result.isNotion) {
+                                                resultWidget = _buildNotionResult(context, theme, result.notionResult!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else if (result.isInfo) {
+                                                resultWidget = _buildInfoResult(context, theme, result.infoResult!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else {
+                                                resultWidget = _buildQuickActionResult(context, theme,
+                                                    result.quickAction!, index, isSelected, isRepeatingKey);
+                                              }
+                                              return KeyedSubtree(
+                                                key: _resultKeys[_resultKeyId(result, index)],
+                                                child: MouseRegion(
+                                                  onHover: (PointerHoverEvent event) =>
+                                                      _selectResultFromPointerHover(event, index),
+                                                  child: Stack(
+                                                    alignment: Alignment.centerRight,
+                                                    children: <Widget>[
+                                                      resultWidget,
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Container(
+                constraints: const BoxConstraints(minHeight: 360),
+                decoration: _design.outerDecoration(surface: theme.colorScheme.surface, accent: accent),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Search bar
+
+                    _design.buildSearchBar(
+                      surface: theme.colorScheme.surface,
+                      accent: accent,
+                      onSurface: onSurface,
+                      dragHandle: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onPanStart: (_) => windowManager.startDragging(),
+                        child: Icon(
+                          Icons.search_rounded,
+                          size: _design == LauncherDesign.serene ? 22 : 20,
+                          color: _design == LauncherDesign.serene ? onSurface.withAlpha(160) : accent,
+                        ),
+                      ),
+                      textField: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: onSurface,
+                          fontSize: _design == LauncherDesign.serene ? 16 : 15,
+                          fontWeight: _design == LauncherDesign.serene ? FontWeight.w400 : null,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search applications, files, bookmarks...',
+                          hintStyle: TextStyle(color: onSurface.withAlpha(70)),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.only(
+                            left: 0,
+                            top: 6,
+                            bottom: 6,
+                            right: _infoText != null ? 120 : 8,
+                          ),
+                        ),
+                        onChanged: _onSearchChanged,
+                        onSubmitted: _onSubmitted,
+                      ),
+                      trailingBadge: _infoText != null ? _buildInfoBadge(accent, onSurface) : null,
+                      isSearching: _isSearching,
+                    ),
+                    // Results area
+                    Material(
+                      type: MaterialType.transparency,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 260, maxHeight: 320),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (!hasInput && _results.isNotEmpty)
+                              _design.buildSectionHeader(label: 'Results', accent: accent),
+                            if (Boxes.searchFolders.isEmpty &&
+                                (_searchMode == LauncherSearchMode.filesOnly ||
+                                    _searchMode == LauncherSearchMode.mixed))
+                              Expanded(
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Icon(Icons.folder_off_rounded, size: 48, color: accent.withAlpha(40)),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No Search Folders Configured',
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            color: onSurface.withAlpha(180),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: onSurface.withAlpha(100),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ValueListenableBuilder<int>(
+                                    valueListenable: _activeIndexNotifier,
+                                    builder: (BuildContext context, int activeIndex, Widget? child) {
+                                      return ValueListenableBuilder<bool>(
+                                        valueListenable: _isRepeatingKey,
+                                        builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                                          return ListView.builder(
+                                            controller: _scrollController,
+                                            shrinkWrap: true,
+                                            itemCount: _results.length,
+                                            itemBuilder: (BuildContext context, int index) {
+                                              final LauncherSearchResultItem result = _results[index];
+                                              final bool isSelected = index == activeIndex;
+                                              late final Widget resultWidget;
+                                              if (result.isShortcut) {
+                                                resultWidget = _buildShortcutResult(context, theme, result.shortcut!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else if (result.isFile) {
+                                                resultWidget = _buildFileResult(context, theme, result.entity!,
+                                                    result.nodeId, index, isSelected, isRepeatingKey);
+                                              } else if (result.isApp) {
+                                                resultWidget = _buildAppResult(context, theme, result.appResult!,
+                                                    result.nodeId, index, isSelected, isRepeatingKey);
+                                              } else if (result.isWindow) {
+                                                resultWidget = _buildWindowResult(
+                                                    context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                              } else if (result.isBookmark) {
+                                                resultWidget = _buildBookmarkResult(context, theme,
+                                                    result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                              } else if (result.isNotion) {
+                                                resultWidget = _buildNotionResult(context, theme, result.notionResult!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else if (result.isInfo) {
+                                                resultWidget = _buildInfoResult(context, theme, result.infoResult!,
+                                                    index, isSelected, isRepeatingKey);
+                                              } else {
+                                                resultWidget = _buildQuickActionResult(context, theme,
+                                                    result.quickAction!, index, isSelected, isRepeatingKey);
+                                              }
+                                              return KeyedSubtree(
+                                                key: _resultKeys[_resultKeyId(result, index)],
+                                                child: MouseRegion(
+                                                  onHover: (PointerHoverEvent event) =>
+                                                      _selectResultFromPointerHover(event, index),
+                                                  child: Stack(
+                                                    alignment: Alignment.centerRight,
+                                                    children: <Widget>[
+                                                      resultWidget,
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              // Results area
-              Material(
-                type: MaterialType.transparency,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 260, maxHeight: 320),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (!hasInput && _results.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
-                          child: Text(
-                            'Results'.toUpperCase(),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: accent.withAlpha(180),
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ),
-                      if (Boxes.searchFolders.isEmpty &&
-                          (_searchMode == LauncherSearchMode.filesOnly || _searchMode == LauncherSearchMode.mixed))
-                        Expanded(
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 40),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Icon(Icons.folder_off_rounded, size: 48, color: accent.withAlpha(40)),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No Search Folders Configured',
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      color: onSurface.withAlpha(180),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: onSurface.withAlpha(100),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: _activeIndexNotifier,
-                              builder: (BuildContext context, int activeIndex, Widget? child) {
-                                return ValueListenableBuilder<bool>(
-                                  valueListenable: _isRepeatingKey,
-                                  builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                                    return ListView.builder(
-                                      controller: _scrollController,
-                                      shrinkWrap: true,
-                                      itemCount: _results.length,
-                                      itemBuilder: (BuildContext context, int index) {
-                                        final LauncherSearchResultItem result = _results[index];
-                                        final bool isSelected = index == activeIndex;
-                                        late final Widget resultWidget;
-                                        if (result.isShortcut) {
-                                          resultWidget = _buildShortcutResult(
-                                              context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                        } else if (result.isFile) {
-                                          resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
-                                              index, isSelected, isRepeatingKey);
-                                        } else if (result.isApp) {
-                                          resultWidget = _buildAppResult(context, theme, result.appResult!,
-                                              result.nodeId, index, isSelected, isRepeatingKey);
-                                        } else if (result.isWindow) {
-                                          resultWidget = _buildWindowResult(
-                                              context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                        } else if (result.isBookmark) {
-                                          resultWidget = _buildBookmarkResult(context, theme, result.bookmarkResult!,
-                                              index, isSelected, isRepeatingKey);
-                                        } else if (result.isNotion) {
-                                          resultWidget = _buildNotionResult(
-                                              context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                                        } else if (result.isInfo) {
-                                          resultWidget = _buildInfoResult(
-                                              context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                                        } else {
-                                          resultWidget = _buildQuickActionResult(
-                                              context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                                        }
-                                        return KeyedSubtree(
-                                          key: _resultKeys[_resultKeyId(result, index)],
-                                          child: MouseRegion(
-                                            onHover: (PointerHoverEvent event) =>
-                                                _selectResultFromPointerHover(event, index),
-                                            child: Stack(
-                                              alignment: Alignment.centerRight,
-                                              children: <Widget>[
-                                                resultWidget,
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 
+  Widget _buildInfoBadge(Color accent, Color onSurface) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(35),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: accent.withAlpha(70)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            _infoIcon ?? Icons.check_circle_outline_rounded,
+            size: 14,
+            color: accent,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _infoText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
   // ---------------------------------------------------------------------------
   // Item builders (delegate to split widget files)
   // ---------------------------------------------------------------------------
@@ -2312,45 +2501,72 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Widget _buildBookmarkResult(BuildContext context, ThemeData theme, BookmarkSearchResult result, int index,
       bool isSelected, bool isRepeatingKey) {
     final Color accent = userSettings.themeColors.accentColor;
-    return BookmarkSearchListItem(
-      result: result,
-      isSelected: isSelected,
-      isRepeating: isRepeatingKey,
-      accent: accent,
-      onSurface: theme.colorScheme.onSurface,
-      onTap: () => _openBookmarkResult(result),
-      onHover: () => _selectResultFromMouse(index),
-    );
+    return _design == LauncherDesign.serene
+        ? SereneBookmarkSearchListItem(
+            result: result,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openBookmarkResult(result),
+            onHover: () => _selectResultFromMouse(index))
+        : BookmarkSearchListItem(
+            result: result,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openBookmarkResult(result),
+            onHover: () => _selectResultFromMouse(index),
+          );
   }
 
   Widget _buildFileResult(BuildContext context, ThemeData theme, FileSystemEntity entity, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
     final Color accent = userSettings.themeColors.accentColor;
-    return LauncherListItem(
-      entity: entity,
-      isSelected: isSelected,
-      isRepeating: isRepeatingKey,
-      accent: accent,
-      onSurface: theme.colorScheme.onSurface,
-      isInHistory: false, // History removed
-      onTap: () => _openFile(entity.path, nodeId: nodeId),
-      onHover: () => _selectResultFromMouse(index),
-      onRemoveFromHistory: () {}, // No-op
-    );
+    return _design == LauncherDesign.serene
+        ? SereneLauncherFileListItem(
+            entity: entity,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openFile(entity.path, nodeId: nodeId),
+            onHover: () => _selectResultFromMouse(index))
+        : LauncherListItem(
+            entity: entity,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            isInHistory: false, // History removed
+            onTap: () => _openFile(entity.path, nodeId: nodeId),
+            onHover: () => _selectResultFromMouse(index),
+            onRemoveFromHistory: () {}, // No-op
+          );
   }
 
   Widget _buildAppResult(BuildContext context, ThemeData theme, LauncherAppResult app, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
     final Color accent = userSettings.themeColors.accentColor;
-    return LauncherAppListItem(
-      app: app,
-      isSelected: isSelected,
-      isRepeating: isRepeatingKey,
-      accent: accent,
-      onSurface: theme.colorScheme.onSurface,
-      onTap: () => _openAppResult(app, nodeId: nodeId),
-      onHover: () => _selectResultFromMouse(index),
-    );
+    return _design == LauncherDesign.serene
+        ? SereneAppListItem(
+            app: app,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openAppResult(app, nodeId: nodeId),
+            onHover: () => _selectResultFromMouse(index))
+        : LauncherAppListItem(
+            app: app,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openAppResult(app, nodeId: nodeId),
+            onHover: () => _selectResultFromMouse(index),
+          );
   }
 
   Widget _buildNotionResult(
@@ -2507,15 +2723,24 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Widget _buildWindowResult(
       BuildContext context, ThemeData theme, Window window, int index, bool isSelected, bool isRepeatingKey) {
     final Color accent = userSettings.themeColors.accentColor;
-    return WindowSearchListItem(
-      window: window,
-      isSelected: isSelected,
-      isRepeating: isRepeatingKey,
-      accent: accent,
-      onSurface: theme.colorScheme.onSurface,
-      onTap: () => _openWindow(window),
-      onHover: () => _selectResultFromMouse(index),
-    );
+    return _design == LauncherDesign.serene
+        ? SereneWindowSearchListItem(
+            window: window,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openWindow(window),
+            onHover: () => _selectResultFromMouse(index))
+        : WindowSearchListItem(
+            window: window,
+            isSelected: isSelected,
+            isRepeating: isRepeatingKey,
+            accent: accent,
+            onSurface: theme.colorScheme.onSurface,
+            onTap: () => _openWindow(window),
+            onHover: () => _selectResultFromMouse(index),
+          );
   }
 }
 

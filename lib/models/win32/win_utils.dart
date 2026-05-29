@@ -931,14 +931,14 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
         for (final RegExpMatch match in matches) {
           final String tag = match.group(0)!;
 
-          // Check rel="icon", "shortcut icon", "apple-touch-icon"
+          // Check rel="icon", "shortcut icon", "Serene-touch-icon"
           final RegExp relRegExp = RegExp('rel=["\']([^"\']+)["\']', caseSensitive: false);
           final RegExpMatch? relMatch = relRegExp.firstMatch(tag);
           if (relMatch == null) continue;
 
           final String rel = relMatch.group(1)!.toLowerCase();
           int priority = -1;
-          if (rel.contains('apple-touch-icon')) {
+          if (rel.contains('Serene-touch-icon')) {
             priority = 3;
           } else if (rel == 'icon') {
             priority = 2;

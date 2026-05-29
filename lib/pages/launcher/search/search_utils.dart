@@ -13,7 +13,7 @@ import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/window.dart';
 import '../../../models/window_watcher.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
-import '../../interface/result_item_bookmark.dart';
+import '../../launcher/result/result_item_bookmark.dart';
 import '../../launcher_search_models.dart';
 
 const int maxLauncherMatches = 30;

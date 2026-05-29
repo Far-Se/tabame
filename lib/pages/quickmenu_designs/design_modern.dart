@@ -34,7 +34,7 @@ class MainMenuModernWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 90,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(User.theme.borderRadius),
         child: Stack(
           children: <Widget>[
             // Background Layer (Transparent Gradient applied via ShaderMask)
@@ -52,7 +52,7 @@ class MainMenuModernWidget extends StatelessWidget {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(User.theme.borderRadius),
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -74,7 +74,7 @@ class MainMenuModernWidget extends StatelessWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(User.theme.borderRadius),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.9),
@@ -82,10 +82,7 @@ class MainMenuModernWidget extends StatelessWidget {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: <Color>[
-                              Colors.white.withAlpha(14),
-                              Colors.transparent,
-                            ],
+                            colors: <Color>[Colors.white.withAlpha(14), Colors.transparent],
                           ),
                         ),
                         child: Stack(

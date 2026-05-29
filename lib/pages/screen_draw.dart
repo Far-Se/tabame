@@ -10,8 +10,11 @@
 // ignore_for_file: unused_element, dead_code
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi' hide Size;
+import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
@@ -19,6 +22,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart' as intl;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,7 +36,18 @@ import '../models/win32/win_utils.dart';
 import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import '../widgets/widgets/emoji_picker_modal.dart';
+import '../widgets/interface/fancyshot.dart';
 import 'color_picker/win32_helper.dart';
+
+// ---------------------------------------------------------------------------
+// Screen-Draw post-capture action enum
+// ---------------------------------------------------------------------------
+
+enum ScreenDrawCaptureAction {
+  copyImage,
+  copyFile,
+  upload,
+}
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -71,6 +86,59 @@ Future<void> startScreenDraw() async {
 // ---------------------------------------------------------------------------
 // Win32 helpers
 // ---------------------------------------------------------------------------
+class Settings {
+  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_draw.json';
+  static Map<String, dynamic> _data = <String, dynamic>{};
+
+  static void load() {
+    try {
+      final File file = File(_path);
+      if (file.existsSync()) {
+        final String content = file.readAsStringSync();
+        _data = jsonDecode(content) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  static void save() {
+    try {
+      final File file = File(_path);
+      file.writeAsStringSync(jsonEncode(_data));
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // --- String Getters / Setters ---
+  static String? getString(String key) => _data[key] as String?;
+
+  static void setString(String key, String? value) {
+    if (value == null) {
+      _data.remove(key);
+    } else {
+      _data[key] = value;
+    }
+    save();
+  }
+
+  // --- Boolean Getters / Setters ---
+  static bool? getBool(String key) => _data[key] as bool?;
+
+  static void setBool(String key, bool value) {
+    _data[key] = value;
+    save();
+  }
+
+  // --- Integer Getters / Setters ---
+  static int? getInt(String key) => _data[key] as int?;
+
+  static void setInt(String key, int value) {
+    _data[key] = value;
+    save();
+  }
+}
 
 class Win32Window {
   static int _hwnd = 0;
@@ -408,6 +476,17 @@ class AnnotationController extends ChangeNotifier {
 
   /// When true, the overlay will close the app after the next screen capture.
   bool captureAndClose = false;
+
+  // ── Screen-capture post-action settings ────────────────────────────────────
+  /// If non-null, apply this FancyShot profile before saving/uploading.
+  String? captureSelectedFancyShotProfile;
+
+  /// After capture: copy image, copy file, upload via host, or null (just save).
+  /// null means copy image to clipboard (legacy / default behaviour).
+  ScreenDrawCaptureAction capturePostAction = ScreenDrawCaptureAction.copyImage;
+
+  /// If [capturePostAction] is [ScreenDrawCaptureAction.upload], which host.
+  ScreenCaptureUploadHost? captureUploadHost;
 
   // Shapes
   final List<DrawShape> _shapes = <DrawShape>[];
@@ -1031,11 +1110,28 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
   /// Widget-local rect of the monitor the cursor is currently on.
   Rect _currentMonitorRect = Rect.zero;
 
+  final List<ScreenCaptureUploadHost> uploadHosts = FancyShot.loadUploadHosts();
+  final List<FancyShotProfile> profiles = FancyShot.loadProfiles();
+
   @override
   void initState() {
     super.initState();
     NativeHooks.registerCallHandler();
     NativeHooks.addListener(this);
+    Settings.load();
+
+    _ctrl.captureAndClose = Settings.getBool("captureAndClose") ?? false;
+
+    final int action = Settings.getInt("capturePostAction") ?? 0;
+    _ctrl.capturePostAction =
+        ScreenDrawCaptureAction.values[action.clamp(0, ScreenDrawCaptureAction.values.length - 1)];
+
+    final String? host = Settings.getString("captureUploadHost");
+    _ctrl.captureUploadHost = uploadHosts.where((ScreenCaptureUploadHost h) => h.id == host).firstOrNull;
+
+    final String? fancyshot = Settings.getString("captureSelectedFancyShotProfile");
+    _ctrl.captureSelectedFancyShotProfile = fancyshot;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Win32Window.setupOverlay();
       _ctrl.toggleDrawingMode(activated: true);
@@ -2325,7 +2421,9 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       _captureStart = null;
       _captureCurrent = null;
     });
-    Future<void>.delayed(const Duration(milliseconds: 100));
+    // Wait for the selection border to be removed from the screen before
+    // capturing, so it doesn't appear in the screenshot.
+    await Future<void>.delayed(const Duration(milliseconds: 120));
     if (start == null || current == null) return;
     final Rect localRect = Rect.fromPoints(start, current);
     if (localRect.width < 2 || localRect.height < 2) return;
@@ -2337,18 +2435,196 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       localRect.width,
       localRect.height,
     );
-    await ScreenDrawCapture.copyRegionToClipboard(screenRect);
+
+    // 1. Capture raw PNG bytes (always needed).
+    Uint8List? pngBytes;
+    // Use the existing GDI clipboard capture path to get raw bytes.
+    {
+      final int x = screenRect.left.round();
+      final int y = screenRect.top.round();
+      final int w = screenRect.width.round().clamp(1, 1000000);
+      final int h = screenRect.height.round().clamp(1, 1000000);
+
+      final int screenDc = GetDC(NULL);
+      final int memDc = CreateCompatibleDC(screenDc);
+      final int bmp = CreateCompatibleBitmap(screenDc, w, h);
+      SelectObject(memDc, bmp);
+      BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY | CAPTUREBLT);
+
+      final Pointer<BITMAPINFO> bmi = calloc<BITMAPINFO>();
+      bmi.ref.bmiHeader.biSize = sizeOf<BITMAPINFOHEADER>();
+      bmi.ref.bmiHeader.biWidth = w;
+      bmi.ref.bmiHeader.biHeight = -h;
+      bmi.ref.bmiHeader.biPlanes = 1;
+      bmi.ref.bmiHeader.biBitCount = 32;
+      bmi.ref.bmiHeader.biCompression = BI_RGB;
+
+      final Pointer<Uint8> bgra = calloc<Uint8>(w * h * 4);
+      GetDIBits(memDc, bmp, 0, h, bgra.cast(), bmi, DIB_RGB_COLORS);
+
+      final Uint8List rgba = Uint8List(w * h * 4);
+      final Uint8List src = bgra.asTypedList(w * h * 4);
+      for (int i = 0; i < src.length; i += 4) {
+        rgba[i] = src[i + 2];
+        rgba[i + 1] = src[i + 1];
+        rgba[i + 2] = src[i];
+        rgba[i + 3] = 255;
+      }
+
+      DeleteObject(bmp);
+      DeleteDC(memDc);
+      ReleaseDC(NULL, screenDc);
+      calloc.free(bgra);
+      calloc.free(bmi);
+
+      final img.Image image = img.Image.fromBytes(
+        width: w,
+        height: h,
+        bytes: rgba.buffer,
+        numChannels: 4,
+        order: img.ChannelOrder.rgba,
+      );
+      pngBytes = Uint8List.fromList(img.encodePng(image));
+    }
+
+    // 2. Apply FancyShot profile if selected.
+    final String? presetName = ctrl.captureSelectedFancyShotProfile;
+    if ((presetName ?? '').isNotEmpty) {
+      try {
+        final FancyShotProfile? preset = FancyShot.profileByName(presetName!);
+        if (preset != null) {
+          pngBytes = await FancyShot.renderPresetCapture(
+            captureBytes: pngBytes,
+            profile: preset,
+          );
+        }
+      } catch (_) {
+        // fallback to raw bytes
+      }
+    }
+
+    // 3. Always save to file (so Copy File / Upload have something to work with).
+    String? savedFilePath;
+    try {
+      final DateTime date = DateTime.now();
+      final String shortMonth = intl.DateFormat('MMM').format(date);
+      final Directory dir = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots\\${date.year} - $shortMonth');
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
+        WinUtils.setSortByDateModifiedDesc(dir.path);
+      }
+      final String ts =
+          DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-').replaceFirst(RegExp(r'^.*?T'), '');
+      savedFilePath = '${dir.path}\\$ts.png';
+      if (pngBytes != null) await File(savedFilePath).writeAsBytes(pngBytes);
+    } catch (_) {
+      savedFilePath = null;
+    }
+
+    // 4. Perform the chosen post-capture action.
+    switch (ctrl.capturePostAction) {
+      case ScreenDrawCaptureAction.copyImage:
+        if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
+      case ScreenDrawCaptureAction.copyFile:
+        if (savedFilePath != null) {
+          ClipboardExtension.copyFile(savedFilePath);
+        } else {
+          // Fallback: copy image bytes
+          if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
+        }
+      case ScreenDrawCaptureAction.upload:
+        final ScreenCaptureUploadHost? host = ctrl.captureUploadHost;
+        if (host != null && savedFilePath != null) {
+          await _runUploadHost(host, savedFilePath);
+        } else {
+          if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
+        }
+    }
 
     final bool shouldClose = ctrl.captureAndClose;
-    ctrl.captureAndClose = false; // consume the flag
+    // captureAndClose is a persistent preference — do not reset it here.
 
+    await WindowManager.instance.focus();
+    await Win32Helper.playBeepSound();
     if (shouldClose) {
       await windowManager.close();
       return;
     }
+  }
 
-    await WindowManager.instance.focus();
-    await Win32Helper.playBeepSound();
+  /// Upload a file to the given host (mirrors screen_capture.dart logic).
+  Future<void> _runUploadHost(ScreenCaptureUploadHost host, String filePath) async {
+    switch (host.uploadType) {
+      case UploadHostType.catbox:
+        await _uploadToCatbox(filePath);
+      case UploadHostType.custom:
+        await _runCustomUploadCommand(host, filePath);
+    }
+  }
+
+  Future<void> _uploadToCatbox(String filePath) async {
+    try {
+      final File file = File(filePath);
+      if (!file.existsSync()) return;
+
+      final HttpClient client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 30);
+      final Uri uri = Uri.parse('https://catbox.moe/user/api.php');
+      final HttpClientRequest request = await client.postUrl(uri);
+
+      final String boundary = '----TabameBoundary${DateTime.now().millisecondsSinceEpoch}';
+      request.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
+
+      final BytesBuilder body = BytesBuilder();
+      void addField(String name, String value) {
+        body.add(utf8.encode('--$boundary\r\n'));
+        body.add(utf8.encode('Content-Disposition: form-data; name="$name"\r\n\r\n'));
+        body.add(utf8.encode('$value\r\n'));
+      }
+
+      addField('reqtype', 'fileupload');
+
+      final Uint8List fileBytes = file.readAsBytesSync();
+      final String fileName = file.path.split(Platform.pathSeparator).last;
+      body.add(utf8.encode('--$boundary\r\n'));
+      body.add(utf8.encode('Content-Disposition: form-data; name="fileToUpload"; filename="$fileName"\r\n'));
+      body.add(utf8.encode('Content-Type: image/png\r\n\r\n'));
+      body.add(fileBytes);
+      body.add(utf8.encode('\r\n'));
+      body.add(utf8.encode('--$boundary--\r\n'));
+
+      final Uint8List bodyBytes = body.toBytes();
+      request.headers.set(HttpHeaders.contentLengthHeader, bodyBytes.length.toString());
+      request.add(bodyBytes);
+
+      final HttpClientResponse response = await request.close();
+      final String responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+
+      if (response.statusCode == 200 && responseBody.startsWith('https://')) {
+        final String url = responseBody.trim();
+        ClipboardExtended.copy(url);
+        await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
+      }
+    } catch (_) {
+      // silently ignore
+    }
+  }
+
+  Future<void> _runCustomUploadCommand(ScreenCaptureUploadHost host, String filePath) async {
+    try {
+      final String escapedFilePath = filePath.replaceAll("'", "''");
+      final String resolvedCommand = host.command.contains(r'${file}')
+          ? host.command.replaceAll(r'${file}', "'$escapedFilePath'")
+          : '${host.command} \'$escapedFilePath\'';
+      await Process.start(
+        'powershell.exe',
+        <String>['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', resolvedCommand],
+        mode: ProcessStartMode.detached,
+      );
+    } catch (_) {
+      // silently ignore
+    }
   }
 }
 
@@ -3172,22 +3448,7 @@ class AnnotationToolbar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               _ToolBtn(Icons.mouse_rounded, DrawTool.select, controller, 'Select (S)'),
-              _ToolBtnWithPopup(
-                icon: Icons.screenshot_monitor_rounded,
-                tool: DrawTool.screenCapture,
-                ctrl: controller,
-                tooltip: 'Screen Capture (C)',
-                popupActions: <_PopupAction>[
-                  _PopupAction(
-                    icon: Icons.screenshot_monitor_rounded,
-                    label: 'Capture & Close',
-                    onTap: () {
-                      controller.setTool(DrawTool.screenCapture);
-                      controller.captureAndClose = true;
-                    },
-                  ),
-                ],
-              ),
+              _ScreenCaptureBtnWithPopup(ctrl: controller),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.edit, DrawTool.pen, controller, 'Pen (P)'),
               _ToolBtn(Icons.highlight, DrawTool.highlight, controller, 'Highlight (H)'),
@@ -3908,6 +4169,320 @@ class _PopupAction {
   final String label;
   final VoidCallback onTap;
   const _PopupAction({required this.icon, required this.label, required this.onTap});
+}
+
+// ---------------------------------------------------------------------------
+// Screen-Capture button: full hover popup with action, upload, FancyShot
+// ---------------------------------------------------------------------------
+
+/// The Screen Capture toolbar button.  On hover it shows a rich popup with:
+///   • Four post-capture actions (Copy Image, Copy File, Capture & Close,
+///     upload hosts)
+///   • FancyShot profile selector (radio-style, "None" + all saved profiles)
+class _ScreenCaptureBtnWithPopup extends StatefulWidget {
+  final AnnotationController ctrl;
+  const _ScreenCaptureBtnWithPopup({required this.ctrl});
+
+  @override
+  State<_ScreenCaptureBtnWithPopup> createState() => _ScreenCaptureBtnWithPopupState();
+}
+
+class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> {
+  Timer? _closeTimer;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+
+  void _show() {
+    _closeTimer?.cancel();
+    if (_overlayEntry != null) return;
+
+    _overlayEntry = OverlayEntry(builder: (_) => _buildOverlay());
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _scheduleHide() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 260), () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    });
+  }
+
+  void _refresh() => _overlayEntry?.markNeedsBuild();
+
+  final List<ScreenCaptureUploadHost> uploadHosts = FancyShot.loadUploadHosts();
+  final List<FancyShotProfile> profiles = FancyShot.loadProfiles();
+  Widget _buildOverlay() {
+    final AnnotationController c = widget.ctrl;
+
+    return Positioned(
+      width: 260,
+      child: CompositedTransformFollower(
+        link: _layerLink,
+        showWhenUnlinked: false,
+        offset: const Offset(40, -4),
+        child: MouseRegion(
+          onEnter: (_) => _show(),
+          onExit: (_) => _scheduleHide(),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.90),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white24),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // ── Section: After Capture ──────────────────────────────
+                  _sectionLabel('AFTER CAPTURE'),
+                  _actionRow(
+                    icon: Icons.content_copy,
+                    label: 'Copy Image',
+                    selected: c.capturePostAction == ScreenDrawCaptureAction.copyImage && c.captureUploadHost == null,
+                    onTap: () {
+                      c.capturePostAction = ScreenDrawCaptureAction.copyImage;
+                      Settings.setInt("capturePostAction", c.capturePostAction.index);
+                      c.captureUploadHost = null;
+                      Settings.setString("captureUploadHost", c.captureUploadHost?.id);
+                      c.setTool(DrawTool.screenCapture);
+                      _refresh();
+                    },
+                  ),
+                  _actionRow(
+                    icon: Icons.file_copy_outlined,
+                    label: 'Copy File',
+                    selected: c.capturePostAction == ScreenDrawCaptureAction.copyFile,
+                    onTap: () {
+                      c.capturePostAction = ScreenDrawCaptureAction.copyFile;
+                      Settings.setInt("capturePostAction", c.capturePostAction.index);
+                      c.captureUploadHost = null;
+                      Settings.setString("captureUploadHost", c.captureUploadHost?.id);
+                      c.setTool(DrawTool.screenCapture);
+                      _refresh();
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _checkboxRow(
+                    icon: Icons.close,
+                    label: 'Close after Capture',
+                    checked: c.captureAndClose,
+                    onTap: () {
+                      c.captureAndClose = !c.captureAndClose;
+                      Settings.setBool('captureAndClose', c.captureAndClose);
+                      c.setTool(c.activeTool); // triggers notifyListeners
+                      _refresh();
+                    },
+                  ),
+
+                  // ── Section: Upload Hosts ───────────────────────────────
+                  if (uploadHosts.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 6),
+                    _sectionLabel('UPLOAD TO'),
+                    ...uploadHosts.map((ScreenCaptureUploadHost host) => _actionRow(
+                          icon: host.isBuiltIn ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
+                          label: host.name,
+                          selected: c.capturePostAction == ScreenDrawCaptureAction.upload &&
+                              c.captureUploadHost?.id == host.id,
+                          onTap: () {
+                            c.capturePostAction = ScreenDrawCaptureAction.upload;
+                            c.captureUploadHost = host;
+                            Settings.setInt("capturePostAction", c.capturePostAction.index);
+                            Settings.setString("captureUploadHost", c.captureUploadHost?.id);
+                            c.setTool(DrawTool.screenCapture);
+                            _refresh();
+                          },
+                        )),
+                  ],
+
+                  // ── Section: FancyShot Profile ──────────────────────────
+                  const SizedBox(height: 6),
+                  _sectionLabel('FANCYSHOT PROFILE'),
+                  _profileRow(
+                    label: 'None',
+                    selected: (c.captureSelectedFancyShotProfile ?? '').isEmpty,
+                    onTap: () {
+                      c.captureSelectedFancyShotProfile = null;
+                      Settings.setString("captureSelectedFancyShotProfile", null);
+                      _refresh();
+                    },
+                  ),
+                  ...profiles.map((FancyShotProfile p) => _profileRow(
+                        label: p.name,
+                        selected: c.captureSelectedFancyShotProfile == p.name,
+                        onTap: () {
+                          c.captureSelectedFancyShotProfile = p.name;
+                          Settings.setString("captureSelectedFancyShotProfile", c.captureSelectedFancyShotProfile);
+                          _refresh();
+                        },
+                      )),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+          ),
+        ),
+      );
+
+  Widget _actionRow({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () {
+        onTap();
+        _scheduleHide();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icon, size: 14, color: selected ? Colors.yellowAccent : Colors.white60),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white70,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (selected) const Icon(Icons.check, size: 12, color: Colors.yellowAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _checkboxRow({
+    required IconData icon,
+    required String label,
+    required bool checked,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: checked ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: checked ? Colors.yellowAccent.withValues(alpha: 0.35) : Colors.white12,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              checked ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 14,
+              color: checked ? Colors.yellowAccent : Colors.white38,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: checked ? Colors.white : Colors.white60,
+                  fontSize: 12,
+                  fontWeight: checked ? FontWeight.w600 : FontWeight.w400,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileRow({required String label, required bool selected, required VoidCallback onTap}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () {
+        onTap();
+        // Don't auto-hide — user may want to adjust other settings too.
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              size: 13,
+              color: selected ? Colors.yellowAccent : Colors.white38,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white60,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _closeTimer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: MouseRegion(
+        onEnter: (_) => _show(),
+        onExit: (_) => _scheduleHide(),
+        child: _ToolBtn(Icons.screenshot_monitor_rounded, DrawTool.screenCapture, widget.ctrl, 'Screen Capture (C)'),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

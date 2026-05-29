@@ -16,9 +16,9 @@ class MainMenuInterfaceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
+    final ThemeData themeX = Theme.of(context);
     final Color accent = userSettings.themeColors.accentColor;
-    final Color surface = theme.colorScheme.surface;
+    final Color surface = themeX.colorScheme.surface;
     final double gradientStrength = (userSettings.themeColors.gradientAlpha.clamp(1, 100)) / 100;
     final double outerAccentAlpha = 0.04 + (gradientStrength * 0.08);
     final double innerAccentAlpha = 0.05 + (gradientStrength * 0.10);
@@ -37,7 +37,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 90,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(User.theme.borderRadius),
         child: Stack(
           children: <Widget>[
             // Background Layer
@@ -55,7 +55,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(User.theme.borderRadius),
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -65,7 +65,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                         surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.95),
                       ],
                     ),
-                    border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
+                    border: Border.all(color: themeX.colorScheme.onSurface.withValues(alpha: 0.08)),
                     boxShadow: <BoxShadow>[
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.10),
@@ -75,7 +75,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(User.theme.borderRadius),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.90),
@@ -84,11 +84,11 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: <Color>[
-                            theme.colorScheme.surface.withAlpha(245),
+                            themeX.colorScheme.surface.withAlpha(245),
                             Color.alphaBlend(accent.withValues(alpha: headerAccentAlpha + headerAccentAlpha * 0.24),
-                                theme.colorScheme.surface),
+                                themeX.colorScheme.surface),
                             Color.alphaBlend(accent.withValues(alpha: headerAccentAlpha + headerAccentAlpha * 0.10),
-                                theme.colorScheme.surface),
+                                themeX.colorScheme.surface),
                           ],
                         ),
                       ),
@@ -116,7 +116,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                 children: <Widget>[
                   if (!userSettings.quickActionsAtBottom) ...<Widget>[
                     Container(padding: const EdgeInsets.fromLTRB(4, 5, 10, 6), child: const TopBar()),
-                    Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08))
+                    Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08))
                   ] else if (userSettings.bottomBarOnTop)
                     const PinnedAndTrayList()
                   else
@@ -124,7 +124,8 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                   const TaskBar(),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Divider(thickness: 1, height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.08)),
+                    child:
+                        Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08)),
                   ),
                   if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (userSettings.taskManagerStats) const TaskbarStats(),
