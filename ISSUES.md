@@ -6,3 +6,4 @@ Ignore this file, it's for me to remember things.
 - Launcher: Actions pentru fisiere Image: convert to X.
 - image watcher: refresh after converter popoff. Save old settings.
 - Screen Draw: OCR. OCR (cu optiuni de cli daca exista).
+- Notion button la search adauga si DB data, nu doar main pages.

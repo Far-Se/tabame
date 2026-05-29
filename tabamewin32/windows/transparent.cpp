@@ -75,48 +75,44 @@ typedef NTSTATUS(WINAPI *RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
 HMODULE user32 = nullptr;
 SetWindowCompositionAttribute set_window_composition_attribute_ = nullptr;
 
+// void setTransparent(HWND hWnd) {
+//   user32 = ::GetModuleHandleA("user32.dll");
+
+//   set_window_composition_attribute_ =
+//       reinterpret_cast<SetWindowCompositionAttribute>(
+//           ::GetProcAddress(user32, "SetWindowCompositionAttribute"));
+
+//   if (!set_window_composition_attribute_)
+//     return;
+
+//   ACCENT_POLICY accent = {};
+//   accent.AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND; // ⭐ THIS is frost
+//   accent.GradientColor = 0xCC202020; // dark translucent tint (AABBGGRR)
+//   accent.AccentFlags = 2;            // required for some Win10 builds
+
+//   WINDOWCOMPOSITIONATTRIBDATA data = {};
+//   data.Attrib = WCA_ACCENT_POLICY;
+//   data.pvData = &accent;
+//   data.cbData = sizeof(accent);
+
+//   set_window_composition_attribute_(hWnd, &data);
+// }
+
 void setTransparent(HWND hWnd) {
   user32 = ::GetModuleHandleA("user32.dll");
-
   set_window_composition_attribute_ =
       reinterpret_cast<SetWindowCompositionAttribute>(
           ::GetProcAddress(user32, "SetWindowCompositionAttribute"));
-
-  if (!set_window_composition_attribute_)
-    return;
-
-  ACCENT_POLICY accent = {};
-  accent.AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND; // ⭐ THIS is frost
-  accent.GradientColor = 0xCC202020; // dark translucent tint (AABBGGRR)
-  accent.AccentFlags = 2;            // required for some Win10 builds
-
-  WINDOWCOMPOSITIONATTRIBDATA data = {};
+  ACCENT_POLICY accent = {ACCENT_DISABLED, 2, static_cast<DWORD>(0), 0};
+  WINDOWCOMPOSITIONATTRIBDATA data;
   data.Attrib = WCA_ACCENT_POLICY;
   data.pvData = &accent;
   data.cbData = sizeof(accent);
-
+  set_window_composition_attribute_(hWnd, &data);
+  // int vA = 0, vB = 0, vG = 0, vR = 0;
+  accent = {static_cast<ACCENT_STATE>(2), 2, static_cast<DWORD>(0), 0};
+  data.Attrib = WCA_ACCENT_POLICY;
+  data.pvData = &accent;
+  data.cbData = sizeof(accent);
   set_window_composition_attribute_(hWnd, &data);
 }
-
-// void setTransparent(HWND hWnd)
-// {
-//     user32 = ::GetModuleHandleA("user32.dll");
-//     set_window_composition_attribute_ =
-//         reinterpret_cast<SetWindowCompositionAttribute>(
-//             ::GetProcAddress(user32, "SetWindowCompositionAttribute"));
-//     ACCENT_POLICY accent = {ACCENT_DISABLED, 2, static_cast<DWORD>(0), 0};
-//     WINDOWCOMPOSITIONATTRIBDATA data;
-//     data.Attrib = WCA_ACCENT_POLICY;
-//     data.pvData = &accent;
-//     data.cbData = sizeof(accent);
-//     set_window_composition_attribute_(hWnd, &data);
-//     // int vA = 0, vB = 0, vG = 0, vR = 0;
-//     accent = {
-//         static_cast<ACCENT_STATE>(2), 2,
-//         static_cast<DWORD>(0),
-//         0};
-//     data.Attrib = WCA_ACCENT_POLICY;
-//     data.pvData = &accent;
-//     data.cbData = sizeof(accent);
-//     set_window_composition_attribute_(hWnd, &data);
-// }

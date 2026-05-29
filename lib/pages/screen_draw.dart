@@ -45,6 +45,7 @@ enum ScreenDrawCaptureAction {
   copyImage,
   copyFile,
   upload,
+  copyTextOcr,
 }
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ Future<void> startScreenDraw() async {
     size: Size(vWidth.toDouble(), vHeight.toDouble()),
     center: false,
     backgroundColor: Colors.transparent,
-    skipTaskbar: false,
+    skipTaskbar: true,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: false,
     title: 'Tabame Screen Draw',
@@ -2443,6 +2444,19 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         } else {
           if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
         }
+      case ScreenDrawCaptureAction.copyTextOcr:
+        try {
+          final String text = await GetTextOCR(
+            screenRect.left.round(),
+            screenRect.top.round(),
+            screenRect.width.round().clamp(1, 1000000),
+            screenRect.height.round().clamp(1, 1000000),
+            0,
+          );
+          await ClipboardExtended.copy(text);
+        } catch (_) {
+          if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
+        }
     }
 
     final bool shouldClose = ctrl.captureAndClose;
@@ -4082,6 +4096,19 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                     selected: c.capturePostAction == ScreenDrawCaptureAction.copyFile,
                     onTap: () {
                       c.capturePostAction = ScreenDrawCaptureAction.copyFile;
+                      Settings.setInt("capturePostAction", c.capturePostAction.index);
+                      c.captureUploadHost = null;
+                      Settings.setString("captureUploadHost", c.captureUploadHost?.id);
+                      c.setTool(DrawTool.screenCapture);
+                      _refresh();
+                    },
+                  ),
+                  _actionRow(
+                    icon: Icons.text_snippet_outlined,
+                    label: 'Copy OCR Text',
+                    selected: c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr,
+                    onTap: () {
+                      c.capturePostAction = ScreenDrawCaptureAction.copyTextOcr;
                       Settings.setInt("capturePostAction", c.capturePostAction.index);
                       c.captureUploadHost = null;
                       Settings.setString("captureUploadHost", c.captureUploadHost?.id);

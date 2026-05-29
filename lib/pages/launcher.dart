@@ -1259,6 +1259,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           icon: Icons.cleaning_services_rounded,
         )),
         const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-clear-help-icon-extension',
+          title: r'$clear iconext',
+          subtitle: 'Removes Icon Cache for Extensions only',
+          icon: Icons.cleaning_services_rounded,
+        )),
+        const LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'function-clear-help-auth-logo',
           title: r'$clear authlogo',
           subtitle: 'Removes Authenticator Logos Cache',
@@ -1281,6 +1287,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           icon: Icons.cleaning_services_rounded,
           searchTerms: const <String>['clear', 'cache', 'icon'],
           onExecute: () => unawaited(_clearCacheFolder('icon_cache')),
+        )),
+      ];
+    }
+    if (input.trim().toLowerCase() == 'iconext') {
+      return <LauncherSearchResultItem>[
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'function-clear-help-icon-extension',
+          title: 'Removes Icon Cache for Extensions only',
+          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\icon_cache\\file_formats'.lastChars(35),
+          icon: Icons.cleaning_services_rounded,
+          searchTerms: const <String>['clear', 'cache', 'icon', 'ext'],
+          onExecute: () => unawaited(_clearCacheFolder('icon_cache\\file_formats')),
         )),
       ];
     } else if (input.trim().toLowerCase() == 'authlogo') {

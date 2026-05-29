@@ -41,6 +41,7 @@
 #pragma comment(lib, "ole32")
 #pragma comment(lib, "shell32")
 #include "audio.cpp"
+#include "screen_ocr.cpp"
 #include "screen_recording.cpp"
 
 // ---------------------------------------------------------------------------
@@ -1060,6 +1061,29 @@ void CaptureMonitorBitmapAlternativeH(Tabamewin32Plugin *,
   OK(result, EVal(Encode::MonitorCaptureToMap(capture)));
 }
 
+void GetTextOCRH(Tabamewin32Plugin *, const MethodCall &call,
+                 MethodResult result) {
+  auto &a = Args::Map(call);
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  const int x = Args::Int(a, "x");
+  const int y = Args::Int(a, "y");
+  const int width = Args::Int(a, "width");
+  const int height = Args::Int(a, "height");
+  const int type = Args::Int(a, "type");
+
+  std::thread([shared_result, x, y, width, height, type]() {
+    const OcrResult ocr = GetTextOCR(x, y, width, height, type);
+    if (!ocr.success) {
+      shared_result->Error(ocr.errorCode, ocr.errorMessage);
+      return;
+    }
+    shared_result->Success(EVal(ocr.text));
+  }).detach();
+}
+
 void ExcludeWindowFromCaptureH(Tabamewin32Plugin *, const MethodCall &call,
                                MethodResult result) {
   auto &a = Args::Map(call);
@@ -1420,6 +1444,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"captureMonitor", Handlers::CaptureMonitorH},
       {"captureMonitorBitmapAlternative",
        Handlers::CaptureMonitorBitmapAlternativeH},
+      {"getTextOCR", Handlers::GetTextOCRH},
       {"excludeWindowFromCapture", Handlers::ExcludeWindowFromCaptureH},
       {"includeWindowFromCapture", Handlers::IncludeWindowFromCaptureH},
       {"startScreenRecording", Handlers::StartScreenRecordingH},

@@ -515,6 +515,20 @@ class MonitorCapture {
   }
 }
 
+Future<String> GetTextOCR(int x, int y, int width, int height, int type) async {
+  final String? result = await tabameWin32MethodChannel.invokeMethod<String>(
+    'getTextOCR',
+    <String, dynamic>{
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'type': type,
+    },
+  );
+  return result ?? '';
+}
+
 enum ScreenRecordingTargetType {
   region,
   monitor,

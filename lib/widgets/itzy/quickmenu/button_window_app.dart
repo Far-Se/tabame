@@ -164,6 +164,10 @@ class _ExtIconCache {
     // Also treat paths that look like directories (end with separator).
     if (trimmed.endsWith('/') || trimmed.endsWith(r'\')) return null;
 
+    try {
+      if (Directory(trimmed).existsSync()) return null;
+    } catch (_) {}
+
     return ext;
   }
 
@@ -207,6 +211,7 @@ class _ExtIconCache {
 class WindowsAppButton extends StatefulWidget {
   // Per-path cache for files whose icon is file-specific (.exe, .lnk, etc.).
   static final Map<String, Future<ExtractedIcon>> iconFutureCache = <String, Future<ExtractedIcon>>{};
+  static Future<ExtractedIcon>? _defaultFolderIconFuture;
 
   // Tracks which paths in iconFutureCache have already resolved.
   // We can't ask a Future if it's complete directly in Dart, so we maintain
@@ -234,6 +239,24 @@ class WindowsAppButton extends StatefulWidget {
     // .url files are never cached — they can change their target at any time.
     if (path.endsWith('.url')) {
       return _IconWorkerPool.instance.extractIcon(path);
+    }
+
+    if (WinUtils.usesDefaultFolderIcon(path)) {
+      return _defaultFolderIconFuture ??= _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
+        if (result is Uint8List) {
+          final String hash = crypto.md5.convert(result).toString();
+          if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
+            _defaultFolderIconFuture = null;
+            return null;
+          }
+        }
+        return result;
+      }).catchError((Object error, StackTrace stackTrace) {
+        Debug.add('Folder icon extraction failed for $path: $error');
+        Debug.add('$stackTrace');
+        _defaultFolderIconFuture = null;
+        return null as ExtractedIcon;
+      });
     }
 
     // ── Extension-type cache (e.g. .mp3, .txt, .pdf …) ──────────────────────
@@ -273,8 +296,7 @@ class WindowsAppButton extends StatefulWidget {
     return iconFutureCache.putIfAbsent(
       path,
       () {
-        final Future<ExtractedIcon> future =
-            _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
+        final Future<ExtractedIcon> future = _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
           // Mark resolved regardless of outcome so eviction can find this entry.
           _resolvedPaths.add(path);
           if (result == null) {

@@ -201,45 +201,26 @@ class Win32Window {
 
   /// Enable click-through: window is visible but the mouse passes through.
   static void enableClickThrough() {
-    final int hwnd = getHwnd();
+    int hwnd = getHwnd();
     if (hwnd == 0) return;
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_EXSTYLE,
-      exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE,
-    );
-    SetWindowPos(
-      hwnd,
-      0,
-      0,
-      0,
-      0,
-      0,
-      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-    );
+
+    int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
 
   /// Disable click-through: window captures mouse events again.
   static void disableClickThrough() {
-    final int hwnd = getHwnd();
+    int hwnd = getHwnd();
     if (hwnd == 0) return;
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_EXSTYLE,
-      exStyle & ~WS_EX_TRANSPARENT & ~WS_EX_LAYERED & ~WS_EX_NOACTIVATE,
-    );
-    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-    SetWindowPos(
-      hwnd,
-      0,
-      0,
-      0,
-      0,
-      0,
-      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
-    );
+
+    int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT);
+
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
 }
 

@@ -32,6 +32,80 @@ class WinUtils {
   static int _isAdministrator = -1;
   static String _programFilesPath = "";
   static bool windowsNotificationRegistered = false;
+  static const Set<String> _perPathIconExtensions = <String>{'.exe', '.lnk', '.url', '.ico'};
+  static const Duration _iconCacheMaxAge = Duration(days: 7);
+  static ExtractedIcon _defaultFolderIcon;
+
+  static Directory _iconCacheDirectory() {
+    return Directory('${getTabameAppDataFolder()}/cache/icon_cache');
+  }
+
+  static Directory _fileFormatIconCacheDirectory() {
+    return Directory(p.join(_iconCacheDirectory().path, 'file_formats', pid.toString()));
+  }
+
+  static bool _isFreshCacheFile(File file) {
+    return DateTime.now().difference(file.lastModifiedSync()) < _iconCacheMaxAge;
+  }
+
+  static String? _fileFormatIconCacheKey(String path) {
+    final String trimmed = path.trim();
+    if (trimmed.isEmpty || trimmed.endsWith('/') || trimmed.endsWith(r'\')) return null;
+
+    try {
+      if (Directory(trimmed).existsSync()) return null;
+    } catch (_) {}
+
+    final String ext = p.extension(trimmed).toLowerCase();
+    if (ext.isEmpty || _perPathIconExtensions.contains(ext)) return null;
+
+    final String key = ext.substring(1).replaceAll(RegExp(r'[^a-z0-9_-]'), '_');
+    return key.isEmpty ? null : key;
+  }
+
+  static File? _fileFormatIconCacheFile(String path) {
+    final String? key = _fileFormatIconCacheKey(path);
+    if (key == null) return null;
+    return File(p.join(_fileFormatIconCacheDirectory().path, '$key.ico'));
+  }
+
+  static File? getCachedFileFormatIcon(String path) {
+    final File? cacheFile = _fileFormatIconCacheFile(path);
+    if (cacheFile == null || !cacheFile.existsSync()) return null;
+    if (_isFreshCacheFile(cacheFile)) return cacheFile;
+
+    try {
+      cacheFile.deleteSync();
+    } catch (_) {}
+    return null;
+  }
+
+  static bool _isDirectoryPath(String path) {
+    try {
+      return Directory(path.trim()).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _hasCustomFolderIcon(String path) {
+    final String trimmed = path.trim();
+    if (trimmed.isEmpty) return false;
+
+    final File desktopIni = File(p.join(trimmed, 'desktop.ini'));
+    if (!desktopIni.existsSync()) return false;
+
+    try {
+      final String content = desktopIni.readAsStringSync().toLowerCase();
+      return content.contains('iconresource=') || content.contains('iconfile=');
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static bool usesDefaultFolderIcon(String path) {
+    return _isDirectoryPath(path) && !_hasCustomFolderIcon(path);
+  }
 
   // Environment and system information
   static bool isAdministrator() {
@@ -612,12 +686,11 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
         NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
   }
 
-  static void startTabame({bool closeCurrent = false, String? arguments}) {
-    if (WinUtils.isAdministrator()) {
-      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: arguments);
-    } else {
-      WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
-    }
+  static void startTabame({bool closeCurrent = false, String? arguments, bool? admin}) {
+    admin ??= WinUtils.isAdministrator();
+    WinUtils.isAdministrator()
+        ? WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: arguments)
+        : WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
     if (closeCurrent) {
       Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
     }
@@ -983,8 +1056,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
   }
 
   static Future<File?> getFaviconUrlData(String url) async {
-    final String cachePath = '${getTabameAppDataFolder()}/cache/icon_cache';
-    final Directory cacheDir = Directory(cachePath);
+    final Directory cacheDir = _iconCacheDirectory();
     if (!cacheDir.existsSync()) {
       cacheDir.createSync(recursive: true);
     }
@@ -994,8 +1066,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       final List<FileSystemEntity> files = cacheDir.listSync();
       for (final FileSystemEntity entity in files) {
         if (entity is File && entity.path.split(Platform.pathSeparator).last.startsWith(cacheSearchPattern)) {
-          final DateTime lastModified = entity.lastModifiedSync();
-          if (DateTime.now().difference(lastModified).inDays < 7) {
+          if (_isFreshCacheFile(entity)) {
             return entity;
           }
         }
@@ -1017,7 +1088,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       extension = 'png';
     }
 
-    final File cacheFile = File('$cachePath/url_${url.hashCode}.$extension');
+    final File cacheFile = File(p.join(cacheDir.path, 'url_${url.hashCode}.$extension'));
 
     try {
       final http.Response response = await http.get(Uri.parse(faviconUrl));
@@ -1031,23 +1102,45 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
 
   static ExtractedIcon extractIcon(String path, {int iconID = 0}) {
     File? cacheFile;
+    final bool isDefaultFolder = iconID == 0 && usesDefaultFolderIcon(path);
+    if (isDefaultFolder && _defaultFolderIcon != null) {
+      return _defaultFolderIcon;
+    }
+
     if (iconID == 0) {
-      final String cachePath = '${getTabameAppDataFolder()}/cache/icon_cache';
-      final Directory cacheDir = Directory(cachePath);
+      final Directory cacheDir = _iconCacheDirectory();
       if (!cacheDir.existsSync()) {
         cacheDir.createSync(recursive: true);
       }
-      cacheFile = File('$cachePath/${path.hashCode}.ico');
-      if (cacheFile.existsSync()) {
-        final DateTime lastModified = cacheFile.lastModifiedSync();
-        if (DateTime.now().difference(lastModified).inDays < 7) {
+
+      cacheFile = _fileFormatIconCacheFile(path);
+      if (cacheFile != null) {
+        final Directory fileFormatCacheDir = cacheFile.parent;
+        if (!fileFormatCacheDir.existsSync()) {
+          fileFormatCacheDir.createSync(recursive: true);
+        }
+      } else if (isDefaultFolder) {
+        cacheFile = null;
+      } else {
+        cacheFile = File(p.join(cacheDir.path, '${path.hashCode}.ico'));
+      }
+
+      if (cacheFile != null && cacheFile.existsSync()) {
+        if (_isFreshCacheFile(cacheFile)) {
           return cacheFile.path;
         }
-        cacheFile.deleteSync();
+        try {
+          cacheFile.deleteSync();
+        } catch (_) {}
       }
     }
 
     final Uint8List? iconBytes = _extractIconInternal(path, iconID);
+
+    if (isDefaultFolder && iconBytes != null) {
+      _defaultFolderIcon = iconBytes;
+      return iconBytes;
+    }
 
     if (iconID == 0 && iconBytes != null && cacheFile != null) {
       final String hash = crypto.md5.convert(iconBytes).toString();
@@ -1559,8 +1652,8 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     final DateTime threshold = DateTime.now().subtract(Duration(days: days));
 
     try {
-      // 3. List all entities in the directory (non-recursive)
-      final List<FileSystemEntity> entities = await directory.list().toList();
+      // 3. List all entities in the directory, including cache subfolders.
+      final List<FileSystemEntity> entities = await directory.list(recursive: true).toList();
 
       for (FileSystemEntity entity in entities) {
         // We only want to delete files, not sub-folders

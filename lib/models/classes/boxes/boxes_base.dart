@@ -296,7 +296,7 @@ class Boxes {
     if (!iconCacheDir.existsSync()) return;
 
     final DateTime oneWeekAgo = DateTime.now().subtract(const Duration(days: 7));
-    for (final FileSystemEntity entity in iconCacheDir.listSync()) {
+    for (final FileSystemEntity entity in iconCacheDir.listSync(recursive: true)) {
       if (entity is File) {
         final DateTime lastModified = entity.lastModifiedSync();
         if (lastModified.isBefore(oneWeekAgo)) {

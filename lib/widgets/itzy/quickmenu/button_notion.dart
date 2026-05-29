@@ -531,7 +531,6 @@ class _NotionWidgetState extends State<NotionWidget> {
     );
     if (response.statusCode != 200) return <NotionResult>[];
     final Map<String, dynamic> data = jsonDecode(response.body);
-    Clipboard.setData(ClipboardData(text: response.body));
     final List<dynamic> raw = (data['results'] as List<dynamic>?) ?? <dynamic>[];
     return raw
         .map((dynamic e) => NotionResult.fromJson(e as Map<String, dynamic>))

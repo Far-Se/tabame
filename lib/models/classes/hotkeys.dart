@@ -861,7 +861,7 @@ class HotKeyInfo {
       if (windowHwnd != 0) {
         Win32.closeWindow(windowHwnd);
       } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw");
+        WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw", admin: false);
       }
     },
     "OpenScreenRecording": () {

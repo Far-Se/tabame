@@ -521,7 +521,8 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
     _pathController = TextEditingController(text: _folder.path);
     _extensionsController = TextEditingController(text: _folder.allowedExtensions.join(", "));
     _depthController = TextEditingController(text: _folder.maxDepth?.toString() ?? "");
-    _excludeController = TextEditingController(text: _folder.excludePath?.toString() ?? "");
+    _excludeController =
+        TextEditingController(text: _folder.excludePath?.toString() ?? r"\Wbuild\W|\Wnode_modules\W|\Wbin\W");
 
     _excludeController.addListener(_validateRegex);
   }

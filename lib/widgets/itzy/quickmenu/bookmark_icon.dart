@@ -22,9 +22,9 @@ class BookmarkIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String cachePath = '${WinUtils.getTabameAppDataFolder()}/cache/icon_cache';
     if (mark.preferInputIcon) {
       final String path = mark.stringToExecute.trim();
+      final String lowerPath = path.toLowerCase();
       if (path.startsWith('http')) {
         return FutureBuilder<File?>(
           future: WinUtils.getFaviconUrlData(path),
@@ -54,12 +54,13 @@ class BookmarkIcon extends StatelessWidget {
       } else if (path.isNotEmpty &&
           (path.contains(':\\') ||
               path.contains(':/') ||
-              path.endsWith('.exe') ||
-              path.endsWith('.url') ||
-              path.endsWith('.lnk'))) {
-        File file = File('$cachePath/${path.hashCode}.ico');
-        if (!path.endsWith('.exe') && !path.endsWith('.url') && !path.endsWith('.lnk')) {
-          final String ext = path.split('.').last;
+              lowerPath.endsWith('.exe') ||
+              lowerPath.endsWith('.url') ||
+              lowerPath.endsWith('.lnk'))) {
+        File? file = WinUtils.getCachedFileFormatIcon(path);
+        file ??= File('${WinUtils.getTabameAppDataFolder()}/cache/icon_cache/${path.hashCode}.ico');
+        if (!lowerPath.endsWith('.exe') && !lowerPath.endsWith('.url') && !lowerPath.endsWith('.lnk')) {
+          final String ext = path.split('.').last.toLowerCase();
           if (iconExtCache.containsKey(ext)) {
             file = File(iconExtCache[ext]!);
           }
@@ -85,11 +86,11 @@ class BookmarkIcon extends StatelessWidget {
           builder: (BuildContext context, AsyncSnapshot<ExtractedIcon> snapshot) {
             if (snapshot.hasData && snapshot.data != null) {
               if (snapshot.data case final String xpath when xpath.isNotEmpty) {
-                if (!path.endsWith('.exe') && !path.endsWith('.url') && !path.endsWith('.lnk')) {
+                if (!lowerPath.endsWith('.exe') && !lowerPath.endsWith('.url') && !lowerPath.endsWith('.lnk')) {
                   try {
                     final String file = path.split('\\').last;
                     if (file.contains('.')) {
-                      final String ext = file.split('.').last;
+                      final String ext = file.split('.').last.toLowerCase();
                       if (!iconExtCache.containsKey(ext)) {
                         iconExtCache[ext] = snapshot.data as String;
                       }

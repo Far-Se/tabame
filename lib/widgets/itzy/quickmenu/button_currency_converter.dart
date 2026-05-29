@@ -531,6 +531,9 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     required double convertedAmount,
     required double? rate,
   }) {
+    // Calculate the reverse exchange rate safely
+    final double? reverseRate = (rate != null && rate != 0) ? 1.0 / rate : null;
+
     return Container(
       decoration: BoxDecoration(
         color: accent.withAlpha(10),
@@ -559,6 +562,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  // Forward Rate (e.g., 1 EUR = X USD)
                   Center(
                     child: Text(
                       rate == null
@@ -570,6 +574,19 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                       ),
                     ),
                   ),
+                  // Reverse Rate (e.g., 1 USD = Y EUR)
+                  if (rate != null && reverseRate != null) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Center(
+                      child: Text(
+                        "1 ${_toCurrency.toUpperCase()} = ${_formatNumber(reverseRate)} ${_fromCurrency.toUpperCase()}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               Positioned(
