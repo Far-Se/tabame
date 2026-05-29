@@ -25,6 +25,8 @@ enum UploadHostType {
 
   /// catbox.moe anonymous upload via HTTP multipart.
   catbox,
+  prntscr,
+  imgur,
 }
 
 class ScreenCaptureUploadHost {
@@ -92,15 +94,40 @@ class ScreenCaptureUploadHost {
 
   // ── Built-in host definitions ─────────────────────────────────────────────
 
-  static ScreenCaptureUploadHost get catbox => ScreenCaptureUploadHost(
-        id: 'builtin:catbox',
-        name: 'catbox.moe',
-        command: '',
-        uploadType: UploadHostType.catbox,
-      );
+  // static ScreenCaptureUploadHost get catbox => ScreenCaptureUploadHost(
+  //       id: 'builtin:catbox',
+  //       name: 'catbox.moe',
+  //       command: '',
+  //       uploadType: UploadHostType.catbox,
+  //     );
+  // static ScreenCaptureUploadHost get prntscr => ScreenCaptureUploadHost(
+  //       id: 'builtin:prntscr',
+  //       name: 'prntscr.com',
+  //       command: '',
+  //       uploadType: UploadHostType.prntscr,
+  //     );
 
   /// All built-in hosts in display order.
-  static List<ScreenCaptureUploadHost> get builtInHosts => <ScreenCaptureUploadHost>[catbox];
+  static List<ScreenCaptureUploadHost> get builtInHosts => <ScreenCaptureUploadHost>[
+        ScreenCaptureUploadHost(
+          id: 'builtin:imgur',
+          name: 'imgur.com',
+          command: '',
+          uploadType: UploadHostType.imgur,
+        ),
+        ScreenCaptureUploadHost(
+          id: 'builtin:catbox',
+          name: 'catbox.moe',
+          command: '',
+          uploadType: UploadHostType.catbox,
+        ),
+        ScreenCaptureUploadHost(
+          id: 'builtin:prntscr',
+          name: 'prntscr.com',
+          command: '',
+          uploadType: UploadHostType.prntscr,
+        ),
+      ];
 }
 
 class Fancyshot extends StatefulWidget {
@@ -239,7 +266,7 @@ class FancyshotState extends State<Fancyshot> {
   }
 
   File? _latestScreenshotFile() {
-    final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+    final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots');
     if (!screenshotsRoot.existsSync()) return null;
 
     final List<File> screenshotFiles = screenshotsRoot
@@ -901,7 +928,7 @@ class FancyshotState extends State<Fancyshot> {
           ),
           const SizedBox(width: 8),
           FilledButton.tonalIcon(
-            onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots'),
+            onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots'),
             icon: const Icon(Icons.folder_open_rounded, size: 16),
             label: const Text('Screenshots'),
           ),

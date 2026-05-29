@@ -448,7 +448,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   String _defaultRecordingFolder() {
     final DateTime now = DateTime.now();
     final String month = intl.DateFormat('MMM').format(now);
-    return '${WinUtils.getTabameAppDataFolder()}\\recordings\\${now.year} - $month';
+    return '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\recordings\\${now.year} - $month';
   }
 
   Future<String> _buildOutputPath() async {
@@ -457,7 +457,8 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       dir.createSync(recursive: true);
       WinUtils.setSortByDateModifiedDesc(dir.path);
     }
-    final String ts = DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
+    DateTime now = DateTime.now();
+    final String ts = intl.DateFormat('d EEEE HH-mm-ss').format(now);
     return '${dir.path}\\$ts.mp4';
   }
 

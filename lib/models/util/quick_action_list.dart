@@ -23,6 +23,7 @@ import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
 import '../../widgets/itzy/quickmenu/button_emoji.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot_browser.dart';
+import '../../widgets/itzy/quickmenu/button_folder_icon.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 // import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
 import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
@@ -172,6 +173,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "WallpapersButton": QuickAction(
     icon: Icons.photo_library_outlined,
     widget: () => const WallpapersButton(),
+  ),
+  "FolderIconButton": QuickAction(
+    icon: Icons.folder_special_rounded,
+    widget: () => const FolderIconButton(),
   ),
   "CalculatorButton": QuickAction(
     icon: Icons.calculate_outlined,

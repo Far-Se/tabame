@@ -91,9 +91,16 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
       QuickActionMenuEntry(
         id: "OpenFancyShotFolder",
         title: "Open FancyShot Screenshots folder",
-        searchTerms: <String>["fancyshot", "screenshot", "open fancyshot screenshot folder", "folder"],
+        searchTerms: <String>[
+          "fancyshot",
+          "screenshot",
+          "open fancyshot screenshot folder",
+          "folder",
+          "screen capture folder",
+          "screen recording folder"
+        ],
         onExecute: () {
-          WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+          WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
           QuickMenuFunctions.hideQuickMenu();
         },
         builder: (BuildContext context) {
@@ -106,7 +113,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
               child: Icon(Icons.open_in_browser, size: 14, color: onSurface),
             ),
             onTap: () async {
-              WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\screenshots');
+              WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
               QuickMenuFunctions.hideQuickMenu();
             },
           );

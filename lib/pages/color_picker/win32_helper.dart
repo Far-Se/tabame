@@ -163,7 +163,10 @@ class Win32Helper {
       };
 
       final String exeDir = WinUtils.getTabameAppDataFolder();
-      File('$exeDir/grid.json').writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
+      if (!Directory('$exeDir/cache').existsSync()) {
+        Directory('$exeDir/cache').createSync(recursive: true);
+      }
+      File('$exeDir/cache/grid.json').writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
     } catch (_) {
       // Non-fatal — just skip the file write.
     }

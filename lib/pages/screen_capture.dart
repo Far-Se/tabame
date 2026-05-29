@@ -23,14 +23,12 @@ import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:intl/intl.dart' as intl;
 import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -38,6 +36,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
+import '../models/screen_utils.dart';
 import '../models/settings.dart';
 import '../models/win32/imports.dart';
 import '../models/win32/mixed.dart';
@@ -47,6 +46,91 @@ import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import 'photo_editor.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Isolate helpers — must be top-level so compute() can send them
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Plain data descriptor for one monitor's contribution to a cropped capture.
+/// All fields are primitive/Uint8List so the object is sendable across isolates.
+class _SnapshotSlice {
+  const _SnapshotSlice({
+    required this.rgba,
+    required this.snapW,
+    required this.snapH,
+    required this.snapLeft,
+    required this.snapTop,
+    required this.scaleX,
+    required this.scaleY,
+    required this.selLeft,
+    required this.selTop,
+    required this.dstColStart,
+    required this.dstRowStart,
+    required this.dstColEnd,
+    required this.dstRowEnd,
+  });
+
+  final Uint8List rgba;
+  final int snapW;
+  final int snapH;
+  final double snapLeft;
+  final double snapTop;
+  final double scaleX;
+  final double scaleY;
+  final double selLeft;
+  final double selTop;
+  final int dstColStart;
+  final int dstRowStart;
+  final int dstColEnd;
+  final int dstRowEnd;
+}
+
+/// Isolate worker: crop pixels from one or more monitor slices then PNG-encode.
+/// [args] = [List<_SnapshotSlice> slices, int outputWidth, int outputHeight]
+Uint8List _cropAndEncodePngIsolate(List<dynamic> args) {
+  final List<_SnapshotSlice> slices = args[0] as List<_SnapshotSlice>;
+  final int outputWidth = args[1] as int;
+  final int outputHeight = args[2] as int;
+
+  final Uint8List outputRgba = Uint8List(outputWidth * outputHeight * 4);
+
+  for (final _SnapshotSlice s in slices) {
+    for (int dstRow = s.dstRowStart; dstRow < s.dstRowEnd; dstRow++) {
+      // Hoist the source-row offset out of the inner column loop.
+      final int sy = ((s.selTop + dstRow - s.snapTop) * s.scaleY).floor().clamp(0, s.snapH - 1);
+      final int srcRowBase = sy * s.snapW * 4;
+      final int dstRowBase = dstRow * outputWidth * 4;
+
+      for (int dstCol = s.dstColStart; dstCol < s.dstColEnd; dstCol++) {
+        final int sx = ((s.selLeft + dstCol - s.snapLeft) * s.scaleX).floor().clamp(0, s.snapW - 1);
+        final int srcIdx = srcRowBase + sx * 4;
+        final int dstIdx = dstRowBase + dstCol * 4;
+        outputRgba[dstIdx] = s.rgba[srcIdx];
+        outputRgba[dstIdx + 1] = s.rgba[srcIdx + 1];
+        outputRgba[dstIdx + 2] = s.rgba[srcIdx + 2];
+        outputRgba[dstIdx + 3] = s.rgba[srcIdx + 3];
+      }
+    }
+  }
+
+  return _encodeRgbaToPngIsolate(<dynamic>[outputRgba, outputWidth, outputHeight]);
+}
+
+/// Isolate worker: encode a raw RGBA buffer to PNG bytes.
+/// [args] = [Uint8List rgbaBytes, int width, int height]
+Uint8List _encodeRgbaToPngIsolate(List<dynamic> args) {
+  final Uint8List rgbaBytes = args[0] as Uint8List;
+  final int width = args[1] as int;
+  final int height = args[2] as int;
+  final img.Image image = img.Image.fromBytes(
+    width: width,
+    height: height,
+    bytes: rgbaBytes.buffer,
+    numChannels: 4,
+    order: img.ChannelOrder.rgba,
+  );
+  return Uint8List.fromList(img.encodePng(image));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -72,14 +156,14 @@ Future<void> startScreenCapture({bool freezeMode = false}) async {
   Map<int, FrozenMonitorSnapshot> preloadedSnapshots = <int, FrozenMonitorSnapshot>{};
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    Win32Window._hwnd = GetAncestor(GetActiveWindow(), 2);
+    Win32Window.hwnd = GetAncestor(GetActiveWindow(), 2);
     await Boxes.registerBoxes(justLoad: true);
     Settings.load();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
     // Keep hidden while we capture – window is offscreen but we also hide it
     // so the layered surface is definitely absent from GDI capture.
-    ShowWindow(Win32Window._hwnd, SW_HIDE);
+    ShowWindow(Win32Window.hwnd, SW_HIDE);
   });
 
   // Capture all monitors while the window is hidden and offscreen.
@@ -92,7 +176,7 @@ Future<void> startScreenCapture({bool freezeMode = false}) async {
   }
 
   // Now show the window.
-  ShowWindow(Win32Window._hwnd, SW_SHOW);
+  ShowWindow(Win32Window.hwnd, SW_SHOW);
   await windowManager.focus();
 
   runApp(ScreenCaptureApp(freezeMode: freezeMode, preloadedSnapshots: preloadedSnapshots));
@@ -301,84 +385,6 @@ class Settings {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Win32 helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-class Win32Window {
-  static int _hwnd = 0;
-
-  static int getHwnd() {
-    if (_hwnd != 0) return _hwnd;
-    _hwnd = GetAncestor(GetActiveWindow(), 2);
-    return _hwnd;
-  }
-
-  static void setVisible(bool visible) {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-    ShowWindow(hwnd, visible ? SW_SHOW : SW_HIDE);
-    if (visible) {
-      SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-    }
-  }
-
-  static void setupOverlay() async {
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-
-    final int style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_STYLE,
-      style & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU),
-    );
-
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_EXSTYLE,
-      exStyle | WS_EX_LAYERED | WS_EX_TOPMOST,
-    );
-
-    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-
-    // Compute the bounding rect of the full virtual desktop (all monitors).
-    final int vLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    final int vTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    final int vWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    final int vHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-    SetWindowPos(
-      hwnd,
-      HWND_TOPMOST,
-      vLeft,
-      vTop,
-      vWidth,
-      vHeight,
-      SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
-    );
-  }
-
-  static void enableClickThrough() {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-  }
-
-  static void disableClickThrough() {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT & ~WS_EX_LAYERED & ~WS_EX_NOACTIVATE);
-    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Screen capture helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -408,6 +414,7 @@ class ScreenCapture {
     GetDIBits(memDc, bmp, 0, h, bgra.cast(), bmi, DIB_RGB_COLORS);
 
     final Uint8List rgba = Uint8List(w * h * 4);
+    // Zero-copy view into native memory — no extra allocation needed.
     final Uint8List src = bgra.asTypedList(w * h * 4);
     for (int i = 0; i < src.length; i += 4) {
       rgba[i] = src[i + 2];
@@ -422,14 +429,8 @@ class ScreenCapture {
     calloc.free(bgra);
     calloc.free(bmi);
 
-    final img.Image image = img.Image.fromBytes(
-      width: w,
-      height: h,
-      bytes: rgba.buffer,
-      numChannels: 4,
-      order: img.ChannelOrder.rgba,
-    );
-    return Uint8List.fromList(img.encodePng(image));
+    // Encode on a background isolate so the UI thread is never blocked.
+    return compute(_encodeRgbaToPngIsolate, <dynamic>[rgba, w, h]);
   }
 
   static Future<void> copyPngToClipboard(Uint8List pngBytes) async {
@@ -442,20 +443,7 @@ class ScreenCapture {
 
   /// Save PNG to %localappdata%\Tabame\screenshots\<timestamp>.png
   static Future<String> saveToFile(Uint8List pngBytes) async {
-    final DateTime date = DateTime.now();
-
-    String shortMonth = intl.DateFormat('MMM').format(date);
-
-    final Directory dir = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots\\${date.year} - $shortMonth');
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
-      WinUtils.setSortByDateModifiedDesc(dir.path);
-    }
-    DateTime now = DateTime.now();
-    final String ts = intl.DateFormat('d EEEE HH-mm-ss').format(now);
-    final String path = '${dir.path}\\$ts.png';
-    await File(path).writeAsBytes(pngBytes);
-    return path;
+    return await ScreenUtils.saveScreenshot(pngBytes);
   }
 
   static Future<FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
@@ -592,11 +580,8 @@ class ScreenCapture {
     GetDIBits(cursorDc, dibBmp, 0, cyCursor, dibBitsRaw.cast(), bmi2, DIB_RGB_COLORS);
     calloc.free(bmi2);
 
-    final Uint8List cursorBgra = Uint8List.fromList(dibBitsRaw.asTypedList(totalBytes));
-    DeleteObject(dibBmp);
-    DeleteDC(cursorDc);
-    ReleaseDC(NULL, screenDc);
-    calloc.free(dibBitsRaw);
+    // Zero-copy view — read pixels directly from native memory before freeing.
+    final Uint8List cursorBgra = dibBitsRaw.asTypedList(totalBytes);
 
     // 7. Alpha-blend the cursor onto a copy of the snapshot RGBA buffer.
     final Uint8List result = Uint8List.fromList(rgbaBytes);
@@ -620,35 +605,36 @@ class ScreenCapture {
 
         if (srcA == 0) {
           // XOR cursor pixel (monochrome mask) – invert destination.
+          // XOR of two bytes is always in [0,255], no clamp needed.
           if (srcR != 0 || srcG != 0 || srcB != 0) {
-            result[dstIdx] = (result[dstIdx] ^ srcR).clamp(0, 255);
-            result[dstIdx + 1] = (result[dstIdx + 1] ^ srcG).clamp(0, 255);
-            result[dstIdx + 2] = (result[dstIdx + 2] ^ srcB).clamp(0, 255);
+            result[dstIdx] = result[dstIdx] ^ srcR;
+            result[dstIdx + 1] = result[dstIdx + 1] ^ srcG;
+            result[dstIdx + 2] = result[dstIdx + 2] ^ srcB;
           }
         } else {
-          // Normal alpha-blend: out = src + dst*(1-srcA).
-          final double a = srcA / 255.0;
-          final double ia = 1.0 - a;
-          result[dstIdx] = (srcR * a + result[dstIdx] * ia).round().clamp(0, 255);
-          result[dstIdx + 1] = (srcG * a + result[dstIdx + 1] * ia).round().clamp(0, 255);
-          result[dstIdx + 2] = (srcB * a + result[dstIdx + 2] * ia).round().clamp(0, 255);
+          // Normal alpha-blend using integer fixed-point (no FPU division).
+          // out = (src * srcA + dst * (255 - srcA)) >> 8
+          final int ia = 255 - srcA;
+          result[dstIdx] = ((srcR * srcA + result[dstIdx] * ia) >> 8).clamp(0, 255);
+          result[dstIdx + 1] = ((srcG * srcA + result[dstIdx + 1] * ia) >> 8).clamp(0, 255);
+          result[dstIdx + 2] = ((srcB * srcA + result[dstIdx + 2] * ia) >> 8).clamp(0, 255);
           result[dstIdx + 3] = 255;
         }
       }
     }
 
+    DeleteObject(dibBmp);
+    DeleteDC(cursorDc);
+    ReleaseDC(NULL, screenDc);
+    calloc.free(dibBitsRaw); // free after loop — view is no longer used
+
     return result;
   }
 
-  static Uint8List encodeRgbaToPng(Uint8List rgbaBytes, int width, int height) {
-    final img.Image image = img.Image.fromBytes(
-      width: width,
-      height: height,
-      bytes: rgbaBytes.buffer,
-      numChannels: 4,
-      order: img.ChannelOrder.rgba,
-    );
-    return Uint8List.fromList(img.encodePng(image));
+  /// Encodes RGBA bytes to PNG on a background isolate so the UI thread
+  /// is never blocked by the (potentially heavy) compression work.
+  static Future<Uint8List> encodeRgbaToPng(Uint8List rgbaBytes, int width, int height) {
+    return compute(_encodeRgbaToPngIsolate, <dynamic>[rgbaBytes, width, height]);
   }
 
   static Uint8List _bgraToRgba(Uint8List bgraBytes) {
@@ -1380,53 +1366,50 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   /// seamlessly composited output image.  Regions not covered by any snapshot
   /// (e.g. the gap between two non-adjacent monitors) are left as transparent
   /// black.
+  ///
+  /// The pixel-copy loop and PNG encoding are both performed on a background
+  /// isolate via [compute] so the UI thread is never blocked.
   Future<Uint8List?> _captureFrozenRegionToPng(Rect screenRect) async {
     final Rect sel = screenRect.normalized();
 
     final int outputWidth = sel.width.round().clamp(1, 1000000);
     final int outputHeight = sel.height.round().clamp(1, 1000000);
-    final Uint8List outputRgba = Uint8List(outputWidth * outputHeight * 4);
 
-    // Iterate every available snapshot and blit the portion that overlaps sel.
-    // A selection that spans two monitors will hit two snapshots here.
-    bool anyHit = false;
+    // Build lightweight, isolate-sendable slice descriptors for every
+    // snapshot that overlaps the selection.
+    final List<_SnapshotSlice> slices = <_SnapshotSlice>[];
+
     for (final int monitorHandle in List<int>.from(_frozenMonitorSnapshots.keys)) {
       final FrozenMonitorSnapshot? snapshot = await _ensureFrozenMonitorSnapshot(monitorHandle);
       if (snapshot == null) continue;
 
       final Rect intersection = sel.intersect(snapshot.screenRect);
       if (intersection.isEmpty) continue;
-      anyHit = true;
 
-      // Per-monitor DPI scale (pixelWidth may differ from screenRect.width on
-      // HiDPI displays).
-      final double scaleX = snapshot.pixelWidth / snapshot.screenRect.width;
-      final double scaleY = snapshot.pixelHeight / snapshot.screenRect.height;
-
-      // Destination pixel range inside outputRgba that this monitor covers.
-      final int dstColStart = (intersection.left - sel.left).round();
-      final int dstRowStart = (intersection.top - sel.top).round();
-      final int dstColEnd = (intersection.right - sel.left).round();
-      final int dstRowEnd = (intersection.bottom - sel.top).round();
-
-      for (int dstRow = dstRowStart; dstRow < dstRowEnd; dstRow++) {
-        final int sy =
-            ((sel.top + dstRow - snapshot.screenRect.top) * scaleY).floor().clamp(0, snapshot.pixelHeight - 1);
-        for (int dstCol = dstColStart; dstCol < dstColEnd; dstCol++) {
-          final int sx =
-              ((sel.left + dstCol - snapshot.screenRect.left) * scaleX).floor().clamp(0, snapshot.pixelWidth - 1);
-          final int srcIndex = (sy * snapshot.pixelWidth + sx) * 4;
-          final int dstIndex = (dstRow * outputWidth + dstCol) * 4;
-          outputRgba[dstIndex] = snapshot.rgbaBytes[srcIndex];
-          outputRgba[dstIndex + 1] = snapshot.rgbaBytes[srcIndex + 1];
-          outputRgba[dstIndex + 2] = snapshot.rgbaBytes[srcIndex + 2];
-          outputRgba[dstIndex + 3] = snapshot.rgbaBytes[srcIndex + 3];
-        }
-      }
+      slices.add(_SnapshotSlice(
+        rgba: snapshot.rgbaBytes,
+        snapW: snapshot.pixelWidth,
+        snapH: snapshot.pixelHeight,
+        snapLeft: snapshot.screenRect.left,
+        snapTop: snapshot.screenRect.top,
+        scaleX: snapshot.pixelWidth / snapshot.screenRect.width,
+        scaleY: snapshot.pixelHeight / snapshot.screenRect.height,
+        selLeft: sel.left,
+        selTop: sel.top,
+        dstColStart: (intersection.left - sel.left).round(),
+        dstRowStart: (intersection.top - sel.top).round(),
+        dstColEnd: (intersection.right - sel.left).round(),
+        dstRowEnd: (intersection.bottom - sel.top).round(),
+      ));
     }
 
-    if (!anyHit) return null;
-    return ScreenCapture.encodeRgbaToPng(outputRgba, outputWidth, outputHeight);
+    if (slices.isEmpty) return null;
+
+    // Offload the pixel-copy loop AND PNG encoding to a background isolate.
+    return compute(
+      _cropAndEncodePngIsolate,
+      <dynamic>[slices, outputWidth, outputHeight],
+    );
   }
 
   bool _isHotkeyPressed(
@@ -1475,7 +1458,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       QuickMenuFunctions.hideQuickMenu();
     } else {
-      windowManager.close();
+      if (userSettings.args.contains('-screenCapture')) windowManager.close();
     }
   }
 
@@ -1927,6 +1910,12 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     );
   }
 
+  Future<void> hideQuickMenuOffScreen() async {
+    await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
+    if (kDebugMode && !Globals.debugHotkeys) return;
+    Win32.setPosition(const Offset(-99999, -99999));
+  }
+
   Future<void> _handleCaptureResult({
     required Uint8List pngBytes,
     required String filePath,
@@ -1943,8 +1932,17 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
     if (choice.uploadHost != null) {
       if (!widget.freezeMode) _resetLiveSnapshot();
-      final bool started = await _runUploadHost(choice.uploadHost!, filePath);
-      if (started) await _finishPostCaptureAction();
+      await hideQuickMenuOffScreen();
+      await UploadUtils.runUploadHost(choice.uploadHost!, filePath, onSuccess: (String url) async {
+        if (choice.uploadHost!.uploadType != UploadHostType.custom) {
+          ClipboardExtended.copy(url);
+          // Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
+          await _finishPostCaptureAction();
+        }
+      }, onError: (String e) {
+        WinUtils.msgBox("Upload Error", e);
+      });
+      // await _finishPostCaptureAction();
       return;
     }
 
@@ -1963,16 +1961,19 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         return;
       case CaptureActionMode.copyImageToClipboard:
         if (!widget.freezeMode) _resetLiveSnapshot();
+        await hideQuickMenuOffScreen();
         await ScreenCapture.copyPngToClipboard(pngBytes);
         await _finishPostCaptureAction();
         return;
       case CaptureActionMode.copyImageFileToClipboard:
         if (!widget.freezeMode) _resetLiveSnapshot();
+        await hideQuickMenuOffScreen();
         await ScreenCapture.copyFileToClipboard(filePath);
         await _finishPostCaptureAction();
         return;
       case CaptureActionMode.openPhotoEditor:
         if (!widget.freezeMode) _resetLiveSnapshot();
+        await hideQuickMenuOffScreen();
         await openPhotoEditorForCapture(
           filePath: editorFilePath,
           bytes: editorPngBytes,
@@ -1985,175 +1986,13 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   Future<void> _finishPostCaptureAction() async {
-    // if (kDebugMode) {
-    //   appState.backToCapture();
-    //   await windowManager.focus();
-    //   return;
-    // }
-    final AudioPlayer player = AudioPlayer();
-    await player.setAsset('resources/beep.mp3');
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    player.dispose();
+    if (kDebugMode) {
+      appState.backToCapture();
+      await windowManager.focus();
+      return;
+    }
+    await ScreenUtils.playCameraSound();
     closeMainWindow();
-  }
-
-  Future<bool> _runUploadHost(ScreenCaptureUploadHost host, String filePath) async {
-    switch (host.uploadType) {
-      case UploadHostType.catbox:
-        return _uploadToCatbox(filePath);
-      case UploadHostType.custom:
-        return _runCustomUploadCommand(host, filePath);
-    }
-  }
-
-  /// Upload [filePath] to catbox.moe anonymously.
-  /// Opens the returned URL in the browser and copies it to clipboard.
-  Future<bool> _uploadToCatbox(String filePath) async {
-    setState(() => _applyingPreset = true); // reuse loading indicator
-    try {
-      final File file = File(filePath);
-      if (!file.existsSync()) {
-        if (mounted) {
-          await showDialog<void>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Upload Failed'),
-              content: Text('File not found:\n$filePath'),
-              actions: <Widget>[
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-              ],
-            ),
-          );
-        }
-        return false;
-      }
-
-      final HttpClient client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 30);
-
-      final Uri uri = Uri.parse('https://catbox.moe/user/api.php');
-      final HttpClientRequest request = await client.postUrl(uri);
-
-      // Build multipart/form-data manually.
-      final String boundary = '----TabameBoundary${DateTime.now().millisecondsSinceEpoch}';
-      request.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
-
-      final BytesBuilder body = BytesBuilder();
-      void addField(String name, String value) {
-        body.add(utf8.encode('--$boundary\r\n'));
-        body.add(utf8.encode('Content-Disposition: form-data; name="$name"\r\n\r\n'));
-        body.add(utf8.encode('$value\r\n'));
-      }
-
-      addField('reqtype', 'fileupload');
-      // Anonymous upload — no userhash needed.
-
-      final Uint8List fileBytes = file.readAsBytesSync();
-      final String fileName = file.path.split(Platform.pathSeparator).last;
-      body.add(utf8.encode('--$boundary\r\n'));
-      body.add(utf8.encode('Content-Disposition: form-data; name="fileToUpload"; filename="$fileName"\r\n'));
-      body.add(utf8.encode('Content-Type: image/png\r\n\r\n'));
-      body.add(fileBytes);
-      body.add(utf8.encode('\r\n'));
-      body.add(utf8.encode('--$boundary--\r\n'));
-
-      final Uint8List bodyBytes = body.toBytes();
-      request.headers.set(HttpHeaders.contentLengthHeader, bodyBytes.length.toString());
-      request.add(bodyBytes);
-
-      final HttpClientResponse response = await request.close();
-      final String responseBody = await response.transform(utf8.decoder).join();
-      client.close();
-
-      if (response.statusCode == 200 && responseBody.startsWith('https://')) {
-        final String url = responseBody.trim();
-        // Copy URL to clipboard.
-        ClipboardExtended.copy(url);
-        // Open in default browser.
-        await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
-        if (mounted) {
-          setState(() => _applyingPreset = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Uploaded: $url  •  URL copied to clipboard'),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-        return true;
-      } else {
-        if (mounted) {
-          setState(() => _applyingPreset = false);
-          await showDialog<void>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('catbox.moe Upload Failed'),
-              content: Text('HTTP ${response.statusCode}\n\n$responseBody'),
-              actions: <Widget>[
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-              ],
-            ),
-          );
-        }
-        return false;
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _applyingPreset = false);
-        await showDialog<void>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('catbox.moe Upload Error'),
-            content: Text('$error'),
-            actions: <Widget>[
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-            ],
-          ),
-        );
-      }
-      return false;
-    } finally {
-      if (mounted) setState(() => _applyingPreset = false);
-    }
-  }
-
-  Future<bool> _runCustomUploadCommand(ScreenCaptureUploadHost host, String filePath) async {
-    try {
-      final String escapedFilePath = filePath.replaceAll("'", "''");
-      final String resolvedCommand = host.command.contains(r'${file}')
-          ? host.command.replaceAll(r'${file}', "'$escapedFilePath'")
-          : '${host.command} \'$escapedFilePath\'';
-      await Process.start(
-        'powershell.exe',
-        <String>[
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-Command',
-          resolvedCommand,
-        ],
-        mode: ProcessStartMode.detached,
-      );
-      return true;
-    } catch (error) {
-      if (!mounted) return false;
-      await showDialog<void>(
-        context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Uploader Failed'),
-          content: Text(
-            'Could not start "${host.name}".\n\n$error',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-      return false;
-    }
   }
 
   void _showCaptureModal(
@@ -2868,15 +2707,6 @@ class _CapturePainter extends CustomPainter {
   @override
   bool shouldRepaint(_CapturePainter old) =>
       old.start != start || old.current != current || old.windowHighlight != windowHighlight;
-}
-
-extension _RectNorm on Rect {
-  Rect normalized() => Rect.fromLTRB(
-        left < right ? left : right,
-        top < bottom ? top : bottom,
-        left < right ? right : left,
-        top < bottom ? bottom : top,
-      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

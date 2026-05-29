@@ -544,26 +544,22 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
             IconButton(
               icon: const Icon(Icons.image_outlined, size: 16),
               tooltip: 'Add Image',
-              splashRadius: 18,
               onPressed: _pickFile,
             ),
             IconButton(
               icon: const Icon(Icons.folder_open_outlined, size: 16),
               tooltip: 'Add Folder',
-              splashRadius: 18,
               onPressed: _pickFolder,
             ),
             if (_selected.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
                 tooltip: 'Convert (${_selected.length})',
-                splashRadius: 18,
                 onPressed: () => _openConverter(),
               ),
             IconButton(
               icon: const Icon(Icons.settings_outlined, size: 16),
               tooltip: 'Watched folders',
-              splashRadius: 18,
               onPressed: () => setState(() => _page = _Page.settings),
             ),
           ],

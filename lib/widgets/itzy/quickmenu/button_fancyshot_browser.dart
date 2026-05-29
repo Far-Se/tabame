@@ -175,8 +175,8 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
   // ── Helpers ───────────────────────────────
 
   String get _rootFolder => _mediaType == _MediaType.screenshots
-      ? '${WinUtils.getTabameAppDataFolder()}\\screenshots'
-      : '${WinUtils.getTabameAppDataFolder()}\\recordings';
+      ? '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots'
+      : '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\recordings';
 
   bool _isMediaFile(String path) {
     final String ext = _extension(path);

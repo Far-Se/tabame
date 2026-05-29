@@ -238,12 +238,17 @@ class VaultsWidgetState extends State<VaultsWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _buildField(_nameController, "Vault Name", Icons.label_outline_rounded),
+          _buildField(controller: _nameController, label: "Vault Name", icon: Icons.label_outline_rounded),
           const SizedBox(height: 12),
-          _buildField(_passController, "Password (Optional)", Icons.password_rounded, isObscure: true),
+          _buildField(
+              controller: _passController, label: "Password (Optional)", icon: Icons.password_rounded, isObscure: true),
           const SizedBox(height: 12),
-          _buildField(_passConfirmController, "Confirm Password", Icons.check_circle_outline_rounded,
-              isObscure: true, onSubmitted: (_) => _createVault()),
+          _buildField(
+              controller: _passConfirmController,
+              label: "Confirm Password",
+              icon: Icons.check_circle_outline_rounded,
+              isObscure: true,
+              onSubmitted: (_) => _createVault()),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(8),
@@ -278,8 +283,13 @@ class VaultsWidgetState extends State<VaultsWidget> {
             children: <Widget>[
               Text("Unlock '$_selectedVaultName'", style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              _buildField(_passController, "Enter Password", Icons.vpn_key_rounded,
-                  isObscure: true, autoFocus: true, onSubmitted: (_) => _unlockVault()),
+              _buildField(
+                  controller: _passController,
+                  label: "Enter Password",
+                  icon: Icons.vpn_key_rounded,
+                  isObscure: true,
+                  autoFocus: true,
+                  onSubmitted: (_) => _unlockVault()),
               const SizedBox(height: 16),
               Row(
                 children: <Widget>[
@@ -296,23 +306,6 @@ class VaultsWidgetState extends State<VaultsWidget> {
             ],
           ),
         ));
-  }
-
-  Widget _buildField(TextEditingController controller, String label, IconData icon,
-      {bool isObscure = false, bool autoFocus = false, Function(String)? onSubmitted}) {
-    return TextField(
-      controller: controller,
-      obscureText: isObscure,
-      autofocus: autoFocus,
-      onSubmitted: onSubmitted,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, size: 16),
-        labelText: label,
-        isDense: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
   }
 
   Future<void> _exportAllKeys() async {
@@ -462,15 +455,9 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
           color: userSettings.themeColors.accentColor.withAlpha(15), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: <Widget>[
-          TextField(
-              controller: _keyEdit,
-              decoration: const InputDecoration(labelText: "Key", isDense: true),
-              style: const TextStyle(fontSize: 12)),
+          _buildField(controller: _keyEdit, label: "Key", icon: Icons.key),
           const SizedBox(height: 8),
-          TextField(
-              controller: _valEdit,
-              decoration: const InputDecoration(labelText: "Value", isDense: true),
-              style: const TextStyle(fontSize: 12)),
+          _buildField(controller: _valEdit, label: "Value", icon: Icons.blur_linear_outlined),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -509,6 +496,62 @@ class _VaultItemTile extends StatefulWidget {
 
   @override
   State<_VaultItemTile> createState() => _VaultItemTileState();
+}
+
+Widget _buildField(
+    {required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isObscure = false,
+    bool autoFocus = false,
+    Function(String)? onSubmitted,
+    String? hintText}) {
+  return TextField(
+    controller: controller,
+    obscureText: isObscure,
+    autofocus: autoFocus,
+    onSubmitted: onSubmitted,
+    style: const TextStyle(fontSize: 13),
+    decoration: InputDecoration(
+      isDense: true,
+
+      // Use labelText instead of hintText
+      labelText: label,
+      hintText: hintText,
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: userSettings.themeColors.textColor.withAlpha(110),
+      ),
+
+      prefixIcon: Icon(
+        icon,
+        size: 16,
+        color: userSettings.themeColors.accentColor,
+      ),
+
+      filled: true,
+      fillColor: userSettings.themeColors.accentColor.withAlpha(10),
+
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 10,
+      ),
+
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: userSettings.themeColors.accentColor.withAlpha(90),
+        ),
+      ),
+    ),
+  );
 }
 
 class _VaultItemTileState extends State<_VaultItemTile> {

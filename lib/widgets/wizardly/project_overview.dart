@@ -1511,6 +1511,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
 
         _loadLocalSaves();
         setState(() {
+          if (File(zipFileName).existsSync()) File(zipFileName).deleteSync();
           isDownloading = false;
           downloadMessage = "Download Project";
         });

@@ -14,7 +14,6 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
@@ -22,7 +21,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:intl/intl.dart' as intl;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
@@ -30,6 +28,7 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
+import '../models/screen_utils.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
@@ -37,7 +36,6 @@ import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import '../widgets/widgets/emoji_picker_modal.dart';
 import '../widgets/interface/fancyshot.dart';
-import 'color_picker/win32_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Screen-Draw post-capture action enum
@@ -77,7 +75,7 @@ Future<void> startScreenDraw() async {
     await windowManager.setHasShadow(false);
     await windowManager.show();
     await windowManager.focus();
-    Win32Window._hwnd = GetAncestor(GetActiveWindow(), 2);
+    Win32Window.hwnd = GetAncestor(GetActiveWindow(), 2);
   });
 
   runApp(const AnnotationApp());
@@ -137,99 +135,6 @@ class Settings {
   static void setInt(String key, int value) {
     _data[key] = value;
     save();
-  }
-}
-
-class Win32Window {
-  static int _hwnd = 0;
-
-  /// Finds the Flutter window HWND by the known class name.
-  static int getHwnd() {
-    if (_hwnd != 0) return _hwnd;
-    _hwnd = GetAncestor(GetActiveWindow(), 2);
-    return _hwnd;
-  }
-
-  /// Make the window borderless, topmost, and spanning all monitors.
-  static void setupOverlay() {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-
-    final int style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_STYLE,
-      style & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU),
-    );
-
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtr(
-      hwnd,
-      GWL_EXSTYLE,
-      exStyle | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-    );
-
-    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-
-    // Span the full virtual desktop (all monitors).
-    final int vLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    final int vTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    final int vWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    final int vHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-    SetWindowPos(
-      hwnd,
-      HWND_TOPMOST,
-      vLeft,
-      vTop,
-      vWidth,
-      vHeight,
-      SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW,
-    );
-  }
-
-  /// Enable click-through: window stays visible but mouse passes through.
-  static void enableClickThrough() {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-
-    SetWindowLongPtr(
-      hwnd,
-      GWL_EXSTYLE,
-      exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE,
-    );
-
-    // SetLayeredWindowAttributes(hwnd, 0, 220, LWA_ALPHA);
-
-    // Important: refresh cached window styles
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-  }
-
-  /// Disable click-through: window captures mouse again.
-  static void disableClickThrough() {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-
-    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT & ~WS_EX_LAYERED & ~WS_EX_NOACTIVATE);
-
-    // Restore full opacity (or whatever you prefer)
-    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-
-    // Refresh style cache (same as before)
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-  }
-
-  /// Show/hide the overlay window.
-  static void setVisible(bool visible) {
-    final int hwnd = getHwnd();
-    if (hwnd == 0) return;
-    ShowWindow(hwnd, visible ? SW_SHOW : SW_HIDE);
-    if (visible) {
-      SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-    }
   }
 }
 
@@ -2506,22 +2411,16 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     // 3. Always save to file (so Copy File / Upload have something to work with).
     String? savedFilePath;
     try {
-      final DateTime date = DateTime.now();
-      final String shortMonth = intl.DateFormat('MMM').format(date);
-      final Directory dir = Directory('${WinUtils.getTabameAppDataFolder()}\\screenshots\\${date.year} - $shortMonth');
-      if (!dir.existsSync()) {
-        dir.createSync(recursive: true);
-        WinUtils.setSortByDateModifiedDesc(dir.path);
-      }
-      final String ts =
-          DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-').replaceFirst(RegExp(r'^.*?T'), '');
-      savedFilePath = '${dir.path}\\$ts.png';
-      if (pngBytes != null) await File(savedFilePath).writeAsBytes(pngBytes);
+      if (pngBytes != null) savedFilePath = await ScreenUtils.saveScreenshot(pngBytes);
     } catch (_) {
       savedFilePath = null;
     }
 
     // 4. Perform the chosen post-capture action.
+    if (ctrl.captureAndClose) {
+      windowManager.minimize();
+      await ScreenUtils.playCameraSound();
+    }
     switch (ctrl.capturePostAction) {
       case ScreenDrawCaptureAction.copyImage:
         if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
@@ -2535,7 +2434,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       case ScreenDrawCaptureAction.upload:
         final ScreenCaptureUploadHost? host = ctrl.captureUploadHost;
         if (host != null && savedFilePath != null) {
-          await _runUploadHost(host, savedFilePath);
+          await UploadUtils.runUploadHost(host, savedFilePath, onSuccess: (String url) async {
+            if (host.uploadType != UploadHostType.custom) {
+              ClipboardExtended.copy(url);
+              // await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
+            }
+          }, onError: (_) {});
         } else {
           if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
         }
@@ -2544,86 +2448,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     final bool shouldClose = ctrl.captureAndClose;
     // captureAndClose is a persistent preference — do not reset it here.
 
-    await WindowManager.instance.focus();
-    await Win32Helper.playBeepSound();
     if (shouldClose) {
       await windowManager.close();
       return;
-    }
-  }
-
-  /// Upload a file to the given host (mirrors screen_capture.dart logic).
-  Future<void> _runUploadHost(ScreenCaptureUploadHost host, String filePath) async {
-    switch (host.uploadType) {
-      case UploadHostType.catbox:
-        await _uploadToCatbox(filePath);
-      case UploadHostType.custom:
-        await _runCustomUploadCommand(host, filePath);
-    }
-  }
-
-  Future<void> _uploadToCatbox(String filePath) async {
-    try {
-      final File file = File(filePath);
-      if (!file.existsSync()) return;
-
-      final HttpClient client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 30);
-      final Uri uri = Uri.parse('https://catbox.moe/user/api.php');
-      final HttpClientRequest request = await client.postUrl(uri);
-
-      final String boundary = '----TabameBoundary${DateTime.now().millisecondsSinceEpoch}';
-      request.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
-
-      final BytesBuilder body = BytesBuilder();
-      void addField(String name, String value) {
-        body.add(utf8.encode('--$boundary\r\n'));
-        body.add(utf8.encode('Content-Disposition: form-data; name="$name"\r\n\r\n'));
-        body.add(utf8.encode('$value\r\n'));
-      }
-
-      addField('reqtype', 'fileupload');
-
-      final Uint8List fileBytes = file.readAsBytesSync();
-      final String fileName = file.path.split(Platform.pathSeparator).last;
-      body.add(utf8.encode('--$boundary\r\n'));
-      body.add(utf8.encode('Content-Disposition: form-data; name="fileToUpload"; filename="$fileName"\r\n'));
-      body.add(utf8.encode('Content-Type: image/png\r\n\r\n'));
-      body.add(fileBytes);
-      body.add(utf8.encode('\r\n'));
-      body.add(utf8.encode('--$boundary--\r\n'));
-
-      final Uint8List bodyBytes = body.toBytes();
-      request.headers.set(HttpHeaders.contentLengthHeader, bodyBytes.length.toString());
-      request.add(bodyBytes);
-
-      final HttpClientResponse response = await request.close();
-      final String responseBody = await response.transform(utf8.decoder).join();
-      client.close();
-
-      if (response.statusCode == 200 && responseBody.startsWith('https://')) {
-        final String url = responseBody.trim();
-        ClipboardExtended.copy(url);
-        await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
-      }
-    } catch (_) {
-      // silently ignore
-    }
-  }
-
-  Future<void> _runCustomUploadCommand(ScreenCaptureUploadHost host, String filePath) async {
-    try {
-      final String escapedFilePath = filePath.replaceAll("'", "''");
-      final String resolvedCommand = host.command.contains(r'${file}')
-          ? host.command.replaceAll(r'${file}', "'$escapedFilePath'")
-          : '${host.command} \'$escapedFilePath\'';
-      await Process.start(
-        'powershell.exe',
-        <String>['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', resolvedCommand],
-        mode: ProcessStartMode.detached,
-      );
-    } catch (_) {
-      // silently ignore
+    } else {
+      await WindowManager.instance.focus();
+      ScreenUtils.playCameraSound();
     }
   }
 }
@@ -3141,15 +2971,6 @@ class _LiveRegionWidgetState extends State<_LiveRegionWidget> {
       ),
     );
   }
-}
-
-extension _RectNorm on Rect {
-  Rect normalized() => Rect.fromLTRB(
-        left < right ? left : right,
-        top < bottom ? top : bottom,
-        left < right ? right : left,
-        top < bottom ? bottom : top,
-      );
 }
 
 class _RegionEffectPainter extends CustomPainter {

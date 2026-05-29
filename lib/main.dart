@@ -26,9 +26,8 @@ Future<void> main(List<String> arguments) async {
   // return startSpotlight();
 
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  // return startScreenCapture();
 
-  // FlutterError.onError = handleErrors;
-  // PlatformDispatcher.instance.onError = handlePlatformErrors;
   if (arguments.contains("-spotlight")) return startSpotlight();
   if (arguments.contains("-editor")) return startPhotoEditor(arguments);
   if (arguments.contains("-screenCapture")) return startScreenCapture();

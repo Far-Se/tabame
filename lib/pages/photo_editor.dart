@@ -16,6 +16,7 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
+import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
@@ -1404,7 +1405,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   Future<void> _captureMoreFromScreen() async {
     if (_captureMoreBusy) return;
     setState(() => _captureMoreBusy = true);
-    final int hwnd = Win32Window.getHwnd();
+    Win32.getMainHandle();
+    final int hwnd = Win32.hWnd;
     try {
       if (hwnd != 0) ShowWindow(hwnd, SW_HIDE);
       await Future<void>.delayed(const Duration(milliseconds: 80));

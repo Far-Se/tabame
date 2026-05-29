@@ -112,5 +112,5 @@ class ColorPickerController extends ChangeNotifier {
 
   Directory get _appDataDirectory => Directory(WinUtils.getTabameAppDataFolder());
 
-  File get _gridFile => File('${_appDataDirectory.path}\\grid.json');
+  File get _gridFile => File('${_appDataDirectory.path}\\cache\\grid.json');
 }
