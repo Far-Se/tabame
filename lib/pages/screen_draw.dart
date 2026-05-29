@@ -48,6 +48,11 @@ enum ScreenDrawCaptureAction {
   copyTextOcr,
 }
 
+enum ScreenDrawOcrCaptureType {
+  bitBlt,
+  directX,
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -390,6 +395,7 @@ class AnnotationController extends ChangeNotifier {
   /// After capture: copy image, copy file, upload via host, or null (just save).
   /// null means copy image to clipboard (legacy / default behaviour).
   ScreenDrawCaptureAction capturePostAction = ScreenDrawCaptureAction.copyImage;
+  ScreenDrawOcrCaptureType ocrCaptureType = ScreenDrawOcrCaptureType.bitBlt;
 
   /// If [capturePostAction] is [ScreenDrawCaptureAction.upload], which host.
   ScreenCaptureUploadHost? captureUploadHost;
@@ -1031,6 +1037,10 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     final int action = Settings.getInt("capturePostAction") ?? 0;
     _ctrl.capturePostAction =
         ScreenDrawCaptureAction.values[action.clamp(0, ScreenDrawCaptureAction.values.length - 1)];
+
+    final int ocrType = Settings.getInt("ocrCaptureType") ?? 0;
+    _ctrl.ocrCaptureType =
+        ScreenDrawOcrCaptureType.values[ocrType.clamp(0, ScreenDrawOcrCaptureType.values.length - 1)];
 
     final String? host = Settings.getString("captureUploadHost");
     _ctrl.captureUploadHost = uploadHosts.where((ScreenCaptureUploadHost h) => h.id == host).firstOrNull;
@@ -2451,7 +2461,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
             screenRect.top.round(),
             screenRect.width.round().clamp(1, 1000000),
             screenRect.height.round().clamp(1, 1000000),
-            0,
+            ctrl.ocrCaptureType.index,
           );
           await ClipboardExtended.copy(text);
         } catch (_) {
@@ -4116,6 +4126,32 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                       _refresh();
                     },
                   ),
+                  if (c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr) ...<Widget>[
+                    const SizedBox(height: 4),
+                    _sectionLabel('OCR CAPTURE'),
+                    _actionRow(
+                      icon: Icons.filter_none,
+                      label: 'BitBlt',
+                      selected: c.ocrCaptureType == ScreenDrawOcrCaptureType.bitBlt,
+                      onTap: () {
+                        c.ocrCaptureType = ScreenDrawOcrCaptureType.bitBlt;
+                        Settings.setInt("ocrCaptureType", c.ocrCaptureType.index);
+                        c.setTool(DrawTool.screenCapture);
+                        _refresh();
+                      },
+                    ),
+                    _actionRow(
+                      icon: Icons.screenshot_monitor_outlined,
+                      label: 'DirectX',
+                      selected: c.ocrCaptureType == ScreenDrawOcrCaptureType.directX,
+                      onTap: () {
+                        c.ocrCaptureType = ScreenDrawOcrCaptureType.directX;
+                        Settings.setInt("ocrCaptureType", c.ocrCaptureType.index);
+                        c.setTool(DrawTool.screenCapture);
+                        _refresh();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   _checkboxRow(
                     icon: Icons.close,

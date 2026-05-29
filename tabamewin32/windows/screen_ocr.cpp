@@ -20,6 +20,11 @@ struct OcrResult {
   std::string errorMessage;
 };
 
+enum class OcrCaptureType {
+  BitBlt = 0,
+  DirectX = 1,
+};
+
 namespace {
 using winrt::Windows::Graphics::Imaging::BitmapAlphaMode;
 using winrt::Windows::Graphics::Imaging::BitmapPixelFormat;
@@ -91,6 +96,59 @@ bool CaptureRectWithBitBlt(int x, int y, int width, int height,
   return lines != 0;
 }
 
+bool CropMonitorCaptureToRect(const MonitorCaptureResult &capture,
+                              const RECT &monitorRect, int x, int y, int width,
+                              int height, std::vector<uint8_t> &pixels) {
+  if (capture.pixels.empty() || capture.width <= 0 || capture.height <= 0)
+    return false;
+
+  pixels.assign(static_cast<size_t>(width) * height * 4, 255);
+  for (int row = 0; row < height; ++row) {
+    const int screenY = y + row;
+    const int sourceY = screenY - monitorRect.top;
+    if (sourceY < 0 || sourceY >= capture.height)
+      continue;
+
+    for (int col = 0; col < width; ++col) {
+      const int screenX = x + col;
+      const int sourceX = screenX - monitorRect.left;
+      if (sourceX < 0 || sourceX >= capture.width)
+        continue;
+
+      const size_t sourceIndex =
+          (static_cast<size_t>(sourceY) * capture.width + sourceX) * 4;
+      const size_t destIndex =
+          (static_cast<size_t>(row) * width + col) * 4;
+      pixels[destIndex] = capture.pixels[sourceIndex];
+      pixels[destIndex + 1] = capture.pixels[sourceIndex + 1];
+      pixels[destIndex + 2] = capture.pixels[sourceIndex + 2];
+      pixels[destIndex + 3] = 255;
+    }
+  }
+  return true;
+}
+
+bool CaptureRectWithDirectX(int x, int y, int width, int height,
+                            std::vector<uint8_t> &pixels) {
+  RECT requested = {x, y, x + width, y + height};
+  HMONITOR monitor = MonitorFromRect(&requested, MONITOR_DEFAULTTONEAREST);
+  if (monitor == nullptr)
+    return false;
+
+  MONITORINFO info = {};
+  info.cbSize = sizeof(MONITORINFO);
+  if (!GetMonitorInfo(monitor, &info))
+    return false;
+
+  MonitorCaptureResult capture;
+  if (!CaptureMonitorBitmapAlternative(
+          static_cast<int64_t>(reinterpret_cast<LONG_PTR>(monitor)), capture))
+    return false;
+
+  return CropMonitorCaptureToRect(capture, info.rcMonitor, x, y, width, height,
+                                  pixels);
+}
+
 OcrResult RecognizeBgraPixels(const std::vector<uint8_t> &pixels, int width,
                               int height) {
   OcrResult out;
@@ -150,13 +208,18 @@ OcrResult RecognizeBgraPixels(const std::vector<uint8_t> &pixels, int width,
 } // namespace
 
 OcrResult GetTextOCR(int x, int y, int width, int height, int type) {
-  (void)type;
   OcrResult result;
   width = std::clamp(width, 1, 1000000);
   height = std::clamp(height, 1, 1000000);
 
   std::vector<uint8_t> pixels;
-  const bool captured = CaptureRectWithBitBlt(x, y, width, height, pixels);
+  const OcrCaptureType captureType =
+      type == static_cast<int>(OcrCaptureType::DirectX) ? OcrCaptureType::DirectX
+                                                       : OcrCaptureType::BitBlt;
+  const bool captured =
+      captureType == OcrCaptureType::DirectX
+          ? CaptureRectWithDirectX(x, y, width, height, pixels)
+          : CaptureRectWithBitBlt(x, y, width, height, pixels);
 
   if (!captured) {
     result.errorCode = "OCR_CAPTURE_FAILED";

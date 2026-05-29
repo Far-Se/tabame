@@ -515,6 +515,11 @@ class MonitorCapture {
   }
 }
 
+enum OcrCaptureType {
+  bitBlt,
+  directX,
+}
+
 Future<String> GetTextOCR(int x, int y, int width, int height, int type) async {
   final String? result = await tabameWin32MethodChannel.invokeMethod<String>(
     'getTextOCR',
