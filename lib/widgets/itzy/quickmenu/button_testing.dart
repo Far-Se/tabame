@@ -20,14 +20,21 @@ class TestingButton extends StatefulWidget {
 
 class _TestingButtonState extends State<TestingButton> {
   Timer? timer;
-  ByteData? xIcon;
+  Uint8List? xIcon;
   AppInfo? app;
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
       message: "Testing",
-      icon: xIcon != null ? Image.memory(xIcon!.buffer.asUint8List()) : const Icon(Icons.science),
+      icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
+        // xIcon = WinUtils.extractIconInternal(
+        //     r"C:\Users\Far Se\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Antigravity\Antigravity.lnk", 0);
+        xIcon = WinUtils.extractIconInternal(
+            r"C:\Users\Far Se\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Steam\Counter-Strike.url", 0);
+        print(xIcon!.length);
+        setState(() {});
+        return;
         const String path = 'C:\\Windows\\System32\\notepad.exe';
         print("Querying context menu items for $path...");
         try {

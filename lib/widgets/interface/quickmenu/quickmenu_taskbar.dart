@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
+import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/window_watcher.dart';
 import '../../widgets/mini_switch.dart';
 
@@ -442,7 +444,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
         children: <Widget>[
           _buildPanelHeader(
             icon: Icons.image_search_rounded,
-            title: "ASSET OVERRIDES",
+            title: "ICONS OVERRIDES",
             subtitle: "Custom path mappings for application icons",
             trailing: FilledButton.tonalIcon(
               onPressed: () {
@@ -748,16 +750,33 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
             icon: Icons.notifications_active_outlined,
             title: "BADGE MONITORING",
             subtitle: "Map taskbar badges to specific application windows",
-            trailing: FilledButton.tonalIcon(
-              onPressed: () {
-                taskbarBadges.insert(0, const MapEntry<String, List<String>>("", <String>["", ""]));
-                badgeExeController.insert(0, TextEditingController());
-                badgeTitleController.insert(0, TextEditingController());
-                badgeHideRegexController.insert(0, TextEditingController());
-                setState(() {});
-              },
-              icon: const Icon(Icons.add_rounded, size: 16),
-              label: const Text("Add Badge"),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextButton.icon(
+                  onPressed: () {
+                    showQuickMenuModal(
+                      context: context,
+                      maxWidth: 500,
+                      child: const _AllBadgesModal(),
+                    );
+                  },
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: const Text("see all badges"),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.tonalIcon(
+                  onPressed: () {
+                    taskbarBadges.insert(0, const MapEntry<String, List<String>>("", <String>["", ""]));
+                    badgeExeController.insert(0, TextEditingController());
+                    badgeTitleController.insert(0, TextEditingController());
+                    badgeHideRegexController.insert(0, TextEditingController());
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text("Add Badge"),
+                ),
+              ],
             ),
           ),
           const Divider(height: 1),
@@ -867,5 +886,149 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
     }
     await Boxes.updateSettings("taskbarBadges", jsonEncode(rules));
     Boxes.taskbarBadges = rules;
+  }
+}
+
+class _AllBadgesModal extends StatefulWidget {
+  const _AllBadgesModal();
+
+  @override
+  State<_AllBadgesModal> createState() => _AllBadgesModalState();
+}
+
+class _AllBadgesModalState extends State<_AllBadgesModal> {
+  bool _loading = true;
+  List<TaskbarButtonInfo> _badgeItems = <TaskbarButtonInfo>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _loading = true;
+    });
+
+    final List<TaskbarButtonInfo> taskbarItems = await TaskbarUia.getButtonInfos();
+
+    if (mounted) {
+      setState(() {
+        _badgeItems = taskbarItems;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Color accent = userSettings.themeColors.accentColor;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.badge_outlined, size: 18, color: scheme.primary),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "ALL OPENED APP BADGES",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Currently active UIA taskbar items and their badge/helpText status",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                onPressed: _refresh,
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _badgeItems.isEmpty
+                  ? Center(
+                      child: Text(
+                        "No taskbar items found",
+                        style: TextStyle(color: theme.hintColor),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _badgeItems.length,
+                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 8),
+                      itemBuilder: (BuildContext context, int index) {
+                        final TaskbarButtonInfo button = _badgeItems[index];
+
+                        return Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  button.uiaName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              if (button.helpText.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: accent.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Text(
+                                    button.helpText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: accent,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  "-",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.hintColor.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
   }
 }

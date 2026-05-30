@@ -365,6 +365,13 @@ class AnnotationController extends ChangeNotifier {
   bool gridVisible = false;
   double gridSpacing = 50.0;
 
+  // Crosshair
+  bool crosshairVisible = true;
+  void toggleCrosshair() {
+    crosshairVisible = !crosshairVisible;
+    notifyListeners();
+  }
+
   // Magnifier
   bool magnifierVisible = false;
 
@@ -875,7 +882,7 @@ class AnnotationController extends ChangeNotifier {
         }
 
         if (newFontSize != null) {
-          newFontSize = (newFontSize * scale).clamp(8.0, 500.0);
+          newFontSize = (newFontSize * scale).clamp(8.0, 1000.0);
         }
 
         _shapes[i] = s.copyWith(
@@ -1387,7 +1394,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
               child: _StatusBar(controller: ctrl),
             ),
           // Crosshair: knows the toolbar position so it can switch cursor there
-          if (ctrl.drawingModeActive && !selectMode)
+          if (ctrl.drawingModeActive && !selectMode && ctrl.crosshairVisible)
             Positioned.fill(
               child: _CrosshairLayer(
                 onHover: null,
@@ -1460,9 +1467,10 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         if (e.logicalKey == LogicalKeyboardKey.keyZ) ctrl.undo();
         if (e.logicalKey == LogicalKeyboardKey.keyY) ctrl.redo();
         if (e.logicalKey == LogicalKeyboardKey.keyG) {
-          // ctrl.gridVisible = !ctrl.gridVisible;
-          // ctrl.notifyListeners();
           ctrl.toggleGrid();
+        }
+        if (e.logicalKey == LogicalKeyboardKey.keyC) {
+          ctrl.toggleCrosshair();
         }
       }
       if (e.logicalKey == LogicalKeyboardKey.delete) ctrl.deleteSelected();
@@ -1498,7 +1506,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         LogicalKeyboardKey.keyW: DrawTool.imageDraw,
         LogicalKeyboardKey.keyV: DrawTool.measureDistance,
       };
-      if (toolKeys.containsKey(e.logicalKey)) {
+      if (!lCtrl && toolKeys.containsKey(e.logicalKey)) {
         ctrl.setTool(toolKeys[e.logicalKey]!);
       }
 
@@ -3481,6 +3489,7 @@ class _HotkeysModal extends StatelessWidget {
                       _HkEntry('Ctrl + Z', 'Undo'),
                       _HkEntry('Ctrl + Y', 'Redo'),
                       _HkEntry('Ctrl + G', 'Toggle grid'),
+                      _HkEntry('Ctrl + C', 'Toggle crosshair'),
                       _HkEntry('Esc', 'Exit drawing mode / deselect'),
                       _HkEntry('Space', 'Toggle drawing mode on/off'),
                     ]),

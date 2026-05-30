@@ -297,11 +297,8 @@ class WindowsAppButton extends StatefulWidget {
       path,
       () {
         final Future<ExtractedIcon> future = _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
-          // Mark resolved regardless of outcome so eviction can find this entry.
           _resolvedPaths.add(path);
           if (result == null) {
-            // Keep a resolved-null sentinel so we don't re-request on every
-            // rebuild — the widget will just show the placeholder.
             return null;
           }
           if (result is Uint8List) {
@@ -314,7 +311,6 @@ class WindowsAppButton extends StatefulWidget {
         }).catchError((Object error, StackTrace stackTrace) {
           Debug.add('Icon extraction failed for $path: $error');
           Debug.add('$stackTrace');
-          // Mark resolved on error too so the eviction set stays consistent.
           _resolvedPaths.add(path);
           return null as ExtractedIcon;
         });
@@ -323,16 +319,7 @@ class WindowsAppButton extends StatefulWidget {
     );
   }
 
-  /// Evict the oldest resolved entry from [iconFutureCache].
-  ///
-  /// We track resolved paths in [_resolvedPaths] (populated inside each
-  /// future's .then/.catchError) so we never have to inspect a Future's
-  /// completion state directly — Dart provides no synchronous API for that.
-  /// Evicting only resolved entries means we never yank a future out from
-  /// under a widget that is still awaiting it.
   static void _evictOneResolvedEntry() {
-    // iconFutureCache is a LinkedHashMap — keys are in insertion order, so
-    // the first resolved key we find is the oldest one.
     for (final String key in iconFutureCache.keys.toList()) {
       if (_resolvedPaths.contains(key)) {
         iconFutureCache.remove(key);
@@ -340,7 +327,6 @@ class WindowsAppButton extends StatefulWidget {
         return;
       }
     }
-    // All entries are still in-flight — nothing safe to evict this cycle.
   }
 
   static int getCacheSize() {
@@ -379,11 +365,8 @@ class WindowsAppButton extends StatefulWidget {
 }
 
 class _WindowsAppButtonState extends State<WindowsAppButton> {
-  // The resolved icon, or null while loading / on error.
   ExtractedIcon? _icon;
 
-  // Tracks which path the current load belongs to so stale callbacks are
-  // discarded when the widget is updated before the future resolves.
   String? _loadingFor;
 
   @override
@@ -408,17 +391,11 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
     final String rewrite = Boxes.getIconRewrite(displayPath);
     if (rewrite.isNotEmpty) displayPath = rewrite;
 
-    // Record which path this load is for so we can detect stale results.
     _loadingFor = displayPath;
 
-    // Capture the expected path in a local variable so the closure below
-    // always compares against the path it was started for, not whatever
-    // _loadingFor happens to be when the future resolves.
     final String expectedPath = displayPath;
 
     WindowsAppButton.getIcon(displayPath).then((ExtractedIcon? result) {
-      // Discard the result if the widget is gone or has already moved on to a
-      // different path.
       if (!mounted || _loadingFor != expectedPath) return;
       setState(() => _icon = result);
     }).catchError((Object error, StackTrace stackTrace) {

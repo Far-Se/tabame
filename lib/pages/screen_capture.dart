@@ -169,7 +169,10 @@ Future<void> startScreenCapture({bool freezeMode = false}) async {
   // Capture all monitors while the window is hidden and offscreen.
   Monitor.fetchMonitors();
   for (final int monitorHandle in Monitor.list) {
-    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+      monitorHandle,
+      engine: Settings.getCaptureEngine(),
+    );
     if (snapshot != null) {
       preloadedSnapshots[monitorHandle] = snapshot;
     }
@@ -193,6 +196,22 @@ enum CaptureActionMode {
   copyImageToClipboard,
   copyImageFileToClipboard,
   openPhotoEditor,
+}
+
+enum CaptureEngine {
+  bitBlt,
+  directX,
+}
+
+extension CaptureEngineLabel on CaptureEngine {
+  String get label {
+    switch (this) {
+      case CaptureEngine.bitBlt:
+        return 'BitBlt';
+      case CaptureEngine.directX:
+        return 'DirectX';
+    }
+  }
 }
 
 class CaptureActionChoice {
@@ -382,6 +401,16 @@ class Settings {
   static void setCaptureDelaySeconds(int value) {
     setInt('captureDelaySeconds', value);
   }
+
+  static CaptureEngine getCaptureEngine() {
+    final int savedIndex = getInt('captureEngine') ?? CaptureEngine.bitBlt.index;
+    if (savedIndex < 0 || savedIndex >= CaptureEngine.values.length) return CaptureEngine.bitBlt;
+    return CaptureEngine.values[savedIndex];
+  }
+
+  static void setCaptureEngine(CaptureEngine value) {
+    setInt('captureEngine', value.index);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -446,8 +475,11 @@ class ScreenCapture {
     return await ScreenUtils.saveScreenshot(pngBytes);
   }
 
-  static Future<FrozenMonitorSnapshot?> captureMonitorSnapshot(int monitorHandle) async {
-    final MonitorBitmapCapture? capture = captureMonitorBitmapByHandle(monitorHandle);
+  static Future<FrozenMonitorSnapshot?> captureMonitorSnapshot(
+    int monitorHandle, {
+    CaptureEngine engine = CaptureEngine.bitBlt,
+  }) async {
+    final MonitorBitmapCapture? capture = await _captureMonitorBitmap(monitorHandle, engine);
     if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
       return null;
     }
@@ -476,6 +508,44 @@ class ScreenCapture {
       pixelWidth: capture.width,
       pixelHeight: capture.height,
     );
+  }
+
+  static Future<MonitorBitmapCapture?> _captureMonitorBitmap(int monitorHandle, CaptureEngine engine) async {
+    switch (engine) {
+      case CaptureEngine.bitBlt:
+        return captureMonitorBitmapByHandle(monitorHandle);
+      case CaptureEngine.directX:
+        return _captureMonitorBitmapWithDirectX(monitorHandle);
+    }
+  }
+
+  static Future<MonitorBitmapCapture?> _captureMonitorBitmapWithDirectX(int monitorHandle) async {
+    final Pointer<MONITORINFOEX> monitorInfo = calloc<MONITORINFOEX>();
+    monitorInfo.ref.monitorInfo.cbSize = sizeOf<MONITORINFOEX>();
+
+    try {
+      if (GetMonitorInfo(monitorHandle, monitorInfo.cast()) == 0) return null;
+
+      final RECT rect = monitorInfo.ref.monitorInfo.rcMonitor;
+      final MonitorCapture? capture = await captureMonitorBitmapAlternative(monitorHandle: monitorHandle);
+      if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.pixels.isEmpty) {
+        return null;
+      }
+      final int expectedBytes = capture.width * capture.height * 4;
+      if (capture.pixels.length < expectedBytes) return null;
+      final Uint8List bgraPixels = Uint8List.sublistView(capture.pixels, 0, expectedBytes);
+
+      return MonitorBitmapCapture(
+        deviceName: monitorInfo.ref.szDevice,
+        left: rect.left,
+        top: rect.top,
+        width: capture.width,
+        height: capture.height,
+        rgbaBytes: ScreenRegionCapture.bgraToRgba(bgraPixels),
+      );
+    } finally {
+      calloc.free(monitorInfo);
+    }
   }
 
   /// Render the current Windows cursor onto [rgbaBytes] in-place (copy returned).
@@ -730,6 +800,8 @@ class FancyShotCaptureWidget extends StatefulWidget {
   /// QuickMenuFunctions.refreshQuickMenu();
   /// ```
   static Future<void> captureScreenshots() async {
+    Settings.load();
+    final CaptureEngine captureEngine = Settings.getCaptureEngine();
     final int hwnd = Win32Window.getHwnd();
     if (hwnd != 0) {
       ShowWindow(hwnd, SW_HIDE);
@@ -740,7 +812,10 @@ class FancyShotCaptureWidget extends StatefulWidget {
     try {
       Monitor.fetchMonitors();
       for (final int monitorHandle in Monitor.list) {
-        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+          monitorHandle,
+          engine: captureEngine,
+        );
         if (snapshot != null) {
           captured[monitorHandle] = snapshot;
         }
@@ -799,6 +874,8 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   /// Hide the window, capture all monitors, re-show, then mark _readySnapshots.
   /// This mirrors what startScreenCapture does for the standalone flow.
   Future<void> _captureInitialSnapshots() async {
+    Settings.load();
+    final CaptureEngine captureEngine = Settings.getCaptureEngine();
     final int hwnd = Win32Window.getHwnd();
     if (hwnd != 0) {
       ShowWindow(hwnd, SW_HIDE);
@@ -809,7 +886,10 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
     try {
       Monitor.fetchMonitors();
       for (final int monitorHandle in Monitor.list) {
-        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+          monitorHandle,
+          engine: captureEngine,
+        );
         if (snapshot != null) {
           captured[monitorHandle] = snapshot;
         }
@@ -974,6 +1054,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   List<FancyShotProfile> _fancyShotProfiles = <FancyShotProfile>[];
   List<ScreenCaptureUploadHost> _uploadHosts = <ScreenCaptureUploadHost>[];
   String? _selectedFancyShotPresetName;
+  CaptureEngine _captureEngine = CaptureEngine.bitBlt;
   int _captureDelaySeconds = 0;
   int? _countdownValue;
   Offset? _captureStart;
@@ -1048,6 +1129,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     if (fancySaved != "" && _fancyShotProfiles.any((FancyShotProfile e) => e.name == fancySaved)) {
       _selectedFancyShotPresetName = fancySaved;
     }
+    _captureEngine = Settings.getCaptureEngine();
     _captureDelaySeconds = Settings.getCaptureDelaySeconds();
     _tickerTimer = Timer.periodic(const Duration(milliseconds: 80), (_) => _ticker());
 
@@ -1170,7 +1252,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
       Monitor.fetchMonitors();
       for (final int monitorHandle in Monitor.list) {
-        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+          monitorHandle,
+          engine: _captureEngine,
+        );
         if (snapshot != null) {
           _frozenMonitorSnapshots[monitorHandle] = snapshot;
           await _ensureFrozenMonitorImage(monitorHandle, snapshot: snapshot, notify: false);
@@ -1196,6 +1281,69 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         unawaited(_syncVisibleFrozenMonitor(forceRefresh: true));
       }
     }
+  }
+
+  Future<void> _setCaptureEngine(CaptureEngine engine) async {
+    if (_captureEngine == engine) return;
+
+    Settings.setCaptureEngine(engine);
+    for (final ui.Image image in _frozenMonitorImages.values) {
+      image.dispose();
+    }
+    _frozenMonitorImages.clear();
+    _frozenMonitorSnapshots.clear();
+
+    if (!mounted) return;
+    setState(() {
+      _captureEngine = engine;
+      _liveSnapshotReady = false;
+      _liveSnapshotLoading = false;
+      _livePointerDown = null;
+      _livePointerCurrent = null;
+      _livePointerHeld = false;
+      _captureStart = null;
+      _captureCurrent = null;
+      _capturing = false;
+    });
+
+    if (widget.freezeMode) {
+      _frozenSnapshotWarmup = _captureInitialFrozenSnapshots();
+      await _frozenSnapshotWarmup;
+      unawaited(_syncVisibleFrozenMonitor(forceRefresh: true));
+    }
+  }
+
+  Future<void> _captureInitialFrozenSnapshots() async {
+    final int hwnd = Win32Window.getHwnd();
+    if (hwnd != 0) {
+      ShowWindow(hwnd, SW_HIDE);
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    }
+
+    final Map<int, FrozenMonitorSnapshot> captured = <int, FrozenMonitorSnapshot>{};
+    try {
+      Monitor.fetchMonitors();
+      for (final int monitorHandle in Monitor.list) {
+        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+          monitorHandle,
+          engine: _captureEngine,
+        );
+        if (snapshot != null) {
+          captured[monitorHandle] = snapshot;
+        }
+      }
+    } finally {
+      if (hwnd != 0) {
+        ShowWindow(hwnd, SW_SHOW);
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+      }
+    }
+
+    if (!mounted) return;
+    _frozenMonitorSnapshots
+      ..clear()
+      ..addAll(captured);
+    await _decodeFrozenMonitorImages();
   }
 
   /// Reset live snapshot state so the overlay goes back to transparent.
@@ -1240,6 +1388,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
               child: _CaptureSettingsModal(
                 captureChoices: _captureChoices(),
                 currentActionId: _captureActionId,
+                currentCaptureEngine: _captureEngine,
                 fancyShotPresets: _fancyShotProfiles.map((FancyShotProfile p) => p.name).toList(),
                 currentPresetName: _selectedFancyShotPresetName,
                 currentDelay: _captureDelaySeconds,
@@ -1256,6 +1405,9 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                   Settings.setCaptureDelaySeconds(v);
                   setState(() => _captureDelaySeconds = v);
                 },
+                onCaptureEngineChanged: (CaptureEngine engine) {
+                  unawaited(_setCaptureEngine(engine));
+                },
               ),
             ),
           ],
@@ -1267,7 +1419,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   Future<FrozenMonitorSnapshot?> _ensureFrozenMonitorSnapshot(int monitorHandle) async {
     final FrozenMonitorSnapshot? existing = _frozenMonitorSnapshots[monitorHandle];
     if (existing != null) return existing;
-    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(monitorHandle);
+    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+      monitorHandle,
+      engine: _captureEngine,
+    );
     if (snapshot != null) {
       _frozenMonitorSnapshots[monitorHandle] = snapshot;
     }
@@ -2191,20 +2346,24 @@ class _CaptureSettingsButtonState extends State<_CaptureSettingsButton> {
 class _CaptureSettingsModal extends StatefulWidget {
   final List<CaptureActionChoice> captureChoices;
   final String currentActionId;
+  final CaptureEngine currentCaptureEngine;
   final List<String> fancyShotPresets;
   final String? currentPresetName;
   final int currentDelay;
   final ValueChanged<String> onActionChanged;
+  final ValueChanged<CaptureEngine> onCaptureEngineChanged;
   final ValueChanged<String?> onPresetChanged;
   final ValueChanged<int> onDelayChanged;
 
   const _CaptureSettingsModal({
     required this.captureChoices,
     required this.currentActionId,
+    required this.currentCaptureEngine,
     required this.fancyShotPresets,
     required this.currentPresetName,
     required this.currentDelay,
     required this.onActionChanged,
+    required this.onCaptureEngineChanged,
     required this.onPresetChanged,
     required this.onDelayChanged,
   });
@@ -2339,6 +2498,38 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
                 ],
               ),
             ),
+            const Divider(height: 1, color: Colors.white10),
+
+            _buildSectionLabel(label: 'CAPTURE ENGINE', icon: Icons.screenshot_monitor_outlined),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                children: <Widget>[
+                  _ModalChoiceRow(
+                    icon: Icons.filter_none,
+                    title: CaptureEngine.bitBlt.label,
+                    subtitle: 'Classic GDI capture',
+                    selected: widget.currentCaptureEngine == CaptureEngine.bitBlt,
+                    onTap: () {
+                      widget.onCaptureEngineChanged(CaptureEngine.bitBlt);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _ModalChoiceRow(
+                    icon: Icons.screenshot_monitor_outlined,
+                    title: CaptureEngine.directX.label,
+                    subtitle: 'Windows Graphics Capture',
+                    selected: widget.currentCaptureEngine == CaptureEngine.directX,
+                    onTap: () {
+                      widget.onCaptureEngineChanged(CaptureEngine.directX);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
             const Divider(height: 1, color: Colors.white10),
 
             // Actions Section

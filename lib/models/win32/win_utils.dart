@@ -40,8 +40,8 @@ class WinUtils {
     return Directory('${getTabameAppDataFolder()}/cache/icon_cache');
   }
 
-  static Directory _fileFormatIconCacheDirectory() {
-    return Directory(p.join(_iconCacheDirectory().path, 'file_formats', pid.toString()));
+  static Directory fileFormatIconCacheDirectory() {
+    return Directory(p.join(_iconCacheDirectory().path, 'file_formats'));
   }
 
   static bool _isFreshCacheFile(File file) {
@@ -66,7 +66,7 @@ class WinUtils {
   static File? _fileFormatIconCacheFile(String path) {
     final String? key = _fileFormatIconCacheKey(path);
     if (key == null) return null;
-    return File(p.join(_fileFormatIconCacheDirectory().path, '$key.ico'));
+    return File(p.join(fileFormatIconCacheDirectory().path, '$key.ico'));
   }
 
   static File? getCachedFileFormatIcon(String path) {
@@ -1135,7 +1135,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       }
     }
 
-    final Uint8List? iconBytes = _extractIconInternal(path, iconID);
+    final Uint8List? iconBytes = extractIconInternal(path, iconID);
 
     if (isDefaultFolder && iconBytes != null) {
       _defaultFolderIcon = iconBytes;
@@ -1153,23 +1153,21 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     return iconBytes;
   }
 
-  static Uint8List? _extractIconInternal(String path, int iconID) {
+  static Uint8List? extractIconInternal(String path, int iconID) {
     if (path.toLowerCase().endsWith('.lnk') || path.toLowerCase().endsWith('.url')) {
+      // For .url files (Steam shortcuts), try to read the IconFile field first.
+      // SHGetFileInfo can't resolve steam:// protocol URLs and returns a blank icon.
+      if (path.toLowerCase().endsWith('.url')) {
+        final Uint8List? urlIcon = _extractIconFromUrlFile(path);
+        if (urlIcon != null) return urlIcon;
+      }
+
       return using((Arena arena) {
         final Pointer<SHFILEINFO> fileInfo = arena<SHFILEINFO>();
         final Pointer<Utf16> pathPointer = path.toNativeUtf16(allocator: arena);
-
         const int shgfiSysiconindex = 0x000004000;
         const int ildNormal = 0x00000000;
-
-        final int imageListHandle = SHGetFileInfo(
-          pathPointer,
-          0,
-          fileInfo,
-          sizeOf<SHFILEINFO>(),
-          shgfiSysiconindex,
-        );
-
+        final int imageListHandle = SHGetFileInfo(pathPointer, 0, fileInfo, sizeOf<SHFILEINFO>(), shgfiSysiconindex);
         if (imageListHandle != 0) {
           final int iconHandle = ImageList_GetIcon(imageListHandle, fileInfo.ref.iIcon, ildNormal);
           if (iconHandle != 0) {
@@ -1228,6 +1226,61 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
         }
       });
     }
+  }
+
+  static Uint8List? _extractIconFromUrlFile(String urlFilePath) {
+    try {
+      final List<String> lines = File(urlFilePath).readAsLinesSync();
+      String? iconFile;
+      int iconIndex = 0;
+
+      for (final String line in lines) {
+        if (line.startsWith('IconFile=')) {
+          iconFile = line.substring('IconFile='.length).trim();
+        } else if (line.startsWith('IconIndex=')) {
+          iconIndex = int.tryParse(line.substring('IconIndex='.length).trim()) ?? -1;
+        }
+      }
+
+      if (iconFile == null || iconFile.isEmpty) return null;
+
+      // Expand environment variables like %ProgramFiles(x86)%
+      iconFile = _expandEnvironmentStrings(iconFile);
+
+      if (!File(iconFile).existsSync()) return null;
+      if (iconFile.endsWith('.ico')) {
+        return File(iconFile).readAsBytesSync();
+      }
+      print(iconFile);
+      return using((Arena arena) {
+        final Pointer<Utf16> iconPathPtr = iconFile!.toNativeUtf16(allocator: arena);
+        // ExtractIconEx gives us the real icon at the specified index
+        final Pointer<IntPtr> hIconLarge = arena<IntPtr>();
+        if (iconIndex == 0) iconIndex = -1;
+        final int extracted = ExtractIconEx(iconPathPtr, iconIndex, hIconLarge, nullptr, 1);
+        if (extracted > 0 && hIconLarge.value != 0) {
+          final Uint8List? bytes = hIconToBytes(hIconLarge.value);
+          DestroyIcon(hIconLarge.value);
+          return bytes;
+        }
+        return null;
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _expandEnvironmentStrings(String input) {
+    // Use ExpandEnvironmentStrings Win32 API for correctness
+    return using((Arena arena) {
+      final Pointer<Utf16> src = input.toNativeUtf16(allocator: arena);
+      // First call to get required buffer size
+      final int size = ExpandEnvironmentStrings(src, nullptr, 0);
+      if (size == 0) return input;
+      final Pointer<Uint16> dst = arena<Uint16>(size);
+      ExpandEnvironmentStrings(src, dst.cast<Utf16>(), size);
+      return dst.cast<Utf16>().toDartString();
+    });
   }
 
   static Uint8List? windowIcon(int hWnd) {
@@ -1696,6 +1749,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       await Future<void>.delayed(delay);
       final Size value = await windowManager.getSize();
       await windowManager.setSize(Size(value.width + 1, value.height + 1));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
       await windowManager.setSize(Size(value.width, value.height));
     });
   }

@@ -249,7 +249,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   String _selectedSystemAudioId = '';
 
   // Video source selection
-  VideoSource _videoSource = VideoSource.wgc;
+  VideoSource _videoSource = VideoSource.ffmpeg;
   String _ffmpegCommand = '';
   Process? _ffmpegProcess;
 
@@ -319,7 +319,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     final String videoSource = RecordingSettingsStore.getString('videoSource', 'wgc');
     _videoSource = VideoSource.values.firstWhere(
       (VideoSource v) => v.name == videoSource,
-      orElse: () => VideoSource.wgc,
+      orElse: () => VideoSource.ffmpeg,
     );
     _ffmpegCommand = RecordingSettingsStore.getString('ffmpegCommand', '');
   }
@@ -1190,12 +1190,12 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               ),
                               items: const <DropdownMenuItem<VideoSource>>[
                                 DropdownMenuItem<VideoSource>(
-                                  value: VideoSource.wgc,
-                                  child: Text('Windows Graphics Capture (WGC)'),
-                                ),
-                                DropdownMenuItem<VideoSource>(
                                   value: VideoSource.ffmpeg,
                                   child: Text('FFmpeg (custom command)'),
+                                ),
+                                DropdownMenuItem<VideoSource>(
+                                  value: VideoSource.wgc,
+                                  child: Text('Windows Graphics Capture (WGC)'),
                                 ),
                               ],
                               onChanged: (VideoSource? value) {
@@ -1232,7 +1232,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                         style: TextStyle(fontSize: 11, color: Colors.white54),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
+                                      SelectableText(
                                         _buildDefaultFfmpegCommand('<output.mp4>'),
                                         style: const TextStyle(
                                           fontSize: 10,

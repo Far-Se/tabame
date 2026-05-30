@@ -197,6 +197,7 @@ Future<List<Map<String, Object?>>> searchAndSyncFileMatchesInBackground(Map<Stri
     if (results.length >= maxMatches || stopwatch.elapsedMilliseconds > 2000) break;
     final Map<String, Object?> folder = Map<String, Object?>.from(folderObj);
     final String path = folder['path'] as String;
+    final String excludePath = (folder['excludePath'] ?? '') as String;
     final bool includeFolders = (folder['includeFolders'] ?? true) as bool;
     final bool includeFiles = (folder['includeFiles'] ?? true) as bool;
     final Set<String> allowedExtensions = _normalizedAllowedExtensions(
@@ -212,6 +213,7 @@ Future<List<Map<String, Object?>>> searchAndSyncFileMatchesInBackground(Map<Stri
       includeFolders,
       includeFiles,
       allowedExtensions,
+      excludePath,
       maxDepth,
       0,
       stopwatch,
@@ -335,6 +337,7 @@ void _recursiveSyncAndSearch(
   bool includeFolders,
   bool includeFiles,
   Set<String> allowedExtensions,
+  String excludePath,
   int? maxDepth,
   int currentDepth,
   Stopwatch stopwatch,
@@ -350,6 +353,7 @@ void _recursiveSyncAndSearch(
       if (results.length >= maxMatches) return;
       if (stopwatch.elapsedMilliseconds > 2000) return;
 
+      if (excludePath != "" && RegExp(excludePath, caseSensitive: false).hasMatch(entity.path)) continue;
       final String name = p.basename(entity.path);
       final String lowerName = name.toLowerCase();
       final bool isDir = entity is Directory;
@@ -393,6 +397,7 @@ void _recursiveSyncAndSearch(
           includeFolders,
           includeFiles,
           allowedExtensions,
+          excludePath,
           maxDepth,
           currentDepth + 1,
           stopwatch,

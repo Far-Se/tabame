@@ -257,10 +257,13 @@ class Boxes {
 
     if (userSettings.previewTheme) return;
     if (justLoad) return;
-    loadQuickTimers();
-    clearIconCache();
 
     if (userSettings.page == TPage.quickmenu) {
+      loadQuickTimers();
+      clearIconCache();
+      shutDownScheduler();
+      if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
+
       if (userSettings.hideTaskbarOnStartup) {
         WinUtils.toggleTaskbar(visible: false);
         Debug.add("Registered: Taskbar");
@@ -271,28 +274,24 @@ class Boxes {
         Debug.add("Registered: Volume");
       }
       if (userSettings.autoCheckForUpdates) checkForUpdates(autoInstall: false);
-    }
 
-    if (userSettings.page == TPage.quickmenu) {
-      if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
       if (userSettings.autoOpenTaskManager) {
         if (Win32.getProcessIdsByName('taskmgr.exe').isEmpty) {
-          unawaited(Process.start(
-            'cmd',
-            <String>['/c', 'start', '', '/min', 'taskmgr'],
-            mode: ProcessStartMode.detached,
-            runInShell: false,
-          ));
+          unawaited(Process.start('cmd', <String>['/c', 'start', '', '/min', 'taskmgr'],
+              mode: ProcessStartMode.detached, runInShell: false));
         }
       }
       Debug.add("Registered: Tasks");
     }
-
-    shutDownScheduler();
   }
 
   static void clearIconCache() {
     final Directory iconCacheDir = Directory("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache");
+    final Directory formatIconCache = WinUtils.fileFormatIconCacheDirectory();
+    if (formatIconCache.existsSync()) {
+      formatIconCache.deleteSync(recursive: true);
+      formatIconCache.createSync();
+    }
     if (!iconCacheDir.existsSync()) return;
 
     final DateTime oneWeekAgo = DateTime.now().subtract(const Duration(days: 7));

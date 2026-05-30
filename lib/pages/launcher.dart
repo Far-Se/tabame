@@ -409,8 +409,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       unawaited(_refreshLauncherCatalogs());
 
       _onSearchChanged(_controller.text);
-      Future<void>.delayed(const Duration(milliseconds: 4),
-          () => _controller.selection = TextSelection.collapsed(offset: _controller.text.length));
+      Future<void>.delayed(const Duration(milliseconds: 5),
+          () => _controller.selection = TextSelection.collapsed(offset: _controller.text.length)); // <- This
       // setState(() {});
     });
 
@@ -714,19 +714,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     return true;
   }
 
-  void _requestLauncherFocus({bool focusWindow = false}) {
-    void requestFocusIfNeeded() {
-      if (!_canFocusLauncher) return;
-      if (focusWindow) unawaited(windowManager.focus());
-      if (!_focusNode.hasPrimaryFocus) {
-        _resetSelection();
-      }
+  void requestFocusIfNeeded(bool focusWindow) {
+    if (!_canFocusLauncher) return;
+    if (focusWindow) unawaited(windowManager.focus());
+    if (!_focusNode.hasPrimaryFocus) {
+      _resetSelection();
     }
+  }
 
-    requestFocusIfNeeded();
-    WidgetsBinding.instance.addPostFrameCallback((_) => requestFocusIfNeeded());
+  void _requestLauncherFocus({bool focusWindow = false}) {
+    requestFocusIfNeeded(focusWindow);
+    WidgetsBinding.instance.addPostFrameCallback((_) => requestFocusIfNeeded(focusWindow));
     _launcherFocusRetryTimer?.cancel();
-    _launcherFocusRetryTimer = Timer(const Duration(milliseconds: 120), requestFocusIfNeeded);
+    _launcherFocusRetryTimer = Timer(const Duration(milliseconds: 5), () => requestFocusIfNeeded(focusWindow));
   }
 
   void _onFocusManagerChanged() {
@@ -1329,11 +1329,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Future<void> _clearCacheFolder(String folder) async {
     final Directory cacheDirectory = Directory('${WinUtils.getTabameAppDataFolder()}\\cache\\$folder');
-    if (await cacheDirectory.exists()) {
-      await for (final FileSystemEntity entity in cacheDirectory.list()) {
-        await entity.delete(recursive: true);
-      }
+    if (cacheDirectory.existsSync()) {
+      cacheDirectory.deleteSync(recursive: true);
+      cacheDirectory.createSync();
     }
+    // if (await cacheDirectory.exists()) {
+    //   await for (final FileSystemEntity entity in cacheDirectory.list()) {
+    //     await entity.delete(recursive: true);
+    //   }
+    // }
     _finishLauncherFunctionExecution();
   }
 
@@ -2073,11 +2077,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // Build
   // ---------------------------------------------------------------------------
   void _resetSelection() {
-    final TextSelection savedSelection = _controller.selection;
+    // final TextSelection savedSelection = _controller.selection;
     _focusNode.requestFocus();
 
-    Future<void>.delayed(const Duration(milliseconds: 4), () => handlePostFrameCallback(savedSelection));
-    WidgetsBinding.instance.addPostFrameCallback((_) => handlePostFrameCallback(savedSelection));
+    Future<void>.delayed(const Duration(milliseconds: 4),
+        () => handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length)));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length)));
   }
 
   @override

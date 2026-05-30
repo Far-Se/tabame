@@ -1142,23 +1142,54 @@ class _NotionWidgetState extends State<NotionWidget> {
                                       ),
                                       child: item.emojiIcon != null
                                           ? Text(item.emojiIcon!, style: const TextStyle(fontSize: 14))
-                                          : Icon(Icons.insert_drive_file_outlined,
-                                              size: 14, color: accent.withAlpha(200)),
+                                          : Icon(
+                                              item.objectType == 'database'
+                                                  ? Icons.table_chart_outlined
+                                                  : Icons.insert_drive_file_outlined,
+                                              size: 14,
+                                              color: accent.withAlpha(200),
+                                            ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          Text(
-                                            item.title,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: onSurface,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                          Row(
+                                            children: <Widget>[
+                                              Flexible(
+                                                child: Text(
+                                                  item.title,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: onSurface,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (item.objectType == 'database') ...<Widget>[
+                                                const SizedBox(width: 5),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: accent.withAlpha(22),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: Border.all(color: accent.withAlpha(40)),
+                                                  ),
+                                                  child: Text(
+                                                    'DB',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: accent,
+                                                      letterSpacing: 0.3,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                           Text(
                                             item.objectType.toUpperCase(),

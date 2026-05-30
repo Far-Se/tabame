@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
@@ -155,7 +156,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                     child: CustomTooltip(
                         message: info.processExe,
                         child: Boxes.getIconRewrite(info.processPath) != ""
-                            ? Image.asset(Boxes.getIconRewrite(info.processPath), width: 20)
+                            ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
                             : Image.memory(
                                 info.iconData,
                                 fit: BoxFit.scaleDown,

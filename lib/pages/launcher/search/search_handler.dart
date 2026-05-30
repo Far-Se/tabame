@@ -103,6 +103,7 @@ class MixedSearchHandler {
                       'includeFiles': folder.includeFiles,
                       'allowedExtensions': folder.allowedExtensions,
                       'maxDepth': folder.maxDepth,
+                      'excludePath': folder.excludePath,
                     })
                 .toList(growable: false),
             'dbPath': FileIndexDb.instance.dbPath,
