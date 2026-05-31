@@ -1,9 +1,6 @@
-part of '../button_music_player.dart';
-
-// Build methods live in an extension so the main music player state stays small
-// while keeping private fields private to this library. The extension operates
-// on _MusicServerPanelState, so these protected State calls are intentional.
 // ignore_for_file: invalid_use_of_protected_member
+
+part of '../button_music_player.dart';
 
 extension _MusicServerPanelStateViews on _MusicServerPanelState {
   String _clipPlayerLabel(String value, {int maxChars = 40}) {

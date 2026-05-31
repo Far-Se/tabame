@@ -108,27 +108,3 @@ class MediaSessionPlugin {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Usage example
-// ---------------------------------------------------------------------------
-//
-// final result = await MediaSessionPlugin.getMediaSessions();
-//
-// print('Current: ${result.currentSession?.title}');
-//
-// for (final session in result.sessions) {
-//   print('${session.isCurrent ? "▶" : " "} [${session.id}] '
-//         '${session.title} — ${session.artist} (${session.playbackStatus})');
-// }
-//
-// // Display artwork in a widget:
-// Widget buildArt(MediaSession session) {
-//   if (session.thumbnail != null) {
-//     return Image.memory(session.thumbnail!, width: 56, height: 56, fit: BoxFit.cover);
-//   }
-//   return const Icon(Icons.music_note);
-// }
-//
-// // Or use as an ImageProvider (e.g. with CircleAvatar):
-// CircleAvatar(backgroundImage: session.thumbnailImage)

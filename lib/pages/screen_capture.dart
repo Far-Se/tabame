@@ -1,22 +1,3 @@
-// main.dart
-// Flutter Windows Screen Capture + Photo Editor
-// Features:
-//   - Monitor-aware screen region capture
-//   - Post-capture modal: Copy to Clipboard / Copy File / Open Editor
-//   - Saves to %localappdata%\Tabame\screenshots
-//   - Full photo editor with all annotation tools when "Open Editor" is pressed
-//
-// Dependencies (pubspec.yaml):
-//   ffi: ^2.1.0
-//   win32: ^5.5.4
-//   window_manager: ^0.3.9
-//   image: ^4.2.0
-//   tabamewin32: ^1.0.0   (for captureMonitor / ClipboardExtended)
-//   path_provider: ^2.1.4
-//   flutter_colorpicker: ^1.1.0
-
-// ignore_for_file: unused_element, dead_code
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
@@ -705,17 +686,6 @@ class ScreenCapture {
   /// is never blocked by the (potentially heavy) compression work.
   static Future<Uint8List> encodeRgbaToPng(Uint8List rgbaBytes, int width, int height) {
     return compute(_encodeRgbaToPngIsolate, <dynamic>[rgbaBytes, width, height]);
-  }
-
-  static Uint8List _bgraToRgba(Uint8List bgraBytes) {
-    final Uint8List rgbaBytes = Uint8List(bgraBytes.length);
-    for (int i = 0; i < bgraBytes.length; i += 4) {
-      rgbaBytes[i] = bgraBytes[i + 2];
-      rgbaBytes[i + 1] = bgraBytes[i + 1];
-      rgbaBytes[i + 2] = bgraBytes[i];
-      rgbaBytes[i + 3] = 255;
-    }
-    return rgbaBytes;
   }
 }
 
@@ -1567,17 +1537,20 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     );
   }
 
-  bool _isHotkeyPressed(
-      {required int keyVk, bool ctrl = false, bool alt = false, bool shift = false, bool win = false}) {
-    if (GetKeyState(keyVk) >= 0) return false;
-    if (ctrl && !_isAnyKeyPressed(<int>[VK_LCONTROL, VK_RCONTROL, VK_CONTROL])) return false;
-    if (alt && !_isAnyKeyPressed(<int>[VK_LMENU, VK_RMENU, VK_MENU])) return false;
-    if (shift && !_isAnyKeyPressed(<int>[VK_LSHIFT, VK_RSHIFT, VK_SHIFT])) return false;
-    if (win && !_isAnyKeyPressed(<int>[VK_LWIN, VK_RWIN])) return false;
-    return true;
-  }
+  // bool _isAnyKeyPressed(List<int> keys) => keys.any((int vk) => GetKeyState(vk) < 0);
 
-  bool _isAnyKeyPressed(List<int> keys) => keys.any((int vk) => GetKeyState(vk) < 0);
+  /// When Ctrl is held, constrain [current] so the selection from [start] forms
+  /// a perfect square (equal width and height, preserving the drag direction).
+  Offset _constrainToSquare(Offset start, Offset current) {
+    if (!HardwareKeyboard.instance.isControlPressed) return current;
+    final double dx = current.dx - start.dx;
+    final double dy = current.dy - start.dy;
+    final double side = min(dx.abs(), dy.abs());
+    return Offset(
+      start.dx + side * dx.sign,
+      start.dy + side * dy.sign,
+    );
+  }
 
   void _toggleScreenCaptureEnabled() {
     setState(() {
@@ -1700,7 +1673,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                 // there is no gap between snapshot-ready and first GestureDetector
                 // onPanUpdate.
                 if (_capturing && _captureStart != null) {
-                  setState(() => _captureCurrent = event.localPosition);
+                  setState(() => _captureCurrent = _constrainToSquare(_captureStart!, event.localPosition));
                 }
               },
               onPointerUp: (PointerUpEvent event) {
@@ -1708,7 +1681,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
                 if (_capturing && _captureStart != null && _liveSnapshotReady) {
                   final Offset s = _captureStart!;
-                  final Offset e = _captureCurrent ?? s;
+                  final Offset e = _constrainToSquare(s, _captureCurrent ?? s);
                   setState(() {
                     _captureStart = null;
                     _captureCurrent = null;
@@ -1738,7 +1711,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                 },
                 onPanUpdate: (DragUpdateDetails d) {
                   if (!_capturing || _captureStart == null) return;
-                  setState(() => _captureCurrent = d.localPosition);
+                  setState(() => _captureCurrent = _constrainToSquare(_captureStart!, d.localPosition));
                 },
                 onPanEnd: (_) async {
                   if (_captureStart == null || _captureCurrent == null) {
@@ -1746,7 +1719,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                     return;
                   }
                   final Offset s = _captureStart!;
-                  final Offset e = _captureCurrent!;
+                  final Offset e = _constrainToSquare(s, _captureCurrent!);
                   setState(() {
                     _captureStart = null;
                     _captureCurrent = null;

@@ -63,18 +63,6 @@ String? getPackagePathByFullName(String fullName) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FFI: GetPackagesByPackageFamily  (kernel32, Windows 8+)
-//
-//  LONG GetPackagesByPackageFamily(
-//    PCWSTR  packageFamilyName,
-//    UINT32 *count,          // in/out
-//    PWSTR  *packageFullNames, // out array of PWSTR (may be NULL)
-//    UINT32 *bufferLength,   // in/out total WCHAR buffer
-//    PWSTR   buffer          // out flat WCHAR buffer backing the array
-//  );
-// ─────────────────────────────────────────────────────────────────────────────
-
 typedef _GetPackagesByFamilyNative = Int32 Function(Pointer<Utf16> familyName, Pointer<Uint32> count,
     Pointer<Pointer<Utf16>> fullNames, Pointer<Uint32> bufferLength, Pointer<Utf16> buffer);
 typedef _GetPackagesByFamilyDart = int Function(Pointer<Utf16> familyName, Pointer<Uint32> count,
@@ -179,17 +167,6 @@ String? _readStringValue(int hKey, String valueName) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Strategy 1 — HKCU per-user package repository
-//
-// HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\
-//   CurrentVersion\AppModel\Repository\Packages\<PackageFullName>
-//     → PackageID\Path  (REG_SZ)  — the install location
-//
-// Readable without elevation. Contains every package staged for the current
-// user (both WindowsApps machine-wide and user-specific installs).
-// ─────────────────────────────────────────────────────────────────────────────
-
 const String _kHkcuPackagesKey = r'SOFTWARE\Classes\Local Settings\Software\Microsoft'
     r'\Windows\CurrentVersion\AppModel\Repository\Packages';
 
@@ -234,16 +211,6 @@ List<AppxPackage> _getPackagesFromHkcu() {
   }
   return packages;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Strategy 2 — PackageManager state store  (another non-elevated location)
-//
-// HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModel\StateRepository\
-//   Cache\Package\Data\<index>
-//     PackageFullName  (REG_SZ)
-//
-// This key is world-readable and lists machine-wide (provisioned) packages.
-// ─────────────────────────────────────────────────────────────────────────────
 
 const String _kStateRepoKey = r'SOFTWARE\Microsoft\Windows\CurrentVersion\AppModel'
     r'\StateRepository\Cache\Package\Data';
@@ -340,17 +307,6 @@ String _familyFromFullName(String fullName) {
   if (parts.length < 2) return fullName;
   return '${parts.first}_${parts.last}';
 }
-// lib/src/appx_launcher.dart
-//
-// For each AppX package:
-//  1. Parse AppxManifest.xml  → Application Id, display name, icon path
-//  2. Build the AUMID         → PackageFamilyName!ApplicationId
-//  3. Launch via              → IApplicationActivationManager::ActivateApplication
-//  4. Resolve icon            → SHGetFileInfo on the shell:AppsFolder item
-//                               OR read the logo path from the manifest
-//
-// No elevation required. No PowerShell.
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Data classes
 // ─────────────────────────────────────────────────────────────────────────────
@@ -383,16 +339,6 @@ class AppxApp {
   String toString() => 'AppxApp($displayName  [$aumid])';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Manifest parser
-//
-// AppxManifest.xml lives at the root of every package install directory.
-// It contains one or more <Application> elements, each with:
-//   Id            → used to build the AUMID
-//   VisualElements uap:VisualElements Square44x44Logo  → icon
-//   DisplayName   → may be "ms-resource:AppName" (resource ref)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _ManifestApp {
   final String applicationId;
   final String displayName; // raw value, may be "ms-resource:…"
@@ -417,15 +363,6 @@ _ManifestInfo? _parseManifest(String installLocation) {
 
   try {
     final XmlDocument doc = XmlDocument.parse(manifestFile.readAsStringSync());
-
-    // ── Package identity ──────────────────────────────────────────────────
-    // <Identity Name="…" Publisher="…" … />
-    // Family name = Name + "_" + publisherId (last segment of publisher hash)
-    // We can read it from the registry or derive it. Easiest: read manifest
-    // and call PackageFamilyNameFromId via FFI, but the simplest non-FFI way
-    // is to just look it up from the fullName we already have.
-    // Pass it in via the caller instead (see getAllAppxApps below).
-
     final List<_ManifestApp> apps = <_ManifestApp>[];
 
     // Namespace-agnostic search — manifests use several uap* namespaces
@@ -458,23 +395,6 @@ _ManifestInfo? _parseManifest(String installLocation) {
     return null;
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon resolution
-//
-// The manifest logo path looks like:
-//   "Assets\Square44x44Logo.png"
-//   "Assets\Square44x44Logo.scale-100.png"
-//   "Images\AppIcon.png"
-//
-// Windows stores scale variants as:
-//   Assets\Square44x44Logo.scale-100.png
-//   Assets\Square44x44Logo.scale-150.png
-//   Assets\Square44x44Logo.scale-200.png
-//
-// When the manifest has "Assets\Square44x44Logo.png" we must probe for the
-// scale-suffixed variants ourselves because the plain .png may not exist.
-// ─────────────────────────────────────────────────────────────────────────────
 
 /// Preferred scale suffixes, highest quality first.
 const List<String> _kScales = <String>['scale-200', 'scale-150', 'scale-100', 'scale-125'];
@@ -518,42 +438,17 @@ String? _resolveIconPath(String installLocation, String relativeLogo) {
   return null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Resource string resolution  ("ms-resource:AppName")
-//
-// Proper resolution requires MrmDumpPriFile / MRT (pkg://…/resources.pri).
-// A pragmatic fallback for a launcher: use the package directory name or
-// the applicationId, which is always human-readable.
-// ─────────────────────────────────────────────────────────────────────────────
-
 String _resolveDisplayName(String raw, String installLocation, String applicationId) {
   if (!raw.startsWith('ms-resource:')) return raw.isEmpty ? applicationId : raw;
 
-  // Try to read from resources.pri via SHLoadIndirectString (shell32)
-  // Format: @{PackageFullName?ms-resource://PackageName/Resources/String}
-  // We skip full MRT and just use the applicationId as the display name,
-  // which is readable (e.g. "Microsoft.OutlookForWindows").
   return applicationId;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FFI: IApplicationActivationManager
-//
-// CoCreateInstance(CLSID_ApplicationActivationManager) →
-//   IApplicationActivationManager::ActivateApplication(aumid, …)
-//
-// This is exactly what the Start Menu uses to launch AppX apps.
-// ─────────────────────────────────────────────────────────────────────────────
 
 // {2e941141-7f97-4756-ba1d-9decde894a3d}
 final Pointer<GUID> _IID_IApplicationActivationManager = GUIDFromString('{2e941141-7f97-4756-ba1d-9decde894a3d}');
 // {45BA127D-10A8-46EA-8AB7-56EA9078943C}
 final Pointer<GUID> _CLSID_ApplicationActivationManager = GUIDFromString('{45BA127D-10A8-46EA-8AB7-56EA9078943C}');
 
-// IApplicationActivationManager vtable layout (after QueryInterface/AddRef/Release):
-//   index 3: ActivateApplication
-//   index 4: ActivateForFile
-//   index 5: ActivateForProtocol
 typedef _ActivateApplicationNative = Int32 Function(
     Pointer obj, Pointer<Utf16> appUserModelId, Pointer<Utf16> arguments, Uint32 options, Pointer<Uint32> processId);
 typedef _ActivateApplicationDart = int Function(
@@ -563,10 +458,6 @@ typedef _ActivateApplicationDart = int Function(
 ///
 /// Returns the PID of the launched process, or throws on failure.
 int launchAppxByAumid(String aumid) {
-  // CoInitializeEx must have been called on this thread already.
-  // In a Flutter app the framework calls it; in a pure Dart CLI add:
-  //   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-
   final ppv = calloc<Pointer>();
   final int hr = CoCreateInstance(
     _CLSID_ApplicationActivationManager,
@@ -610,12 +501,6 @@ int launchAppxByAumid(String aumid) {
 // Public API — build AppxApp list from already-enumerated packages
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Call this after getAllAppxPackages() from your previous code.
-///
-/// ```dart
-/// final packages = getAllAppxPackages();
-/// final apps     = getAllAppxApps(packages);
-/// ```
 List<AppxApp> getAllAppxApps(List<AppxPackage> packages) {
   final List<AppxApp> apps = <AppxApp>[];
 

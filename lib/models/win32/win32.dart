@@ -1302,33 +1302,6 @@ class HwndPath {
     return exePath.contains('WWAHost') || exePath.contains("ApplicationFrameHost");
   }
 }
-// lib/src/appx_packages_win32.dart
-//
-// Enumerates all AppX / MSIX packages installed under
-// C:\Program Files\WindowsApps using only Win32 / WinRT package-management
-// APIs via dart:ffi.
-//
-// APIs used
-// ─────────
-//  kernel32  : GetPackagesByPackageFamily  (not used here — see note below)
-//  kernel32  : GetPackagePathByFullName
-//  appmodel  : OpenPackageInfoByFullName
-//              GetPackageInfo
-//              ClosePackageInfo
-//
-// The highest-level API that enumerates ALL packages for ALL users without
-// PowerShell is FindPackages() / FindPackagesByUserSecurityId() from the
-// Windows.Management.Deployment WinRT namespace.  Because calling WinRT
-// from plain FFI is verbose, we use the lower-level kernel32 approach:
-//
-//   1. GetCurrentPackageFullName — not useful (host is not packaged)
-//   2. PackageManager::FindPackages — WinRT only
-//   3. ✔  Enumerate HKLM\SOFTWARE\Classes\Local Settings\Software\
-//             Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages
-//      and then call GetPackagePathByFullName for each key name.
-//
-// The registry hive above is the canonical source that Windows itself reads;
-// it contains every machine-wide and per-user package registration.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data class
@@ -1348,11 +1321,6 @@ class AppxPackage {
 // FFI bindings not already in the win32 package
 // ─────────────────────────────────────────────────────────────────────────────
 
-// LONG GetPackagePathByFullName(
-//   PCWSTR packageFullName,
-//   UINT32 *pathLength,   // in/out: in chars, including null terminator
-//   PWSTR  path           // out: may be NULL on the first call
-// );
 typedef _GetPackagePathByFullNameNative = Int32 Function(
   Pointer<Utf16> packageFullName,
   Pointer<Uint32> pathLength,
@@ -1434,8 +1402,6 @@ List<String> _enumSubKeyNames(int hKey) {
 // GetPackagePathByFullName wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Returns the install path for [fullName], or `null` if the package is not
-/// found / the path cannot be retrieved.
 String? getPackagePathByFullName(String fullName) {
   final Pointer<Utf16> pFullName = fullName.toNativeUtf16();
   final Pointer<Uint32> pathLen = calloc<Uint32>();
@@ -1468,15 +1434,7 @@ String? getPackagePathByFullName(String fullName) {
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Returns every AppX / MSIX package installed under
-/// `C:\Program Files\WindowsApps` using only Win32 kernel32 APIs.
-///
-/// Throws [UnsupportedError] on non-Windows platforms.
 List<AppxPackage> getAllAppxPackages() {
-  if (!Platform.isWindows) {
-    throw UnsupportedError('getAllAppxPackages() is Windows-only.');
-  }
-
   const String windowsAppsPrefix = r'C:\Program Files\WindowsApps\';
 
   final int hKey = _openKey(_kPackageRepoKey);

@@ -22,6 +22,12 @@ class LogoDragButtonState extends State<LogoDragButton> {
         onPanStart: (DragStartDetails details) {
           windowManager.startDragging();
         },
+        onSecondaryTapDown: (TapDownDetails e) async {
+          final Size value = await windowManager.getSize();
+          await windowManager.setSize(Size(value.width + 2, value.height + 2));
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await windowManager.setSize(Size(value.width, value.height));
+        },
         child: RepaintBoundary(
           child: InkWell(
             borderRadius: BorderRadius.circular(10),

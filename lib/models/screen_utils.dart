@@ -30,26 +30,6 @@ extension RectNormExtension on Rect {
       );
 }
 
-// ---------------------------------------------------------------------------
-// Settings base class
-//
-// Both screen_draw.dart and screen_capture.dart have a local `Settings` class
-// with the same load/save/get/set pattern backed by a JSON file.  Each screen
-// supplies its own _path by overriding the getter; everything else is shared.
-//
-// Usage:
-//   class Settings extends SettingsBase {
-//     static String get _path => '...\\screen_draw.json';
-//     // delegate every static call to the singleton instance:
-//     static void load() => _instance.loadFrom(_path);
-//     ...
-//   }
-//
-// Because Dart does not allow static abstract members, the simplest pattern
-// is to keep the two thin wrappers in each file and delegate to the helpers
-// below.
-// ---------------------------------------------------------------------------
-
 /// Shared JSON-file-backed key-value store.
 /// Instantiate once per file (or use static delegation).
 class SettingsStore {
@@ -105,15 +85,6 @@ class SettingsStore {
   Map<String, dynamic> get raw => _data;
 }
 
-// ---------------------------------------------------------------------------
-// Win32Window — shared overlay/HWND helpers
-//
-// Identical across both files except screen_capture.dart's setupOverlay() has
-// an async delay and slightly different exStyle flags (no WS_EX_TOOLWINDOW).
-// The common operations are factored here; each file may call setupOverlay()
-// with the appropriate flags.
-// ---------------------------------------------------------------------------
-
 class Win32Window {
   static int hwnd = 0;
 
@@ -148,12 +119,7 @@ class Win32Window {
   }
 
   // ── Overlay setup ─────────────────────────────────────────────────────────
-
-  /// Make the window borderless, layered, and topmost, spanning the full
-  /// virtual desktop.
-  ///
-  /// Pass [toolWindow] = true (screen_draw) to also set WS_EX_TOOLWINDOW.
-  /// Pass [delayMs] > 0 (screen_capture) to add an initial async delay.
+  //
   static Future<void> setupOverlay({
     bool toolWindow = false,
     int delayMs = 0,
@@ -254,13 +220,6 @@ class ScreenUtils {
     return path;
   }
 }
-
-// ---------------------------------------------------------------------------
-// ScreenRegionCapture — GDI-based pixel capture helpers
-//
-// The BGRA→RGBA loop and GDI object management pattern is identical in both
-// files.  Centralised here so each file only calls the high-level helpers.
-// ---------------------------------------------------------------------------
 
 class ScreenRegionCapture {
   /// Capture [screenRect] (screen / physical coords) using GDI BitBlt and
@@ -648,9 +607,6 @@ class UploadUtils {
     }
   }
 
-  /// Run a custom upload command defined by [host], substituting the file path.
-  ///
-  /// Returns true if the process was launched successfully.
   static Future<bool> runCustomUploadCommand(
     ScreenCaptureUploadHost host,
     String filePath, {
@@ -664,13 +620,7 @@ class UploadUtils {
           : "${host.command} '$escapedFilePath'";
       final Process result = await Process.start(
         'powershell.exe',
-        <String>[
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-Command',
-          resolvedCommand,
-        ],
+        <String>['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', resolvedCommand],
         mode: ProcessStartMode.detached,
       );
       onSuccess(result.stdout as String);

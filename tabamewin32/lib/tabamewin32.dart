@@ -1434,27 +1434,7 @@ Future<void> initializeGDI() async {
   await tabameWin32MethodChannel.invokeMethod('initializeGDI');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TaskbarUia
-//
-// Thin wrapper around the native UIA taskbar polling functions.
-//
-// Usage pattern (poll while QuickMenu is visible):
-//
-//   Timer.periodic(const Duration(seconds: 1), (_) async {
-//     final items = await TaskbarUia.getButtonInfos();
-//     for (final item in items) {
-//       if (item.hasBadge) print('${item.name}  →  ${item.helpText}  (hWnd: ${item.hWnd})');
-//     }
-//   });
-//
-// Call [shutdown] when polling stops so the native COM objects are released.
-// They are recreated automatically on the next [getButtonInfos] call.
-// ─────────────────────────────────────────────────────────────────────────────
-
 class TaskbarButtonInfo {
-  /// UIA HelpText — badge or tooltip string (e.g. "3 unread", "Downloading 42%").
-  /// Empty if the button carries no badge.
   final String helpText;
 
   /// UIA button label (may include "- 2 running windows").
@@ -1481,36 +1461,16 @@ class TaskbarButtonInfo {
 class TaskbarUia {
   TaskbarUia._();
 
-  /// Returns info for every taskbar button currently found by UIA.
-  ///
-  /// An empty list is returned on any error (e.g. COM failure, taskbar not
-  /// found).  Simply retry on the next tick — the native layer will reinitialise.
   static Future<List<TaskbarButtonInfo>> getButtonInfos() async {
     final List<dynamic>? raw = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getTaskbarItemHelpTexts');
     if (raw == null) return <TaskbarButtonInfo>[];
     return raw.cast<Map<Object?, Object?>>().map(TaskbarButtonInfo._fromMap).toList();
   }
 
-  /// Releases the cached COM objects.  Call when polling stops (e.g. QuickMenu
-  /// closed).  The next [getButtonInfos] call reinitialises transparently.
   static Future<void> shutdown() async {
     await tabameWin32MethodChannel.invokeMethod<bool>('shutdownTaskbarUia');
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WinTray — extended system tray API
-//
-// Covers both the visible system tray AND the hidden overflow tray
-// (the "show hidden icons" popup).
-//
-// Enumerate:
-//   final icons = await WinTray.enumAllIcons();
-//
-// Click (without moving the mouse — works even when the taskbar is hidden):
-//   await WinTray.click(icon);                          // left click
-//   await WinTray.click(icon, clickType: TrayClickType.right);
-// ─────────────────────────────────────────────────────────────────────────────
 
 enum TrayClickType {
   /// UIA InvokePattern::Invoke() — works for Win32, Qt, Electron, Appx/UWP
@@ -1585,23 +1545,12 @@ class ExtendedTrayIcon {
 class WinTray {
   WinTray._();
 
-  /// Returns all tray icons — visible, hidden-in-main, and overflow.
-  /// Each entry includes tooltip, process ID, HWND, GDI hIcon, etc.
-  /// To get icon pixel data: `await getIconPng(icon.hIcon)`
   static Future<List<ExtendedTrayIcon>> enumAllIcons() async {
     final List<dynamic>? raw = await tabameWin32MethodChannel.invokeListMethod<dynamic>('enumAllTrayIcons');
     if (raw == null) return <ExtendedTrayIcon>[];
     return raw.cast<Map<Object?, Object?>>().map(ExtendedTrayIcon._fromMap).toList();
   }
 
-  /// Clicks a tray icon using UIAutomation — works for Win32, Qt, Electron,
-  /// and Appx/UWP apps.  No mouse movement required.
-  ///
-  /// - Left / double: UIA `InvokePattern::Invoke()`.
-  /// - Right / middle: UIA resolves the screen rect, then `SendInput` delivers
-  ///   the click to that coordinate (requires the element to have valid screen
-  ///   coordinates — overflow icons always do; main-tray icons need the
-  ///   taskbar to be visible).
   static Future<bool> click(
     ExtendedTrayIcon icon, {
     TrayClickType clickType = TrayClickType.left,
@@ -1618,31 +1567,18 @@ class WinTray {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FolderWatch — folder change detection
-//
-// Monitors specific folders for changes (last write time).
-//
-// ─────────────────────────────────────────────────────────────────────────────
-
 class FolderWatch {
   FolderWatch._();
 
-  /// Builds the initial state for a list of paths.
-  /// This is a convenience wrapper around [addFoldersToWatchlist].
   static Future<void> buildInitialState(List<String> paths) async {
     await addFoldersToWatchlist(paths);
   }
 
-  /// Returns the list of folders that have changed since the last check.
-  /// The internal cache is updated automatically.
   static Future<List<String>> getChangedFolders() async {
     final List<dynamic>? result = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getChangedFolders');
     return result?.cast<String>() ?? <String>[];
   }
 
-  /// Adds folders to the internal watchlist.
-  /// Duplicates are ignored.
   static Future<void> addFoldersToWatchlist(List<String> paths) async {
     await tabameWin32MethodChannel.invokeMethod<void>(
       'addFoldersToWatchlist',

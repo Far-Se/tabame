@@ -84,7 +84,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select folder to change icon';
     final Directory? dir = dirPicker.getDirectory();
-    Timer(const Duration(milliseconds: 1000), () => QuickMenuFunctions.keepOpen = false);
+    Timer(const Duration(milliseconds: 400), () => QuickMenuFunctions.keepOpen = false);
     if (dir == null || dir.path.isEmpty) return;
     setState(() {
       _selectedFolderPath = dir.path;
@@ -102,7 +102,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
       ..defaultFilterIndex = 0
       ..title = 'Select icon image';
     final File? result = file.getFile();
-    Timer(const Duration(milliseconds: 1000), () => QuickMenuFunctions.keepOpen = false);
+    Timer(const Duration(milliseconds: 400), () => QuickMenuFunctions.keepOpen = false);
     if (result == null) return;
     _cleanUpTempFile();
     setState(() {
@@ -700,6 +700,10 @@ Future<void> _applyDesktopIni(String folderPath, String icoPath) async {
   await Process.run('attrib', <String>['+s', folderPath]);
 
   final File iniFile = File('$folderPath\\desktop.ini');
+
+  if (await iniFile.exists()) {
+    await Process.run('attrib', <String>['-h', '-s', iniFile.path]);
+  }
   final String content = '[.ShellClassInfo]\r\nIconResource=$icoPath,0\r\n';
   await iniFile.writeAsString(content, flush: true);
 

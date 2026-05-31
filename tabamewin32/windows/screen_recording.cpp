@@ -460,6 +460,7 @@ public:
     frameCount_ = 0;
     droppedFrames_ = 0;
     audioFramesWritten_ = 0;
+    audioStartTime_ = {};
     audioInitDone_ = false;
     audioInitSucceeded_ = false;
     audioSources_.clear();
@@ -1027,8 +1028,17 @@ private:
     if (FAILED(hr) || FAILED(sample->AddBuffer(buffer.get())))
       return false;
 
+    // Compute the timestamp for this chunk relative to the recording origin
+    // (startTime_).  audioStartTime_ marks when IAudioClient::Start() was
+    // called; audioFramesWritten_ counts samples since that moment.  Together
+    // they give a sample-accurate position on the same timeline as video.
+    const int64_t audioOriginHns =
+        std::chrono::duration_cast<
+            std::chrono::duration<int64_t, std::ratio<1, 10'000'000>>>(
+            audioStartTime_ - startTime_)
+            .count();
     const LONGLONG sampleTime =
-        audioFramesWritten_ * 10'000'000LL / kAudioSampleRate;
+        audioOriginHns + audioFramesWritten_ * 10'000'000LL / kAudioSampleRate;
     const LONGLONG sampleDuration =
         static_cast<LONGLONG>(framesToWrite) * 10'000'000LL / kAudioSampleRate;
     sample->SetSampleTime(sampleTime);
@@ -1107,6 +1117,10 @@ private:
         return;
       }
     }
+
+    // Record the moment audio capture actually starts so that audio
+    // timestamps can be expressed relative to the same origin as video.
+    audioStartTime_ = std::chrono::steady_clock::now();
 
     audioInitSucceeded_ = true;
     audioInitDone_ = true;
@@ -1310,8 +1324,19 @@ private:
       return;
     }
 
-    const LONGLONG sampleTime = static_cast<LONGLONG>(frameCount_.load()) *
-                                10'000'000LL / captureConfig_.frameRate;
+    // Timestamp this frame relative to the recording start using the wall
+    // clock.  This keeps video and audio on the same timeline: both are
+    // expressed as (now - startTime_) in 100-ns units.  Using the frame's
+    // SystemRelativeTime() is theoretically more accurate but requires
+    // converting a QPC-epoch value to a steady_clock epoch, which is not
+    // straightforward across all Windows versions.  The wall-clock approach
+    // is correct as long as ProcessFrame() is called promptly after capture
+    // (guaranteed by FrameLoop's deadline logic).
+    const LONGLONG sampleTime =
+        std::chrono::duration_cast<
+            std::chrono::duration<LONGLONG, std::ratio<1, 10'000'000>>>(
+            std::chrono::steady_clock::now() - startTime_)
+            .count();
     const LONGLONG sampleDuration = 10'000'000LL / captureConfig_.frameRate;
     sample->SetSampleTime(sampleTime);
     sample->SetSampleDuration(sampleDuration);
@@ -1400,6 +1425,7 @@ private:
   std::atomic<int> droppedFrames_{0};
   int64_t audioFramesWritten_ = 0;
   std::chrono::steady_clock::time_point startTime_{};
+  std::chrono::steady_clock::time_point audioStartTime_{};
   Config captureConfig_;
   RECT sourceRect_{0, 0, 0, 0};
   int outputWidth_ = 0;

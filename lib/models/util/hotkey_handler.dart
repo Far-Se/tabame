@@ -9,22 +9,6 @@ import '../classes/hotkeys.dart';
 import '../globals.dart';
 import '../settings.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HotkeyHandler
-//
-// Processes incoming [HotkeyEvent]s from the native hook layer and dispatches
-// them to the appropriate [KeyMap] actions based on the configured trigger type.
-//
-// Trigger types and their dispatch order on button release:
-//   1. Mouse-movement (while held)
-//   2. Mouse-direction (distance on release)
-//   3. Hold-duration
-//   4. Region double-press
-//   5. Region press
-//   6. Global double-press
-//   7. Normal press
-// ─────────────────────────────────────────────────────────────────────────────
-
 class HotkeyHandler {
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -352,8 +336,6 @@ class HotkeyHandler {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Returns a copy of [keymaps] sorted so that region-bound maps come first.
-  /// Region-aware checks should always be evaluated before fallback (any-window) ones.
   List<KeyMap> _sortedByRegionFirst(List<KeyMap> keymaps) {
     return keymaps.toList()
       ..sort((KeyMap a, KeyMap b) {

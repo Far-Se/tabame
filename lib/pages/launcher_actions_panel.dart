@@ -1610,12 +1610,6 @@ class LauncherActionsBuilder {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Win32Window — thin helpers for window management actions.
-// Delegates to Win32 (from ../models/win32/win32.dart) which is the same
-// class used throughout launcher.dart.
-// ─────────────────────────────────────────────────────────────────────────────
-
 class Win32Window {
   static void activateWindow(int hWnd) => Win32.activateWindow(hWnd);
 

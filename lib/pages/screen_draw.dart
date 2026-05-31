@@ -1,14 +1,3 @@
-// main.dart
-// Flutter Windows Screen Annotation Overlay
-// Uses: win32 (pre-v6), ffi, dart:isolate, dart:ffi
-//
-// HWND discovery: FindWindowEx by class name 'FLUTTER_RUNNER_WIN32_WINDOW'
-// Global hotkeys: RegisterHotKey with HWND=0 in a background isolate message pump
-// Click-through: WS_EX_LAYERED | WS_EX_TRANSPARENT via SetWindowLongPtr
-// No native runner changes required.
-
-// ignore_for_file: unused_element, dead_code
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
@@ -271,6 +260,9 @@ class DrawShape {
   /// For text/infoBalloon: explicit background color (null = default black/shape color)
   final Color? textBgColor;
 
+  /// For rect / ellipse: draw filled instead of stroked
+  final bool filled;
+
   DrawShape({
     required this.tool,
     required this.points,
@@ -288,6 +280,7 @@ class DrawShape {
     this.imageH,
     this.fillColor,
     this.textBgColor,
+    this.filled = false,
   });
 
   DrawShape copyWith({
@@ -306,6 +299,7 @@ class DrawShape {
     int? imageH,
     Color? fillColor,
     Color? textBgColor,
+    bool? filled,
   }) {
     return DrawShape(
       tool: tool,
@@ -324,6 +318,7 @@ class DrawShape {
       imageH: imageH ?? this.imageH,
       fillColor: fillColor ?? this.fillColor,
       textBgColor: textBgColor ?? this.textBgColor,
+      filled: filled ?? this.filled,
     );
   }
 }
@@ -374,6 +369,13 @@ class AnnotationController extends ChangeNotifier {
 
   // Magnifier
   bool magnifierVisible = false;
+
+  // Shape fill option (rect / ellipse)
+  bool shapeFilled = false;
+  void toggleShapeFilled() {
+    shapeFilled = !shapeFilled;
+    notifyListeners();
+  }
 
   // Text tool options
   bool textBackground = true;
@@ -512,6 +514,7 @@ class AnnotationController extends ChangeNotifier {
 
   void setColor(Color c) {
     strokeColor = c;
+    Settings.setInt('strokeColor', c.toARGB32());
     notifyListeners();
   }
 
@@ -542,6 +545,7 @@ class AnnotationController extends ChangeNotifier {
       opacity: opacity,
       textBackground: textBackground,
       stepNumber: activeTool == DrawTool.stepCounter ? _stepCount : null,
+      filled: (activeTool == DrawTool.rect || activeTool == DrawTool.ellipse) ? shapeFilled : false,
     );
     currentEnd = pos;
     notifyListeners();
@@ -1055,6 +1059,11 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     final String? fancyshot = Settings.getString("captureSelectedFancyShotProfile");
     _ctrl.captureSelectedFancyShotProfile = fancyshot;
 
+    final int? savedColor = Settings.getInt('strokeColor');
+    if (savedColor != null) {
+      _ctrl.strokeColor = Color(savedColor);
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Win32Window.setupOverlay();
       _ctrl.toggleDrawingMode(activated: true);
@@ -1219,8 +1228,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   // (nothing extra needed here since imageDraw goes through the normal shape commit path)
 
   // Magnifier: live circle lens from screen capture
-  Offset? _magnifierCenter;
-  DrawShape? _magnifierShape; // fetched pixels for the magnifier circle
+  // Offset? _magnifierCenter;
+  // DrawShape? _magnifierShape; // fetched pixels for the magnifier circle
 
   Timer? _liveRegionFetchDebounce;
   Timer? _selectedCaptureRefreshTimer;
@@ -1373,12 +1382,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
               shape: _liveRegionShape!,
               rect: Rect.fromPoints(_captureStart!, _captureCurrent!),
             ),
-          if (false &&
-              ctrl.drawingModeActive &&
-              ctrl.activeTool == DrawTool.magnifier &&
-              _magnifierShape != null &&
-              _magnifierCenter != null)
-            _MagnifierLens(center: _magnifierCenter!, shape: _magnifierShape!),
+          // if (false &&
+          //     ctrl.drawingModeActive &&
+          //     ctrl.activeTool == DrawTool.magnifier &&
+          //     _magnifierShape != null &&
+          //     _magnifierCenter != null)
+          //   _MagnifierLens(center: _magnifierCenter!, shape: _magnifierShape!),
           // Toolbar anchored to active monitor
           if (ctrl.drawingModeActive)
             Positioned(
@@ -1731,37 +1740,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   }
 
   // ── Magnifier hover ────────────────────────────────────────────────────────
-
-  DateTime _lastMagnifierFetch = DateTime(0);
-
-  void _onMagnifierHover(Offset pos) {
-    setState(() => _magnifierCenter = pos);
-    final DateTime now = DateTime.now();
-    if (now.difference(_lastMagnifierFetch).inMilliseconds < 80) return;
-    _lastMagnifierFetch = now;
-    unawaited(_fetchMagnifierRegion(pos));
-  }
-
-  Future<void> _fetchMagnifierRegion(Offset center) async {
-    const double radius = 80.0;
-    final Rect localRect = Rect.fromCenter(center: center, width: radius * 2, height: radius * 2);
-    final Uint8List? bytes = await _captureMonitorRegion(localRect, force: true);
-    if (bytes == null || !mounted) return;
-    setState(() {
-      _magnifierShape = DrawShape(
-        tool: DrawTool.magnifier,
-        points: <Offset>[localRect.topLeft, localRect.bottomRight],
-        color: ctrl.strokeColor,
-        strokeWidth: ctrl.strokeWidth,
-        opacity: ctrl.opacity,
-        imageBytes: bytes,
-        imageW: (radius * 2).round(),
-        imageH: (radius * 2).round(),
-      );
-    });
-  }
-
-  // \u2500\u2500 Measure Distance snapshot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   bool _measureSnapshotInProgress = false;
   DateTime _lastMeasureSnapshotTime = DateTime(0);
@@ -3306,8 +3284,18 @@ class AnnotationToolbar extends StatelessWidget {
               _ToolBtn(Icons.edit, DrawTool.pen, controller, 'Pen (P)'),
               _ToolBtn(Icons.highlight, DrawTool.highlight, controller, 'Highlight (H)'),
               _ToolBtn(Icons.remove, DrawTool.line, controller, 'Line (L)'),
-              _ToolBtn(Icons.crop_square, DrawTool.rect, controller, 'Rect (R)'),
-              _ToolBtn(Icons.circle_outlined, DrawTool.ellipse, controller, 'Ellipse (E)'),
+              _ToolBtnWithFillPopup(
+                icon: Icons.crop_square,
+                tool: DrawTool.rect,
+                ctrl: controller,
+                tooltip: 'Rect (R)',
+              ),
+              _ToolBtnWithFillPopup(
+                icon: Icons.circle_outlined,
+                tool: DrawTool.ellipse,
+                ctrl: controller,
+                tooltip: 'Ellipse (E)',
+              ),
               _ToolBtn(Icons.arrow_forward, DrawTool.arrow, controller, 'Arrow (A)'),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.text_fields, DrawTool.text, controller, 'Text (T)'),
@@ -3611,9 +3599,159 @@ class _ColorPopupBtnState extends State<_ColorPopupBtn> {
   Timer? _closeTimer;
   OverlayEntry? _overlayEntry;
   OverlayEntry? _pickerOverlayEntry;
+  OverlayEntry? _eyedropperOverlayEntry;
   final LayerLink _layerLink = LayerLink();
   final LayerLink _pickerLayerLink = LayerLink();
   bool _pickerOpen = false;
+
+  // ── Eyedropper (screen colour picker) ─────────────────────────────────────
+  bool _eyedropperActive = false;
+  Timer? _eyedropperTimer;
+  Offset _eyedropperCursor = Offset.zero;
+  Color _eyedropperPreviewColor = Colors.transparent;
+
+  /// Sample the pixel at [x, y] in screen coordinates using Win32 GDI.
+  Color _samplePixel(int x, int y) {
+    final int hdc = GetDC(NULL);
+    final int colorRef = GetPixel(hdc, x, y);
+    ReleaseDC(NULL, hdc);
+    if (colorRef == -1) return Colors.black; // CLR_INVALID
+    final int r = colorRef & 0xFF;
+    final int g = (colorRef >> 8) & 0xFF;
+    final int b = (colorRef >> 16) & 0xFF;
+    return Color.fromARGB(255, r, g, b);
+  }
+
+  void _startEyedropper() {
+    // Close any open overlays first
+    _closePicker();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+
+    _eyedropperActive = true;
+
+    // Poll cursor position every 16 ms (~60 fps) to show live preview
+    _eyedropperTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      final Pointer<POINT> pt = calloc<POINT>();
+      GetCursorPos(pt);
+      final int sx = pt.ref.x;
+      final int sy = pt.ref.y;
+      calloc.free(pt);
+
+      final Color sampled = _samplePixel(sx, sy);
+      if (mounted) {
+        setState(() {
+          _eyedropperCursor = Offset(sx.toDouble(), sy.toDouble());
+          _eyedropperPreviewColor = sampled;
+        });
+        _eyedropperOverlayEntry?.markNeedsBuild();
+      }
+    });
+
+    _showEyedropperOverlay();
+  }
+
+  void _showEyedropperOverlay() {
+    _eyedropperOverlayEntry = OverlayEntry(
+      builder: (_) {
+        // Full-screen transparent listener that captures the next click
+        return Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (TapDownDetails details) {
+              // Sample the pixel at the exact tap position
+              final int sx = _eyedropperCursor.dx.round();
+              final int sy = _eyedropperCursor.dy.round();
+              final Color picked = _samplePixel(sx, sy);
+              widget.ctrl.setColor(picked);
+              _stopEyedropper();
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.precise,
+              child: Material(
+                type: MaterialType.transparency,
+                child: Stack(
+                  children: <Widget>[
+                    // Preview magnifier bubble near cursor
+                    AnimatedPositioned(
+                      duration: Duration.zero,
+                      left: (_eyedropperCursor.dx + 18).clamp(0, double.infinity),
+                      top: (_eyedropperCursor.dy - 60).clamp(0, double.infinity),
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 85,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white38),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Row(
+                                children: <Widget>[
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: _eyedropperPreviewColor,
+                                      borderRadius: BorderRadius.circular(3),
+                                      border: Border.all(color: Colors.white38),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      '#'
+                                      '${_eyedropperPreviewColor.red8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}'
+                                      '${_eyedropperPreviewColor.green8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}'
+                                      '${_eyedropperPreviewColor.blue8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Click to pick',
+                                style: TextStyle(color: Colors.white54, fontSize: 9),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_eyedropperOverlayEntry!);
+  }
+
+  void _stopEyedropper() {
+    _eyedropperTimer?.cancel();
+    _eyedropperTimer = null;
+    _eyedropperOverlayEntry?.remove();
+    _eyedropperOverlayEntry = null;
+    if (mounted) setState(() => _eyedropperActive = false);
+  }
 
   void _show() {
     _closeTimer?.cancel();
@@ -3621,7 +3759,7 @@ class _ColorPopupBtnState extends State<_ColorPopupBtn> {
 
     _overlayEntry = OverlayEntry(
       builder: (_) => Positioned(
-        width: 300,
+        width: 340,
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
@@ -3707,6 +3845,30 @@ class _ColorPopupBtnState extends State<_ColorPopupBtn> {
                               color: Colors.white,
                             ),
                           ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    // ── Screen eyedropper ──────────────────────────────────
+                    GestureDetector(
+                      onTap: _startEyedropper,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _eyedropperActive ? Colors.white24 : Colors.transparent,
+                          border: Border.all(
+                            color: _eyedropperActive ? Colors.white : Colors.white38,
+                            width: _eyedropperActive ? 2.0 : 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.colorize_outlined,
+                          size: 14,
+                          color: _eyedropperActive ? Colors.white : Colors.white70,
                         ),
                       ),
                     ),
@@ -3845,6 +4007,7 @@ class _ColorPopupBtnState extends State<_ColorPopupBtn> {
   void dispose() {
     _closeTimer?.cancel();
     _closePicker();
+    _stopEyedropper();
     _overlayEntry?.remove();
     _overlayEntry = null;
     super.dispose();
@@ -4511,6 +4674,137 @@ class _ToolBtnWithPopupState extends State<_ToolBtnWithPopup> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tool button with Fill sub-option (rect / ellipse)
+// ---------------------------------------------------------------------------
+
+/// Like [_ToolBtnWithPopup] but shows a persistent "Fill" checkbox that
+/// toggles [AnnotationController.shapeFilled].  The popup stays open while
+/// the mouse is inside so the user can tick/untick without re-hovering.
+class _ToolBtnWithFillPopup extends StatefulWidget {
+  final IconData icon;
+  final DrawTool tool;
+  final AnnotationController ctrl;
+  final String tooltip;
+
+  const _ToolBtnWithFillPopup({
+    required this.icon,
+    required this.tool,
+    required this.ctrl,
+    required this.tooltip,
+  });
+
+  @override
+  State<_ToolBtnWithFillPopup> createState() => _ToolBtnWithFillPopupState();
+}
+
+class _ToolBtnWithFillPopupState extends State<_ToolBtnWithFillPopup> {
+  Timer? _closeTimer;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+
+  void _show() {
+    _closeTimer?.cancel();
+    if (_overlayEntry != null) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Positioned(
+        width: 140,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(40, -4),
+          child: MouseRegion(
+            onEnter: (_) => _show(),
+            onExit: (_) => _scheduleHide(),
+            child: Material(
+              color: Colors.transparent,
+              child: ListenableBuilder(
+                listenable: widget.ctrl,
+                builder: (_, __) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(5),
+                    onTap: () {
+                      widget.ctrl.toggleShapeFilled();
+                      _overlayEntry?.markNeedsBuild();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: widget.ctrl.shapeFilled ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: widget.ctrl.shapeFilled ? Colors.yellowAccent.withValues(alpha: 0.35) : Colors.white12,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(
+                            widget.ctrl.shapeFilled ? Icons.check_box : Icons.check_box_outline_blank,
+                            size: 14,
+                            color: widget.ctrl.shapeFilled ? Colors.yellowAccent : Colors.white38,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Fill',
+                            style: TextStyle(
+                              color: widget.ctrl.shapeFilled ? Colors.white : Colors.white60,
+                              fontSize: 12,
+                              fontWeight: widget.ctrl.shapeFilled ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _scheduleHide() {
+    _closeTimer?.cancel();
+    _closeTimer = Timer(const Duration(milliseconds: 220), () {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _closeTimer?.cancel();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: MouseRegion(
+        onEnter: (_) => _show(),
+        onExit: (_) => _scheduleHide(),
+        child: _ToolBtn(widget.icon, widget.tool, widget.ctrl, widget.tooltip),
+      ),
+    );
+  }
+}
+
 class _ToolBtn extends StatelessWidget {
   final IconData icon;
   final DrawTool tool;
@@ -4619,7 +4913,7 @@ class AnnotationPainter extends CustomPainter {
         ..color = Colors.blue.withValues(alpha: 0.3)
         ..strokeWidth = s.strokeWidth + 4
         ..style = PaintingStyle.stroke;
-      _drawShape(canvas, s.tool, start, end, s.points, selPaint, s.color, s.strokeWidth);
+      _drawShape(canvas, s.tool, start, end, s.points, selPaint, s.color, s.strokeWidth, s.filled);
     }
 
     // Dispatch new specialised tools first
@@ -4657,7 +4951,7 @@ class AnnotationPainter extends CustomPainter {
         break;
     }
 
-    _drawShape(canvas, s.tool, start, end, s.points, paint, s.color, s.strokeWidth);
+    _drawShape(canvas, s.tool, start, end, s.points, paint, s.color, s.strokeWidth, s.filled);
 
     // Measurement labels for ruler / sizebox / line
     if (s.tool == DrawTool.ruler || s.tool == DrawTool.line || s.tool == DrawTool.sizebox || s.tool == DrawTool.arrow) {
@@ -4783,33 +5077,8 @@ class AnnotationPainter extends CustomPainter {
     }
   }
 
-  void _drawDashedRect(Canvas canvas, Rect rect, Color color) {
-    final ui.Paint p = Paint()
-      ..color = color
-      ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
-    const double dash = 6, gap = 4;
-    void drawDashedLine(Offset a, Offset b) {
-      final double len = (b - a).distance;
-      final Offset dir = (b - a) / len;
-      double pos = 0;
-      bool drawing = true;
-      while (pos < len) {
-        final double end = (pos + (drawing ? dash : gap)).clamp(0, len);
-        if (drawing) canvas.drawLine(a + dir * pos, a + dir * end, p);
-        pos = end;
-        drawing = !drawing;
-      }
-    }
-
-    drawDashedLine(rect.topLeft, rect.topRight);
-    drawDashedLine(rect.topRight, rect.bottomRight);
-    drawDashedLine(rect.bottomRight, rect.bottomLeft);
-    drawDashedLine(rect.bottomLeft, rect.topLeft);
-  }
-
   void _drawShape(Canvas canvas, DrawTool tool, Offset start, Offset end, List<Offset> points, Paint paint, Color color,
-      double sw) {
+      double sw, bool filled) {
     switch (tool) {
       case DrawTool.select:
         break;
@@ -4875,13 +5144,29 @@ class AnnotationPainter extends CustomPainter {
         canvas.drawLine(start, end, paint);
 
       case DrawTool.rect:
-        canvas.drawRect(Rect.fromPoints(start, end), paint);
+        if (filled) {
+          canvas.drawRect(
+              Rect.fromPoints(start, end),
+              Paint()
+                ..color = paint.color
+                ..style = PaintingStyle.fill);
+        } else {
+          canvas.drawRect(Rect.fromPoints(start, end), paint);
+        }
 
       case DrawTool.sizebox:
         canvas.drawRect(Rect.fromPoints(start, end), paint);
 
       case DrawTool.ellipse:
-        canvas.drawOval(Rect.fromPoints(start, end), paint);
+        if (filled) {
+          canvas.drawOval(
+              Rect.fromPoints(start, end),
+              Paint()
+                ..color = paint.color
+                ..style = PaintingStyle.fill);
+        } else {
+          canvas.drawOval(Rect.fromPoints(start, end), paint);
+        }
 
       case DrawTool.arrow:
         _drawArrow(canvas, start, end, paint);

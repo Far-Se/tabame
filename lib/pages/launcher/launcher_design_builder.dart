@@ -59,12 +59,6 @@ extension LauncherDesignBuilder on LauncherDesign {
     }
   }
 
-  /// Returns the search-bar widget for the given design.
-  ///
-  /// [dragHandle] is the GestureDetector wrapping the drag affordance.
-  /// [textField] is the already-constructed TextField.
-  /// [trailingBadge] is the optional info badge (e.g. "File Copied").
-  /// [isSearching] drives the spinner.
   Widget buildSearchBar({
     required Color surface,
     required Color accent,
@@ -199,8 +193,6 @@ class _ClassicSearchBar extends StatelessWidget {
 // Serene search bar
 // ---------------------------------------------------------------------------
 
-/// The Spotlight-inspired search bar: no card border, just a subtle
-/// separator below, larger search icon, and a slightly heavier input font.
 class _SereneSearchBar extends StatelessWidget {
   const _SereneSearchBar({
     required this.surface,
@@ -274,18 +266,6 @@ class _SereneSearchBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Serene launcher outer frame
-//
-// The LauncherState.build() method wraps its content in one of these so the
-// backdrop blur and rounded corners are consistent.
-// ---------------------------------------------------------------------------
-
-/// Wraps [child] in the Serene-design frosted-glass container.
-///
-/// Use this instead of a plain [Container] when [LauncherDesign.serene] is
-/// active.  For [LauncherDesign.classic] the existing [Container] in
-/// `launcher.dart` is kept unchanged.
 class SereneLauncherFrame extends StatelessWidget {
   const SereneLauncherFrame({
     super.key,

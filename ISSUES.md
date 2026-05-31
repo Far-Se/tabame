@@ -4,3 +4,6 @@ Ignore this file, it's for me to remember things.
 - Launcher: Reload Settings.
 - Launcher: Actions pentru fisiere Image: convert to X.
 - Integrare LibreHardwareMonitor.
+- Optiune pentru FancyShot sa se deschida separat nu din Tabame.
+- Right click pe logo face resize la window pentru draw bug.
+- Reformateaza firstRun sa contina si pagini hotkeys pentru Launcher, QuickClick, QuickSnap, EmojiPage, Fancyshot

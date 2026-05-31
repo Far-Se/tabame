@@ -247,7 +247,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   String _saveFolder = '';
   String _selectedMicId = '';
   String _selectedSystemAudioId = '';
-
+  bool _missingVirtualAudioCapturer = false;
   // Video source selection
   VideoSource _videoSource = VideoSource.ffmpeg;
   String _ffmpegCommand = '';
@@ -585,6 +585,45 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   // ---------------------------------------------------------------------------
   // FFmpeg recording
   // ---------------------------------------------------------------------------
+  Future<void> _checkVirtualAudioCapturer() async {
+    if (_videoSource != VideoSource.ffmpeg) {
+      if (mounted) {
+        setState(() => _missingVirtualAudioCapturer = false);
+      }
+      return;
+    }
+
+    if (_audioMode != ScreenRecordingAudioMode.system && _audioMode != ScreenRecordingAudioMode.systemAndMic) {
+      if (mounted) {
+        setState(() => _missingVirtualAudioCapturer = false);
+      }
+      return;
+    }
+
+    try {
+      final ProcessResult result = await Process.run(
+        'ffmpeg.exe',
+        <String>['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'],
+        runInShell: false,
+      );
+
+      final String output = (result.stderr as String?) ?? '';
+
+      final bool installed = output.toLowerCase().contains('virtual-audio-capturer');
+
+      if (mounted) {
+        setState(() {
+          _missingVirtualAudioCapturer = !installed;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _missingVirtualAudioCapturer = true;
+        });
+      }
+    }
+  }
 
   static String get _ffmpegDebugLogPath => '${WinUtils.getTabameAppDataFolder(settings: true)}\\ffmpeg_debug.log';
 
@@ -992,15 +1031,20 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   Future<void> _openSettings() async {
-    const double modalWidth = 460;
+    // Pause the 50 ms monitor/hover timer while the dialog is open.
+    // Without this, the continuous setState() calls steal focus from TextFields.
+    _monitorTimer?.cancel();
+    _monitorTimer = null;
+
+    const double modalWidth = 500;
     final Rect mon = _currentMonitorRect;
     final double left =
         mon.isEmpty ? 80 : (mon.left + (mon.width - modalWidth) / 2).clamp(mon.left + 8, mon.right - modalWidth - 8);
-    final double top = mon.isEmpty ? 80 : (mon.top + 80).clamp(mon.top + 8, mon.bottom - 8);
+    final double top = mon.isEmpty ? 60 : (mon.top + 60).clamp(mon.top + 8, mon.bottom - 8);
 
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, void Function(void Function()) setModalState) {
@@ -1010,259 +1054,606 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
               setModalState(() => _saveFolder = folder);
             }
 
-            // Inner dialog content — extracted so the Positioned can size it.
+            // ── design tokens ──────────────────────────────────────────
+            const Color surface = Color(0xFF1A1D23);
+            const Color surfaceElevated = Color(0xFF21252E);
+            const Color border = Color(0xFF2E3340);
+            const Color accent = Color(0xFF6C8EFF);
+            const Color textPrimary = Color(0xFFEAECF0);
+            const Color textSecondary = Color(0xFF8B91A0);
+            const Color toggleTrackOn = Color(0xFF3D5AFE);
+
+            // ── reusable section header ────────────────────────────────
+            Widget sectionHeader(String label, IconData icon) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: <Widget>[
+                    Icon(icon, size: 13, color: accent),
+                    const SizedBox(width: 6),
+                    Text(
+                      label.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // ── custom styled row dropdown ─────────────────────────────
+            Widget settingsDropdown<T>({
+              required String label,
+              required String? sublabel,
+              required T value,
+              required List<({T value, String label, String? sublabel})> options,
+              required void Function(T) onChanged,
+            }) {
+              return _SettingsDropdownRow<T>(
+                label: label,
+                sublabel: sublabel,
+                value: value,
+                options: options,
+                onChanged: onChanged,
+                surface: surface,
+                surfaceElevated: surfaceElevated,
+                border: border,
+                accent: accent,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+                setModalState: setModalState,
+              );
+            }
+
+            // ── toggle row ─────────────────────────────────────────────
+            Widget toggleRow(String label, String? sublabel, bool val, void Function(bool) onChanged) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(label,
+                              style: const TextStyle(fontSize: 13, color: textPrimary, fontWeight: FontWeight.w500)),
+                          if (sublabel != null) ...<Widget>[
+                            const SizedBox(height: 2),
+                            Text(sublabel, style: const TextStyle(fontSize: 11, color: textSecondary)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: val,
+                      onChanged: onChanged,
+                      activeColor: Colors.white,
+                      activeTrackColor: toggleTrackOn,
+                      inactiveThumbColor: Colors.white60,
+                      inactiveTrackColor: border,
+                      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // ── card wrapper ───────────────────────────────────────────
+            Widget settingsCard({required List<Widget> children}) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: surfaceElevated,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: border),
+                ),
+                child: Column(
+                  children: children.asMap().entries.map((MapEntry<int, Widget> e) {
+                    final bool isLast = e.key == children.length - 1;
+                    return Column(
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          child: e.value,
+                        ),
+                        if (!isLast)
+                          Divider(height: 1, color: border.withValues(alpha: 0.6), indent: 14, endIndent: 14),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              );
+            }
+
             final Widget dialogContent = Material(
-              color: settings_model.userSettings.theme.background,
-              borderRadius: BorderRadius.circular(12),
-              elevation: 8,
+              color: surface,
+              borderRadius: BorderRadius.circular(14),
+              elevation: 24,
+              shadowColor: Colors.black,
               child: SizedBox(
                 width: modalWidth,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-                      child: Text(
-                        'Recording settings',
-                        style: Theme.of(context).textTheme.titleMedium,
+                    // ── title bar ──────────────────────────────────────
+                    Container(
+                      decoration: BoxDecoration(
+                        color: surfaceElevated,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                        border: Border(bottom: BorderSide(color: border)),
                       ),
-                    ),
-                    const Divider(height: 1),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: (mon.isEmpty ? 600 : mon.height - 200).clamp(200.0, 700.0).toDouble(),
-                      ),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            DropdownButtonFormField<RecordingTargetMode>(
-                              initialValue: _targetMode,
-                              decoration: const InputDecoration(labelText: 'Target'),
-                              items: RecordingTargetMode.values
-                                  .map((RecordingTargetMode value) => DropdownMenuItem<RecordingTargetMode>(
-                                        value: value,
-                                        child: Text(value.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (RecordingTargetMode? value) {
-                                if (value == null) return;
-                                setModalState(() => _targetMode = value);
-                              },
+                      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                      child: Row(
+                        children: <Widget>[
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<int>(
-                              initialValue: _frameRate,
-                              decoration: const InputDecoration(labelText: 'Frame rate'),
-                              items: const <int>[24, 30, 60]
-                                  .map((int value) => DropdownMenuItem<int>(value: value, child: Text('$value FPS')))
-                                  .toList(),
-                              onChanged: (int? value) {
-                                if (value == null) return;
-                                setModalState(() => _frameRate = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<int>(
-                              initialValue: _videoBitrateMbps,
-                              decoration: const InputDecoration(labelText: 'Quality'),
-                              items: const <MapEntry<int, String>>[
-                                MapEntry<int, String>(6, 'Standard (6 Mbps)'),
-                                MapEntry<int, String>(12, 'High (12 Mbps)'),
-                                MapEntry<int, String>(20, 'Ultra (20 Mbps)'),
-                              ]
-                                  .map((MapEntry<int, String> value) => DropdownMenuItem<int>(
-                                        value: value.key,
-                                        child: Text(value.value),
-                                      ))
-                                  .toList(),
-                              onChanged: (int? value) {
-                                if (value == null) return;
-                                setModalState(() => _videoBitrateMbps = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            SwitchListTile(
-                              value: _captureCursor,
-                              onChanged: (bool value) => setModalState(() => _captureCursor = value),
-                              title: const Text('Capture cursor'),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            SwitchListTile(
-                              value: _captureBorder,
-                              onChanged: (bool value) => setModalState(() => _captureBorder = value),
-                              title: const Text('Capture border'),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<ScreenRecordingAudioMode>(
-                              initialValue: _audioMode,
-                              decoration: const InputDecoration(labelText: 'Audio source'),
-                              items: ScreenRecordingAudioMode.values
-                                  .map((ScreenRecordingAudioMode value) => DropdownMenuItem<ScreenRecordingAudioMode>(
-                                        value: value,
-                                        child: Text(value.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (ScreenRecordingAudioMode? value) {
-                                if (value == null) return;
-                                setModalState(() => _audioMode = value);
-                              },
-                            ),
-                            if (_audioMode == ScreenRecordingAudioMode.mic ||
-                                _audioMode == ScreenRecordingAudioMode.systemAndMic) ...<Widget>[
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<String>(
-                                initialValue: _inputDevices.any((AudioDevice e) => e.id == _selectedMicId)
-                                    ? _selectedMicId
-                                    : (_inputDevices.isNotEmpty ? _inputDevices.first.id : null),
-                                decoration: const InputDecoration(labelText: 'Microphone device'),
-                                items: _inputDevices
-                                    .map((AudioDevice device) =>
-                                        DropdownMenuItem<String>(value: device.id, child: Text(device.name)))
-                                    .toList(),
-                                onChanged: (String? value) {
-                                  if (value == null) return;
-                                  setModalState(() => _selectedMicId = value);
-                                },
-                              ),
-                            ],
-                            if (_audioMode == ScreenRecordingAudioMode.system ||
-                                _audioMode == ScreenRecordingAudioMode.systemAndMic) ...<Widget>[
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<String>(
-                                initialValue: _outputDevices.any((AudioDevice e) => e.id == _selectedSystemAudioId)
-                                    ? _selectedSystemAudioId
-                                    : (_outputDevices.isNotEmpty ? _outputDevices.first.id : null),
-                                decoration: const InputDecoration(labelText: 'System audio device'),
-                                items: _outputDevices
-                                    .map((AudioDevice device) =>
-                                        DropdownMenuItem<String>(value: device.id, child: Text(device.name)))
-                                    .toList(),
-                                onChanged: (String? value) {
-                                  if (value == null) return;
-                                  setModalState(() => _selectedSystemAudioId = value);
-                                },
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<RecordingAfterAction>(
-                              initialValue: _afterAction,
-                              decoration: const InputDecoration(labelText: 'After recording'),
-                              items: RecordingAfterAction.values
-                                  .map((RecordingAfterAction value) => DropdownMenuItem<RecordingAfterAction>(
-                                        value: value,
-                                        child: Text(value.name),
-                                      ))
-                                  .toList(),
-                              onChanged: (RecordingAfterAction? value) {
-                                if (value == null) return;
-                                setModalState(() => _afterAction = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              initialValue: _saveFolder,
-                              decoration: const InputDecoration(labelText: 'Save location'),
-                              onChanged: (String value) => _saveFolder = value,
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: browseFolder,
-                                icon: const Icon(Icons.folder_open_outlined),
-                                label: const Text('Browse'),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(),
-                            const SizedBox(height: 4),
-                            DropdownButtonFormField<VideoSource>(
-                              initialValue: _videoSource,
-                              decoration: const InputDecoration(
-                                labelText: 'Video source',
-                                helperText: 'WGC = Windows built-in  |  FFmpeg = custom command',
-                                helperMaxLines: 2,
-                              ),
-                              items: const <DropdownMenuItem<VideoSource>>[
-                                DropdownMenuItem<VideoSource>(
-                                  value: VideoSource.ffmpeg,
-                                  child: Text('FFmpeg (custom command)'),
+                            child: const Icon(Icons.videocam_rounded, size: 16, color: accent),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Recording Settings',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
                                 ),
-                                DropdownMenuItem<VideoSource>(
-                                  value: VideoSource.wgc,
-                                  child: Text('Windows Graphics Capture (WGC)'),
+                                Text(
+                                  'Configure capture, audio, and output',
+                                  style: TextStyle(fontSize: 11, color: textSecondary),
                                 ),
                               ],
-                              onChanged: (VideoSource? value) {
-                                if (value == null) return;
-                                setModalState(() => _videoSource = value);
-                              },
                             ),
-                            if (_videoSource == VideoSource.ffmpeg) ...<Widget>[
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                initialValue: _ffmpegCommand,
-                                decoration: const InputDecoration(
-                                  labelText: 'FFmpeg command',
-                                  helperText: 'Leave blank to auto-generate. Use {output} as output path placeholder, '
-                                      'or omit it and the path will be appended automatically.',
-                                  helperMaxLines: 4,
-                                ),
-                                maxLines: 3,
-                                onChanged: (String value) => _ffmpegCommand = value,
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: border,
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              if (_ffmpegCommand.trim().isEmpty) ...<Widget>[
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.06),
-                                    borderRadius: BorderRadius.circular(8),
+                              child: const Icon(Icons.close_rounded, size: 14, color: textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ── scrollable body ────────────────────────────────
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: (mon.isEmpty ? 560 : mon.height - 180).clamp(220.0, 620.0).toDouble(),
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            // ── Capture section ───────────────────────
+                            sectionHeader('Capture', Icons.crop_square_rounded),
+                            settingsCard(children: <Widget>[
+                              settingsDropdown<RecordingTargetMode>(
+                                label: 'Target',
+                                sublabel: 'What to record',
+                                value: _targetMode,
+                                options: const <({RecordingTargetMode value, String label, String? sublabel})>[
+                                  (
+                                    value: RecordingTargetMode.region,
+                                    label: 'Region',
+                                    sublabel: 'Draw a selection area'
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      const Text(
-                                        'Auto-generated command preview:',
-                                        style: TextStyle(fontSize: 11, color: Colors.white54),
+                                  (
+                                    value: RecordingTargetMode.window,
+                                    label: 'Window',
+                                    sublabel: 'Pick a specific app window'
+                                  ),
+                                  (
+                                    value: RecordingTargetMode.monitor,
+                                    label: 'Monitor',
+                                    sublabel: 'Capture the entire display'
+                                  ),
+                                ],
+                                onChanged: (RecordingTargetMode v) => _targetMode = v,
+                              ),
+                              toggleRow('Capture Cursor', 'Include mouse pointer in recording', _captureCursor,
+                                  (bool v) => setModalState(() => _captureCursor = v)),
+                              toggleRow('Capture Border', 'Show window border highlight', _captureBorder,
+                                  (bool v) => setModalState(() => _captureBorder = v)),
+                            ]),
+
+                            // ── Video section ─────────────────────────
+                            sectionHeader('Video', Icons.movie_filter_rounded),
+                            settingsCard(children: <Widget>[
+                              settingsDropdown<int>(
+                                label: 'Frame Rate',
+                                sublabel: 'Frames per second',
+                                value: _frameRate,
+                                options: const <({int value, String label, String? sublabel})>[
+                                  (value: 24, label: '24 FPS', sublabel: 'Cinematic'),
+                                  (value: 30, label: '30 FPS', sublabel: 'Standard'),
+                                  (value: 60, label: '60 FPS', sublabel: 'Smooth'),
+                                ],
+                                onChanged: (int v) => _frameRate = v,
+                              ),
+                              settingsDropdown<int>(
+                                label: 'Quality',
+                                sublabel: 'Video bitrate',
+                                value: _videoBitrateMbps,
+                                options: const <({int value, String label, String? sublabel})>[
+                                  (value: 6, label: 'Standard', sublabel: '6 Mbps — smaller file'),
+                                  (value: 12, label: 'High', sublabel: '12 Mbps — balanced'),
+                                  (value: 20, label: 'Ultra', sublabel: '20 Mbps — best quality'),
+                                ],
+                                onChanged: (int v) => _videoBitrateMbps = v,
+                              ),
+                              settingsDropdown<VideoSource>(
+                                label: 'Video Backend',
+                                sublabel: 'Capture engine',
+                                value: _videoSource,
+                                options: const <({VideoSource value, String label, String? sublabel})>[
+                                  (value: VideoSource.ffmpeg, label: 'FFmpeg', sublabel: 'Custom command, gdigrab'),
+                                  (value: VideoSource.wgc, label: 'WGC', sublabel: 'Windows Graphics Capture'),
+                                ],
+                                onChanged: (VideoSource v) => _videoSource = v,
+                              ),
+                            ]),
+
+                            // ── FFmpeg command (conditional) ──────────
+                            if (_videoSource == VideoSource.ffmpeg) ...<Widget>[
+                              sectionHeader('FFmpeg Command', Icons.terminal_rounded),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: surfaceElevated,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: border),
+                                ),
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    TextFormField(
+                                      initialValue: _ffmpegCommand,
+                                      style: const TextStyle(fontSize: 12, color: textPrimary, fontFamily: 'monospace'),
+                                      decoration: InputDecoration(
+                                        hintText: 'Leave blank to auto-generate…',
+                                        hintStyle: const TextStyle(color: textSecondary, fontSize: 12),
+                                        filled: true,
+                                        fillColor: surface,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(7),
+                                          borderSide: const BorderSide(color: border),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(7),
+                                          borderSide: const BorderSide(color: border),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(7),
+                                          borderSide: const BorderSide(color: accent, width: 1.5),
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      SelectableText(
-                                        _buildDefaultFfmpegCommand('<output.mp4>'),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white70,
-                                          fontFamily: 'monospace',
+                                      maxLines: 3,
+                                      onChanged: (String v) => setModalState(() => _ffmpegCommand = v),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Use {output} as the output path placeholder, or omit it to auto-append.',
+                                      style: const TextStyle(fontSize: 10, color: textSecondary),
+                                    ),
+                                    if (_ffmpegCommand.trim().isEmpty) ...<Widget>[
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: surface,
+                                          borderRadius: BorderRadius.circular(7),
+                                          border: Border.all(color: border),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            const Text(
+                                              'Auto-generated preview',
+                                              style: TextStyle(
+                                                  fontSize: 10, color: textSecondary, fontWeight: FontWeight.w600),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            SelectableText(
+                                              _buildDefaultFfmpegCommand('<output.mp4>'),
+                                              style: const TextStyle(
+                                                fontSize: 9.5,
+                                                color: Color(0xFF90CAF9),
+                                                fontFamily: 'monospace',
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (_missingVirtualAudioCapturer) ...<Widget>[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3A1F1F),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
                                   ),
                                 ),
-                              ],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    const Row(
+                                      children: <Widget>[
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: Color(0xFFFFB74D),
+                                          size: 18,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'virtual-audio-capturer is required',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'FFmpeg system audio recording requires '
+                                      '"virtual-audio-capturer" to be installed.',
+                                      style: TextStyle(
+                                        color: Color(0xFFE0E0E0),
+                                        fontSize: 11,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    GestureDetector(
+                                      onTap: () {
+                                        launchWithExplorer(
+                                          'https://github.com/rdp/screen-capture-recorder-to-video-windows-free/releases/tag/v0.13.3',
+                                        );
+                                      },
+                                      child: Container(
+                                        height: 34,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFB74D),
+                                          borderRadius: BorderRadius.circular(7),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            Icon(
+                                              Icons.download_rounded,
+                                              size: 15,
+                                              color: Colors.black,
+                                            ),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Download',
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
-                            const SizedBox(height: 8),
+
+                            // ── Audio section ─────────────────────────
+                            sectionHeader('Audio', Icons.mic_rounded),
+                            settingsCard(children: <Widget>[
+                              settingsDropdown<ScreenRecordingAudioMode>(
+                                label: 'Audio Source',
+                                sublabel: 'What to record',
+                                value: _audioMode,
+                                options: ScreenRecordingAudioMode.values
+                                    .map((ScreenRecordingAudioMode m) => (value: m, label: m.name, sublabel: null))
+                                    .toList(),
+                                onChanged: (ScreenRecordingAudioMode v) => _audioMode = v,
+                              ),
+                              if (_audioMode == ScreenRecordingAudioMode.mic ||
+                                  _audioMode == ScreenRecordingAudioMode.systemAndMic)
+                                settingsDropdown<String>(
+                                  label: 'Microphone',
+                                  sublabel: 'Input device',
+                                  value: _inputDevices.any((AudioDevice e) => e.id == _selectedMicId)
+                                      ? _selectedMicId
+                                      : (_inputDevices.isNotEmpty ? _inputDevices.first.id : ''),
+                                  options: _inputDevices
+                                      .map((AudioDevice d) => (value: d.id, label: d.name, sublabel: null))
+                                      .toList(),
+                                  onChanged: (String v) => _selectedMicId = v,
+                                ),
+                              if (_audioMode == ScreenRecordingAudioMode.system ||
+                                  _audioMode == ScreenRecordingAudioMode.systemAndMic)
+                                settingsDropdown<String>(
+                                  label: 'System Audio',
+                                  sublabel: 'Output/loopback device',
+                                  value: _outputDevices.any((AudioDevice e) => e.id == _selectedSystemAudioId)
+                                      ? _selectedSystemAudioId
+                                      : (_outputDevices.isNotEmpty ? _outputDevices.first.id : ''),
+                                  options: _outputDevices
+                                      .map((AudioDevice d) => (value: d.id, label: d.name, sublabel: null))
+                                      .toList(),
+                                  onChanged: (String v) => _selectedSystemAudioId = v,
+                                ),
+                            ]),
+
+                            // ── Output section ────────────────────────
+                            sectionHeader('Output', Icons.folder_rounded),
+                            settingsCard(children: <Widget>[
+                              settingsDropdown<RecordingAfterAction>(
+                                label: 'After Recording',
+                                sublabel: 'What to do with the file',
+                                value: _afterAction,
+                                options: const <({RecordingAfterAction value, String label, String? sublabel})>[
+                                  (
+                                    value: RecordingAfterAction.ask,
+                                    label: 'Show in Folder',
+                                    sublabel: 'Open Explorer at the file'
+                                  ),
+                                  (
+                                    value: RecordingAfterAction.openFile,
+                                    label: 'Open File',
+                                    sublabel: 'Play the recording immediately'
+                                  ),
+                                  (
+                                    value: RecordingAfterAction.openFolder,
+                                    label: 'Open Folder',
+                                    sublabel: 'Open the recordings directory'
+                                  ),
+                                  (
+                                    value: RecordingAfterAction.copyFilePath,
+                                    label: 'Copy Path',
+                                    sublabel: 'Copy file path to clipboard'
+                                  ),
+                                ],
+                                onChanged: (RecordingAfterAction v) => _afterAction = v,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    const Text(
+                                      'Save Location',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text('Directory where recordings are saved',
+                                        style: TextStyle(fontSize: 11, color: textSecondary)),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: TextFormField(
+                                            initialValue: _saveFolder,
+                                            style: const TextStyle(fontSize: 12, color: textPrimary),
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              filled: true,
+                                              fillColor: surface,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(7),
+                                                borderSide: const BorderSide(color: border),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(7),
+                                                borderSide: const BorderSide(color: border),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(7),
+                                                borderSide: const BorderSide(color: accent, width: 1.5),
+                                              ),
+                                            ),
+                                            onChanged: (String v) => _saveFolder = v,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        GestureDetector(
+                                          onTap: browseFolder,
+                                          child: Container(
+                                            height: 36,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              color: accent.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(7),
+                                              border: Border.all(color: accent.withValues(alpha: 0.35)),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: const Row(
+                                              children: <Widget>[
+                                                Icon(Icons.folder_open_rounded, size: 14, color: accent),
+                                                SizedBox(width: 5),
+                                                Text('Browse',
+                                                    style: TextStyle(
+                                                        fontSize: 12, color: accent, fontWeight: FontWeight.w600)),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ]),
+
+                            const SizedBox(height: 4),
                           ],
                         ),
                       ),
                     ),
-                    const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+
+                    // ── footer ─────────────────────────────────────────
+                    Container(
+                      decoration: BoxDecoration(
+                        color: surfaceElevated,
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+                        border: Border(top: BorderSide(color: border)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: <Widget>[
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              height: 34,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: border,
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text('Cancel',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textSecondary)),
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () {
+                          GestureDetector(
+                            onTap: () {
                               RecordingSettingsStore.setString('targetMode', _targetMode.name);
                               RecordingSettingsStore.setString('afterAction', _afterAction.name);
                               RecordingSettingsStore.setString('audioMode', _audioMode.name);
@@ -1278,7 +1669,24 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               Navigator.of(context).pop();
                               setState(() {});
                             },
-                            child: const Text('Save'),
+                            child: Container(
+                              height: 34,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(7),
+                                boxShadow: <BoxShadow>[
+                                  BoxShadow(
+                                    color: accent.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text('Save Settings',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                            ),
                           ),
                         ],
                       ),
@@ -1302,6 +1710,15 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         );
       },
     );
+
+    // Resume the monitor/hover timer now that the dialog is closed.
+    _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (_recording) {
+        _syncRecordingInteractivity();
+      } else {
+        _refreshMonitorAndHover();
+      }
+    });
   }
 
   @override
@@ -1727,6 +2144,218 @@ class _RecordingActivePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RecordingActivePainter oldDelegate) {
     return oldDelegate.highlightRect != highlightRect || oldDelegate.accent != accent;
+  }
+}
+
+/// A custom styled dropdown row used inside the settings modal.
+/// Renders the current value as a pill and opens a custom overlay menu on tap.
+class _SettingsDropdownRow<T> extends StatefulWidget {
+  const _SettingsDropdownRow({
+    required this.label,
+    required this.sublabel,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    required this.surface,
+    required this.surfaceElevated,
+    required this.border,
+    required this.accent,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.setModalState,
+  });
+
+  final String label;
+  final String? sublabel;
+  final T value;
+  final List<({T value, String label, String? sublabel})> options;
+  final void Function(T) onChanged;
+  final Color surface;
+  final Color surfaceElevated;
+  final Color border;
+  final Color accent;
+  final Color textPrimary;
+  final Color textSecondary;
+  final void Function(void Function()) setModalState;
+
+  @override
+  State<_SettingsDropdownRow<T>> createState() => _SettingsDropdownRowState<T>();
+}
+
+class _SettingsDropdownRowState<T> extends State<_SettingsDropdownRow<T>> {
+  OverlayEntry? _overlayEntry;
+  final GlobalKey _key = GlobalKey();
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _openDropdown() {
+    if (_overlayEntry != null) {
+      _removeOverlay();
+      return;
+    }
+    final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      builder: (BuildContext context) {
+        return Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _removeOverlay,
+                behavior: HitTestBehavior.translucent,
+                child: const SizedBox.expand(),
+              ),
+            ),
+            Positioned(
+              left: offset.dx,
+              top: offset.dy + size.height + 4,
+              width: math.max(size.width, 240),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: widget.surfaceElevated,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: widget.border),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: widget.options
+                        .asMap()
+                        .entries
+                        .map((MapEntry<int, ({T value, String label, String? sublabel})> e) {
+                      final bool selected = e.value.value == widget.value;
+                      final bool isLast = e.key == widget.options.length - 1;
+                      return Column(
+                        children: <Widget>[
+                          GestureDetector(
+                            onTap: () {
+                              widget.setModalState(() => widget.onChanged(e.value.value));
+                              _removeOverlay();
+                            },
+                            child: Container(
+                              color: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          e.value.label,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                                            color: selected ? widget.accent : widget.textPrimary,
+                                          ),
+                                        ),
+                                        if (e.value.sublabel != null) ...<Widget>[
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            e.value.sublabel!,
+                                            style: TextStyle(fontSize: 11, color: widget.textSecondary),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  if (selected) Icon(Icons.check_rounded, size: 15, color: widget.accent),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (!isLast)
+                            Divider(height: 1, color: widget.border.withValues(alpha: 0.6), indent: 14, endIndent: 14),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String currentLabel = widget.options
+        .firstWhere(
+          (({T value, String label, String? sublabel}) e) => e.value == widget.value,
+          orElse: () => (value: widget.value, label: widget.value.toString(), sublabel: null),
+        )
+        .label;
+
+    return GestureDetector(
+      key: _key,
+      onTap: _openDropdown,
+      child: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    widget.label,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: widget.textPrimary),
+                  ),
+                  if (widget.sublabel != null) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(widget.sublabel!, style: TextStyle(fontSize: 11, color: widget.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: widget.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: widget.accent.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    currentLabel,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.accent),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.expand_more_rounded, size: 14, color: widget.accent),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

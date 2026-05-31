@@ -348,13 +348,6 @@ class QuickMenuState extends State<QuickMenu>
           }
         }
       }
-      // WidgetsBinding.instance.addPostFrameCallback((_) async {
-      //   final Size value = await windowManager.getSize();
-      //   await windowManager.setSize(Size(value.width + 1, value.height + 1));
-      //   await Future<void>.delayed(const Duration(milliseconds: 10));
-      //   await windowManager.setSize(Size(value.width, value.height));
-      //   WinUtils.fixDrawBug();
-      // });
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
         userSettings.launcherSearchText = "";
         await WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height));

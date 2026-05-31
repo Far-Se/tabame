@@ -24,9 +24,6 @@ namespace fs = std::filesystem;
 
 struct AppInfo {
   std::wstring name;
-  // For protocol-URI entries (steam://, epicgames://, …) this is the path to
-  // the backing .url file on disk; for Win32 .lnk shortcuts it is the .lnk
-  // path; for plain .exe entries it equals parsingName.
   std::wstring executable;
   std::wstring arguments;
   std::wstring appUserModelId;
@@ -39,22 +36,10 @@ struct AppBitmap {
   int height = 0;
 };
 
-// PKEY_Link_TargetParsingPath and PKEY_Link_Arguments are declared extern in
-// propkey.h; their definitions live in propsys.lib (already linked above).
-// We just need the lib to be linked — no local redefinition needed.
 #pragma comment(lib, "propsys.lib") // already listed above, harmless duplicate
 
 namespace detail {
 
-// ---------------------------------------------------------------------------
-// FIX #2: Read alpha from the DIB section bits directly.
-//
-// IShellItemImageFactory returns a 32-bpp premultiplied-ARGB DIB section.
-// GetDIBits with BI_RGB zeroes the alpha byte on every pixel, making the
-// result appear corrupt / invisible when displayed.
-// The correct approach: lock the DIB section memory and copy the raw
-// premultiplied pixels, then un-premultiply so callers get straight BGRA.
-// ---------------------------------------------------------------------------
 inline AppBitmap HBitmapToAppBitmap(HBITMAP hbmp) {
   AppBitmap result;
   if (!hbmp)
@@ -121,9 +106,6 @@ inline AppBitmap HBitmapToAppBitmap(HBITMAP hbmp) {
     }
   }
 
-  // Un-premultiply alpha so Dart/Flutter sees straight BGRA.
-  // Premultiplied: stored_B = real_B * alpha/255
-  // Straight:      real_B   = stored_B * 255 / alpha
   uint8_t *px = result.pixels.data();
   for (int i = 0; i < w * absH; ++i, px += 4) {
     const uint8_t a = px[3];
@@ -138,12 +120,6 @@ inline AppBitmap HBitmapToAppBitmap(HBITMAP hbmp) {
 
   return result;
 }
-// ---------------------------------------------------------------------------
-// CropAndScaleBitmap: if the actual icon content occupies only a small
-// region of the bitmap (padded by transparency), crop to that region and
-// scale it up to desiredSize x desiredSize using nearest-neighbour.
-// This fixes .url file icons that come back padded with transparent space.
-// ---------------------------------------------------------------------------
 inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
   if (src.pixels.empty())
     return src;
@@ -151,9 +127,6 @@ inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
   const int w = src.width;
   const int h = src.height;
 
-  // Skip the outer 5% on each side (likely a decorative border).
-  // Then check the next 5% band — if it's fully transparent, the icon
-  // is small and centered; crop to where content actually starts.
   int skip = max(1, w * 5 / 100);  // 5% of width (use width for both axes)
   int probe = max(1, w * 5 / 100); // next 5% band to check
 
@@ -239,15 +212,6 @@ inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
 
   return result;
 }
-// ---------------------------------------------------------------------------
-// FIX #1: Icon extraction for UWP / packaged apps.
-//
-// SHCreateItemFromParsingName fails for AUMIDs (they are not file-system
-// paths).  The item we already have from enumerating the AppsFolder *does*
-// support IShellItemImageFactory — so we pass the live IShellItem* here.
-// For GetAppBitmap (called by AUMID/parsingName string) we re-enumerate
-// the folder to find the matching item.
-// ---------------------------------------------------------------------------
 inline HBITMAP ExtractIconBitmapFromItem(IShellItem *item,
                                          int desiredSize = 256) {
   ComPtr<IShellItemImageFactory> factory;
@@ -295,36 +259,13 @@ inline std::wstring ReadStringProp(IPropertyStore *store,
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// FIX #3: Resolve executable & arguments.
-//
-// BHID_SFUIObject → IShellLink does NOT work for items in the virtual
-// AppsFolder; that handler is simply not implemented for those items.
-//
-// Strategy:
-//  a) If the parsingName ends in .exe  →  that IS the executable.
-//  b) Try IShellItem2 → PKEY_Link_TargetParsingPath (works for .lnk that
-//     the shell exposes as app entries, e.g. classic Win32 shortcuts).
-//  c) For packaged (UWP/MSIX) apps, PKEY_AppUserModel_PackageInstallPath
-//     + PKEY_AppUserModel_RelativeApplicationID give us the host exe.
-//     We compose the full path from those two.
-// ---------------------------------------------------------------------------
-
-// {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 5  — package install path
 static const PROPERTYKEY PKEY_AppUserModel_PackageInstallPath = {
     {0x9F4C2855,
      0x9F79,
      0x4B39,
      {0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3}},
     5};
-// {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, 8  — relative exe inside package
-// static const PROPERTYKEY PKEY_AppUserModel_HostEnvironment = {
-//     {0x9F4C2855, 0x9F79, 0x4B39, {0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5,
-//     0xF3}}, 8
-// };
 
-// Returns true if the string looks like a protocol URI (contains "://" and
-// does NOT look like a Windows file path).
 inline bool IsProtocolUri(const std::wstring &s) {
   auto pos = s.find(L"://");
   if (pos == std::wstring::npos)
@@ -356,10 +297,6 @@ inline void ResolveExecutableAndArgs(IShellItem *item,
   ComPtr<IShellItem2> item2;
   item->QueryInterface(IID_PPV_ARGS(&item2));
 
-  // ── (b) Protocol-URI entries (steam://, epicgames://, battle.net://, …) ──
-  // The parsingName IS the URI. The item is backed by a .url Internet
-  // Shortcut file on disk. Read its file-system path from PKEY_ItemPathDisplay
-  // so callers can use it (e.g. to extract the icon).
   if (IsProtocolUri(parsingName)) {
     if (item2) {
       PWSTR filePath = nullptr;
@@ -498,14 +435,6 @@ inline std::future<std::vector<AppInfo>> GetAllAppsAsync() {
                     []() -> std::vector<AppInfo> { return GetAllApps(); });
 }
 
-// ---------------------------------------------------------------------------
-// GetAppBitmap — fetch icon by parsingName or AUMID.
-//
-// FIX #1 continued: for UWP/packaged apps the parsingName is an AUMID like
-// "Microsoft.WindowsStore_8wekyb3d8bbwe!App", not a file-system path.
-// SHCreateItemFromParsingName works only for file-system items.
-// We must resolve the item through the AppsFolder namespace instead.
-// ---------------------------------------------------------------------------
 namespace detail {
 
 inline ComPtr<IShellItem>
@@ -574,10 +503,6 @@ inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
   ComPtr<IShellItem> item;
 
   if (detail::IsProtocolUri(parsingName)) {
-    // Protocol-URI entries (steam://, epicgames://, …) are backed by a
-    // .url Internet Shortcut file.  We must find that file via the
-    // AppsFolder enumerator, read its on-disk path, then create a shell
-    // item from THAT path — the .url file has the icon reference embedded.
     ComPtr<IShellItem> virtualItem = detail::FindItemInAppsFolder(parsingName);
     if (virtualItem) {
       // Read the file-system path of the .url file.
@@ -603,25 +528,19 @@ inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
         }
 
         if (gotPath && filePath) {
-          // Create a shell item from the actual .url file path so
-          // IShellItemImageFactory can read the embedded icon.
           SHCreateItemFromParsingName(filePath, nullptr, IID_PPV_ARGS(&item));
         }
         if (filePath)
           CoTaskMemFree(filePath);
       }
 
-      // If we still don't have a file-based item, try the virtual item
-      // directly — some launchers do register a proper icon factory.
       if (!item)
         item = virtualItem;
     }
   } else {
-    // Fast path: file-system item (.exe, .lnk, package install path, …)
     hr = SHCreateItemFromParsingName(parsingName.c_str(), nullptr,
                                      IID_PPV_ARGS(&item));
     if (FAILED(hr) || !item) {
-      // Slow path for UWP / MSIX AUMIDs
       item = detail::FindItemInAppsFolder(parsingName);
     }
   }
@@ -631,7 +550,6 @@ inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
     if (bitmap) {
       result = detail::HBitmapToAppBitmap(bitmap);
       DeleteObject(bitmap);
-      // Fix padded .url icons: crop transparent border and scale up.
       result = detail::CropAndScaleIfPadded(std::move(result), desiredSize);
     }
   }
