@@ -190,7 +190,6 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
 
   Widget _buildHeader(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color onSurface = theme.colorScheme.onSurface;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
@@ -218,47 +217,6 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                 ),
               ),
             ],
-          ),
-          const Spacer(),
-          // Search field — filters the Disabled list
-          SizedBox(
-            width: 220,
-            height: 36,
-            child: TextField(
-              controller: _searchController,
-              onChanged: (String value) => setState(() => _disabledSearchQuery = value.toLowerCase()),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: onSurface),
-              decoration: InputDecoration(
-                hintText: 'Search disabled…',
-                hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.4)),
-                prefixIcon: Icon(Icons.search_rounded, size: 16, color: onSurface.withValues(alpha: 0.4)),
-                suffixIcon: _disabledSearchQuery.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() => _disabledSearchQuery = '');
-                        },
-                        child: Icon(Icons.close_rounded, size: 14, color: onSurface.withValues(alpha: 0.5)),
-                      )
-                    : null,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                filled: true,
-                fillColor: onSurface.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 1.5),
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -301,6 +259,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
             children: <Widget>[
               // Column Header
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   Icon(
                     isActive ? Icons.generating_tokens_rounded : Icons.do_not_disturb_on_rounded,
@@ -342,6 +301,49 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                       ],
                     ),
                   ),
+                  // Search field — explicitly attached to the right of the Disabled header
+                  if (!isActive) ...<Widget>[
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 220,
+                      height: 36,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (String value) => setState(() => _disabledSearchQuery = value.toLowerCase()),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Search disabled…',
+                          hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.4)),
+                          prefixIcon: Icon(Icons.search_rounded, size: 16, color: onSurface.withValues(alpha: 0.4)),
+                          suffixIcon: _disabledSearchQuery.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () {
+                                    _searchController.clear();
+                                    setState(() => _disabledSearchQuery = '');
+                                  },
+                                  child: Icon(Icons.close_rounded, size: 14, color: onSurface.withValues(alpha: 0.5)),
+                                )
+                              : null,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          filled: true,
+                          fillColor: onSurface.withValues(alpha: 0.05),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: onSurface.withValues(alpha: 0.12), width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),

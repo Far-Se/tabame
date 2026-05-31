@@ -1678,9 +1678,17 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       if (region.width > 4 && region.height > 4) {
         // Await so _commitLiveRegion crops from the current frozen snapshot,
         // then discard so the *next* drag takes a fresh capture.
+        final DrawTool committedTool = ctrl.activeTool;
         await _commitLiveRegion(region);
-        // Auto-select Select mode so the toolbar highlights correctly.
-        ctrl.setTool(DrawTool.select);
+        // Restore blur/pixelate tool so the user can keep drawing regions.
+        // For other live-region tools (smartDelete, spotlight) switch to select.
+        if (committedTool != DrawTool.blur && committedTool != DrawTool.pixelate) {
+          ctrl.setTool(DrawTool.select);
+        } else {
+          // Stay on the same tool — just clear selectMode so the crosshair returns.
+          selectMode = false;
+          setState(() {});
+        }
       }
       _discardMonitorSnapshot();
       return;
@@ -2722,9 +2730,9 @@ class _CommittedRegionPainter extends CustomPainter {
     canvas.clipRect(bounds);
     canvas.saveLayer(
       bounds,
-      Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12, tileMode: TileMode.mirror),
     );
-    canvas.drawImageRect(image!, src, bounds.inflate(16), Paint()..filterQuality = FilterQuality.high);
+    canvas.drawImageRect(image!, src, bounds, Paint()..filterQuality = FilterQuality.high);
     canvas.restore();
     canvas.drawRect(bounds, Paint()..color = Colors.white.withValues(alpha: 0.10));
     canvas.restore();
@@ -3013,9 +3021,9 @@ class _RegionEffectPainter extends CustomPainter {
       canvas.clipRect(bounds);
       canvas.saveLayer(
         bounds,
-        Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12, tileMode: TileMode.mirror),
       );
-      canvas.drawImageRect(image!, src, bounds.inflate(16), Paint()..filterQuality = FilterQuality.high);
+      canvas.drawImageRect(image!, src, bounds, Paint()..filterQuality = FilterQuality.high);
       canvas.restore();
       canvas.drawRect(bounds, Paint()..color = Colors.white.withValues(alpha: 0.10));
       canvas.restore();
@@ -3338,8 +3346,37 @@ class AnnotationToolbar extends StatelessWidget {
               _ActionBtn(Icons.grid_on, 'Grid (Ctrl+G)', () => controller.toggleGrid()),
               const Divider(color: Colors.white24, height: 10),
               _InfoBtn(controller, monitorRect),
+              const Divider(color: Colors.white24, height: 10),
+              _CloseBtn(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Close button ──────────────────────────────────────────────────────────────
+class _CloseBtn extends StatelessWidget {
+  const _CloseBtn();
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Close Screen Draw',
+      preferBelow: false,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => windowManager.close(),
+        child: Container(
+          width: 36,
+          height: 36,
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            color: Colors.red.withValues(alpha: 0.18),
+          ),
+          child: const Icon(Icons.close, color: Colors.redAccent, size: 18),
         ),
       ),
     );
@@ -4954,7 +4991,7 @@ class AnnotationPainter extends CustomPainter {
     _drawShape(canvas, s.tool, start, end, s.points, paint, s.color, s.strokeWidth, s.filled);
 
     // Measurement labels for ruler / sizebox / line
-    if (s.tool == DrawTool.ruler || s.tool == DrawTool.line || s.tool == DrawTool.sizebox || s.tool == DrawTool.arrow) {
+    if (s.tool == DrawTool.ruler || s.tool == DrawTool.sizebox) {
       _paintMeasurement(canvas, s.tool, start, end, s.color);
     }
   }

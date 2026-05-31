@@ -47,7 +47,18 @@ class PanelHeader extends StatelessWidget {
       ),
       child: CancelTraversal(
         child: Theme(
-          data: Theme.of(context).copyWith(iconTheme: IconThemeData(color: accent)),
+          data: Theme.of(context).copyWith(
+            iconTheme: IconThemeData(color: accent, size: 14),
+            iconButtonTheme: IconButtonThemeData(
+              style: ButtonStyle(
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.all(0), // <- default padding here
+                ),
+                minimumSize: WidgetStateProperty.all(const Size(30, 30)),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
           child: Row(
             children: <Widget>[
               GestureDetector(

@@ -127,6 +127,9 @@ class Settings {
   int themeScheduleMax = 20 * 60;
   ThemeColors get theme => themeColors;
   ThemeType themeType = ThemeType.system;
+  bool isDark(BuildContext context) =>
+      userSettings.themeType == ThemeType.dark ||
+      (userSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark);
 
   // Light Switch
   LightSwitchMode lightSwitchMode = LightSwitchMode.off;

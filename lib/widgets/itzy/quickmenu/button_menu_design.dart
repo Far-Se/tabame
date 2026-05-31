@@ -12,6 +12,8 @@ import '../../../pages/launcher/launcher_design.dart';
 import '../../interface/theme_setup.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
+import '../../widgets/font_picker/models/picker_font.dart';
+import '../../widgets/font_picker/ui/font_picker.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/panel_opacity_gradient_editor.dart';
@@ -205,7 +207,23 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           accent: accent,
           icon: Icons.dashboard_customize_outlined,
           buttonPressed: _resetCurrentPalette,
-          buttonIcon: Icons.refresh_rounded,
+          buttonTooltip: "Reset To Default Colors",
+          buttonIcon: Icons.history,
+          extraActions: <Widget>[
+            CustomTooltip(
+              message: "Change to ${User.s.isDark(context) ? "Light" : "Dark"}",
+              child: IconButton(
+                  icon: const Icon(Icons.theater_comedy_sharp),
+                  onPressed: () {
+                    bool isSimple = false;
+                    if (<ThemeType>[ThemeType.light, ThemeType.dark].contains(userSettings.themeType)) isSimple = true;
+                    userSettings.themeType = User.s.isDark(context) ? ThemeType.light : ThemeType.dark;
+                    if (isSimple) Boxes.updateSettings("themeType", userSettings.themeType.index);
+
+                    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                  }),
+            )
+          ],
         ),
         Flexible(
           child: SingleChildScrollView(
@@ -231,6 +249,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 }),
                 const SizedBox(height: 8),
                 _buildBorderRadiusCard(accent, onSurface),
+                const SizedBox(height: 8),
+                _buildFontPickerCard(accent, onSurface),
                 const SizedBox(height: 8),
                 _buildTransparencyGradientCard(accent, onSurface),
               ],
@@ -505,6 +525,158 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFontPickerCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            "Typography",
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            "Custom fonts for general UI and data entries.",
+            style: TextStyle(
+              fontSize: 10.5,
+              color: onSurface.withAlpha(150),
+            ),
+          ),
+          const SizedBox(height: 10),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: _fontPreviewTile(
+                    "UI Font",
+                    "Sets the main font used across the application.",
+                    _selectedTheme.uiFontFamily,
+                    _selectedTheme.uiFontWeight,
+                    _selectedTheme.uiFontItalic,
+                    (PickerFont font) async {
+                      await _updateTheme(() {
+                        _selectedTheme.uiFontFamily = font.fontFamily;
+                        _selectedTheme.uiFontWeight = font.fontWeight.value;
+                        _selectedTheme.uiFontItalic = font.fontStyle == FontStyle.italic;
+                      });
+                      Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _fontPreviewTile(
+                    "Entry Font",
+                    "Overrides typography for taskbar items and headers.",
+                    _selectedTheme.entryFontFamily,
+                    _selectedTheme.entryFontWeight,
+                    _selectedTheme.entryFontItalic,
+                    (PickerFont font) async {
+                      await _updateTheme(() {
+                        _selectedTheme.entryFontFamily = font.fontFamily;
+                        _selectedTheme.entryFontWeight = font.fontWeight.value;
+                        _selectedTheme.entryFontItalic = font.fontStyle == FontStyle.italic;
+                      });
+                      Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fontPreviewTile(
+      String title, String subtitle, String family, int weight, bool italic, ValueChanged<PickerFont> onFontChanged) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withAlpha(30),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title,
+              style: TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 11.5, color: Theme.of(context).colorScheme.onSurface)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
+          const SizedBox(height: 8),
+          Text(
+            "Preview: $family",
+            style: TextStyle(
+              fontFamily: family,
+              fontWeight: FontWeight.values.firstWhere(
+                (FontWeight w) => w.value == weight,
+                orElse: () => FontWeight.normal,
+              ),
+              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: () => _openFontPicker(family, onFontChanged),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "Change",
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(185),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openFontPicker(String initialFamily, ValueChanged<PickerFont> onFontChanged) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          content: SizedBox(
+            width: 400,
+            height: 500,
+            child: FontPicker(
+              initialFontFamily: initialFamily,
+              showInDialog: true,
+              onFontChanged: onFontChanged,
+            ),
+          ),
+        );
+      },
     );
   }
 
