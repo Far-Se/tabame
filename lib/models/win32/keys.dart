@@ -404,7 +404,8 @@ class WinKeys {
 
   static void safeSendHotkey(Function() hotkeyBuilder) {
     releaseAllPressedKeys();
-    return hotkeyBuilder();
+    hotkeyBuilder();
+    return;
     // releaseAllKeys();
     // Future<void>.delayed(const Duration(milliseconds: 10), () => hotkeyBuilder());
   }

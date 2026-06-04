@@ -551,7 +551,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -838,7 +838,7 @@ class _CliBookItemState extends State<_CliBookItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+          color: _hovered ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -872,7 +872,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                   height: 14,
                   margin: EdgeInsets.only(right: _hovered ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accentColor,
+                    color: userSettings.themeColors.accent,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -895,8 +895,8 @@ class _CliBookItemState extends State<_CliBookItem> {
                   opacity: _hovered ? 1.0 : 0.0,
                   child: _copied
                       ? Text("Copied!",
-                          style: TextStyle(fontSize: 12, color: userSettings.themeColors.accentColor.withAlpha(170)))
-                      : Icon(Icons.copy, size: 13, color: userSettings.themeColors.accentColor.withAlpha(170)),
+                          style: TextStyle(fontSize: 12, color: userSettings.themeColors.accent.withAlpha(170)))
+                      : Icon(Icons.copy, size: 13, color: userSettings.themeColors.accent.withAlpha(170)),
                 ),
                 const SizedBox(width: 8),
                 if (widget.onEdit != null)
@@ -921,8 +921,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                     borderRadius: BorderRadius.circular(6),
                     child: Padding(
                       padding: const EdgeInsets.all(3),
-                      child: Icon(Icons.tune_rounded,
-                          size: 13, color: userSettings.themeColors.accentColor.withAlpha(220)),
+                      child: Icon(Icons.tune_rounded, size: 13, color: userSettings.themeColors.accent.withAlpha(220)),
                     ),
                   ),
                 ),

@@ -405,9 +405,9 @@ class BookmarkInfo {
 
 class ThemeColors {
   Color background;
+  Color text;
+  Color accent;
   int gradientAlpha;
-  Color textColor;
-  Color accentColor;
   String uiFontFamily;
   int uiFontWeight;
   bool uiFontItalic;
@@ -424,8 +424,8 @@ class ThemeColors {
   ThemeColors({
     required this.background,
     required this.gradientAlpha,
-    required this.textColor,
-    required this.accentColor,
+    required this.text,
+    required this.accent,
     this.uiFontFamily = 'Jura',
     this.uiFontWeight = 400,
     this.uiFontItalic = false,
@@ -446,8 +446,8 @@ class ThemeColors {
   ThemeColors copyWith({
     Color? background,
     int? gradientAlpha,
-    Color? textColor,
-    Color? accentColor,
+    Color? text,
+    Color? accent,
     bool? quickMenuBoldFont,
     String? uiFontFamily,
     int? uiFontWeight,
@@ -466,8 +466,8 @@ class ThemeColors {
     return ThemeColors(
       background: background ?? this.background,
       gradientAlpha: gradientAlpha ?? this.gradientAlpha,
-      textColor: textColor ?? this.textColor,
-      accentColor: accentColor ?? this.accentColor,
+      text: text ?? this.text,
+      accent: accent ?? this.accent,
       uiFontFamily: uiFontFamily ?? this.uiFontFamily,
       uiFontWeight: uiFontWeight ?? this.uiFontWeight,
       uiFontItalic: uiFontItalic ?? this.uiFontItalic,
@@ -488,15 +488,15 @@ class ThemeColors {
     return <String, dynamic>{
       'background': background.value32bit,
       'gradientAlpha': gradientAlpha,
-      'textColor': textColor.value32bit,
-      'accentColor': accentColor.value32bit,
+      'textColor': text.value32bit,
+      'accentColor': accent.value32bit,
       'uiFontFamily': uiFontFamily,
       'uiFontWeight': uiFontWeight,
       'uiFontItalic': uiFontItalic,
       'entryFontFamily': entryFontFamily,
       'entryFontWeight': entryFontWeight,
       'entryFontItalic': entryFontItalic,
-      'backdropImages': backdropImages,
+      'backdropImage': backdropImages,
       'backdropType': backdropType,
       'backdropOpacity': backdropOpacity,
       'panelOpacityPoints': panelOpacityPoints,
@@ -510,8 +510,8 @@ class ThemeColors {
     return ThemeColors(
       background: Color(map['background'] as int),
       gradientAlpha: map['gradientAlpha'] as int,
-      textColor: Color(map['textColor'] as int),
-      accentColor: Color(map['accentColor'] as int),
+      text: Color(map['textColor'] as int),
+      accent: Color(map['accentColor'] as int),
       uiFontFamily: (map['uiFontFamily'] ?? 'Jura') as String,
       uiFontWeight: (map['uiFontWeight'] ?? 400) as int,
       uiFontItalic: (map['uiFontItalic'] ?? false) as bool,
@@ -536,7 +536,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $textColor, accentColor: $accentColor, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius)';
   }
 
   @override
@@ -545,16 +545,16 @@ class ThemeColors {
 
     return other.background == background &&
         other.gradientAlpha == gradientAlpha &&
-        other.textColor == textColor &&
-        other.accentColor == accentColor &&
+        other.text == text &&
+        other.accent == accent &&
         other.uiFontFamily == uiFontFamily &&
         other.uiFontWeight == uiFontWeight &&
         other.uiFontItalic == uiFontItalic &&
         other.entryFontFamily == entryFontFamily &&
         other.entryFontWeight == entryFontWeight &&
         other.entryFontItalic == entryFontItalic &&
-        listEquals(other.backdropImages, backdropImages) &&
         other.backdropType == backdropType &&
+        other.backdropImages == backdropImages &&
         other.backdropOpacity == backdropOpacity &&
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
@@ -566,8 +566,8 @@ class ThemeColors {
   int get hashCode {
     return background.hashCode ^
         gradientAlpha.hashCode ^
-        textColor.hashCode ^
-        accentColor.hashCode ^
+        text.hashCode ^
+        accent.hashCode ^
         uiFontFamily.hashCode ^
         uiFontWeight.hashCode ^
         uiFontItalic.hashCode ^

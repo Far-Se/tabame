@@ -16,10 +16,10 @@ int _trayIconCacheKey(ExtendedTrayIcon icon) {
   return Object.hash(icon.hWnd, icon.uID, icon.uCallbackMsg, icon.isOverflow);
 }
 
-class Tray {
+class TrayWatcher {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
   static final Map<int, TrayBarInfo> _trayCache = <int, TrayBarInfo>{};
-  Tray._();
+  TrayWatcher._();
 
   static Future<bool> fetchTray({bool sort = true}) async {
     final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];

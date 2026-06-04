@@ -844,7 +844,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
       final bool updated = await WindowWatcher.fetchWindows();
-      if (WindowWatcher.list.any((Window e) => e.process.exe.toLowerCase() == "taskmgr.exe")) await Tray.fetchTray();
+      if (WindowWatcher.list.any((Window e) => e.process.exe.toLowerCase() == "taskmgr.exe")) {
+        await TrayWatcher.fetchTray();
+      }
       if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
       _refreshVisibleWindowResults();
@@ -1057,7 +1059,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onExecute: () => _createLauncherTimer(timer),
       builder: (BuildContext context) {
         final ThemeData theme = Theme.of(context);
-        final Color accent = userSettings.themeColors.accentColor;
+        final Color accent = userSettings.themeColors.accent;
         final Color onSurface = theme.colorScheme.onSurface;
         return InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -1599,7 +1601,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onExecute: onExecute,
       builder: (BuildContext context) {
         final ThemeData theme = Theme.of(context);
-        final Color accent = userSettings.themeColors.accentColor;
+        final Color accent = userSettings.themeColors.accent;
         final Color onSurface = theme.colorScheme.onSurface;
         return InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -1656,7 +1658,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     await NotionSearchCache.load();
     if (!context.isActiveSearch(context.requestId, context.query)) return;
 
-    final List<NotionResult> cached = NotionSearchCache.cached(context.normalizedQuery);
+    final List<NotionResult> cached = NotionSearchCache.cachedSearch(context.normalizedQuery);
     if (cached.isNotEmpty || context.normalizedQuery.isEmpty) {
       context.setResults(cached.map(LauncherSearchResultItem.notion).toList(), isSearching: false);
     }
@@ -1873,7 +1875,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
         WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
-        QuickMenuFunctions.hideQuickMenu();
+        QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
         userSettings.launcherSearchText = '';
       case BookmarkResultKind.cliBook:
         // Copy the CLI command to clipboard.
@@ -1882,7 +1884,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         userSettings.launcherSearchText = '';
       case BookmarkResultKind.appItem:
         WinUtils.open(result.app!.path, arguments: result.app!.arguments);
-        QuickMenuFunctions.hideQuickMenu();
+        QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
         userSettings.launcherSearchText = '';
     }
   }
@@ -1898,7 +1900,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     } else {
       WinUtils.open(path);
     }
-    QuickMenuFunctions.hideQuickMenu();
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -1913,7 +1915,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (launchTarget.isEmpty) return;
 
     WinUtils.open(launchTarget, parseParamaters: false);
-    QuickMenuFunctions.hideQuickMenu();
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -1959,7 +1961,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _openWindow(Window window) async {
-    await QuickMenuFunctions.hideQuickMenu();
+    await QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Win32.activateWindow(window.hWnd);
     Globals.lastFocusedWinHWND = window.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
@@ -2007,7 +2009,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _openNotionResult(NotionResult result) {
     if (result.url.isEmpty) return;
     WinUtils.open(result.url);
-    QuickMenuFunctions.hideQuickMenu();
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
   }
@@ -2089,12 +2091,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     return Theme(
       data: theme.copyWith(
-        textTheme: ThemeData.dark().textTheme.apply(fontFamily: userSettings.theme.entryFontFamily),
+        textTheme: FontThemeCache.getTextTheme(
+          fontFamily: userSettings.theme.entryFontFamily,
+          isDark: userSettings.isDark(context),
+        ),
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -2466,7 +2471,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildShortcutResult(BuildContext context, ThemeData theme, LauncherShortcut shortcut, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2524,7 +2529,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildBookmarkResult(BuildContext context, ThemeData theme, BookmarkSearchResult result, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return _design == LauncherDesign.serene
         ? SereneBookmarkSearchListItem(
             result: result,
@@ -2547,7 +2552,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildFileResult(BuildContext context, ThemeData theme, FileSystemEntity entity, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return _design == LauncherDesign.serene
         ? SereneLauncherFileListItem(
             entity: entity,
@@ -2572,7 +2577,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildAppResult(BuildContext context, ThemeData theme, LauncherAppResult app, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return _design == LauncherDesign.serene
         ? SereneAppListItem(
             app: app,
@@ -2595,7 +2600,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildNotionResult(
       BuildContext context, ThemeData theme, NotionResult result, int index, bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2658,7 +2663,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildInfoResult(BuildContext context, ThemeData theme, LauncherInfoResult result, int index, bool isSelected,
       bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2718,7 +2723,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Widget _buildQuickActionResult(BuildContext context, ThemeData theme, QuickActionMenuEntry quickAction, int index,
       bool isSelected, bool isRepeatingKey) {
     final GlobalKey actionKey = _quickActionKeys.putIfAbsent(quickAction.id, () => GlobalKey());
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final bool showSplash = _quickActionSplashId == quickAction.id;
 
     return MouseRegion(
@@ -2746,7 +2751,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildWindowResult(
       BuildContext context, ThemeData theme, Window window, int index, bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return _design == LauncherDesign.serene
         ? SereneWindowSearchListItem(
             window: window,

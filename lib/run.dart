@@ -182,7 +182,7 @@ class _CommandRunnerWindowState extends State<CommandRunnerWindow> with WindowLi
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color panelBase = scheme.surface;
     final Color panelOutline = accent.withValues(alpha: 0.16);
     final Color panelGlow = accent.withValues(alpha: 0.10);

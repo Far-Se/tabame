@@ -199,7 +199,7 @@ class _PresetList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     if (presets.isEmpty) {
@@ -272,7 +272,7 @@ class _PresetTileState extends State<_PresetTile> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 130),
-          color: _hov ? userSettings.themeColors.accentColor.withValues(alpha: 0.08) : Colors.transparent,
+          color: _hov ? userSettings.themeColors.accent.withValues(alpha: 0.08) : Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: <Widget>[
@@ -283,7 +283,7 @@ class _PresetTileState extends State<_PresetTile> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(5),
                   child: CustomPaint(
-                    painter: _MiniPainter(preset: widget.preset, accent: userSettings.themeColors.accentColor),
+                    painter: _MiniPainter(preset: widget.preset, accent: userSettings.themeColors.accent),
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -331,7 +331,7 @@ class _ZoneGridState extends State<_ZoneGrid> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(

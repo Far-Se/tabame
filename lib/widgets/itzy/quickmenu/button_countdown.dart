@@ -110,7 +110,7 @@ class CountDownWidgetState extends State<CountDownWidget> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -295,7 +295,7 @@ class _HistoryTimerTileState extends State<_HistoryTimerTile> {
         margin: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
           color: _isHovered
-              ? userSettings.themeColors.accentColor.withValues(alpha: 0.25)
+              ? userSettings.themeColors.accent.withValues(alpha: 0.25)
               : widget.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(10),
         ),

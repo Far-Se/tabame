@@ -355,7 +355,7 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -435,6 +435,7 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
             scanning: _scanningBrokenApps,
             accent: accent,
             onSurface: onSurface,
+            brokenLinks: _brokenApps,
             onClear: _brokenApps.isNotEmpty && !_scanningBrokenApps ? () => unawaited(_removeAllBrokenApps()) : null,
           ),
         ),
@@ -917,12 +918,13 @@ class _InfoStrip extends StatelessWidget {
   }
 }
 
-class _BrokenAppsRow extends StatelessWidget {
+class _BrokenAppsRow extends StatefulWidget {
   const _BrokenAppsRow({
     required this.count,
     required this.scanning,
     required this.accent,
     required this.onSurface,
+    required this.brokenLinks,
     this.onClear,
   });
 
@@ -930,69 +932,127 @@ class _BrokenAppsRow extends StatelessWidget {
   final bool scanning;
   final Color accent;
   final Color onSurface;
+  final List<String> brokenLinks;
   final VoidCallback? onClear;
+
+  @override
+  State<_BrokenAppsRow> createState() => _BrokenAppsRowState();
+}
+
+class _BrokenAppsRowState extends State<_BrokenAppsRow> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: onSurface.withAlpha(8),
+        color: widget.onSurface.withAlpha(8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: onSurface.withAlpha(16)),
+        border: Border.all(color: widget.onSurface.withAlpha(16)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: (count > 0 ? Colors.orange : accent).withAlpha(20),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              count > 0 ? Icons.link_off_rounded : Icons.link_rounded,
-              size: 18,
-              color: count > 0 ? Colors.orange : accent,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  "Broken App SymLinks",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: onSurface),
+          Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: (widget.count > 0 ? Colors.orange : widget.accent).withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  scanning
-                      ? "Scanning..."
-                      : (count > 0
-                          ? "$count broken Start Menu Symlinks found"
-                          : "No broken symlinks found in Start Menu"),
-                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(140)),
+                child: Icon(
+                  widget.count > 0 ? Icons.link_off_rounded : Icons.link_rounded,
+                  size: 18,
+                  color: widget.count > 0 ? Colors.orange : widget.accent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Broken App SymLinks",
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.onSurface),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.scanning
+                          ? "Scanning..."
+                          : (widget.count > 0
+                              ? "${widget.count} broken Start Menu Symlinks found"
+                              : "No broken symlinks found in Start Menu"),
+                      style: TextStyle(fontSize: 11, color: widget.onSurface.withAlpha(140)),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.count > 0 && !widget.scanning) ...<Widget>[
+                IconButton(
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: widget.onSurface.withAlpha(160)),
+                  ),
+                  tooltip: _expanded ? "Hide broken links" : "Show broken links",
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+                IconButton(
+                  onPressed: widget.onClear,
+                  icon: const Icon(Icons.delete_sweep_rounded),
+                  color: Colors.orange,
+                  tooltip: "Clear all broken app entries",
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
-            ),
+              if (widget.scanning)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: widget.accent),
+                ),
+            ],
           ),
-          if (count > 0 && !scanning)
-            IconButton(
-              onPressed: onClear,
-              icon: const Icon(Icons.delete_sweep_rounded),
-              color: Colors.orange,
-              tooltip: "Clear all broken app entries",
-              iconSize: 20,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+          if (_expanded && widget.brokenLinks.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: widget.onSurface.withAlpha(6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: widget.onSurface.withAlpha(12)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: widget.brokenLinks.map((String path) {
+                  final String name = path.split('\\').last;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Row(
+                      children: <Widget>[
+                        Icon(Icons.insert_drive_file_outlined, size: 13, color: Colors.orange.withAlpha(180)),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: widget.onSurface.withAlpha(160)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
-          if (scanning)
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-            ),
+          ],
         ],
       ),
     );

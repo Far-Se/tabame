@@ -119,7 +119,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
@@ -519,7 +519,7 @@ class _FolderInfoState extends State<FolderInfo> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     String parentDirectory = widget.directory;
     if (parentDirectory.endsWith("\\")) parentDirectory = parentDirectory.substring(0, parentDirectory.length - 1);
     final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(parentDirectory);

@@ -81,7 +81,7 @@ class LauncherListItem extends StatelessWidget {
             curve: animCurve,
             margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
-              color: isSelected ? userSettings.themeColors.accentColor.withAlpha(55) : Colors.transparent,
+              color: isSelected ? userSettings.themeColors.accent.withAlpha(55) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
@@ -96,7 +96,7 @@ class LauncherListItem extends StatelessWidget {
                     height: 22,
                     margin: EdgeInsets.only(right: isSelected ? 7 : 0),
                     decoration: BoxDecoration(
-                      color: userSettings.themeColors.accentColor,
+                      color: userSettings.themeColors.accent,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -113,13 +113,7 @@ class LauncherListItem extends StatelessWidget {
                           name.replaceFirst('.lnk', ''),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? onSurface : onSurface.withAlpha(200),
-                            fontFamily: userSettings.themeColors.entryFontFamily,
-                            fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                            fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
-                          ),
+                          style: entryStyle(isSelected),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -140,7 +134,7 @@ class LauncherListItem extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 4),
                     child: _FileKindBadge(
                       isDirectory: entity.path.split('.').length != 2,
-                      accent: userSettings.themeColors.accentColor,
+                      accent: userSettings.themeColors.accent,
                       onSurface: onSurface,
                     ),
                   ),

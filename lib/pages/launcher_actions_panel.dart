@@ -253,7 +253,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color surface = theme.colorScheme.surface;
 
     return Material(
@@ -931,7 +931,7 @@ class _CliRunSheetState extends State<_CliRunSheet> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Padding(
@@ -1652,7 +1652,7 @@ class _ParametersDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return AlertDialog(
       backgroundColor: Colors.transparent,

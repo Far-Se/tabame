@@ -44,7 +44,7 @@ class SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
     if (!runOnStartup) userSettings.runAsAdministrator = false;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
@@ -670,7 +670,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   Widget _radioTileGeneric<T>(String label, T value, bool Function(T) isSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool selected = isSelected(value);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Container(
       decoration: BoxDecoration(
@@ -819,7 +819,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Widget _timeChip(String label, String value, Future<void> Function() onTap) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return InkWell(
       onTap: onTap,

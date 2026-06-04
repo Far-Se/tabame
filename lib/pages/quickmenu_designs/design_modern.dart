@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
-import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
+import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
@@ -17,7 +18,7 @@ class MainMenuModernWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color surface = theme.colorScheme.surface;
 
     final List<double> points = userSettings.themeColors.panelOpacityPoints;
@@ -87,12 +88,8 @@ class MainMenuModernWidget extends StatelessWidget {
                         ),
                         child: Stack(
                           children: <Widget>[
-                            if (userSettings.themeColors.backdropType.isNotEmpty)
-                              Positioned.fill(
-                                  child: DesignBackdrop(
-                                path: userSettings.activeBackdropPath,
-                                opacity: userSettings.themeColors.backdropOpacity,
-                              )),
+                            if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
+                              Globals.backdrop!,
                           ],
                         ),
                       ),
@@ -116,9 +113,10 @@ class MainMenuModernWidget extends StatelessWidget {
                   else
                     const PinnedAndTrayList(),
                   const TaskBar(),
-                  Divider(thickness: 1, height: 1, color: userSettings.themeColors.textColor.withValues(alpha: 0.08)),
+                  Divider(thickness: 1, height: 1, color: userSettings.themeColors.text.withValues(alpha: 0.08)),
                   if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (userSettings.taskManagerStats) const TaskbarStats(),
+                  if (userSettings.libreStats) const LibreStats(),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(0, 4, 1, 6),
                     child: BottomBar(),

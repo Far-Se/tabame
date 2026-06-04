@@ -17,20 +17,20 @@ class ClearKeyboardButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ModalButton(
-        actionName: "Clear Keyboard",
+        actionName: "Block Keyboard",
         icon: const Icon(Icons.keyboard_hide_rounded),
-        child: () => const ClearKeyboardPanel());
+        child: () => const BlockKeyboardPanel());
   }
 }
 
-class ClearKeyboardPanel extends StatefulWidget {
-  const ClearKeyboardPanel({super.key});
+class BlockKeyboardPanel extends StatefulWidget {
+  const BlockKeyboardPanel({super.key});
 
   @override
-  State<ClearKeyboardPanel> createState() => _ClearKeyboardPanelState();
+  State<BlockKeyboardPanel> createState() => _BlockKeyboardPanelState();
 }
 
-class _ClearKeyboardPanelState extends State<ClearKeyboardPanel> {
+class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
   final TextEditingController _minutesController = TextEditingController(text: "01");
   final TextEditingController _secondsController = TextEditingController(text: "00");
   final FocusNode _minutesFocus = FocusNode();
@@ -156,7 +156,7 @@ class _ClearKeyboardPanelState extends State<ClearKeyboardPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -164,7 +164,7 @@ class _ClearKeyboardPanelState extends State<ClearKeyboardPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         PanelHeader(
-          title: "Clear Keyboard",
+          title: "Block Keyboard",
           accent: accent,
           icon: Icons.keyboard_hide_rounded,
         ),
@@ -416,7 +416,7 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return InkWell(
@@ -463,7 +463,7 @@ class _InfoStrip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              "Keyboard input is blocked by the native hook until the timer ends or Stop is pressed.",
+              "Useful if you want to clear your keyboard, or to stop your cat from writing poetry while you are away.",
               style: TextStyle(fontSize: 11, height: 1.25, color: onSurface.withAlpha(135)),
             ),
           ),

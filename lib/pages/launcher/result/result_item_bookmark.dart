@@ -106,7 +106,7 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
         curve: widget.isRepeating ? Curves.linear : Curves.easeIn,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: highlighted ? userSettings.themeColors.accentColor.withAlpha(60) : Colors.transparent,
+          color: highlighted ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -122,11 +122,11 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
                   height: 22,
                   margin: EdgeInsets.only(right: highlighted ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accentColor,
+                    color: userSettings.themeColors.accent,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                _buildIcon(result, userSettings.themeColors.accentColor),
+                _buildIcon(result, userSettings.themeColors.accent),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -137,13 +137,7 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
                         result.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: highlighted ? widget.onSurface : widget.onSurface.withAlpha(200),
-                          fontFamily: userSettings.themeColors.entryFontFamily,
-                          fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                          fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
-                        ),
+                        style: entryStyle(highlighted, fontSize: 12),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -162,7 +156,7 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: _KindBadge(
-                      kind: result.kind, accent: userSettings.themeColors.accentColor, onSurface: widget.onSurface),
+                      kind: result.kind, accent: userSettings.themeColors.accent, onSurface: widget.onSurface),
                 ),
               ],
             ),

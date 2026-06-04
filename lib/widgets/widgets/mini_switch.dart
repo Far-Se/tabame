@@ -28,36 +28,38 @@ class MiniToggleSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onChanged != null ? () => onChanged!(!value) : null,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: width,
-          height: height,
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: value
-                ? (activeTrackColor ?? activeThumbColor ?? User.theme.accentColor).withAlpha(40)
-                : colors.onSurface.withAlpha(20),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: value
-                  ? (activeThumbColor ?? User.theme.accentColor).withAlpha(100)
-                  : colors.outlineVariant.withAlpha(40),
-            ),
-          ),
-          child: AnimatedAlign(
+    return Container(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onChanged != null ? () => onChanged!(!value) : null,
+          child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            curve: Curves.easeInOut,
-            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: value ? (activeThumbColor ?? User.theme.accentColor) : colors.onSurfaceVariant.withAlpha(100),
-                shape: BoxShape.circle,
+            width: width,
+            height: height,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: value
+                  ? (activeTrackColor ?? activeThumbColor ?? User.theme.accent).withAlpha(40)
+                  : colors.onSurface.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: value
+                    ? (activeThumbColor ?? User.theme.accent).withAlpha(100)
+                    : colors.outlineVariant.withAlpha(40),
+              ),
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeInOut,
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: value ? (activeThumbColor ?? User.theme.accent) : colors.onSurfaceVariant.withAlpha(100),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
           ),

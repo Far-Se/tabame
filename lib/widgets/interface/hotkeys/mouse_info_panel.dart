@@ -106,7 +106,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -272,7 +272,7 @@ Trigger actions only when the mouse is inside a specific rectangle (on-screen or
 Anchor to a screen position: For example, to target the bottom corner, set the Anchor Point to `BottomRight` and define a rectangle via `startX,startY:endX,endY`.
 
 **Keystroke Commands:**
-Send multiple key presses in a sequence. 
+Send multiple key presses in a sequence.
 - Use `#` to hold a key.
 - Use `^` to release a key.
 - Use `{}` to wrap special keys.

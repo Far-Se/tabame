@@ -618,6 +618,7 @@ class _FontPickerUIState extends State<FontPickerUI> {
     'Jacques Francois',
     'Jacques Francois Shadow',
     'Jaldi',
+    'Jersey 25',
     'JetBrains Mono',
     'Jim Nightshade',
     'Joan',

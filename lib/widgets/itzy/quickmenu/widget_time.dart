@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/settings.dart';
@@ -52,7 +53,7 @@ class _TimeWidgetState extends State<TimeWidget> {
     final String timeStr = DateFormat('hh:mm:ss').format(_now);
     final String dateStr = DateFormat('dd MMM').format(_now);
     final String dayStr = DateFormat('EE').format(_now);
-    final FontWeight fontWeight = FontWeight(userSettings.theme.uiFontWeight);
+    final FontWeight fontWeight = FontWeight(userSettings.theme.entryFontWeight);
 
     if (widget.inline) {
       return InkWell(
@@ -63,8 +64,9 @@ class _TimeWidgetState extends State<TimeWidget> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              _buildText(timeStr, 14, fontWeight, minWidth: 70, maxWidth: 100),
-              _buildText("$dayStr $dateStr", 14, fontWeight, minWidth: 60, maxWidth: 100),
+              _buildText(timeStr, userSettings.expandedTaskbar ? 12.5 : 11.5, fontWeight, minWidth: 70, maxWidth: 100),
+              _buildText("$dayStr $dateStr", userSettings.expandedTaskbar ? 12.5 : 11.5, fontWeight,
+                  minWidth: 60, maxWidth: 100),
             ],
           ),
         ),
@@ -84,11 +86,11 @@ class _TimeWidgetState extends State<TimeWidget> {
               children: <Widget>[
                 Flexible(
                   fit: FlexFit.tight,
-                  child: Center(child: _buildText(timeStr, 14, fontWeight)),
+                  child: Center(child: _buildText(timeStr, 11.5, fontWeight)),
                 ),
                 Flexible(
                   fit: FlexFit.tight,
-                  child: Center(child: _buildText("$dayStr $dateStr", 10, fontWeight)),
+                  child: Center(child: _buildText("$dayStr $dateStr", 11.5, fontWeight)),
                 )
               ],
             ),
@@ -101,7 +103,7 @@ class _TimeWidgetState extends State<TimeWidget> {
   Widget _buildText(String text, double fontSize, FontWeight weight, {double? minWidth, double? maxWidth}) {
     Widget child = Text(
       text,
-      style: TextStyle(fontSize: fontSize, fontWeight: weight),
+      style: GoogleFonts.getFont(User.theme.entryFontFamily, fontSize: fontSize, fontWeight: weight),
       overflow: TextOverflow.ellipsis,
     );
 

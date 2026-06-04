@@ -31,9 +31,9 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   bool fetching = false;
   void fetchTray() async {
     fetching = true;
-    await Tray.fetchTray();
+    await TrayWatcher.fetchTray();
     fetching = false;
-    tray = <TrayBarInfo>[...Tray.trayList.where((TrayBarInfo element) => element.isVisible)];
+    tray = <TrayBarInfo>[...TrayWatcher.trayList.where((TrayBarInfo element) => element.isVisible)];
 
     if (mounted) setState(() {});
   }
@@ -74,18 +74,6 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     QuickMenuFunctions.removeListener(this);
     mainTimer.cancel();
     super.dispose();
-  }
-
-  void sendClick(ExtendedTrayIcon element, TrayClickType clickType) async {
-    final Pointer<POINT> point = calloc<POINT>();
-    GetCursorPos(point);
-    final int x = point.ref.x;
-    final int y = point.ref.y;
-    free(point);
-    WinTray.click(element, clickType: TrayClickType.left);
-    // interval 10ms move mosue back to pos
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    SetCursorPos(x, y);
   }
 
   @override
@@ -177,4 +165,16 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
       ),
     );
   }
+}
+
+void sendClick(ExtendedTrayIcon element, TrayClickType clickType) async {
+  final Pointer<POINT> point = calloc<POINT>();
+  GetCursorPos(point);
+  final int x = point.ref.x;
+  final int y = point.ref.y;
+  free(point);
+  WinTray.click(element, clickType: TrayClickType.left);
+  // interval 10ms move mosue back to pos
+  await Future<void>.delayed(const Duration(milliseconds: 400));
+  SetCursorPos(x, y);
 }

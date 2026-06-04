@@ -1,15 +1,20 @@
-import 'dart:math' as math;
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../pages/launcher/launcher_design.dart';
 import '../../interface/theme_setup.dart';
+import '../../quickmenu/design_backdrop.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/font_picker/models/picker_font.dart';
@@ -17,6 +22,7 @@ import '../../widgets/font_picker/ui/font_picker.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/panel_opacity_gradient_editor.dart';
+import 'package:filepicker_windows/filepicker_windows.dart';
 
 class QuickMenuDesignButton extends StatelessWidget {
   const QuickMenuDesignButton({super.key});
@@ -48,6 +54,11 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   late final List<Map<ColorSwatch<Object>, String>> _lightPresets;
   late final List<Map<ColorSwatch<Object>, String>> _darkPresets;
   LauncherDesign launcherDesign = LauncherDesign.classic;
+
+  bool _isBackdropProcessing = false;
+  int _backdropProcessingTotal = 0;
+  int _backdropProcessingCompleted = 0;
+  int _backdropProcessingConverted = 0;
   @override
   void initState() {
     super.initState();
@@ -102,26 +113,91 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     setState(() {});
   }
 
-  Future<void> _shuffleBackdrop() async {
-    final ThemeColors currentTheme = _selectedTheme;
-    if (currentTheme.backdropType == 'builtIn') {
-      final int random = math.Random().nextInt(10);
-      userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
-    } else {
-      final List<String> images = currentTheme.backdropImages;
-      if (images.length < 2) return;
+  Future<void> _addBackdropImages() async {
+    if (_isBackdropProcessing) return;
+    QuickMenuFunctions.keepOpen = true;
+    final OpenFilePicker picker = OpenFilePicker()
+      ..filterSpecification = <String, String>{
+        'Images': '*.jpg;*.jpeg;*.png;*.webp',
+      }
+      ..title = 'Select Backdrop Image';
+    final List<File> results = picker.getFiles();
+    Future<void>.delayed(const Duration(milliseconds: 1000), () {
+      QuickMenuFunctions.keepOpen = false;
+    });
+    if (results.isEmpty) return;
 
-      final String current = userSettings.activeBackdropPath;
-      final List<String> others = images.where((String path) => path != current).toList();
-
-      final math.Random random = math.Random();
-      final String next = others[random.nextInt(others.length)];
-
-      userSettings.activeBackdropPath = next;
+    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\cache\\backdrops";
+    if (!Directory(backdropsDir).existsSync()) {
+      Directory(backdropsDir).createSync(recursive: true);
     }
 
+    setState(() {
+      _isBackdropProcessing = true;
+      _backdropProcessingTotal = results.length;
+      _backdropProcessingCompleted = 0;
+      _backdropProcessingConverted = 0;
+    });
+
+    bool changed = false;
+    final int batchStartedAt = DateTime.now().millisecondsSinceEpoch;
+    try {
+      for (int i = 0; i < results.length; i++) {
+        final File result = results[i];
+        final String fileName = result.uri.pathSegments.last;
+        final String targetPath = "$backdropsDir\\${batchStartedAt}_${i}_$fileName";
+        try {
+          await compute(_resizeAndSaveBackdropInPanel, <String, String>{
+            'source': result.path,
+            'target': targetPath,
+          });
+          _selectedTheme.backdropImages.add(targetPath);
+          changed = true;
+          if (!mounted) return;
+          setState(() {
+            _backdropProcessingConverted++;
+          });
+        } catch (e) {
+          // ignore per-file errors
+        } finally {
+          if (mounted) {
+            setState(() {
+              _backdropProcessingCompleted = i + 1;
+            });
+          }
+        }
+      }
+    } finally {
+      if (mounted) {
+        if (changed) await _persistThemeChanges();
+        setState(() {
+          _isBackdropProcessing = false;
+          _backdropProcessingCompleted = _backdropProcessingTotal;
+        });
+      }
+    }
+  }
+
+  static const int _builtInGradientCount = 10;
+
+  Future<void> _shuffleBackdrop() async {
+    QuickMenuFunctions.randomizeBackdrop();
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     if (mounted) setState(() {});
+  }
+
+  Future<void> _selectBuiltInGradient(int index) async {
+    userSettings.activeBackdropPath = 'resources/gradient/gradient$index.jpg';
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    if (mounted) setState(() {});
+  }
+
+  int get _selectedGradientIndex {
+    final String path = userSettings.activeBackdropPath;
+    final RegExp re = RegExp(r'gradient(\d+)\.jpg$');
+    final Match? m = re.firstMatch(path);
+    if (m == null) return -1;
+    return int.tryParse(m.group(1)!) ?? -1;
   }
 
   Future<void> _resetCurrentPalette() async {
@@ -141,9 +217,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       if (index == 0) {
         _selectedTheme.background = color;
       } else if (index == 1) {
-        _selectedTheme.textColor = color;
+        _selectedTheme.text = color;
       } else {
-        _selectedTheme.accentColor = color;
+        _selectedTheme.accent = color;
       }
     });
   }
@@ -151,8 +227,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   Future<void> _openCustomColorPicker(int index) async {
     final Color startColor = switch (index) {
       0 => _selectedTheme.background,
-      1 => _selectedTheme.textColor,
-      _ => _selectedTheme.accentColor,
+      1 => _selectedTheme.text,
+      _ => _selectedTheme.accent,
     };
     Color pendingColor = startColor;
 
@@ -195,7 +271,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -225,35 +301,56 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             )
           ],
         ),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _buildDesignsCard("QuickMenu", accent, onSurface),
-                const SizedBox(height: 8),
-                _buildDesignsCard("Launcher", accent, onSurface),
-                const SizedBox(height: 8),
-                _buildPanelTintCard(accent, onSurface),
-                const SizedBox(height: 8),
-                if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
-                  _buildBackdropOpacityCard(accent, onSurface),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 2,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+            activeTrackColor: accent.withAlpha(200),
+            inactiveTrackColor: onSurface.withAlpha(20),
+            thumbColor: accent,
+          ),
+          child: Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _buildDesignsCard("QuickMenu", accent, onSurface),
                   const SizedBox(height: 8),
+                  _buildDesignsCard("Launcher", accent, onSurface),
+                  const SizedBox(height: 8),
+                  _buildPanelTintCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                  ...List<Widget>.generate(_colorTitles.length, (int index) {
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
+                      child: _buildColorCard(accent, onSurface, index),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  _buildBorderRadiusCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                  _buildFontPickerCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                  _buildTransparencyGradientCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                  _buildBackdropSourceCard(accent, onSurface),
+                  const SizedBox(height: 8),
+                  if (_selectedTheme.backdropType == 'builtIn') ...<Widget>[
+                    _buildBuiltInGradientPickerCard(accent, onSurface),
+                    const SizedBox(height: 8),
+                  ],
+                  if (_selectedTheme.backdropType == 'custom') ...<Widget>[
+                    _buildBackdropImagesCard(accent, onSurface),
+                    const SizedBox(height: 8),
+                  ],
+                  if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
+                    _buildBackdropOpacityCard(accent, onSurface),
+                    const SizedBox(height: 8),
+                  ],
                 ],
-                ...List<Widget>.generate(_colorTitles.length, (int index) {
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
-                    child: _buildColorCard(accent, onSurface, index),
-                  );
-                }),
-                const SizedBox(height: 8),
-                _buildBorderRadiusCard(accent, onSurface),
-                const SizedBox(height: 8),
-                _buildFontPickerCard(accent, onSurface),
-                const SizedBox(height: 8),
-                _buildTransparencyGradientCard(accent, onSurface),
-              ],
+              ),
             ),
           ),
         ),
@@ -453,6 +550,376 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     );
   }
 
+  Widget _buildBackdropSourceCard(Color accent, Color onSurface) {
+    const Map<String, String> options = <String, String>{
+      '': 'None',
+      'builtIn': 'Built-in',
+      'custom': 'Custom',
+    };
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Column(
+            children: <Widget>[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    "Backdrop Source",
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Pick between built-in gradients or custom images.",
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: onSurface.withAlpha(150),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              ToggleButtons(
+                isSelected: options.keys.map((String key) => key == _selectedTheme.backdropType).toList(),
+                onPressed: (int index) async {
+                  await _updateTheme(() {
+                    _selectedTheme.backdropType = options.keys.elementAt(index);
+                  });
+                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                },
+                borderRadius: BorderRadius.circular(8),
+                selectedColor: accent,
+                fillColor: accent.withAlpha(18),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                constraints: const BoxConstraints(minHeight: 30),
+                children: options.values
+                    .map((String val) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(val),
+                        ))
+                    .toList(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBuiltInGradientPickerCard(Color accent, Color onSurface) {
+    final int selected = _selectedGradientIndex;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Built-in Gradient",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Choose one of the ${_builtInGradientCount} built-in gradients.",
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: onSurface.withAlpha(150),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              CustomTooltip(
+                message: "Random gradient",
+                child: InkWell(
+                  onTap: _shuffleBackdrop,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.shuffle_rounded, size: 16, color: accent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 1.5,
+            ),
+            itemCount: _builtInGradientCount,
+            itemBuilder: (BuildContext context, int index) {
+              final bool isSelected = selected == index;
+              return GestureDetector(
+                onTap: isSelected ? null : () => _selectBuiltInGradient(index),
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.asset(
+                          'resources/gradient/gradient$index.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (BuildContext ctx, Object e, StackTrace? s) => Container(
+                            decoration: BoxDecoration(
+                              color: onSurface.withAlpha(14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(fontSize: 11, color: onSurface.withAlpha(100)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: accent, width: 2),
+                          ),
+                          child: Align(
+                            alignment: Alignment.bottomRight,
+                            child: Padding(
+                              padding: const EdgeInsets.all(3),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                                child: const Icon(Icons.check_rounded, size: 10, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: onSurface.withAlpha(20)),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackdropImagesCard(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+      decoration: _cardDecoration(onSurface, accent: accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            "Custom Backdrop Image",
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: onSurface),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            "Manage the image pool used for randomized backdrops.",
+            style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(150)),
+          ),
+          const SizedBox(height: 10),
+          if (_selectedTheme.backdropImages.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: onSurface.withAlpha(6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: onSurface.withAlpha(14)),
+              ),
+              child: Center(
+                child: Column(
+                  children: <Widget>[
+                    Icon(Icons.image_search_rounded, size: 28, color: onSurface.withAlpha(50)),
+                    const SizedBox(height: 6),
+                    Text(
+                      "No custom images added",
+                      style: TextStyle(fontSize: 11, color: onSurface.withAlpha(100)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+                childAspectRatio: 1.5,
+              ),
+              itemCount: _selectedTheme.backdropImages.length,
+              itemBuilder: (BuildContext context, int index) {
+                final String path = _selectedTheme.backdropImages[index];
+                final bool isActive = userSettings.activeBackdropPath == path;
+                return Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: isActive
+                            ? null
+                            : () async {
+                                userSettings.activeBackdropPath = path;
+                                Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                                if (mounted) setState(() {});
+                              },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.file(
+                            File(path),
+                            cacheWidth: 200,
+                            fit: BoxFit.cover,
+                            errorBuilder: (BuildContext ctx, Object e, StackTrace? s) => Container(
+                              color: onSurface.withAlpha(14),
+                              child: const Icon(Icons.broken_image_rounded, size: 18),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isActive)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: accent, width: 2),
+                            ),
+                            child: Align(
+                              alignment: Alignment.bottomRight,
+                              child: Padding(
+                                padding: const EdgeInsets.all(3),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                                  child: const Icon(Icons.check_rounded, size: 10, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      top: 3,
+                      right: 3,
+                      child: InkWell(
+                        onTap: () async {
+                          final String removedPath = _selectedTheme.backdropImages[index];
+                          _selectedTheme.backdropImages.remove(removedPath);
+                          if (userSettings.activeBackdropPath == removedPath) {
+                            if (_selectedTheme.backdropImages.isNotEmpty) {
+                              userSettings.activeBackdropPath = _selectedTheme.backdropImages.first;
+                            } else {
+                              userSettings.activeBackdropPath = "";
+                            }
+                          }
+                          await _updateTheme(() {});
+                          if (File(removedPath).existsSync()) {
+                            try {
+                              await File(removedPath).delete();
+                            } catch (_) {}
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 12, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          const SizedBox(height: 10),
+          if (_isBackdropProcessing) ...<Widget>[
+            Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: accent.withAlpha(200)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Converting $_backdropProcessingConverted / $_backdropProcessingTotal",
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(
+              value: _backdropProcessingTotal == 0 ? null : _backdropProcessingCompleted / _backdropProcessingTotal,
+              minHeight: 3,
+              borderRadius: BorderRadius.circular(999),
+              color: accent,
+              backgroundColor: accent.withAlpha(35),
+            ),
+            const SizedBox(height: 8),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isBackdropProcessing ? null : _addBackdropImages,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                side: BorderSide(color: accent.withAlpha(80)),
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: Icon(
+                _isBackdropProcessing ? Icons.hourglass_top_rounded : Icons.add_photo_alternate_rounded,
+                size: 16,
+              ),
+              label: Text(
+                _isBackdropProcessing ? "Converting..." : "Add Image",
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBackdropOpacityCard(Color accent, Color onSurface) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 6),
@@ -468,7 +935,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        if (_selectedTheme.backdropType == 'builtIn' || _selectedTheme.backdropImages.length > 1)
+                        if (_selectedTheme.backdropType == 'builtIn' || _selectedTheme.backdropImages.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: InkWell(
@@ -516,6 +983,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             inactiveColor: accent.withAlpha(40),
             onChanged: (double value) {
               setState(() => _selectedTheme.backdropOpacity = value);
+              Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
               Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
             },
             onChangeEnd: (double value) async {
@@ -559,7 +1027,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 Expanded(
                   child: _fontPreviewTile(
                     "UI Font",
-                    "Sets the main font used across the application.",
                     _selectedTheme.uiFontFamily,
                     _selectedTheme.uiFontWeight,
                     _selectedTheme.uiFontItalic,
@@ -577,7 +1044,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 Expanded(
                   child: _fontPreviewTile(
                     "Entry Font",
-                    "Overrides typography for taskbar items and headers.",
                     _selectedTheme.entryFontFamily,
                     _selectedTheme.entryFontWeight,
                     _selectedTheme.entryFontItalic,
@@ -600,7 +1066,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Widget _fontPreviewTile(
-      String title, String subtitle, String family, int weight, bool italic, ValueChanged<PickerFont> onFontChanged) {
+      String title, String family, int weight, bool italic, ValueChanged<PickerFont> onFontChanged) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -615,12 +1081,10 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               style: TextStyle(
                   fontWeight: FontWeight.w600, fontSize: 11.5, color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 2),
-          Text(subtitle, style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
-          const SizedBox(height: 8),
           Text(
             "Preview: $family",
-            style: TextStyle(
-              fontFamily: family,
+            style: GoogleFonts.getFont(
+              family,
               fontWeight: FontWeight.values.firstWhere(
                 (FontWeight w) => w.value == weight,
                 orElse: () => FontWeight.normal,
@@ -732,8 +1196,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   Widget _buildColorCard(Color accent, Color onSurface, int index) {
     final Color currentColor = switch (index) {
       0 => _selectedTheme.background,
-      1 => _selectedTheme.textColor,
-      _ => _selectedTheme.accentColor,
+      1 => _selectedTheme.text,
+      _ => _selectedTheme.accent,
     };
 
     return Container(
@@ -878,3 +1342,33 @@ const List<String> _colorDescriptions = <String>[
   "Labels, titles, and general text color.",
   "Highlights, active states, and focus color.",
 ];
+
+Future<void> _resizeAndSaveBackdropInPanel(Map<String, String> args) async {
+  final String sourcePath = args['source']!;
+  final String targetPath = args['target']!;
+
+  final File sourceFile = File(sourcePath);
+  if (!sourceFile.existsSync()) return;
+
+  try {
+    final Uint8List sourceBytes = await sourceFile.readAsBytes();
+    final img.Image? decoded = img.decodeImage(sourceBytes);
+
+    if (decoded == null) {
+      await sourceFile.copy(targetPath);
+      return;
+    }
+
+    if (decoded.width > 1200) {
+      final img.Image resized = img.copyResize(decoded, width: 1200);
+      final Uint8List encoded = Uint8List.fromList(img.encodeJpg(resized, quality: 90));
+      await File(targetPath).writeAsBytes(encoded);
+    } else {
+      await sourceFile.copy(targetPath);
+    }
+  } catch (e) {
+    if (sourceFile.existsSync()) {
+      await sourceFile.copy(targetPath);
+    }
+  }
+}

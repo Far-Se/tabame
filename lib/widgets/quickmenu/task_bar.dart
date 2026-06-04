@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -333,7 +334,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   Widget _buildMonitorSeparator(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 1),
       child: Divider(height: 1, color: accent.withAlpha(40)),
@@ -390,7 +391,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final bool isSelected = widget.isSelected;
     final bool isHovered = _isHovered;
     final bool expanded = userSettings.expandedTaskbar;
@@ -428,7 +429,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
     final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
     final bool highlighted = widget.isSelected || _isHovered;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -498,7 +499,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildExpandedTitle() {
-    final Color onSurface = userSettings.themeColors.textColor;
+    final Color onSurface = userSettings.themeColors.text;
     final bool highlighted = widget.isSelected || _isHovered;
     final String processName = widget.window.process.exe.replaceFirst('.exe', '');
 
@@ -510,12 +511,16 @@ class _TaskBarItemState extends State<TaskBarItem> {
           widget.window.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: GoogleFonts.getFont(
+            userSettings.themeColors.entryFontFamily,
             fontSize: 12,
             color: highlighted ? onSurface : onSurface.withAlpha(200),
-            fontFamily: userSettings.themeColors.entryFontFamily,
             fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-            fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight(userSettings.themeColors.entryFontWeight),
+            fontWeight: widget.isSelected
+                ? FontWeight.w600
+                : FontWeight(
+                    userSettings.themeColors.entryFontWeight,
+                  ),
           ),
         ),
         const SizedBox(height: 1),
@@ -565,8 +570,8 @@ class _TaskBarItemState extends State<TaskBarItem> {
                     Positioned(
                       left: 18,
                       top: 3,
-                      child: Icon(Icons.push_pin_rounded,
-                          size: 8, color: userSettings.themeColors.accentColor.withAlpha(140)),
+                      child:
+                          Icon(Icons.push_pin_rounded, size: 8, color: userSettings.themeColors.accent.withAlpha(140)),
                     ),
                   if (Caches.audioMixer.contains(widget.window.process.pId) ||
                       Caches.audioMixer.contains(widget.window.process.mainPID) ||
@@ -593,7 +598,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildMediaButton() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
       borderRadius: BorderRadius.circular(6),
@@ -607,7 +612,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildVolumeButton() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
       borderRadius: BorderRadius.circular(6),
@@ -625,7 +630,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildCloseButton() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return Padding(
       padding: EdgeInsets.only(right: !userSettings.expandedTaskbar && WindowWatcher.list.length > 10 ? 5.0 : 0),
       child: InkWell(
@@ -684,7 +689,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildMuteButton() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return HoverScaleButton(
       zoom: 1.8,
       onTap: _muteWindow,
@@ -706,7 +711,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   Widget _buildHelpBadge() {
     if (widget.window.helpText.isEmpty) return const SizedBox.shrink();
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return CustomTooltip(
       message: widget.window.helpText,
       child: Container(
@@ -733,12 +738,16 @@ class _TaskBarItemState extends State<TaskBarItem> {
       overflow: TextOverflow.ellipsis,
       maxLines: 1,
       softWrap: false,
-      style: TextStyle(
+      style: GoogleFonts.getFont(
+        userSettings.theme.entryFontFamily,
         fontSize: 13,
         letterSpacing: 0.3,
-        fontFamily: userSettings.theme.entryFontFamily,
         fontStyle: userSettings.theme.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-        fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight(userSettings.theme.entryFontWeight),
+        fontWeight: widget.isSelected
+            ? FontWeight.w600
+            : FontWeight(
+                userSettings.theme.entryFontWeight,
+              ),
       ),
     );
   }
@@ -795,7 +804,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final bool expanded = userSettings.expandedTaskbar;
     final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
 
@@ -838,7 +847,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: userSettings.themeColors.textColor,
+                              color: userSettings.themeColors.text,
                             ),
                           ),
                           !expanded
@@ -849,7 +858,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: userSettings.themeColors.textColor.withAlpha(160),
+                                    color: userSettings.themeColors.text.withAlpha(160),
                                   ),
                                 ),
                         ],
@@ -873,7 +882,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: userSettings.themeColors.accentColor.withAlpha(20),
+        color: userSettings.themeColors.accent.withAlpha(20),
       ),
       clipBehavior: Clip.antiAlias,
       child: widget.item.localArtworkSmallPath != null && File(widget.item.localArtworkSmallPath!).existsSync()
@@ -904,7 +913,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   }
 
   Widget _buildControls() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[

@@ -65,7 +65,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.apps_rounded, size: 48, color: userSettings.themeColors.accentColor.withAlpha(80)),
+                Icon(Icons.apps_rounded, size: 48, color: userSettings.themeColors.accent.withAlpha(80)),
                 const SizedBox(height: 16),
                 const Text(
                   "Your Apps",
@@ -100,7 +100,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
       color: Colors.transparent,
       child: Column(
         children: <Widget>[
-          PanelHeader(title: "Apps", accent: userSettings.themeColors.accentColor, icon: Icons.apps),
+          PanelHeader(title: "Apps", accent: userSettings.themeColors.accent, icon: Icons.apps),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

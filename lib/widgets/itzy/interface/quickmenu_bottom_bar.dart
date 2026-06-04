@@ -11,6 +11,7 @@ import '../../../models/settings.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
@@ -47,22 +48,25 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    return WindowsScrollView(
-      controller: ScrollController(),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (widget.section == BottomBarSection.all || widget.section == BottomBarSection.trayOnly)
-              _buildBottomBarCard(),
-            const SizedBox(height: 20),
-            if (widget.section == BottomBarSection.all) _buildPinnedAppsCard(),
-            const SizedBox(height: 20),
-            if (widget.section == BottomBarSection.all || widget.section == BottomBarSection.weatherSystemOnly)
-              _buildWeatherCard(),
-            const SizedBox(height: 100),
-          ],
+    return Material(
+      type: MaterialType.transparency,
+      child: WindowsScrollView(
+        controller: ScrollController(),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (widget.section == BottomBarSection.all || widget.section == BottomBarSection.trayOnly)
+                _buildBottomBarCard(),
+              const SizedBox(height: 20),
+              if (widget.section == BottomBarSection.all) _buildPinnedAppsCard(),
+              const SizedBox(height: 20),
+              if (widget.section == BottomBarSection.all || widget.section == BottomBarSection.weatherSystemOnly)
+                _buildWeatherCard(),
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );
@@ -101,6 +105,50 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               },
             ),
             SwitchListTile(
+              title: const Text("Show LibreHardwareMonitor Data",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              subtitle: const Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp. Must run Tabame as admin!",
+                  style: TextStyle(fontSize: 12)),
+              secondary: const Icon(Icons.insights, size: 20),
+              value: userSettings.libreStats,
+              onChanged: (bool newValue) async {
+                userSettings.libreStats = newValue;
+                await Boxes.updateSettings("libreStats", userSettings.libreStats);
+                if (newValue == true) {
+                  userSettings.taskManagerStats = false;
+                  userSettings.autoOpenTaskManager = false;
+                  await Boxes.updateSettings("taskManagerStats", userSettings.taskManagerStats);
+                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                }
+                if (mounted) setState(() {});
+              },
+            ),
+            if (userSettings.libreStats) ...<Widget>[
+              ListTile(
+                title: CustomTextField(
+                  labelText: "URL",
+                  hintText: "Options->Remote Server->Run then Interface",
+                  value: Boxes.pref.getString('libreUrl'),
+                  onChanged: (String e) {
+                    Boxes.pref.setString("libreUrl", e);
+                  },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_browser),
+                dense: true,
+                title: const Text("Install LibreHardwareMonitor if you dont have it already",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                subtitle:
+                    const Text("It must be always open and with Admin Privileges.", style: TextStyle(fontSize: 12)),
+                onTap: () {
+                  WinUtils.open(
+                      "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest#:~:text=7%20other%20contributors-,Assets,-4");
+                },
+                trailing: const Icon(Icons.open_in_new),
+              ),
+            ],
+            SwitchListTile(
               title: const Text("Show TaskManager System Usage",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               subtitle: const Text("If TaskManger is open, put it on at the bottom of the screen",
@@ -113,6 +161,9 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                 if (newValue == false) {
                   userSettings.autoOpenTaskManager = false;
                   await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                } else {
+                  userSettings.libreStats = false;
+                  await Boxes.updateSettings("libreStats", userSettings.libreStats);
                 }
                 if (mounted) setState(() {});
               },
@@ -318,14 +369,14 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
           ),
         ),
         FutureBuilder<bool>(
-          future: Tray.fetchTray(sort: false),
+          future: TrayWatcher.fetchTray(sort: false),
           builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
             if (!snapshot.hasData) {
               return const Center(
                   child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)));
             }
             final List<TrayBarInfo> trayList =
-                Tray.trayList.where((TrayBarInfo element) => element.processExe != "explorer.exe").toList();
+                TrayWatcher.trayList.where((TrayBarInfo element) => element.processExe != "explorer.exe").toList();
             return Container(
               constraints: const BoxConstraints(maxHeight: 250),
               child: ListView.separated(

@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
-import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
+import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
@@ -63,7 +64,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
 
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color surface = theme.colorScheme.surface;
 
     final List<double> points = userSettings.themeColors.panelOpacityPoints;
@@ -110,12 +111,8 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                         borderRadius: BorderRadius.circular(User.theme.borderRadius),
                         child: Stack(
                           children: <Widget>[
-                            if (userSettings.themeColors.backdropType.isNotEmpty)
-                              Positioned.fill(
-                                  child: DesignBackdrop(
-                                path: userSettings.activeBackdropPath,
-                                opacity: userSettings.themeColors.backdropOpacity,
-                              )),
+                            if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
+                              Globals.backdrop!,
                             // Technical Grid Overlay
                             Positioned.fill(
                               child: IgnorePointer(
@@ -178,6 +175,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               if (userSettings.taskManagerStats) const TaskbarStats(withTopDivider: false),
+              if (userSettings.libreStats) const LibreStats(withTopDivider: false),
               const SizedBox(height: 6),
               const BottomBar(),
             ],
@@ -199,6 +197,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
             const PinnedAndTrayList(),
             const SizedBox(height: 6),
             if (userSettings.taskManagerStats) const TaskbarStats(),
+            if (userSettings.libreStats) const LibreStats(),
             const BottomBar(),
           ],
         ),

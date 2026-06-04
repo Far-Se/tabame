@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
-import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
+import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
@@ -72,12 +73,8 @@ class MainMenuClassicWidget extends StatelessWidget {
                         ]),
                     child: Stack(
                       children: <Widget>[
-                        if (userSettings.themeColors.backdropType.isNotEmpty)
-                          Positioned.fill(
-                              child: DesignBackdrop(
-                            path: userSettings.activeBackdropPath,
-                            opacity: userSettings.themeColors.backdropOpacity,
-                          )),
+                        if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
+                          Globals.backdrop!,
                       ],
                     ),
                   ),
@@ -102,6 +99,7 @@ class MainMenuClassicWidget extends StatelessWidget {
                   const Divider(thickness: 1, height: 1),
                   if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (userSettings.taskManagerStats) const TaskbarStats(),
+                  if (userSettings.libreStats) const LibreStats(),
                   const BottomBar(),
                 ],
               ),

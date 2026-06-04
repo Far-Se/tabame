@@ -6,11 +6,11 @@
 // Build:
 //   cl /EHsc monitor.cpp pdh.lib wbemuuid.lib
 
-#include <windows.h>
+#include <comdef.h>
 #include <pdh.h>
 #include <pdhmsg.h>
 #include <wbemidl.h>
-#include <comdef.h>
+#include <windows.h>
 
 #include <iostream>
 #include <string>
@@ -19,308 +19,246 @@
 #pragma comment(lib, "pdh.lib")
 #pragma comment(lib, "wbemuuid.lib")
 
-struct SystemStats
-{
-    double cpuUsage;
-    double gpuUsage;
-    double cpuTemp;
-    double gpuTemp;
+struct SystemStats {
+  double cpuUsage;
+  double gpuUsage;
+  double cpuTemp;
+  double gpuTemp;
 };
 
-class HardwareMonitor
-{
+class HardwareMonitor {
 private:
-    PDH_HQUERY cpuQuery = nullptr;
-    PDH_HCOUNTER cpuTotal = nullptr;
+  PDH_HQUERY cpuQuery = nullptr;
+  PDH_HCOUNTER cpuTotal = nullptr;
 
-    PDH_HQUERY gpuQuery = nullptr;
-    std::vector<PDH_HCOUNTER> gpuCounters;
+  PDH_HQUERY gpuQuery = nullptr;
+  std::vector<PDH_HCOUNTER> gpuCounters;
 
 public:
-    HardwareMonitor()
-    {
-        InitCPU();
-        InitGPU();
-    }
+  HardwareMonitor() {
+    InitCPU();
+    InitGPU();
+  }
 
-    ~HardwareMonitor()
-    {
-        if (cpuQuery)
-            PdhCloseQuery(cpuQuery);
+  ~HardwareMonitor() {
+    if (cpuQuery)
+      PdhCloseQuery(cpuQuery);
 
-        if (gpuQuery)
-            PdhCloseQuery(gpuQuery);
-    }
+    if (gpuQuery)
+      PdhCloseQuery(gpuQuery);
+  }
 
-    bool InitCPU()
-    {
-        if (PdhOpenQuery(NULL, NULL, &cpuQuery) != ERROR_SUCCESS)
-            return false;
+  bool InitCPU() {
+    if (PdhOpenQuery(NULL, NULL, &cpuQuery) != ERROR_SUCCESS)
+      return false;
 
-        if (PdhAddEnglishCounter(
-                cpuQuery,
-                L"\\Processor(_Total)\\% Processor Time",
-                NULL,
-                &cpuTotal) != ERROR_SUCCESS)
-            return false;
+    if (PdhAddEnglishCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time",
+                             NULL, &cpuTotal) != ERROR_SUCCESS)
+      return false;
 
-        PdhCollectQueryData(cpuQuery);
+    PdhCollectQueryData(cpuQuery);
 
-        return true;
-    }
+    return true;
+  }
 
-    bool InitGPU()
-    {
-        if (PdhOpenQuery(NULL, NULL, &gpuQuery) != ERROR_SUCCESS)
-            return false;
+  bool InitGPU() {
+    if (PdhOpenQuery(NULL, NULL, &gpuQuery) != ERROR_SUCCESS)
+      return false;
 
-        DWORD bufferSize = 0;
-        DWORD itemCount = 0;
+    DWORD bufferSize = 0;
+    DWORD itemCount = 0;
 
-        PDH_STATUS status = PdhEnumObjectItems(
-            NULL,
-            NULL,
-            L"GPU Engine",
-            NULL,
-            &bufferSize,
-            NULL,
-            &itemCount,
-            PERF_DETAIL_WIZARD,
-            0);
+    PDH_STATUS status =
+        PdhEnumObjectItems(NULL, NULL, L"GPU Engine", NULL, &bufferSize, NULL,
+                           &itemCount, PERF_DETAIL_WIZARD, 0);
 
-        if (status != PDH_MORE_DATA)
-            return false;
+    if (status != PDH_MORE_DATA)
+      return false;
 
-        std::vector<wchar_t> buffer(bufferSize);
+    std::vector<wchar_t> buffer(bufferSize);
 
-        status = PdhEnumObjectItems(
-            NULL,
-            NULL,
-            L"GPU Engine",
-            buffer.data(),
-            &bufferSize,
-            NULL,
-            &itemCount,
-            PERF_DETAIL_WIZARD,
-            0);
+    status = PdhEnumObjectItems(NULL, NULL, L"GPU Engine", buffer.data(),
+                                &bufferSize, NULL, &itemCount,
+                                PERF_DETAIL_WIZARD, 0);
 
-        if (status != ERROR_SUCCESS)
-            return false;
+    if (status != ERROR_SUCCESS)
+      return false;
 
-        wchar_t* ptr = buffer.data();
+    wchar_t *ptr = buffer.data();
 
-        while (*ptr)
-        {
-            std::wstring instance = ptr;
+    while (*ptr) {
+      std::wstring instance = ptr;
 
-            if (instance.find(L"engtype_3D") != std::wstring::npos)
-            {
-                std::wstring path =
-                    L"\\GPU Engine(" + instance + L")\\Utilization Percentage";
+      if (instance.find(L"engtype_3D") != std::wstring::npos) {
+        std::wstring path =
+            L"\\GPU Engine(" + instance + L")\\Utilization Percentage";
 
-                PDH_HCOUNTER counter;
+        PDH_HCOUNTER counter;
 
-                if (PdhAddEnglishCounter(
-                        gpuQuery,
-                        path.c_str(),
-                        NULL,
-                        &counter) == ERROR_SUCCESS)
-                {
-                    gpuCounters.push_back(counter);
-                }
-            }
-
-            ptr += instance.size() + 1;
+        if (PdhAddEnglishCounter(gpuQuery, path.c_str(), NULL, &counter) ==
+            ERROR_SUCCESS) {
+          gpuCounters.push_back(counter);
         }
+      }
 
-        PdhCollectQueryData(gpuQuery);
-
-        return true;
+      ptr += instance.size() + 1;
     }
 
-    double GetCPUUsage()
-    {
-        PDH_FMT_COUNTERVALUE counterVal;
+    PdhCollectQueryData(gpuQuery);
 
-        PdhCollectQueryData(cpuQuery);
+    return true;
+  }
 
-        if (PdhGetFormattedCounterValue(
-                cpuTotal,
-                PDH_FMT_DOUBLE,
-                NULL,
-                &counterVal) != ERROR_SUCCESS)
-        {
-            return -1.0;
-        }
+  double GetCPUUsage() {
+    PDH_FMT_COUNTERVALUE counterVal;
 
-        return counterVal.doubleValue;
+    PdhCollectQueryData(cpuQuery);
+
+    if (PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL,
+                                    &counterVal) != ERROR_SUCCESS) {
+      return -1.0;
     }
 
-    double GetGPUUsage()
-    {
-        PdhCollectQueryData(gpuQuery);
+    return counterVal.doubleValue;
+  }
 
-        double total = 0.0;
+  double GetGPUUsage() {
+    PdhCollectQueryData(gpuQuery);
 
-        for (auto& counter : gpuCounters)
-        {
-            PDH_FMT_COUNTERVALUE value;
+    double total = 0.0;
 
-            if (PdhGetFormattedCounterValue(
-                    counter,
-                    PDH_FMT_DOUBLE,
-                    NULL,
-                    &value) == ERROR_SUCCESS)
-            {
-                total += value.doubleValue;
-            }
-        }
+    for (auto &counter : gpuCounters) {
+      PDH_FMT_COUNTERVALUE value;
 
-        return total;
+      if (PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value) ==
+          ERROR_SUCCESS) {
+        total += value.doubleValue;
+      }
     }
 
-    double ReadWMITemperature(const wchar_t* sensorName)
-    {
-        HRESULT hres;
+    return total;
+  }
 
-        hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+  double ReadWMITemperature(const wchar_t *sensorName) {
+    HRESULT hres;
 
-        if (FAILED(hres) && hres != RPC_E_CHANGED_MODE)
-            return -1.0;
+    hres = CoInitializeEx(0, COINIT_MULTITHREADED);
 
-        hres = CoInitializeSecurity(
-            NULL,
-            -1,
-            NULL,
-            NULL,
-            RPC_C_AUTHN_LEVEL_DEFAULT,
-            RPC_C_IMP_LEVEL_IMPERSONATE,
-            NULL,
-            EOAC_NONE,
-            NULL);
+    if (FAILED(hres) && hres != RPC_E_CHANGED_MODE)
+      return -1.0;
 
-        IWbemLocator* pLoc = NULL;
+    // hres = CoInitializeSecurity(
+    //     NULL,
+    //     -1,
+    //     NULL,
+    //     NULL,
+    //     RPC_C_AUTHN_LEVEL_DEFAULT,
+    //     RPC_C_IMP_LEVEL_IMPERSONATE,
+    //     NULL,
+    //     EOAC_NONE,
+    //     NULL);
 
-        hres = CoCreateInstance(
-            CLSID_WbemLocator,
-            0,
-            CLSCTX_INPROC_SERVER,
-            IID_IWbemLocator,
-            (LPVOID*)&pLoc);
+    IWbemLocator *pLoc = NULL;
 
-        if (FAILED(hres))
-            return -1.0;
+    hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER,
+                            IID_IWbemLocator, (LPVOID *)&pLoc);
 
-        IWbemServices* pSvc = NULL;
+    if (FAILED(hres))
+      return -1.0;
 
-        hres = pLoc->ConnectServer(
-            _bstr_t(L"ROOT\\WMI"),
-            NULL,
-            NULL,
-            0,
-            NULL,
-            0,
-            0,
-            &pSvc);
+    IWbemServices *pSvc = NULL;
 
-        if (FAILED(hres))
-        {
-            pLoc->Release();
-            return -1.0;
-        }
+    hres = pLoc->ConnectServer(_bstr_t(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0,
+                               &pSvc);
 
-        hres = CoSetProxyBlanket(
-            pSvc,
-            RPC_C_AUTHN_WINNT,
-            RPC_C_AUTHZ_NONE,
-            NULL,
-            RPC_C_AUTHN_LEVEL_CALL,
-            RPC_C_IMP_LEVEL_IMPERSONATE,
-            NULL,
-            EOAC_NONE);
-
-        IEnumWbemClassObject* pEnumerator = NULL;
-
-        hres = pSvc->ExecQuery(
-            bstr_t("WQL"),
-            bstr_t("SELECT * FROM MSAcpi_ThermalZoneTemperature"),
-            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-            NULL,
-            &pEnumerator);
-
-        if (FAILED(hres))
-        {
-            pSvc->Release();
-            pLoc->Release();
-            return -1.0;
-        }
-
-        IWbemClassObject* pclsObj = NULL;
-        ULONG uReturn = 0;
-
-        double temperature = -1.0;
-
-        while (pEnumerator)
-        {
-            HRESULT hr = pEnumerator->Next(
-                WBEM_INFINITE,
-                1,
-                &pclsObj,
-                &uReturn);
-
-            if (0 == uReturn)
-                break;
-
-            VARIANT vtProp;
-
-            hr = pclsObj->Get(L"CurrentTemperature", 0, &vtProp, 0, 0);
-
-            if (SUCCEEDED(hr))
-            {
-                temperature =
-                    ((double)vtProp.uintVal / 10.0) - 273.15;
-
-                VariantClear(&vtProp);
-                pclsObj->Release();
-                break;
-            }
-
-            pclsObj->Release();
-        }
-
-        pSvc->Release();
-        pLoc->Release();
-        pEnumerator->Release();
-
-        return temperature;
+    if (FAILED(hres)) {
+      pLoc->Release();
+      return -1.0;
     }
 
-    double GetCPUTemp()
-    {
-        return ReadWMITemperature(L"CPU");
+    hres = CoSetProxyBlanket(pSvc, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, nullptr,
+                             RPC_C_AUTHN_LEVEL_PKT, RPC_C_IMP_LEVEL_IMPERSONATE,
+                             nullptr, EOAC_NONE);
+
+    // If that fails (can happen in some elevated contexts), fall back to
+    // DEFAULT level
+    if (FAILED(hres)) {
+      hres =
+          CoSetProxyBlanket(pSvc, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, nullptr,
+                            RPC_C_AUTHN_LEVEL_DEFAULT, // let COM decide
+                            RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE);
     }
 
-    double GetGPUTemp()
-    {
-        return ReadWMITemperature(L"GPU");
+    if (FAILED(hres)) {
+      pSvc->Release();
+      pLoc->Release();
+      return -1.0;
     }
 
-    SystemStats GetStats(bool onlyUsage)
-    {
-        SystemStats stats;
+    IEnumWbemClassObject *pEnumerator = NULL;
 
-        stats.cpuUsage = GetCPUUsage();
-        stats.gpuUsage = GetGPUUsage();
-        if(onlyUsage)
-        {
-            stats.cpuTemp = 0;
-            stats.gpuTemp = 0;
-            return stats;
-        }
-        stats.cpuTemp = GetCPUTemp();
-        stats.gpuTemp = GetGPUTemp();
-        return stats;
+    hres = pSvc->ExecQuery(
+        bstr_t("WQL"), bstr_t("SELECT * FROM MSAcpi_ThermalZoneTemperature"),
+        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL,
+        &pEnumerator);
+
+    if (FAILED(hres)) {
+      pSvc->Release();
+      pLoc->Release();
+      return -1.0;
     }
+
+    IWbemClassObject *pclsObj = NULL;
+    ULONG uReturn = 0;
+
+    double temperature = -1.0;
+
+    while (pEnumerator) {
+      HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+
+      if (0 == uReturn)
+        break;
+
+      VARIANT vtProp;
+
+      hr = pclsObj->Get(L"CurrentTemperature", 0, &vtProp, 0, 0);
+
+      if (SUCCEEDED(hr)) {
+        temperature = ((double)vtProp.uintVal / 10.0) - 273.15;
+
+        VariantClear(&vtProp);
+        pclsObj->Release();
+        break;
+      }
+
+      pclsObj->Release();
+    }
+
+    pSvc->Release();
+    pLoc->Release();
+    pEnumerator->Release();
+
+    return temperature;
+  }
+
+  double GetCPUTemp() { return ReadWMITemperature(L"CPU"); }
+
+  double GetGPUTemp() { return ReadWMITemperature(L"GPU"); }
+
+  SystemStats GetStats(bool onlyUsage) {
+    SystemStats stats;
+
+    stats.cpuUsage = GetCPUUsage();
+    stats.gpuUsage = GetGPUUsage();
+    if (onlyUsage) {
+      stats.cpuTemp = 0;
+      stats.gpuTemp = 0;
+      return stats;
+    }
+    stats.cpuTemp = GetCPUTemp();
+    stats.gpuTemp = GetGPUTemp();
+    return stats;
+  }
 };
 
 // int main()

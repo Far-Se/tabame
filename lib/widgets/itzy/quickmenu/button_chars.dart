@@ -384,7 +384,7 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return QuickMenuPanel(
@@ -735,11 +735,11 @@ class _CharTileState extends State<_CharTile> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _isHovering
-                  ? userSettings.themeColors.accentColor.withAlpha(35)
-                  : userSettings.themeColors.accentColor.withAlpha(12),
+                  ? userSettings.themeColors.accent.withAlpha(35)
+                  : userSettings.themeColors.accent.withAlpha(12),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: _isHovering ? userSettings.themeColors.accentColor.withAlpha(80) : Colors.transparent,
+                color: _isHovering ? userSettings.themeColors.accent.withAlpha(80) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -748,7 +748,7 @@ class _CharTileState extends State<_CharTile> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: _isHovering ? userSettings.themeColors.accentColor : widget.onSurface,
+                color: _isHovering ? userSettings.themeColors.accent : widget.onSurface,
               ),
             ),
           ),

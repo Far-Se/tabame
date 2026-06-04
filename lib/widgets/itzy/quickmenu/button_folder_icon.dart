@@ -269,7 +269,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     // The image to preview: processed > original
@@ -590,7 +590,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
             // ── Header ──
             PanelHeader(
               title: 'Info',
-              accent: User.theme.accentColor,
+              accent: User.theme.accent,
               icon: Icons.auto_fix_high_rounded,
               extraActions: <Widget>[
                 IconButton(
@@ -611,10 +611,18 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                     // ── Profiles row ──
                     const SizedBox(height: 6),
                     infoButton(
-                        'Use an AI image generation to generate a type of folder, then make variations of that folder design, with different text/colors, so they will match in the Directory they are.'),
-                    const SizedBox(height: 18),
+                        'Use an AI image generator to create a folder design template, then generate multiple variations with different text and color schemes so each folder visually matches its corresponding directory.'),
+                    const SizedBox(height: 6),
                     infoButton(
-                        'The image will be auto-cropped, resized to 256×256 and saved as .ico. A hidden desktop.ini will be written inside the selected folder.'),
+                        'The image will be auto-cropped, resized to 256×256 and saved as .ico. A hidden desktop.ini will be written inside the selected folder that will change the folder icon to yours.'),
+                    const SizedBox(height: 6),
+                    infoButton(
+                        'Design a Folder Icon for Desktop with flat white background:\nColor: Dark Gray\nText: Settings\nIcon: Settings Gear\n'
+                        'Design: Modern with just a few details, folder slighly opened to the left, text below the icon inside the folder, folder color has a slighly gradient, square aspect ratio',
+                        selectable: true),
+                    const SizedBox(height: 6),
+                    infoButton(
+                        'ChatGPT Image Generator has transparent Background, others do not support, so specify white background for non ChatGPT'),
                   ],
                 ),
               ),
@@ -623,25 +631,27 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
         ));
   }
 
-  Container infoButton(String info) {
+  Container infoButton(String info, {bool selectable = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: User.theme.accentColor.withAlpha(10),
+        color: User.theme.accent.withAlpha(10),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: User.theme.accentColor.withAlpha(30)),
+        border: Border.all(color: User.theme.accent.withAlpha(30)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(Icons.info_outline_rounded, size: 14, color: User.theme.accentColor.withAlpha(180)),
+          Icon(Icons.info_outline_rounded, size: 14, color: User.theme.accent.withAlpha(180)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              info,
-              style:
-                  TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160), height: 1.5),
-            ),
+            child: !selectable
+                ? Text(info,
+                    style: TextStyle(
+                        fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160), height: 1.5))
+                : SelectableText(info,
+                    style: TextStyle(
+                        fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160), height: 1.5)),
           ),
         ],
       ),
@@ -897,6 +907,7 @@ class RemoveBgBalance {
   });
 
   factory RemoveBgBalance.fromJson(Map<String, dynamic> attributes) {
+    // ignore: always_specify_types
     final credits = attributes['credits'] ?? <dynamic, dynamic>{};
     return RemoveBgBalance(
       totalCredits: (credits['total'] ?? 0.0).toDouble(),

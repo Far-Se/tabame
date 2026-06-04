@@ -72,6 +72,7 @@ class Boxes {
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("taskManagerStats", false);
+      await pref.setBool("libreStats", false);
       await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("quickClickEnabled", false);
       await pref.setString("quickClickConfig", jsonEncode(userSettings.quickClickConfig.toMap()));
@@ -137,6 +138,7 @@ class Boxes {
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? userSettings.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? userSettings.themeScheduleMax
       ..taskManagerStats = pref.getBool("taskManagerStats") ?? userSettings.taskManagerStats
+      ..libreStats = pref.getBool("libreStats") ?? userSettings.libreStats
       ..quickSnapOverlay = pref.getBool("quickSnapOverlay") ?? userSettings.quickSnapOverlay
       ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? userSettings.hideDesktopFiles
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? userSettings.trktivityEnabled

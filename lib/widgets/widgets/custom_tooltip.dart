@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/settings.dart';
 import '../../models/theme.dart';
@@ -226,14 +227,16 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                           child: Text(
                             widget.message,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: userSettings.themeColors.entryFontFamily,
-                              fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
-                              fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                            style: GoogleFonts.getFont(
+                              userSettings.themeColors.entryFontFamily,
                               fontSize: 11.5,
                               letterSpacing: 0.2,
                               height: 1.2,
                               color: onSurface.withValues(alpha: 0.9),
+                              fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                              fontWeight: AppTheme.getFontWeight(
+                                userSettings.themeColors.entryFontWeight,
+                              ),
                             ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
@@ -249,12 +252,12 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                             ),
                             child: Text(
                               widget.shortcut!,
-                              style: TextStyle(
-                                fontFamily: userSettings.themeColors.entryFontFamily,
-                                fontWeight: FontWeight.w600,
+                              style: GoogleFonts.getFont(
+                                userSettings.themeColors.entryFontFamily,
                                 fontSize: 10,
                                 letterSpacing: 0.5,
                                 color: onSurface.withValues(alpha: 0.5),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),

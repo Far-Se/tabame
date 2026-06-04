@@ -266,10 +266,19 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: ColorPickerPanel(
-          onPickRequested: _onPickRequested,
-          onClose: widget.isStandalone ? _exit : null,
-          isStandalone: widget.isStandalone,
+        child: KeyboardListener(
+          focusNode: FocusNode()..requestFocus(),
+          onKeyEvent: !widget.isStandalone
+              ? null
+              : (KeyEvent e) {
+                  if (e is! KeyDownEvent) return;
+                  windowManager.close();
+                },
+          child: ColorPickerPanel(
+            onPickRequested: _onPickRequested,
+            onClose: widget.isStandalone ? _exit : null,
+            isStandalone: widget.isStandalone,
+          ),
         ),
       ),
     );

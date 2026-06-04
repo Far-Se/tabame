@@ -485,6 +485,9 @@ class AnnotationController extends ChangeNotifier {
     if (overlayVisible) WindowManager.instance.focus();
     Win32Window.setVisible(overlayVisible);
     notifyListeners();
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      // Win32.activeWindowUnderCursor();
+    });
   }
 
   void setTool(DrawTool t) {
@@ -1486,6 +1489,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       if (e.logicalKey == LogicalKeyboardKey.escape) {
         timer = Timer(const Duration(milliseconds: 400), () {
           WindowManager.instance.close();
+          // ctrl.toggleDrawingMode(activated: false);
         });
         // ctrl.currentShape = null;
         // ctrl.notifyListeners();
@@ -2450,7 +2454,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         }
       case ScreenDrawCaptureAction.copyTextOcr:
         try {
-          final String text = await GetTextOCR(
+          final String text = await getTextOCR(
             screenRect.left.round(),
             screenRect.top.round(),
             screenRect.width.round().clamp(1, 1000000),
@@ -3347,7 +3351,7 @@ class AnnotationToolbar extends StatelessWidget {
               const Divider(color: Colors.white24, height: 10),
               _InfoBtn(controller, monitorRect),
               const Divider(color: Colors.white24, height: 10),
-              _CloseBtn(),
+              const _CloseBtn(),
             ],
           ),
         ),

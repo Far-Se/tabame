@@ -196,7 +196,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
@@ -317,7 +317,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
 
   Widget _buildTypeButton(ContextTarget type, String label, IconData icon) {
     final bool isSelected = target == type;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return InkWell(
       onTap: () => setState(() => target = type),
       borderRadius: BorderRadius.circular(8),

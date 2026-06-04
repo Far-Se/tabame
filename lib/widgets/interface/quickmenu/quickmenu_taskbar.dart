@@ -925,7 +925,7 @@ class _AllBadgesModalState extends State<_AllBadgesModal> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -47,7 +47,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
@@ -731,7 +731,7 @@ class ListTileFileState extends State<ListTileFile> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final bool unchanged = widget.oldName == widget.newName;
 
     return InkWell(

@@ -63,7 +63,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final TimeOfDay? parsedTime = _parseTimeInput(_timeController.text);
 

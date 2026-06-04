@@ -589,7 +589,8 @@ class FancyshotState extends State<Fancyshot> {
             ),
             Expanded(
               child: ColoredBox(
-                color: const Color(0xFF1A1A1A),
+                // color: const Color(0xFF1A1A1A),
+                color: Colors.white,
                 child: Center(
                   child: _buildCanvasEditor(),
                 ),

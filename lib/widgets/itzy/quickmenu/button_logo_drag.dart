@@ -53,7 +53,7 @@ class LogoDragButtonState extends State<LogoDragButton> {
                     right: 0,
                     child: CustomPaint(
                       size: const Size(6, 6),
-                      painter: TrianglePainter(userSettings.themeColors.accentColor.withValues(alpha: 0.5)),
+                      painter: TrianglePainter(userSettings.themeColors.accent.withValues(alpha: 0.5)),
                     ),
                   ),
               ],
@@ -71,7 +71,7 @@ class TrianglePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = color.withValues(alpha: 0.3);
+    final Paint paint = Paint()..color = color.withValues(alpha: 0.1);
     // final Path path = Path();
     // path.moveTo(0, 0);
     // path.lineTo(size.width, 0);

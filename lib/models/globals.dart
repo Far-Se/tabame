@@ -75,7 +75,7 @@ class Globals {
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
   static String _pendingLauncherQuickAction = "";
-
+  static Positioned? backdrop;
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
   static Pages get currentPage => _currentPage;

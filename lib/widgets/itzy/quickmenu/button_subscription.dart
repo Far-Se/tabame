@@ -110,7 +110,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
             PanelHeader(
               title: "Subscriptions",
               icon: Icons.subscriptions,
-              accent: userSettings.themeColors.accentColor,
+              accent: userSettings.themeColors.accent,
               buttonPressed: () => Navigator.of(context).pop(),
               buttonIcon: Icons.close,
             ),
@@ -153,7 +153,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
   }
 
   Widget _buildEditorHeader() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Container(
@@ -219,7 +219,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
 
   Widget _buildTab(String title, int index, IconData icon) {
     final bool isSelected = _currentIndex == index;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Expanded(
@@ -391,7 +391,7 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
   }
 
   Widget _buildChip(String label, String value, IconData icon) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -478,7 +478,7 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
     final DateTime now = DateTime.now();
     final bool isToday = date.year == now.year && date.month == now.month && date.day == now.day;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final List<Subscription> subsToday = widget.subscriptions.where((Subscription s) {
       return s.isBillingOnDate(date);
     }).toList();
@@ -524,7 +524,7 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
   }
 
   Widget _buildCalendarCellLogos(List<Subscription> subs) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -687,7 +687,7 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
         Positioned(
           right: 0,
           top: 0,
-          child: Text("logo.dev ", style: TextStyle(fontSize: 10, color: userSettings.themeColors.textColor)),
+          child: Text("logo.dev ", style: TextStyle(fontSize: 10, color: userSettings.themeColors.text)),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -705,9 +705,9 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 32),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accentColor.withValues(alpha: 0.28),
+                    color: userSettings.themeColors.accent.withValues(alpha: 0.28),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: userSettings.themeColors.accentColor.withValues(alpha: 0.8), width: 1),
+                    border: Border.all(color: userSettings.themeColors.accent.withValues(alpha: 0.8), width: 1),
                   ),
                   child: Text(
                     label,
@@ -715,7 +715,7 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
-                      color: userSettings.themeColors.accentColor,
+                      color: userSettings.themeColors.accent,
                     ),
                   ),
                 ),
@@ -755,7 +755,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     double totalMonthly = 0;
     double totalYearly = 0;
@@ -1009,7 +1009,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
   Widget _buildSectionLabel(String label, Color onSurface, int count, IconData icon) {
     return Row(
       children: <Widget>[
-        Icon(icon, size: 14, color: userSettings.themeColors.accentColor),
+        Icon(icon, size: 14, color: userSettings.themeColors.accent),
         const SizedBox(width: 6),
         Text(
           label.toUpperCase(),
@@ -1024,10 +1024,10 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: userSettings.themeColors.accentColor.withValues(alpha: 0.28),
+            color: userSettings.themeColors.accent.withValues(alpha: 0.28),
             borderRadius: BorderRadius.circular(99),
           ),
-          child: Text("$count", style: TextStyle(fontSize: 10, color: userSettings.themeColors.accentColor)),
+          child: Text("$count", style: TextStyle(fontSize: 10, color: userSettings.themeColors.accent)),
         ),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: onSurface.withValues(alpha: 0.2))),
@@ -1127,7 +1127,7 @@ class _SubscriptionFormState extends State<SubscriptionForm> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),

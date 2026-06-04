@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/settings.dart';
@@ -105,7 +106,7 @@ class _TaskbarStatsState extends State<TaskbarStats> {
   Widget build(BuildContext context) {
     if (WindowWatcher.taskManagerStats == "") return const SizedBox.shrink();
     final double height = userSettings.expandedTaskbar ? 32 : 27;
-    final Color onSurface = userSettings.themeColors.textColor;
+    final Color onSurface = userSettings.themeColors.text;
     final List<({String label, String value})> metrics = _parseStats(_stats);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -121,7 +122,7 @@ class _TaskbarStatsState extends State<TaskbarStats> {
             child: InkWell(
               onTap: metrics.isEmpty ? null : _focusTaskManager,
               borderRadius: BorderRadius.circular(10),
-              hoverColor: userSettings.themeColors.accentColor.withAlpha(10),
+              hoverColor: userSettings.themeColors.accent.withAlpha(10),
               splashColor: Colors.transparent,
               child: Padding(
                 padding: !userSettings.expandedTaskbar
@@ -148,25 +149,25 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                                   children: <InlineSpan>[
                                     TextSpan(
                                       text: '${metric.label} ',
-                                      style: TextStyle(
+                                      style: GoogleFonts.getFont(
+                                        userSettings.themeColors.uiFontFamily,
                                         fontSize: userSettings.expandedTaskbar ? 11.5 : 10.5,
                                         letterSpacing: 0.4,
-                                        fontFamily: userSettings.themeColors.uiFontFamily,
                                         fontStyle:
                                             userSettings.themeColors.uiFontItalic ? FontStyle.italic : FontStyle.normal,
                                         fontWeight: FontWeight(userSettings.themeColors.uiFontWeight),
-                                        color: userSettings.themeColors.textColor,
+                                        color: userSettings.themeColors.text,
                                       ),
                                     ),
                                     TextSpan(
                                       text: metric.value,
-                                      style: TextStyle(
+                                      style: GoogleFonts.getFont(
+                                        userSettings.themeColors.entryFontFamily,
                                         fontSize: userSettings.expandedTaskbar ? 12.5 : 11.5,
-                                        fontFamily: userSettings.themeColors.entryFontFamily,
+                                        color: userSettings.themeColors.text,
                                         fontStyle: userSettings.themeColors.entryFontItalic
                                             ? FontStyle.italic
                                             : FontStyle.normal,
-                                        color: userSettings.themeColors.textColor,
                                       ),
                                     ),
                                   ],

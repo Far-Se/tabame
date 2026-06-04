@@ -28,6 +28,8 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
+        final HardwareData hardwareData = await getHardwareData();
+        print(hardwareData);
         // xIcon = WinUtils.extractIconInternal(
         //     r"C:\Users\Far Se\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Antigravity\Antigravity.lnk", 0);
         xIcon = WinUtils.extractIconInternal(

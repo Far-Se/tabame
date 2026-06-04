@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../models/classes/boxes/boxes_base.dart';
@@ -422,7 +423,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
       builder: (BuildContext context) => AlertDialog(
         shadowColor: Colors.red,
         elevation: 5,
-        surfaceTintColor: userSettings.themeColors.accentColor,
+        surfaceTintColor: userSettings.themeColors.accent,
         title: const Text("Delete Playlist?"),
         content:
             Text("Delete '${playlist.name}' from ${MusicServerManager.isLocalActive ? 'Local' : 'the music server'}?"),
@@ -561,7 +562,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         title: const Text("Remove Track?"),
         shadowColor: Colors.red,
         elevation: 5,
-        surfaceTintColor: userSettings.themeColors.accentColor,
+        surfaceTintColor: userSettings.themeColors.accent,
         content: Text("Remove '${item.title}' from this playlist?"),
         actions: <Widget>[
           TextButton(
@@ -787,7 +788,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final Duration transitionDuration = reduceMotion ? Duration.zero : const Duration(milliseconds: 220);
     final bool localFolderTab = MusicServerManager.isLocalActive && _tabIndex == 3;
@@ -800,7 +801,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         behavior: HitTestBehavior.translucent,
         onSecondaryTap: _hasBackHistory ? _goBack : null,
         child: QuickMenuPanel(
-          accent: userSettings.themeColors.accentColor,
+          accent: userSettings.themeColors.accent,
           title: _tabIndex == 2
               ? _titles.last
               : _tabIndex == 3

@@ -12,7 +12,7 @@ class BMACDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final ThemeData theme = Theme.of(context);
     final Color surface = theme.colorScheme.surface;
 

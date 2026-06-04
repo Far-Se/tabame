@@ -809,7 +809,7 @@ class HotKeyInfo {
     "Bookmarks",
     "Calculator",
     "Cli Book",
-    "Clear Keyboard",
+    "Block Keyboard",
     "Clipboard History",
     "Color Picker",
     "Countdown",

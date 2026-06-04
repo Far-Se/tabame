@@ -229,8 +229,8 @@ class ThemeSetupState extends State<ThemeSetup> {
                         },
                         onColorChanged: (Color color, int i) {
                           if (i == 0) userSettings.darkTheme.background = color;
-                          if (i == 1) userSettings.darkTheme.textColor = color;
-                          if (i == 2) userSettings.darkTheme.accentColor = color;
+                          if (i == 1) userSettings.darkTheme.text = color;
+                          if (i == 2) userSettings.darkTheme.accent = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                           Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
                         },
@@ -273,8 +273,8 @@ class ThemeSetupState extends State<ThemeSetup> {
                         },
                         onColorChanged: (Color color, int i) {
                           if (i == 0) userSettings.lightTheme.background = color;
-                          if (i == 1) userSettings.lightTheme.textColor = color;
-                          if (i == 2) userSettings.lightTheme.accentColor = color;
+                          if (i == 1) userSettings.lightTheme.text = color;
+                          if (i == 2) userSettings.lightTheme.accent = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         predefinedColors: predefinedColorsLight,
@@ -491,7 +491,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             'source': result.path,
             'target': targetPath,
           });
-          widget.currentColors.backdropImages = List<String>.from(widget.currentColors.backdropImages)..add(targetPath);
+          widget.currentColors.backdropImages.add(targetPath);
           changed = true;
           if (!mounted) return;
           setState(() {
@@ -520,7 +520,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor.withValues(alpha: 1.0);
+    final Color accent = userSettings.themeColors.accent.withValues(alpha: 1.0);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -595,8 +595,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           "Primary Text",
           "Used for titles, labels, and general content.",
           1,
-          widget.savedColors.textColor,
-          widget.currentColors.textColor,
+          widget.savedColors.text,
+          widget.currentColors.text,
           widget.predefinedColors[1],
         ),
 
@@ -606,8 +606,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           "Accent Highlight",
           "Used for buttons, switches, and active states.",
           2,
-          widget.savedColors.accentColor,
-          widget.currentColors.accentColor,
+          widget.savedColors.accent,
+          widget.currentColors.accent,
           widget.predefinedColors[2],
         ),
         const SizedBox(height: 16),
@@ -931,7 +931,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   Widget _buildDesignTile(
       String title, String subtitle, QuickMenuDesigns current, ValueChanged<QuickMenuDesigns> onSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor.withValues(alpha: 1.0);
+    final Color accent = userSettings.themeColors.accent.withValues(alpha: 1.0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1359,9 +1359,18 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                         child: InkWell(
                           onTap: () async {
                             widget.onChanged();
-                            final List<String> newList = List<String>.from(widget.currentColors.backdropImages);
-                            final String removedPath = newList.removeAt(index);
-                            widget.currentColors.backdropImages = newList;
+
+                            final String removedPath = widget.currentColors.backdropImages[index];
+                            widget.currentColors.backdropImages.remove(removedPath);
+                            if (userSettings.activeBackdropPath == removedPath) {
+                              if (widget.currentColors.backdropImages.isNotEmpty) {
+                                userSettings.activeBackdropPath = widget.currentColors.backdropImages.first;
+                              } else {
+                                userSettings.activeBackdropPath = "";
+                              }
+                            }
+                            // final String removedPath = widget.currentColors.backdropImages;
+                            // widget.currentColors.backdropImages = "";
                             if (File(removedPath).existsSync()) {
                               try {
                                 await File(removedPath).delete();

@@ -132,34 +132,36 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     accent: accent,
                     icon: _settingsMode ? Icons.tune_rounded : Icons.palette_outlined,
                     extraActions: <Widget>[
-                      CustomTooltip(
-                        message: _settingsMode ? "Picker" : "Format settings",
-                        child: IconButton(
-                          onPressed: () => setState(() {
-                            _settingsMode = !_settingsMode;
-                            if (_settingsMode == false) {
-                              _settingsPage = _FormatSettingsPage.library;
-                            }
-                          }),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                          iconSize: 14,
-                          icon: Icon(
-                            _settingsMode ? Icons.palette_outlined : Icons.tune_rounded,
-                            color: accent,
+                      if (!widget.isStandalone)
+                        CustomTooltip(
+                          message: _settingsMode ? "Picker" : "Format settings",
+                          child: IconButton(
+                            onPressed: () => setState(() {
+                              _settingsMode = !_settingsMode;
+                              if (_settingsMode == false) {
+                                _settingsPage = _FormatSettingsPage.library;
+                              }
+                            }),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                            iconSize: 14,
+                            icon: Icon(
+                              _settingsMode ? Icons.palette_outlined : Icons.tune_rounded,
+                              color: accent,
+                            ),
                           ),
                         ),
-                      ),
-                      CustomTooltip(
-                        message: "Refresh",
-                        child: IconButton(
-                          onPressed: _controller.loadCapture,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                          iconSize: 14,
-                          icon: Icon(Icons.refresh_rounded, color: accent),
+                      if (!widget.isStandalone)
+                        CustomTooltip(
+                          message: "Refresh",
+                          child: IconButton(
+                            onPressed: _controller.loadCapture,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                            iconSize: 14,
+                            icon: Icon(Icons.refresh_rounded, color: accent),
+                          ),
                         ),
-                      ),
                     ],
                     buttonPressed: widget.onClose,
                     buttonIcon: Icons.close_rounded,

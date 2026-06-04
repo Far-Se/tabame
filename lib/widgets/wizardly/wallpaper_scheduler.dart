@@ -100,7 +100,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -475,7 +475,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
             : UnderlineInputBorder(borderSide: BorderSide(color: Theme.of(context).dividerColor.withAlpha(50))),
         focusedBorder: noBorder
             ? InputBorder.none
-            : UnderlineInputBorder(borderSide: BorderSide(color: userSettings.themeColors.accentColor)),
+            : UnderlineInputBorder(borderSide: BorderSide(color: userSettings.themeColors.accent)),
       ),
       maxLength: 50,
       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -512,7 +512,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
             const SizedBox(height: 2),
             Text(
               "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: userSettings.themeColors.accentColor),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: userSettings.themeColors.accent),
             ),
           ],
         ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
-import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
+import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
@@ -17,7 +18,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData themeX = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color surface = themeX.colorScheme.surface;
     final double gradientStrength = (userSettings.themeColors.gradientAlpha.clamp(1, 100)) / 100;
     final double outerAccentAlpha = 0.04 + (gradientStrength * 0.08);
@@ -94,12 +95,8 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                       ),
                       child: Stack(
                         children: <Widget>[
-                          if (userSettings.themeColors.backdropType.isNotEmpty)
-                            Positioned.fill(
-                                child: DesignBackdrop(
-                              path: userSettings.activeBackdropPath,
-                              opacity: userSettings.themeColors.backdropOpacity,
-                            )),
+                          if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
+                            Globals.backdrop!,
                         ],
                       ),
                     ),
@@ -129,6 +126,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                   ),
                   if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
                   if (userSettings.taskManagerStats) const TaskbarStats(),
+                  if (userSettings.libreStats) const LibreStats(),
                   Container(padding: const EdgeInsets.fromLTRB(0, 4, 2, 6), child: const BottomBar()),
                 ],
               ),

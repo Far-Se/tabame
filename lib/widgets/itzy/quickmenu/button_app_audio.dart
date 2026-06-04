@@ -102,7 +102,8 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     if (win != null) {
       return (hWnd: win.hWnd, pid: win.process.pId);
     } else {
-      final TrayBarInfo? tray = Tray.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
+      final TrayBarInfo? tray =
+          TrayWatcher.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
       if (tray != null) {
         return (hWnd: tray.hWnd, pid: tray.processID);
       }
@@ -122,8 +123,9 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     }
 
     // 2. Check if the app is in the system tray
-    await Tray.fetchTray();
-    final TrayBarInfo? tray = Tray.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
+    await TrayWatcher.fetchTray();
+    final TrayBarInfo? tray =
+        TrayWatcher.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
     if (tray != null) {
       WinTray.click(tray, clickType: TrayClickType.left);
       return;

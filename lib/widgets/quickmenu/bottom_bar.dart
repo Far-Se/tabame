@@ -21,7 +21,7 @@ class PinnedAndTrayList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double height = userSettings.expandedTaskbar ? 32 : 27;
-    Globals.heights.pinnedAndTray = userSettings.taskManagerStats ? height * 2 : height;
+    Globals.heights.pinnedAndTray = (userSettings.taskManagerStats || userSettings.libreStats) ? height * 2 : height;
     return Container(
       height: height,
       width: double.infinity,
@@ -43,11 +43,8 @@ class PinnedAndTrayList extends StatelessWidget {
                         const SizedBox(width: 3),
                         const Expanded(child: BarWithQuickActions()),
                         Theme(
-                            data: Theme.of(context).copyWith(
-                                iconTheme: IconThemeData(
-                              size: 16,
-                              color: Theme.of(context).iconTheme.color,
-                            )),
+                            data: Theme.of(context)
+                                .copyWith(iconTheme: IconThemeData(size: 16, color: Theme.of(context).iconTheme.color)),
                             child: const OpenSettingsButton()),
                       ],
                     ),

@@ -520,7 +520,7 @@ enum OcrCaptureType {
   directX,
 }
 
-Future<String> GetTextOCR(int x, int y, int width, int height, int type) async {
+Future<String> getTextOCR(int x, int y, int width, int height, int type) async {
   final String? result = await tabameWin32MethodChannel.invokeMethod<String>(
     'getTextOCR',
     <String, dynamic>{
@@ -958,6 +958,66 @@ Future<SystemStatsInfo> getSystemStats({bool onlyUsage = true}) async {
       ) ??
       <dynamic, dynamic>{};
   return SystemStatsInfo.fromMap(result);
+}
+
+class HardwareData {
+  final double cpuUsage;
+  final double cpuTemp;
+  final double ramUsage;
+  final double gpuUsage;
+  final double gpuTemp;
+
+  const HardwareData({
+    required this.cpuUsage,
+    required this.cpuTemp,
+    required this.ramUsage,
+    required this.gpuUsage,
+    required this.gpuTemp,
+  });
+
+  factory HardwareData.fromMap(Map<dynamic, dynamic> map) {
+    double toDouble(dynamic value) {
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      return 0.0;
+    }
+
+    return HardwareData(
+      cpuUsage: toDouble(map['cpuUsage']),
+      cpuTemp: toDouble(map['cpuTemp']),
+      ramUsage: toDouble(map['ramUsage']),
+      gpuUsage: toDouble(map['gpuUsage']),
+      gpuTemp: toDouble(map['gpuTemp']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'cpuUsage': cpuUsage,
+      'cpuTemp': cpuTemp,
+      'ramUsage': ramUsage,
+      'gpuUsage': gpuUsage,
+      'gpuTemp': gpuTemp,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'HardwareData('
+        'cpuUsage: $cpuUsage, '
+        'cpuTemp: $cpuTemp, '
+        'ramUsage: $ramUsage, '
+        'gpuUsage: $gpuUsage, '
+        'gpuTemp: $gpuTemp'
+        ')';
+  }
+}
+
+Future<HardwareData> getHardwareData() async {
+  final Map<dynamic, dynamic>? result =
+      await tabameWin32MethodChannel.invokeMethod<Map<dynamic, dynamic>>('getHardwareData');
+
+  return HardwareData.fromMap(result ?? <dynamic, dynamic>{});
 }
 
 Future<void> toggleMonitorWallpaper(bool enabled) async {

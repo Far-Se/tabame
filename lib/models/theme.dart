@@ -1,22 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import 'classes/boxes.dart';
 import 'settings.dart';
 
 class AppTheme {
   static ThemeData getDarkThemeData(BuildContext context) {
-    return ThemeData.dark().copyWith(
+    late TextTheme font;
+    try {
+      font = GoogleFonts.getTextTheme(userSettings.darkTheme.uiFontFamily, ThemeData.dark().textTheme);
+    } catch (_) {
+      userSettings.darkTheme.uiFontFamily = "Roboto";
+      font = GoogleFonts.getTextTheme(userSettings.darkTheme.uiFontFamily, ThemeData.dark().textTheme);
+      Boxes.saveActiveQuickMenuThemes();
+    }
+    try {
+      GoogleFonts.getTextTheme(userSettings.darkTheme.entryFontFamily, ThemeData.dark().textTheme);
+    } catch (_) {
+      userSettings.darkTheme.entryFontFamily = "Roboto";
+      Boxes.saveActiveQuickMenuThemes();
+    }
+    return ThemeData(
+      brightness: Brightness.dark,
       splashColor: const Color.fromARGB(225, 0, 0, 0),
       cardColor: userSettings.darkTheme.background,
-      iconTheme: ThemeData.dark().iconTheme.copyWith(color: userSettings.darkTheme.textColor),
-      textTheme: ThemeData.dark().textTheme.apply(
-            bodyColor: userSettings.darkTheme.textColor,
-            displayColor: userSettings.darkTheme.textColor,
-            decorationColor: userSettings.darkTheme.textColor,
-            fontFamily: userSettings.darkTheme.uiFontFamily,
-          ),
+      iconTheme: IconThemeData(color: userSettings.darkTheme.text),
+      textTheme: font,
       elevatedButtonTheme: ElevatedButtonThemeData(
           style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.all(userSettings.darkTheme.accentColor),
+        backgroundColor: WidgetStateProperty.all(userSettings.darkTheme.accent),
         elevation: WidgetStateProperty.all(0),
         shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
         foregroundColor: WidgetStateProperty.all(userSettings.darkTheme.background),
@@ -33,7 +45,7 @@ class AppTheme {
             verticalOffset: 10,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             margin: const EdgeInsets.all(0),
-            textStyle: TextStyle(color: userSettings.darkTheme.textColor, fontSize: 12, height: 0),
+            textStyle: TextStyle(color: userSettings.darkTheme.text, fontSize: 12, height: 0),
             decoration: BoxDecoration(color: userSettings.darkTheme.background),
             preferBelow: false,
           ),
@@ -52,7 +64,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.darkTheme.accentColor;
+            return userSettings.darkTheme.accent;
           }
           return null;
         }),
@@ -63,7 +75,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.darkTheme.accentColor;
+            return userSettings.darkTheme.accent;
           }
           return null;
         }),
@@ -74,7 +86,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.darkTheme.accentColor;
+            return userSettings.darkTheme.accent;
           }
           return null;
         }),
@@ -83,7 +95,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.darkTheme.accentColor.withValues(alpha: 0.5);
+            return userSettings.darkTheme.accent.withValues(alpha: 0.5);
           }
           return null;
         }),
@@ -91,35 +103,45 @@ class AppTheme {
       colorScheme: ThemeData.dark()
           .colorScheme
           .copyWith(
-            primary: userSettings.darkTheme.accentColor,
-            secondary: userSettings.darkTheme.accentColor,
-            tertiary: userSettings.darkTheme.textColor,
+            primary: userSettings.darkTheme.accent,
+            secondary: userSettings.darkTheme.accent,
+            tertiary: userSettings.darkTheme.text,
             surfaceContainerLow: userSettings.darkTheme.background.lighten(3),
             surfaceContainerHigh: userSettings.darkTheme.background.lighten(5),
             surfaceContainer: userSettings.darkTheme.background.lighten(7),
             primaryContainer: userSettings.darkTheme.background.lighten(10),
           )
           .copyWith(surface: userSettings.darkTheme.background)
-          .copyWith(error: userSettings.darkTheme.accentColor),
-      hoverColor: userSettings.darkTheme.accentColor.withAlpha(60),
+          .copyWith(error: userSettings.darkTheme.accent),
+      hoverColor: userSettings.darkTheme.accent.withAlpha(60),
       dialogTheme: DialogThemeData(backgroundColor: userSettings.darkTheme.background),
     );
   }
 
   static ThemeData getLightThemeData() {
-    return ThemeData.light().copyWith(
+    final ThemeData base = ThemeData.light();
+    late TextTheme font;
+    try {
+      font = GoogleFonts.getTextTheme(userSettings.lightTheme.uiFontFamily, base.textTheme);
+    } catch (_) {
+      userSettings.lightTheme.uiFontFamily = "Roboto";
+      font = GoogleFonts.getTextTheme(userSettings.lightTheme.uiFontFamily, base.textTheme);
+      Boxes.saveActiveQuickMenuThemes();
+    }
+    try {
+      GoogleFonts.getTextTheme(userSettings.lightTheme.entryFontFamily, ThemeData.dark().textTheme);
+    } catch (_) {
+      userSettings.lightTheme.entryFontFamily = "Roboto";
+      Boxes.saveActiveQuickMenuThemes();
+    }
+    return base.copyWith(
       splashColor: const Color.fromARGB(225, 0, 0, 0),
       cardColor: userSettings.lightTheme.background,
-      iconTheme: ThemeData.light().iconTheme.copyWith(color: userSettings.lightTheme.textColor),
-      textTheme: ThemeData.light().textTheme.apply(
-            bodyColor: userSettings.lightTheme.textColor,
-            displayColor: userSettings.lightTheme.textColor,
-            decorationColor: userSettings.lightTheme.textColor,
-            fontFamily: userSettings.lightTheme.uiFontFamily,
-          ),
+      iconTheme: IconThemeData(color: userSettings.lightTheme.text),
+      textTheme: font,
       elevatedButtonTheme: ElevatedButtonThemeData(
           style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.all(userSettings.lightTheme.accentColor),
+        backgroundColor: WidgetStateProperty.all(userSettings.lightTheme.accent),
         elevation: WidgetStateProperty.all(0),
         shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
         foregroundColor: WidgetStateProperty.all(userSettings.lightTheme.background),
@@ -134,7 +156,7 @@ class AppTheme {
             verticalOffset: 10,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             margin: const EdgeInsets.all(0),
-            textStyle: TextStyle(color: userSettings.lightTheme.textColor, fontSize: 12, height: 0),
+            textStyle: TextStyle(color: userSettings.lightTheme.text, fontSize: 12, height: 0),
             decoration: BoxDecoration(color: userSettings.lightTheme.background),
             preferBelow: false,
           ),
@@ -149,7 +171,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.lightTheme.accentColor;
+            return userSettings.lightTheme.accent;
           }
           return null;
         }),
@@ -160,7 +182,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.lightTheme.accentColor;
+            return userSettings.lightTheme.accent;
           }
           return null;
         }),
@@ -171,7 +193,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.lightTheme.accentColor;
+            return userSettings.lightTheme.accent;
           }
           return null;
         }),
@@ -180,7 +202,7 @@ class AppTheme {
             return null;
           }
           if (states.contains(WidgetState.selected)) {
-            return userSettings.lightTheme.accentColor.withValues(alpha: 0.5);
+            return userSettings.lightTheme.accent.withValues(alpha: 0.5);
           }
           return null;
         }),
@@ -188,17 +210,17 @@ class AppTheme {
       colorScheme: ThemeData.light()
           .colorScheme
           .copyWith(
-            primary: userSettings.lightTheme.accentColor,
-            secondary: userSettings.lightTheme.accentColor,
-            tertiary: userSettings.lightTheme.textColor,
+            primary: userSettings.lightTheme.accent,
+            secondary: userSettings.lightTheme.accent,
+            tertiary: userSettings.lightTheme.text,
             surfaceContainerLow: userSettings.lightTheme.background.darken(3),
             surfaceContainerHigh: userSettings.lightTheme.background.darken(5),
             surfaceContainer: userSettings.lightTheme.background.darken(7),
-            primaryContainer: userSettings.lightTheme.accentColor.withValues(alpha: 0.1),
+            primaryContainer: userSettings.lightTheme.accent.withValues(alpha: 0.1),
           )
           .copyWith(surface: userSettings.lightTheme.background)
-          .copyWith(error: userSettings.lightTheme.accentColor),
-      hoverColor: userSettings.lightTheme.accentColor.withAlpha(60),
+          .copyWith(error: userSettings.lightTheme.accent),
+      hoverColor: userSettings.lightTheme.accent.withAlpha(60),
       dialogTheme: DialogThemeData(backgroundColor: userSettings.lightTheme.background),
     );
   }

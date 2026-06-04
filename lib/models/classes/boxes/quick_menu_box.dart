@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../widgets/quickmenu/design_backdrop.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
@@ -49,22 +50,27 @@ class QuickMenuFunctions {
     Globals.clearQuickMenuSearchInput();
   }
 
+  static String oldbackdropType = User.theme.backdropType;
   static void randomizeBackdrop() {
     final ThemeColors currentTheme = userSettings.themeColors;
     if (currentTheme.backdropType == '') {
       userSettings.activeBackdropPath = '';
+      Globals.backdrop = null;
+      oldbackdropType = '';
       return;
     }
     if (currentTheme.backdropType == 'builtIn') {
       final int random = Random().nextInt(10);
       userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+      Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
+      oldbackdropType = 'builtIn';
     } else {
       if (currentTheme.backdropImages.isNotEmpty) {
-        final int random = Random().nextInt(currentTheme.backdropImages.length);
-        userSettings.activeBackdropPath = currentTheme.backdropImages[random];
-      } else {
-        final int random = Random().nextInt(10);
-        userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
+        if (oldbackdropType != userSettings.activeBackdropPath) {
+          userSettings.activeBackdropPath = currentTheme.backdropImages[0];
+          oldbackdropType = userSettings.activeBackdropPath;
+          Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
+        }
       }
     }
   }
@@ -89,8 +95,8 @@ class QuickMenuFunctions {
     taskBarSelectedIdx = -1;
   }
 
-  static Future<void> hideQuickMenu() async {
-    if (Globals.quickMenuPage == QuickMenuPage.launcher) {
+  static Future<void> hideQuickMenu({bool launcherActivateLastWin = true}) async {
+    if (launcherActivateLastWin && Globals.quickMenuPage == QuickMenuPage.launcher) {
       Future<void>.delayed(const Duration(milliseconds: 50), () => Win32.activateWindow(Globals.lastFocusedWinHWND));
     }
     await toggleQuickMenu(visible: false);
@@ -131,6 +137,7 @@ class QuickMenuFunctions {
           triggerQuickAction("action:refreshTaskbar");
         }
         Future<void>.delayed(const Duration(milliseconds: 110), () async {
+          Win32.setWindowInvisible(false);
           if (forceReposition) {
             if (center) {
               Win32.setCenter(useMouse: true);
@@ -142,7 +149,6 @@ class QuickMenuFunctions {
             if (!_listeners.contains(listener)) continue;
             await listener.onQuickMenuVisible(type, center);
           }
-          Win32.setWindowInvisible(false);
           shownTime = DateTime.now().millisecondsSinceEpoch;
         });
       } else {

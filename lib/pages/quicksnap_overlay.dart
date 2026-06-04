@@ -455,7 +455,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final List<QuickGrid> presets = Boxes.quickGrids;
 
     // BUG FIX #3: sync key map by id so renamed/reordered presets get fresh keys.

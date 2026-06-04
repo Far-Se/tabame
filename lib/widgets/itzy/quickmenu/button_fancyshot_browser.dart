@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:pool/pool.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
@@ -188,7 +189,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
     return i == -1 ? '' : path.substring(i).toLowerCase();
   }
 
-  void _loadMonths() {
+  void _loadMonths() async {
     final Directory root = Directory(_rootFolder);
     if (!root.existsSync()) {
       setState(() {
@@ -198,14 +199,21 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       return;
     }
 
-    final List<Directory> dirs = root.listSync(followLinks: false).whereType<Directory>().toList()
-      ..sort((Directory a, Directory b) {
-        // Sort newest first by folder name ("2026 - May")
-        return b.path.toLowerCase().compareTo(a.path.toLowerCase());
+    final List<Directory> dirs = root.listSync(followLinks: false).whereType<Directory>().toList();
+
+    final List<FileStat> stats = await Future.wait(
+      dirs.map((Directory f) => f.stat()),
+    );
+
+    final List<MapEntry<Directory, FileStat>> paired = List<MapEntry<Directory, FileStat>>.generate(
+      dirs.length,
+      (int i) => MapEntry<Directory, FileStat>(dirs[i], stats[i]),
+    )..sort((MapEntry<Directory, FileStat> a, MapEntry<Directory, FileStat> b) {
+        return b.value.changed.compareTo(a.value.changed);
       });
 
     setState(() {
-      _monthFolders = dirs;
+      _monthFolders = paired.map((MapEntry<Directory, FileStat> e) => e.key).toList();
       _selectedMonthFolder = null;
       _files = <File>[];
     });
@@ -277,7 +285,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -312,7 +320,17 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
                       splashRadius: 18,
                     ),
                   ]
-                : null),
+                : <Widget>[
+                    IconButton(
+                      icon: Icon(Icons.arrow_outward_outlined, size: 18, color: accent),
+                      tooltip: 'Open Fancyshot Folder',
+                      onPressed: () {
+                        WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
+                        QuickMenuFunctions.hideQuickMenu();
+                      },
+                      splashRadius: 18,
+                    )
+                  ]),
 
         // ── Screenshots / Recordings toggle ──
         Padding(

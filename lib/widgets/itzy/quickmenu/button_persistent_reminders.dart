@@ -68,7 +68,7 @@ class RemindersPanel extends StatefulWidget {
 class RemindersPanelState extends State<RemindersPanel> {
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

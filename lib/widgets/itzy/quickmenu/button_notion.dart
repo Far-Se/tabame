@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -107,12 +106,22 @@ class NotionResult {
 
 class NotionSearchCache {
   static const String apiKeyKey = "notionApiKey";
-  static final Map<String, List<NotionResult>> searchCache = <String, List<NotionResult>>{};
+
+  /// Single flat map of every page/database ever seen, keyed by Notion page id.
+  /// This is what gets persisted to disk — one deduplicated catalogue of all items.
+  static final Map<String, NotionResult> allItems = <String, NotionResult>{};
+
+  /// Browse cache is still keyed by parent-page id so the browse tree works.
   static final Map<String, List<NotionResult>> browseCache = <String, List<NotionResult>>{};
+
   static bool _loaded = false;
 
   static String get apiKey => (Boxes.pref.getString(apiKeyKey) ?? "").trim();
   static String get cachePath => "${WinUtils.getTabameAppDataFolder()}\\cache\\notion.json";
+
+  // ---------------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------------
 
   static Future<void> load() async {
     if (_loaded) return;
@@ -123,29 +132,20 @@ class NotionSearchCache {
 
       final String content = await file.readAsString();
       final dynamic decoded = jsonDecode(content);
-
-      if (decoded is List) {
-        final List<NotionResult> cached =
-            decoded.map((dynamic e) => NotionResult.fromMap(e as Map<String, dynamic>)).toList();
-        if (cached.isNotEmpty) searchCache["_"] = cached;
-        return;
-      }
-
       if (decoded is! Map<String, dynamic>) return;
 
-      final dynamic searchData = decoded['search'];
-      if (searchData is Map<String, dynamic>) {
-        searchData.forEach((String key, dynamic value) {
-          if (value is List) {
-            searchCache[key] = value.map((dynamic e) => NotionResult.fromMap(e as Map<String, dynamic>)).toList();
-          }
-        });
-      } else if (searchData is List) {
-        searchCache["_"] = searchData.map((dynamic e) => NotionResult.fromMap(e as Map<String, dynamic>)).toList();
+      // Load flat all-items catalogue.
+      final dynamic itemsData = decoded['items'];
+      if (itemsData is List) {
+        for (final dynamic e in itemsData) {
+          final NotionResult r = NotionResult.fromMap(e as Map<String, dynamic>);
+          if (r.id.isNotEmpty) allItems[r.id] = r;
+        }
       }
 
-      final Map<String, dynamic>? browseData = decoded['browse'] as Map<String, dynamic>?;
-      if (browseData != null) {
+      // Load browse cache.
+      final dynamic browseData = decoded['browse'];
+      if (browseData is Map<String, dynamic>) {
         browseData.forEach((String key, dynamic value) {
           if (value is List) {
             browseCache[key] = value.map((dynamic e) => NotionResult.fromMap(e as Map<String, dynamic>)).toList();
@@ -163,23 +163,17 @@ class NotionSearchCache {
       if (!await file.parent.exists()) {
         await file.parent.create(recursive: true);
       }
-      if (searchCache.length > 10) {
-        final int itemsToRemove = searchCache.length - 10;
-        final List<String> keysToRemove = searchCache.keys.take(itemsToRemove).toList();
-        for (final String key in keysToRemove) {
-          searchCache.remove(key);
+
+      // Trim browse cache to 20 entries max.
+      if (browseCache.length > 20) {
+        final List<String> toRemove = browseCache.keys.take(browseCache.length - 20).toList();
+        for (final String k in toRemove) {
+          browseCache.remove(k);
         }
       }
-      if (browseCache.length > 10) {
-        final int itemsToRemove = browseCache.length - 10;
-        final List<String> keysToRemove = browseCache.keys.take(itemsToRemove).toList();
-        for (final String key in keysToRemove) {
-          browseCache.remove(key);
-        }
-      }
+
       final Map<String, dynamic> data = <String, dynamic>{
-        'search': searchCache.map((String k, List<NotionResult> v) =>
-            MapEntry<String, dynamic>(k, v.map((NotionResult e) => e.toMap()).toList())),
+        'items': allItems.values.map((NotionResult e) => e.toMap()).toList(),
         'browse': browseCache.map((String k, List<NotionResult> v) =>
             MapEntry<String, dynamic>(k, v.map((NotionResult e) => e.toMap()).toList())),
       };
@@ -194,56 +188,78 @@ class NotionSearchCache {
     try {
       final File file = File(cachePath);
       if (await file.exists()) await file.delete();
-      searchCache.clear();
+      allItems.clear();
       browseCache.clear();
+      _loaded = false;
     } catch (e) {
       Debug.add("Notion: Error clearing cache: $e");
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Search — returns fresh API results and merges them into allItems.
+  // ---------------------------------------------------------------------------
+
   static Future<List<NotionResult>> search(String query) async {
     await load();
-    if (apiKey.isEmpty) return cached(query);
+    if (apiKey.isEmpty) return cachedSearch(query);
 
     final String queryTrimmed = query.trim();
     final Uri uri = Uri.parse("https://api.notion.com/v1/search");
-    final http.Response response = await http.post(
-      uri,
-      headers: <String, String>{
-        "Authorization": "Bearer $apiKey",
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode(<String, dynamic>{
+
+    final Map<String, NotionResult> freshMap = <String, NotionResult>{};
+    String? cursor;
+    do {
+      final Map<String, dynamic> requestBody = <String, dynamic>{
         "query": queryTrimmed,
-        "page_size": 25,
-      }),
-    );
+        "page_size": 100,
+      };
+      if (cursor != null) requestBody["start_cursor"] = cursor;
 
-    if (response.statusCode != 200) {
-      throw Exception("Error: ${response.statusCode} - ${response.reasonPhrase}");
+      final http.Response response = await http.post(
+        uri,
+        headers: <String, String>{
+          "Authorization": "Bearer $apiKey",
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception("Error: ${response.statusCode} - ${response.reasonPhrase}");
+      }
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      // print(query);
+      // print(data);
+      final List<dynamic>? rawResults = data['results'] as List<dynamic>?;
+      for (final dynamic e in rawResults ?? <dynamic>[]) {
+        final NotionResult r = NotionResult.fromJson(e as Map<String, dynamic>);
+        freshMap[r.id] = r;
+      }
+
+      final bool hasMore = (data['has_more'] as bool?) ?? false;
+      cursor = hasMore ? (data['next_cursor'] as String?) : null;
+    } while (cursor != null);
+
+    final List<NotionResult> results = freshMap.values.toList();
+
+    // Merge into the global catalogue — never remove items, only add/update.
+    if (results.isNotEmpty) {
+      allItems.addAll(freshMap);
+      await save();
     }
 
-    final Map<String, dynamic> data = jsonDecode(response.body);
-    final List<dynamic>? rawResults = data['results'] as List<dynamic>?;
-    final List<NotionResult> parsed =
-        rawResults?.map((dynamic e) => NotionResult.fromJson(e as Map<String, dynamic>)).toList() ?? <NotionResult>[];
-
-    final Map<String, NotionResult> mergeMap = <String, NotionResult>{};
-    for (final NotionResult item in parsed) {
-      mergeMap[item.id] = item;
-    }
-
-    final List<NotionResult> results = mergeMap.values.toList();
-    if (queryTrimmed.isEmpty) searchCache['_'] = parsed;
-    searchCache[queryTrimmed] = results;
-    await save();
     return results;
   }
 
-  static List<NotionResult> cached(String query) {
-    final String queryTrimmed = query.trim();
-    return searchCache[queryTrimmed] ?? (queryTrimmed.isEmpty ? searchCache['_'] : null) ?? <NotionResult>[];
+  /// Returns all cached items whose title contains [query] (case-insensitive).
+  /// Used as the instant result while the real API call is in flight.
+  static List<NotionResult> cachedSearch(String query) {
+    final String q = query.trim().toLowerCase();
+    if (q.isEmpty) return allItems.values.toList();
+    return allItems.values.where((NotionResult r) => r.title.toLowerCase().contains(q)).toList();
   }
 }
 
@@ -297,7 +313,6 @@ class _NotionWidgetState extends State<NotionWidget> {
   List<NotionResult> _results = <NotionResult>[];
   String? _errorMessage;
 
-  final Map<String, List<NotionResult>> _searchCache = <String, List<NotionResult>>{};
   final Map<String, List<NotionResult>> _browseCache = <String, List<NotionResult>>{};
   Timer? _debounceTimer;
 
@@ -343,21 +358,16 @@ class _NotionWidgetState extends State<NotionWidget> {
 
   Future<void> _loadCache() async {
     await NotionSearchCache.load();
-    _searchCache
-      ..clear()
-      ..addAll(NotionSearchCache.searchCache);
     _browseCache
       ..clear()
       ..addAll(NotionSearchCache.browseCache);
-    if (_searchCache.containsKey("_") && mounted) {
-      setState(() => _results = _searchCache["_"]!);
+    // Show every known item as the initial list before the first API call.
+    if (NotionSearchCache.allItems.isNotEmpty && mounted) {
+      setState(() => _results = NotionSearchCache.allItems.values.toList());
     }
   }
 
   Future<void> _saveCache() async {
-    NotionSearchCache.searchCache
-      ..clear()
-      ..addAll(_searchCache);
     NotionSearchCache.browseCache
       ..clear()
       ..addAll(_browseCache);
@@ -368,7 +378,6 @@ class _NotionWidgetState extends State<NotionWidget> {
     try {
       await NotionSearchCache.clear();
       setState(() {
-        _searchCache.clear();
         _browseCache.clear();
         _results = <NotionResult>[];
         _browseItems = <NotionResult>[];
@@ -427,8 +436,9 @@ class _NotionWidgetState extends State<NotionWidget> {
   Future<void> _browseLoad(String pageId, {String objectType = 'page'}) async {
     if (!mounted || _apiKey.isEmpty) return;
 
-    // Show cached version immediately if available
     final String cacheKey = pageId.isEmpty ? 'root' : pageId;
+
+    // Show cached version immediately.
     if (_browseCache.containsKey(cacheKey)) {
       setState(() {
         _browseItems = _browseCache[cacheKey]!;
@@ -453,7 +463,8 @@ class _NotionWidgetState extends State<NotionWidget> {
 
       if (!mounted) return;
 
-      // If page is empty and not root, open in Notion and go back
+      // If a non-root page came back empty the page itself has no sub-pages,
+      // so open it in Notion and navigate back.
       if (freshItems.isEmpty && pageId.isNotEmpty) {
         final _BreadcrumbEntry last = _breadcrumbs.last;
         if (last.id == pageId) {
@@ -472,22 +483,25 @@ class _NotionWidgetState extends State<NotionWidget> {
         }
       }
 
-      // Check if data actually changed to avoid unnecessary rebuilds
-      final List<NotionResult> currentItems = _browseCache[cacheKey] ?? <NotionResult>[];
-      final bool changed = currentItems.length != freshItems.length || !_isSameList(currentItems, freshItems);
+      // Merge fresh items with whatever was cached so items never vanish
+      // mid-session due to API ordering differences.
+      final Map<String, NotionResult> merged = <String, NotionResult>{
+        for (final NotionResult r in _browseCache[cacheKey] ?? <NotionResult>[]) r.id: r,
+        for (final NotionResult r in freshItems) r.id: r,
+      };
+      final List<NotionResult> mergedList = merged.values.toList();
 
+      final bool changed = !_isSameList(_browseCache[cacheKey] ?? <NotionResult>[], mergedList);
       if (changed) {
         setState(() {
-          _browseItems = freshItems;
-          _browseCache[cacheKey] = freshItems;
-          _selectedIndex = freshItems.isEmpty ? -1 : _selectedIndex.clamp(0, freshItems.length - 1);
+          _browseItems = mergedList;
+          _browseCache[cacheKey] = mergedList;
+          _selectedIndex = mergedList.isEmpty ? -1 : _selectedIndex.clamp(0, mergedList.length - 1);
         });
         _saveCache();
       }
 
-      setState(() {
-        _browseLoading = false;
-      });
+      setState(() => _browseLoading = false);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -516,26 +530,38 @@ class _NotionWidgetState extends State<NotionWidget> {
   }
 
   Future<List<NotionResult>> _searchByObjectType(String type) async {
-    final http.Response response = await http.post(
-      Uri.parse('https://api.notion.com/v1/search'),
-      headers: <String, String>{
-        'Authorization': 'Bearer $_apiKey',
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(<String, dynamic>{
-        // 'filter': <String, String>{'value': type, 'property': 'object'},
+    final Map<String, NotionResult> mergeMap = <String, NotionResult>{};
+    String? cursor;
+    do {
+      final Map<String, dynamic> body = <String, dynamic>{
         'sort': <String, String>{'direction': 'descending', 'timestamp': 'last_edited_time'},
-        'page_size': 50,
-      }),
-    );
-    if (response.statusCode != 200) return <NotionResult>[];
-    final Map<String, dynamic> data = jsonDecode(response.body);
-    final List<dynamic> raw = (data['results'] as List<dynamic>?) ?? <dynamic>[];
-    return raw
-        .map((dynamic e) => NotionResult.fromJson(e as Map<String, dynamic>))
-        .where((NotionResult r) => r.title.isNotEmpty)
-        .toList();
+        'page_size': 100,
+      };
+      if (cursor != null) body['start_cursor'] = cursor;
+
+      final http.Response response = await http.post(
+        Uri.parse('https://api.notion.com/v1/search'),
+        headers: <String, String>{
+          'Authorization': 'Bearer $_apiKey',
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      if (response.statusCode != 200) break;
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      final List<dynamic> raw = (data['results'] as List<dynamic>?) ?? <dynamic>[];
+      for (final dynamic e in raw) {
+        final NotionResult r = NotionResult.fromJson(e as Map<String, dynamic>);
+        if (r.title.isNotEmpty) mergeMap[r.id] = r;
+      }
+
+      final bool hasMore = (data['has_more'] as bool?) ?? false;
+      cursor = hasMore ? (data['next_cursor'] as String?) : null;
+    } while (cursor != null);
+
+    return mergeMap.values.toList();
   }
 
   /// Returns rows (pages) inside a Notion database.
@@ -584,7 +610,7 @@ class _NotionWidgetState extends State<NotionWidget> {
       if (response.statusCode != 200) break;
 
       final Map<String, dynamic> data = jsonDecode(response.body);
-      final List<NotionResult> cacheValues = _searchCache.values.flattenedToList;
+      final Map<String, NotionResult> cacheValues = NotionSearchCache.allItems;
       final List<dynamic> raw = (data['results'] as List<dynamic>?) ?? <dynamic>[];
       for (final dynamic block in raw) {
         final Map<String, dynamic> b = block as Map<String, dynamic>;
@@ -602,7 +628,7 @@ class _NotionWidgetState extends State<NotionWidget> {
           if (icon != null && icon['type'] == 'emoji') emoji = icon['emoji'] as String?;
         } catch (_) {}
         if (emoji == null) {
-          final NotionResult? found = cacheValues.firstWhereOrNull((NotionResult e) => e.id == id);
+          final NotionResult? found = cacheValues[id];
           if (found != null) emoji = found.emojiIcon;
         }
 
@@ -649,38 +675,49 @@ class _NotionWidgetState extends State<NotionWidget> {
 
     final String queryTrimmed = query.trim();
 
-    final List<NotionResult> cached = NotionSearchCache.cached(queryTrimmed);
-    if (cached.isNotEmpty) {
-      setState(() {
-        _results = cached;
-      });
-    }
-
+    // Clear immediately when the query changes so stale results from the
+    // previous query never bleed into the new one.
     setState(() {
+      _results = <NotionResult>[];
+      _selectedIndex = -1;
       _isLoading = true;
       _errorMessage = null;
     });
 
-    try {
-      final List<NotionResult> results = await NotionSearchCache.search(queryTrimmed);
-      if (!mounted) return;
-      _searchCache
-        ..clear()
-        ..addAll(NotionSearchCache.searchCache);
+    // Show cached results for THIS query right away so the UI isn't blank.
+    final List<NotionResult> cachedResults = NotionSearchCache.cachedSearch(queryTrimmed);
+    if (cachedResults.isNotEmpty && mounted) {
       setState(() {
-        _results = results;
+        _results = cachedResults;
+        _selectedIndex = 0;
+      });
+    }
+
+    try {
+      final List<NotionResult> fresh = await NotionSearchCache.search(queryTrimmed);
+      if (!mounted) return;
+
+      // Merge cache + fresh only for THIS query so new pages that appeared
+      // since the cache was written are included, but nothing from other
+      // queries ever leaks in.
+      final Map<String, NotionResult> merged = <String, NotionResult>{
+        for (final NotionResult r in cachedResults) r.id: r,
+        for (final NotionResult r in fresh) r.id: r,
+      };
+
+      setState(() {
+        _results = merged.values.toList();
         _selectedIndex = _results.isEmpty ? -1 : _selectedIndex.clamp(0, _results.length - 1);
       });
     } catch (e) {
       if (!mounted) return;
+      // Keep whatever is already shown for this query; just surface the error.
       setState(() {
-        _errorMessage = "Network error: \${e.toString()}";
+        _errorMessage = "Network error: ${e.toString()}";
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -707,7 +744,7 @@ class _NotionWidgetState extends State<NotionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     String headerTitle = 'Notion';
@@ -1095,7 +1132,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: Text(
-                      _currentQuery.isEmpty ? "No recent items" : "No results found for '\$_currentQuery'",
+                      _currentQuery.isEmpty ? "No recent items" : "No results found for '$_currentQuery'",
                       style: TextStyle(fontSize: 12, color: onSurface.withAlpha(120)),
                     ),
                   ),

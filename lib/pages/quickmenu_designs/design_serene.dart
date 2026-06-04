@@ -2,35 +2,23 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
-import '../../widgets/quickmenu/design_backdrop.dart';
 import '../../widgets/quickmenu/info_bar.dart';
+import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
-/// A calm, unified frosted-glass panel.
-///
-/// Architecture mirrors [MainMenuInterfaceWidget] — one ClipRRect shell,
-/// background layer + foreground column — but the aesthetic shifts toward
-/// a soft, luminous Serene-like feel:
-///
-///  - Single panel with no floating card sub-sections.
-///  - `BackdropFilter` blur on the whole shell for a frosted-glass look.
-///  - Background is a gentle radial glow from the accent colour, not a
-///    flat gradient or a grid.
-///  - Dividers are nearly invisible hairlines — present for rhythm, not noise.
-///  - Outer shell has a translucent specular border and a single diffused
-///    shadow; no inner accent border.
 class MainMenuSereneWidget extends StatelessWidget {
   const MainMenuSereneWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color surface = theme.colorScheme.surface;
     final bool isDark = theme.brightness == Brightness.dark;
 
@@ -117,13 +105,8 @@ class MainMenuSereneWidget extends StatelessWidget {
                   child: Stack(
                     children: <Widget>[
                       // Optional backdrop image underneath everything.
-                      if (userSettings.themeColors.backdropType.isNotEmpty)
-                        Positioned.fill(
-                          child: DesignBackdrop(
-                            path: userSettings.activeBackdropPath,
-                            opacity: userSettings.themeColors.backdropOpacity,
-                          ),
-                        ),
+                      if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
+                        Globals.backdrop!,
 
                       // Content column — mirrors interface design's structure.
                       RepaintBoundary(
@@ -158,6 +141,7 @@ class MainMenuSereneWidget extends StatelessWidget {
 
                             // ── Optional system stats ─────────────────────
                             if (userSettings.taskManagerStats) const TaskbarStats(),
+                            if (userSettings.libreStats) const LibreStats(),
 
                             // ── Bottom bar ────────────────────────────────
                             Container(

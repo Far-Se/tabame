@@ -44,150 +44,160 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
           children: <Widget>[
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
+                final bool disableAnimations = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+                final Color surface = Theme.of(context).colorScheme.surface;
+                final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Container(
-                      padding: const EdgeInsets.all(18),
+                      // Deep immersive top-to-bottom gradient
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                           colors: <Color>[
-                            Theme.of(context).colorScheme.surface.withAlpha(245),
-                            Color.alphaBlend(accent.withAlpha(24), Theme.of(context).colorScheme.surface),
-                            Color.alphaBlend(accent.withAlpha(10), Theme.of(context).colorScheme.surface),
+                            Color.alphaBlend(accent.withAlpha(38), surface),
+                            Color.alphaBlend(accent.withAlpha(18), surface),
+                            surface,
                           ],
+                          stops: const <double>[0.0, 0.45, 1.0],
                         ),
-                        border: Border.all(color: accent.withAlpha(28)),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: Colors.black.withAlpha(18),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
                       ),
                       child: Material(
                         type: MaterialType.transparency,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            Stack(
-                              // fit: StackFit.passthrough,
-                              children: <Widget>[
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: _PlayerTrackMenuButton(
-                                    onSelected: (_PlayerTrackMenuAction action) =>
-                                        _handlePlayerTrackMenuAction(action, item),
-                                  ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                          child: Stack(
+                            children: <Widget>[
+                              // More-menu aligned right
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: _PlayerTrackMenuButton(
+                                  onSelected: (_PlayerTrackMenuAction action) =>
+                                      _handlePlayerTrackMenuAction(action, item),
                                 ),
-                                const SizedBox(height: 8),
-                                Builder(
-                                  builder: (BuildContext context) {
-                                    final bool disableAnimations =
-                                        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-                                    final bool useStackedHeader = constraints.maxWidth < 430;
-                                    final Widget metadata = AnimatedSwitcher(
-                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  const SizedBox(height: 6),
+                                  // Large centered cover art with coloured shadow
+                                  Center(
+                                    child: AnimatedSwitcher(
+                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 300),
                                       switchInCurve: Curves.easeOutCubic,
                                       switchOutCurve: Curves.easeOutCubic,
-                                      child: KeyedSubtree(
-                                        key: ValueKey<String>('meta_${item.id}'),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              useStackedHeader ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            Text(
-                                              _clipPlayerLabel(item.title),
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                              style: TextStyle(
-                                                fontFamily: userSettings.themeColors.entryFontFamily,
-                                                fontSize: 19,
-                                                height: 1.1,
-                                                fontWeight: FontWeight.w800,
-                                                color: Theme.of(context).colorScheme.onSurface,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              _clipPlayerLabel(item.artist ?? "Unknown artist"),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                              style: TextStyle(
-                                                fontFamily: userSettings.themeColors.entryFontFamily,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: accent.withAlpha(200),
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            if (item.album != null) ...<Widget>[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                item.album!,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: useStackedHeader ? TextAlign.center : TextAlign.start,
-                                                style: TextStyle(
-                                                  fontFamily: userSettings.themeColors.entryFontFamily,
-                                                  fontSize: 11.5,
-                                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                                      transitionBuilder: (Widget child, Animation<double> anim) => FadeTransition(
+                                        opacity: anim,
+                                        child: ScaleTransition(
+                                          scale: Tween<double>(begin: 0.94, end: 1.0).animate(
+                                            CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                                          ),
+                                          child: child,
                                         ),
                                       ),
-                                    );
-
-                                    final Widget coverArt = AnimatedSwitcher(
-                                      duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 240),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeOutCubic,
                                       child: KeyedSubtree(
                                         key: ValueKey<String>(item.id),
-                                        child: _CoverArt(
-                                          item: item,
-                                          size: 120,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(18),
+                                            boxShadow: <BoxShadow>[
+                                              BoxShadow(
+                                                color: accent.withAlpha(90),
+                                                blurRadius: 32,
+                                                offset: const Offset(0, 14),
+                                                spreadRadius: -4,
+                                              ),
+                                              BoxShadow(
+                                                color: Colors.black.withAlpha(55),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(18),
+                                            child: _CoverArt(
+                                              item: item,
+                                              size: (constraints.maxWidth * 0.58).clamp(130.0, 160.0),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    );
+                                    ),
+                                  ),
+                                  const SizedBox(height: 15),
 
-                                    if (useStackedHeader) {
-                                      return Column(
+                                  // Song title + artist + album — centered
+                                  AnimatedSwitcher(
+                                    duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
+                                    switchInCurve: Curves.easeOutCubic,
+                                    switchOutCurve: Curves.easeOutCubic,
+                                    child: KeyedSubtree(
+                                      key: ValueKey<String>('meta_${item.id}'),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: <Widget>[
-                                          Center(child: coverArt),
-                                          const SizedBox(height: 18),
-                                          metadata,
+                                          Text(
+                                            _clipPlayerLabel(item.title, maxChars: 52),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.getFont(
+                                              userSettings.themeColors.entryFontFamily,
+                                              fontSize: 20,
+                                              height: 1.15,
+                                              fontWeight: FontWeight.w800,
+                                              color: onSurface,
+                                              letterSpacing: -0.3,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            _clipPlayerLabel(item.artist ?? "Unknown artist"),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.getFont(
+                                              userSettings.themeColors.entryFontFamily,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: accent,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                          if (item.album != null) ...<Widget>[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              item.album!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.getFont(
+                                                userSettings.themeColors.entryFontFamily,
+                                                fontSize: 11,
+                                                color: onSurface.withAlpha(120),
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      );
-                                    }
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
 
-                                    return Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        coverArt,
-                                        const SizedBox(width: 30),
-                                        Expanded(child: metadata),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            _buildTimeline(accent, item),
-                            const SizedBox(height: 10),
-                            _buildTransport(accent, sequenceState, item),
-                            const SizedBox(height: 20),
-                            _buildQueueButton(accent, queueLength, currentIndex),
-                          ],
+                                  _buildTimeline(accent, item),
+                                  const SizedBox(height: 8),
+                                  _buildTransport(accent, sequenceState, item),
+                                  const SizedBox(height: 16),
+                                  _buildQueueButton(accent, queueLength, currentIndex),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -391,40 +401,44 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             final double value = position.inMilliseconds.clamp(0, max.toInt()).toDouble();
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              child: Row(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+              child: Column(
                 children: <Widget>[
-                  _TimelineTimeLabel(
-                    label: _formatDuration(position),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 3,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                        activeTrackColor: accent.withAlpha(220),
-                        inactiveTrackColor: accent.withAlpha(30),
-                        thumbColor: accent,
-                      ),
-                      child: Slider(
-                        min: 0,
-                        max: max,
-                        value: value,
-                        padding: EdgeInsets.zero,
-                        onChanged: trustedDuration == null
-                            ? null
-                            : (double next) {
-                                final int nextMilliseconds = next.round().clamp(0, trustedDuration.inMilliseconds);
-                                MusicServerManager.player.seek(Duration(milliseconds: nextMilliseconds));
-                              },
-                      ),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 4.5,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.5),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                      activeTrackColor: accent,
+                      inactiveTrackColor: accent.withAlpha(35),
+                      thumbColor: accent,
+                      overlayColor: accent.withAlpha(28),
+                      trackShape: const RoundedRectSliderTrackShape(),
+                    ),
+                    child: Slider(
+                      min: 0,
+                      max: max,
+                      value: value,
+                      padding: EdgeInsets.zero,
+                      onChanged: trustedDuration == null
+                          ? null
+                          : (double next) {
+                              final int nextMilliseconds = next.round().clamp(0, trustedDuration.inMilliseconds);
+                              MusicServerManager.player.seek(Duration(milliseconds: nextMilliseconds));
+                            },
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  _TimelineTimeLabel(
-                    label: trustedDuration == null ? "--:--" : _formatDuration(duration),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        _TimelineTimeLabel(label: _formatDuration(position)),
+                        _TimelineTimeLabel(
+                          label: trustedDuration == null ? "--:--" : _formatDuration(duration),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -573,62 +587,42 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
   }
 
   Widget _buildQueueButton(Color accent, int queueLength, int currentIndex) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: InkWell(
-        onTap: queueLength == 0 ? null : () => setState(() => _queueVisible = true),
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-          decoration: BoxDecoration(
-            color: accent.withAlpha(12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withAlpha(30)),
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: accent.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.queue_music_rounded, size: 16, color: accent),
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      onTap: queueLength == 0 ? null : () => setState(() => _queueVisible = true),
+      borderRadius: BorderRadius.circular(99),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(14),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: accent.withAlpha(40)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.queue_music_rounded, size: 15, color: accent),
+            const SizedBox(width: 7),
+            Text(
+              "Up next",
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: accent.withAlpha(22),
+                borderRadius: BorderRadius.circular(999),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      "Queue",
-                      style: TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 1),
-                  ],
-                ),
+              child: Text(
+                "$currentIndex / $queueLength",
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent),
               ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: accent.withAlpha(18),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  "$currentIndex/$queueLength",
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded,
-                  size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
-            ],
-          ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.keyboard_arrow_up_rounded, size: 16, color: onSurface.withAlpha(110)),
+          ],
         ),
       ),
     );
@@ -1669,15 +1663,15 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       isDense: true,
       hintText: hint,
       hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
-      prefixIcon: Icon(icon, size: 16, color: userSettings.themeColors.accentColor),
+      prefixIcon: Icon(icon, size: 16, color: userSettings.themeColors.accent),
       suffixIcon: suffix,
       filled: true,
-      fillColor: userSettings.themeColors.accentColor.withAlpha(10),
+      fillColor: userSettings.themeColors.accent.withAlpha(10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: userSettings.themeColors.accentColor.withAlpha(90)),
+        borderSide: BorderSide(color: userSettings.themeColors.accent.withAlpha(90)),
       ),
     );
   }
@@ -1692,22 +1686,74 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       const _TabSpec(Icons.settings_rounded, "Servers"),
     ];
 
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onSurface.withAlpha(4),
-        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(12), width: 1)),
+        color: Color.alphaBlend(onSurface.withAlpha(6), surface),
+        border: Border(top: BorderSide(color: onSurface.withAlpha(14), width: 1)),
       ),
       child: Row(
         children: tabs.asMap().entries.map((MapEntry<int, _TabSpec> entry) {
+          final bool active = entry.key == _tabIndex;
           return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _TabButton(
-                icon: entry.value.icon,
-                label: entry.value.label,
-                active: entry.key == _tabIndex,
-                onTap: () => _setTab(entry.key),
+            child: GestureDetector(
+              onTap: () => _setTab(entry.key),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: active ? accent.withAlpha(22) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: active ? accent.withAlpha(80) : Colors.transparent,
+                    width: 1,
+                  ),
+                ),
+                child: SizedBox(
+                  height: 35,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        top: active ? 2 : 8,
+                        child: Icon(
+                          entry.value.icon,
+                          size: 18,
+                          color: active ? accent : onSurface.withAlpha(100),
+                        ),
+                      ),
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        bottom: active ? 4 : -10,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 150),
+                          opacity: active ? 1 : 0,
+                          child: Text(
+                            entry.value.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
+                              height: 1.0,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );

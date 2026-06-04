@@ -93,7 +93,7 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'PRO TIP: With hooks active, start dragging any window and PRESS RIGHT CLICK to open the QuickSnap layout overlay instantly.',
+                    'How to Use: Start dragging any window then PRESS RIGHT CLICK to open the QuickSnap layout overlay instantly then drop it into a desired space. You can move the mouse on the top to see all QuickSnap Zones Sets.',
                     style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: accent, height: 1.3),
                   ),
                 ),
@@ -161,7 +161,7 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
 
   Widget _buildList() {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -173,18 +173,26 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               _buildHooksToggle(accent, theme),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
               Row(
                 children: <Widget>[
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text('QuickSnap Zones',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(
+                          'QuickSnap Zones',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text('Define custom screen regions and snap windows to them for an organized workspace',
-                            style: theme.textTheme.bodySmall?.copyWith(color: onSurface.withValues(alpha: 0.6))),
+                        Text(
+                          'Define custom screen regions and snap windows to them for an organized workspace',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -192,12 +200,6 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
                     onPressed: _addQuickGrid,
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('New Preset'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: theme.colorScheme.surface,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
                   ),
                 ],
               ),
@@ -205,26 +207,29 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
           ),
         ),
         const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          child: _GridSettingsTile(onTap: () => setState(() => _showGridSettings = true)),
-        ),
-        if (_zones.isEmpty)
-          _EmptyState(onAdd: _addQuickGrid)
-        else
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: <Widget>[
-                for (int i = 0; i < _zones.length; i++)
-                  _ZoneListTile(
-                    zone: _zones[i],
-                    onEdit: () => setState(() => _editingIndex = i),
-                    onDelete: () => _deleteQuickGrid(i),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: <Widget>[
+                  _GridSettingsTile(
+                    onTap: () => setState(() => _showGridSettings = true),
                   ),
-              ],
+                  if (_zones.isEmpty)
+                    _EmptyState(onAdd: _addQuickGrid)
+                  else
+                    for (int i = 0; i < _zones.length; i++)
+                      _ZoneListTile(
+                        zone: _zones[i],
+                        onEdit: () => setState(() => _editingIndex = i),
+                        onDelete: () => _deleteQuickGrid(i),
+                      ),
+                ],
+              ),
             ),
           ),
+        ),
       ],
     );
   }
@@ -244,7 +249,7 @@ class _ZoneListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(
@@ -301,7 +306,7 @@ class _ZoneMiniPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: CustomPaint(
@@ -440,7 +445,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool isFreestyle = _zone.layoutType == QuickGridLayoutType.freestyle;
 
@@ -827,7 +832,7 @@ class _ZoneCanvasState extends State<_ZoneCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
@@ -1208,7 +1213,7 @@ class _ZoneFreestyleCanvasState extends State<_ZoneFreestyleCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return LayoutBuilder(
@@ -1669,7 +1674,7 @@ class _PctFieldState extends State<_PctField> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Expanded(
@@ -1766,7 +1771,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.remove_rounded,
             onTap: widget.value > 0 ? () => widget.onChanged(widget.value - 1) : null,
-            accent: userSettings.themeColors.accentColor,
+            accent: userSettings.themeColors.accent,
           ),
           Expanded(
             child: Focus(
@@ -1785,7 +1790,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: userSettings.themeColors.accentColor, width: 1.5),
+                    borderSide: BorderSide(color: userSettings.themeColors.accent, width: 1.5),
                   ),
                 ),
                 onChanged: (String v) {
@@ -1798,7 +1803,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.add_rounded,
             onTap: widget.value < 200 ? () => widget.onChanged(widget.value + 1) : null,
-            accent: userSettings.themeColors.accentColor,
+            accent: userSettings.themeColors.accent,
           ),
         ],
       ),
@@ -1965,7 +1970,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Padding(
@@ -2008,7 +2013,7 @@ class _GridSettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(

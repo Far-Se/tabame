@@ -804,7 +804,18 @@ class MusicServerManager {
             .toList(growable: false),
         initialIndex: initialIndex.clamp(0, playable.length - 1),
       );
-      if (play) await player.play();
+      if (play) {
+        // Wait until the player leaves the idle/loading state so that play()
+        // is not silently swallowed on the very first load (just_audio requires
+        // the audio source to be prepared before play() takes effect).
+        final ProcessingState current = player.processingState;
+        if (current == ProcessingState.idle || current == ProcessingState.loading) {
+          await player.processingStateStream
+              .firstWhere((ProcessingState s) => s != ProcessingState.idle && s != ProcessingState.loading)
+              .timeout(const Duration(seconds: 10), onTimeout: () => ProcessingState.idle);
+        }
+        await player.play();
+      }
     } catch (e) {
       debugPrint("MusicServerManager.playQueue error: $e");
     }

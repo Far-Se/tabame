@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
@@ -31,9 +32,10 @@ enum TPage {
 enum QuickMenuDesigns {
   classic,
   modern,
-  interface,
+  serene,
   matrix,
-  serene;
+  interface,
+  ;
 
   String get name {
     return switch (this) {
@@ -63,6 +65,7 @@ class Settings {
   int quickMenuDesign = QuickMenuDesigns.modern.index;
   bool showTrayBar = true;
   bool showWeather = true;
+  bool libreStats = false;
   bool isWindows10 = false;
   bool previewTheme = false;
   bool volumeSetBack = false;
@@ -170,8 +173,8 @@ class Settings {
   }) {
     return ThemeColors(
       background: background,
-      textColor: textColor,
-      accentColor: accentColor,
+      text: textColor,
+      accent: accentColor,
       gradientAlpha: gradientAlpha,
       uiFontFamily: uiFontFamily,
       uiFontWeight: uiFontWeight,
@@ -699,4 +702,43 @@ extension ColorExtensions on Color {
     final HSLColor hsl = HSLColor.fromColor(this);
     return hsl.withLightness(math.min(1, math.max(0, hsl.lightness - amount / 100))).toColor();
   }
+}
+
+final TextStyle baseEntryStyle = GoogleFonts.getFont(
+  userSettings.themeColors.entryFontFamily,
+  fontSize: 12,
+  color: User.theme.text,
+  fontWeight: FontWeight(
+    userSettings.themeColors.entryFontWeight,
+  ),
+  fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+);
+TextStyle entryStyle(bool isSelected, {double fontSize = 12, double? letterSpacing}) {
+  return baseEntryStyle.copyWith(
+    fontSize: fontSize,
+    letterSpacing: letterSpacing,
+    color: isSelected ? User.theme.text : User.theme.text.withAlpha(200),
+  );
+}
+
+class FontThemeCache {
+  static final Map<String, TextTheme> _cache = <String, TextTheme>{};
+
+  static TextTheme getTextTheme({
+    required String fontFamily,
+    required bool isDark,
+  }) {
+    final String key = '$fontFamily-$isDark';
+
+    return _cache.putIfAbsent(key, () {
+      final ThemeData base = isDark ? ThemeData.dark() : ThemeData.light();
+
+      return GoogleFonts.getTextTheme(
+        fontFamily,
+        base.textTheme,
+      );
+    });
+  }
+
+  static void clear() => _cache.clear();
 }

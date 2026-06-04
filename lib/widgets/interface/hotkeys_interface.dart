@@ -163,7 +163,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   }
 
   Widget _buildScreenDrawHotkeysTile(ColorScheme colors, TextTheme texts) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -214,7 +214,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
   }
 
   Widget _buildQuickClickHotkeysTile(ColorScheme colors, TextTheme texts) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -290,7 +290,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
               FilledButton.icon(
                 onPressed: _addNewHotkey,
                 icon: const Icon(Icons.add, size: 20),
-                label: const Text("ADD HOTKEY", style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text("ADD HOTKEY"),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -769,12 +769,12 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
           margin: const EdgeInsets.only(bottom: 6),
           decoration: BoxDecoration(
             color: isEnabled
-                ? (_hovered ? userSettings.themeColors.accentColor.withAlpha(12) : widget.onSurface.withAlpha(5))
+                ? (_hovered ? userSettings.themeColors.accent.withAlpha(12) : widget.onSurface.withAlpha(5))
                 : widget.onSurface.withAlpha(2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isEnabled
-                  ? (_hovered ? userSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent)
+                  ? (_hovered ? userSettings.themeColors.accent.withAlpha(40) : Colors.transparent)
                   : (_hovered ? widget.onSurface.withAlpha(20) : Colors.transparent),
             ),
           ),
@@ -822,7 +822,7 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
                                   fontWeight: isEnabled ? FontWeight.w500 : FontWeight.w400,
                                   fontStyle: isEnabled ? FontStyle.normal : FontStyle.italic,
                                   color: isEnabled
-                                      ? (_hovered ? userSettings.themeColors.accentColor : widget.onSurface)
+                                      ? (_hovered ? userSettings.themeColors.accent : widget.onSurface)
                                       : widget.onSurface.withAlpha(150),
                                 ),
                               ),
@@ -1257,7 +1257,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme texts = Theme.of(context).textTheme;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Container(
       decoration: BoxDecoration(
@@ -1362,7 +1362,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
 
   Widget _modifierChip(String label, bool active) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Expanded(
       child: Container(
@@ -1469,7 +1469,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                 ),
               ),
               const SizedBox(width: 16),
-              MiniToggleSwitch(
+              Switch(
                 value: _enabled,
                 onChanged: (bool value) {
                   setState(() => _enabled = value);
@@ -1486,7 +1486,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
           builder: (BuildContext context) {
             final ColorScheme colors2 = Theme.of(context).colorScheme;
             final TextTheme texts2 = Theme.of(context).textTheme;
-            final Color accent = userSettings.themeColors.accentColor;
+            final Color accent = userSettings.themeColors.accent;
             final Hotkeys qch = widget.quickClickHotkey;
             return Padding(
               padding: const EdgeInsets.only(bottom: 24),
@@ -1956,7 +1956,7 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
               child: Icon(
                 Icons.sensors_rounded,
                 size: 16,
-                color: _listening ? userSettings.themeColors.accentColor : userSettings.themeColors.textColor,
+                color: _listening ? userSettings.themeColors.accent : userSettings.themeColors.text,
               ),
             ),
           ),

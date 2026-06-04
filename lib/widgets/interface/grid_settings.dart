@@ -26,7 +26,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -438,7 +438,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
   }
 
   Widget _toggleChip({required String label, required bool value, required ValueChanged<bool> onChanged}) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(20),

@@ -809,7 +809,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color background = userSettings.themeColors.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
@@ -934,9 +934,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         tooltip: "",
         onPressed: onPressed,
         style: IconButton.styleFrom(
-          backgroundColor:
-              isSelected ? userSettings.themeColors.accentColor.withValues(alpha: 0.1) : Colors.transparent,
-          foregroundColor: isSelected ? userSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.6),
+          backgroundColor: isSelected ? userSettings.themeColors.accent.withValues(alpha: 0.1) : Colors.transparent,
+          foregroundColor: isSelected ? userSettings.themeColors.accent : onSurface.withValues(alpha: 0.6),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
@@ -1304,10 +1303,10 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
-                      color: isSelected ? userSettings.themeColors.accentColor : onSurface.withValues(alpha: 0.5))),
+                      color: isSelected ? userSettings.themeColors.accent : onSurface.withValues(alpha: 0.5))),
               if (isSelected)
                 Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    size: 16, color: userSettings.themeColors.accentColor),
+                    size: 16, color: userSettings.themeColors.accent),
             ],
           ),
         ),
@@ -1548,7 +1547,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

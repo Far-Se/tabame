@@ -1131,7 +1131,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                     Switch(
                       value: val,
                       onChanged: onChanged,
-                      activeColor: Colors.white,
+                      activeThumbColor: Colors.white,
                       activeTrackColor: toggleTrackOn,
                       inactiveThumbColor: Colors.white60,
                       inactiveTrackColor: border,
@@ -1182,9 +1182,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                   children: <Widget>[
                     // ── title bar ──────────────────────────────────────
                     Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: surfaceElevated,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
                         border: Border(bottom: BorderSide(color: border)),
                       ),
                       padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
@@ -1354,9 +1354,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       onChanged: (String v) => setModalState(() => _ffmpegCommand = v),
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
+                                    const Text(
                                       'Use {output} as the output path placeholder, or omit it to auto-append.',
-                                      style: const TextStyle(fontSize: 10, color: textSecondary),
+                                      style: TextStyle(fontSize: 10, color: textSecondary),
                                     ),
                                     if (_ffmpegCommand.trim().isEmpty) ...<Widget>[
                                       const SizedBox(height: 10),
@@ -1628,9 +1628,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
 
                     // ── footer ─────────────────────────────────────────
                     Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: surfaceElevated,
-                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
                         border: Border(top: BorderSide(color: border)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1741,7 +1741,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
               child: CustomPaint(
                 painter: _RecordingActivePainter(
                   highlightRect: _activeRecordingRect,
-                  accent: settings_model.userSettings.theme.accentColor,
+                  accent: settings_model.userSettings.theme.accent,
                 ),
               ),
             ),
@@ -1868,7 +1868,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                     dragCurrent: _dragCurrent,
                     highlightRect: highlightRect,
                     monitorRect: _targetMode == RecordingTargetMode.monitor ? _currentMonitorRect : Rect.zero,
-                    accent: settings_model.userSettings.theme.accentColor,
+                    accent: settings_model.userSettings.theme.accent,
                     targetMode: _targetMode,
                   ),
                   child: const SizedBox.expand(),

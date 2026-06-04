@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/settings.dart';
-import '../../models/theme.dart';
 
 class CustomTextInput extends StatefulWidget {
   final String labelText;
@@ -188,7 +187,7 @@ class CustomTextInputState extends State<CustomTextInput> {
                               color: scheme.onSurface.withValues(alpha: 0.65),
                             ),
                           ),
-                      /* 
+                      /*
                           InputDecoration(
                             hintText: widget.hintText ?? (widget.labelText.isEmpty ? null : widget.labelText),
                             border: InputBorder.none,
@@ -200,13 +199,7 @@ class CustomTextInputState extends State<CustomTextInput> {
                             ),
                           ), */
                       controller: _controller,
-                      style: TextStyle(
-                        fontFamily: userSettings.themeColors.entryFontFamily,
-                        fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
-                        fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                        fontSize: 14,
-                        letterSpacing: 0.5,
-                      ),
+                      style: entryStyle(true, fontSize: 14, letterSpacing: 0.5),
                       cursorWidth: 1.5,
                       cursorRadius: const Radius.circular(2),
                       cursorColor: scheme.primary,

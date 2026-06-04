@@ -721,7 +721,7 @@ class ScreenCaptureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.theme.accentColor;
+    final Color accent = userSettings.theme.accent;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -2251,7 +2251,7 @@ class _CaptureSettingsButtonState extends State<_CaptureSettingsButton> {
   @override
   Widget build(BuildContext context) {
     final bool hasPreset = (widget.activePresetName ?? "").isNotEmpty;
-    final Color accent = userSettings.theme.accentColor;
+    final Color accent = userSettings.theme.accent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -2357,7 +2357,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
   @override
   Widget build(BuildContext context) {
     const Color onSurface = Colors.white;
-    final Color accent = userSettings.theme.accentColor;
+    final Color accent = userSettings.theme.accent;
 
     return Material(
       type: MaterialType.transparency,
@@ -2609,7 +2609,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: userSettings.theme.textColor.withValues(alpha: 0.38),
+              color: userSettings.theme.text.withValues(alpha: 0.38),
             ),
           ),
         ],
@@ -2638,7 +2638,7 @@ class _DelayButtonState extends State<_DelayButton> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.theme.accentColor;
+    final Color accent = userSettings.theme.accent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -2695,7 +2695,7 @@ class _ModalChoiceRowState extends State<_ModalChoiceRow> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.theme.accentColor;
+    final Color accent = userSettings.theme.accent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -2739,7 +2739,7 @@ class _ModalChoiceRowState extends State<_ModalChoiceRow> {
                     Text(
                       widget.title,
                       style: TextStyle(
-                        color: widget.selected ? Colors.white : userSettings.theme.textColor.withValues(alpha: 0.8),
+                        color: widget.selected ? Colors.white : userSettings.theme.text.withValues(alpha: 0.8),
                         fontSize: 13,
                         fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
                       ),
@@ -2790,7 +2790,7 @@ class _CapturePainter extends CustomPainter {
         canvas.drawRect(
           r,
           Paint()
-            ..color = userSettings.theme.accentColor
+            ..color = userSettings.theme.accent
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2,
         );
@@ -2825,7 +2825,7 @@ class _CapturePainter extends CustomPainter {
 
     // Dashed selection border
     final Paint dashedPaint = Paint()
-      ..color = userSettings.theme.accentColor
+      ..color = userSettings.theme.accent
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
     _drawDashed(canvas, sel, dashedPaint);
@@ -3196,7 +3196,7 @@ class _CrosshairPainter extends CustomPainter {
         ..color = Colors.transparent
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = userSettings.theme.accentColor,
+        ..color = userSettings.theme.accent,
     );
 
     // Border around whole magnifier
@@ -3359,7 +3359,7 @@ class _CaptureModalState extends State<_CaptureModal> {
         decoration: BoxDecoration(
           color: userSettings.theme.background,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: userSettings.theme.accentColor.withValues(alpha: 0.2)),
+          border: Border.all(color: userSettings.theme.accent.withValues(alpha: 0.2)),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.6),
@@ -3387,7 +3387,7 @@ class _CaptureModalState extends State<_CaptureModal> {
             // Info bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: userSettings.theme.textColor.withValues(alpha: 0.04),
+              color: userSettings.theme.text.withValues(alpha: 0.04),
               child: Row(
                 children: <Widget>[
                   const Icon(Icons.image_outlined, size: 14, color: Colors.white38),
@@ -3513,12 +3513,10 @@ class _ModalActionState extends State<_ModalAction> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color:
-                _hovered ? widget.color.withValues(alpha: 0.15) : userSettings.theme.textColor.withValues(alpha: 0.05),
+            color: _hovered ? widget.color.withValues(alpha: 0.15) : userSettings.theme.text.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color:
-                  _hovered ? widget.color.withValues(alpha: 0.6) : userSettings.theme.textColor.withValues(alpha: 0.1),
+              color: _hovered ? widget.color.withValues(alpha: 0.6) : userSettings.theme.text.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -3538,11 +3536,10 @@ class _ModalActionState extends State<_ModalAction> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(widget.label,
-                        style:
-                            TextStyle(color: userSettings.theme.textColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                        style: TextStyle(color: userSettings.theme.text, fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(widget.subtitle,
-                        style: TextStyle(color: userSettings.theme.textColor.withValues(alpha: 0.6), fontSize: 12)),
+                        style: TextStyle(color: userSettings.theme.text.withValues(alpha: 0.6), fontSize: 12)),
                   ],
                 ),
               ),

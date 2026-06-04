@@ -768,7 +768,7 @@ class _BMACFooterState extends State<_BMACFooter> with SingleTickerProviderState
                         Icons.coffee_rounded,
                         size: 14,
                         color: isHovered
-                            ? userSettings.themeColors.accentColor
+                            ? userSettings.themeColors.accent
                             : Theme.of(context).colorScheme.onSurface.withAlpha(80),
                       ),
                     ),

@@ -123,8 +123,8 @@ class WizardlyState extends State<Wizardly> {
                       pages.length,
                       (int i) => ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: userSettings.themeColors.accentColor.withAlpha(currentPage == i ? 50 : 12),
-                          foregroundColor: userSettings.themeColors.accentColor,
+                          backgroundColor: userSettings.themeColors.accent.withAlpha(currentPage == i ? 50 : 12),
+                          foregroundColor: userSettings.themeColors.accent,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

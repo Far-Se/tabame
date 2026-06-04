@@ -62,24 +62,24 @@ class CustomTextFieldState extends State<CustomTextField> {
 
             labelStyle: TextStyle(
               fontSize: 12,
-              color: userSettings.themeColors.textColor.withAlpha(110),
+              color: userSettings.themeColors.text.withAlpha(110),
             ),
 
             prefixIcon: widget.iconData != null
                 ? Icon(
                     widget.iconData,
                     size: 16,
-                    color: userSettings.themeColors.accentColor,
+                    color: userSettings.themeColors.accent,
                   )
                 : widget.icon ??
                     Icon(
                       Icons.edit,
                       size: 16,
-                      color: userSettings.themeColors.accentColor,
+                      color: userSettings.themeColors.accent,
                     ),
 
             filled: true,
-            fillColor: userSettings.themeColors.accentColor.withAlpha(10),
+            fillColor: userSettings.themeColors.accent.withAlpha(10),
 
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 10,
@@ -94,7 +94,7 @@ class CustomTextFieldState extends State<CustomTextField> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
-                color: userSettings.themeColors.accentColor.withAlpha(90),
+                color: userSettings.themeColors.accent.withAlpha(90),
               ),
             ),
           ),

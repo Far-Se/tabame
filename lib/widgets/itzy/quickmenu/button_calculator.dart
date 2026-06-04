@@ -331,7 +331,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
   }
 
   void _showInfo() {
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     showQuickMenuModal(
@@ -430,7 +430,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Material(
       type: MaterialType.transparency,
@@ -625,10 +625,9 @@ class _HistoryTileState extends State<_HistoryTile> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: _isHovered ? userSettings.themeColors.accentColor.withAlpha(20) : widget.onSurface.withAlpha(10),
+          color: _isHovered ? userSettings.themeColors.accent.withAlpha(20) : widget.onSurface.withAlpha(10),
           borderRadius: BorderRadius.circular(8),
-          border:
-              Border.all(color: _isHovered ? userSettings.themeColors.accentColor.withAlpha(40) : Colors.transparent),
+          border: Border.all(color: _isHovered ? userSettings.themeColors.accent.withAlpha(40) : Colors.transparent),
         ),
         child: Row(
           children: <Widget>[
@@ -636,13 +635,12 @@ class _HistoryTileState extends State<_HistoryTile> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: userSettings.themeColors.accentColor.withAlpha(40),
+                color: userSettings.themeColors.accent.withAlpha(40),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 widget.entry.name,
-                style:
-                    TextStyle(color: userSettings.themeColors.accentColor, fontWeight: FontWeight.bold, fontSize: 13),
+                style: TextStyle(color: userSettings.themeColors.accent, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
             const SizedBox(width: 8),
@@ -684,8 +682,7 @@ class _HistoryTileState extends State<_HistoryTile> {
                             ),
                             if (_isHovered) ...<Widget>[
                               const SizedBox(width: 6),
-                              Icon(Icons.edit_rounded,
-                                  size: 10, color: userSettings.themeColors.accentColor.withAlpha(150)),
+                              Icon(Icons.edit_rounded, size: 10, color: userSettings.themeColors.accent.withAlpha(150)),
                             ],
                           ],
                         ),

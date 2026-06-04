@@ -7,7 +7,6 @@ import 'package:tabamewin32/tabamewin32.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
-import '../../../models/theme.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/mini_switch.dart';
@@ -239,12 +238,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                     icon: Icon(Icons.save_rounded, color: accent),
                   ),
           ),
-          style: TextStyle(
-            fontFamily: userSettings.themeColors.entryFontFamily,
-            fontWeight: AppTheme.getFontWeight(userSettings.themeColors.entryFontWeight),
-            fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-            fontSize: 14,
-          ),
+          style: entryStyle(true, fontSize: 14),
           minLines: 1,
           maxLines: 2,
         ),

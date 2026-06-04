@@ -136,11 +136,11 @@ class FirstRunState extends State<FirstRun> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(
-                  color: User.theme.accentColor.withAlpha(40),
+                  color: User.theme.accent.withAlpha(40),
                   width: 1,
                 ),
               ),
-              shadowColor: User.theme.accentColor.withValues(alpha: 0.3),
+              shadowColor: User.theme.accent.withValues(alpha: 0.3),
               backgroundColor: User.theme.background,
               title: Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               actions: <Widget>[
@@ -185,7 +185,7 @@ class FirstRunState extends State<FirstRun> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accentColor;
+    final Color accent = userSettings.themeColors.accent;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
