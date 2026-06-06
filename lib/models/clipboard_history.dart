@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -122,9 +124,10 @@ class ClipboardHistoryStore {
 
   static bool _recording = false;
 
-  /// In-memory ring of the most-recently recorded entries.
+  /// In-memory ring of MD5 hashes of the most-recently recorded entries.
   /// Used only for duplicate detection — never exposed to the UI.
-  static final List<ClipboardHistoryEntry> _recentCache = <ClipboardHistoryEntry>[];
+  /// Storing hashes instead of full entries keeps RAM usage negligible.
+  static final List<String> _recentCache = <String>[];
   static bool _recentCacheLoaded = false;
 
   static bool get enabled => Boxes.pref.getBool(enabledKey) ?? true;
@@ -326,7 +329,8 @@ class ClipboardHistoryStore {
       await _ensureRecentCacheLoaded();
 
       // Duplicate check against the recent in-memory window.
-      final bool isDuplicate = _recentCache.any((ClipboardHistoryEntry old) => _isDuplicate(entry!, old));
+      final String entryHash = _contentHash(entry);
+      final bool isDuplicate = _recentCache.contains(entryHash);
       if (isDuplicate) return;
 
       // Update lengths before appending
@@ -338,8 +342,8 @@ class ClipboardHistoryStore {
       // Append one NDJSON line — no full file read/write needed.
       await _appendEntry(entryWithLengths);
 
-      // Update in-memory recent cache.
-      _recentCache.insert(0, entryWithLengths);
+      // Update in-memory recent cache with the hash only.
+      _recentCache.insert(0, entryHash);
       if (_recentCache.length > _recentCacheSize) {
         _recentCache.removeLast();
       }
@@ -368,10 +372,10 @@ class ClipboardHistoryStore {
       // Delete orphaned images and images older than cacheDays (unless pinned).
       _pruneImages(<ClipboardHistoryEntry>[...keptHistory, ...pinned], cutoff);
 
-      // Rebuild in-memory cache from the survivors.
+      // Rebuild in-memory cache from the survivors (hashes only).
       _recentCache
         ..clear()
-        ..addAll(keptHistory.take(_recentCacheSize));
+        ..addAll(keptHistory.take(_recentCacheSize).map(_contentHash));
     } catch (error) {
       Debug.print('ClipboardHistory: clearCache failed $error');
     }
@@ -419,8 +423,8 @@ class ClipboardHistoryStore {
       if (image.existsSync()) image.deleteSync();
     }
 
-    // Sync recent cache.
-    _recentCache.removeWhere((ClipboardHistoryEntry e) => e.id == entry.id);
+    // Sync recent cache — evict by hash.
+    _recentCache.remove(_contentHash(entry));
   }
 
   /// Toggle the pinned state of an entry.
@@ -450,13 +454,8 @@ class ClipboardHistoryStore {
     await _rewriteFile(nextHistory, historyFilePath);
     await _rewriteFile(nextPinned, pinnedFilePath);
 
-    // Sync recent cache.
-    for (int i = 0; i < _recentCache.length; i++) {
-      if (_recentCache[i].id == entry.id) {
-        _recentCache[i] = _recentCache[i].copyWith(pinned: pinned);
-        break;
-      }
-    }
+    // Sync recent cache — replace old hash with updated hash (pinned flag is part of hash input? No —
+    // pinned is not content, so the hash stays the same. Nothing to do here.
   }
 
   /// Delete ALL history and images.
@@ -490,7 +489,7 @@ class ClipboardHistoryStore {
       final List<ClipboardHistoryEntry> all = await _loadAllFull();
       _recentCache
         ..clear()
-        ..addAll(all.take(_recentCacheSize));
+        ..addAll(all.take(_recentCacheSize).map(_contentHash));
     } catch (_) {}
   }
 
@@ -618,12 +617,18 @@ class ClipboardHistoryStore {
     await imageFile.writeAsBytes(bytes, flush: true);
     if (!imageFile.existsSync()) return null;
 
+    // Embed the bytes-hash in the `text` field so that _contentHash can use it
+    // for duplicate detection without needing to re-read the file from disk.
+    // The field is otherwise empty for image entries, so this is safe.
+    final String bytesHash = _contentHashFromBytes(bytes);
+
     return ClipboardHistoryEntry(
       id: id,
       type: ClipboardHistoryType.image,
       createdAt: now,
       imagePath: imagePath,
       byteLength: bytes.length,
+      text: bytesHash, // used only for dedup; not shown in UI
     );
   }
 
@@ -710,12 +715,28 @@ class ClipboardHistoryStore {
     return null;
   }
 
-  static bool _isDuplicate(ClipboardHistoryEntry next, ClipboardHistoryEntry old) {
-    if (next.type != old.type) return false;
-    if (next.type == ClipboardHistoryType.image) {
-      return next.byteLength == old.byteLength && next.imagePath == old.imagePath;
+  /// Returns an MD5 hex digest that uniquely identifies the *content* of [entry].
+  ///
+  /// - Text / rich-text: MD5 of `"text:<text>\nhtml:<html>"` encoded as UTF-8.
+  ///   Both fields are included so that the same plain text with different HTML
+  ///   formatting is treated as a distinct entry.
+  /// - Image: if [entry.text] contains the bytes-hash written by [_saveImageEntry],
+  ///   that value is returned directly (it is already a unique content fingerprint).
+  ///   Otherwise falls back to `"image:<byteLength>:<imagePath>"`.
+  static String _contentHash(ClipboardHistoryEntry entry) {
+    if (entry.type == ClipboardHistoryType.image) {
+      // _saveImageEntry stores the MD5-of-bytes in the text field.
+      if (entry.text.startsWith('img-bytes:')) return entry.text;
+      return md5.convert(utf8.encode('image:${entry.byteLength}:${entry.imagePath}')).toString();
     }
-    return next.text == old.text && next.html == old.html;
+    return md5.convert(utf8.encode('text:${entry.text}\nhtml:${entry.html}')).toString();
+  }
+
+  /// Compute a content hash directly from raw image [bytes].
+  /// Use this inside [_saveImageEntry] so that two identical bitmaps
+  /// that arrive at different timestamps still produce the same hash.
+  static String _contentHashFromBytes(Uint8List bytes) {
+    return 'img-bytes:${md5.convert(bytes)}';
   }
 
   static String _entryId(DateTime now) => now.microsecondsSinceEpoch.toString();

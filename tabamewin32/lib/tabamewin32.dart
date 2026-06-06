@@ -1013,13 +1013,6 @@ class HardwareData {
   }
 }
 
-Future<HardwareData> getHardwareData() async {
-  final Map<dynamic, dynamic>? result =
-      await tabameWin32MethodChannel.invokeMethod<Map<dynamic, dynamic>>('getHardwareData');
-
-  return HardwareData.fromMap(result ?? <dynamic, dynamic>{});
-}
-
 Future<void> toggleMonitorWallpaper(bool enabled) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,

@@ -26,12 +26,26 @@ class AppStartup {
 
     Debug.add("===");
     Debug.add("Started");
-    WidgetsFlutterBinding.ensureInitialized();
+    // WidgetsFlutterBinding.ensureInitialized();
     Debug.add("Register WindowManager");
     await windowManager.ensureInitialized();
     if (kReleaseMode) {
-      FlutterError.onError = handleErrors;
-      PlatformDispatcher.instance.onError = handlePlatformErrors;
+      // FlutterError.onError = handleErrors;
+      // PlatformDispatcher.instance.onError = handlePlatformErrors;
+      //
+      FlutterError.onError = (FlutterErrorDetails details) async {
+        await ErrorLogger.log(
+          'FlutterError',
+          details.exceptionAsString(),
+          details.stack,
+        );
+      };
+
+      // Dart async/platform errors not caught by Flutter
+      PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+        ErrorLogger.log('PlatformDispatcher', error.toString(), stack);
+        return true; // returning true = you handled it
+      };
     }
   }
 

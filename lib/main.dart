@@ -23,7 +23,6 @@ import 'run.dart';
 import 'widgets/widgets/focus_fix.dart';
 
 Future<void> main(List<String> arguments) async {
-  await AppStartup.initialize();
   AppStartup.parseArguments(arguments);
   // return startSpotlight();
 
@@ -39,16 +38,24 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-msgbox")) return showMessage(arguments);
   if (arguments.contains("-run")) return showRunStatus(arguments);
-  await AppStartup.registerServices();
 
   if (await AppStartup.checkAdminAndRestart()) return;
-
-  AppStartup.registerHooks();
-  await AppStartup.setupWindow(arguments);
-  await AppStartup.finalizeStartup();
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
   // PaintingBinding.instance.imageCache.maximumSize = 50;
 
-  runApp(Tabame());
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await AppStartup.registerServices();
+      AppStartup.registerHooks();
+      await AppStartup.setupWindow(arguments);
+      await AppStartup.finalizeStartup();
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
+      await AppStartup.initialize();
+      runApp(const Tabame());
+    },
+    (Object error, StackTrace stack) async {
+      await ErrorLogger.log('ZoneError', error.toString(), stack);
+    },
+  );
   // runApp(FocusFix(child: Tabame()));
 }

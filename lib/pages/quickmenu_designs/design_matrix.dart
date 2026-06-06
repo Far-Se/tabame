@@ -87,7 +87,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
           if (_itemRects.isNotEmpty)
             Positioned.fill(
               child: ClipPath(
-                clipper: MatrixFloatingClipper(_itemRects),
+                clipper: MatrixFloatingClipper(_itemRects, Design.borderRadius),
                 child: RepaintBoundary(
                   child: ShaderMask(
                     blendMode: BlendMode.dstIn,
@@ -205,19 +205,25 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
     ];
   }
 
+  // 3. In _sectionCard, capture the radius from a local variable
+  // so it's read fresh on every build pass
   Widget _sectionCard({
     required Key key,
     required Widget child,
     EdgeInsets? padding,
   }) {
+    final double radius = Design.borderRadius;
+    final Color textColor = Design.text;
     return SizeChangedLayoutNotifier(
       child: Container(
         key: key,
         padding: padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withAlpha(8), // Subtle tint even if backdrop fails
-          borderRadius: BorderRadius.circular(User.theme.borderRadius),
-          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(18)),
+          color: textColor.withAlpha(8),
+          borderRadius: BorderRadius.circular(radius), // <-- uses local var
+          border: Border.all(
+            color: textColor.withAlpha(18),
+          ),
         ),
         child: child,
       ),
@@ -225,22 +231,25 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
   }
 }
 
+// 1. Pass borderRadius into MatrixFloatingClipper
 class MatrixFloatingClipper extends CustomClipper<Path> {
   final List<Rect> rects;
-  MatrixFloatingClipper(this.rects);
+  final double borderRadius; // <-- add this
+
+  MatrixFloatingClipper(this.rects, this.borderRadius); // <-- add this
 
   @override
   Path getClip(Size size) {
     final Path path = Path();
     for (final Rect rect in rects) {
-      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(User.theme.borderRadius)));
+      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(borderRadius)));
     }
     return path;
   }
 
   @override
   bool shouldReclip(covariant MatrixFloatingClipper oldClipper) {
-    return !listEquals(oldClipper.rects, rects);
+    return !listEquals(oldClipper.rects, rects) || oldClipper.borderRadius != borderRadius; // <-- add radius check
   }
 }
 

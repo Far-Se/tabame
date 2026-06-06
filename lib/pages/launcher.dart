@@ -275,6 +275,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       subtitle: 'Opens Actions Menu for a specific result',
       icon: Icons.menu_rounded,
     )),
+    const LauncherSearchResultItem.info(LauncherInfoResult(
+      id: 'ctrlCInfo',
+      title: 'Ctrl+C',
+      subtitle: 'Copy file/folder. Only for File Search',
+      icon: Icons.menu_rounded,
+    )),
   ];
   void _copyItem() {
     if (_results.isEmpty) return;
@@ -1657,20 +1663,25 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Future<void> _handleNotionSearch(LauncherSearchContext context) async {
     await NotionSearchCache.load();
     if (!context.isActiveSearch(context.requestId, context.query)) return;
-
     final List<NotionResult> cached = NotionSearchCache.cachedSearch(context.normalizedQuery);
     if (cached.isNotEmpty || context.normalizedQuery.isEmpty) {
       context.setResults(cached.map(LauncherSearchResultItem.notion).toList(), isSearching: false);
     }
-
     if (context.normalizedQuery.isEmpty) return;
     if (NotionSearchCache.apiKey.isEmpty) return;
-
     context.setSearching(true);
     try {
       final List<NotionResult> results = await NotionSearchCache.search(context.normalizedQuery);
       if (!context.isActiveSearch(context.requestId, context.query)) return;
-      context.setResults(results.map(LauncherSearchResultItem.notion).toList(),
+      final Map<String, NotionResult> freshMap = <String, NotionResult>{
+        for (final NotionResult r in results) r.id: r,
+      };
+      final List<NotionResult> merged = <NotionResult>[
+        for (final NotionResult r in cached) freshMap[r.id] ?? r,
+        for (final NotionResult r in results)
+          if (!cached.any((NotionResult c) => c.id == r.id)) r,
+      ];
+      context.setResults(merged.map(LauncherSearchResultItem.notion).toList(),
           isSearching: false, resetSelection: false);
     } catch (_) {
       if (context.isActiveSearch(context.requestId, context.query)) {

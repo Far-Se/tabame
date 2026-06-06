@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../logic/error_handler.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
@@ -49,6 +50,16 @@ class _TabameState extends State<Tabame> {
 
   @override
   Widget build(BuildContext context) {
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      ErrorLogger.log(
+        'WidgetError',
+        details.exceptionAsString(),
+        details.stack,
+      );
+      return Material(
+        child: Center(child: Text('Error: ${details.exceptionAsString()}')),
+      );
+    };
     return ValueListenableBuilder<bool>(
         valueListenable: Globals.fullLoaded,
         builder: (BuildContext context, bool value, __) {

@@ -11,8 +11,8 @@ import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
-class ClearKeyboardButton extends StatelessWidget {
-  const ClearKeyboardButton({super.key});
+class BlockKeyboardButton extends StatelessWidget {
+  const BlockKeyboardButton({super.key});
 
   @override
   Widget build(BuildContext context) {

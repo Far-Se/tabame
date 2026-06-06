@@ -461,7 +461,7 @@ class QuickMenuState extends State<QuickMenu>
   }
 
   void _refreshQuickMenu() {
-    print("Refresh");
+    // print("Refresh");
     if (mounted) setState(() {});
   }
 

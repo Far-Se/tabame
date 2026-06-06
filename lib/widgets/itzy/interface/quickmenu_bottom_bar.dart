@@ -140,7 +140,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                 title: const Text("Install LibreHardwareMonitor if you dont have it already",
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 subtitle:
-                    const Text("It must be always open and with Admin Privileges.", style: TextStyle(fontSize: 12)),
+                    const Text("It must be always open and Remote Server running.", style: TextStyle(fontSize: 12)),
                 onTap: () {
                   WinUtils.open(
                       "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest#:~:text=7%20other%20contributors-,Assets,-4");

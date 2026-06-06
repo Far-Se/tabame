@@ -700,13 +700,20 @@ class _NotionWidgetState extends State<NotionWidget> {
       // Merge cache + fresh only for THIS query so new pages that appeared
       // since the cache was written are included, but nothing from other
       // queries ever leaks in.
-      final Map<String, NotionResult> merged = <String, NotionResult>{
-        for (final NotionResult r in cachedResults) r.id: r,
+      // Preserve cached order: update existing entries in-place, append new ones at the end.
+      final Map<String, NotionResult> freshMap = <String, NotionResult>{
         for (final NotionResult r in fresh) r.id: r,
       };
+      final List<NotionResult> merged = <NotionResult>[
+        // Keep cached items in their original order (updated with fresh data if available).
+        for (final NotionResult r in cachedResults) freshMap[r.id] ?? r,
+        // Append items that are new (not present in the cached results).
+        for (final NotionResult r in fresh)
+          if (!cachedResults.any((NotionResult c) => c.id == r.id)) r,
+      ];
 
       setState(() {
-        _results = merged.values.toList();
+        _results = merged;
         _selectedIndex = _results.isEmpty ? -1 : _selectedIndex.clamp(0, _results.length - 1);
       });
     } catch (e) {

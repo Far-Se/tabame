@@ -52,7 +52,28 @@ enum LightSwitchMode { off, fixed, sunrise }
 
 class User {
   static ThemeColors get theme => userSettings.themeColors;
+  static ThemeColors get t => userSettings.themeColors;
   static Settings get s => userSettings;
+}
+
+class Design {
+  static Color get background => userSettings.theme.background;
+  static Color get text => userSettings.theme.text;
+  static Color get accent => userSettings.theme.accent;
+  static int get gradientAlpha => userSettings.theme.gradientAlpha;
+  static String get uiFontFamily => userSettings.theme.uiFontFamily;
+  static int get uiFontWeight => userSettings.theme.uiFontWeight;
+  static bool get uiFontItalic => userSettings.theme.uiFontItalic;
+  static String get entryFontFamily => userSettings.theme.entryFontFamily;
+  static int get entryFontWeight => userSettings.theme.entryFontWeight;
+  static bool get entryFontItalic => userSettings.theme.entryFontItalic;
+  static List<String> get backdropImages => userSettings.theme.backdropImages;
+  static String get backdropType => userSettings.theme.backdropType;
+  static double get backdropOpacity => userSettings.theme.backdropOpacity;
+  static List<double> get panelOpacityPoints => userSettings.theme.panelOpacityPoints;
+  static String get panelOpacityBegin => userSettings.theme.panelOpacityBegin;
+  static String get panelOpacityEnd => userSettings.theme.panelOpacityEnd;
+  static double get borderRadius => userSettings.theme.borderRadius;
 }
 
 class Settings {
@@ -713,11 +734,11 @@ final TextStyle baseEntryStyle = GoogleFonts.getFont(
   ),
   fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
 );
-TextStyle entryStyle(bool isSelected, {double fontSize = 12, double? letterSpacing}) {
+TextStyle entryStyle(bool? isSelected, {double fontSize = 12, double? letterSpacing, Color? color}) {
   return baseEntryStyle.copyWith(
     fontSize: fontSize,
     letterSpacing: letterSpacing,
-    color: isSelected ? User.theme.text : User.theme.text.withAlpha(200),
+    color: color ?? ((isSelected ?? false) ? User.theme.text : User.theme.text.withAlpha(200)),
   );
 }
 

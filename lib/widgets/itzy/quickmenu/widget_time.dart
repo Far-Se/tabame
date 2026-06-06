@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/keys.dart';
 
@@ -28,6 +29,7 @@ class _TimeWidgetState extends State<TimeWidget> {
     super.initState();
     _now = DateTime.now();
     _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!QuickMenuFunctions.isQuickMenuVisible) return;
       if (mounted) {
         setState(() {
           _now = DateTime.now();

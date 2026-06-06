@@ -870,6 +870,7 @@ Future<List<_EmojiEntry>> _readEmojiEntries() async {
       sn: item.short_name,
       so: item.sort_order,
       sk: skin_variation,
+      t: tags
       */
         final Map<String, dynamic> entry = Map<String, dynamic>.from(dynamicEntry as _EmojiJsonEntry);
         final String char = _unicodeToString((entry['u'] as String?) ?? '');
@@ -877,11 +878,12 @@ Future<List<_EmojiEntry>> _readEmojiEntries() async {
         final String subcategory = (entry['sc'] as String?) ?? 'Objects';
         final String name = ((entry['n'] as String?) ?? '').trim();
         final String shortName = ((entry['sn'] as String?) ?? '').trim();
+        final String tags = ((entry['t'] as String?) ?? '').trim();
         final int sortOrder = (entry['so'] as num?)?.toInt() ?? 999999;
         final List<String> skinVariation =
             (entry['sk'] as List<dynamic>?)?.map((dynamic e) => _unicodeToString(e as String)).toList() ?? <String>[];
         final String normalizedShortName = shortName.replaceAll('_', ' ');
-        final String searchIndex = _normalizedText('$name $normalizedShortName $category $subcategory $char');
+        final String searchIndex = _normalizedText('$name $normalizedShortName $category $subcategory $char $tags');
 
         return _EmojiEntry(
           char: char,

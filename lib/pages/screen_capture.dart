@@ -496,7 +496,12 @@ class ScreenCapture {
       case CaptureEngine.bitBlt:
         return captureMonitorBitmapByHandle(monitorHandle);
       case CaptureEngine.directX:
-        return _captureMonitorBitmapWithDirectX(monitorHandle);
+        try {
+          final MonitorBitmapCapture? result = await _captureMonitorBitmapWithDirectX(monitorHandle);
+          return result ?? captureMonitorBitmapByHandle(monitorHandle);
+        } catch (_) {
+          return captureMonitorBitmapByHandle(monitorHandle);
+        }
     }
   }
 
@@ -524,6 +529,9 @@ class ScreenCapture {
         height: capture.height,
         rgbaBytes: ScreenRegionCapture.bgraToRgba(bgraPixels),
       );
+    } catch (_) {
+      // ErrorLogger.log('ScreenCapture _captureMonitorBitmapWithDirectX', x.toString(), stack);
+      return null;
     } finally {
       calloc.free(monitorInfo);
     }
@@ -819,7 +827,7 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Win32Window.setupOverlay();
+      Win32Window.setupOverlay(delayMs: 10);
       Win32Window.disableClickThrough();
     });
     Monitor.fetchMonitors();
@@ -1582,9 +1590,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
       _toggleScreenCaptureEnabled();
       Navigator.of(context).maybePop();
+      FancyShotCaptureWidget._staticCache?.clear();
+      await QuickMenuFunctions.hideQuickMenu();
       QuickMenuFunctions.refreshQuickMenu();
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      QuickMenuFunctions.hideQuickMenu();
+      // await Future<void>.delayed(const Duration(milliseconds: 200));
     } else {
       if (userSettings.args.contains('-screenCapture')) windowManager.close();
     }

@@ -996,19 +996,6 @@ void GetFocusedElementCaretRectH(Tabamewin32Plugin *, const MethodCall &,
                                  MethodResult result) {
   OK(result, EVal(Encode::RectToMap(GetFocusedElementCaretRect())));
 }
-void GetHardwareDataH(Tabamewin32Plugin *, const MethodCall &,
-                      MethodResult result) {
-  const LibreData data = GetLibreHardwareMonitor();
-
-  EMap map;
-  map[EVal("cpuUsage")] = EVal(data.cpuUsage);
-  map[EVal("cpuTemp")] = EVal(data.cpuTemp);
-  map[EVal("ramUsage")] = EVal(data.ramUsage);
-  map[EVal("gpuUsage")] = EVal(data.gpuUsage);
-  map[EVal("gpuTemp")] = EVal(data.gpuTemp);
-
-  OK(result, EVal(map));
-}
 // ===== Extended tray =====
 void EnumAllTrayIconsH(Tabamewin32Plugin *, const MethodCall &,
                        MethodResult result) {
@@ -1451,7 +1438,6 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"shutdownTaskbarUia", Handlers::ShutdownTaskbarUiaH},
       // Extended tray
       {"enumAllTrayIcons", Handlers::EnumAllTrayIconsH},
-      {"getHardwareData", Handlers::GetHardwareDataH},
       {"clickTrayNotifyIcon", Handlers::ClickTrayNotifyIconH},
       {"setWindowTheme", Handlers::SetWindowThemeH},
       {"captureMonitor", Handlers::CaptureMonitorH},

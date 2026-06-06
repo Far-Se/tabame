@@ -108,9 +108,9 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.content_paste_search_rounded,
     widget: () => const ClipboardHistoryButton(),
   ),
-  "ClearKeyboardButton": QuickAction(
+  "BlockKeyboardButton": QuickAction(
     icon: Icons.keyboard_hide_rounded,
-    widget: () => const ClearKeyboardButton(),
+    widget: () => const BlockKeyboardButton(),
   ),
   "VaultButton": QuickAction(
     icon: Icons.lock_rounded,

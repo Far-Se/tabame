@@ -22,6 +22,7 @@ import '../widgets/interface/fancyshot.dart';
 import '../widgets/interface/first_run.dart';
 import '../widgets/interface/home.dart';
 import '../widgets/interface/hotkeys_interface.dart';
+import '../widgets/interface/interface_faq.dart';
 import '../widgets/interface/interface_quickmenu.dart';
 import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/theme_setup.dart';
@@ -102,6 +103,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
     PageClass(title: 'Fancyshot', icon: Icons.center_focus_strong_rounded, widget: const Fancyshot()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
+    PageClass(title: 'F.A.Q', icon: Icons.contact_support, widget: const FaqPage()),
     PageClass(title: 'Changelog', icon: Icons.newspaper, widget: const Changelog()),
     PageClass(title: 'FirstRun', icon: Icons.newspaper, widget: const FirstRun()),
   ];

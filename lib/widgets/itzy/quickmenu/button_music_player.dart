@@ -59,6 +59,7 @@ class _MusicServerButtonState extends State<MusicServerButton> {
 
   /// Checks the actual background process state.
   void _checkForAppPlaying(Timer timer) {
+    if (!QuickMenuFunctions.isQuickMenuVisible) return;
     if (!mounted) return;
     if (_lastState != MusicServerManager.player.playing) {
       setState(() {

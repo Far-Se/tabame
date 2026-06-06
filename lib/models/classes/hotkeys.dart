@@ -891,7 +891,7 @@ class HotKeyInfo {
     },
     "OpenFrozenFancyShot": () async {
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.hideQuickMenu();
+        await QuickMenuFunctions.hideQuickMenu();
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;

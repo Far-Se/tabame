@@ -69,12 +69,13 @@ void QuickClickController::HookThreadProc() {
 // ---------------------------------------------------------------------------
 void QuickClickController::MovementThreadProc() {
   auto lastShiftReset = std::chrono::steady_clock::now();
+  auto movementStart = std::chrono::steady_clock::now();
   bool shiftWasHeld = false;
+  bool wasMoving = false;
 
   while (running_) {
     if (active_.load() && (moveUp_ || moveDown_ || moveLeft_ || moveRight_)) {
       int dx = 0, dy = 0;
-      int multiplier = 1;
       bool shiftIsHeld = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
       if (shiftIsHeld) {
@@ -82,7 +83,7 @@ void QuickClickController::MovementThreadProc() {
           lastShiftReset = std::chrono::steady_clock::now();
           shiftWasHeld = true;
         }
-
+        wasMoving = false; // reset acceleration when shift kicks in
         if (moveUp_)
           dy -= config_.shiftNudgeAmount;
         if (moveDown_)
@@ -91,8 +92,19 @@ void QuickClickController::MovementThreadProc() {
           dx -= config_.shiftNudgeAmount;
         if (moveRight_)
           dx += config_.shiftNudgeAmount;
+
       } else {
         shiftWasHeld = false;
+        if (!wasMoving) {
+          movementStart = std::chrono::steady_clock::now();
+          wasMoving = true;
+        }
+
+        long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::steady_clock::now() - movementStart)
+                           .count();
+        long long steps = ms / 100;
+        double multiplier = std::pow(1.1, static_cast<double>(steps));
 
         if (moveUp_)
           dy -= config_.nudgeAmount;
@@ -102,29 +114,42 @@ void QuickClickController::MovementThreadProc() {
           dx -= config_.nudgeAmount;
         if (moveRight_)
           dx += config_.nudgeAmount;
+
+        if (dx != 0 || dy != 0) {
+          int scaledDx = static_cast<int>(std::round(dx * multiplier));
+          int scaledDy = static_cast<int>(std::round(dy * multiplier));
+          const auto mi = GetMonitorUnderCursor();
+          INPUT inp =
+              MakeMouseInput(MOUSEEVENTF_MOVE, 0, ScaleForDpi(scaledDx, mi.dpi),
+                             ScaleForDpi(scaledDy, mi.dpi));
+          SendInput(1, &inp, sizeof(INPUT));
+          TriggerEvent("nudge", {{"dx", std::to_string(scaledDx)},
+                                 {"dy", std::to_string(scaledDy)},
+                                 {"multiplier", std::to_string(multiplier)}});
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        continue; // sleep already done, skip the one at the bottom
       }
 
       if (dx != 0 || dy != 0) {
-        dx *= multiplier;
-        dy *= multiplier;
-
         const auto mi = GetMonitorUnderCursor();
         INPUT inp = MakeMouseInput(MOUSEEVENTF_MOVE, 0, ScaleForDpi(dx, mi.dpi),
                                    ScaleForDpi(dy, mi.dpi));
         SendInput(1, &inp, sizeof(INPUT));
-
         TriggerEvent("nudge", {{"dx", std::to_string(dx)},
                                {"dy", std::to_string(dy)},
-                               {"multiplier", std::to_string(multiplier)}});
+                               {"multiplier", "1"}});
       }
+
     } else {
-      // Reset shift tracking if no movement keys are held
       shiftWasHeld = false;
+      wasMoving = false;
     }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
   }
 }
-
 LRESULT CALLBACK QuickClickController::LowLevelKeyboardProc(int nCode,
                                                             WPARAM wParam,
                                                             LPARAM lParam) {

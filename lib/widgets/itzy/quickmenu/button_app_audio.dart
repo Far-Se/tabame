@@ -58,6 +58,7 @@ class _AppAudioButtonState extends State<AppAudioButton> {
 
   /// Checks the actual background process state.
   void _checkForAppPlaying(Timer timer) {
+    if (!QuickMenuFunctions.isQuickMenuVisible) return;
     if (!mounted) return;
     final AppAudioControl? ctl = _control;
     if (ctl == null || !ctl.showAnimation) return;
