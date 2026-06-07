@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../models/settings.dart';
 import '../constants/translations.dart';
 
 class FontLanguage extends StatefulWidget {
@@ -54,7 +55,7 @@ class _FontLanguageState extends State<FontLanguage> {
         value: widget.selectedFontLanguage,
         isDense: true,
         style: TextStyle(
-          fontSize: 12.0,
+          fontSize: Design.baseFontSize + 2.0,
           color: DefaultTextStyle.of(context).style.color,
         ),
         icon: const Icon(Icons.arrow_drop_down_sharp),

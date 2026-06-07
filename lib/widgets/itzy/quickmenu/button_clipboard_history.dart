@@ -425,11 +425,11 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
     return TextField(
       controller: _searchController,
       focusNode: _focusNode,
-      style: TextStyle(fontSize: 12, color: onSurface),
+      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
       decoration: InputDecoration(
         isDense: true,
         hintText: "Search clipboard",
-        hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(110)),
+        hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(110)),
         prefixIcon: Icon(Icons.search_rounded, size: 15, color: accent),
         suffixIcon: _searchController.text.isEmpty
             ? null
@@ -529,7 +529,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
         const SizedBox(width: 5),
         Text(
           value,
-          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: accent),
+          style: TextStyle(fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w700, color: accent),
         ),
       ],
     );
@@ -559,7 +559,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
                 color: onSurface.withAlpha(185),
@@ -569,7 +569,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
           const SizedBox(width: 7),
           Text(
             count.toString().padLeft(2, '0'),
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: accent),
+            style: TextStyle(fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w700, color: accent),
           ),
           const SizedBox(width: 8),
           Expanded(child: Divider(height: 1, color: onSurface.withAlpha(20))),
@@ -607,9 +607,13 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: onSurface)),
+                Text(title,
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(150), height: 1.25)),
+                Text(subtitle,
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(150), height: 1.25)),
               ],
             ),
           ),
@@ -640,7 +644,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: onSurface.withAlpha(150), height: 1.25),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(150), height: 1.25),
             ),
           ],
         ),
@@ -732,7 +736,7 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
                       '${(entry.byteLength / 1024).toStringAsFixed(1)} KB',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -795,7 +799,7 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: Design.baseFontSize + 0.5,
                               fontWeight: FontWeight.w700,
                               color: entry.pinned ? widget.accent : widget.onSurface.withAlpha(155),
                             ),
@@ -806,7 +810,8 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
                           child: Text(
                             time,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 10.5, color: widget.onSurface.withAlpha(120)),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize + 0.5, color: widget.onSurface.withAlpha(120)),
                           ),
                         ),
                       ],
@@ -816,7 +821,8 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
                       _summary(entry),
                       maxLines: entry.type == ClipboardHistoryType.image ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, height: 1.25, color: widget.onSurface.withAlpha(210)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2, height: 1.25, color: widget.onSurface.withAlpha(210)),
                     ),
                   ],
                 ),

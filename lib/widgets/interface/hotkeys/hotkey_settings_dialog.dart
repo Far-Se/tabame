@@ -293,7 +293,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
         Text(
           label.toUpperCase(),
           style: TextStyle(
-            fontSize: 11,
+            fontSize: Design.baseFontSize + 1,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.6,
             color: colors.onSurface.withAlpha(180),
@@ -515,7 +515,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
               style: texts.labelSmall?.copyWith(
                 color: colors.error,
                 fontWeight: FontWeight.w800,
-                fontSize: 10,
+                fontSize: Design.baseFontSize,
               ),
             ),
           ),
@@ -627,7 +627,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
                     _specialBindingDescription(binding),
                     style: texts.bodySmall?.copyWith(
                       color: colors.onSurfaceVariant.withAlpha(180),
-                      fontSize: 10.5,
+                      fontSize: Design.baseFontSize + 0.5,
                       height: 1.3,
                     ),
                   ),
@@ -684,7 +684,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
             child: Text(
               "SAVE CHANGES",
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.8,
                 color: accent,
@@ -725,7 +725,8 @@ class HotKeySettingsState extends State<HotKeySettings> {
           const SizedBox(height: 6),
           RichText(
             text: TextSpan(
-              style: texts.bodySmall?.copyWith(color: colors.onSurfaceVariant, fontSize: 10, height: 1.4),
+              style:
+                  texts.bodySmall?.copyWith(color: colors.onSurfaceVariant, fontSize: Design.baseFontSize, height: 1.4),
               children: const <InlineSpan>[
                 TextSpan(text: "Use semicolon regex for "),
                 TextSpan(text: "class, exe, or title.", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -787,7 +788,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       color: colors.onSurfaceVariant.withAlpha(140),
                       height: 1.2,
                     ),

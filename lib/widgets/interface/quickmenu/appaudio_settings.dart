@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
@@ -95,7 +96,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                     Text(
                       "Provision isolated media controls for specific applications. Mapped controls populate the system interface slots (1-$_maxControls).",
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                       ),
                     ),
@@ -163,7 +164,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                             ? "No active controlsprovisioned."
                             : "Adjust sequence and interface mappings",
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: theme.hintColor.withValues(alpha: 0.6),
                         ),
                       ),
@@ -196,7 +197,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                   Text(
                     "Provision your first isolated control to start",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: theme.hintColor.withValues(alpha: 0.5), fontSize: 11),
+                    style: TextStyle(color: theme.hintColor.withValues(alpha: 0.5), fontSize: Design.baseFontSize + 1),
                   ),
                 ],
               ),
@@ -279,7 +280,8 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                     const SizedBox(height: 4),
                     Text(
                       control.exe.isEmpty ? "NO TARGET EXECUTABLE" : control.exe,
-                      style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.5)),
+                      style:
+                          TextStyle(fontSize: Design.baseFontSize + 1, color: theme.hintColor.withValues(alpha: 0.5)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -364,14 +366,14 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
             "$label: ",
             style: TextStyle(
               color: theme.hintColor,
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
             ),
           ),
         ],
@@ -389,7 +391,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: Design.baseFontSize + 1,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -411,7 +413,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
       child: Text(
         "$label: ${value.isEmpty ? 'Not set' : value}",
         style: TextStyle(
-          fontSize: 11,
+          fontSize: Design.baseFontSize + 1,
           color: theme.hintColor,
         ),
       ),
@@ -750,7 +752,8 @@ class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                Text(subtitle, style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.6))),
+                Text(subtitle,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: theme.hintColor.withValues(alpha: 0.6))),
               ],
             ),
           ),
@@ -792,7 +795,7 @@ class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
               color: theme.colorScheme.primary.withValues(alpha: 0.7),

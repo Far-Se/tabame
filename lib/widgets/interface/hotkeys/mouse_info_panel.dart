@@ -158,7 +158,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: (trackingEnabled && tracking) ? Colors.green : Colors.orange,
                               fontWeight: FontWeight.bold,
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -171,7 +171,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
                     "Press ALT to pause/resume",
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: onSurface.withAlpha(120),
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                     ),
                   ),
                 ],

@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../models/settings.dart';
 import 'launcher_design.dart';
 
 // ---------------------------------------------------------------------------
@@ -101,7 +102,7 @@ extension LauncherDesignBuilder on LauncherDesign {
           child: Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               color: accent.withAlpha(180),
               fontWeight: FontWeight.w800,
               letterSpacing: 1.0,
@@ -114,7 +115,7 @@ extension LauncherDesignBuilder on LauncherDesign {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               color: accent.withAlpha(160),
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,

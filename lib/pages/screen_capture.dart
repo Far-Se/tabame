@@ -1883,8 +1883,8 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                   alignment: Alignment.center,
                   child: Text(
                     '$_countdownValue',
-                    style: const TextStyle(
-                      fontSize: 120,
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       shadows: <Shadow>[
@@ -2398,7 +2398,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
                   Text(
                     'CAPTURE ENGINE',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: Design.baseFontSize + 2,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
                       color: onSurface.withValues(alpha: 0.9),
@@ -2615,7 +2615,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
               color: userSettings.theme.text.withValues(alpha: 0.38),
@@ -2757,7 +2757,7 @@ class _ModalChoiceRowState extends State<_ModalChoiceRow> {
                     //   widget.subtitle,
                     //   style: const TextStyle(
                     //     color: Colors.white38,
-                    //     fontSize: 11,
+                    //     fontSize: Design.baseFontSize + 1,
                     //   ),
                     // ),
                   ],
@@ -2810,7 +2810,7 @@ class _CapturePainter extends CustomPainter {
             text: '${r.width.round()} × ${r.height.round()}  •  click to capture',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
               backgroundColor: Colors.black.withValues(alpha: 0.75),
             ),
           ),
@@ -2845,7 +2845,7 @@ class _CapturePainter extends CustomPainter {
         text: '${sel.width.round()} × ${sel.height.round()}',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 12,
+          fontSize: Design.baseFontSize + 2,
           backgroundColor: Colors.black.withValues(alpha: 0.75),
         ),
       ),
@@ -3114,7 +3114,7 @@ class _CrosshairPainter extends CustomPainter {
         text: '${pos.dx.round()}, ${pos.dy.round()}',
         style: TextStyle(
           color: Colors.white70,
-          fontSize: 12,
+          fontSize: Design.baseFontSize + 2,
           backgroundColor: Colors.black.withValues(alpha: 0.85),
         ),
       ),
@@ -3233,7 +3233,7 @@ class _CrosshairPainter extends CustomPainter {
           text: hex,
           style: TextStyle(
             color: Colors.white70,
-            fontSize: 11,
+            fontSize: Design.baseFontSize + 1,
             backgroundColor: Colors.black.withValues(alpha: 0.85),
           ),
         ),
@@ -3403,7 +3403,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                   const SizedBox(width: 6),
                   Text(
                     '${widget.imageW} × ${widget.imageH}px',
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+                    style: TextStyle(color: Colors.white38, fontSize: Design.baseFontSize + 2),
                   ),
                   const SizedBox(width: 10),
                   const Icon(Icons.folder_outlined, size: 14, color: Colors.white38),
@@ -3411,7 +3411,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                   Expanded(
                     child: Text(
                       widget.filePath,
-                      style: const TextStyle(color: Colors.white24, fontSize: 11),
+                      style: TextStyle(color: Colors.white24, fontSize: Design.baseFontSize + 1),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -3425,7 +3425,7 @@ class _CaptureModalState extends State<_CaptureModal> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   _statusMsg!,
-                  style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
+                  style: TextStyle(color: Colors.greenAccent, fontSize: Design.baseFontSize + 2),
                 ),
               ),
 
@@ -3548,7 +3548,8 @@ class _ModalActionState extends State<_ModalAction> {
                         style: TextStyle(color: userSettings.theme.text, fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(widget.subtitle,
-                        style: TextStyle(color: userSettings.theme.text.withValues(alpha: 0.6), fontSize: 12)),
+                        style: TextStyle(
+                            color: userSettings.theme.text.withValues(alpha: 0.6), fontSize: Design.baseFontSize + 2)),
                   ],
                 ),
               ),

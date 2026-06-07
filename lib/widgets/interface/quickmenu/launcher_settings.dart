@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/db/file_index_db.dart';
+import '../../../models/settings.dart';
 import '../../../services/file_indexer.dart';
 
 class QuickmenuSearchSettings extends StatefulWidget {
@@ -171,7 +172,7 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
                     Text(
                       "Prioritize folders for faster discovery",
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         fontWeight: FontWeight.w600,
                         color: theme.hintColor.withValues(alpha: 0.8),
                       ),
@@ -245,7 +246,7 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
                               builder: (BuildContext context, bool isCompleted, _) {
                                 return Text(
                                   isCompleted ? "Indexing complete" : "Indexing folders...",
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700),
                                 );
                               },
                             ),
@@ -255,7 +256,7 @@ class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
                                 return Text(
                                   "Processed $count items",
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: Design.baseFontSize + 1,
                                     color: theme.hintColor,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -479,7 +480,7 @@ class _SearchFolderTileState extends State<_SearchFolderTile> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w600,
               color: tagColor.withValues(alpha: 0.8),
             ),
@@ -751,7 +752,7 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
 
   Widget _presetChip(String label, String exts) {
     return ActionChip(
-      label: Text(label, style: const TextStyle(fontSize: 11)),
+      label: Text(label, style: TextStyle(fontSize: Design.baseFontSize + 1)),
       onPressed: () => _setExtensions(exts),
       visualDensity: VisualDensity.compact,
       padding: EdgeInsets.zero,
@@ -784,7 +785,7 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.bold,
                   color: value ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.8),
                 ),

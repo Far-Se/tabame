@@ -114,7 +114,7 @@ class SettingsPageState extends State<SettingsPage> {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: Design.baseFontSize,
           fontWeight: FontWeight.w900,
           letterSpacing: 1.1,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: _AppOpacity.textSecondary),
@@ -169,8 +169,9 @@ class SettingsPageState extends State<SettingsPage> {
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(updateResponse,
-                          style:
-                              TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 2,
+                              color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                     ],
                   ),
                 ),
@@ -384,7 +385,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
             const Text("This will permanently remove your settings, local data, and the application itself."),
             const SizedBox(height: 20),
             Text("Type 'MeNoGusta' to confirm:",
-                style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6))),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6))),
             const SizedBox(height: 8),
             TextField(
               controller: controller,
@@ -626,11 +627,13 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                   const SizedBox(width: 8),
                   Text(title,
                       style: TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.7))),
+                          fontSize: Design.baseFontSize + 1,
+                          fontWeight: FontWeight.bold,
+                          color: onSurface.withValues(alpha: 0.7))),
                 ],
               ),
               Text("${value >= 0 ? '+' : ''}$value min",
-                  style: TextStyle(fontSize: 11, fontFamily: 'Consolas', color: accent)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontFamily: 'Consolas', color: accent)),
             ],
           ),
           SliderTheme(
@@ -662,7 +665,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
         Text(label,
             style: TextStyle(
                 fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: onSurface.withValues(alpha: 0.4))),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Consolas')),
+        Text(value,
+            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, fontFamily: 'Consolas')),
       ],
     );
   }
@@ -744,7 +748,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                                  fontSize: Design.baseFontSize + 2,
+                                  color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                         ],
                       ],
                     ),
@@ -767,7 +772,9 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(subtitle,
-                      style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                   const SizedBox(height: 16),
                   child,
                 ],
@@ -803,7 +810,9 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
                 Text(subtitle,
-                    style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
               ],
             ),
           ),
@@ -840,7 +849,9 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(label,
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1,
+                          color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
                   Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ],
               ),

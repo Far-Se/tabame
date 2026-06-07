@@ -446,8 +446,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _isRepeatingKey.dispose();
 
     if (!FileIndexer.instance.isIndexing) {
+      // Only close if we are certain no background work is running.
+      // FileIndexDb will reopen automatically on next access if needed.
       FileIndexDb.instance.close();
     }
+    // If indexing is still in progress, leave the DB open; it will be
+    // closed the next time the launcher disposes while idle.
     Globals.clearQuickMenuSearchInput();
 
     _searchDebounce?.cancel();
@@ -1955,16 +1959,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Future<void> _repairFileIndexInBackground() async {
     if (_isRepairingFileIndex) return;
     _isRepairingFileIndex = true;
+
     try {
-      // Close the current connection first — repair() needs exclusive access
-      FileIndexDb.instance.close(); // flush any lingering state
       await FileIndexDb.instance.repair();
       await FileIndexer.instance.fullReindex();
       await _syncLauncherAppsCatalog();
-      if (mounted) _onSearchChanged(_controller.text);
-    } catch (e, st) {
-      debugPrint('Launcher: Failed to repair file index DB: $e');
-      debugPrintStack(stackTrace: st);
+      if (mounted) {
+        _onSearchChanged(_controller.text);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to repair file index DB: $error');
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _isRepairingFileIndex = false;
     }

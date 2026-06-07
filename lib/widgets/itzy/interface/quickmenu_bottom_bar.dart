@@ -95,7 +95,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             const Divider(),
             SwitchListTile(
               title: const Text("Show System Usage", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("Display RAM and CPU usage in the quick menu", style: TextStyle(fontSize: 12)),
+              subtitle: Text("Display RAM and CPU usage in the quick menu",
+                  style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.speed, size: 20),
               value: userSettings.showSystemUsage,
               onChanged: (bool newValue) async {
@@ -107,8 +108,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             SwitchListTile(
               title: const Text("Show LibreHardwareMonitor Data",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp. Must run Tabame as admin!",
-                  style: TextStyle(fontSize: 12)),
+              subtitle: Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp. Must run Tabame as admin!",
+                  style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.insights, size: 20),
               value: userSettings.libreStats,
               onChanged: (bool newValue) async {
@@ -139,8 +140,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                 dense: true,
                 title: const Text("Install LibreHardwareMonitor if you dont have it already",
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                subtitle:
-                    const Text("It must be always open and Remote Server running.", style: TextStyle(fontSize: 12)),
+                subtitle: Text("It must be always open and Remote Server running.",
+                    style: TextStyle(fontSize: Design.baseFontSize + 2)),
                 onTap: () {
                   WinUtils.open(
                       "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest#:~:text=7%20other%20contributors-,Assets,-4");
@@ -151,8 +152,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             SwitchListTile(
               title: const Text("Show TaskManager System Usage",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("If TaskManger is open, put it on at the bottom of the screen",
-                  style: TextStyle(fontSize: 12)),
+              subtitle: Text("If TaskManger is open, put it on at the bottom of the screen",
+                  style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.query_stats, size: 20),
               value: userSettings.taskManagerStats,
               onChanged: (bool newValue) async {
@@ -172,8 +173,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               SwitchListTile(
                 title:
                     const Text("Auto start TaskManager", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                subtitle: const Text("Open TaskManager on startup so you can always see PC stats",
-                    style: TextStyle(fontSize: 12)),
+                subtitle: Text("Open TaskManager on startup so you can always see PC stats",
+                    style: TextStyle(fontSize: Design.baseFontSize + 2)),
                 secondary: const Icon(Icons.dataset_linked, size: 20),
                 value: userSettings.autoOpenTaskManager,
                 onChanged: (bool newValue) async {
@@ -184,7 +185,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               ),
             SwitchListTile(
               title: const Text("Tray Bar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: 12)),
+              subtitle:
+                  Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.expand_less, size: 20),
               value: userSettings.showTrayBar,
               onChanged: (bool newValue) async {
@@ -424,7 +426,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
               child: Text(
                 message,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 11,
+                      fontSize: Design.baseFontSize + 1,
                       fontWeight: FontWeight.w500,
                       height: 1.4,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
@@ -555,7 +557,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
             const Divider(),
             SwitchListTile(
               title: const Text("Show Weather", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: const Text("Display local weather in the bottom bar", style: TextStyle(fontSize: 12)),
+              subtitle:
+                  Text("Display local weather in the bottom bar", style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.wb_sunny_outlined, size: 20),
               value: userSettings.showWeather,
               onChanged: (bool newValue) async {
@@ -586,12 +589,13 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                       TextField(
                         decoration: InputDecoration(
                           labelText: "LATITUDE & LONGITUDE",
-                          labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+                          labelStyle: TextStyle(
+                              fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, letterSpacing: 1),
                           isDense: true,
                           prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           helperText: "Format: 52.52, 13.41",
-                          helperStyle: const TextStyle(fontSize: 10),
+                          helperStyle: TextStyle(fontSize: Design.baseFontSize),
                         ),
                         style: const TextStyle(fontSize: 13),
                         controller: TextEditingController(text: userSettings.weatherLatLong),
@@ -609,7 +613,8 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                           style: const TextStyle(fontSize: 13),
                           decoration: InputDecoration(
                             labelText: "SEARCH BY CITY",
-                            labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+                            labelStyle: TextStyle(
+                                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, letterSpacing: 1),
                             isDense: true,
                             prefixIcon: const Icon(Icons.search, size: 18),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -632,11 +637,12 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
                               child: TextField(
                                 controller: cityLatLong,
                                 style: const TextStyle(fontSize: 13),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: "SEARCH BY CITY",
-                                  labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                  labelStyle: TextStyle(
+                                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, letterSpacing: 1),
                                   isDense: true,
-                                  prefixIcon: Icon(Icons.search, size: 18),
+                                  prefixIcon: const Icon(Icons.search, size: 18),
                                 ),
                               ),
                             ),
@@ -660,7 +666,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
     if (isText) {
       return TextButton.icon(
         icon: Icon(icon, size: 18),
-        label: Text(label, style: const TextStyle(fontSize: 12)),
+        label: Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2)),
         onPressed: onPressed,
         style: TextButton.styleFrom(
           visualDensity: VisualDensity.compact,
@@ -670,7 +676,7 @@ class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
     }
     return ElevatedButton.icon(
       icon: Icon(icon, size: 18),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      label: Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600)),
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         visualDensity: VisualDensity.compact,

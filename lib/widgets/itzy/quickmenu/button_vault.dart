@@ -88,7 +88,8 @@ class VaultsWidgetState extends State<VaultsWidget> {
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 1, color: Colors.redAccent, fontWeight: FontWeight.w500),
                         ),
                       ),
                       InkWell(
@@ -256,13 +257,13 @@ class VaultsWidgetState extends State<VaultsWidget> {
                 color: Colors.amber.withAlpha(20),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.amber.withAlpha(50))),
-            child: const Row(
+            child: Row(
               children: <Widget>[
-                Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
-                SizedBox(width: 8),
+                const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                const SizedBox(width: 8),
                 Expanded(
                     child: Text("IMPORTANT: If you lose this password, your data is lost forever.",
-                        style: TextStyle(fontSize: 10, color: Colors.amber))),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: Colors.amber))),
               ],
             ),
           ),
@@ -521,7 +522,7 @@ Widget _buildField(
       floatingLabelBehavior: FloatingLabelBehavior.auto,
 
       labelStyle: TextStyle(
-        fontSize: 12,
+        fontSize: Design.baseFontSize + 2,
         color: userSettings.themeColors.text.withAlpha(110),
       ),
 
@@ -593,7 +594,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                       Text(
                         _hovered ? widget.item.value : "••••••••",
                         style: TextStyle(
-                            fontSize: 11,
+                            fontSize: Design.baseFontSize + 1,
                             color: widget.onSurface.withAlpha(150),
                             fontFamily: _hovered ? null : 'monospace'),
                         overflow: TextOverflow.ellipsis,
@@ -603,8 +604,10 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                 ),
                 if (_copied)
                   Text("Copied!",
-                      style:
-                          TextStyle(fontSize: 10, color: userSettings.themeColors.accent, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize,
+                          color: userSettings.themeColors.accent,
+                          fontWeight: FontWeight.bold)),
                 if (_hovered && !_copied) ...<Widget>[
                   IconButton(
                       onPressed: widget.onEdit,

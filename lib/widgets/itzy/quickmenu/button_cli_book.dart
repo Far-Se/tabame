@@ -225,7 +225,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
           if (variables.isEmpty)
             Text(
               "This item does not use variables.",
-              style: TextStyle(fontSize: 12, color: onSurface.withAlpha(140)),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(140)),
             )
           else
             ...variables.map(
@@ -291,7 +291,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
           const SizedBox(height: 8),
           Text(
             "Preview",
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onSurface),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: onSurface),
           ),
           const SizedBox(height: 6),
           Container(
@@ -303,7 +303,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
             ),
             child: SelectableText(
               resolvedCommand,
-              style: TextStyle(fontSize: 12, height: 1.45, color: onSurface.withAlpha(200)),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, height: 1.45, color: onSurface.withAlpha(200)),
             ),
           ),
           const SizedBox(height: 16),
@@ -720,7 +720,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
                                 ),
                                 child: Text(
                                   r"Use ${varName} inside the command if this item needs values at run time. Example: cd ${projectFolder}",
-                                  style: TextStyle(fontSize: 12, color: onSurface.withAlpha(160)),
+                                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(160)),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -764,7 +764,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
                                     Text(
                                       "Store your frequently used CLI commands and snippets here for quick access.",
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 12, color: onSurface.withAlpha(128)),
+                                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(128)),
                                     ),
                                   ],
                                 ),
@@ -882,7 +882,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                   child: Text(
                     widget.name,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: Design.baseFontSize + 2,
                       fontWeight: widget.boldFont ? FontWeight.w500 : FontWeight.w300,
                       color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
                     ),
@@ -895,7 +895,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                   opacity: _hovered ? 1.0 : 0.0,
                   child: _copied
                       ? Text("Copied!",
-                          style: TextStyle(fontSize: 12, color: userSettings.themeColors.accent.withAlpha(170)))
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: userSettings.themeColors.accent.withAlpha(170)))
                       : Icon(Icons.copy, size: 13, color: userSettings.themeColors.accent.withAlpha(170)),
                 ),
                 const SizedBox(width: 8),

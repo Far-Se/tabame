@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes/boxes_base.dart';
 import '../../models/classes/saved_maps.dart';
+import '../../models/settings.dart';
 import '../../models/util/app_opacity.dart';
 import '../../models/win32/mixed.dart';
 import '../itzy/interface/quickmenu_bottom_bar.dart';
@@ -192,7 +193,8 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
             children: <Widget>[
               Text("Dashboard", style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
               Text("Configuration & Sub-systems",
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.hintColor)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: theme.hintColor)),
             ],
           ),
         ),
@@ -237,7 +239,7 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
                       const SizedBox(height: 4),
                       Text(
                         "Try a different keyword or browse the grid.",
-                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.2)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.2)),
                       ),
                     ],
                   ),
@@ -414,7 +416,7 @@ class _SubPageHeaderState extends State<_SubPageHeader> {
                     Text(
                       "SETTINGS / ",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w800,
                         color: onSurface.withValues(alpha: 0.3),
                         letterSpacing: 1,
@@ -423,7 +425,7 @@ class _SubPageHeaderState extends State<_SubPageHeader> {
                     Text(
                       widget.page.title.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         fontWeight: FontWeight.w800,
                         color: primary,
                         letterSpacing: 0.5,
@@ -456,7 +458,7 @@ class _SubPageHeaderState extends State<_SubPageHeader> {
               child: Text(
                 widget.page.stats!(),
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w700,
                   color: onSurface.withValues(alpha: 0.4),
@@ -575,7 +577,7 @@ class _NavigationTileState extends State<_NavigationTile> with SingleTickerProvi
                           Text(
                             widget.page.subtitle,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: Design.baseFontSize + 1,
                               fontWeight: FontWeight.w500,
                               color: onSurface.withValues(alpha: 0.5),
                             ),

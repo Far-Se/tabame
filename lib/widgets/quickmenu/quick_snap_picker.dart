@@ -299,7 +299,7 @@ class _PresetTileState extends State<_PresetTile> {
                     const SizedBox(height: 3),
                     Text(
                       '${widget.preset.zones.length} zone${widget.preset.zones.length == 1 ? '' : 's'}',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.55)),
                     ),
                   ],
                 ),

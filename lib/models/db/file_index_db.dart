@@ -61,13 +61,19 @@ class FileIndexDb {
   Completer<Database>? _initCompleter;
 
   Future<Database> get database async {
+    // If we have a live db instance, return it immediately.
     if (_db != null) return _db!;
-    if (_initCompleter != null) return _initCompleter!.future; // <-- wait, don't re-enter
+    // Reuse an in-progress completer, but NOT a completed one — a completed
+    // completer from a previous session would hand back a closed Database.
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      return _initCompleter!.future;
+    }
 
     _initCompleter = Completer<Database>();
     try {
       final Database db = await _initDb();
       _db = db;
+      _isClosed = false;
       _initCompleter!.complete(db);
       return db;
     } catch (e) {
@@ -101,6 +107,8 @@ class FileIndexDb {
   Future<void> repair() async {
     _db?.close();
     _db = null;
+    _isClosed = false;
+    _initCompleter = null; // Reset so database getter re-initializes after repair
 
     final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
     final String path = p.join(appDir.path, dbName);
@@ -119,10 +127,31 @@ class FileIndexDb {
     }
   }
 
+  bool _isClosed = false;
+
+  void close() {
+    if (_db != null && !_isClosed) {
+      _db!.close();
+    }
+    _isClosed = true;
+    _db = null;
+    _initCompleter = null; // Must be reset so database getter re-initializes cleanly
+  }
+
+  /// Resets closed state so the [database] getter will reinitialize on next call.
+  Future<void> reopen() async {
+    // Clear all cached state so the getter starts fresh.
+    _db = null;
+    _isClosed = false;
+    _initCompleter = null;
+    await database; // Eagerly open so callers get a live connection immediately.
+  }
+
   Database _openAndSetupDb(String dbPath) {
     WinUtils.copySqlite3IfItDoesntExistForFuckSake();
 
     final Database db = sqlite3.open(dbPath);
+    db.execute('PRAGMA busy_timeout = 3000;'); // Wait up to 3 s before "database is locked"
     db.execute('PRAGMA journal_mode = WAL;');
     db.execute('PRAGMA foreign_keys = ON;');
 
@@ -174,6 +203,8 @@ class FileIndexDb {
     db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_app_user_model_id ON nodes(app_user_model_id);');
     db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_stable_identity ON nodes(stable_identity);');
 
+    // FTS5 with trigram tokenizer — each trigger is isolated so a transient
+    // lock on one does not prevent the others from being (re-)created.
     try {
       db.execute('''
         CREATE VIRTUAL TABLE IF NOT EXISTS fts_nodes USING fts5(
@@ -183,7 +214,15 @@ class FileIndexDb {
           tokenize="trigram"
         );
       ''');
+    } catch (e) {
+      debugPrint('FTS5 Trigram not supported — full-text search disabled: $e');
+      // Without FTS the LIKE-based fallback in search() still works fine.
+      return db;
+    }
 
+    // Each DROP + CREATE pair is its own try/catch so a transient lock on
+    // one trigger does not abort the others.
+    try {
       db.execute('DROP TRIGGER IF EXISTS nodes_ai;');
       db.execute('''
         CREATE TRIGGER nodes_ai AFTER INSERT ON nodes
@@ -192,14 +231,22 @@ class FileIndexDb {
           INSERT INTO fts_nodes(rowid, name) VALUES (new.id, new.name);
         END;
       ''');
+    } catch (e) {
+      debugPrint('FTS5: Could not create nodes_ai trigger: $e');
+    }
 
+    try {
       db.execute('DROP TRIGGER IF EXISTS nodes_ad;');
       db.execute('''
         CREATE TRIGGER nodes_ad AFTER DELETE ON nodes BEGIN
           INSERT INTO fts_nodes(fts_nodes, rowid, name) VALUES('delete', old.id, old.name);
         END;
       ''');
+    } catch (e) {
+      debugPrint('FTS5: Could not create nodes_ad trigger: $e');
+    }
 
+    try {
       db.execute('DROP TRIGGER IF EXISTS nodes_au;');
       db.execute('''
         CREATE TRIGGER nodes_au AFTER UPDATE ON nodes BEGIN
@@ -209,7 +256,7 @@ class FileIndexDb {
         END;
       ''');
     } catch (e) {
-      debugPrint('FTS5 Trigram not supported: $e');
+      debugPrint('FTS5: Could not create nodes_au trigger: $e');
     }
 
     return db;
@@ -772,11 +819,6 @@ class FileIndexDb {
 
   SearchResultEntryType _entryTypeFromDbValue(String value) {
     return value == 'app' ? SearchResultEntryType.app : SearchResultEntryType.file;
-  }
-
-  void close() {
-    _db?.close();
-    _db = null;
   }
 }
 

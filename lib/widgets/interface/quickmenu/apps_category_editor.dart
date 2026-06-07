@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 import '../../itzy/quickmenu/button_window_app.dart';
 
 class QuickmenuAppsCategoryEditor extends StatefulWidget {
@@ -138,7 +139,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                     Text(
                       "CATEGORY PROPERTIES",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w900,
                         color: primary,
                         letterSpacing: 1.2,
@@ -147,7 +148,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                     Text(
                       "Configure apps and synchronization rules",
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         color: onSurface.withValues(alpha: 0.45),
                         fontWeight: FontWeight.w500,
                       ),
@@ -216,7 +217,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                   Text(
                     "CURATED ITEMS",
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.w800,
                       color: onSurface.withValues(alpha: 0.4),
                       letterSpacing: 0.5,
@@ -244,7 +245,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                   foregroundColor: primary,
                 ),
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                label: const Text("IMPORT FILE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                label: Text("IMPORT FILE", style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800)),
               ),
             ],
           ),
@@ -292,7 +293,8 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                 icon: Icon(Icons.delete_outline_rounded, size: 18, color: theme.colorScheme.error),
                 label: Text(
                   "DELETE CATEGORY",
-                  style: TextStyle(color: theme.colorScheme.error, fontSize: 11, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                      color: theme.colorScheme.error, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w800),
                 ),
               ),
               const Spacer(),
@@ -300,7 +302,10 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
                   "CANCEL",
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: onSurface.withValues(alpha: 0.5)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w800,
+                      color: onSurface.withValues(alpha: 0.5)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -316,7 +321,8 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text("SAVE CHANGES", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                child: Text("SAVE CHANGES",
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: Design.baseFontSize + 1)),
               ),
             ],
           ),
@@ -380,7 +386,7 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                     fontFamily: "monospace",
                     color: hasFolder ? onSurface : onSurface.withValues(alpha: 0.4),
                   ),
@@ -429,7 +435,8 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
           const SizedBox(height: 12),
           Text(
             "This category is currently empty",
-            style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
           ),
         ],
       ),
@@ -493,7 +500,7 @@ class _ViewTypeButton extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: Design.baseFontSize + 1,
                   fontWeight: isActive ? FontWeight.w900 : FontWeight.w500,
                   color: isActive ? primary : theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
@@ -565,7 +572,7 @@ class _AppItemTileState extends State<_AppItemTile> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontFamily: "monospace",
               color: onSurface.withValues(alpha: 0.4),
             ),

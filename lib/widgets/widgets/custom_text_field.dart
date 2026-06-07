@@ -61,7 +61,7 @@ class CustomTextFieldState extends State<CustomTextField> {
             floatingLabelBehavior: FloatingLabelBehavior.auto,
 
             labelStyle: TextStyle(
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
               color: userSettings.themeColors.text.withAlpha(110),
             ),
 

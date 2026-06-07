@@ -99,7 +99,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
                             currentFolder.isEmpty
                                 ? "Pick a folder to preview file renames"
                                 : currentFolder.truncate(70, suffix: "..."),
-                            style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -164,7 +165,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
               ),
               child: Text(
                 infoText,
-                style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: accent, fontWeight: FontWeight.w600),
               ),
             ),
         ],
@@ -185,15 +186,15 @@ class FileNameWidgetState extends State<FileNameWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text("Rename Rules", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    SizedBox(height: 4),
+                    const Text("Rename Rules", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 4),
                     Text(
                       "Build replacements with regex captures or switch to list replace for mapped values.",
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2),
                     ),
                   ],
                 ),
@@ -211,7 +212,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
           const SizedBox(height: 10),
           Text(
             "Tip: use groups like `(test)` and reference them in replace as `\$1`. Toggle `Tt` to switch to list replace.",
-            style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
           ),
           if (filters.isEmpty)
             Container(
@@ -225,7 +226,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
               ),
               child: Text(
                 "No rules yet. Add one to start shaping the new file names.",
-                style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.55)),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.55)),
               ),
             ),
           ...List<Widget>.generate(
@@ -260,8 +261,8 @@ class FileNameWidgetState extends State<FileNameWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
-                  child:
-                      Text("${index + 1}", style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 12)),
+                  child: Text("${index + 1}",
+                      style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -437,13 +438,14 @@ class FileNameWidgetState extends State<FileNameWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text("Preview", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    SizedBox(height: 4),
-                    Text("Review the generated names before applying changes.", style: TextStyle(fontSize: 12)),
+                    const Text("Preview", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text("Review the generated names before applying changes.",
+                        style: TextStyle(fontSize: Design.baseFontSize + 2)),
                   ],
                 ),
               ),
@@ -492,12 +494,16 @@ class FileNameWidgetState extends State<FileNameWidget> {
                 Expanded(
                   child: Text("Current Name",
                       style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
+                          fontSize: Design.baseFontSize + 2,
+                          fontWeight: FontWeight.bold,
+                          color: onSurface.withValues(alpha: 0.75))),
                 ),
                 Expanded(
                   child: Text("Preview Name",
                       style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.75))),
+                          fontSize: Design.baseFontSize + 2,
+                          fontWeight: FontWeight.bold,
+                          color: onSurface.withValues(alpha: 0.75))),
                 ),
                 const SizedBox(width: 104),
               ],
@@ -546,7 +552,7 @@ class FileNameWidgetState extends State<FileNameWidget> {
           const SizedBox(width: 8),
           RichText(
             text: TextSpan(
-              style: TextStyle(color: onSurface, fontSize: 12),
+              style: TextStyle(color: onSurface, fontSize: Design.baseFontSize + 2),
               children: <InlineSpan>[
                 TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.bold)),
                 TextSpan(text: " $label", style: TextStyle(color: onSurface.withValues(alpha: 0.65))),
@@ -759,7 +765,7 @@ class ListTileFileState extends State<ListTileFile> {
               child: Text(
                 widget.oldName,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: unchanged ? onSurface.withValues(alpha: 0.45) : onSurface,
                 ),
               ),
@@ -769,7 +775,7 @@ class ListTileFileState extends State<ListTileFile> {
               child: Text(
                 widget.newName,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: unchanged ? FontWeight.w400 : FontWeight.w600,
                   color: unchanged ? onSurface.withValues(alpha: 0.45) : accent,
                 ),

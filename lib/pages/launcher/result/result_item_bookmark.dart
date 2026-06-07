@@ -137,7 +137,7 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
                         result.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: entryStyle(highlighted, fontSize: 12),
+                        style: entryStyle(highlighted, fontSize: Design.baseFontSize + 2),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -145,7 +145,7 @@ class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize,
                           color: highlighted ? widget.onSurface.withAlpha(170) : widget.onSurface.withAlpha(130),
                         ),
                       ),

@@ -355,12 +355,16 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
                 value: selectedDaysRange,
                 isDense: true,
                 items: <DropdownMenuItem<int?>>[
-                  const DropdownMenuItem<int?>(value: 30, child: Text("Last 30 Days", style: TextStyle(fontSize: 12))),
-                  const DropdownMenuItem<int?>(value: 90, child: Text("Last 90 Days", style: TextStyle(fontSize: 12))),
-                  const DropdownMenuItem<int?>(
-                      value: 180, child: Text("Last 180 Days", style: TextStyle(fontSize: 12))),
-                  const DropdownMenuItem<int?>(value: 365, child: Text("Last Year", style: TextStyle(fontSize: 12))),
-                  const DropdownMenuItem<int?>(value: null, child: Text("All Time", style: TextStyle(fontSize: 12))),
+                  DropdownMenuItem<int?>(
+                      value: 30, child: Text("Last 30 Days", style: TextStyle(fontSize: Design.baseFontSize + 2))),
+                  DropdownMenuItem<int?>(
+                      value: 90, child: Text("Last 90 Days", style: TextStyle(fontSize: Design.baseFontSize + 2))),
+                  DropdownMenuItem<int?>(
+                      value: 180, child: Text("Last 180 Days", style: TextStyle(fontSize: Design.baseFontSize + 2))),
+                  DropdownMenuItem<int?>(
+                      value: 365, child: Text("Last Year", style: TextStyle(fontSize: Design.baseFontSize + 2))),
+                  DropdownMenuItem<int?>(
+                      value: null, child: Text("All Time", style: TextStyle(fontSize: Design.baseFontSize + 2))),
                 ],
                 onChanged: (int? newValue) {
                   setState(() {

@@ -298,7 +298,7 @@ class _MemoCardState extends State<_MemoCard> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: Design.baseFontSize + 2,
                       color: widget.onSurface.withAlpha(153),
                       height: 1.3,
                     ),

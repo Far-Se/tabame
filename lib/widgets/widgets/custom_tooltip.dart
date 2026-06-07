@@ -229,7 +229,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                             textAlign: TextAlign.center,
                             style: GoogleFonts.getFont(
                               userSettings.themeColors.entryFontFamily,
-                              fontSize: 11.5,
+                              fontSize: Design.baseFontSize + 1.5,
                               letterSpacing: 0.2,
                               height: 1.2,
                               color: onSurface.withValues(alpha: 0.9),
@@ -254,7 +254,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
                               widget.shortcut!,
                               style: GoogleFonts.getFont(
                                 userSettings.themeColors.entryFontFamily,
-                                fontSize: 10,
+                                fontSize: Design.baseFontSize,
                                 letterSpacing: 0.5,
                                 color: onSurface.withValues(alpha: 0.5),
                                 fontWeight: FontWeight.w600,

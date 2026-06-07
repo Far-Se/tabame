@@ -1501,7 +1501,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                   const SizedBox(height: 20),
                   Row(
                     children: <Widget>[
-                      const Text('Size', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text('Size', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                       Expanded(
                         child: Slider(
                           value: localSize,
@@ -1512,13 +1512,15 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                         ),
                       ),
                       Text(localSize.round().toString(),
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.white, fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 10),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Font Family', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    title:
+                        Text('Font Family', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                     subtitle:
                         Text(localFontFamily, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     trailing: const Icon(Icons.font_download, color: Colors.white54),
@@ -1583,7 +1585,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                   const SizedBox(height: 20),
                   Row(
                     children: <Widget>[
-                      const Text('Size', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text('Size', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                       Expanded(
                         child: Slider(
                           value: localSize,
@@ -1595,7 +1597,8 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
                       ),
                       Text(
                         localSize.round().toString(),
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white, fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -2099,7 +2102,7 @@ class _EditorPainter extends CustomPainter {
           text: label,
           style: TextStyle(
               color: color,
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               backgroundColor: Colors.black.withValues(alpha: 0.9),
               fontFamily: 'monospace')),
       textDirection: TextDirection.ltr,
@@ -2283,7 +2286,7 @@ class _EditorWindowBar extends StatelessWidget {
                       style: GoogleFonts.getFont(
                         userSettings.theme.uiFontFamily,
                         color: userSettings.theme.text.withValues(alpha: 0.4),
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                       ),
                     ),
                   ),
@@ -2436,7 +2439,7 @@ class _EditorToolbar extends StatelessWidget {
               style: GoogleFonts.getFont(
                 userSettings.theme.uiFontFamily,
                 color: userSettings.theme.text.withValues(alpha: 0.4),
-                fontSize: 10,
+                fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -2877,7 +2880,7 @@ class _SaveButtonState extends State<_SaveButton> {
               color: Colors.black87,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(_msg!, style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
+            child: Text(_msg!, style: TextStyle(color: Colors.greenAccent, fontSize: Design.baseFontSize + 2)),
           ),
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -3069,7 +3072,7 @@ class _PresetMenuRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: Colors.white54, fontSize: Design.baseFontSize + 1),
               ),
             ],
           ),

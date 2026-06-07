@@ -158,7 +158,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                         Text(
                           "Capture a QR code from the screen and show only the decoded output.",
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             height: 1.3,
                             color: onSurface.withAlpha(190),
                           ),
@@ -225,7 +225,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
             "Start a capture and select the QR code area on screen.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               height: 1.35,
               color: onSurface.withAlpha(155),
             ),
@@ -258,7 +258,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                     child: Text(
                       "Decoded Output",
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -267,7 +267,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                   Text(
                     _copied ? "Copied" : "Tap to copy",
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.w600,
                       color: _copied ? accent : onSurface.withAlpha(145),
                     ),
@@ -278,7 +278,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
               SelectableText(
                 _result ?? '',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   height: 1.4,
                   color: onSurface.withAlpha(220),
                 ),
@@ -318,7 +318,7 @@ class _QrStatusStrip extends StatelessWidget {
             child: Text(
               message,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w600,
                 color: accent,
               ),

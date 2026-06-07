@@ -327,7 +327,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 border: InputBorder.none,
                 hintText: 'Search emoji names or paste the emoji itself',
                 hintStyle: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: scheme.onSurface.withValues(alpha: 0.45),
                 ),
               ),
@@ -396,7 +396,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 Text(
                   index == 0 ? 'Default' : 'Tone $index',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                     color: selected ? accent : scheme.onSurface,
                   ),
@@ -479,7 +479,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 border: InputBorder.none,
                 hintText: 'Type or paste your own emoji / custom token',
                 hintStyle: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: scheme.onSurface.withValues(alpha: 0.45),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -550,7 +550,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                     Text(
                       category.label,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                         color: selected ? accent : scheme.onSurface.withValues(alpha: 0.72),
                       ),
@@ -582,7 +582,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               fontWeight: FontWeight.w600,
               color: accent.withValues(alpha: 0.9),
             ),
@@ -591,7 +591,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           Text(
             widget.quickTip ?? 'Tap to use immediately',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               color: scheme.onSurface.withValues(alpha: 0.45),
             ),
           ),
@@ -613,7 +613,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           const SizedBox(height: 12),
           Text(
             'Loading emoji catalog...',
-            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ),
@@ -629,12 +629,12 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           const SizedBox(height: 10),
           Text(
             'Emoji data could not be loaded.',
-            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.72)),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.72)),
           ),
           const SizedBox(height: 4),
           Text(
             'You can still paste your own emoji above.',
-            style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.48)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: scheme.onSurface.withValues(alpha: 0.48)),
           ),
         ],
       ),
@@ -650,12 +650,12 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           const SizedBox(height: 10),
           Text(
             'No emoji matched your search.',
-            style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.72)),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.72)),
           ),
           const SizedBox(height: 4),
           Text(
             'Paste your own emoji or custom token above instead.',
-            style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.48)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: scheme.onSurface.withValues(alpha: 0.48)),
           ),
         ],
       ),

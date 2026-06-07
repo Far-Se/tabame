@@ -442,7 +442,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                       Text(
                         _errorMessage!,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: Colors.redAccent.withAlpha(210),
                         ),
                       ),
@@ -453,7 +453,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                         child: Text(
                           _inputMessage!,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             color: onSurface.withAlpha(170),
                           ),
                         ),
@@ -487,7 +487,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
         Text(
           "Amount",
           style: TextStyle(
-            fontSize: 12,
+            fontSize: Design.baseFontSize + 2,
             fontWeight: FontWeight.w600,
             color: onSurface.withAlpha(185),
           ),
@@ -569,7 +569,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                           ? " "
                           : "1 ${_fromCurrency.toUpperCase()} = ${_formatNumber(rate)} ${_toCurrency.toUpperCase()}",
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         color: onSurface.withValues(alpha: 0.5),
                       ),
                     ),
@@ -581,7 +581,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                       child: Text(
                         "1 ${_toCurrency.toUpperCase()} = ${_formatNumber(reverseRate)} ${_fromCurrency.toUpperCase()}",
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: onSurface.withValues(alpha: 0.5),
                         ),
                       ),
@@ -634,7 +634,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
               Text(
                 "${_fromCurrency.toUpperCase()} -> ${_toCurrency.toUpperCase()}",
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: Design.baseFontSize + 1,
                   color: onSurface.withAlpha(145),
                 ),
               ),
@@ -704,7 +704,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                   return Text(
                     _formatNumber(value),
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       color: onSurface.withAlpha(120),
                     ),
                   );
@@ -733,7 +733,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                     child: Text(
                       _formatChartLabel(_historyPoints[index].date),
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         color: onSurface.withAlpha(120),
                       ),
                     ),
@@ -757,7 +757,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                     "${_formatApiDate(point.date)}\n${_formatNumber(point.value)} ${_toCurrency.toUpperCase()}",
                     TextStyle(
                       color: onSurface,
-                      fontSize: 11,
+                      fontSize: Design.baseFontSize + 1,
                       fontWeight: FontWeight.w600,
                     ),
                   );
@@ -870,7 +870,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
           message,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: Design.baseFontSize + 2,
             color: onSurface.withAlpha(145),
           ),
         ),
@@ -888,7 +888,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: Design.baseFontSize + 1,
           color: Theme.of(context).colorScheme.onSurface.withAlpha(165),
         ),
       ),

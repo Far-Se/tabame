@@ -2114,7 +2114,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                       ),
                       const SizedBox(height: 12),
                       Row(children: <Widget>[
-                        const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text('Size:', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: SliderTheme(
@@ -2131,12 +2131,13 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                             ),
                           ),
                         ),
-                        Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                        Text('${localSize.round()}pt',
+                            style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 1)),
                       ]),
                       const SizedBox(height: 8),
                       // Text color preview (always from toolbar)
                       Row(children: <Widget>[
-                        const Text('Text color:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text('Text color:', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                         const SizedBox(width: 8),
                         Container(
                           width: 20,
@@ -2148,7 +2149,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Text('(from toolbar)', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                        Text('(from toolbar)',
+                            style: TextStyle(color: Colors.white38, fontSize: Design.baseFontSize + 1)),
                       ]),
                       const SizedBox(height: 8),
                       // Background toggle + background color picker
@@ -2166,7 +2168,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                               Icon(localBg ? Icons.check_box : Icons.check_box_outline_blank,
                                   color: Colors.white70, size: 16),
                               const SizedBox(width: 4),
-                              const Text('BG', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              Text('BG', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 1)),
                             ]),
                           ),
                         ),
@@ -2266,7 +2268,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                       const SizedBox(height: 12),
                       Row(
                         children: <Widget>[
-                          const Text('Size:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          Text('Size:', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                           const SizedBox(width: 8),
                           Expanded(
                             child: SliderTheme(
@@ -2283,7 +2285,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                               ),
                             ),
                           ),
-                          Text('${localSize.round()}pt', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                          Text('${localSize.round()}pt',
+                              style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 1)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -3200,7 +3203,7 @@ class _CaptureSelectionPainter extends CustomPainter {
         text: '${rect.width.abs().round()} x ${rect.height.abs().round()}',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 12,
+          fontSize: Design.baseFontSize + 2,
           backgroundColor: Colors.black.withValues(alpha: 0.85),
         ),
       ),
@@ -3557,8 +3560,11 @@ class _HkSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title,
-            style:
-                const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+            style: TextStyle(
+                color: Colors.white60,
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1)),
         const SizedBox(height: 8),
         ...entries.map((_HkEntry e) => Padding(
               padding: const EdgeInsets.only(bottom: 5),
@@ -3571,7 +3577,7 @@ class _HkSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(e.desc, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+                    child: Text(e.desc, style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2.5)),
                   ),
                 ],
               ),
@@ -3603,9 +3609,9 @@ class _KeyChip extends StatelessWidget {
       children: <Widget>[
         for (int i = 0; i < parts.length; i++) ...<Widget>[
           if (i > 0)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 3),
-              child: Text('+', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              child: Text('+', style: TextStyle(color: Colors.white38, fontSize: Design.baseFontSize + 1)),
             ),
           _chip(parts[i]),
         ],
@@ -3621,8 +3627,11 @@ class _KeyChip extends StatelessWidget {
           border: Border.all(color: Colors.white24),
         ),
         child: Text(text,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: Design.baseFontSize + 1.5,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace')),
       );
 }
 
@@ -3754,9 +3763,9 @@ class _ColorPopupBtnState extends State<_ColorPopupBtn> {
                                       '${_eyedropperPreviewColor.red8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}'
                                       '${_eyedropperPreviewColor.green8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}'
                                       '${_eyedropperPreviewColor.blue8bit.toRadixString(16).padLeft(2, '0').toUpperCase()}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 10,
+                                        fontSize: Design.baseFontSize,
                                         fontFamily: 'monospace',
                                       ),
                                     ),
@@ -4468,7 +4477,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                 label,
                 style: TextStyle(
                   color: selected ? Colors.white : Colors.white70,
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -4514,7 +4523,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                 label,
                 style: TextStyle(
                   color: checked ? Colors.white : Colors.white60,
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: checked ? FontWeight.w600 : FontWeight.w400,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -4548,7 +4557,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                 label,
                 style: TextStyle(
                   color: selected ? Colors.white : Colors.white60,
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -4661,9 +4670,9 @@ class _ToolBtnWithPopupState extends State<_ToolBtnWithPopup> {
                             Flexible(
                               child: Text(
                                 action.label,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: Design.baseFontSize + 2,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -4797,7 +4806,7 @@ class _ToolBtnWithFillPopupState extends State<_ToolBtnWithFillPopup> {
                             'Fill',
                             style: TextStyle(
                               color: widget.ctrl.shapeFilled ? Colors.white : Colors.white60,
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               fontWeight: widget.ctrl.shapeFilled ? FontWeight.w600 : FontWeight.w400,
                             ),
                           ),

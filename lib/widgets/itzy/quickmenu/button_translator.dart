@@ -382,7 +382,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: TextField(
             controller: _languageSearchController,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
             decoration: _inputDecoration(
               hint: "Search languages",
               icon: Icons.search_rounded,
@@ -452,7 +452,8 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Text(
               "Recent",
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: onSurface.withAlpha(110)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w800, color: onSurface.withAlpha(110)),
             ),
           ),
           const SizedBox(height: 6),
@@ -492,7 +493,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
                     child: Text(
                       name,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         fontWeight: FontWeight.w700,
                         color: selected ? accent : onSurface.withAlpha(160),
                       ),
@@ -508,7 +509,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: TextField(
             controller: _fromSearchController,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
             decoration: _inputDecoration(
               hint: "Search languages",
               icon: Icons.search_rounded,
@@ -569,7 +570,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
     return InputDecoration(
       isDense: true,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(110)),
+      hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(110)),
       prefixIcon: Icon(icon, size: 16, color: accent),
       filled: true,
       fillColor: accent.withAlpha(10),
@@ -632,7 +633,8 @@ class _TargetSummary extends StatelessWidget {
                 targetLanguages.isEmpty ? "Choose languages" : "$label${extra > 0 ? ' +$extra' : ''}",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
               ),
             ),
             Icon(Icons.tune_rounded, size: 14, color: accent),
@@ -679,7 +681,8 @@ class _FromSummary extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               "From:",
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -687,7 +690,8 @@ class _FromSummary extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
               ),
             ),
             Icon(Icons.chevron_right_rounded, size: 16, color: accent),
@@ -739,7 +743,8 @@ class _TranslationCard extends StatelessWidget {
                       : "$title · from ${GoogleTranslator.languages[result.detectedLanguage] ?? result.detectedLanguage!.toUpperCase()}",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: onSurface.withAlpha(150)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w800, color: onSurface.withAlpha(150)),
                 ),
               ),
               if (!hasError)
@@ -816,13 +821,14 @@ class _LanguageRow extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
               ),
             ),
             const SizedBox(width: 8),
             Text(
               code.toUpperCase(),
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: onSurface.withAlpha(95)),
+              style:
+                  TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: onSurface.withAlpha(95)),
             ),
           ],
         ),
@@ -854,7 +860,8 @@ class _InfoStrip extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145)),
             ),
           ),
         ],
@@ -890,7 +897,7 @@ class _EmptyTranslationState extends StatelessWidget {
           Text(
             "Auto-detect source language, then translate to your selected targets.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130), height: 1.25),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130), height: 1.25),
           ),
         ],
       ),

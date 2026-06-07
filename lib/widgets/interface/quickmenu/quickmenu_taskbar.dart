@@ -228,7 +228,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                 Text(
                   "DISPLAY PREFERENCE",
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: Design.baseFontSize,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.5,
                     color: scheme.primary.withValues(alpha: 0.7),
@@ -326,7 +326,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         color: theme.hintColor.withValues(alpha: 0.6),
                       ),
                     ),
@@ -592,7 +592,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.6)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: theme.hintColor.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -621,7 +621,9 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                  Text(subtitle, style: TextStyle(fontSize: 11, color: theme.hintColor.withValues(alpha: 0.6))),
+                  Text(subtitle,
+                      style:
+                          TextStyle(fontSize: Design.baseFontSize + 1, color: theme.hintColor.withValues(alpha: 0.6))),
                 ],
               ),
             ),
@@ -650,7 +652,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(color: theme.hintColor.withValues(alpha: 0.5), fontSize: 12),
+            style: TextStyle(color: theme.hintColor.withValues(alpha: 0.5), fontSize: Design.baseFontSize + 2),
           ),
         ],
       ),
@@ -676,7 +678,7 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
         style: const TextStyle(fontSize: 13),
         decoration: InputDecoration(
           labelText: labelText,
-          labelStyle: TextStyle(fontSize: 12, color: theme.hintColor),
+          labelStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: theme.hintColor),
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           border: OutlineInputBorder(
@@ -949,17 +951,17 @@ class _AllBadgesModalState extends State<_AllBadgesModal> {
             children: <Widget>[
               Icon(Icons.badge_outlined, size: 18, color: scheme.primary),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    const Text(
                       "ALL OPENED APP BADGES",
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       "Currently active UIA taskbar items and their badge/helpText status",
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -1020,7 +1022,7 @@ class _AllBadgesModalState extends State<_AllBadgesModal> {
                                   child: Text(
                                     button.helpText,
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: Design.baseFontSize + 1,
                                       fontWeight: FontWeight.bold,
                                       color: accent,
                                     ),
@@ -1030,7 +1032,7 @@ class _AllBadgesModalState extends State<_AllBadgesModal> {
                                 Text(
                                   "-",
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: Design.baseFontSize + 2,
                                     color: theme.hintColor.withValues(alpha: 0.4),
                                   ),
                                 ),

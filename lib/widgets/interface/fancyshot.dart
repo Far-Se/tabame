@@ -17,6 +17,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
+import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/mini_switch.dart';
 
@@ -993,7 +994,7 @@ class _CompactSlider extends StatelessWidget {
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1002,7 +1003,7 @@ class _CompactSlider extends StatelessWidget {
               Text(
                 value.toStringAsFixed(decimals),
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   color: colorScheme.primary,
                   fontWeight: FontWeight.w900,
                   fontFamily: 'monospace',
@@ -1059,7 +1060,7 @@ class _CompactTextField extends StatelessWidget {
           child: Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
               color: colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1071,11 +1072,12 @@ class _CompactTextField extends StatelessWidget {
           height: 36,
           child: TextField(
             controller: controller,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               isDense: true,
               hintText: hint,
-              hintStyle: TextStyle(fontSize: 11, color: colorScheme.onSurface.withValues(alpha: 0.3)),
+              hintStyle:
+                  TextStyle(fontSize: Design.baseFontSize + 1, color: colorScheme.onSurface.withValues(alpha: 0.3)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -1133,7 +1135,7 @@ class _ProfileCreateTile extends StatelessWidget {
               onSubmitted: (_) => onCreate(),
               style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w500,
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
               ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -1275,7 +1277,7 @@ class _ProfileListTileState extends State<_ProfileListTile> {
                       onSubmitted: (_) => _commitRename(),
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                       ),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
@@ -1287,7 +1289,7 @@ class _ProfileListTileState extends State<_ProfileListTile> {
                       widget.profile.name,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         color: widget.selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.85),
                       ),
                       overflow: TextOverflow.ellipsis,

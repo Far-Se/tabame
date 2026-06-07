@@ -659,7 +659,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
               'Z${_selectedZone! + 1}',
               style: TextStyle(
                 color: accent.withValues(alpha: 0.6),
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -961,7 +961,7 @@ class _CoordChip extends StatelessWidget {
         label,
         style: TextStyle(
           color: userSettings.themeColors.accent,
-          fontSize: 12,
+          fontSize: Design.baseFontSize + 2,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.4,
         ),

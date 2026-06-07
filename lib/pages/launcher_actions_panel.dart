@@ -506,7 +506,7 @@ class _ActionsHeader extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: accent.withAlpha(180),
                     fontWeight: FontWeight.w600,
-                    fontSize: 10,
+                    fontSize: Design.baseFontSize,
                   ),
                 ),
               ],
@@ -618,7 +618,7 @@ class _KbdHint extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w600,
               color: onSurface.withAlpha(160),
               fontFamily: 'monospace',
@@ -628,7 +628,7 @@ class _KbdHint extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           caption,
-          style: TextStyle(fontSize: 10, color: onSurface.withAlpha(80)),
+          style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(80)),
         ),
       ],
     );
@@ -688,7 +688,7 @@ class _ActionsList extends StatelessWidget {
                       action.label,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(60),
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -797,7 +797,7 @@ class _ActionTile extends StatelessWidget {
                     child: Text(
                       action.kbdHint!,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         color: onSurface.withAlpha(100),
                         fontFamily: 'monospace',
                       ),
@@ -959,7 +959,7 @@ class _CliRunSheetState extends State<_CliRunSheet> {
               child: Text(
                 widget.cliItem.value,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontFamily: 'monospace',
                   color: onSurface.withAlpha(200),
                 ),
@@ -979,7 +979,7 @@ class _CliRunSheetState extends State<_CliRunSheet> {
                   decoration: InputDecoration(
                     isDense: true,
                     hintText: 'Value for \$$v',
-                    hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(80)),
+                    hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(80)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -1009,7 +1009,7 @@ class _CliRunSheetState extends State<_CliRunSheet> {
                       child: Text(
                         _workingDirectory.isEmpty ? 'Working directory (optional)' : _workingDirectory,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: _workingDirectory.isEmpty ? onSurface.withAlpha(80) : onSurface.withAlpha(200),
                         ),
                         overflow: TextOverflow.ellipsis,

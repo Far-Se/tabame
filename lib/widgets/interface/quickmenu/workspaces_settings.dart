@@ -221,14 +221,14 @@ class _WorkspaceListTile extends StatelessWidget {
                     Text(
                       '${workspace.areas.length} app${workspace.areas.length == 1 ? '' : 's'}'
                       '${monitors.isNotEmpty ? ' | ${monitors.length} monitor${monitors.length == 1 ? '' : 's'}' : ''}',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       workspace.areas.isEmpty
                           ? 'Add apps from the live window picker'
                           : 'Uses saved positions, arguments, and hooks',
-                      style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.45)),
+                      style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.45)),
                     ),
                   ],
                 ),
@@ -657,7 +657,7 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
         onChanged: (String value) => setState(() => _windowQuery = value),
         decoration: InputDecoration(
           hintText: 'Search open windows',
-          hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.35)),
+          hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.35)),
           prefixIcon: Icon(Icons.search_rounded, size: 18, color: onSurface.withValues(alpha: 0.35)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -703,7 +703,7 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.55)),
               ),
             ],
           ),
@@ -764,7 +764,7 @@ class _WorkspacePreviewSection extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Visual summary of the selected windows and their saved positions',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.55)),
                     ),
                   ],
                 ),
@@ -772,7 +772,7 @@ class _WorkspacePreviewSection extends StatelessWidget {
               Text(
                 '${workspace.areas.length} item${workspace.areas.length == 1 ? '' : 's'}',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontWeight: FontWeight.w700,
                   color: onSurface.withValues(alpha: 0.45),
                 ),
@@ -849,7 +849,7 @@ class _CurrentWindowTile extends StatelessWidget {
                       exeName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.55)),
                     ),
                   ],
                 ),
@@ -865,7 +865,7 @@ class _CurrentWindowTile extends StatelessWidget {
                   child: Text(
                     'M$monitorNumber',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.w700,
                       color: accent,
                     ),
@@ -1027,7 +1027,8 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
                         const SizedBox(height: 2),
                         Text(
                           '${_monitorLabel()} | ${_geometryLabel()}',
-                          style: TextStyle(fontSize: 10, color: widget.onSurface.withValues(alpha: 0.55)),
+                          style:
+                              TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withValues(alpha: 0.55)),
                         ),
                       ],
                     ),
@@ -1080,7 +1081,9 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
                   Text(
                     'Hooks',
                     style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700, color: widget.onSurface.withValues(alpha: 0.6)),
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w700,
+                        color: widget.onSurface.withValues(alpha: 0.6)),
                   ),
                   const SizedBox(height: 6),
                   Wrap(
@@ -1093,7 +1096,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
                           selected: _area.hooks.contains(hook),
                           onSelected: (_) => _toggleHook(hook),
                           labelStyle: TextStyle(
-                            fontSize: 10,
+                            fontSize: Design.baseFontSize,
                             fontWeight: FontWeight.w700,
                             color:
                                 _area.hooks.contains(hook) ? widget.accent : widget.onSurface.withValues(alpha: 0.75),
@@ -1137,7 +1140,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
       children: <Widget>[
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
         ),
         const SizedBox(height: 4),
         Container(
@@ -1148,10 +1151,10 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
           ),
           child: TextField(
             controller: controller,
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: Design.baseFontSize + 2),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.40)),
+              hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.40)),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               isDense: true,
@@ -1190,7 +1193,7 @@ class _EmptyWorkspaceState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Create one, pick live windows, and save their positions',
-            style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.45)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.45)),
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
@@ -1242,7 +1245,7 @@ class _EmptyMiniState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.45)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.45)),
           ),
         ],
       ),
@@ -1295,7 +1298,7 @@ class _WorkspacePreviewPainter extends CustomPainter {
           text: 'Workspace preview',
           style: TextStyle(
             color: onSurface.withValues(alpha: 0.35),
-            fontSize: 12,
+            fontSize: Design.baseFontSize + 2,
             fontWeight: FontWeight.w600,
           ),
         ),

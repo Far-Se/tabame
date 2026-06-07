@@ -190,7 +190,8 @@ class CountDownWidgetState extends State<CountDownWidget> {
             padding: const EdgeInsets.only(bottom: 8),
             child: TextButton(
               onPressed: _stopTimer,
-              child: Text("Cancel Countdown", style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: 12)),
+              child: Text("Cancel Countdown",
+                  style: TextStyle(color: Colors.redAccent.withAlpha(200), fontSize: Design.baseFontSize + 2)),
             ),
           ),
 
@@ -198,10 +199,14 @@ class CountDownWidgetState extends State<CountDownWidget> {
 
         // History List
         if (timers.isNotEmpty && !Globals.countdownManager.isRunning && !Globals.countdownManager.isPaused) ...<Widget>[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text("Recent",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: Colors.grey)),
           ),
           Flexible(
             child: ListView.builder(
@@ -257,7 +262,8 @@ class CountDownWidgetState extends State<CountDownWidget> {
         ),
         const SizedBox(height: 4),
         Text(label,
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.4))),
+            style: TextStyle(
+                fontSize: Design.baseFontSize, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.4))),
       ],
     );
   }

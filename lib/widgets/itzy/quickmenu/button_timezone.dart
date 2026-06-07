@@ -103,7 +103,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
                 Text(
                   "Type a local wall-clock time like 6 PM or 18:30 and compare it with saved zones.",
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: onSurface.withAlpha(180),
                     height: 1.25,
                   ),
@@ -160,7 +160,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
               child: Text(
                 "Use formats like 6 PM, 6:30 pm, 18:00, or 0830.",
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: onSurface.withAlpha(190),
                 ),
               ),
@@ -175,7 +175,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
               child: Text(
                 "No zones saved yet. Open settings and add the time zones you talk to most.",
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: onSurface.withAlpha(190),
                 ),
               ),
@@ -222,7 +222,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
           Text(
             "Saved zones",
             style: TextStyle(
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
               fontWeight: FontWeight.w600,
               color: onSurface,
             ),
@@ -232,7 +232,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
             Text(
               "No saved zones yet.",
               style: TextStyle(
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
                 color: onSurface.withAlpha(150),
               ),
             )
@@ -254,7 +254,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
                           Text(
                             _shortZoneLabel(zone),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               color: onSurface.withAlpha(210),
                             ),
                           ),
@@ -277,7 +277,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
           Text(
             "Add zone",
             style: TextStyle(
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
               fontWeight: FontWeight.w600,
               color: onSurface,
             ),
@@ -287,7 +287,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
             Text(
               "No matching zones found.",
               style: TextStyle(
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
                 color: onSurface.withAlpha(150),
               ),
             )
@@ -306,7 +306,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
                         child: Text(
                           _prettyZoneName(zone),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             color: onSurface.withAlpha(210),
                           ),
                         ),
@@ -314,7 +314,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
                       Text(
                         zone,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: Design.baseFontSize + 1,
                           color: onSurface.withAlpha(120),
                         ),
                       ),
@@ -367,7 +367,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
               Text(
                 offsetLabel,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: Design.baseFontSize + 1,
                   color: onSurface.withAlpha(145),
                 ),
               ),
@@ -377,7 +377,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
           Text(
             zoneId,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               color: onSurface.withAlpha(125),
             ),
           ),
@@ -425,7 +425,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.w600,
                   color: onSurface.withAlpha(180),
                 ),
@@ -434,7 +434,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
               Text(
                 result,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.w600,
                   color: onSurface.withAlpha(180),
                   height: 1.2,
@@ -457,7 +457,7 @@ class _TimeZoneWidgetState extends State<TimeZoneWidget> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: Design.baseFontSize + 1,
           color: onSurface.withAlpha(170),
         ),
       ),

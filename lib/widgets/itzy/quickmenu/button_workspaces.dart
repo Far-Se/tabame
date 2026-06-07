@@ -349,7 +349,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Create them in QuickMenu Settings',
-              style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.45)),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.45)),
             ),
           ],
         ),
@@ -400,7 +400,7 @@ class _WorkspaceTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${workspace.areas.length} App${workspace.areas.length == 1 ? '' : 's'}',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.60)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.60)),
                     ),
                   ],
                 ),

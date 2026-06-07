@@ -97,7 +97,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                           searchFinished
                               ? "Found ${groupedResults.length} files matching your query."
                               : (searchState == 1 ? "Search in progress..." : "No active search."),
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2),
                         ),
                       ],
                     ),
@@ -220,7 +220,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
                             searchFolder.isEmpty
                                 ? "Pick a folder to search within"
                                 : searchFolder.truncate(70, suffix: "..."),
-                            style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -304,13 +305,14 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text("Search Parameters", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    SizedBox(height: 2),
-                    Text("Specify what to find and which files to look into.", style: TextStyle(fontSize: 12)),
+                    const Text("Search Parameters", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text("Specify what to find and which files to look into.",
+                        style: TextStyle(fontSize: Design.baseFontSize + 2)),
                   ],
                 ),
               ),
@@ -381,7 +383,7 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
           const SizedBox(width: 8),
           RichText(
             text: TextSpan(
-              style: TextStyle(color: onSurface, fontSize: 12),
+              style: TextStyle(color: onSurface, fontSize: Design.baseFontSize + 2),
               children: <InlineSpan>[
                 TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.bold)),
                 TextSpan(text: " $label", style: TextStyle(color: onSurface.withValues(alpha: 0.65))),
@@ -626,7 +628,7 @@ class _FileResultCardState extends State<_FileResultCard> {
                       children: <Widget>[
                         Text(fileName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         Text(parentDir.truncate(80, suffix: "..."),
-                            style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5))),
+                            style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5))),
                       ],
                     ),
                   ),
@@ -637,7 +639,9 @@ class _FileResultCardState extends State<_FileResultCard> {
                         borderRadius: BorderRadius.circular(12)),
                     child: Text("${widget.matches.length} matches",
                         style: TextStyle(
-                            color: userSettings.themeColors.accent, fontSize: 10, fontWeight: FontWeight.bold)),
+                            color: userSettings.themeColors.accent,
+                            fontSize: Design.baseFontSize,
+                            fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 8),
                   _buildTinyIconButton(
@@ -701,7 +705,7 @@ class _FileResultCardState extends State<_FileResultCard> {
               ),
               child: Text(
                 o.lines.join("\n").trim(),
-                style: const TextStyle(fontFamily: "monospace", fontSize: 11, height: 1.4),
+                style: TextStyle(fontFamily: "monospace", fontSize: Design.baseFontSize + 1, height: 1.4),
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),

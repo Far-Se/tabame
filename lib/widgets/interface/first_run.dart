@@ -896,7 +896,7 @@ class FirstRunState extends State<FirstRun> {
                         const SizedBox(width: 6),
                         Text(a.direction, style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
                         const SizedBox(width: 4),
-                        Text("→", style: TextStyle(color: theme.hintColor, fontSize: 11)),
+                        Text("→", style: TextStyle(color: theme.hintColor, fontSize: Design.baseFontSize + 1)),
                         const SizedBox(width: 4),
                         Text(a.action, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
                       ],

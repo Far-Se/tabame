@@ -284,7 +284,7 @@ class AudioBoxState extends State<AudioBox> {
         Text(
           label.toUpperCase(),
           style: TextStyle(
-            fontSize: 10.5,
+            fontSize: Design.baseFontSize + 0.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.7,
             color: onSurface.withAlpha(220),
@@ -300,7 +300,7 @@ class AudioBoxState extends State<AudioBox> {
           child: Text(
             "$count",
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w700,
               color: accent.withAlpha(200),
             ),
@@ -345,7 +345,7 @@ class AudioBoxState extends State<AudioBox> {
               Text(
                 type == AudioDeviceType.output ? "OUTPUT" : "INPUT",
                 style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: Design.baseFontSize + 0.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.7,
                   color: onSurface.withAlpha(220),
@@ -361,7 +361,7 @@ class AudioBoxState extends State<AudioBox> {
                 child: Text(
                   "${info.devices.length}",
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: Design.baseFontSize,
                     fontWeight: FontWeight.w700,
                     color: accent.withAlpha(200),
                   ),
@@ -505,7 +505,7 @@ class AudioBoxState extends State<AudioBox> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                             letterSpacing: 0.2,
                             color: onSurface.withAlpha(isSelected ? 255 : 200),
@@ -523,7 +523,7 @@ class AudioBoxState extends State<AudioBox> {
                       Text(
                         "${((info.deviceVolumes[device.id] ?? 0.0) * 100).round()}%",
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize,
                           fontWeight: FontWeight.w700,
                           fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
                           color: isSelected ? accent.withAlpha(220) : onSurface.withAlpha(160),
@@ -617,7 +617,7 @@ class AudioBoxState extends State<AudioBox> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: Design.baseFontSize + 0.5,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                           color: onSurface.withAlpha(220),
@@ -628,7 +628,7 @@ class AudioBoxState extends State<AudioBox> {
                     Text(
                       "${(mix.maxVolume * 100).round()}%",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w700,
                         fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
                         color: onSurface.withAlpha(180),

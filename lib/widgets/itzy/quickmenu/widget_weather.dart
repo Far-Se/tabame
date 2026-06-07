@@ -174,7 +174,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight(userSettings.theme.uiFontWeight),
                   height: 1.1,
                 ),

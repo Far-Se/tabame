@@ -76,7 +76,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
                   "Store your favorite applications and tools here for quick access. Organize them into categories and choose between list or grid views.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                   ),
                 ),
@@ -84,7 +84,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
                 Text(
                   "Configure them in QuickMenu settings.",
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                     fontStyle: FontStyle.italic,
                     color: accent.withAlpha(180),
                   ),
@@ -273,7 +273,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
         ),
         title: Text(
           item.name,
-          style: const TextStyle(fontSize: 12),
+          style: TextStyle(fontSize: Design.baseFontSize + 2),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

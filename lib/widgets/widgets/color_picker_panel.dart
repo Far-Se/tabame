@@ -10,6 +10,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes/boxes_base.dart';
 import '../../models/classes/boxes/quick_menu_box.dart';
+import '../../models/settings.dart';
 import '../../models/util/color_picker_controller.dart';
 import '../../models/win32/win_utils.dart';
 import 'custom_tooltip.dart';
@@ -246,7 +247,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             "Pick any pixel on screen",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: Design.baseFontSize + 2.5,
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
@@ -256,7 +257,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             "The external picker samples the center color and the surrounding grid. When it closes, the grid loads here so you can inspect each cell.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: Design.baseFontSize + 0.5,
               color: onSurface.withAlpha(150),
               height: 1.25,
             ),
@@ -284,7 +285,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               visualDensity: VisualDensity.compact,
-              textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+              textStyle: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 8),
@@ -363,7 +364,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Text(
                       "Enable at least one format in settings to copy its output.",
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: Design.baseFontSize + 1.5,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
                         height: 1.35,
                       ),
@@ -393,7 +394,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                             _copiedMessage ?? colorNameText,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: Design.baseFontSize + 1.5,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                             ),
@@ -453,7 +454,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             "Tap any sampled square to inspect it. The accent outline marks the center pixel captured by the script.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
               height: 1.35,
             ),
@@ -481,7 +482,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
               child: Text(
                 "No formats enabled. Open settings to turn one back on.",
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: Design.baseFontSize + 1.5,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
                 ),
               ),
@@ -528,7 +529,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
               },
               visualDensity: VisualDensity.compact,
               labelStyle: TextStyle(
-                fontSize: 11.5,
+                fontSize: Design.baseFontSize + 1.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
               ),
@@ -584,7 +585,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                       child: Text(
                         "Format library",
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: Design.baseFontSize + 2.5,
                           fontWeight: FontWeight.w700,
                           color: onSurface,
                         ),
@@ -600,7 +601,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                 Text(
                   "Built-ins can be toggled on or off. Custom formats use placeholder tokens like %RX or %Hu and appear in the picker selector when enabled.",
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: Design.baseFontSize + 0.5,
                     height: 1.25,
                     color: onSurface.withAlpha(150),
                   ),
@@ -644,7 +645,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
           Text(
             "Create custom format",
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: Design.baseFontSize + 2.5,
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
@@ -652,7 +653,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
           const SizedBox(height: 8),
           TextField(
             controller: _customNameController,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
             decoration: _formatInputDecoration(
               hint: "Name",
               icon: Icons.badge_outlined,
@@ -666,7 +667,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             controller: _customOutputController,
             minLines: 2,
             maxLines: 4,
-            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
             decoration: _formatInputDecoration(
               hint: "Output template, e.g: new Color(%Rb, %Gb, %Bb)",
               icon: Icons.code_rounded,
@@ -685,7 +686,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             Text(
               "Pick a color to preview custom format output.",
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: Design.baseFontSize + 0.5,
                 color: onSurface.withAlpha(150),
               ),
             ),
@@ -706,7 +707,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                         Text(
                           "Format Info",
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: Design.baseFontSize + 1.5,
                             fontWeight: FontWeight.w600,
                             color: accent,
                           ),
@@ -723,7 +724,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -759,7 +760,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                       child: Text(
                         "Available Tokens",
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: Design.baseFontSize + 2.5,
                           fontWeight: FontWeight.w700,
                           color: onSurface,
                         ),
@@ -779,7 +780,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Expanded(
                       child: TextField(
                         controller: _customOutputController,
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
                         decoration: _formatInputDecoration(
                           hint: "Build your format template here...",
                           icon: Icons.code_rounded,
@@ -836,7 +837,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                                 Text(
                                   entry.description,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: Design.baseFontSize + 2,
                                     fontWeight: FontWeight.w700,
                                     color: onSurface,
                                   ),
@@ -846,7 +847,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                                   Text(
                                     "Modifiers: ${entry.modifiers}",
                                     style: TextStyle(
-                                      fontSize: 10.5,
+                                      fontSize: Design.baseFontSize + 0.5,
                                       height: 1.25,
                                       color: onSurface.withAlpha(150),
                                     ),
@@ -876,7 +877,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Text(
                       "Modifier Reference",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -885,7 +886,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Text(
                       "These apply to %R, %G, %B, and %Al.",
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         height: 1.25,
                         color: onSurface.withAlpha(150),
                       ),
@@ -906,7 +907,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                                   Text(
                                     entry.description,
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: Design.baseFontSize + 2,
                                       fontWeight: FontWeight.w700,
                                       color: onSurface,
                                     ),
@@ -915,7 +916,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                                   Text(
                                     "Example: ${entry.example}",
                                     style: TextStyle(
-                                      fontSize: 10.5,
+                                      fontSize: Design.baseFontSize + 0.5,
                                       height: 1.25,
                                       color: onSurface.withAlpha(150),
                                     ),
@@ -974,7 +975,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                             format.name,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12.5,
+                              fontSize: Design.baseFontSize + 2.5,
                               fontWeight: FontWeight.w700,
                               color: onSurface,
                             ),
@@ -994,7 +995,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: Design.baseFontSize + 0.5,
                           height: 1.25,
                           color: onSurface.withAlpha(150),
                         ),
@@ -1044,7 +1045,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
               value,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: Design.baseFontSize + 0.5,
                 fontWeight: FontWeight.w600,
                 color: onSurface.withAlpha(180),
               ),
@@ -1066,7 +1067,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
       child: Text(
         message,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: Design.baseFontSize + 0.5,
           fontWeight: FontWeight.w600,
           color: onSurface.withAlpha(200),
         ),
@@ -1083,7 +1084,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
     return InputDecoration(
       isDense: true,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 11.5, color: onSurface.withAlpha(100)),
+      hintStyle: TextStyle(fontSize: Design.baseFontSize + 1.5, color: onSurface.withAlpha(100)),
       prefixIcon: Icon(icon, size: 14, color: accent),
       filled: true,
       fillColor: onSurface.withAlpha(7),
@@ -1113,7 +1114,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: Design.baseFontSize + 0.5,
           fontWeight: FontWeight.w700,
           color: color,
         ),
@@ -1146,7 +1147,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: Design.baseFontSize + 1.5,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),

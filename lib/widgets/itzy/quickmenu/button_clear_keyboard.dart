@@ -320,7 +320,7 @@ class _StatusCard extends StatelessWidget {
                       active ? "Keyboard input is being blocked." : "Set a timer, then start the keyboard blocker.",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130)),
                     ),
                   ],
                 ),
@@ -397,7 +397,7 @@ class _TimeField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: onSurface.withAlpha(115))),
+        Text(label, style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: onSurface.withAlpha(115))),
       ],
     );
   }
@@ -432,7 +432,7 @@ class _PresetChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: Design.baseFontSize + 1,
             fontWeight: FontWeight.w800,
             color: active ? accent : onSurface.withAlpha(90),
           ),
@@ -464,7 +464,7 @@ class _InfoStrip extends StatelessWidget {
           Expanded(
             child: Text(
               "Useful if you want to clear your keyboard, or to stop your cat from writing poetry while you are away.",
-              style: TextStyle(fontSize: 11, height: 1.25, color: onSurface.withAlpha(135)),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, height: 1.25, color: onSurface.withAlpha(135)),
             ),
           ),
         ],

@@ -233,15 +233,15 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
         children: <Widget>[
           const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               "Not running as Administrator. You may not be able to modify some items.",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500),
             ),
           ),
           TextButton(
             onPressed: () => WinUtils.runAsAdmin(Platform.resolvedExecutable),
-            child: const Text("Restart as Admin", style: TextStyle(fontSize: 11)),
+            child: Text("Restart as Admin", style: TextStyle(fontSize: Design.baseFontSize + 1)),
           ),
         ],
       ),
@@ -257,7 +257,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
             children: <Widget>[
               const Text("Context Menu Cleaner", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               Text("Manage app-added context menu items.",
-                  style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.7))),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.7))),
             ],
           ),
         ),
@@ -334,7 +334,8 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
           children: <Widget>[
             Icon(icon, size: 16, color: isSelected ? accent : null),
             const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : null)),
+            Text(label,
+                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: isSelected ? FontWeight.bold : null)),
           ],
         ),
       ),
@@ -377,7 +378,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
                     Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     Text(
                       item.type == ContextMenuItemType.static ? "Static Item" : "Shell Extension",
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.5)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
                 ),

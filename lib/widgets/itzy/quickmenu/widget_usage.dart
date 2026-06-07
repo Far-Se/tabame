@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 
 class SystemUsageWidget extends StatefulWidget {
   const SystemUsageWidget({super.key});
@@ -47,6 +48,7 @@ class SystemUsageWidgetState extends State<SystemUsageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Text("📟$cpuUsage\n💾$memUsage", style: const TextStyle(fontSize: 12, height: 1.1), softWrap: false);
+    return Text("📟$cpuUsage\n💾$memUsage",
+        style: TextStyle(fontSize: Design.baseFontSize + 2, height: 1.1), softWrap: false);
   }
 }

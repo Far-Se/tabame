@@ -609,11 +609,15 @@ class _HotkeyCardState extends State<_HotkeyCard> {
                                   widget.keymap.keymaps.length == 1
                                       ? Text(
                                           "${widget.keymap.keymaps[0].name}",
-                                          style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
+                                          style: TextStyle(
+                                              fontSize: Design.baseFontSize + 2,
+                                              color: widget.colors.onSurface.withAlpha(150)),
                                         )
                                       : Text(
                                           "${widget.keymap.keymaps.length} automated actions",
-                                          style: TextStyle(fontSize: 12, color: widget.colors.onSurface.withAlpha(150)),
+                                          style: TextStyle(
+                                              fontSize: Design.baseFontSize + 2,
+                                              color: widget.colors.onSurface.withAlpha(150)),
                                         ),
                                 ],
                               ),
@@ -641,7 +645,8 @@ class _HotkeyCardState extends State<_HotkeyCard> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                               ),
                               icon: const Icon(Icons.add_rounded, size: 16),
-                              label: const Text("Action", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                              label: Text("Action",
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: Design.baseFontSize + 2)),
                               onPressed: widget.onAddAction,
                             ),
                             const SizedBox(width: 6),
@@ -1024,7 +1029,7 @@ class _HotkeysSubPageHeaderState extends State<_HotkeysSubPageHeader> {
                     Text(
                       "HOTKEYS / ",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w800,
                         color: onSurface.withAlpha(76),
                         letterSpacing: 1,
@@ -1033,7 +1038,7 @@ class _HotkeysSubPageHeaderState extends State<_HotkeysSubPageHeader> {
                     Text(
                       widget.title.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         fontWeight: FontWeight.w800,
                         color: primary,
                         letterSpacing: 0.5,
@@ -1298,7 +1303,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
                       const SizedBox(height: 2),
                       Text(
                         _binding.enabled ? _binding.displayHotkey : "Disabled",
-                        style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -1711,7 +1716,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                   const SizedBox(height: 2),
                   Text(
                     currentVk == 0 ? "Not set" : WinKeys.vk(currentVk).replaceAll("VK_", ""),
-                    style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1766,7 +1771,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                 children: <Widget>[
                   Text(title, style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
+                  Text(subtitle, style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -1801,7 +1806,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                   const SizedBox(height: 2),
                   Text(
                     WinKeys.vk(currentVk).replaceAll("VK_", ""),
-                    style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                   ),
                 ],
               ),

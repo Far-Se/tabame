@@ -557,7 +557,7 @@ class _MonthRowState extends State<_MonthRow> {
                     child: Text(
                       '${widget.count}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         fontWeight: FontWeight.w600,
                         color: widget.accent,
                       ),
@@ -883,7 +883,7 @@ class _WebpProgressBanner extends StatelessWidget {
                 child: Text(
                   status,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     fontWeight: FontWeight.w500,
                     color: onSurface.withAlpha(220),
                   ),
@@ -894,7 +894,7 @@ class _WebpProgressBanner extends StatelessWidget {
                 Text(
                   '${(overall * 100).toStringAsFixed(0)}%',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     fontWeight: FontWeight.w600,
                     color: accent,
                   ),
@@ -938,7 +938,7 @@ class _Hint extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
                 color: Theme.of(context).colorScheme.onSurface.withAlpha(170),
               ),
             ),

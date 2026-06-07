@@ -89,7 +89,7 @@ class RemindersPanelState extends State<RemindersPanel> {
                         opacity: 0.5,
                         child: Text(
                           "No active reminders",
-                          style: TextStyle(fontSize: 12, color: onSurface),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
                         ),
                       ),
                     ),
@@ -151,7 +151,7 @@ class RemindersPanelState extends State<RemindersPanel> {
         Text(
           label.toUpperCase(),
           style: TextStyle(
-            fontSize: 11,
+            fontSize: Design.baseFontSize + 1,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
             color: onSurface,
@@ -164,7 +164,7 @@ class RemindersPanelState extends State<RemindersPanel> {
             color: accent.withAlpha(28),
             borderRadius: BorderRadius.circular(99),
           ),
-          child: Text("$count", style: TextStyle(fontSize: 10, color: accent)),
+          child: Text("$count", style: TextStyle(fontSize: Design.baseFontSize, color: accent)),
         ),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: onSurface.withAlpha(20))),
@@ -203,7 +203,7 @@ class RemindersPanelState extends State<RemindersPanel> {
                 child: Text(
                   text,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: onSurface,
                     fontWeight: FontWeight.w500,
                   ),
@@ -246,7 +246,7 @@ class RemindersPanelState extends State<RemindersPanel> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
                 color: accent,

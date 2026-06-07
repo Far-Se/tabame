@@ -18,6 +18,20 @@ class FileIndexer {
   final ValueNotifier<bool> isIndexingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isCompletedNotifier = ValueNotifier<bool>(false);
 
+  /// Ensures the database is open, reopening it if it was previously closed.
+  Future<Database> _ensureDb() async {
+    try {
+      final Database db = await FileIndexDb.instance.database;
+      // Probe the connection with a no-op to confirm it is still alive.
+      db.execute('SELECT 1');
+      return db;
+    } catch (_) {
+      // The cached instance is closed or broken — reset and reopen.
+      await FileIndexDb.instance.reopen();
+      return FileIndexDb.instance.database;
+    }
+  }
+
   /// Initializes the watchlist with current search folders.
   Future<void> init() async {
     final List<String> paths = Boxes.searchFolders.map((SearchFolder f) => f.path).toList();
@@ -35,8 +49,8 @@ class FileIndexer {
     indexedCount.value = 0;
 
     try {
-      // Ensure DB is initialized
-      await FileIndexDb.instance.database;
+      // Ensure DB is open (reopens automatically if it was closed).
+      await _ensureDb();
 
       // 1. Cleanup orphaned roots (folders removed from settings)
       final List<SearchFolder> allRootsConfig = Boxes.searchFolders;
@@ -59,8 +73,10 @@ class FileIndexer {
     } finally {
       _isIndexing = false;
       isCompletedNotifier.value = true;
-      Database db = await FileIndexDb.instance.database;
-      db.execute('PRAGMA shrink_memory;'); // Releases the page cache back to OS
+      try {
+        final Database db = await FileIndexDb.instance.database;
+        db.execute('PRAGMA shrink_memory;'); // Releases the page cache back to OS
+      } catch (_) {}
       // Wait 5 seconds before hiding progress
       Future<void>.delayed(const Duration(seconds: 5), () {
         if (!_isIndexing) {
@@ -80,7 +96,7 @@ class FileIndexer {
     indexedCount.value = 0;
 
     try {
-      await FileIndexDb.instance.database;
+      await _ensureDb();
       await _indexFolder(folder);
     } finally {
       _isIndexing = false;
@@ -103,7 +119,7 @@ class FileIndexer {
     indexedCount.value = 0;
 
     try {
-      await FileIndexDb.instance.database;
+      await _ensureDb();
       try {
         FileIndexDb.instance.deleteRootsByEntryType(SearchResultEntryType.file);
       } catch (e) {
@@ -136,7 +152,7 @@ class FileIndexer {
 
   /// Removes a folder from the database index.
   Future<void> removeFolder(String path) async {
-    await FileIndexDb.instance.database;
+    await _ensureDb();
     final int? rootId = FileIndexDb.instance.findNode(null, path);
     if (rootId != null) {
       FileIndexDb.instance.deleteNode(rootId);
@@ -147,7 +163,7 @@ class FileIndexer {
     final Directory dir = Directory(config.path);
     if (!await dir.exists()) return;
 
-    final Database db = await FileIndexDb.instance.database;
+    final Database db = await _ensureDb();
 
     db.execute('BEGIN TRANSACTION');
     try {

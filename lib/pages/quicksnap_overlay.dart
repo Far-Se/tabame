@@ -787,9 +787,9 @@ class _NotchTab extends StatelessWidget {
               // Invisible bold placeholder to reserve width and prevent layout jitter on hover
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.transparent,
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
                 ),
@@ -799,7 +799,7 @@ class _NotchTab extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: isActive ? 1.0 : 0.5),
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   letterSpacing: 0.3,
                 ),

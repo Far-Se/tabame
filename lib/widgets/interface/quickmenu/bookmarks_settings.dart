@@ -164,7 +164,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                 ),
                 Text(
                   "Group useful files, URLs, and scripts for quick access",
-                  style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.5)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5)),
                 ),
               ],
             ),
@@ -271,12 +271,12 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 4, bottom: 8),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 4, bottom: 8),
                                   child: Text(
                                     "SYMBOL",
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: Design.baseFontSize,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1.5,
                                     ),
@@ -320,11 +320,12 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4, bottom: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
                         child: Text(
                           "VIEW MODE",
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                          style:
+                              TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                         ),
                       ),
                       Row(
@@ -420,7 +421,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1,
                 color: isSelected ? accent : onSurface.withValues(alpha: 0.5),
@@ -685,7 +686,7 @@ class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSetti
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
                       color: isSelected ? accent : onSurface.withValues(alpha: 0.8),
@@ -818,7 +819,8 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                             ),
                             Text(
                               "${widget.project.bookmarks.length} saved bookmarks",
-                              style: TextStyle(fontSize: 11, color: widget.onSurface.withValues(alpha: 0.4)),
+                              style: TextStyle(
+                                  fontSize: Design.baseFontSize + 1, color: widget.onSurface.withValues(alpha: 0.4)),
                             ),
                           ],
                         ),
@@ -889,7 +891,8 @@ class _BookmarkGroupCardState extends State<_BookmarkGroupCard> {
                         child: Center(
                           child: Text(
                             "This group is empty.",
-                            style: TextStyle(fontSize: 12, color: widget.onSurface.withValues(alpha: 0.3)),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 2, color: widget.onSurface.withValues(alpha: 0.3)),
                           ),
                         ),
                       )
@@ -990,7 +993,7 @@ class _BookmarkItemTileState extends State<_BookmarkItemTile> {
                     widget.item.stringToExecute,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 10, color: widget.onSurface.withValues(alpha: 0.4)),
+                    style: TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withValues(alpha: 0.4)),
                   ),
                 ],
               ),

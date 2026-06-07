@@ -636,7 +636,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                             ),
                           ),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             color: onSurface,
                           ),
                         ),
@@ -654,7 +654,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                     "logos by logo.dev",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       color: onSurface.withAlpha(135),
                     ),
                   ),
@@ -680,7 +680,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: Design.baseFontSize + 2,
             fontWeight: FontWeight.w700,
             color: onSurface,
           ),
@@ -743,7 +743,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         height: 1.35,
                         color: onSurface.withAlpha(165),
                       ),
@@ -801,7 +801,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                 "Add one from an otpauth URI, an otpauth-migration payload, a backup file, or a captured QR code.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: onSurface.withAlpha(160),
                 ),
               ),
@@ -881,7 +881,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
                       child: Text(
                         "No authenticators match your search.",
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: onSurface.withAlpha(160),
                         ),
                       ),
@@ -967,7 +967,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         Text(
           "${remaining}s",
           style: TextStyle(
-            fontSize: 10,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.w700,
             color: onSurface.withAlpha(150),
           ),
@@ -1003,7 +1003,7 @@ class _StatusStrip extends StatelessWidget {
             child: Text(
               message,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w500,
                 color: accent,
               ),
@@ -1093,7 +1093,7 @@ class _AuthenticatorPasswordDialogState extends State<_AuthenticatorPasswordDial
             const SizedBox(height: 10),
             Text(
               _localError!,
-              style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: Colors.redAccent),
             ),
           ],
         ],
@@ -1255,7 +1255,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                           return Text(
                             widget.entry.title.characters.first.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               fontWeight: FontWeight.w700,
                               color: userSettings.themeColors.accent,
                             ),
@@ -1273,7 +1273,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               fontWeight: FontWeight.w700,
                               color: widget.onSurface,
                             ),
@@ -1284,7 +1284,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               color: widget.onSurface.withAlpha(150),
                             ),
                           ),
@@ -1301,7 +1301,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                       child: Text(
                         "${remaining}s",
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize,
                           fontWeight: FontWeight.w700,
                           color: widget.onSurface.withAlpha(180),
                         ),
@@ -1353,7 +1353,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
                     Text(
                       _copied ? "Copied" : "Tap to copy",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w600,
                         color: _copied ? userSettings.themeColors.accent : widget.onSurface.withAlpha(140),
                       ),

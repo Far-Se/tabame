@@ -103,7 +103,7 @@ class BMACDialog extends StatelessWidget {
                             "Don't show again",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: Design.baseFontSize + 1,
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                             ),
                           ),

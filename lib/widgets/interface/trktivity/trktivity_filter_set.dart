@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 
 class TrktivityFilterSet extends StatefulWidget {
   final TrktivityFilter filter;
@@ -112,7 +113,7 @@ class TrktivityFilterSetState extends State<TrktivityFilterSet> {
 
     return TextField(
       controller: controller,
-      style: const TextStyle(fontSize: 12),
+      style: TextStyle(fontSize: Design.baseFontSize + 2),
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, size: 16, color: colorScheme.primary.withValues(alpha: 0.7)),

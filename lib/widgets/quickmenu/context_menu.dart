@@ -145,7 +145,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: Design.baseFontSize,
           fontWeight: FontWeight.w700,
           color: onSurface.withAlpha(120),
           letterSpacing: 1.2,
@@ -162,7 +162,8 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Text(
           "No other windows open",
-          style: TextStyle(fontSize: 12, color: onSurface.withAlpha(100), fontStyle: FontStyle.italic),
+          style: TextStyle(
+              fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(100), fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -302,7 +303,7 @@ class _HookWindowTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: isHooked ? accent : onSurface.withAlpha(200),
                     fontWeight: isHooked ? FontWeight.w600 : FontWeight.w400,
                   ),

@@ -546,11 +546,11 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                     ),
                     Text(
                       "Changes are applied after closing Interface",
-                      style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                     ),
                     Text(
                       "You can change colors live from Quick Menu Design Button (from Top bar or Launcher).",
-                      style: TextStyle(fontSize: 12, color: accent.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: accent.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
@@ -721,7 +721,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               children: <Widget>[
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                Text(subtitle,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.62))),
                 const SizedBox(height: 10),
                 Text(
                   "Preview text using $family",
@@ -744,7 +745,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               minimumSize: Size.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text("Change", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text("Change", style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -801,8 +802,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          const Text("Preset Variants",
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+          Text("Preset Variants",
+              style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 8),
           ListColors(
             colorsNameMap: options,
@@ -844,7 +845,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -914,7 +915,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                   children: <Widget>[
                     Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.65))),
+                    Text(subtitle,
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.65))),
                   ],
                 ),
               ),
@@ -949,7 +951,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               children: <Widget>[
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                Text(subtitle,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.62))),
               ],
             ),
           ),
@@ -992,7 +995,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                   children: <Widget>[
                     Text(
                       current.name,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accent),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, color: accent),
                     ),
                     const SizedBox(width: 4),
                     Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: accent),
@@ -1020,7 +1023,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+          Text(subtitle, style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.62))),
           const SizedBox(height: 8),
           Row(
             children: <Widget>[
@@ -1054,7 +1057,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                   controller: controller,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold),
                   inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
                     isDense: true,
@@ -1152,7 +1155,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           ThemeType.dark => "Always use dark theme",
                           ThemeType.schedule => "Switching at custom hours",
                         },
-                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.62)),
                       ),
                     ],
                   ),
@@ -1213,7 +1216,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                                 ThemeType.dark => "Dark",
                                 ThemeType.schedule => "Scheduled",
                               },
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accent),
+                              style: TextStyle(
+                                  fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, color: accent),
                             ),
                             const SizedBox(width: 4),
                             Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: accent),
@@ -1265,7 +1269,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           children: <Widget>[
             Text(label,
                 style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: onSurface.withValues(alpha: 0.5))),
-            Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: accent)),
+            Text(value,
+                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w900, color: accent)),
           ],
         ),
       ),
@@ -1304,7 +1309,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
           ),
           if (widget.currentColors.backdropType == 'custom') ...<Widget>[
             const SizedBox(height: 16),
-            const Text("Image Set", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Text("Image Set",
+                style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 8),
             if (widget.currentColors.backdropImages.isEmpty)
               Container(
@@ -1415,7 +1421,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                       child: Text(
                         "Converted backdrops $_backdropProcessingConverted / $_backdropProcessingTotal",
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           fontWeight: FontWeight.w700,
                           color: onSurface.withValues(alpha: 0.82),
                         ),
@@ -1500,7 +1506,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               children: <Widget>[
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.62))),
+                Text(subtitle,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.62))),
               ],
             ),
           ),
@@ -1514,7 +1521,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
             children: options.values
                 .map((String val) => Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      child:
+                          Text(val, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
                     ))
                 .toList(),
           ),

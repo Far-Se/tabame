@@ -207,7 +207,7 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
             Text(
               design.name,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 color: isSelected ? theme.colorScheme.primary : theme.textTheme.bodyMedium?.color,
               ),
@@ -242,7 +242,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
                     Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
@@ -301,7 +303,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
                     Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
@@ -324,7 +328,7 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: Design.baseFontSize,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.2,
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
@@ -368,8 +372,9 @@ class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsP
                     children: <Widget>[
                       Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       Text(subtitle,
-                          style:
-                              TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6))),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 2,
+                              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6))),
                     ],
                   ),
                 ),

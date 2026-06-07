@@ -178,7 +178,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                               textAlign: TextAlign.center,
                                               style: GoogleFonts.getFont(
                                                 userSettings.themeColors.entryFontFamily,
-                                                fontSize: 11,
+                                                fontSize: Design.baseFontSize + 1,
                                                 color: onSurface.withAlpha(120),
                                               ),
                                             ),
@@ -367,7 +367,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   _restoringSavedQueue ? "Fetching tracks..." : "Ready to list in Player.",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                 ),
               ],
             ),
@@ -606,7 +607,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             const SizedBox(width: 7),
             Text(
               "Up next",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
             ),
             const SizedBox(width: 8),
             Container(
@@ -617,7 +618,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
               ),
               child: Text(
                 "$currentIndex / $queueLength",
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent),
+                style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: accent),
               ),
             ),
             const SizedBox(width: 6),
@@ -745,7 +746,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         child: TextField(
                           controller: _queueSearchController,
                           onChanged: (_) => setState(() {}),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
                           decoration: _inputDecoration(
                             hint: "Search queue by artist, album, or title",
                             icon: Icons.queue_music_rounded,
@@ -1064,7 +1065,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   child: TextField(
                     controller: _playlistNameController,
                     onSubmitted: (_) => _createPlaylist(),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
                     decoration: _inputDecoration(
                       hint: "New playlist name",
                       icon: Icons.playlist_add_rounded,
@@ -1184,7 +1185,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                           : "${_localRoots.length} folders - $_localSongCount tracks indexed",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1,
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                     ),
                   ],
                 ),
@@ -1257,7 +1260,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: Design.baseFontSize + 1.5,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface),
                       ),
@@ -1306,7 +1309,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 children: <Widget>[
                   Icon(Icons.create_new_folder_rounded, size: 16, color: accent),
                   const SizedBox(width: 6),
-                  Text("Add Music Folder", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                  Text("Add Music Folder",
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: accent)),
                 ],
               ),
             ),
@@ -1372,7 +1376,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
+                                  fontSize: Design.baseFontSize + 1,
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
                         ],
                       ),
                     ),
@@ -1426,7 +1431,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       const SizedBox(height: 2),
                       Text(
                         "Display playback controls in the quick menu taskbar.",
-                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                       ),
                     ],
                   ),
@@ -1483,7 +1490,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                         Icon(Icons.add_rounded, size: 16, color: accent),
                         const SizedBox(width: 6),
                         Text("Add Subsonic type Server",
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: accent)),
                       ],
                     ),
                   ),
@@ -1646,7 +1654,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
       decoration: _inputDecoration(
         hint: label,
         icon: icon,
@@ -1662,7 +1670,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     return InputDecoration(
       isDense: true,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
+      hintStyle:
+          TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
       prefixIcon: Icon(icon, size: 16, color: userSettings.themeColors.accent),
       suffixIcon: suffix,
       filled: true,

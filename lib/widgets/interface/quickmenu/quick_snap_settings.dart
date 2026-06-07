@@ -60,7 +60,9 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
                     const Text('Global QuickSnap Hooks', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     const SizedBox(height: 2),
                     Text('Enable hardware-level hooks to trigger layouts while dragging',
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                   ],
                 ),
               ),
@@ -94,7 +96,8 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
                 Expanded(
                   child: Text(
                     'How to Use: Start dragging any window then PRESS RIGHT CLICK to open the QuickSnap layout overlay instantly then drop it into a desired space. You can move the mouse on the top to see all QuickSnap Zones Sets.',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: accent, height: 1.3),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: accent, height: 1.3),
                   ),
                 ),
               ],
@@ -278,7 +281,7 @@ class _ZoneListTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       '${zone.zones.length} zone${zone.zones.length == 1 ? '' : 's'} · ${zone.layoutType.label}',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
@@ -486,7 +489,8 @@ class _ZoneEditorState extends State<_ZoneEditor> {
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Row(
               children: <Widget>[
-                Text('Layout:', style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.65))),
+                Text('Layout:',
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.65))),
                 const SizedBox(width: 8),
                 for (final QuickGridLayoutType type in QuickGridLayoutType.values) ...<Widget>[
                   _LayoutChip(
@@ -503,7 +507,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
                   _AddZoneChip(accent: accent, onTap: _addFreestyleZone),
                 ] else ...<Widget>[
                   Text('${_zone.zones.length} zones',
-                      style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.65))),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.65))),
                   const SizedBox(width: 6),
                   _CountButton(icon: Icons.remove_rounded, onTap: _zone.zones.length > 1 ? _removeZone : null),
                   const SizedBox(width: 4),
@@ -521,7 +525,8 @@ class _ZoneEditorState extends State<_ZoneEditor> {
               children: <Widget>[
                 Icon(Icons.space_bar_rounded, size: 14, color: onSurface.withValues(alpha: 0.55)),
                 const SizedBox(width: 6),
-                Text('Gap between zones:', style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.65))),
+                Text('Gap between zones:',
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.65))),
                 const SizedBox(width: 10),
                 _GapSpinner(
                   value: _zone.gap,
@@ -532,7 +537,8 @@ class _ZoneEditorState extends State<_ZoneEditor> {
                   accent: accent,
                 ),
                 const SizedBox(width: 8),
-                Text('px', style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.55))),
+                Text('px',
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.55))),
                 const SizedBox(width: 14),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -542,7 +548,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
                   ),
                   child: Text(
                     'Applied as inset when snapping windows',
-                    style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5)),
+                    style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5)),
                   ),
                 ),
               ],
@@ -606,7 +612,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
                       _zone.zones.isEmpty
                           ? 'Tap "Add Zone" to create your first zone'
                           : 'Click a zone to select it · drag to move · drag handles to resize',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.5)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
                 ),
@@ -627,7 +633,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
                   Icon(Icons.drag_indicator_rounded, size: 14, color: onSurface.withValues(alpha: 0.4)),
                   const SizedBox(width: 6),
                   Text('Drag the dividers to resize zones',
-                      style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.5))),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5))),
                 ],
               ),
             ),
@@ -685,7 +691,7 @@ class _LayoutChip extends StatelessWidget {
             const SizedBox(width: 5),
             Text(label,
                 style: TextStyle(
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                     color: selected ? accent : onSurface.withValues(alpha: 0.7))),
           ],
@@ -721,7 +727,8 @@ class _AddZoneChip extends StatelessWidget {
           children: <Widget>[
             Icon(Icons.add_rounded, size: 14, color: accent),
             const SizedBox(width: 5),
-            Text('Add Zone', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
+            Text('Add Zone',
+                style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: accent)),
           ],
         ),
       ),
@@ -1507,7 +1514,8 @@ class _ManualZoneEditor extends StatelessWidget {
                     Icon(Icons.layers_rounded, size: 12, color: accent),
                     const SizedBox(width: 5),
                     Text('Zone ${zoneIndex + 1}',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
+                        style:
+                            TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: accent)),
                   ],
                 ),
               ),
@@ -1523,7 +1531,8 @@ class _ManualZoneEditor extends StatelessWidget {
                       children: <Widget>[
                         Icon(Icons.delete_outline_rounded, size: 14, color: theme.colorScheme.error),
                         const SizedBox(width: 4),
-                        Text('Delete', style: TextStyle(fontSize: 11, color: theme.colorScheme.error)),
+                        Text('Delete',
+                            style: TextStyle(fontSize: Design.baseFontSize + 1, color: theme.colorScheme.error)),
                       ],
                     ),
                   ),
@@ -1619,7 +1628,7 @@ class _ManualZoneEditor extends StatelessWidget {
           // Summary text
           SelectableText(
             'L:${lPct.toStringAsFixed(1)}%  T:${tPct.toStringAsFixed(1)}%  R:${rPct.toStringAsFixed(1)}%  B:${bPct.toStringAsFixed(1)}%  W:${wPct.toStringAsFixed(1)}%  H:${hPct.toStringAsFixed(1)}%',
-            style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5), fontFamily: 'monospace'),
+            style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5), fontFamily: 'monospace'),
           ),
         ],
       ),
@@ -1682,7 +1691,7 @@ class _PctFieldState extends State<_PctField> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(widget.label,
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: onSurface.withValues(alpha: 0.6))),
+              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 4),
           SizedBox(
             height: 34,
@@ -1694,11 +1703,11 @@ class _PctFieldState extends State<_PctField> {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
                 ],
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
                   suffixText: '%',
-                  suffixStyle: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.5)),
+                  suffixStyle: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5)),
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -1783,7 +1792,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.digitsOnly,
                 ],
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
@@ -1868,11 +1877,11 @@ class _InfoChip extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 11, color: faint ? onSurface.withValues(alpha: 0.45) : accent.withValues(alpha: 0.8)),
             const SizedBox(width: 4),
-            Text('$label: ', style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: faint ? 0.45 : 0.65))),
+            Text('$label: ', style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: faint ? 0.45 : 0.65))),
             SelectableText(
               value,
               style: TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w700, color: faint ? onSurface.withValues(alpha: 0.65) : accent),
+                  fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: faint ? onSurface.withValues(alpha: 0.65) : accent),
             ),
           ],
         ),
@@ -1906,7 +1915,10 @@ class _ZoneIndexList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text('Zone summary',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withValues(alpha: 0.65))),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface.withValues(alpha: 0.65))),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -1944,13 +1956,13 @@ class _ZoneChip extends StatelessWidget {
           children: <InlineSpan>[
             TextSpan(
               text: 'Z${index + 1}  ',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent),
+              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: accent),
             ),
             TextSpan(
               text: 'L:${_p(rect.left)}  T:${_p(rect.top)}  '
                   'R:${_p(rect.right)}  B:${_p(rect.bottom)}  '
                   'W:${_p(rect.right - rect.left)}  H:${_p(rect.bottom - rect.top)}',
-              style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.70)),
+              style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.70)),
             ),
           ],
         ),
@@ -2047,7 +2059,7 @@ class _GridSettingsTile extends StatelessWidget {
                     const Text('Grid Settings', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     const SizedBox(height: 3),
                     Text('Configure subdivisions, density and scroll scaling',
-                        style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.6))),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6))),
                   ],
                 ),
               ),

@@ -95,7 +95,8 @@ class HostsEditorState extends State<HostsEditor> {
               ),
               child: Text(
                 "Open Tabame with administrator privileges to save changes.",
-                style: TextStyle(fontSize: 12, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 12),
@@ -132,7 +133,7 @@ class HostsEditorState extends State<HostsEditor> {
                         const Text("Hosts File", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         Text(
                           hostFile,
-                          style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -178,7 +179,10 @@ class HostsEditorState extends State<HostsEditor> {
           Expanded(
             child: Text(
               "${hostsList.length} entries loaded",
-              style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2,
+                  color: onSurface.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w600),
             ),
           ),
           TextButton.icon(
@@ -209,16 +213,16 @@ class HostsEditorState extends State<HostsEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
+          Row(
             children: <Widget>[
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text("Entries", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    SizedBox(height: 4),
+                    const Text("Entries", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 4),
                     Text("Edit address, host, and comment fields directly. Changes save automatically when allowed.",
-                        style: TextStyle(fontSize: 12)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2)),
                   ],
                 ),
               ),

@@ -220,7 +220,7 @@ class _CustomColorPickerState extends State<CustomColorPicker> {
                   child: TextField(
                     controller: hexController,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, letterSpacing: 1),
                     decoration: InputDecoration(
                       prefixText: "#",
                       isDense: true,
@@ -309,7 +309,10 @@ class _CustomColorPickerState extends State<CustomColorPicker> {
           const Divider(),
           const SizedBox(height: 12),
           Text('Theme Palette Sources',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12, fontWeight: FontWeight.bold)),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Flexible(
               child: GridView.builder(
@@ -379,8 +382,10 @@ class _CustomColorPickerState extends State<CustomColorPicker> {
             child: SizedBox(
               width: 12,
               child: Text(label,
-                  style:
-                      TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: activeColor.withValues(alpha: 0.8))),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: activeColor.withValues(alpha: 0.8))),
             ),
           ),
         Expanded(
@@ -424,7 +429,7 @@ class _CustomColorPickerState extends State<CustomColorPicker> {
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.bold),
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],

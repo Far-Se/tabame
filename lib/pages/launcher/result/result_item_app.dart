@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../widgets/widgets/custom_tooltip.dart';
 import '../../launcher_search_models.dart';
@@ -107,7 +108,7 @@ class LauncherAppListItem extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: isSelected ? onSurface : onSurface.withAlpha(200),
                         ),
                       ),
@@ -117,7 +118,7 @@ class LauncherAppListItem extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize,
                           color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
                         ),
                       ),

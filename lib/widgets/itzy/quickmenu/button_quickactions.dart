@@ -849,7 +849,7 @@ class ListItem extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: theme.textTheme.bodyMedium?.copyWith(
-        fontSize: 12,
+        fontSize: Design.baseFontSize + 2,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.1,
         color: onSurface.withAlpha(200),
@@ -925,7 +925,7 @@ class _QuickActionListItemState extends State<_QuickActionListItem> {
                     child: Text(
                       widget.name,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         fontWeight: FontWeight.w500,
                         color: _hovered ? User.theme.text : User.theme.text.withAlpha(200),
                       ),

@@ -313,8 +313,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   const SizedBox(height: 8),
                   _buildDesignsCard("Launcher", accent, onSurface),
                   const SizedBox(height: 8),
-                  _buildPanelTintCard(accent, onSurface),
-                  const SizedBox(height: 8),
                   ...List<Widget>.generate(_colorTitles.length, (int index) {
                     return Padding(
                       padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
@@ -342,6 +340,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     _buildBackdropOpacityCard(accent, onSurface),
                     const SizedBox(height: 8),
                   ],
+                  const SizedBox(height: 8),
+                  _buildPanelTintCard(accent, onSurface),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -362,7 +363,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Text(
             isQuickMenu ? "QuickMenu Design Type" : "Launcher Design Type",
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: Design.baseFontSize + 2.5,
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
@@ -405,7 +406,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         },
                   visualDensity: VisualDensity.compact,
                   labelStyle: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: Design.baseFontSize + 1.5,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected ? accent : onSurface,
                   ),
@@ -441,7 +442,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Border Radius",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -450,7 +451,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Set the border radius for the QuickMenu.",
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         color: onSurface.withAlpha(150),
                       ),
                     ),
@@ -500,7 +501,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Panel Tint",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -509,7 +510,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Panel tint strength for this palette.",
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         color: onSurface.withAlpha(150),
                       ),
                     ),
@@ -562,7 +563,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               Text(
                 "Backdrop Source",
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: Design.baseFontSize + 2.5,
                   fontWeight: FontWeight.w700,
                   color: onSurface,
                 ),
@@ -581,7 +582,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   borderRadius: BorderRadius.circular(8),
                   selectedColor: accent,
                   fillColor: accent.withAlpha(18),
-                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold),
                   constraints: const BoxConstraints(minHeight: 30),
                   children: options.values
                       .map((String val) => Padding(
@@ -615,7 +616,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Built-in Gradient",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -624,7 +625,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Choose one of the ${Globals.totalGradients} built-in gradients.",
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         color: onSurface.withAlpha(150),
                       ),
                     ),
@@ -669,7 +670,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                             child: Center(
                               child: Text(
                                 '${index + 1}',
-                                style: TextStyle(fontSize: 11, color: onSurface.withAlpha(100)),
+                                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
                               ),
                             ),
                           ),
@@ -724,12 +725,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         children: <Widget>[
           Text(
             "Custom Backdrop Image",
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: onSurface),
+            style: TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
           ),
           const SizedBox(height: 2),
           Text(
             "Choose one custom image for the QuickMenu backdrop.",
-            style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(150)),
+            style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 10),
           if (_selectedTheme.backdropImages.isEmpty)
@@ -747,7 +748,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     const SizedBox(height: 6),
                     Text(
                       "No custom images added",
-                      style: TextStyle(fontSize: 11, color: onSurface.withAlpha(100)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
                     ),
                   ],
                 ),
@@ -852,7 +853,10 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 Expanded(
                   child: Text(
                     "Converting $_backdropProcessingConverted / $_backdropProcessingTotal",
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withAlpha(200)),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface.withAlpha(200)),
                   ),
                 ),
               ],
@@ -883,7 +887,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               ),
               label: Text(
                 _isBackdropProcessing ? "Converting..." : "Add Image",
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -908,7 +912,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Backdrop Intensity",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -917,7 +921,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Opacity of the background image layer.",
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         color: onSurface.withAlpha(150),
                       ),
                     ),
@@ -961,7 +965,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Text(
             "Typography",
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: Design.baseFontSize + 2.5,
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
@@ -970,7 +974,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Text(
             "Custom fonts for general UI and data entries.",
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: Design.baseFontSize + 0.5,
               color: onSurface.withAlpha(150),
             ),
           ),
@@ -1025,7 +1029,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       "Base font size",
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -1042,16 +1046,22 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           ),
           Slider(
             min: 8,
-            max: 20,
-            value: _selectedTheme.baseFontSize.toDouble().clamp(8, 20),
+            max: 16,
+            divisions: 8,
+            showValueIndicator: ShowValueIndicator.onDrag,
+            value: _selectedTheme.baseFontSize.toDouble().clamp(8, 16),
             activeColor: accent,
             inactiveColor: accent.withAlpha(40),
             onChanged: (double value) {
-              setState(() => _selectedTheme.baseFontSize = value.floorToDouble());
-              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+              // setState(() => _selectedTheme.baseFontSize = value.floorToDouble());
+              // Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
             },
             onChangeEnd: (double value) async {
+              await _updateTheme(() {
+                _selectedTheme.baseFontSize = value.floorToDouble();
+              });
               _selectedTheme.baseFontSize = value.floorToDouble();
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
               await _persistThemeChanges();
             },
           ),
@@ -1074,7 +1084,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         children: <Widget>[
           Text(title,
               style: TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 11.5, color: Theme.of(context).colorScheme.onSurface)),
+                  fontWeight: FontWeight.w600,
+                  fontSize: Design.baseFontSize + 1.5,
+                  color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 2),
           Text(
             "Preview: $family",
@@ -1104,7 +1116,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 child: Text(
                   "Change",
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: Design.baseFontSize + 0.5,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface.withAlpha(185),
                   ),
@@ -1149,7 +1161,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Text(
             "Interface Transparency Gradient",
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: Design.baseFontSize + 2.5,
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
@@ -1158,7 +1170,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           Text(
             "Overall panel transparency stops.",
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: Design.baseFontSize + 0.5,
               color: onSurface.withAlpha(150),
             ),
           ),
@@ -1213,7 +1225,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       _colorTitles[index],
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: Design.baseFontSize + 2.5,
                         fontWeight: FontWeight.w700,
                         color: onSurface,
                       ),
@@ -1222,7 +1234,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     Text(
                       _colorDescriptions[index],
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: Design.baseFontSize + 0.5,
                         height: 1.25,
                         color: onSurface.withAlpha(150),
                       ),
@@ -1252,7 +1264,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                       child: Text(
                         "Pick",
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: Design.baseFontSize + 0.5,
                           fontWeight: FontWeight.w700,
                           color: accent.withAlpha(220),
                         ),
@@ -1297,7 +1309,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: Design.baseFontSize + 0.5,
           fontWeight: FontWeight.w700,
           color: foreground,
         ),

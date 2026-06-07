@@ -57,7 +57,7 @@ class Globals {
   static WinRect? focusedRect;
   static int virtualDesktop = 0;
 
-  static const int totalGradients = 11;
+  static const int totalGradients = 12;
   static bool changingPages = false;
   static bool isWindowActive = false;
   static final Heights heights = Heights();

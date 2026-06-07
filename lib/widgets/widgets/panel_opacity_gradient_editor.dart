@@ -242,9 +242,9 @@ class _MiniSlider extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Text(label, style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150), fontWeight: FontWeight.w600)),
+            Text(label, style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(150), fontWeight: FontWeight.w600)),
             Text("${(value * 100).toInt()}%",
-                style: TextStyle(fontSize: 10, color: accent, fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: Design.baseFontSize, color: accent, fontWeight: FontWeight.bold)),
           ],
         ),
         SliderTheme(
@@ -289,7 +289,7 @@ class _AlignmentSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(label,
-            style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
+            style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
@@ -317,8 +317,10 @@ class _AlignmentSelector extends StatelessWidget {
                       value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withValues(alpha: 0.9)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1,
+                          fontWeight: FontWeight.w700,
+                          color: onSurface.withValues(alpha: 0.9)),
                     ),
                   ),
                   Icon(Icons.unfold_more_rounded, size: 14, color: accent.withValues(alpha: 0.7)),
@@ -332,7 +334,7 @@ class _AlignmentSelector extends StatelessWidget {
                   child: Text(
                     key,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: Design.baseFontSize + 1,
                       fontWeight: key == value ? FontWeight.w700 : FontWeight.w500,
                       color: key == value ? accent : onSurface,
                     ),

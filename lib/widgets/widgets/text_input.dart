@@ -109,7 +109,7 @@ class CustomTextInputState extends State<CustomTextInput> {
                   child: Text(
                     widget.labelText.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: Design.baseFontSize + 1,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.5,
                       color: theme.hintColor.withValues(alpha: _isFocused ? 1.0 : 0.8),
@@ -181,7 +181,7 @@ class CustomTextInputState extends State<CustomTextInput> {
                             fillColor: scheme.onSurface.withValues(alpha: 0.04),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                             labelStyle: TextStyle(
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.4,
                               color: scheme.onSurface.withValues(alpha: 0.65),

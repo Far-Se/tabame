@@ -285,7 +285,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                           Text(
                                             "Tabame",
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: Design.baseFontSize + 2,
                                               fontWeight: FontWeight.w600,
                                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                                             ),
@@ -550,7 +550,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                           Text(
                                                                             "Sponsored by",
                                                                             style: TextStyle(
-                                                                              fontSize: 10,
+                                                                              fontSize: Design.baseFontSize,
                                                                               fontStyle: FontStyle.italic,
                                                                               color: Theme.of(context)
                                                                                   .colorScheme
@@ -782,7 +782,7 @@ class _BMACFooterState extends State<_BMACFooter> with SingleTickerProviderState
                 "Made by Far Se",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
                   letterSpacing: 0.5,
                 ),

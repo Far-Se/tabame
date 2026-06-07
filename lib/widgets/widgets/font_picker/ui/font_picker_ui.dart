@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../models/settings.dart';
 import '../constants/constants.dart';
 import '../constants/fontweights_map.dart';
 import '../constants/translations.dart';
@@ -1604,7 +1605,7 @@ class _FontPickerUIState extends State<FontPickerUI> {
                               text: stylesString,
                               style: TextStyle(
                                 fontStyle: FontStyle.italic,
-                                fontSize: 11.0,
+                                fontSize: Design.baseFontSize + 1.0,
                                 color: Colors.grey,
                                 fontFamily: DefaultTextStyle.of(context).style.fontFamily,
                               ),
@@ -1638,7 +1639,7 @@ class _FontPickerUIState extends State<FontPickerUI> {
                                           maxLines: 1,
                                           overflow: TextOverflow.clip,
                                           style: TextStyle(
-                                            fontSize: 10.0,
+                                            fontSize: Design.baseFontSize,
                                             fontStyle: variant == "italic" ? FontStyle.italic : FontStyle.normal,
                                           ),
                                         ),

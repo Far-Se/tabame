@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/settings.dart';
 import '../../widgets/custom_tooltip.dart';
 import 'trktivity_models.dart';
 
@@ -136,7 +137,7 @@ class TrktivityTimeline extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Text(
             entry.key,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w500),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

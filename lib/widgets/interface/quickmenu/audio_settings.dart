@@ -111,7 +111,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.60)),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.60)),
                   ),
                 ],
               ),
@@ -165,7 +165,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.60),
                         ),
                       ),
@@ -199,7 +199,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
         Text(
           'Predefined Media Apps',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.1,
             color: accent.withValues(alpha: 0.65),
@@ -253,7 +253,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
             const SizedBox(width: 6),
             Text(
               _mediaAppsStatus ?? (_mediaAppsDirty ? 'Unsaved changes' : 'Saved'),
-              style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.55)),
             ),
           ],
         ),
@@ -359,7 +359,8 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
       title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
       subtitle: Text(
         subtitle,
-        style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.60)),
+        style: TextStyle(
+            fontSize: Design.baseFontSize + 1, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.60)),
       ),
       value: style,
       activeColor: theme.colorScheme.primary,
@@ -400,7 +401,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: theme.colorScheme.onErrorContainer, fontSize: 12),
+              style: TextStyle(color: theme.colorScheme.onErrorContainer, fontSize: Design.baseFontSize + 2),
             ),
           ),
         ],
@@ -505,7 +506,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                       Text(
                         'Player shortcuts and per-app volume automation',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.60),
                         ),
                       ),
@@ -551,7 +552,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                               Text(
                                 'Revert the temporary rule volume after the matched window stops being active',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: Design.baseFontSize + 2,
                                   color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.60),
                                 ),
                               ),
@@ -604,7 +605,8 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                               child: DropdownButtonFormField<String>(
                                 initialValue: volume.type,
                                 decoration: _miniDecoration(context, 'Match By'),
-                                style: TextStyle(fontSize: 12, color: onSurface, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    fontSize: Design.baseFontSize + 2, color: onSurface, fontWeight: FontWeight.bold),
                                 items: const <DropdownMenuItem<String>>[
                                   DropdownMenuItem<String>(value: 'exe', child: Text('EXE File')),
                                   DropdownMenuItem<String>(value: 'class', child: Text('Win Class')),
@@ -626,7 +628,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                                   Boxes.updateSettings('defaultVolume', jsonEncode(widget.volumes));
                                 },
                                 decoration: _miniDecoration(context, 'Match (Regex)').copyWith(hintText: '^Spotify.*'),
-                                style: const TextStyle(fontSize: 12, fontFamily: 'Consolas'),
+                                style: TextStyle(fontSize: Design.baseFontSize + 2, fontFamily: 'Consolas'),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -642,7 +644,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                                   Boxes.updateSettings('defaultVolume', jsonEncode(widget.volumes));
                                 },
                                 decoration: _miniDecoration(context, 'Vol').copyWith(suffixText: '%'),
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -686,7 +688,7 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       labelStyle: TextStyle(
-        fontSize: 11,
+        fontSize: Design.baseFontSize + 1,
         color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.70),
       ),
     );

@@ -1121,7 +1121,9 @@ class _ConverterPageState extends State<_ConverterPage> {
                     children: <Widget>[
                       _SectionLabel(label: 'Quality', accent: accent),
                       const Spacer(),
-                      Text('$_quality%', style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600)),
+                      Text('$_quality%',
+                          style:
+                              TextStyle(fontSize: Design.baseFontSize + 2, color: accent, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -1238,11 +1240,11 @@ class _ConverterPageState extends State<_ConverterPage> {
                       Expanded(
                         child: TextField(
                           controller: _profileNameCtrl,
-                          style: TextStyle(fontSize: 12, color: onSurface),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
                           decoration: InputDecoration(
                             isDense: true,
                             hintText: 'Profile name…',
-                            hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(100)),
+                            hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(100)),
                             filled: true,
                             fillColor: accent.withAlpha(10),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -1265,7 +1267,7 @@ class _ConverterPageState extends State<_ConverterPage> {
                       TextButton.icon(
                         onPressed: _saveProfile,
                         icon: const Icon(Icons.bookmark_add_outlined, size: 14),
-                        label: const Text('Save', style: TextStyle(fontSize: 12)),
+                        label: Text('Save', style: TextStyle(fontSize: Design.baseFontSize + 2)),
                         style: TextButton.styleFrom(
                           backgroundColor: accent.withAlpha(20),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1290,11 +1292,11 @@ class _ConverterPageState extends State<_ConverterPage> {
                             children: <Widget>[
                               Text(
                                 'Converting…',
-                                style: TextStyle(fontSize: 11, color: onSurface.withAlpha(160)),
+                                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(160)),
                               ),
                               Text(
                                 '$_convertProgress / $_convertTotal',
-                                style: TextStyle(fontSize: 11, color: accent),
+                                style: TextStyle(fontSize: Design.baseFontSize + 1, color: accent),
                               ),
                             ],
                           ),
@@ -1336,7 +1338,7 @@ class _ConverterPageState extends State<_ConverterPage> {
                             child: Text(
                               _statusMessage!,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: Design.baseFontSize + 2,
                                 color: _statusIsError ? Colors.red.shade300 : accent,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1394,7 +1396,10 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label,
       style: TextStyle(
-          fontSize: 11, fontWeight: FontWeight.w700, color: User.theme.text.withAlpha(150), letterSpacing: 0.4),
+          fontSize: Design.baseFontSize + 1,
+          fontWeight: FontWeight.w700,
+          color: User.theme.text.withAlpha(150),
+          letterSpacing: 0.4),
     );
   }
 }
@@ -1417,7 +1422,7 @@ class _ToolbarButton extends StatelessWidget {
     return TextButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 13),
-      label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      label: Text(label, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600)),
       style: TextButton.styleFrom(
         backgroundColor: accent.withAlpha(18),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
@@ -1455,7 +1460,7 @@ class _FormatButton extends StatelessWidget {
           side: active ? BorderSide(color: accent.withAlpha(80), width: 1) : BorderSide.none,
         ),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Text(label, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -1480,7 +1485,7 @@ class _IntField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
-      style: TextStyle(fontSize: 12, color: onSurface),
+      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
       onChanged: (String v) {
         final int? i = int.tryParse(v);
         if (i != null) onChanged(i);
@@ -1488,7 +1493,7 @@ class _IntField extends StatelessWidget {
       decoration: InputDecoration(
         isDense: true,
         labelText: label,
-        labelStyle: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+        labelStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130)),
         filled: true,
         fillColor: accent.withAlpha(10),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -1541,7 +1546,7 @@ class _IntField extends StatelessWidget {
 //               ),
 //             ),
 //             const SizedBox(width: 8),
-//             Text(label, style: TextStyle(fontSize: 12, color: onSurface.withAlpha(200))),
+//             Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(200))),
 //           ],
 //         ),
 //       ),
@@ -1613,7 +1618,7 @@ class _OutputModeRowState extends State<_OutputModeRow> {
                     Text(
                       widget.mode.label,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: Design.baseFontSize + 2,
                         fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                         color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(180),
                       ),
@@ -1621,7 +1626,7 @@ class _OutputModeRowState extends State<_OutputModeRow> {
                     if (widget.mode == OutputMode.specificFolder && widget.outputFolder != null)
                       Text(
                         widget.outputFolder!,
-                        style: TextStyle(fontSize: 10, color: widget.accent.withAlpha(180)),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: widget.accent.withAlpha(180)),
                         overflow: TextOverflow.ellipsis,
                       ),
                   ],
@@ -1697,7 +1702,7 @@ class _ProfileChipState extends State<_ProfileChip> {
                 child: Text(
                   widget.label,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                     fontWeight: widget.active ? FontWeight.w600 : FontWeight.w400,
                     color: widget.active ? widget.accent : widget.accent.withAlpha(180),
                   ),
@@ -1746,7 +1751,8 @@ class _ClipboardLoadingTile extends StatelessWidget {
           SizedBox(
               width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 1.5, color: accent.withAlpha(160))),
           const SizedBox(width: 10),
-          Text('Checking clipboard…', style: TextStyle(fontSize: 12, color: onSurface.withAlpha(140))),
+          Text('Checking clipboard…',
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(140))),
         ],
       ),
     );
@@ -1824,7 +1830,7 @@ class _ClipboardImageTileState extends State<_ClipboardImageTile> {
                       const SizedBox(height: 2),
                       Text(
                         '${widget.bytes.lengthInBytes ~/ 1024} KB  •  from clipboard',
-                        style: TextStyle(fontSize: 10, color: widget.onSurface.withAlpha(130)),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withAlpha(130)),
                       ),
                     ],
                   ),
@@ -1843,7 +1849,8 @@ class _ClipboardImageTileState extends State<_ClipboardImageTile> {
                       Icon(Icons.star_rounded, size: 11, color: widget.accent),
                       const SizedBox(width: 3),
                       Text('Clipboard',
-                          style: TextStyle(fontSize: 10, color: widget.accent, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize, color: widget.accent, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -1994,7 +2001,7 @@ class _FileRowState extends State<_FileRow> {
                             child: Text(
                               _stem,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                                 color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(210),
                               ),
@@ -2006,7 +2013,7 @@ class _FileRowState extends State<_FileRow> {
                             Text(
                               _ext,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                                 color: widget.selected ? widget.onSurface : widget.onSurface.withAlpha(210),
                               ),
@@ -2015,7 +2022,7 @@ class _FileRowState extends State<_FileRow> {
                       ),
                       Text(
                         _dir,
-                        style: TextStyle(fontSize: 10, color: widget.onSurface.withAlpha(100)),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withAlpha(100)),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -2047,7 +2054,7 @@ class _FileRowState extends State<_FileRow> {
                             child: Text(
                               _fileSize,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: Design.baseFontSize,
                                 color: widget.onSurface.withAlpha(140),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -2200,7 +2207,7 @@ class _FolderRowState extends State<_FolderRow> {
                 child: Text(
                   widget.path,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -2215,7 +2222,7 @@ class _FolderRowState extends State<_FolderRow> {
                 ),
                 child: Text(
                   '$_imageCount img',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: widget.accent),
+                  style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: widget.accent),
                 ),
               ),
               const SizedBox(width: 4),
@@ -2267,7 +2274,8 @@ class _Hint extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(160)),
             ),
           ],
         ),

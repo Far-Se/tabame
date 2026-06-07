@@ -16,6 +16,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/settings.dart' as settings_model;
+import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 
@@ -1073,8 +1074,8 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                     const SizedBox(width: 6),
                     Text(
                       label.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w700,
                         color: accent,
                         letterSpacing: 1.1,
@@ -1123,7 +1124,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               style: const TextStyle(fontSize: 13, color: textPrimary, fontWeight: FontWeight.w500)),
                           if (sublabel != null) ...<Widget>[
                             const SizedBox(height: 2),
-                            Text(sublabel, style: const TextStyle(fontSize: 11, color: textSecondary)),
+                            Text(sublabel, style: TextStyle(fontSize: Design.baseFontSize + 1, color: textSecondary)),
                           ],
                         ],
                       ),
@@ -1200,7 +1201,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                             child: const Icon(Icons.videocam_rounded, size: 16, color: accent),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -1214,7 +1215,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                 ),
                                 Text(
                                   'Configure capture, audio, and output',
-                                  style: TextStyle(fontSize: 11, color: textSecondary),
+                                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: textSecondary),
                                 ),
                               ],
                             ),
@@ -1330,10 +1331,13 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                   children: <Widget>[
                                     TextFormField(
                                       initialValue: _ffmpegCommand,
-                                      style: const TextStyle(fontSize: 12, color: textPrimary, fontFamily: 'monospace'),
+                                      style: TextStyle(
+                                          fontSize: Design.baseFontSize + 2,
+                                          color: textPrimary,
+                                          fontFamily: 'monospace'),
                                       decoration: InputDecoration(
                                         hintText: 'Leave blank to auto-generate…',
-                                        hintStyle: const TextStyle(color: textSecondary, fontSize: 12),
+                                        hintStyle: TextStyle(color: textSecondary, fontSize: Design.baseFontSize + 2),
                                         filled: true,
                                         fillColor: surface,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -1354,9 +1358,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       onChanged: (String v) => setModalState(() => _ffmpegCommand = v),
                                     ),
                                     const SizedBox(height: 8),
-                                    const Text(
+                                    Text(
                                       'Use {output} as the output path placeholder, or omit it to auto-append.',
-                                      style: TextStyle(fontSize: 10, color: textSecondary),
+                                      style: TextStyle(fontSize: Design.baseFontSize, color: textSecondary),
                                     ),
                                     if (_ffmpegCommand.trim().isEmpty) ...<Widget>[
                                       const SizedBox(height: 10),
@@ -1371,10 +1375,12 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: <Widget>[
-                                            const Text(
+                                            Text(
                                               'Auto-generated preview',
                                               style: TextStyle(
-                                                  fontSize: 10, color: textSecondary, fontWeight: FontWeight.w600),
+                                                  fontSize: Design.baseFontSize,
+                                                  color: textSecondary,
+                                                  fontWeight: FontWeight.w600),
                                             ),
                                             const SizedBox(height: 6),
                                             SelectableText(
@@ -1409,20 +1415,20 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    const Row(
+                                    Row(
                                       children: <Widget>[
-                                        Icon(
+                                        const Icon(
                                           Icons.warning_amber_rounded,
                                           color: Color(0xFFFFB74D),
                                           size: 18,
                                         ),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
                                             'virtual-audio-capturer is required',
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 12,
+                                              fontSize: Design.baseFontSize + 2,
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
@@ -1430,12 +1436,12 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    const Text(
+                                    Text(
                                       'FFmpeg system audio recording requires '
                                       '"virtual-audio-capturer" to be installed.',
                                       style: TextStyle(
                                         color: Color(0xFFE0E0E0),
-                                        fontSize: 11,
+                                        fontSize: Design.baseFontSize + 1,
                                         height: 1.4,
                                       ),
                                     ),
@@ -1453,20 +1459,20 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                           color: const Color(0xFFFFB74D),
                                           borderRadius: BorderRadius.circular(7),
                                         ),
-                                        child: const Row(
+                                        child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
-                                            Icon(
+                                            const Icon(
                                               Icons.download_rounded,
                                               size: 15,
                                               color: Colors.black,
                                             ),
-                                            SizedBox(width: 6),
+                                            const SizedBox(width: 6),
                                             Text(
                                               'Download',
                                               style: TextStyle(
                                                 color: Colors.black,
-                                                fontSize: 12,
+                                                fontSize: Design.baseFontSize + 2,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
@@ -1560,15 +1566,15 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
                                     ),
                                     const SizedBox(height: 2),
-                                    const Text('Directory where recordings are saved',
-                                        style: TextStyle(fontSize: 11, color: textSecondary)),
+                                    Text('Directory where recordings are saved',
+                                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: textSecondary)),
                                     const SizedBox(height: 8),
                                     Row(
                                       children: <Widget>[
                                         Expanded(
                                           child: TextFormField(
                                             initialValue: _saveFolder,
-                                            style: const TextStyle(fontSize: 12, color: textPrimary),
+                                            style: TextStyle(fontSize: Design.baseFontSize + 2, color: textPrimary),
                                             decoration: InputDecoration(
                                               isDense: true,
                                               filled: true,
@@ -1602,13 +1608,15 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                               border: Border.all(color: accent.withValues(alpha: 0.35)),
                                             ),
                                             alignment: Alignment.center,
-                                            child: const Row(
+                                            child: Row(
                                               children: <Widget>[
-                                                Icon(Icons.folder_open_rounded, size: 14, color: accent),
-                                                SizedBox(width: 5),
+                                                const Icon(Icons.folder_open_rounded, size: 14, color: accent),
+                                                const SizedBox(width: 5),
                                                 Text('Browse',
                                                     style: TextStyle(
-                                                        fontSize: 12, color: accent, fontWeight: FontWeight.w600)),
+                                                        fontSize: Design.baseFontSize + 2,
+                                                        color: accent,
+                                                        fontWeight: FontWeight.w600)),
                                               ],
                                             ),
                                           ),
@@ -1901,7 +1909,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                   padding: const EdgeInsets.all(12),
                   child: Text(
                     _errorText!,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize + 2),
                   ),
                 ),
               ),
@@ -1920,7 +1928,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                       : _targetMode == RecordingTargetMode.window
                           ? 'Hover a window, then click to record it'
                           : 'Click to record the current monitor',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -2105,8 +2113,8 @@ class _HudButton extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: Design.baseFontSize + 1,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -2267,7 +2275,8 @@ class _SettingsDropdownRowState<T> extends State<_SettingsDropdownRow<T>> {
                                           const SizedBox(height: 1),
                                           Text(
                                             e.value.sublabel!,
-                                            style: TextStyle(fontSize: 11, color: widget.textSecondary),
+                                            style: TextStyle(
+                                                fontSize: Design.baseFontSize + 1, color: widget.textSecondary),
                                           ),
                                         ],
                                       ],
@@ -2328,7 +2337,8 @@ class _SettingsDropdownRowState<T> extends State<_SettingsDropdownRow<T>> {
                   ),
                   if (widget.sublabel != null) ...<Widget>[
                     const SizedBox(height: 2),
-                    Text(widget.sublabel!, style: TextStyle(fontSize: 11, color: widget.textSecondary)),
+                    Text(widget.sublabel!,
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: widget.textSecondary)),
                   ],
                 ],
               ),
@@ -2345,7 +2355,8 @@ class _SettingsDropdownRowState<T> extends State<_SettingsDropdownRow<T>> {
                 children: <Widget>[
                   Text(
                     currentLabel,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.accent),
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: widget.accent),
                   ),
                   const SizedBox(width: 4),
                   Icon(Icons.expand_more_rounded, size: 14, color: widget.accent),
@@ -2385,7 +2396,7 @@ class _SettingsChip extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 8),
               const Icon(Icons.settings_outlined, color: Colors.white70, size: 16),
@@ -2447,7 +2458,7 @@ class _RecordingOverlayPainter extends CustomPainter {
     final TextPainter painter = TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

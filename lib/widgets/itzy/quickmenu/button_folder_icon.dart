@@ -396,7 +396,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                           Expanded(
                             child: Text(
                               _creditsLeft == null ? 'Use remove.bg API' : "remove.bg ($_creditsLeft Credits Left)",
-                              style: TextStyle(fontSize: 12, color: onSurface),
+                              style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
                             ),
                           ),
                           if (_removeBgEnabled)
@@ -428,11 +428,12 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                                         child: TextField(
                                           controller: _apiKeyController,
                                           obscureText: true,
-                                          style: TextStyle(fontSize: 12, color: onSurface),
+                                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
                                           decoration: InputDecoration(
                                             isDense: true,
                                             hintText: 'Paste your remove.bg API key…',
-                                            hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(100)),
+                                            hintStyle: TextStyle(
+                                                fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(100)),
                                             filled: true,
                                             fillColor: accent.withAlpha(10),
                                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -505,7 +506,8 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                           const SizedBox(height: 6),
                           Text(
                             'Run "Remove Background" before applying, or disable the toggle to use the original image.',
-                            style: TextStyle(fontSize: 10, color: onSurface.withAlpha(140), height: 1.4),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(140), height: 1.4),
                           ),
                         ],
                       ],
@@ -537,7 +539,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                           child: Text(
                             _statusMessage!,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               color: _statusIsError ? Colors.red : Colors.green,
                             ),
                           ),
@@ -648,10 +650,14 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
             child: !selectable
                 ? Text(info,
                     style: TextStyle(
-                        fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160), height: 1.5))
+                        fontSize: Design.baseFontSize + 2,
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                        height: 1.5))
                 : SelectableText(info,
                     style: TextStyle(
-                        fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(160), height: 1.5)),
+                        fontSize: Design.baseFontSize + 2,
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                        height: 1.5)),
           ),
         ],
       ),
@@ -826,11 +832,12 @@ class _StepCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   '$step',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 8),
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: onSurface)),
+              Text(label,
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: onSurface)),
             ],
           ),
           const SizedBox(height: 10),
@@ -879,7 +886,8 @@ class _PickerRow extends StatelessWidget {
                 value ?? placeholder,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: value != null ? onSurface : onSurface.withAlpha(100)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, color: value != null ? onSurface : onSurface.withAlpha(100)),
               ),
             ),
             const SizedBox(width: 6),

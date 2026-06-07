@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../models/settings.dart';
 import 'win32_helper.dart';
 
 /// Colours — matches the PowerShell palette 1-to-1.
@@ -213,7 +214,7 @@ class ColorPickerPainter extends CustomPainter {
         text: text,
         style: TextStyle(
           fontFamily: 'Courier New',
-          fontSize: 11,
+          fontSize: Design.baseFontSize + 1,
           fontWeight: FontWeight.bold,
           color: color,
         ),

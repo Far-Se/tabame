@@ -74,6 +74,7 @@ class Design {
   static String get panelOpacityBegin => userSettings.theme.panelOpacityBegin;
   static String get panelOpacityEnd => userSettings.theme.panelOpacityEnd;
   static double get borderRadius => userSettings.theme.borderRadius;
+  static double get baseFontSize => userSettings.theme.baseFontSize;
 }
 
 class Settings {
@@ -750,7 +751,7 @@ final TextStyle baseEntryStyle = GoogleFonts.getFont(
 TextStyle entryStyle(bool? isSelected, {double? fontSize, double? letterSpacing, Color? color}) {
   return baseEntryStyle.copyWith(
     fontSize: fontSize ?? userSettings.themeColors.baseFontSize + 2,
-    letterSpacing: letterSpacing,
+    letterSpacing: letterSpacing ?? 1.4,
     color: color ?? ((isSelected ?? false) ? User.theme.text : User.theme.text.withAlpha(200)),
   );
 }

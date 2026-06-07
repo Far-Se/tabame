@@ -202,7 +202,7 @@ class HotKeyActionState extends State<HotKeyAction> {
                                           color: colorScheme.primary,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 1.5,
-                                          fontSize: 10,
+                                          fontSize: Design.baseFontSize,
                                         )),
                                     Text("Developer tools",
                                         style: textTheme.labelSmall?.copyWith(
@@ -345,7 +345,7 @@ class HotKeyActionState extends State<HotKeyAction> {
             style: texts.labelLarge?.copyWith(
               fontWeight: FontWeight.w900,
               letterSpacing: 1.5,
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               color: colors.primary.withValues(alpha: 0.8),
             ),
           ),
@@ -459,7 +459,7 @@ class HotKeyActionState extends State<HotKeyAction> {
           Icon(Icons.info_outline_rounded, color: colors.primary.withValues(alpha: 0.4), size: 16),
           const SizedBox(width: 8),
           Text("No actions defined yet",
-              style: TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 12)),
+              style: TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.7), fontSize: Design.baseFontSize + 2)),
         ],
       ),
     );
@@ -887,7 +887,7 @@ class HotKeyActionState extends State<HotKeyAction> {
             subtitle: Text(
               isFocused ? "LISTENING FOR INPUT... PRESS KEYS" : "Click to record sequence...",
               style: TextStyle(
-                fontSize: 10,
+                fontSize: Design.baseFontSize,
                 fontWeight: isFocused ? FontWeight.bold : FontWeight.normal,
                 color: isFocused ? colors.error : colors.onSurfaceVariant.withValues(alpha: 0.6),
               ),

@@ -395,7 +395,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
         const SizedBox(height: 4),
         Text(
           description,
-          style: TextStyle(color: onSurface.withAlpha(180), fontSize: 12),
+          style: TextStyle(color: onSurface.withAlpha(180), fontSize: Design.baseFontSize + 2),
         ),
         const SizedBox(height: 8),
         Container(
@@ -415,7 +415,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                   style: TextStyle(
                     color: onSurface.withAlpha(220),
                     fontFamily: 'monospace',
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                   ),
                 ),
               );
@@ -457,7 +457,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                     ),
                     child: Text(
                       _statusMessage!,
-                      style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: accent, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -562,7 +562,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
           Text(
             "Press Enter to save as a variable",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 10, color: onSurface.withAlpha(80)),
+            style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(80)),
           ),
         ],
       ),

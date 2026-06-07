@@ -248,12 +248,12 @@ class _WeatherPanelState extends State<WeatherPanel> {
                     if (failed)
                       Text(
                         "Could not load weather.",
-                        style: TextStyle(fontSize: 12, color: Colors.redAccent.withAlpha(220)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: Colors.redAccent.withAlpha(220)),
                       )
                     else if (current == null)
                       Text(
                         loading ? "Loading forecast..." : "No forecast loaded yet.",
-                        style: TextStyle(fontSize: 12, color: onSurface.withAlpha(145)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(145)),
                       )
                     else
                       Wrap(
@@ -331,7 +331,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
         if (_locations.isEmpty)
           Text(
             "No saved locations yet.",
-            style: TextStyle(fontSize: 12, color: onSurface.withAlpha(145)),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(145)),
           )
         else
           for (int index = 0; index < _locations.length; index++) _buildSavedLocationRow(index, accent, onSurface),
@@ -362,20 +362,20 @@ class _WeatherPanelState extends State<WeatherPanel> {
                   Text(
                     result.name,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     result.subtitle,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: onSurface.withAlpha(135)),
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(135)),
                   ),
                 ],
               ),
             ),
             Text(
               "${result.latitude.toStringAsFixed(2)}, ${result.longitude.toStringAsFixed(2)}",
-              style: TextStyle(fontSize: 10, color: onSurface.withAlpha(105)),
+              style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(105)),
             ),
           ],
         ),
@@ -405,13 +405,13 @@ class _WeatherPanelState extends State<WeatherPanel> {
                 Text(
                   location.displayName,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   "${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}",
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: onSurface.withAlpha(120)),
+                  style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(120)),
                 ),
               ],
             ),
@@ -578,7 +578,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
                 Text(
                   "${_weatherLabel(current.weatherCode)}  Feels ${_formatTemp(current.apparentTemperature)}",
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: onSurface.withAlpha(155)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(155)),
                 ),
               ],
             ),
@@ -588,12 +588,12 @@ class _WeatherPanelState extends State<WeatherPanel> {
             children: <Widget>[
               Text(
                 "Humidity ${current.humidity.round()}%",
-                style: TextStyle(fontSize: 11, color: onSurface.withAlpha(145)),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(145)),
               ),
               const SizedBox(height: 4),
               Text(
                 "Wind ${_formatSpeed(current.windSpeed)}",
-                style: TextStyle(fontSize: 11, color: onSurface.withAlpha(145)),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(145)),
               ),
             ],
           ),
@@ -642,7 +642,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: Design.baseFontSize + 2,
               fontWeight: FontWeight.w700,
               color: selected ? onSurface : onSurface.withAlpha(135),
             ),
@@ -709,13 +709,13 @@ class _WeatherPanelState extends State<WeatherPanel> {
                 Text(
                   title,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(135)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(135)),
                 ),
               ],
             ),
@@ -726,12 +726,12 @@ class _WeatherPanelState extends State<WeatherPanel> {
             children: <Widget>[
               Text(
                 primary,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: onSurface),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: onSurface),
               ),
               const SizedBox(height: 2),
               Text(
                 trailing,
-                style: TextStyle(fontSize: 10, color: onSurface.withAlpha(120)),
+                style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(120)),
               ),
             ],
           ),
@@ -757,7 +757,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
   Widget _buildSectionLabel(String label, Color onSurface) {
     return Text(
       label,
-      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onSurface),
+      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
     );
   }
 
@@ -770,7 +770,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
       ),
       child: Text(
         message,
-        style: TextStyle(fontSize: 12, color: onSurface.withAlpha(190)),
+        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(190)),
       ),
     );
   }
@@ -798,7 +798,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: onSurface.withAlpha(145)),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(145)),
             ),
           ],
         ),

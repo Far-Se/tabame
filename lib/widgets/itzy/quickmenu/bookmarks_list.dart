@@ -93,13 +93,13 @@ class _BookmarkGroupSection extends StatelessWidget {
               children: <Widget>[
                 Text(
                   group.emoji.isNotEmpty ? group.emoji : "📂",
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   group.title.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: Design.baseFontSize + 0.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
                     color: onSurface.withAlpha(180),
@@ -351,7 +351,7 @@ class _BookmarkRowItemState extends State<_BookmarkRowItem> {
                 Expanded(
                   child: Text(
                     widget.mark.title,
-                    style: entryStyle(_hovered, fontSize: 11.5, letterSpacing: 0.3),
+                    style: entryStyle(_hovered, fontSize: Design.baseFontSize + 1.5, letterSpacing: 0.3),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

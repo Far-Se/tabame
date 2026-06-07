@@ -231,7 +231,7 @@ class _SectionLabel extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.7,
             color: accent.withAlpha(210),
@@ -246,7 +246,7 @@ class _SectionLabel extends StatelessWidget {
           ),
           child: Text(
             "$count",
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: accent.withAlpha(180)),
+            style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: accent.withAlpha(180)),
           ),
         ),
         const SizedBox(width: 6),
@@ -281,7 +281,7 @@ class _CreateTimerForm extends StatelessWidget {
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         hintText: hint,
-        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.withAlpha(140)),
+        hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: Colors.grey.withAlpha(140)),
         filled: true,
         fillColor: accent.withAlpha(12),
         border: OutlineInputBorder(
@@ -318,7 +318,7 @@ class _CreateTimerForm extends StatelessWidget {
                 ],
                 textInputAction: TextInputAction.done,
                 decoration: _inputDec("Min", accent),
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 controller: durCtrl,
                 focusNode: durFocus,
                 autofocus: true,
@@ -334,7 +334,7 @@ class _CreateTimerForm extends StatelessWidget {
             Expanded(
               child: TextField(
                 decoration: _inputDec("Message (optional)", accent),
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 controller: msgCtrl,
                 onChanged: (_) => onChanged(),
               ),
@@ -352,7 +352,8 @@ class _CreateTimerForm extends StatelessWidget {
                         elevation: WidgetStateProperty.all(0),
                         padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12)),
                         shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                        textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        textStyle: WidgetStateProperty.all(
+                            TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600)),
                       ),
                   onPressed: canCreate ? onCreate : null,
                   icon: const Icon(Icons.add_rounded, size: 16),
@@ -483,7 +484,7 @@ class _ActiveTimerRowState extends State<_ActiveTimerRow> {
               ),
               child: Text(
                 widget.timeLabel,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: rowAccent),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: rowAccent),
               ),
             ),
             const SizedBox(width: 8),
@@ -493,12 +494,13 @@ class _ActiveTimerRowState extends State<_ActiveTimerRow> {
                 children: <Widget>[
                   Text(
                     widget.name,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: widget.onSurface),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500, color: widget.onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     "ends ${widget.endTime.hour.formatZeros()}:${widget.endTime.minute.formatZeros()}",
-                    style: TextStyle(fontSize: 10, color: widget.onSurface.withAlpha(120)),
+                    style: TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withAlpha(120)),
                   ),
                 ],
               ),
@@ -640,7 +642,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                   child: Text(
                     "${widget.minutes}m",
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.w700,
                       color: userSettings.themeColors.accent.withAlpha(200),
                     ),
@@ -652,7 +654,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                   child: Text(
                     widget.name,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: Design.baseFontSize + 2,
                       fontWeight: FontWeight(userSettings.theme.uiFontWeight),
                       color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
                     ),

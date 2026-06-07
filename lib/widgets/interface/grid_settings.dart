@@ -164,7 +164,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: Design.baseFontSize,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.5,
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
@@ -371,13 +371,13 @@ class ViewsInterfaceState extends State<ViewsInterface> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          Text(
             "OPERATIONS MANUAL",
             style: TextStyle(
-              fontSize: 10,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
-              color: Color(0xFF888888),
+              color: const Color(0xFF888888),
             ),
           ),
           const SizedBox(height: 16),
@@ -404,7 +404,8 @@ class ViewsInterfaceState extends State<ViewsInterface> {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Row(
           children: <Widget>[
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+            Expanded(
+                child: Text(title, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500))),
             Transform.scale(
               scale: 0.7,
               child: MiniToggleSwitch(
@@ -427,7 +428,8 @@ class ViewsInterfaceState extends State<ViewsInterface> {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: <Widget>[
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500))),
+            Expanded(
+                child: Text(title, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500))),
             trailing,
             const SizedBox(width: 4),
             Icon(Icons.chevron_right_rounded, size: 14, color: Theme.of(context).hintColor.withValues(alpha: 0.5)),
@@ -467,7 +469,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
                 color: value ? accent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -495,12 +497,15 @@ class ViewsInterfaceState extends State<ViewsInterface> {
           const SizedBox(width: 8),
           Text(
             key,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withValues(alpha: 0.8)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                color: onSurface.withValues(alpha: 0.8)),
           ),
           const SizedBox(width: 4),
           Text(
             action,
-            style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.4)),
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.4)),
           ),
         ],
       ),

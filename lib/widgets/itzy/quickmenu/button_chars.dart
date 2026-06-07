@@ -501,7 +501,7 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
               child: Text(
                 "Hidden Sets",
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: Design.baseFontSize + 1,
                   fontWeight: FontWeight.bold,
                   color: onSurface.withAlpha(100),
                 ),
@@ -515,7 +515,7 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
                   child: ActionChip(
                     labelPadding: EdgeInsets.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                    label: Text(name, style: const TextStyle(fontSize: 10)),
+                    label: Text(name, style: TextStyle(fontSize: Design.baseFontSize)),
                     onPressed: () {
                       setState(() {
                         disabledSets.remove(name);
@@ -552,13 +552,13 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
             Expanded(
               child: TextField(
                 controller: searchController,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 autofocus: true,
                 focusNode: _focusNode,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: "Search categories or characters...",
-                  hintStyle: TextStyle(fontSize: 12, color: accent.withAlpha(120)),
+                  hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: accent.withAlpha(120)),
                   isDense: true,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -594,10 +594,10 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
             Expanded(
               child: TextField(
                 controller: textField,
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: Design.baseFontSize + 2),
                 decoration: InputDecoration(
                   hintText: "New char...",
-                  hintStyle: TextStyle(fontSize: 12, color: onSurface.withAlpha(80)),
+                  hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(80)),
                   isDense: true,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -643,7 +643,7 @@ class _CustomCharsPanelState extends State<CustomCharsPanel> {
               ),
             Text(
               title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
             if (onToggle != null)

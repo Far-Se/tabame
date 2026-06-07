@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 import '../../itzy/quickmenu/button_window_app.dart';
 import '../../widgets/custom_tooltip.dart';
 import 'apps_category_editor.dart';
@@ -274,10 +275,10 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
                       }
 
                       final String prompt = '''
-Please group these apps into categories. 
+Please group these apps into categories.
 One VERY important category must be "Others" where you should place apps that no one typically uses manually (like default Windows built-in utilities, background services, or extremely obscure apps).
 Other categories worth mentioning should be Games, Productivity Apps, Editors.
-Your output MUST be ONLY a valid raw JSON object strictly in this format: 
+Your output MUST be ONLY a valid raw JSON object strictly in this format:
 {"CategoryName": [id_1, id_2], "CategoryName2": [id_3, id_4], "Others": [id_5, id_6]}
 
 Apps data:
@@ -292,7 +293,7 @@ ${jsonEncode(appData)}
                     maxLines: 8,
                     decoration: InputDecoration(
                       hintText: "Paste AI output JSON here...",
-                      hintStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
+                      hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -524,7 +525,7 @@ ${jsonEncode(appData)}
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w900,
                         color: theme.colorScheme.primary,
                         letterSpacing: 1.2,
@@ -534,7 +535,7 @@ ${jsonEncode(appData)}
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w500,
                         color: onSurface.withValues(alpha: 0.35),
                       ),
@@ -645,7 +646,7 @@ ${jsonEncode(appData)}
               const SizedBox(width: 10),
               Text(
                 app.name,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -684,7 +685,7 @@ ${jsonEncode(appData)}
 
     return InputDecoration(
       hintText: hintText,
-      hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.3)),
+      hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.3)),
       prefixIcon:
           prefixIcon != null ? Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: prefixIcon) : null,
       prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -934,7 +935,7 @@ class _AppTileContentState extends State<_AppTileContent> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: Design.baseFontSize + 1,
                         fontWeight: FontWeight.w700,
                         color: _isHovered ? primary : onSurface,
                       ),
@@ -1045,7 +1046,7 @@ class _BucketTileState extends State<_BucketTile> {
                         ),
                         Text(
                           "${widget.category.items.length} items • ${widget.category.viewType.name.toUpperCase()}",
-                          style: TextStyle(fontSize: 10, color: onSurface.withValues(alpha: 0.4)),
+                          style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.4)),
                         ),
                       ],
                     ),

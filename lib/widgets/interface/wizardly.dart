@@ -133,8 +133,8 @@ class WizardlyState extends State<Wizardly> {
                         icon: Icon(pages[i].icon, size: 16),
                         label: Text(
                           pages[i].title,
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

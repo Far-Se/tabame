@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quick_actions.dart';
 import '../../widgets/text_input.dart';
@@ -153,7 +154,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
             Text(
               "Create your first action to get started",
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 color: scheme.onSurface.withValues(alpha: 0.3),
               ),
             ),
@@ -236,7 +237,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
                       Text(
                         action.type,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),

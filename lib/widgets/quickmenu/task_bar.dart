@@ -29,12 +29,43 @@ import 'quick_snap_picker.dart';
 
 // --- CONSTANTS ---
 const double kTaskBarItemHeight = 28.0;
-const double kTaskBarItemExpandedHeight = 42.0;
+const double kTaskBarxItemExpandedHeight = 43.0;
 const double kMediaButtonWidth = 25.0;
 const double kTaskBarWidth = 310.0;
 const Duration kTimerInterval = Duration(milliseconds: 300);
 
 class Caches {
+  static double get expandedHeight {
+    switch (Design.baseFontSize) {
+      case 8:
+        return 39;
+
+      case 9:
+        return 41;
+
+      case 10:
+        return 42;
+
+      case 11:
+        return 44;
+
+      case 12:
+        return 46;
+
+      case 13:
+        return 49;
+
+      case 14:
+        return 52;
+
+      case 15:
+        return 55;
+
+      default:
+        return 59;
+    }
+  }
+
   static List<int> audioMixer = <int>[];
   static List<String> audioMixerExes = <String>[];
 }
@@ -243,7 +274,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       });
     }
     Globals.heights.taskbar =
-        ((userSettings.expandedTaskbar ? kTaskBarItemExpandedHeight : kTaskBarItemHeight) * _windows.length)
+        ((userSettings.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * _windows.length)
             .clamp(150, userSettings.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
 
     return MouseRegion(
@@ -391,7 +422,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final bool isSelected = widget.isSelected;
     final bool isHovered = _isHovered;
     final bool expanded = userSettings.expandedTaskbar;
-    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight;
+    final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight;
 
     if (userSettings.taskManagerStats && widget.window.process.exe.toLowerCase() == "taskmgr.exe") {
       return const SizedBox.shrink();
@@ -509,8 +540,9 @@ class _TaskBarItemState extends State<TaskBarItem> {
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.getFont(
             userSettings.themeColors.entryFontFamily,
-            fontSize: 12,
+            fontSize: Design.baseFontSize + 2,
             color: highlighted ? onSurface : onSurface.withAlpha(200),
+            // letterSpacing: 1.1,
             fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
             fontWeight: widget.isSelected
                 ? FontWeight.w600
@@ -525,7 +557,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: Design.baseFontSize,
             color: highlighted ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
           ),
         ),
@@ -891,7 +923,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
     if (pages.isEmpty) return const SizedBox.shrink();
 
     final bool expanded = userSettings.expandedTaskbar;
-    final double itemHeight = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+    final double itemHeight = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
     final Color accent = userSettings.themeColors.accent;
 
     // Clamp current page in case the source list shrank.
@@ -1034,7 +1066,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   Widget build(BuildContext context) {
     final Color accent = userSettings.themeColors.accent;
     final bool expanded = userSettings.expandedTaskbar;
-    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+    final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1073,7 +1105,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: Design.baseFontSize + 2,
                               fontWeight: FontWeight.w600,
                               color: userSettings.themeColors.text,
                             ),
@@ -1085,7 +1117,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: Design.baseFontSize,
                                     color: userSettings.themeColors.text.withAlpha(160),
                                   ),
                                 ),
@@ -1201,7 +1233,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
   Widget build(BuildContext context) {
     final Color accent = userSettings.themeColors.accent;
     final bool expanded = userSettings.expandedTaskbar;
-    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+    final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1237,7 +1269,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: FontWeight.w600,
                             color: userSettings.themeColors.text,
                           ),
@@ -1248,7 +1280,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               color: userSettings.themeColors.text.withAlpha(160),
                             ),
                           ),

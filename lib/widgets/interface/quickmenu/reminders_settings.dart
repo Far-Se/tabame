@@ -113,7 +113,7 @@ class _QuickmenuRemindersSettingsPageState extends State<QuickmenuRemindersSetti
                 ),
                 Text(
                   "Schedule voice or visual notifications for important tasks",
-                  style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.5)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5)),
                 ),
               ],
             ),
@@ -332,7 +332,7 @@ class _ReminderCardState extends State<_ReminderCard> {
                       Text(
                         _getFrequencyText(),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: Design.baseFontSize + 1,
                           color: widget.onSurface.withValues(alpha: isEnabled ? 0.5 : 0.2),
                         ),
                       ),
@@ -460,8 +460,8 @@ class ReminderEditorState extends State<ReminderEditor> {
           title: Text("Persistent Notification",
               style:
                   TextStyle(fontSize: 14, color: persistent ? theme.colorScheme.error : theme.colorScheme.onSurface)),
-          subtitle:
-              const Text("Adds a warning to QuickMenu that must be manually dismissed", style: TextStyle(fontSize: 12)),
+          subtitle: Text("Adds a warning to QuickMenu that must be manually dismissed",
+              style: TextStyle(fontSize: Design.baseFontSize + 2)),
           value: persistent,
           activeThumbColor: theme.colorScheme.error,
           onChanged: (bool value) => setState(() => persistent = value),
@@ -640,7 +640,8 @@ class ReminderEditorState extends State<ReminderEditor> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text("Repeat Interval",
-                          style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontSize: 10)),
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: theme.colorScheme.primary, fontSize: Design.baseFontSize)),
                       Text(
                         "Every ${reminder.time} minutes",
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -887,7 +888,8 @@ class ReminderEditorState extends State<ReminderEditor> {
       focusedBorder:
           OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: accent, width: 1.2)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      labelStyle: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
+      labelStyle:
+          TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
     );
   }
 }
@@ -992,7 +994,7 @@ class _SegmentButtonState<T> extends State<_SegmentButton<T>> {
               Text(
                 widget.item.label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w500,
                   color: widget.isSelected ? colors.primary : colors.onSurfaceVariant,
                 ),
@@ -1039,7 +1041,7 @@ class _TimeTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(label, style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, height: 1)),
+                  Text(label, style: theme.textTheme.labelSmall?.copyWith(fontSize: Design.baseFontSize, height: 1)),
                   const SizedBox(height: 2),
                   Text(
                     customText ?? (time >= 0 ? time.formatTime() : "--:--"),

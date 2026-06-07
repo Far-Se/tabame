@@ -205,7 +205,7 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
                   onPressed: _cycleFillMode,
                   icon: Icon(_getFillModeIcon(_fillMode), size: 16),
                   label: Text(_fillMode.name.toUpperCase(),
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.bold)),
                   style: TextButton.styleFrom(
                     backgroundColor: accent.withAlpha(20),
                     foregroundColor: accent,
@@ -222,7 +222,7 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     color: Theme.of(context).colorScheme.onSurface.withAlpha(190),
                   ),
                 ),
@@ -316,7 +316,7 @@ class _WallpapersHint extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: Design.baseFontSize + 2,
                 color: Theme.of(context).colorScheme.onSurface.withAlpha(170),
               ),
             ),
@@ -413,7 +413,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
               "Click a monitor to apply wallpaper",
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
               ),
             ),
@@ -483,7 +483,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                       widget.image.path.split('\\').last,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                      style: TextStyle(color: Colors.white, fontSize: Design.baseFontSize),
                     ),
                   ),
                 ),
@@ -575,7 +575,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           fontWeight: widget.isCurrent ? FontWeight.w600 : FontWeight.w400,
                           color: onSurface,
                         ),
@@ -584,7 +584,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                       Text(
                         widget.isCurrent ? "Current wallpaper" : "Set as wallpaper",
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize,
                           color: widget.isCurrent
                               ? userSettings.themeColors.accent.withAlpha(220)
                               : onSurface.withAlpha(140),
@@ -751,7 +751,7 @@ class _MonitorItemState extends State<_MonitorItem> {
               Text(
                 "${widget.index + 1}",
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.bold,
                   color: _hovered ? userSettings.themeColors.accent : onSurface.withAlpha(180),
                 ),

@@ -142,7 +142,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                               controller: _titleCtrl,
                               autofocus: true,
                               textCapitalization: TextCapitalization.words,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500),
                               decoration: _inputDecoration(
                                   context, isBookmark ? "Label" : "Category Name", userSettings.themeColors.accent),
                               onSubmitted: (_) => _handleSave(),
@@ -180,7 +180,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                                 Text(
                                   "Prefer Input Icons",
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: Design.baseFontSize + 1,
                                     fontWeight: FontWeight.w700,
                                     color:
                                         _preferInputIcon ? userSettings.themeColors.accent : onSurface.withAlpha(200),
@@ -272,7 +272,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                             child: TextField(
                               controller: _pathCtrl,
                               maxLines: null,
-                              style: const TextStyle(fontSize: 11, letterSpacing: 0.2),
+                              style: TextStyle(fontSize: Design.baseFontSize + 1, letterSpacing: 0.2),
                               decoration: _inputDecoration(
                                       context, "Target Path / URL / Command", userSettings.themeColors.accent)
                                   .copyWith(
@@ -388,7 +388,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.7,
             color: onSurface.withAlpha(180),
@@ -433,7 +433,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
                 color: isSelected ? userSettings.themeColors.accent : onSurface.withAlpha(120),
@@ -467,7 +467,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
       fillColor: onSurface.withAlpha(12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       labelStyle: TextStyle(
-        fontSize: 10,
+        fontSize: Design.baseFontSize,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.4,
         color: onSurface.withAlpha(130),

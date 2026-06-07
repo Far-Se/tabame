@@ -909,7 +909,7 @@ class _NotionWidgetState extends State<NotionWidget> {
         children: <Widget>[
           Text(
             "Enter your Notion Internal Integration Bearer Token to enable search.\nMake sure your integration has 'Content Access' enabled.",
-            style: TextStyle(fontSize: 12, color: onSurface.withAlpha(150)),
+            style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 8),
           Align(
@@ -922,7 +922,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                 child: Text(
                   "Create API Key ->",
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: Design.baseFontSize + 1,
                     color: accent,
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline,
@@ -954,7 +954,8 @@ class _NotionWidgetState extends State<NotionWidget> {
           const SizedBox(height: 12),
           Text(
             "Cache Management",
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: onSurface.withAlpha(150)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -995,7 +996,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                 color: Colors.redAccent.withAlpha(28),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(_browseError!, style: const TextStyle(fontSize: 11, color: Colors.redAccent)),
+              child: Text(_browseError!, style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.redAccent)),
             ),
           // List
           Flexible(
@@ -1007,7 +1008,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                         child: Center(
                           child: Text(
                             'No sub-pages found here.',
-                            style: TextStyle(fontSize: 12, color: onSurface.withAlpha(120)),
+                            style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
                           ),
                         ),
                       )
@@ -1055,7 +1056,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       if (_breadcrumbs[i].emoji != null) ...<Widget>[
-                        Text(_breadcrumbs[i].emoji!, style: const TextStyle(fontSize: 12)),
+                        Text(_breadcrumbs[i].emoji!, style: TextStyle(fontSize: Design.baseFontSize + 2)),
                         const SizedBox(width: 3),
                       ] else if (i == 0) ...<Widget>[
                         Icon(Icons.home_rounded,
@@ -1065,7 +1066,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                       Text(
                         _breadcrumbs[i].title,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: Design.baseFontSize + 1,
                           fontWeight: i == _breadcrumbs.length - 1 ? FontWeight.w700 : FontWeight.w500,
                           color: i == _breadcrumbs.length - 1 ? accent : onSurface.withAlpha(150),
                         ),
@@ -1130,7 +1131,7 @@ class _NotionWidgetState extends State<NotionWidget> {
             ),
             child: Text(
               _errorMessage!,
-              style: const TextStyle(fontSize: 11, color: Colors.redAccent),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.redAccent),
             ),
           ),
         Flexible(
@@ -1140,7 +1141,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                   child: Center(
                     child: Text(
                       _currentQuery.isEmpty ? "No recent items" : "No results found for '$_currentQuery'",
-                      style: TextStyle(fontSize: 12, color: onSurface.withAlpha(120)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
                     ),
                   ),
                 )
@@ -1238,7 +1239,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                                           Text(
                                             item.objectType.toUpperCase(),
                                             style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: Design.baseFontSize,
                                               color: onSurface.withAlpha(120),
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1407,7 +1408,7 @@ class _BrowseRowState extends State<_BrowseRow> {
                           Text(
                             'Open',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               fontWeight: FontWeight.w700,
                               color: widget.accent,
                             ),

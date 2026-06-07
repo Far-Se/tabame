@@ -121,7 +121,7 @@ class _TimelineTimeLabel extends StatelessWidget {
           overflow: TextOverflow.visible,
           style: GoogleFonts.getFont(
             userSettings.themeColors.entryFontFamily,
-            fontSize: 10.5,
+            fontSize: Design.baseFontSize + 0.5,
             color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
             letterSpacing: 0.4,
             fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
@@ -290,7 +290,8 @@ class _MusicRowState extends State<_MusicRow> {
                               padding: const EdgeInsets.only(left: 8),
                               child: Text(_durationLabel(widget.item.duration!),
                                   style: TextStyle(
-                                      fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withAlpha(110))),
+                                      fontSize: Design.baseFontSize,
+                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(110))),
                             ),
                         ],
                       ),
@@ -299,7 +300,9 @@ class _MusicRowState extends State<_MusicRow> {
                         _primaryMeta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                       ),
                       if (_secondaryMeta != null) ...<Widget>[
                         const SizedBox(height: 2),
@@ -307,8 +310,9 @@ class _MusicRowState extends State<_MusicRow> {
                           _secondaryMeta!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(fontSize: 10.5, color: Theme.of(context).colorScheme.onSurface.withAlpha(102)),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 0.5,
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(102)),
                         ),
                       ],
                     ],
@@ -434,12 +438,14 @@ class _PlaylistRowState extends State<_PlaylistRow> {
                               color: Theme.of(context).colorScheme.onSurface)),
                       const SizedBox(height: 2),
                       Text("${widget.playlist.songCount} songs",
-                          style:
-                              TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 1,
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(130))),
                       const SizedBox(height: 2),
                       Text("${widget.playlist.duration.inMinutes} min total",
-                          style:
-                              TextStyle(fontSize: 10.5, color: Theme.of(context).colorScheme.onSurface.withAlpha(102))),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 0.5,
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(102))),
                     ],
                   ),
                 ),
@@ -514,7 +520,9 @@ class _SmartPlaylistRow extends StatelessWidget {
                     category.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(130)),
                   ),
                 ],
               ),
@@ -559,13 +567,15 @@ class _PlaylistPickerRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
+                    fontSize: Design.baseFontSize + 2,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
             Text(
               "${playlist.songCount}",
               style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: Design.baseFontSize + 0.5,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface.withAlpha(120)),
             ),
@@ -600,7 +610,7 @@ class _CompactQueueRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: Design.baseFontSize + 1.5,
                       fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                       color: active
                           ? Theme.of(context).colorScheme.onSurface
@@ -670,7 +680,7 @@ class _PlayerTrackMenuButton extends StatelessWidget {
         children: <Widget>[
           Icon(icon, size: 16, color: userSettings.themeColors.accent),
           const SizedBox(width: 9),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -815,7 +825,7 @@ class _SectionLabel extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label.toUpperCase(),
             style: TextStyle(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 1,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.45,
                 color: Theme.of(context).colorScheme.onSurface)),
@@ -826,7 +836,10 @@ class _SectionLabel extends StatelessWidget {
             decoration: BoxDecoration(
                 color: userSettings.themeColors.accent.withAlpha(24), borderRadius: BorderRadius.circular(999)),
             child: Text("$count",
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: userSettings.themeColors.accent)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize,
+                    fontWeight: FontWeight.w800,
+                    color: userSettings.themeColors.accent)),
           ),
         ],
         const SizedBox(width: 8),
@@ -906,13 +919,14 @@ class _QuickLaunchTileState extends State<_QuickLaunchTile> {
                   Text(widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: widget.onSurface)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: widget.onSurface)),
                   const SizedBox(height: 1),
                   Text(
                     widget.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 10.5, color: widget.onSurface.withAlpha(126)),
+                    style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: widget.onSurface.withAlpha(126)),
                   ),
                 ],
               ),
@@ -997,7 +1011,9 @@ class _InlinePanel extends StatelessWidget {
                         fontSize: 13, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(height: 2),
                 Text(subtitle,
-                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(135))),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(135))),
               ],
             ),
           ),
@@ -1041,7 +1057,9 @@ class _EmptyState extends StatelessWidget {
             Text(subtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(140), height: 1.25)),
+                    fontSize: Design.baseFontSize + 2,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                    height: 1.25)),
             if (actionLabel != null && onAction != null) ...<Widget>[
               const SizedBox(height: 12),
               TextButton(onPressed: onAction, child: Text(actionLabel!)),
@@ -1072,8 +1090,10 @@ class _StatusStrip extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
                 child: Text(message,
-                    style:
-                        TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: userSettings.themeColors.accent))),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w700,
+                        color: userSettings.themeColors.accent))),
             InkWell(
               onTap: onClose,
               borderRadius: BorderRadius.circular(10),

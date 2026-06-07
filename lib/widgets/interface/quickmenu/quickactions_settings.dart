@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/settings.dart';
 import '../../../models/util/quick_action_list.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -211,7 +212,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
               Text(
                 "Curate your top-bar priority and active states",
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.w600,
                   color: theme.hintColor.withValues(alpha: 0.8),
                 ),
@@ -276,7 +277,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
-                            fontSize: 12,
+                            fontSize: Design.baseFontSize + 2,
                             color: isActive ? primary : onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -293,7 +294,7 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                             "Order implies priority. Drag on top of other QuickAction to reorder",
                             softWrap: true,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: Design.baseFontSize,
                               fontWeight: FontWeight.w500,
                               color: primary.withValues(alpha: 0.6),
                             ),
@@ -310,10 +311,12 @@ class QuickmenuTopbarState extends State<QuickmenuTopbar> {
                       child: TextField(
                         controller: _searchController,
                         onChanged: (String value) => setState(() => _disabledSearchQuery = value.toLowerCase()),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: onSurface),
+                        style:
+                            TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500, color: onSurface),
                         decoration: InputDecoration(
                           hintText: 'Search disabled…',
-                          hintStyle: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.4)),
+                          hintStyle:
+                              TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.4)),
                           prefixIcon: Icon(Icons.search_rounded, size: 16, color: onSurface.withValues(alpha: 0.4)),
                           suffixIcon: _disabledSearchQuery.isNotEmpty
                               ? GestureDetector(
@@ -459,7 +462,7 @@ class _DraggableGridItemState extends State<_DraggableGridItem> {
                 _formatItemLabel(widget.item),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: Design.baseFontSize + 2,
                   color: widget.isActive ? onSurface : onSurface.withValues(alpha: 0.6),
                 ),
               ),

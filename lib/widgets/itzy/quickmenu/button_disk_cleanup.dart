@@ -499,7 +499,8 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
               children: <Widget>[
                 Icon(Icons.add_rounded, size: 16, color: accent),
                 const SizedBox(width: 7),
-                Text("Add Folder", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                Text("Add Folder",
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: accent)),
               ],
             ),
           ),
@@ -660,7 +661,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   "$count folder${count == 1 ? '' : 's'} selected",
-                  style: TextStyle(fontSize: 11, color: onSurface.withAlpha(130)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130)),
                 ),
               ],
             ),
@@ -711,14 +712,14 @@ class _CleanupRow extends StatelessWidget {
                   result.target.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: onSurface),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w800, color: onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   result.error ?? (result.exists ? result.target.path : "Folder not found"),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(110)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(110)),
                 ),
               ],
             ),
@@ -729,7 +730,8 @@ class _CleanupRow extends StatelessWidget {
           else ...<Widget>[
             Text(
               result.exists ? _formatBytes(result.size) : "-",
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: onSurface.withAlpha(140)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w800, color: onSurface.withAlpha(140)),
             ),
             const SizedBox(width: 6),
             IconButton(
@@ -786,12 +788,12 @@ class _DefaultFolderRow extends StatelessWidget {
                 Text(target.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: onSurface)),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: onSurface)),
                 const SizedBox(height: 2),
                 Text(target.path,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(110))),
+                    style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(110))),
               ],
             ),
           ),
@@ -846,7 +848,9 @@ class _CustomFolderRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(path,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: onSurface)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: Design.baseFontSize + 1.5, color: onSurface)),
           ),
           IconButton(
             tooltip: "Remove",
@@ -874,12 +878,17 @@ class _SectionLabel extends StatelessWidget {
     return Row(
       children: <Widget>[
         Text(label.toUpperCase(),
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: onSurface)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 0.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+                color: onSurface)),
         const SizedBox(width: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(color: accent.withAlpha(22), borderRadius: BorderRadius.circular(999)),
-          child: Text("$count", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: accent)),
+          child: Text("$count",
+              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: accent)),
         ),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: onSurface.withAlpha(20))),
@@ -910,7 +919,8 @@ class _InfoStrip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(message,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145))),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145))),
           ),
         ],
       ),
@@ -985,7 +995,7 @@ class _BrokenAppsRowState extends State<_BrokenAppsRow> {
                           : (widget.count > 0
                               ? "${widget.count} broken Start Menu Symlinks found"
                               : "No broken symlinks found in Start Menu"),
-                      style: TextStyle(fontSize: 11, color: widget.onSurface.withAlpha(140)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 1, color: widget.onSurface.withAlpha(140)),
                     ),
                   ],
                 ),
@@ -1043,7 +1053,7 @@ class _BrokenAppsRowState extends State<_BrokenAppsRow> {
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, color: widget.onSurface.withAlpha(160)),
+                            style: TextStyle(fontSize: Design.baseFontSize + 1, color: widget.onSurface.withAlpha(160)),
                           ),
                         ),
                       ],

@@ -132,7 +132,7 @@ class FaqPageState extends State<FaqPage> {
                       Text(
                         "Answers to the most common questions about Tabame.",
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Design.baseFontSize + 2,
                           color: onSurface.withValues(alpha: _AppOpacity.textSecondary),
                         ),
                       ),
@@ -157,7 +157,7 @@ class FaqPageState extends State<FaqPage> {
                   icon: const Icon(Icons.feedback_outlined, size: 16),
                   label: Text(
                     "Send Feedback & Suggestions",
-                    style: entryStyle(null, fontSize: 12, color: User.theme.background),
+                    style: entryStyle(null, fontSize: Design.baseFontSize + 2, color: User.theme.background),
                   ),
                 ),
               ],
@@ -188,7 +188,7 @@ class FaqPageState extends State<FaqPage> {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: Design.baseFontSize,
           fontWeight: FontWeight.w900,
           letterSpacing: 1.1,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: _AppOpacity.textSecondary),
@@ -254,7 +254,7 @@ class FaqPageState extends State<FaqPage> {
                       child: Text(
                         "${index + 1}",
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: Design.baseFontSize + 1,
                           fontWeight: FontWeight.w700,
                           color: isOpen ? accent : onSurface.withValues(alpha: _AppOpacity.textSecondary),
                         ),

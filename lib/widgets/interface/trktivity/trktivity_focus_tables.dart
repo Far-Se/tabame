@@ -122,7 +122,7 @@ class TrktivityFocusTables extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: Design.baseFontSize + 2,
                                 color: track.key == idleKey ? colorScheme.onSurface.withValues(alpha: 0.5) : null,
                               ),
                             ),
@@ -166,7 +166,7 @@ class TrktivityFocusTables extends StatelessWidget {
         text,
         textAlign: TextAlign.end,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: Design.baseFontSize + 2,
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           color: color,
         ),

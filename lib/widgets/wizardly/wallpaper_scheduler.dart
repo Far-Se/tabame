@@ -135,7 +135,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, letterSpacing: -0.5),
                   ),
                   if (_editingSchedule != null)
-                    Text(_editingSchedule!.name, style: TextStyle(fontSize: 12, color: accent.withAlpha(180))),
+                    Text(_editingSchedule!.name, style: TextStyle(fontSize: Design.baseFontSize + 2, color: accent.withAlpha(180))),
                 ],
               ),
             ),
@@ -149,7 +149,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text("NEW", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                child: Text("NEW", style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 1)),
               )
             else
               IconButton(
@@ -233,7 +233,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
             subtitle: Text(
               "${s.startHour.toString().padLeft(2, '0')}:${s.startMinute.toString().padLeft(2, '0')} - "
               "${s.endHour.toString().padLeft(2, '0')}:${s.endMinute.toString().padLeft(2, '0')}",
-              style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).hintColor),
             ),
             onTap: () => _onEditingScheduleChanged(s),
             trailing: Row(
@@ -443,7 +443,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: Design.baseFontSize,
                   fontWeight: FontWeight.w900,
                   color: onSurface.withAlpha(150),
                   letterSpacing: 1.2,
@@ -464,7 +464,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+        labelStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).hintColor),
         isDense: true,
         counterText: "",
         border: noBorder
@@ -530,7 +530,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
         Row(
           children: <Widget>[
             ChoiceChip(
-              label: const Text("All Monitors", style: TextStyle(fontSize: 11)),
+              label: Text("All Monitors", style: TextStyle(fontSize: Design.baseFontSize + 1)),
               selected: s.monitorIndex == -1,
               onSelected: (bool sel) {
                 if (sel) {
@@ -546,7 +546,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
             const SizedBox(width: 12),
             Text(
               s.monitorIndex == -1 ? "Global schedule" : "Monitor ${s.monitorIndex + 1}",
-              style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Theme.of(context).hintColor),
             ),
           ],
         ),
@@ -590,7 +590,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
                       : s.images.isNotEmpty
                           ? "${s.images.length} images"
                           : "Empty",
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -927,7 +927,7 @@ class _MonitorItemState extends State<_MonitorItem> {
                 Text(
                   "${widget.index + 1}",
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: Design.baseFontSize + 2,
                     fontWeight: FontWeight.bold,
                     color: widget.isSelected || _hovered ? widget.accent : onSurface.withAlpha(180),
                   ),

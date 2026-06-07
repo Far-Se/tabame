@@ -137,14 +137,14 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
               children: <Widget>[
                 Text(
                   "For a more in-depth and professional scanner, use ",
-                  style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.5)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5)),
                 ),
                 InkWell(
                   onTap: () => WinUtils.open("https://diskanalyzer.com/"),
                   child: Text(
                     "Wiztree",
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: Design.baseFontSize + 1,
                       color: accent,
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.underline,
@@ -198,7 +198,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                             currentFolder.isEmpty
                                 ? "Pick a folder to scan storage usage"
                                 : currentFolder.truncate(70, suffix: "..."),
-                            style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -275,7 +276,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             ),
             child: Text(
               "Folders only, drives are blocked",
-              style: TextStyle(fontSize: 11, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -292,7 +294,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
       ),
       child: Text(
         processedFiles.trim(),
-        style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w600),
+        style: TextStyle(fontSize: Design.baseFontSize + 2, color: accent, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -313,14 +315,14 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text("Folder Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        SizedBox(height: 4),
+                        const Text("Folder Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
                         Text("Inspect the largest folders first and trim files directly from the report.",
-                            style: TextStyle(fontSize: 12)),
+                            style: TextStyle(fontSize: Design.baseFontSize + 2)),
                       ],
                     ),
                   ),
@@ -351,14 +353,14 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                     SizedBox(
                         width: 86,
                         child: Text(getFileSize(DirectoryScan.main.size, 1),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
                     const PercentageBar(percent: 100, barWidth: 56),
                     const SizedBox(width: 12),
                     Expanded(
                       child: MouseScrollWidget(
                         child: Text(
                           DirectoryScan.main.path,
-                          style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.78)),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.78)),
                         ),
                       ),
                     ),
@@ -389,7 +391,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
           const SizedBox(width: 8),
           RichText(
             text: TextSpan(
-              style: TextStyle(color: onSurface, fontSize: 12),
+              style: TextStyle(color: onSurface, fontSize: Design.baseFontSize + 2),
               children: <InlineSpan>[
                 TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.bold)),
                 TextSpan(text: " $label", style: TextStyle(color: onSurface.withValues(alpha: 0.65))),
@@ -577,7 +579,7 @@ class _FolderInfoState extends State<FolderInfo> {
                   SizedBox(
                     width: 86,
                     child: Text(getFileSize(dir.size, 1),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
                   ),
                   PercentageBar(percent: percent, barWidth: barWidth),
                   const SizedBox(width: 12),
@@ -585,7 +587,7 @@ class _FolderInfoState extends State<FolderInfo> {
                     child: MouseScrollWidget(
                       child: Text(
                         shortName,
-                        style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.85)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.85)),
                       ),
                     ),
                   ),
@@ -664,11 +666,11 @@ class _FolderInfoState extends State<FolderInfo> {
           const SizedBox(width: barWidth, child: Icon(Icons.description_outlined, size: 15)),
           SizedBox(
               width: 86,
-              child:
-                  Text(getFileSize(filesSize, 1), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+              child: Text(getFileSize(filesSize, 1),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold))),
           PercentageBar(percent: percent, barWidth: barWidth),
           const SizedBox(width: 12),
-          const Expanded(child: Text("Files", style: TextStyle(fontSize: 12))),
+          Expanded(child: Text("Files", style: TextStyle(fontSize: Design.baseFontSize + 2))),
         ]),
       ),
       FutureBuilder<Map<String, int>>(
@@ -702,14 +704,14 @@ class _FolderInfoState extends State<FolderInfo> {
                     SizedBox(
                         width: 86,
                         child: Text(getFileSize(file.value, 1),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold))),
                     PercentageBar(percent: percent, barWidth: barWidth),
                     const SizedBox(width: 12),
                     Expanded(
                       child: MouseScrollWidget(
                         child: Text(
                           file.key.replaceFirst("$parentDirectory\\", ""),
-                          style: TextStyle(fontSize: 12, color: onSurface.withValues(alpha: 0.82)),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.82)),
                         ),
                       ),
                     ),

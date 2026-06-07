@@ -336,7 +336,7 @@ class TrktivityPageState extends State<TrktivityPage> {
                       ? const Markdown(
                           shrinkWrap: true,
                           data: '''
-With Trktivity you can track your activity per minute/hour/day/week. 
+With Trktivity you can track your activity per minute/hour/day/week.
 
 It records keystrokes, mouse movement and active Window.
 ''',
@@ -398,7 +398,7 @@ It records keystrokes, mouse movement and active Window.
                                         setState(() => showFilters = true);
                                       },
                                       icon: const Icon(Icons.add_rounded, size: 18),
-                                      label: const Text("Add Rule", style: TextStyle(fontSize: 12)),
+                                      label: Text("Add Rule", style: TextStyle(fontSize: Design.baseFontSize + 2)),
                                     )
                                   ],
                                 ],
