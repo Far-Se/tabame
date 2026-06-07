@@ -229,7 +229,6 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
     final bool buffering =
         state.processingState == ProcessingState.loading || state.processingState == ProcessingState.buffering;
     final MusicItem? currentItem = _currentQueuedItem();
-    print(currentItem);
 
     if (!buffering || currentItem == null) {
       _cancelBufferingWarning(resetWarnedItem: !buffering);

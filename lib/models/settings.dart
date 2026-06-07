@@ -115,6 +115,7 @@ class Settings {
   bool hideDesktopFiles = false;
   bool showMediaControlForApp = true;
   bool showMusicPlayerInTaskbar = true;
+  bool showMediaSessionsInTaskbar = true;
   bool trktivitySaveAllTitles = false;
   bool showQuickMenuAtTaskbarLevel = true;
   String customLogo = "";
@@ -191,6 +192,7 @@ class Settings {
     int entryFontWeight = 700,
     bool entryFontItalic = false,
     double borderRadius = 10,
+    double baseFontSize = 10,
   }) {
     return ThemeColors(
       background: background,
@@ -204,6 +206,7 @@ class Settings {
       entryFontWeight: entryFontWeight,
       entryFontItalic: entryFontItalic,
       borderRadius: borderRadius,
+      baseFontSize: baseFontSize,
     );
   }
 
@@ -218,6 +221,7 @@ class Settings {
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
           borderRadius: 12,
+          baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xFF0A0A0A),
@@ -227,6 +231,7 @@ class Settings {
           uiFontFamily: 'Jura',
           entryFontFamily: 'Jura',
           borderRadius: 12,
+          baseFontSize: 10,
         ),
       ),
       QuickMenuDesigns.classic.name: QuickMenuDesignThemeSet(
@@ -239,6 +244,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 0,
+          baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff171317),
@@ -249,6 +255,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 0,
+          baseFontSize: 10,
         ),
       ),
       QuickMenuDesigns.interface.name: QuickMenuDesignThemeSet(
@@ -262,6 +269,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 22,
+          baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff101923),
@@ -273,6 +281,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 22,
+          baseFontSize: 10,
         ),
       ),
       QuickMenuDesigns.matrix.name: QuickMenuDesignThemeSet(
@@ -286,6 +295,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 12,
+          baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff000000),
@@ -297,6 +307,7 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 12,
+          baseFontSize: 10,
         ),
       ),
       QuickMenuDesigns.serene.name: QuickMenuDesignThemeSet(
@@ -310,6 +321,7 @@ class Settings {
           entryFontFamily: 'Nunito',
           entryFontWeight: 600,
           borderRadius: 10,
+          baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
           background: const Color(0xff161618),
@@ -321,6 +333,7 @@ class Settings {
           entryFontFamily: 'Nunito',
           entryFontWeight: 600,
           borderRadius: 10,
+          baseFontSize: 10,
         ),
       ),
     };
@@ -727,16 +740,16 @@ extension ColorExtensions on Color {
 
 final TextStyle baseEntryStyle = GoogleFonts.getFont(
   userSettings.themeColors.entryFontFamily,
-  fontSize: 12,
+  fontSize: userSettings.themeColors.baseFontSize + 2,
   color: User.theme.text,
   fontWeight: FontWeight(
     userSettings.themeColors.entryFontWeight,
   ),
   fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
 );
-TextStyle entryStyle(bool? isSelected, {double fontSize = 12, double? letterSpacing, Color? color}) {
+TextStyle entryStyle(bool? isSelected, {double? fontSize, double? letterSpacing, Color? color}) {
   return baseEntryStyle.copyWith(
-    fontSize: fontSize,
+    fontSize: fontSize ?? userSettings.themeColors.baseFontSize + 2,
     letterSpacing: letterSpacing,
     color: color ?? ((isSelected ?? false) ? User.theme.text : User.theme.text.withAlpha(200)),
   );

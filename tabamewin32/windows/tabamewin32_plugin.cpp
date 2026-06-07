@@ -1266,6 +1266,55 @@ void GetMediaSessionsH(Tabamewin32Plugin *, const MethodCall &,
     winrt::uninit_apartment();
   }).detach();
 }
+void MediaSessionCommandH(Tabamewin32Plugin *, const MethodCall &call,
+                          MethodResult result) {
+  const auto *args = std::get_if<EMap>(call.arguments());
+  if (!args) {
+    result->Error("INVALID_ARGS", "Expected a map of arguments");
+    return;
+  }
+
+  auto getString = [&](const std::string &key) -> std::optional<std::string> {
+    auto it = args->find(EVal(key));
+    if (it == args->end())
+      return std::nullopt;
+    const auto *s = std::get_if<std::string>(&it->second);
+    if (!s)
+      return std::nullopt;
+    return *s;
+  };
+
+  const auto sessionId = getString("sessionId");
+  const auto command = getString("command");
+
+  if (!sessionId || !command) {
+    result->Error("INVALID_ARGS", "Missing sessionId or command");
+    return;
+  }
+
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+  std::string capturedId = *sessionId;
+  std::string capturedCommand = *command;
+
+  std::thread([shared_result, capturedId, capturedCommand]() {
+    winrt::init_apartment(winrt::apartment_type::multi_threaded);
+    auto value = MediaSession::MediaSessionCommand(capturedId, capturedCommand);
+    if (auto *map = std::get_if<EMap>(&value)) {
+      auto it = map->find(EVal("error"));
+      if (it != map->end()) {
+        const auto *message = std::get_if<std::string>(&it->second);
+        shared_result->Error(
+            "SMTC_ERROR", message ? *message : "Unknown media session error");
+        winrt::uninit_apartment();
+        return;
+      }
+    }
+    shared_result->Success(); // null == success
+    winrt::uninit_apartment();
+  }).detach();
+}
 
 // ===== QuickClick =====
 void RegisterQuickClickH(Tabamewin32Plugin *self, const MethodCall &call,
@@ -1469,6 +1518,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"clipboardExtendedStartMonitoring", Handlers::ClipboardExtendedH},
       {"clipboardExtendedStopMonitoring", Handlers::ClipboardExtendedH},
       {"getMediaSessions", Handlers::GetMediaSessionsH},
+      {"mediaSessionCommand", Handlers::MediaSessionCommandH},
       // QuickClick
       {"registerQuickClick", Handlers::RegisterQuickClickH},
       {"setQuickClickHotkeys", Handlers::SetQuickClickHotkeysH},

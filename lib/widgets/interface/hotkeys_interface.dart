@@ -1860,7 +1860,6 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
     if (!_listening) return KeyEventResult.ignored;
 
     if (event is KeyDownEvent) {
-      print(event.logicalKey);
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         setState(() => _listening = false);
         return KeyEventResult.handled;

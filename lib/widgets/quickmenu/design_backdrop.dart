@@ -11,15 +11,15 @@ class DesignBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // print("Backdrop");
-    if (userSettings.activeBackdropPath.isEmpty) return const SizedBox.shrink();
-
-    final bool isAsset = userSettings.activeBackdropPath.startsWith('resources/');
-    final double opacityClamped = userSettings.themeColors.backdropOpacity.clamp(0.0, 1.0);
-
     return ValueListenableBuilder<bool>(
         valueListenable: Globals.themeChangeNotifier,
         builder: (_, bool refreshed, __) {
+          final String activePath = userSettings.activeBackdropPath;
+          if (activePath.isEmpty) return const SizedBox.shrink();
+
+          final bool isAsset = activePath.startsWith('resources/');
+          final double opacityClamped = userSettings.themeColors.backdropOpacity.clamp(0.0, 1.0);
+
           return RepaintBoundary(
             child: Stack(
               children: <Widget>[
@@ -28,14 +28,18 @@ class DesignBackdrop extends StatelessWidget {
                     opacity: opacityClamped,
                     child: isAsset
                         ? Image.asset(
-                            userSettings.activeBackdropPath,
+                            activePath,
+                            key: ValueKey<String>(activePath),
                             fit: BoxFit.cover,
+                            gaplessPlayback: true,
                             errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
                                 const SizedBox.shrink(),
                           )
                         : Image.file(
-                            File(userSettings.activeBackdropPath),
+                            File(activePath),
+                            key: ValueKey<String>(activePath),
                             fit: BoxFit.cover,
+                            gaplessPlayback: true,
                             errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
                                 const SizedBox.shrink(),
                           ),

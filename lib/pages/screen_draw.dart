@@ -1659,7 +1659,6 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 
     final ui.Offset pos = e.localPosition;
     // final double scrollDelta = e.scrollDelta.dy;
-    // print('pos: $pos scrollDelta: $scrollDelta');
     ctrl.resizeElement(pos, e.scrollDelta);
   }
 

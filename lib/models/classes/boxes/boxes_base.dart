@@ -429,7 +429,7 @@ class Boxes {
     userSettings.saveActiveThemesToCurrentDesign();
     userSettings.quickMenuDesign = design.index;
     userSettings.applyThemesForDesign(design);
-    QuickMenuFunctions.randomizeBackdrop();
+    QuickMenuFunctions.syncSelectedBackdrop();
 
     await pref.setInt("quickMenuDesign", design.index);
     await saveActiveQuickMenuThemes(notify: notify);

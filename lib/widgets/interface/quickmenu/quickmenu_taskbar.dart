@@ -208,6 +208,18 @@ class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
             ),
           ],
           const Divider(height: 1),
+          _buildToggleTile(
+            title: "Show Media Sessions",
+            subtitle: "It will show curent Media Session like Music Player or Youtube/Browser",
+            value: userSettings.showMediaSessionsInTaskbar,
+            onChanged: (bool v) async {
+              userSettings.showMediaSessionsInTaskbar = v;
+              await Boxes.updateSettings("showMediaSessionsInTaskbar", userSettings.showMediaSessionsInTaskbar);
+              if (!mounted) return;
+              setState(() {});
+            },
+          ),
+          const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

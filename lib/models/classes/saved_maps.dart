@@ -416,11 +416,13 @@ class ThemeColors {
   bool entryFontItalic;
   List<String> backdropImages;
   String backdropType;
+  String backdropPath;
   double backdropOpacity;
   List<double> panelOpacityPoints;
   String panelOpacityBegin;
   String panelOpacityEnd;
   double borderRadius;
+  double baseFontSize;
   ThemeColors({
     required this.background,
     required this.gradientAlpha,
@@ -434,11 +436,13 @@ class ThemeColors {
     this.entryFontItalic = false,
     this.backdropImages = const <String>[],
     this.backdropType = '',
+    this.backdropPath = '',
     this.backdropOpacity = 0.7,
     this.panelOpacityPoints = const <double>[0.0, 1.0, 1.0, 1.0],
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
     this.borderRadius = 10.0,
+    this.baseFontSize = 10.0,
   });
 
 // #region (collapsed) [ThemeColors]
@@ -457,11 +461,13 @@ class ThemeColors {
     bool? entryFontItalic,
     List<String>? backdropImages,
     String? backdropType,
+    String? backdropPath,
     double? backdropOpacity,
     List<double>? panelOpacityPoints,
     String? panelOpacityBegin,
     String? panelOpacityEnd,
     double? borderRadius,
+    double? baseFontSize,
   }) {
     return ThemeColors(
       background: background ?? this.background,
@@ -476,11 +482,13 @@ class ThemeColors {
       entryFontItalic: entryFontItalic ?? this.entryFontItalic,
       backdropImages: backdropImages ?? this.backdropImages,
       backdropType: backdropType ?? this.backdropType,
+      backdropPath: backdropPath ?? this.backdropPath,
       backdropOpacity: backdropOpacity ?? this.backdropOpacity,
       panelOpacityPoints: panelOpacityPoints ?? this.panelOpacityPoints,
       panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
       panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
       borderRadius: borderRadius ?? this.borderRadius,
+      baseFontSize: baseFontSize ?? this.baseFontSize,
     );
   }
 
@@ -496,13 +504,15 @@ class ThemeColors {
       'entryFontFamily': entryFontFamily,
       'entryFontWeight': entryFontWeight,
       'entryFontItalic': entryFontItalic,
-      'backdropImage': backdropImages,
+      'backdropImages': backdropImages,
       'backdropType': backdropType,
+      'backdropPath': backdropPath,
       'backdropOpacity': backdropOpacity,
       'panelOpacityPoints': panelOpacityPoints,
       'panelOpacityBegin': panelOpacityBegin,
       'panelOpacityEnd': panelOpacityEnd,
       'borderRadius': borderRadius,
+      'baseFontSize': baseFontSize,
     };
   }
 
@@ -518,8 +528,9 @@ class ThemeColors {
       entryFontFamily: (map['entryFontFamily'] ?? 'Jura') as String,
       entryFontWeight: (map['entryFontWeight'] ?? 700) as int,
       entryFontItalic: (map['entryFontItalic'] ?? false) as bool,
-      backdropImages: List<String>.from(map['backdropImages'] ?? const <String>[]),
+      backdropImages: List<String>.from(map['backdropImages'] ?? map['backdropImage'] ?? const <String>[]),
       backdropType: (map['backdropType'] ?? '') as String,
+      backdropPath: (map['backdropPath'] ?? '') as String,
       backdropOpacity: (map['backdropOpacity'] ?? 0.7) as double,
       panelOpacityPoints: List<double>.from(
           (map['panelOpacityPoints'] as List<dynamic>?)?.map((dynamic e) => (e as num).toDouble()) ??
@@ -527,6 +538,7 @@ class ThemeColors {
       panelOpacityBegin: (map['panelOpacityBegin'] ?? 'Top Left') as String,
       panelOpacityEnd: (map['panelOpacityEnd'] ?? 'Bottom Right') as String,
       borderRadius: (map['borderRadius'] as num?)?.toDouble() ?? 10.0,
+      baseFontSize: (map['baseFontSize'] as num?)?.toDouble() ?? 10.0,
     );
   }
 
@@ -536,7 +548,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
   }
 
   @override
@@ -554,11 +566,13 @@ class ThemeColors {
         other.entryFontWeight == entryFontWeight &&
         other.entryFontItalic == entryFontItalic &&
         other.backdropType == backdropType &&
+        other.backdropPath == backdropPath &&
         other.backdropImages == backdropImages &&
         other.backdropOpacity == backdropOpacity &&
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
         other.borderRadius == borderRadius &&
+        other.baseFontSize == baseFontSize &&
         other.panelOpacityEnd == panelOpacityEnd;
   }
 
@@ -576,7 +590,9 @@ class ThemeColors {
         entryFontItalic.hashCode ^
         backdropImages.hashCode ^
         backdropType.hashCode ^
+        backdropPath.hashCode ^
         borderRadius.hashCode ^
+        baseFontSize.hashCode ^
         panelOpacityPoints.hashCode;
   }
 // #endregion

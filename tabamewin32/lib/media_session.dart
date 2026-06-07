@@ -69,7 +69,7 @@ class MediaSession {
 
   @override
   String toString() => 'MediaSession($id: "$title" by $artist [$playbackStatus]'
-      '${thumbnail != null ? " +art" : ""})';
+      '${thumbnail != null ? " +art" : ""}, $albumTitle, $albumArtist, $trackNumber, $canPlay, $canPause, $canSkipNext, $canSkipPrevious)';
 }
 
 class MediaSessionResult {
@@ -106,5 +106,14 @@ class MediaSessionPlugin {
       currentSessionId: result['currentSessionId'] as String?,
       sessions: sessions,
     );
+  }
+
+  static Future<void> sendCommand(String id, String command) async {
+    try {
+      await _channel.invokeMethod<void>('mediaSessionCommand', <String, String>{
+        'sessionId': id,
+        'command': command,
+      });
+    } catch (_) {}
   }
 }

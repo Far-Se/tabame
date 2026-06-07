@@ -1251,7 +1251,6 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
       if (iconFile.endsWith('.ico')) {
         return File(iconFile).readAsBytesSync();
       }
-      print(iconFile);
       return using((Arena arena) {
         final Pointer<Utf16> iconPathPtr = iconFile!.toNativeUtf16(allocator: arena);
         // ExtractIconEx gives us the real icon at the specified index

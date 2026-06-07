@@ -25,8 +25,7 @@ ERROR: $error
 STACK:
 $chain
 ''';
-
-      await errorLog.writeAsString(entry, mode: FileMode.append, flush: true);
+      if (kReleaseMode) await errorLog.writeAsString(entry, mode: FileMode.append, flush: true);
 
       // Also print in debug
       assert(() {

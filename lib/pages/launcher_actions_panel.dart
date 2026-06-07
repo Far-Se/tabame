@@ -1181,7 +1181,6 @@ class LauncherActionsBuilder {
     // ── Shell context-menu items ──
     final List<ShellMenuItem> shellActions = await ShellContextMenu.getMenuItems(path);
     final List<LauncherAction> newList = <LauncherAction>[];
-    print(shellActions);
     for (final ShellMenuItem action in shellActions) {
       if (<String>["Cut", "Copy"].contains(action.verb)) continue;
       newList.add(LauncherAction(

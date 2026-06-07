@@ -510,7 +510,6 @@ class Parsers {
       }
     }
     final String url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/$from/$to.min.json";
-    print(url);
     final http.Response response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);

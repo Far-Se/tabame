@@ -1955,17 +1955,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Future<void> _repairFileIndexInBackground() async {
     if (_isRepairingFileIndex) return;
     _isRepairingFileIndex = true;
-
     try {
+      // Close the current connection first — repair() needs exclusive access
+      FileIndexDb.instance.close(); // flush any lingering state
       await FileIndexDb.instance.repair();
       await FileIndexer.instance.fullReindex();
       await _syncLauncherAppsCatalog();
-      if (mounted) {
-        _onSearchChanged(_controller.text);
-      }
-    } catch (error, stackTrace) {
-      debugPrint('Launcher: Failed to repair file index DB: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) _onSearchChanged(_controller.text);
+    } catch (e, st) {
+      debugPrint('Launcher: Failed to repair file index DB: $e');
+      debugPrintStack(stackTrace: st);
     } finally {
       _isRepairingFileIndex = false;
     }

@@ -53,6 +53,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   Timer? _mainTimer;
   final ScrollController _scrollController = ScrollController();
 
+  // SMTC media sessions stream (all sessions)
+
   // Window sizing state
 
   @override
@@ -263,69 +265,63 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 ).createShader(rect);
               },
               blendMode: BlendMode.dstOut,
-              child: StreamBuilder<SequenceState?>(
-                  stream: MusicServerManager.player.sequenceStateStream,
-                  builder: (BuildContext context, AsyncSnapshot<SequenceState?> snapshot) {
-                    final SequenceState? sequenceState = snapshot.data;
-                    final MusicItem? musicItem = sequenceState?.currentSource?.tag is MusicItem
-                        ? sequenceState!.currentSource!.tag as MusicItem
-                        : null;
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                // Row 0 is always the carousel slot; it renders SizedBox.shrink
+                // when there is nothing to show, so the window list is offset by 1.
+                itemCount: _windows.length + 1,
+                itemBuilder: (BuildContext context, int xIndex) {
+                  if (xIndex == 0) {
+                    if (User.s.showMediaSessionsInTaskbar || User.s.showMusicPlayerInTaskbar) {
+                      return const TaskBarMediaCarousel();
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  }
 
-                    int isMusicPlaying = (musicItem != null && userSettings.showMusicPlayerInTaskbar) ? 1 : 0;
+                  final int index = xIndex - 1;
+                  final Window window = _windows[index];
+                  final bool isSelected = index == QuickMenuFunctions.taskBarSelectedIdx;
 
-                    // return TaskBarMusicItem(item: item);
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      // physics: const ClampingScrollPhysics(),
-                      padding: EdgeInsets.zero,
-                      itemCount: _windows.length + isMusicPlaying,
-                      itemBuilder: (BuildContext context, int xIndex) {
-                        if (xIndex == 0 && isMusicPlaying != 0) {
-                          return TaskBarMusicItem(item: musicItem!);
-                        }
-                        final int index = xIndex - isMusicPlaying;
-                        final Window window = _windows[index];
-                        final bool isSelected = index == QuickMenuFunctions.taskBarSelectedIdx;
-
-                        // Add separator if monitor changes
-                        if (index > 0 && window.monitor != _windows[index - 1].monitor) {
-                          return Column(
-                            children: <Widget>[
-                              _buildMonitorSeparator(context),
-                              TaskBarItem(
-                                window: window,
-                                index: index,
-                                isSelected: isSelected,
-                                onClose: _handleWindowClose,
-                              ),
-                            ],
-                          );
-                        }
-
-                        // Add padding at bottom
-                        if (_windows.length > 10 && index == _windows.length - 1) {
-                          return Column(
-                            children: <Widget>[
-                              TaskBarItem(
-                                window: window,
-                                index: index,
-                                isSelected: isSelected,
-                                onClose: _handleWindowClose,
-                              ),
-                              const SizedBox(height: 20),
-                            ],
-                          );
-                        }
-
-                        return TaskBarItem(
+                  // Add separator if monitor changes
+                  if (index > 0 && window.monitor != _windows[index - 1].monitor) {
+                    return Column(
+                      children: <Widget>[
+                        _buildMonitorSeparator(context),
+                        TaskBarItem(
                           window: window,
                           index: index,
                           isSelected: isSelected,
                           onClose: _handleWindowClose,
-                        );
-                      },
+                        ),
+                      ],
                     );
-                  }),
+                  }
+
+                  // Add padding at bottom
+                  if (_windows.length > 10 && index == _windows.length - 1) {
+                    return Column(
+                      children: <Widget>[
+                        TaskBarItem(
+                          window: window,
+                          index: index,
+                          isSelected: isSelected,
+                          onClose: _handleWindowClose,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    );
+                  }
+
+                  return TaskBarItem(
+                    window: window,
+                    index: index,
+                    isSelected: isSelected,
+                    onClose: _handleWindowClose,
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -791,6 +787,193 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// MEDIA CAROUSEL — shows internal player + all SMTC sessions as swipeable pages
+// -----------------------------------------------------------------------------
+
+class TaskBarMediaCarousel extends StatefulWidget {
+  const TaskBarMediaCarousel({super.key});
+
+  @override
+  State<TaskBarMediaCarousel> createState() => _TaskBarMediaCarouselState();
+}
+
+class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  final StreamController<List<MediaSession>> _mediaSessionController = StreamController<List<MediaSession>>.broadcast();
+  List<MediaSession> _lastMediaSessions = <MediaSession>[];
+
+  List<Widget> _buildPages(MusicItem? musicItem, List<MediaSession> sessions) {
+    final List<Widget> pages = <Widget>[];
+    if (musicItem != null && userSettings.showMusicPlayerInTaskbar) {
+      pages.add(TaskBarMusicItem(item: musicItem));
+    }
+    if (User.s.showMediaSessionsInTaskbar) {
+      for (final MediaSession session in sessions) {
+        pages.add(TaskBarMediaSessionItem(session: session));
+      }
+    }
+    return pages;
+  }
+
+  Timer? timer;
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    timer = Timer.periodic(kTimerInterval, (_) => _pollMediaSession());
+  }
+
+  @override
+  void dispose() {
+    _mediaSessionController.close();
+    _pageController.dispose();
+    timer?.cancel();
+    super.dispose();
+  }
+
+  void _pollMediaSession({bool forced = false}) async {
+    if (_mediaSessionController.isClosed) {
+      return;
+    }
+    if (!QuickMenuFunctions.isQuickMenuVisible) return;
+    try {
+      final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
+      final List<MediaSession> sessions = result.sessions.where((MediaSession s) => s.title.isNotEmpty).toList();
+      // Emit only when something meaningful changed to avoid rebuilds.
+      bool changed = sessions.length != _lastMediaSessions.length;
+      if (!changed) {
+        for (int i = 0; i < sessions.length; i++) {
+          final MediaSession n = sessions[i];
+          final MediaSession o = _lastMediaSessions[i];
+          // print(n);
+          // print(o);
+          if (n.id != o.id || n.playbackStatus != o.playbackStatus || n.title != o.title || n.artist != o.artist) {
+            changed = true;
+            Future<void>.delayed(const Duration(seconds: 5), () {
+              _lastMediaSessions = sessions;
+              if (!_mediaSessionController.isClosed) {
+                _mediaSessionController.add(sessions);
+              }
+            });
+            break;
+          }
+          if (n.thumbnail != null && o.thumbnail != null && n.thumbnail.hashCode != o.thumbnail.hashCode) {
+            break;
+          }
+        }
+      }
+
+      if (changed || forced) {
+        _lastMediaSessions = sessions;
+        if (!_mediaSessionController.isClosed) {
+          _mediaSessionController.add(sessions);
+        }
+      }
+    } catch (_) {
+      // SMTC unavailable — emit empty list so the UI hides the carousel.
+      if (_lastMediaSessions.isNotEmpty) {
+        _lastMediaSessions = <MediaSession>[];
+        if (!_mediaSessionController.isClosed) {
+          _mediaSessionController.add(<MediaSession>[]);
+        }
+      }
+    }
+  }
+
+  void _goTo(int index) {
+    _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+  }
+
+  Widget _buildCarousel(List<Widget> pages) {
+    if (pages.isEmpty) return const SizedBox.shrink();
+
+    final bool expanded = userSettings.expandedTaskbar;
+    final double itemHeight = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+    final Color accent = userSettings.themeColors.accent;
+
+    // Clamp current page in case the source list shrank.
+    if (_currentPage >= pages.length) {
+      _currentPage = pages.length - 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) _pageController.jumpToPage(_currentPage);
+      });
+    }
+
+    return SizedBox(
+      height: itemHeight + (pages.length > 1 ? 12 : 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SizedBox(
+            height: itemHeight,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: pages.length,
+              onPageChanged: (int idx) {
+                _pollMediaSession(forced: true);
+                setState(() => _currentPage = idx);
+              },
+              itemBuilder: (BuildContext context, int index) => pages[index],
+            ),
+          ),
+          if (pages.length > 1)
+            SizedBox(
+              height: 12,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List<Widget>.generate(pages.length, (int i) {
+                  final bool active = i == _currentPage;
+                  return GestureDetector(
+                    onTap: () => _goTo(i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                      width: active ? 14 : 5,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(active ? 200 : 80),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<MediaSession>>(
+      stream: _mediaSessionController.stream,
+      initialData: _lastMediaSessions,
+      builder: (BuildContext context, AsyncSnapshot<List<MediaSession>> mediaSnapshot) {
+        final List<MediaSession> smtcSessions = mediaSnapshot.data ?? <MediaSession>[];
+
+        return StreamBuilder<SequenceState?>(
+          stream: MusicServerManager.player.sequenceStateStream,
+          builder: (BuildContext context, AsyncSnapshot<SequenceState?> seqSnapshot) {
+            final SequenceState? sequenceState = seqSnapshot.data;
+            final MusicItem? musicItem =
+                sequenceState?.currentSource?.tag is MusicItem ? sequenceState!.currentSource!.tag as MusicItem : null;
+
+            return _buildCarousel(_buildPages(musicItem, smtcSessions));
+          },
+        );
+      },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// INTERNAL MUSIC PLAYER ITEM
+// -----------------------------------------------------------------------------
+
 class TaskBarMusicItem extends StatefulWidget {
   final MusicItem item;
   const TaskBarMusicItem({super.key, required this.item});
@@ -801,6 +984,51 @@ class TaskBarMusicItem extends StatefulWidget {
 
 class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   bool _isHovered = false;
+  Timer? _artworkPoller;
+
+  @override
+  void initState() {
+    super.initState();
+    _startArtworkPollerIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(TaskBarMusicItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // New track — restart the poller if artwork is still missing.
+    if (oldWidget.item != widget.item) {
+      _artworkPoller?.cancel();
+      _startArtworkPollerIfNeeded();
+    }
+  }
+
+  @override
+  void dispose() {
+    _artworkPoller?.cancel();
+    super.dispose();
+  }
+
+  bool get _hasArtwork {
+    final String? path = widget.item.localArtworkSmallPath;
+    if (path != null && File(path).existsSync()) return true;
+    if (widget.item.coverUrl != null) return true;
+    return false;
+  }
+
+  void _startArtworkPollerIfNeeded() {
+    if (_hasArtwork) return;
+    // Poll every second until artwork appears, then stop.
+    _artworkPoller = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        _artworkPoller?.cancel();
+        return;
+      }
+      if (_hasArtwork) {
+        _artworkPoller?.cancel();
+        setState(() {});
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -939,6 +1167,147 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
           onTap: () => MusicServerManager.player.seekToNext(),
           accent: accent,
         ),
+      ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// SMTC MEDIA SESSION ITEM
+// -----------------------------------------------------------------------------
+
+class TaskBarMediaSessionItem extends StatefulWidget {
+  final MediaSession session;
+  const TaskBarMediaSessionItem({super.key, required this.session});
+
+  @override
+  State<TaskBarMediaSessionItem> createState() => _TaskBarMediaSessionItemState();
+}
+
+class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = userSettings.themeColors.accent;
+    final bool expanded = userSettings.expandedTaskbar;
+    final double height = expanded ? kTaskBarItemExpandedHeight : kTaskBarItemHeight + 6;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        height: height,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(_isHovered ? 30 : 15),
+          borderRadius: BorderRadius.circular(expanded ? 8 : 9),
+          border: Border.all(color: accent.withAlpha(20), width: 1),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  _buildCoverArt(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          !expanded
+                              ? '${widget.session.artist.isNotEmpty ? widget.session.artist : "Unknown Artist"}'
+                                  ' - ${widget.session.title}'
+                              : widget.session.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: userSettings.themeColors.text,
+                          ),
+                        ),
+                        if (expanded)
+                          Text(
+                            widget.session.artist.isNotEmpty ? widget.session.artist : 'Unknown Artist',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: userSettings.themeColors.text.withAlpha(160),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildControls(accent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverArt() {
+    final double size = userSettings.expandedTaskbar ? 32 : 20;
+    final ImageProvider<Object>? image = widget.session.thumbnailImage;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        color: userSettings.themeColors.accent.withAlpha(20),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: image != null
+          ? Image(
+              image: image,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, size: 18),
+            )
+          : const Icon(Icons.music_note_rounded, size: 18),
+    );
+  }
+
+  Widget _buildControls(Color accent) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (widget.session.canSkipPrevious)
+          _ControlBtn(
+            icon: Icons.skip_previous_rounded,
+            onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, 'skipPrevious'),
+            accent: accent,
+          ),
+        _ControlBtn(
+          icon: widget.session.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, widget.session.isPlaying ? 'pause' : 'play'),
+          accent: accent,
+          isMain: true,
+        ),
+        if (widget.session.canSkipNext)
+          _ControlBtn(
+            icon: Icons.skip_next_rounded,
+            onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, 'skipNext'),
+            accent: accent,
+          ),
       ],
     );
   }

@@ -2,10 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
+import 'design_backdrop_stable.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
@@ -22,8 +22,6 @@ class MainMenuSereneWidget extends StatelessWidget {
     final Color surface = theme.colorScheme.surface;
     final bool isDark = theme.brightness == Brightness.dark;
 
-    // Opacity mask — reuse the user's panel opacity points exactly like the
-    // other designs do, so the fade-out behaviour is consistent.
     final List<double> points = userSettings.themeColors.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> maskColors = <Color>[];
@@ -33,25 +31,17 @@ class MainMenuSereneWidget extends StatelessWidget {
     }
 
     final double radius = User.theme.borderRadius;
-
-    // How strongly the accent tints the background (driven by gradientAlpha).
     final double tintStrength = (userSettings.themeColors.gradientAlpha.clamp(0, 255)) / 255.0;
-
-    // Panel base: surface colour at high opacity so content is always legible.
     final double baseAlpha = userSettings.activeBackdropPath.isNotEmpty ? 0.72 : 0.88;
-
     final Color panelBase = surface.withValues(alpha: baseAlpha);
 
-    // Glow centre colour — accent at very low opacity, blended into surface.
     final Color glowColor = Color.alphaBlend(
       accent.withValues(alpha: 0.10 + tintStrength * 0.14),
       surface,
     );
 
-    // Hairline border — white highlight on dark, soft grey on light.
     final Color borderColor = isDark ? Colors.white.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.70);
 
-    // Divider colour — barely there.
     final Color dividerColor = theme.colorScheme.onSurface.withValues(alpha: 0.07);
 
     return ConstrainedBox(
@@ -62,100 +52,93 @@ class MainMenuSereneWidget extends StatelessWidget {
       child: RepaintBoundary(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(radius),
-          // Frosted-glass blur applied to everything beneath the panel.
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: ShaderMask(
-              blendMode: BlendMode.dstIn,
-              shaderCallback: (Rect bounds) {
-                return LinearGradient(
-                  begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                  end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
-                  colors: maskColors,
-                  stops: stops,
-                ).createShader(bounds);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
-                  // Soft drop shadow — one layer, large blur, no hard edge.
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
-                      blurRadius: 32,
-                      spreadRadius: -4,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                  // Radial glow from top-left: accent tint bleeds into
-                  // neutral surface — subtle, not saturated.
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.6, -0.7),
-                    radius: 1.4,
-                    colors: <Color>[
-                      glowColor,
-                      panelBase,
-                    ],
-                  ),
-                  // Specular hairline border.
-                  border: Border.all(color: borderColor, width: 0.8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
-                  child: Stack(
-                    children: <Widget>[
-                      // Optional backdrop image underneath everything.
-                      if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
-                        Globals.backdrop!,
+          child: Stack(
+            children: <Widget>[
+              // ── Layer 0: backdrop image ──────────────────────────────────
+              // Lives OUTSIDE the BackdropFilter so the blur never
+              // re-snapshots it.  Tooltip repaints or any other dirty-region
+              // above this layer cannot cause it to flicker.
 
-                      // Content column — mirrors interface design's structure.
-                      RepaintBoundary(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            // ── Top bar / quick-actions header ────────────
-                            if (!userSettings.quickActionsAtBottom) ...<Widget>[
-                              Container(
-                                padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
-                                child: const TopBar(),
-                              ),
-                              _Hairline(color: dividerColor),
-                            ] else if (userSettings.bottomBarOnTop)
-                              const PinnedAndTrayList()
-                            else
-                              const SizedBox(height: 3),
-
-                            // ── Task list ─────────────────────────────────
-                            const TaskBar(),
-
-                            // ── Separator before footer ───────────────────
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              child: _Hairline(color: dividerColor),
-                            ),
-
-                            // ── Pinned + tray ─────────────────────────────
-                            if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
-
-                            // ── Optional system stats ─────────────────────
-                            if (userSettings.taskManagerStats) const TaskbarStats(),
-                            if (userSettings.libreStats) const LibreStats(),
-
-                            // ── Bottom bar ────────────────────────────────
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(0, 4, 2, 6),
-                              child: const BottomBar(),
+              // ── Layer 1: frosted-glass panel ─────────────────────────────
+              // BackdropFilter now only sees Layer 0 (the backdrop image or
+              // the window content behind the panel) — never the UI content
+              // column, which is promoted to Layer 2.
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                    child: ShaderMask(
+                      blendMode: BlendMode.dstIn,
+                      shaderCallback: (Rect bounds) {
+                        return LinearGradient(
+                          begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
+                          end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                          colors: maskColors,
+                          stops: stops,
+                        ).createShader(bounds);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(radius),
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+                              blurRadius: 32,
+                              spreadRadius: -4,
+                              offset: const Offset(0, 6),
                             ),
                           ],
+                          gradient: RadialGradient(
+                            center: const Alignment(-0.6, -0.7),
+                            radius: 1.4,
+                            colors: <Color>[glowColor, panelBase],
+                          ),
+                          border: Border.all(color: borderColor, width: 0.8),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+
+              const StableBackdrop(),
+
+              // ── Layer 2: UI content ───────────────────────────────────────
+              // Promoted to its own RepaintBoundary so tooltip hovers,
+              // hover-state changes, or any widget repaint here cannot
+              // propagate down into the BackdropFilter's snapshot region.
+              RepaintBoundary(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (!userSettings.quickActionsAtBottom) ...<Widget>[
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
+                        child: const TopBar(),
+                      ),
+                      _Hairline(color: dividerColor),
+                    ] else if (userSettings.bottomBarOnTop)
+                      const PinnedAndTrayList()
+                    else
+                      const SizedBox(height: 3),
+                    const TaskBar(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: _Hairline(color: dividerColor),
+                    ),
+                    if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (userSettings.taskManagerStats) const TaskbarStats(),
+                    if (userSettings.libreStats) const LibreStats(),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(0, 4, 2, 6),
+                      child: const BottomBar(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -163,9 +146,6 @@ class MainMenuSereneWidget extends StatelessWidget {
   }
 }
 
-/// A one-pixel hairline divider that carries zero visual weight on its own —
-/// it only becomes perceptible where two content regions need a breath of air
-/// between them. Using a dedicated widget keeps the column readable.
 class _Hairline extends StatelessWidget {
   final Color color;
   const _Hairline({required this.color});

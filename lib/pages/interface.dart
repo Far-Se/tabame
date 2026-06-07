@@ -207,7 +207,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   final math.Random random = math.Random();
   @override
   Widget build(BuildContext context) {
-    final int randomWallpaper = random.nextInt(9);
+    final int randomWallpaper = random.nextInt(Globals.totalGradients);
     if (Globals.changingPages) {
       return const SizedBox(width: 10);
     }

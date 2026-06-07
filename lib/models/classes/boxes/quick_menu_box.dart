@@ -1,10 +1,7 @@
-import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../widgets/quickmenu/design_backdrop.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
@@ -50,29 +47,29 @@ class QuickMenuFunctions {
     Globals.clearQuickMenuSearchInput();
   }
 
-  static String oldbackdropType = User.theme.backdropType;
-  static void randomizeBackdrop() {
+  static const String defaultBackdropPath = 'resources/gradient/gradient0.jpg';
+
+  static void syncSelectedBackdrop({String? selectedPath}) {
     final ThemeColors currentTheme = userSettings.themeColors;
     if (currentTheme.backdropType == '') {
       userSettings.activeBackdropPath = '';
-      Globals.backdrop = null;
-      oldbackdropType = '';
+      currentTheme.backdropPath = '';
       return;
     }
+
+    String nextPath = selectedPath ?? currentTheme.backdropPath;
     if (currentTheme.backdropType == 'builtIn') {
-      final int random = Random().nextInt(10);
-      userSettings.activeBackdropPath = 'resources/gradient/gradient$random.jpg';
-      Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
-      oldbackdropType = 'builtIn';
-    } else {
-      if (currentTheme.backdropImages.isNotEmpty) {
-        if (oldbackdropType != userSettings.activeBackdropPath) {
-          userSettings.activeBackdropPath = currentTheme.backdropImages[0];
-          oldbackdropType = userSettings.activeBackdropPath;
-          Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
-        }
+      if (!nextPath.startsWith('resources/gradient/')) nextPath = defaultBackdropPath;
+    } else if (currentTheme.backdropType == 'custom') {
+      if (!currentTheme.backdropImages.contains(nextPath)) {
+        nextPath = currentTheme.backdropImages.isEmpty ? '' : currentTheme.backdropImages.first;
       }
+    } else {
+      nextPath = '';
     }
+
+    userSettings.activeBackdropPath = nextPath;
+    currentTheme.backdropPath = nextPath;
   }
 
   static void refreshQuickMenu() {

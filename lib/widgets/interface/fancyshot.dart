@@ -16,6 +16,7 @@ import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/mini_switch.dart';
 
@@ -1692,7 +1693,7 @@ class _BackgroundGrid extends StatelessWidget {
                 child: Image.memory(capture!, fit: BoxFit.cover),
               ),
             // Gradients
-            ...List<Widget>.generate(10, (int i) {
+            ...List<Widget>.generate(Globals.totalGradients, (int i) {
               final String path = "resources/gradient/gradient$i.jpg";
               return _BgTile(
                 selected: filters.backgroundType == BackgroundType.stock && filters.backgroundImage == path,

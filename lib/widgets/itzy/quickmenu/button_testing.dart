@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 // import '../../../models/win32/win32.dart';
@@ -28,6 +29,21 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
+        final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
+
+        print('Current: ${result.currentSession?.title}');
+
+        for (final MediaSession session in result.sessions) {
+          print('${session.isCurrent ? "▶" : " "} [${session.id}] '
+              '${session.title} — ${session.artist} (${session.playbackStatus})');
+          print(session);
+          if (session.thumbnailImage != null) {
+            xIcon = session.thumbnail!;
+            setState(() {});
+          }
+        }
+
+        return;
         // xIcon = WinUtils.extractIconInternal(
         //     r"C:\Users\Far Se\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Antigravity\Antigravity.lnk", 0);
         xIcon = WinUtils.extractIconInternal(
@@ -57,14 +73,6 @@ class _TestingButtonState extends State<TestingButton> {
           print("Error testing context menu: $e");
         }
         return;
-        final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
-
-        print('Current: ${result.currentSession?.title}');
-
-        for (final MediaSession session in result.sessions) {
-          print('${session.isCurrent ? "▶" : " "} [${session.id}] '
-              '${session.title} — ${session.artist} (${session.playbackStatus})');
-        }
         // print(FocusScope.of(context).focusedChild);
         // print(Globals.quickMenuPage);
         return;

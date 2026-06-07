@@ -14,7 +14,6 @@ import '../../../models/util/theme_colors.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/launcher/launcher_design.dart';
 import '../../interface/theme_setup.dart';
-import '../../quickmenu/design_backdrop.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/font_picker/models/picker_font.dart';
@@ -169,7 +168,10 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       }
     } finally {
       if (mounted) {
-        if (changed) await _persistThemeChanges();
+        if (changed) {
+          QuickMenuFunctions.syncSelectedBackdrop();
+          await _persistThemeChanges();
+        }
         setState(() {
           _isBackdropProcessing = false;
           _backdropProcessingCompleted = _backdropProcessingTotal;
@@ -178,18 +180,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     }
   }
 
-  static const int _builtInGradientCount = 10;
-
-  Future<void> _shuffleBackdrop() async {
-    QuickMenuFunctions.randomizeBackdrop();
-    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-    if (mounted) setState(() {});
-  }
-
   Future<void> _selectBuiltInGradient(int index) async {
-    userSettings.activeBackdropPath = 'resources/gradient/gradient$index.jpg';
-    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-    if (mounted) setState(() {});
+    QuickMenuFunctions.syncSelectedBackdrop(selectedPath: 'resources/gradient/gradient$index.jpg');
+    await _persistThemeChanges();
   }
 
   int get _selectedGradientIndex {
@@ -563,48 +556,40 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    "Backdrop Source",
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "Pick between built-in gradients or custom images.",
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: onSurface.withAlpha(150),
-                    ),
-                  ),
-                ],
+              Text(
+                "Backdrop Source",
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface,
+                ),
               ),
+              const SizedBox(height: 2),
               const SizedBox(width: 8),
-              ToggleButtons(
-                isSelected: options.keys.map((String key) => key == _selectedTheme.backdropType).toList(),
-                onPressed: (int index) async {
-                  await _updateTheme(() {
-                    _selectedTheme.backdropType = options.keys.elementAt(index);
-                  });
-                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                },
-                borderRadius: BorderRadius.circular(8),
-                selectedColor: accent,
-                fillColor: accent.withAlpha(18),
-                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                constraints: const BoxConstraints(minHeight: 30),
-                children: options.values
-                    .map((String val) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(val),
-                        ))
-                    .toList(),
+              Center(
+                child: ToggleButtons(
+                  isSelected: options.keys.map((String key) => key == _selectedTheme.backdropType).toList(),
+                  onPressed: (int index) async {
+                    await _updateTheme(() {
+                      _selectedTheme.backdropType = options.keys.elementAt(index);
+                      QuickMenuFunctions.syncSelectedBackdrop();
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  selectedColor: accent,
+                  fillColor: accent.withAlpha(18),
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  constraints: const BoxConstraints(minHeight: 30),
+                  children: options.values
+                      .map((String val) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(val),
+                          ))
+                      .toList(),
+                ),
               ),
             ],
           ),
@@ -637,7 +622,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Choose one of the ${_builtInGradientCount} built-in gradients.",
+                      "Choose one of the ${Globals.totalGradients} built-in gradients.",
                       style: TextStyle(
                         fontSize: 10.5,
                         color: onSurface.withAlpha(150),
@@ -646,16 +631,10 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   ],
                 ),
               ),
-              CustomTooltip(
-                message: "Random gradient",
-                child: InkWell(
-                  onTap: _shuffleBackdrop,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(Icons.shuffle_rounded, size: 16, color: accent),
-                  ),
-                ),
+              _buildMetaChip(
+                label: selected >= 0 ? "${selected + 1}" : "1",
+                background: accent.withAlpha(18),
+                foreground: accent.withAlpha(220),
               ),
             ],
           ),
@@ -669,7 +648,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               crossAxisSpacing: 6,
               childAspectRatio: 1.5,
             ),
-            itemCount: _builtInGradientCount,
+            itemCount: Globals.totalGradients,
             itemBuilder: (BuildContext context, int index) {
               final bool isSelected = selected == index;
               return GestureDetector(
@@ -749,7 +728,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           ),
           const SizedBox(height: 2),
           Text(
-            "Manage the image pool used for randomized backdrops.",
+            "Choose one custom image for the QuickMenu backdrop.",
             style: TextStyle(fontSize: 10.5, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 10),
@@ -795,9 +774,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         onTap: isActive
                             ? null
                             : () async {
-                                userSettings.activeBackdropPath = path;
-                                Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                                if (mounted) setState(() {});
+                                QuickMenuFunctions.syncSelectedBackdrop(selectedPath: path);
+                                await _persistThemeChanges();
                               },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
@@ -842,13 +820,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         onTap: () async {
                           final String removedPath = _selectedTheme.backdropImages[index];
                           _selectedTheme.backdropImages.remove(removedPath);
-                          if (userSettings.activeBackdropPath == removedPath) {
-                            if (_selectedTheme.backdropImages.isNotEmpty) {
-                              userSettings.activeBackdropPath = _selectedTheme.backdropImages.first;
-                            } else {
-                              userSettings.activeBackdropPath = "";
-                            }
-                          }
+                          QuickMenuFunctions.syncSelectedBackdrop();
                           await _updateTheme(() {});
                           if (File(removedPath).existsSync()) {
                             try {
@@ -933,29 +905,13 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        if (_selectedTheme.backdropType == 'builtIn' || _selectedTheme.backdropImages.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: InkWell(
-                              onTap: _shuffleBackdrop,
-                              borderRadius: BorderRadius.circular(4),
-                              child: CustomTooltip(
-                                message: "Random backdrop",
-                                child: Icon(Icons.shuffle_rounded, size: 14, color: accent),
-                              ),
-                            ),
-                          ),
-                        Text(
-                          "Backdrop Intensity",
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: onSurface,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      "Backdrop Intensity",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -983,7 +939,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             inactiveColor: accent.withAlpha(40),
             onChanged: (double value) {
               setState(() => _selectedTheme.backdropOpacity = value);
-              Globals.backdrop = const Positioned.fill(child: DesignBackdrop());
               Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
             },
             onChangeEnd: (double value) async {
@@ -1059,6 +1014,46 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Base font size",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildMetaChip(
+                label: "${_selectedTheme.baseFontSize}",
+                background: accent.withAlpha(18),
+                foreground: accent.withAlpha(220),
+              ),
+            ],
+          ),
+          Slider(
+            min: 8,
+            max: 20,
+            value: _selectedTheme.baseFontSize.toDouble().clamp(8, 20),
+            activeColor: accent,
+            inactiveColor: accent.withAlpha(40),
+            onChanged: (double value) {
+              setState(() => _selectedTheme.baseFontSize = value.floorToDouble());
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+            },
+            onChangeEnd: (double value) async {
+              _selectedTheme.baseFontSize = value.floorToDouble();
+              await _persistThemeChanges();
+            },
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -57,10 +58,23 @@ class FileIndexDb {
     _manualPath = path;
   }
 
+  Completer<Database>? _initCompleter;
+
   Future<Database> get database async {
     if (_db != null) return _db!;
-    _db = await _initDb();
-    return _db!;
+    if (_initCompleter != null) return _initCompleter!.future; // <-- wait, don't re-enter
+
+    _initCompleter = Completer<Database>();
+    try {
+      final Database db = await _initDb();
+      _db = db;
+      _initCompleter!.complete(db);
+      return db;
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+      rethrow;
+    }
   }
 
   Future<Database> _initDb() async {

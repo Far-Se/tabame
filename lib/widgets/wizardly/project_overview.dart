@@ -168,8 +168,6 @@ List<String> _splitProjectSetting(String setting) {
       .map((String value) => value.trim())
       .where((String value) => value.isNotEmpty)
       .toList();
-  print("BAGAMAIS PULA");
-  print(caca);
   return caca;
 }
 

@@ -57,6 +57,7 @@ class Globals {
   static WinRect? focusedRect;
   static int virtualDesktop = 0;
 
+  static const int totalGradients = 11;
   static bool changingPages = false;
   static bool isWindowActive = false;
   static final Heights heights = Heights();
@@ -75,7 +76,6 @@ class Globals {
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
   static String _pendingLauncherQuickAction = "";
-  static Positioned? backdrop;
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
   static Pages get currentPage => _currentPage;

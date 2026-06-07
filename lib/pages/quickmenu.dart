@@ -175,7 +175,7 @@ class QuickMenuState extends State<QuickMenu>
     ClipboardHooks.start();
     QuickMenuFunctions.addListener(this);
     WindowManager.instance.addListener(this);
-    QuickMenuFunctions.randomizeBackdrop();
+    QuickMenuFunctions.syncSelectedBackdrop();
 
     WinHotkeys.update();
     ClipboardHistoryStore.clearCache();
@@ -363,7 +363,6 @@ class QuickMenuState extends State<QuickMenu>
         } else {
           final ({int height, int width}) size = Win32.getSize();
           if (size.width != Boxes.quickMenuWidth) {
-            print("Redo Size");
             await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
           }
         }
@@ -373,7 +372,7 @@ class QuickMenuState extends State<QuickMenu>
     } else {
       // PaintingBinding.instance.imageCache.clear();
       // PaintingBinding.instance.imageCache.clearLiveImages();
-      QuickMenuFunctions.randomizeBackdrop();
+      QuickMenuFunctions.syncSelectedBackdrop();
       lastTimeShown = DateTime.now();
       // FocusScope.of(context).unfocus();
       tryPop = true;
@@ -402,14 +401,12 @@ class QuickMenuState extends State<QuickMenu>
       WinUtils.makeWindowClickThrough(false);
       final ({int height, int width}) size = Win32.getSize();
       if (size.width != Boxes.quickMenuWidth) {
-        print("Redu Size");
         WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
       }
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         _requestQuickMenuFocus(focusWindow: true);
         // await Future<void>.delayed(const Duration(milliseconds: 300));
-        // print("aici?");
         // WidgetsBinding.instance.reassembleApplication(); // <- this.
       });
       // setState(() {});
@@ -461,7 +458,6 @@ class QuickMenuState extends State<QuickMenu>
   }
 
   void _refreshQuickMenu() {
-    // print("Refresh");
     if (mounted) setState(() {});
   }
 

@@ -94,8 +94,6 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
 
       focusedRect = Globals.focusedRect ?? await getFocusedElementCaretRect();
       // focusedRect = await getFocusedElementRect();
-      Debug.add("${focusedRect.left} ${focusedRect.top} ${focusedRect.width} ${focusedRect.height}");
-      print("${focusedRect.left} ${focusedRect.top} ${focusedRect.width} ${focusedRect.height}");
       if (focusedRect.left < 0) {
         final List<int> mouse = WinUtils.getMousePosXY();
         focusedRect.left = mouse[0];

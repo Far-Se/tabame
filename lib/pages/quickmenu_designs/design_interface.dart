@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
+import 'design_backdrop_stable.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
@@ -93,10 +93,9 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-                      child: Stack(
+                      child: const Stack(
                         children: <Widget>[
-                          if (userSettings.themeColors.backdropType.isNotEmpty && Globals.backdrop != null)
-                            Globals.backdrop!,
+                          StableBackdrop(),
                         ],
                       ),
                     ),
