@@ -9,6 +9,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
@@ -25,6 +26,7 @@ const bool showCapturedMonitorImage = false;
 
 Future<void> startSpotlight() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
   await windowManager.ensureInitialized();
   await Boxes.registerBoxes(justLoad: true);
 

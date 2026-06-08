@@ -14,6 +14,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
@@ -25,6 +26,8 @@ import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import '../widgets/widgets/emoji_picker_modal.dart';
 import '../widgets/interface/fancyshot.dart';
+import '../widgets/widgets/font_picker/models/picker_font.dart';
+import '../widgets/widgets/font_picker/ui/font_picker.dart';
 
 // ---------------------------------------------------------------------------
 // Screen-Draw post-capture action enum
@@ -48,6 +51,7 @@ enum ScreenDrawOcrCaptureType {
 
 Future<void> startScreenDraw() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
   await Boxes.registerBoxes(justLoad: true);
 
   // Use virtual desktop size so the initial window is large enough for all monitors.
@@ -248,6 +252,7 @@ class DrawShape {
   final bool textBackground; // text: show background pill
   final Color? textColor; // explicit text color (nullable = use stroke color)
   final double? fontSize; // text: font size override
+  final String? fontFamily; // text: font family override
   final int? stepNumber; // stepCounter: which number
   /// Raw RGBA pixels captured from screen (blur/pixelate/smartDelete/spotlight/imageDraw/magnifier)
   final Uint8List? imageBytes;
@@ -274,6 +279,7 @@ class DrawShape {
     this.textBackground = true,
     this.textColor,
     this.fontSize,
+    this.fontFamily,
     this.stepNumber,
     this.imageBytes,
     this.imageW,
@@ -293,6 +299,7 @@ class DrawShape {
     bool? textBackground,
     Color? textColor,
     double? fontSize,
+    String? fontFamily,
     int? stepNumber,
     Uint8List? imageBytes,
     int? imageW,
@@ -312,6 +319,7 @@ class DrawShape {
       textBackground: textBackground ?? this.textBackground,
       textColor: textColor ?? this.textColor,
       fontSize: fontSize ?? this.fontSize,
+      fontFamily: fontFamily ?? this.fontFamily,
       stepNumber: stepNumber ?? this.stepNumber,
       imageBytes: imageBytes ?? this.imageBytes,
       imageW: imageW ?? this.imageW,
@@ -380,6 +388,7 @@ class AnnotationController extends ChangeNotifier {
   // Text tool options
   bool textBackground = true;
   double fontSize = 16.0;
+  String? textFontFamily; // null = system default
   Color? textColor; // null = use strokeColor
   Color? textBgColor; // null = black
 
@@ -648,6 +657,7 @@ class AnnotationController extends ChangeNotifier {
       textColor: textColor,
       textBgColor: textBgColor,
       fontSize: fontSize,
+      fontFamily: textFontFamily,
     ));
     notifyListeners();
   }
@@ -2066,11 +2076,38 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     // Background color starts from last used bg or black.
     Color localBgColor = ctrl.textBgColor ?? Colors.black;
     double localSize = ctrl.fontSize;
+    String? localFontFamily = ctrl.textFontFamily;
 
     // Approximate dialog size (width fixed, height estimated).
     const double dw = 400;
-    const double dh = 300;
+    const double dh = 340;
     final Offset dOff = _dialogOffset(dw, dh);
+
+    Future<void> openFontPicker(StateSetter setSt) async {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black54,
+        builder: (BuildContext pickerCtx) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: SizedBox(
+            width: 900,
+            height: 700,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: FontPicker(
+                showInDialog: false,
+                initialFontFamily: localFontFamily,
+                onFontChanged: (PickerFont font) {
+                  setSt(() {
+                    localFontFamily = font.fontFamily;
+                  });
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     final String? result = await showDialog<String>(
       context: context,
@@ -2098,7 +2135,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                       TextField(
                         controller: tc,
                         autofocus: true,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: Colors.white, fontFamily: localFontFamily),
                         decoration: const InputDecoration(
                           hintText: 'Type here…',
                           hintStyle: TextStyle(color: Colors.white38),
@@ -2109,6 +2146,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                           ctrl.textBackground = localBg;
                           ctrl.textBgColor = localBgColor;
                           ctrl.fontSize = localSize;
+                          ctrl.textFontFamily = localFontFamily;
                           Navigator.pop(ctx, v);
                         },
                       ),
@@ -2133,6 +2171,47 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         ),
                         Text('${localSize.round()}pt',
                             style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 1)),
+                      ]),
+                      const SizedBox(height: 8),
+                      // Font family picker
+                      Row(children: <Widget>[
+                        Text('Font:', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => openFontPicker(setSt),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white10,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.white38),
+                              ),
+                              child: Row(children: <Widget>[
+                                Expanded(
+                                  child: Text(
+                                    localFontFamily ?? 'Default',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: Design.baseFontSize + 1,
+                                      fontFamily: localFontFamily,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_drop_down, color: Colors.white54, size: 18),
+                              ]),
+                            ),
+                          ),
+                        ),
+                        if (localFontFamily != null) ...<Widget>[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => setSt(() => localFontFamily = null),
+                            child: const Icon(Icons.close, color: Colors.white38, size: 16),
+                          ),
+                        ],
                       ]),
                       const SizedBox(height: 8),
                       // Text color preview (always from toolbar)
@@ -2209,6 +2288,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                       ctrl.textBackground = localBg;
                       ctrl.textBgColor = localBgColor;
                       ctrl.fontSize = localSize;
+                      ctrl.textFontFamily = localFontFamily;
                       Navigator.pop(ctx, tc.text);
                     },
                     child: const Text('OK'),
@@ -5022,6 +5102,7 @@ class AnnotationPainter extends CustomPainter {
           color: tc,
           fontSize: fs,
           fontWeight: FontWeight.bold,
+          fontFamily: s.fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,

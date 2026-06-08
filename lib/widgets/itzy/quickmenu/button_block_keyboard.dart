@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
+import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
@@ -30,7 +31,7 @@ class BlockKeyboardPanel extends StatefulWidget {
   State<BlockKeyboardPanel> createState() => _BlockKeyboardPanelState();
 }
 
-class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
+class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> with QuickMenuTriggers {
   final TextEditingController _minutesController = TextEditingController(text: "01");
   final TextEditingController _secondsController = TextEditingController(text: "00");
   final FocusNode _minutesFocus = FocusNode();
@@ -44,6 +45,7 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
   @override
   void initState() {
     super.initState();
+    QuickMenuFunctions.addListener(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _minutesFocus.requestFocus();
@@ -53,6 +55,7 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
   @override
   void dispose() {
     _ticker?.cancel();
+    QuickMenuFunctions.removeListener(this);
     if (_active) unawaited(stopKeyboardBlocker());
     _minutesController.dispose();
     _secondsController.dispose();
@@ -60,7 +63,22 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
     super.dispose();
   }
 
+  @override
+  void onQuickActionExecute(String actionName) async {
+    if (actionName == "StartBlockingKeyboard") {
+      print("EXECUTING");
+      QuickMenuFunctions.keepOpen = true;
+      await Future<void>.delayed(const Duration(milliseconds: 300), () {});
+      _minutesController.text = "9999";
+      _secondsController.text = "00";
+      _start();
+      // if (mounted) setState(() {});
+    }
+  }
+
   Future<void> _start() async {
+    QuickMenuFunctions.keepOpen = true;
+    await Future<void>.delayed(const Duration(milliseconds: 200), () {});
     final Duration duration = _durationFromInputs();
     if (duration <= Duration.zero) return;
 
@@ -82,6 +100,8 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> {
   }
 
   Future<void> _stop() async {
+    QuickMenuFunctions.keepOpen = false;
+    await Future<void>.delayed(const Duration(milliseconds: 200), () {});
     _ticker?.cancel();
     _ticker = null;
     await stopKeyboardBlocker();
@@ -397,7 +417,9 @@ class _TimeField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Text(label, style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: onSurface.withAlpha(115))),
+        Text(label,
+            style:
+                TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: onSurface.withAlpha(115))),
       ],
     );
   }

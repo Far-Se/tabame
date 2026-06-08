@@ -15,6 +15,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/screen_utils.dart';
@@ -119,6 +120,7 @@ Uint8List _encodeRgbaToPngIsolate(List<dynamic> args) {
 
 Future<void> startScreenCapture({bool freezeMode = false}) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
 
   const WindowOptions windowOptions = WindowOptions(
     size: Size(400, 400),

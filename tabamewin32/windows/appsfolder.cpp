@@ -130,25 +130,51 @@ inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
   int skip = max(1, w * 5 / 100);  // 5% of width (use width for both axes)
   int probe = max(1, w * 5 / 100); // next 5% band to check
 
+  // Returns true when a pixel should be treated as background padding:
+  //   • fully/nearly transparent (alpha <= 8)
+  //   • solid #3F3F3F  (Windows dark-tile background, BGRA: 3F 3F 3F FF)
+  //   • solid #0078D7  (Windows accent-blue background, BGRA: D7 78 00 FF)
+
+  auto isBackground = [&](int x, int y) -> bool {
+    const uint8_t *p = &src.pixels[(y * w + x) * 4];
+    if (p[3] <= 8)
+      return true; // transparent
+    if (p[3] >= 247) {
+      // Opaque — check the two known Windows bg colours (with a small
+      // tolerance of ±6 per channel to survive minor scaling artefacts).
+      auto closeEnough = [](uint8_t a, uint8_t b) -> bool {
+        return (a >= b ? a - b : b - a) <= 6;
+      };
+      // #3F3F3F  →  B=0x3F G=0x3F R=0x3F
+      if (closeEnough(p[0], 0x3F) && closeEnough(p[1], 0x3F) &&
+          closeEnough(p[2], 0x3F))
+        return true;
+      // #0078D7  →  B=0xD7 G=0x78 R=0x00
+      if (closeEnough(p[0], 0xD7) && closeEnough(p[1], 0x78) &&
+          closeEnough(p[2], 0x00))
+        return true;
+    }
+    return false;
+  };
+
   // Check top band [skip .. skip+probe)
-  auto bandTransparent = [&](int x0, int y0, int x1, int y1) -> bool {
+  auto bandBackground = [&](int x0, int y0, int x1, int y1) -> bool {
     for (int y = y0; y < y1; ++y)
       for (int x = x0; x < x1; ++x)
-        if (src.pixels[(y * w + x) * 4 + 3] > 8)
+        if (!isBackground(x, y))
           return false;
     return true;
   };
 
-  bool topClear = bandTransparent(skip, skip, w - skip, skip + probe);
-  bool bottomClear =
-      bandTransparent(skip, h - skip - probe, w - skip, h - skip);
-  bool leftClear = bandTransparent(skip, skip, skip + probe, h - skip);
-  bool rightClear = bandTransparent(w - skip - probe, skip, w - skip, h - skip);
+  bool topClear = bandBackground(skip, skip, w - skip, skip + probe);
+  bool bottomClear = bandBackground(skip, h - skip - probe, w - skip, h - skip);
+  bool leftClear = bandBackground(skip, skip, skip + probe, h - skip);
+  bool rightClear = bandBackground(w - skip - probe, skip, w - skip, h - skip);
 
   if (!topClear && !bottomClear && !leftClear && !rightClear)
     return src; // icon already fills the canvas, nothing to do
 
-  // Find bounding box of non-transparent pixels starting from skip+probe
+  // Find bounding box of non-background pixels starting from skip+probe
   // inward.
   int startX = skip + probe;
   int startY = skip + probe;
@@ -160,7 +186,7 @@ inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
 
   for (int y = startY; y < endY; ++y) {
     for (int x = startX; x < endX; ++x) {
-      if (src.pixels[(y * w + x) * 4 + 3] > 8) {
+      if (!isBackground(x, y)) {
         if (x < minX)
           minX = x;
         if (x > maxX)
@@ -490,7 +516,56 @@ FindItemInAppsFolder(const std::wstring &parsingName) {
 }
 
 } // namespace detail
+inline HBITMAP ExtractIconBitmapViaImageList(IShellItem *item) {
+  PIDLIST_ABSOLUTE pidl = nullptr;
+  if (FAILED(SHGetIDListFromObject(item, &pidl)) || !pidl)
+    return nullptr;
 
+  IImageList *imageList = nullptr;
+  if (FAILED(SHGetImageList(SHIL_EXTRALARGE, IID_PPV_ARGS(&imageList))) ||
+      !imageList) {
+    ILFree(pidl);
+    return nullptr;
+  }
+
+  SHFILEINFOW sfi{};
+  SHGetFileInfoW(reinterpret_cast<LPCWSTR>(pidl), 0, &sfi, sizeof(sfi),
+                 SHGFI_PIDL | SHGFI_SYSICONINDEX);
+
+  HICON hIcon = nullptr;
+  imageList->GetIcon(sfi.iIcon, ILD_TRANSPARENT, &hIcon);
+  imageList->Release();
+  ILFree(pidl);
+
+  if (!hIcon)
+    return nullptr;
+
+  // Render onto a 48x48 32bpp DIB
+  HDC hdc = GetDC(nullptr);
+  HDC memDC = CreateCompatibleDC(hdc);
+
+  BITMAPINFO bi{};
+  bi.bmiHeader.biSize = sizeof(bi.bmiHeader);
+  bi.bmiHeader.biWidth = 48;
+  bi.bmiHeader.biHeight = 48;
+  bi.bmiHeader.biPlanes = 1;
+  bi.bmiHeader.biBitCount = 32;
+  bi.bmiHeader.biCompression = BI_RGB;
+
+  void *bits = nullptr;
+  HBITMAP hbmp = CreateDIBSection(hdc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+  HGDIOBJ old = SelectObject(memDC, hbmp);
+
+  memset(bits, 0, 48 * 48 * 4);
+  DrawIconEx(memDC, 0, 0, hIcon, 48, 48, 0, nullptr, DI_NORMAL);
+
+  SelectObject(memDC, old);
+  DeleteDC(memDC);
+  ReleaseDC(nullptr, hdc);
+  DestroyIcon(hIcon);
+
+  return hbmp;
+}
 inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
                               int desiredSize = 256) {
   AppBitmap result;
@@ -546,11 +621,19 @@ inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
   }
 
   if (item) {
-    HBITMAP bitmap = detail::ExtractIconBitmapFromItem(item.Get(), desiredSize);
+    HBITMAP bitmap = ExtractIconBitmapViaImageList(item.Get());
     if (bitmap) {
       result = detail::HBitmapToAppBitmap(bitmap);
       DeleteObject(bitmap);
-      result = detail::CropAndScaleIfPadded(std::move(result), desiredSize);
+      // No CropAndScaleIfPadded — image list gives clean icons
+    } else {
+      // Fallback for UWP/MSIX or anything the image list couldn't serve
+      bitmap = detail::ExtractIconBitmapFromItem(item.Get(), desiredSize);
+      if (bitmap) {
+        result = detail::HBitmapToAppBitmap(bitmap);
+        DeleteObject(bitmap);
+        result = detail::CropAndScaleIfPadded(std::move(result), desiredSize);
+      }
     }
   }
 

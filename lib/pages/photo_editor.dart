@@ -13,6 +13,7 @@ import 'package:image/image.dart' as img;
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
@@ -28,6 +29,7 @@ import 'screen_capture.dart';
 
 Future<void> startPhotoEditor(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
 
   final int fileIndex = arguments.indexOf('-file');
   final String? imageFilePath = fileIndex >= 0 && fileIndex + 1 < arguments.length ? arguments[fileIndex + 1] : null;

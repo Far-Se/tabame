@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/settings.dart';
 import '../models/theme.dart';
@@ -12,6 +13,7 @@ const Size _messageBoxSize = Size(420, 280);
 
 Future<void> showMessage(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
   await windowManager.ensureInitialized();
   const WindowOptions windowOptions = WindowOptions(
     size: _messageBoxSize,

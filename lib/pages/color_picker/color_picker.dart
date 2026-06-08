@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../logic/app_startup.dart';
 import '../../models/classes/boxes.dart';
 import 'color_picker_window.dart';
 
 Future<void> startColorPicker() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
   // Load settings and themes only, without full app initialization
   await Boxes.registerBoxes(justLoad: true);
 

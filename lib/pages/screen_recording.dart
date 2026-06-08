@@ -14,6 +14,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/settings.dart' as settings_model;
 import '../models/settings.dart';
@@ -22,6 +23,7 @@ import '../models/win32/win_utils.dart';
 
 Future<void> startScreenRecordingPage() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppStartup.initialize();
 
   const WindowOptions windowOptions = WindowOptions(
     size: Size(400, 300),

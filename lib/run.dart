@@ -9,12 +9,15 @@ import '../models/classes/boxes/boxes_base.dart';
 import '../models/settings.dart';
 import '../models/theme.dart';
 import '../models/win32/win32.dart' show Win32;
+import 'logic/app_startup.dart';
 
 const Size _windowSize = Size(480, 360);
 
 /// Entry point: decides whether to run a command or show a simple message.
 Future<void> showRunStatus(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await AppStartup.initialize();
   await windowManager.ensureInitialized();
   // Load settings (needed for theme)
   await Boxes.registerBoxes(justLoad: true);

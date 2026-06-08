@@ -10,7 +10,7 @@ import '../../widgets/itzy/quickmenu/button_bookmarks.dart';
 import '../../widgets/itzy/quickmenu/button_calculator.dart';
 import '../../widgets/itzy/quickmenu/button_change_theme.dart';
 import '../../widgets/itzy/quickmenu/button_chars.dart';
-import '../../widgets/itzy/quickmenu/button_clear_keyboard.dart';
+import '../../widgets/itzy/quickmenu/button_block_keyboard.dart';
 import '../../widgets/itzy/quickmenu/button_cli_book.dart';
 import '../../widgets/itzy/quickmenu/button_clipboard_history.dart';
 import '../../widgets/itzy/quickmenu/button_closeonfocus.dart';

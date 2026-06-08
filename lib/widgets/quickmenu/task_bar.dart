@@ -1121,6 +1121,8 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                                     color: userSettings.themeColors.text.withAlpha(160),
                                   ),
                                 ),
+                          const SizedBox(height: 4),
+                          MusicProgressBar(accent: accent),
                         ],
                       ),
                     ),
@@ -1200,6 +1202,76 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
           accent: accent,
         ),
       ],
+    );
+  }
+}
+
+class MusicProgressBar extends StatefulWidget {
+  const MusicProgressBar({
+    super.key,
+    required this.accent,
+  });
+
+  final Color accent;
+
+  @override
+  State<MusicProgressBar> createState() => _MusicProgressBarState();
+}
+
+class _MusicProgressBarState extends State<MusicProgressBar> {
+  Timer? timer;
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(const Duration(milliseconds: 500), (Timer timer) {
+      checkProgres();
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  double progress = 0;
+  void checkProgres() async {
+    if (!QuickMenuFunctions.isQuickMenuVisible) return;
+    final Duration duration = MusicServerManager.player.duration ?? Duration.zero;
+    progress = duration.inMilliseconds > 0
+        ? (MusicServerManager.player.position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: SizedBox(
+            height: 2,
+            width: constraints.maxWidth,
+            child: Stack(
+              children: <Widget>[
+                // Track
+                Container(
+                  width: constraints.maxWidth,
+                  color: widget.accent.withAlpha(40),
+                ),
+                // Fill
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.linear,
+                  width: constraints.maxWidth * progress,
+                  color: widget.accent.withAlpha(180),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

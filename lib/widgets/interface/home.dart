@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/markdown_text.dart';
@@ -158,8 +158,8 @@ class _HomeState extends State<Home> {
                 border: Border(top: BorderSide(color: onSurface.withValues(alpha: 0.08))),
               ),
             ),
-            sizedImageBuilder: (MarkdownImageConfig config) {
-              if (config.uri.path == "logo") return Image.asset(userSettings.logo, width: 20);
+            imageBuilder: (uri, title, alt) {
+              if (uri.path == "logo") return Image.asset(userSettings.logo, width: 20);
 
               const Map<String, IconData> icons = <String, IconData>{
                 "quickMenu": Icons.apps,
@@ -173,10 +173,10 @@ class _HomeState extends State<Home> {
                 "tasks": Icons.task_alt,
               };
 
-              if (icons.containsKey(config.alt)) {
+              if (icons.containsKey(alt)) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: Icon(icons[config.alt], size: 18, color: color),
+                  child: Icon(icons[alt], size: 18, color: color),
                 );
               }
               return const SizedBox.shrink();

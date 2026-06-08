@@ -5,7 +5,7 @@ import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
