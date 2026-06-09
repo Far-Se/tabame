@@ -7,14 +7,14 @@ import '../../../models/settings.dart';
 import '../../../models/util/quick_action_list.dart';
 import '../../widgets/windows_scroll.dart';
 
-class QuickmenuTopbar extends StatefulWidget {
-  const QuickmenuTopbar({super.key});
+class QMTopbar extends StatefulWidget {
+  const QMTopbar({super.key});
 
   @override
-  QuickmenuTopbarState createState() => QuickmenuTopbarState();
+  QMTopbarState createState() => QMTopbarState();
 }
 
-class QuickmenuTopbarState extends State<QuickmenuTopbar> {
+class QMTopbarState extends State<QMTopbar> {
   List<String> activeItems = <String>[];
   List<String> disabledItems = <String>[];
   final Map<String, IconData> icons = <String, IconData>{};

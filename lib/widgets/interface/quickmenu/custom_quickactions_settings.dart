@@ -8,13 +8,13 @@ import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quick_actions.dart';
 import '../../widgets/text_input.dart';
 
-class QuickmenuCustomQuickActionsSettingsPage extends StatefulWidget {
-  const QuickmenuCustomQuickActionsSettingsPage({super.key});
+class InterfaceQMCustomQuickActionsSettingsPage extends StatefulWidget {
+  const InterfaceQMCustomQuickActionsSettingsPage({super.key});
   @override
-  State<QuickmenuCustomQuickActionsSettingsPage> createState() => _QuickmenuCustomQuickActionsSettingsPageState();
+  State<InterfaceQMCustomQuickActionsSettingsPage> createState() => _InterfaceQMCustomQuickActionsSettingsPageState();
 }
 
-class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCustomQuickActionsSettingsPage> {
+class _InterfaceQMCustomQuickActionsSettingsPageState extends State<InterfaceQMCustomQuickActionsSettingsPage> {
   List<QuickActions> quickActions = Boxes.quickActions;
 
   @override
@@ -220,7 +220,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    _QuickmenuQuickActionEditState._getStaticIconForType(action.type),
+                    _QMQuickActionEditState._getStaticIconForType(action.type),
                     size: 18,
                     color: scheme.primary,
                   ),
@@ -280,7 +280,7 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: AppOpacity.border)),
               ),
-              child: QuickmenuQuickActionEdit(
+              child: QMQuickActionEdit(
                 leAction: quickActions.elementAt(index).copyWith(),
                 onSaved: (QuickActions n) {
                   quickActions[index] = n.copyWith();
@@ -296,19 +296,19 @@ class _QuickmenuCustomQuickActionsSettingsPageState extends State<QuickmenuCusto
   }
 }
 
-class QuickmenuQuickActionEdit extends StatefulWidget {
+class QMQuickActionEdit extends StatefulWidget {
   final QuickActions leAction;
   final void Function(QuickActions hotkey) onSaved;
-  const QuickmenuQuickActionEdit({
+  const QMQuickActionEdit({
     super.key,
     required this.leAction,
     required this.onSaved,
   });
   @override
-  State<QuickmenuQuickActionEdit> createState() => _QuickmenuQuickActionEditState();
+  State<QMQuickActionEdit> createState() => _QMQuickActionEditState();
 }
 
-class _QuickmenuQuickActionEditState extends State<QuickmenuQuickActionEdit> {
+class _QMQuickActionEditState extends State<QMQuickActionEdit> {
   static IconData _getStaticIconForType(String type) {
     switch (type) {
       case "Audio Output Devices":

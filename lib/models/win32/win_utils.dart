@@ -1879,6 +1879,93 @@ class ClipboardExtension {
     }
   }
 
+  static Future<void> copyMultipleFiles(List<String> files) async {
+    if (files.isEmpty) {
+      throw Exception('No files provided.');
+    }
+
+    final List<int> allUnits = <int>[];
+    for (final String file in files) {
+      final String normalized = file.endsWith(Platform.pathSeparator) ? file.substring(0, file.length - 1) : file;
+      allUnits.addAll(normalized.codeUnits);
+      allUnits.add(0);
+    }
+    allUnits.add(0); // double-null terminator
+
+    final int bytesNeeded = sizeOf<DROPFILES>() + (allUnits.length * 2);
+    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
+    if (hMem.address == 0) {
+      throw Exception('Failed to allocate clipboard memory.');
+    }
+
+    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
+    if (dropFiles.address == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to lock clipboard memory.');
+    }
+
+    try {
+      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
+      dropFiles.ref.pt.x = 0;
+      dropFiles.ref.pt.y = 0;
+      dropFiles.ref.fNC = 0;
+      dropFiles.ref.fWide = 1;
+
+      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
+      for (int i = 0; i < allUnits.length; i++) {
+        fileListPtr[i] = allUnits[i];
+      }
+    } finally {
+      GlobalUnlock(hMem);
+    }
+
+    // ✅ Fix #3: non-blocking retry
+    int opened = 0;
+    for (int attempt = 0; attempt < 5 && opened == 0; attempt++) {
+      opened = OpenClipboard(NULL);
+      if (opened == 0) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    }
+    if (opened == 0) {
+      GlobalFree(hMem);
+      throw Exception('Failed to open clipboard after retries.');
+    }
+
+    try {
+      EmptyClipboard();
+
+      final int result = SetClipboardData(CF_HDROP, hMem.address);
+      if (result == 0) {
+        // Clipboard does NOT own hMem yet on failure
+        GlobalFree(hMem);
+        throw Exception('Failed to set clipboard file data.');
+      }
+      // Clipboard now owns hMem — do NOT free it
+
+      // ✅ Fix #2: register the format dynamically
+      final int cfPreferredDropEffect = RegisterClipboardFormat(
+        TEXT('Preferred DropEffect'),
+      );
+
+      const int dropEffectCopy = 1;
+      final Pointer<NativeType> hEffect = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeOf<Uint32>());
+      if (hEffect.address != 0) {
+        final Pointer<Uint32> effectPtr = GlobalLock(hEffect).cast<Uint32>();
+        if (effectPtr.address != 0) {
+          effectPtr.value = dropEffectCopy;
+          GlobalUnlock(hEffect);
+          SetClipboardData(cfPreferredDropEffect, hEffect.address);
+          // Clipboard owns hEffect now
+        } else {
+          GlobalFree(hEffect);
+        }
+      }
+    } finally {
+      CloseClipboard();
+    }
+  }
+
   static Future<void> copyFolder(String folderPath) async {
     // Normalize path: remove trailing separator if present
     final String normalizedPath =

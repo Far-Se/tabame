@@ -4,43 +4,42 @@
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 
+#include "quickClick/QuickClickController.h"
 #include <memory>
 #include <optional>
-#include "quickClick/QuickClickController.h"
 
 extern HHOOK gMouseHook;
 extern HWINEVENTHOOK gEventHook;
 
-namespace tabamewin32
-{
+namespace tabamewin32 {
 
-    class Tabamewin32Plugin : public flutter::Plugin
-    {
-    public:
-        static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
+class Tabamewin32Plugin : public flutter::Plugin {
+public:
+  static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
 
-        Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar);
+  Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar);
 
-        virtual ~Tabamewin32Plugin();
+  virtual ~Tabamewin32Plugin();
 
-        // Disallow copy and assign.
-        Tabamewin32Plugin(const Tabamewin32Plugin &) = delete;
-        Tabamewin32Plugin &operator=(const Tabamewin32Plugin &) = delete;
+  // Disallow copy and assign.
+  Tabamewin32Plugin(const Tabamewin32Plugin &) = delete;
+  Tabamewin32Plugin &operator=(const Tabamewin32Plugin &) = delete;
 
-        // Accessible to dispatch handlers within the plugin namespace.
-        flutter::PluginRegistrarWindows *registrar_ = nullptr;
-        int clipboard_proc_id_ = -1;
-        HWND clipboard_view_hwnd_ = nullptr;
-        HWND clipboard_root_hwnd_ = nullptr;
-        std::unique_ptr<QuickClickController> quickClickController_;
-        std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
+  // Accessible to dispatch handlers within the plugin namespace.
+  flutter::PluginRegistrarWindows *registrar_ = nullptr;
+  int clipboard_proc_id_ = -1;
+  int display_proc_id_ = -1;
+  HWND clipboard_view_hwnd_ = nullptr;
+  HWND clipboard_root_hwnd_ = nullptr;
+  std::unique_ptr<QuickClickController> quickClickController_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
 
-    private:
-        // Called when a method is called on this plugin's channel from Dart.
-        void HandleMethodCall(
-            const flutter::MethodCall<flutter::EncodableValue> &method_call,
-            std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
-    };
+private:
+  // Called when a method is called on this plugin's channel from Dart.
+  void HandleMethodCall(
+      const flutter::MethodCall<flutter::EncodableValue> &method_call,
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+};
 
 } // namespace tabamewin32
 

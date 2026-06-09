@@ -8,14 +8,14 @@ import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../widgets/mini_switch.dart';
 
-class QuickmenuGeneralSettingsPage extends StatefulWidget {
-  const QuickmenuGeneralSettingsPage({super.key});
+class InterfaceQMGeneralSettingsPage extends StatefulWidget {
+  const InterfaceQMGeneralSettingsPage({super.key});
 
   @override
-  State<QuickmenuGeneralSettingsPage> createState() => _QuickmenuGeneralSettingsPageState();
+  State<InterfaceQMGeneralSettingsPage> createState() => _InterfaceQMGeneralSettingsPageState();
 }
 
-class _QuickmenuGeneralSettingsPageState extends State<QuickmenuGeneralSettingsPage> {
+class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(

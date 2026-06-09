@@ -8,19 +8,19 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../itzy/quickmenu/button_window_app.dart';
 
-class QuickmenuAppsCategoryEditor extends StatefulWidget {
+class QMAppsCategoryEditor extends StatefulWidget {
   final int categoryIndex;
 
-  const QuickmenuAppsCategoryEditor({
+  const QMAppsCategoryEditor({
     super.key,
     required this.categoryIndex,
   });
 
   @override
-  State<QuickmenuAppsCategoryEditor> createState() => _QuickmenuAppsCategoryEditorState();
+  State<QMAppsCategoryEditor> createState() => _QMAppsCategoryEditorState();
 }
 
-class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEditor> {
+class _QMAppsCategoryEditorState extends State<QMAppsCategoryEditor> {
   late List<AppCategory> categories;
   late AppCategory draft;
   late TextEditingController nameController;
@@ -245,7 +245,8 @@ class _QuickmenuAppsCategoryEditorState extends State<QuickmenuAppsCategoryEdito
                   foregroundColor: primary,
                 ),
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                label: Text("IMPORT FILE", style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800)),
+                label:
+                    Text("IMPORT FILE", style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800)),
               ),
             ],
           ),

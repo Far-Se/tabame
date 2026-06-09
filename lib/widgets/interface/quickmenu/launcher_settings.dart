@@ -9,14 +9,14 @@ import '../../../models/db/file_index_db.dart';
 import '../../../models/settings.dart';
 import '../../../services/file_indexer.dart';
 
-class QuickmenuSearchSettings extends StatefulWidget {
-  const QuickmenuSearchSettings({super.key});
+class InterfaceQMSearchSettings extends StatefulWidget {
+  const InterfaceQMSearchSettings({super.key});
 
   @override
-  State<QuickmenuSearchSettings> createState() => _QuickmenuSearchSettingsState();
+  State<InterfaceQMSearchSettings> createState() => _InterfaceQMSearchSettingsState();
 }
 
-class _QuickmenuSearchSettingsState extends State<QuickmenuSearchSettings> {
+class _InterfaceQMSearchSettingsState extends State<InterfaceQMSearchSettings> {
   List<SearchFolder> _folders = <SearchFolder>[];
   int? _editingIndex;
   bool _isAdding = false;
@@ -423,10 +423,11 @@ class _SearchFolderTileState extends State<_SearchFolderTile> {
                                   "Depth: ${widget.folder.maxDepth}",
                                   Icons.unfold_more_rounded,
                                 ),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: FileIndexer.instance.isIndexingNotifier,
-                                builder: (BuildContext context, bool isIndexing, _) {
+                              ValueListenableBuilder<int>(
+                                valueListenable: FileIndexer.instance.indexedCount,
+                                builder: (BuildContext context, int _, __) {
                                   final int count = FileIndexDb.instance.getDescendantCount(widget.folder.path);
+                                  final bool isIndexing = FileIndexer.instance.isIndexingNotifier.value;
                                   if (count == 0 && isIndexing) return const SizedBox.shrink();
                                   return _buildTag(
                                     context,

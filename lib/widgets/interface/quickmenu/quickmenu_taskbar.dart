@@ -12,14 +12,14 @@ import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/window_watcher.dart';
 import '../../widgets/mini_switch.dart';
 
-class QuickmenuTaskbar extends StatefulWidget {
-  const QuickmenuTaskbar({super.key});
+class QMTaskbar extends StatefulWidget {
+  const QMTaskbar({super.key});
 
   @override
-  State<QuickmenuTaskbar> createState() => _QuickmenuTaskbarState();
+  State<QMTaskbar> createState() => _QMTaskbarState();
 }
 
-class _QuickmenuTaskbarState extends State<QuickmenuTaskbar> {
+class _QMTaskbarState extends State<QMTaskbar> {
   List<MapEntry<String, String>> taskbarRewrites = Boxes.taskBarRewrites.entries.toList();
   final List<TextEditingController> reWriteSearchController = <TextEditingController>[];
   final List<TextEditingController> reWriteReplaceController = <TextEditingController>[];

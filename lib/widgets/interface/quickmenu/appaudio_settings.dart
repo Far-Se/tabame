@@ -14,14 +14,14 @@ import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
 import '../../widgets/windows_scroll.dart';
 
-class QuickmenuAppAudioSettingsPage extends StatefulWidget {
-  const QuickmenuAppAudioSettingsPage({super.key});
+class InterfaceQMAppAudioSettingsPage extends StatefulWidget {
+  const InterfaceQMAppAudioSettingsPage({super.key});
 
   @override
-  State<QuickmenuAppAudioSettingsPage> createState() => _QuickmenuAppAudioSettingsPageState();
+  State<InterfaceQMAppAudioSettingsPage> createState() => _InterfaceQMAppAudioSettingsPageState();
 }
 
-class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSettingsPage> {
+class _InterfaceQMAppAudioSettingsPageState extends State<InterfaceQMAppAudioSettingsPage> {
   static const int _maxControls = 5;
 
   List<AppAudioControl> appAudioControls = Boxes.appAudioControls;
@@ -458,7 +458,7 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: AppOpacity.border)),
               ),
-              child: QuickmenuAppAudioEdit(
+              child: QMAppAudioEdit(
                 control: AppAudioControl.fromMap(appAudioControls[index].toMap()),
                 onSaved: (AppAudioControl updated) {
                   appAudioControls[index] = updated;
@@ -474,8 +474,8 @@ class _QuickmenuAppAudioSettingsPageState extends State<QuickmenuAppAudioSetting
   }
 }
 
-class QuickmenuAppAudioEdit extends StatefulWidget {
-  const QuickmenuAppAudioEdit({
+class QMAppAudioEdit extends StatefulWidget {
+  const QMAppAudioEdit({
     super.key,
     required this.control,
     required this.onSaved,
@@ -485,10 +485,10 @@ class QuickmenuAppAudioEdit extends StatefulWidget {
   final void Function(AppAudioControl ctl) onSaved;
 
   @override
-  State<QuickmenuAppAudioEdit> createState() => _QuickmenuAppAudioEditState();
+  State<QMAppAudioEdit> createState() => _QMAppAudioEditState();
 }
 
-class _QuickmenuAppAudioEditState extends State<QuickmenuAppAudioEdit> {
+class _QMAppAudioEditState extends State<QMAppAudioEdit> {
   final List<IconData> _predefinedIcons = const <IconData>[
     Icons.music_note,
     Icons.music_video,

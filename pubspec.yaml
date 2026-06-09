@@ -57,7 +57,6 @@ dependencies:
   zip_flutter: ^0.0.13
   stack_trace: ^1.12.1
   flutter_markdown_plus: ^1.0.7
-
 dev_dependencies:
   build_runner: ^2.1.11
   flutter_lints: ^6.0.0

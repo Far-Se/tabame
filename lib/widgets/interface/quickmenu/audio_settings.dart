@@ -12,14 +12,14 @@ import '../../../models/win32/win_utils.dart';
 import '../../widgets/mini_switch.dart';
 import '../interface_quickmenu.dart';
 
-class QuickmenuAudioSettingsPage extends StatefulWidget {
-  const QuickmenuAudioSettingsPage({super.key});
+class InterfaceQMAudioSettingsPage extends StatefulWidget {
+  const InterfaceQMAudioSettingsPage({super.key});
 
   @override
-  State<QuickmenuAudioSettingsPage> createState() => _QuickmenuAudioSettingsPageState();
+  State<InterfaceQMAudioSettingsPage> createState() => _InterfaceQMAudioSettingsPageState();
 }
 
-class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage> {
+class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsPage> {
   late final TextEditingController _mediaAppsController;
   Timer? _mediaAppsDebounce;
   bool _mediaAppsDirty = false;
@@ -376,7 +376,7 @@ class _QuickmenuAudioSettingsPageState extends State<QuickmenuAudioSettingsPage>
         setState(() {});
       },
       onOpenAppAudio: () {
-        final QuickmenuSettingsState? state = context.findAncestorStateOfType<QuickmenuSettingsState>();
+        final QMSettingsState? state = context.findAncestorStateOfType<QMSettingsState>();
         if (state != null) {
           state.openPage(5);
         }

@@ -15,7 +15,6 @@ import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:tabamewin32/tabamewin32.dart';
-
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
@@ -70,11 +69,14 @@ class Design {
   static List<String> get backdropImages => userSettings.theme.backdropImages;
   static String get backdropType => userSettings.theme.backdropType;
   static double get backdropOpacity => userSettings.theme.backdropOpacity;
+  static bool get backdropLauncher => userSettings.theme.backdropLauncher;
   static List<double> get panelOpacityPoints => userSettings.theme.panelOpacityPoints;
   static String get panelOpacityBegin => userSettings.theme.panelOpacityBegin;
   static String get panelOpacityEnd => userSettings.theme.panelOpacityEnd;
   static double get borderRadius => userSettings.theme.borderRadius;
   static double get baseFontSize => userSettings.theme.baseFontSize;
+  static final TextStyle fontSize2Alpha80 =
+      TextStyle(fontSize: baseFontSize + 2, color: userSettings.theme.text.withAlpha(80));
 }
 
 class Settings {
@@ -178,7 +180,7 @@ class Settings {
     accentColor: const Color(0xFFA7CF3F),
     gradientAlpha: 20,
   );
-  Map<String, QuickMenuDesignThemeSet> quickMenuDesignThemes = Settings.createDefaultQuickMenuDesignThemes();
+  Map<String, QMDesignThemeSet> quickMenuDesignThemes = Settings.createDefaultQuickMenuDesignThemes();
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
 
   static ThemeColors _defaultThemeColors({
@@ -194,6 +196,7 @@ class Settings {
     bool entryFontItalic = false,
     double borderRadius = 10,
     double baseFontSize = 10,
+    bool backdropLauncher = true,
   }) {
     return ThemeColors(
       background: background,
@@ -208,12 +211,13 @@ class Settings {
       entryFontItalic: entryFontItalic,
       borderRadius: borderRadius,
       baseFontSize: baseFontSize,
+      backdropLauncher: backdropLauncher,
     );
   }
 
-  static Map<String, QuickMenuDesignThemeSet> createDefaultQuickMenuDesignThemes() {
-    return <String, QuickMenuDesignThemeSet>{
-      QuickMenuDesigns.modern.name: QuickMenuDesignThemeSet(
+  static Map<String, QMDesignThemeSet> createDefaultQuickMenuDesignThemes() {
+    return <String, QMDesignThemeSet>{
+      QuickMenuDesigns.modern.name: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffD5E0FB),
           textColor: const Color(0xff3A404A),
@@ -235,7 +239,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.classic.name: QuickMenuDesignThemeSet(
+      QuickMenuDesigns.classic.name: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffECE2D7),
           textColor: const Color(0xff3D342B),
@@ -256,10 +260,11 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 0,
+          backdropLauncher: true,
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.interface.name: QuickMenuDesignThemeSet(
+      QuickMenuDesigns.interface.name: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffEEF4F8),
           textColor: const Color(0xff223444),
@@ -285,7 +290,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.matrix.name: QuickMenuDesignThemeSet(
+      QuickMenuDesigns.matrix.name: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF2F2F2),
           textColor: const Color(0xff003B00),
@@ -311,7 +316,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.serene.name: QuickMenuDesignThemeSet(
+      QuickMenuDesigns.serene.name: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF5F0EB),
           textColor: const Color(0xff2C2118),
@@ -345,15 +350,15 @@ class Settings {
     return QuickMenuDesigns.values[safeIndex];
   }
 
-  void hydrateQuickMenuDesignThemes([Map<String, QuickMenuDesignThemeSet>? source]) {
-    final Map<String, QuickMenuDesignThemeSet> defaults = Settings.createDefaultQuickMenuDesignThemes();
+  void hydrateQuickMenuDesignThemes([Map<String, QMDesignThemeSet>? source]) {
+    final Map<String, QMDesignThemeSet> defaults = Settings.createDefaultQuickMenuDesignThemes();
     if (source != null) {
-      for (final MapEntry<String, QuickMenuDesignThemeSet> entry in source.entries) {
+      for (final MapEntry<String, QMDesignThemeSet> entry in source.entries) {
         defaults[entry.key] = entry.value.copyWith();
       }
     }
     quickMenuDesignThemes = defaults.map(
-      (String key, QuickMenuDesignThemeSet value) => MapEntry<String, QuickMenuDesignThemeSet>(key, value.copyWith()),
+      (String key, QMDesignThemeSet value) => MapEntry<String, QMDesignThemeSet>(key, value.copyWith()),
     );
   }
 
@@ -365,9 +370,9 @@ class Settings {
     final Map<String, dynamic> decoded = Map<String, dynamic>.from(jsonDecode(source) as Map<dynamic, dynamic>);
     hydrateQuickMenuDesignThemes(
       decoded.map(
-        (String key, dynamic value) => MapEntry<String, QuickMenuDesignThemeSet>(
+        (String key, dynamic value) => MapEntry<String, QMDesignThemeSet>(
           key,
-          QuickMenuDesignThemeSet.fromMap(Map<String, dynamic>.from(value as Map<dynamic, dynamic>)),
+          QMDesignThemeSet.fromMap(Map<String, dynamic>.from(value as Map<dynamic, dynamic>)),
         ),
       ),
     );
@@ -376,14 +381,14 @@ class Settings {
   String quickMenuDesignThemesToJson() {
     return jsonEncode(
       quickMenuDesignThemes.map(
-        (String key, QuickMenuDesignThemeSet value) => MapEntry<String, dynamic>(key, value.toMap()),
+        (String key, QMDesignThemeSet value) => MapEntry<String, dynamic>(key, value.toMap()),
       ),
     );
   }
 
   void saveActiveThemesToCurrentDesign([QuickMenuDesigns? design]) {
     final QuickMenuDesigns target = design ?? currentQuickMenuDesign;
-    quickMenuDesignThemes[target.name] = QuickMenuDesignThemeSet(
+    quickMenuDesignThemes[target.name] = QMDesignThemeSet(
       lightTheme: lightTheme.copyWith(),
       darkTheme: darkTheme.copyWith(),
     );
@@ -394,7 +399,7 @@ class Settings {
     ThemeColors? fallbackLightTheme,
     ThemeColors? fallbackDarkTheme,
   }) {
-    final QuickMenuDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.name];
+    final QMDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.name];
     lightTheme = (savedThemeSet?.lightTheme ??
             fallbackLightTheme ??
             Settings.createDefaultQuickMenuDesignThemes()[design.name]!.lightTheme)
@@ -406,8 +411,10 @@ class Settings {
     saveActiveThemesToCurrentDesign(design);
   }
 
+  ThemeType themeTypeMode = ThemeType.system;
+
   /// Get Dark or Light Theme
-  ThemeType get themeTypeMode {
+  ThemeType get themeTypeMode2 {
     if (themeType == ThemeType.system) {
       if (MediaQueryData.fromView(WidgetsBinding.instance.platformDispatcher.views.first).platformBrightness ==
           Brightness.dark) {
@@ -477,6 +484,34 @@ class Settings {
 }
 
 Settings userSettings = Settings();
+void checkThemeChange() {
+  ThemeType newType = userSettings.themeTypeMode;
+  if (userSettings.themeType == ThemeType.system) {
+    if (WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark) {
+      newType = ThemeType.dark;
+    } else {
+      newType = ThemeType.light;
+    }
+  } else if (userSettings.themeType == ThemeType.schedule) {
+    final int start = userSettings.lightSwitchMode == LightSwitchMode.sunrise
+        ? (userSettings.lightSwitchSunrise + userSettings.lightSwitchSunriseOffset)
+        : userSettings.themeScheduleMin;
+    final int end = userSettings.lightSwitchMode == LightSwitchMode.sunrise
+        ? (userSettings.lightSwitchSunset + userSettings.lightSwitchSunsetOffset)
+        : userSettings.themeScheduleMax;
+    final DateTime now0 = DateTime.now();
+    final int now = (now0.hour * 60) + now0.minute;
+    newType = now.isBetweenEqual(start, end) ? ThemeType.light : ThemeType.dark;
+  } else {
+    newType = userSettings.themeType;
+  }
+  if (userSettings.themeTypeMode != newType) {
+    userSettings.themeTypeMode = newType;
+    QuickMenuFunctions.refreshQuickMenu();
+    // QmTaskbarRewrites
+    // InterfaceQMBookmarksSettings
+  }
+}
 
 Future<void> registerAll() async {
   final String locale = Platform.localeName.substring(0, 2);
@@ -487,11 +522,17 @@ Future<void> registerAll() async {
   // ? Monitor Handle
   Monitor.fetchMonitors();
   Debug.add("Registered: Monitor");
-  Timer.periodic(const Duration(seconds: 10), (Timer timer) => Monitor.fetchMonitors());
+  // Timer.periodic(const Duration(seconds: 10), (Timer timer) {
+  //   if (!QuickMenuFunctions.isQuickMenuVisible) return;
+  //   Monitor.fetchMonitors();
+  // });
+  checkThemeChange();
+  Timer.periodic(const Duration(seconds: 1), (Timer timer) {
+    if (QuickMenuFunctions.isQuickMenuVisible) checkThemeChange();
+  });
   Timer.periodic(const Duration(seconds: 5), (Timer timer) {
-    if (userSettings.hideDesktopFiles) {
-      WinUtils.toggleDesktopFiles(visible: false);
-    }
+    if (!userSettings.hideDesktopFiles) return;
+    WinUtils.toggleDesktopFiles(visible: false);
   });
   //register
   await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? true : false);

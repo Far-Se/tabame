@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
+import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 
 // ---------------------------------------------------------------------------
@@ -154,7 +155,7 @@ class _ClassicSearchBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: surface.withAlpha(210),
+        color: surface.withAlpha(100),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withAlpha(32)),
       ),
@@ -215,54 +216,57 @@ class _SereneSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-          child: Row(
-            children: <Widget>[
-              // The drag handle widget already wraps the search icon in the
-              // parent; we just render it.
-              dragHandle,
-              const SizedBox(width: 10),
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.centerRight,
-                  children: <Widget>[
-                    textField,
-                    if (trailingBadge != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: trailingBadge!,
-                      ),
-                  ],
-                ),
-              ),
-              if (isSearching)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      color: onSurface.withAlpha(80),
-                    ),
+    return Container(
+      decoration: BoxDecoration(
+        color: surface.withAlpha(70),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Row(
+              children: <Widget>[
+                dragHandle,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.centerRight,
+                    children: <Widget>[
+                      textField,
+                      if (trailingBadge != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: trailingBadge!,
+                        ),
+                    ],
                   ),
                 ),
-            ],
+                if (isSearching)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: onSurface.withAlpha(80),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        // Hairline separator — replaces the boxy card border
-        Divider(
-          height: 1,
-          thickness: 1,
-          indent: 0,
-          endIndent: 0,
-          color: onSurface.withAlpha(18),
-        ),
-      ],
+          // Hairline separator — replaces the boxy card border
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 0,
+            endIndent: 0,
+            color: onSurface.withAlpha(18),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -273,14 +277,14 @@ class SereneLauncherFrame extends StatelessWidget {
     required this.child,
     required this.accent,
   });
-
   final Widget child;
   final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-
+    final bool hasBackdrop =
+        userSettings.themeColors.backdropType.isNotEmpty && userSettings.activeBackdropPath.isNotEmpty;
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: BackdropFilter(
@@ -289,7 +293,7 @@ class SereneLauncherFrame extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 360),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            color: surface.withAlpha(240),
+            color: surface.withAlpha(hasBackdrop ? 180 : 240),
             border: Border.all(color: Colors.white.withAlpha(18)),
             boxShadow: <BoxShadow>[
               BoxShadow(
@@ -300,7 +304,14 @@ class SereneLauncherFrame extends StatelessWidget {
               ),
             ],
           ),
-          child: child,
+          child: Design.backdropLauncher
+              ? Stack(
+                  children: <Widget>[
+                    const StableBackdrop(),
+                    child,
+                  ],
+                )
+              : child,
         ),
       ),
     );

@@ -418,6 +418,7 @@ class ThemeColors {
   String backdropType;
   String backdropPath;
   double backdropOpacity;
+  bool backdropLauncher;
   List<double> panelOpacityPoints;
   String panelOpacityBegin;
   String panelOpacityEnd;
@@ -438,6 +439,7 @@ class ThemeColors {
     this.backdropType = '',
     this.backdropPath = '',
     this.backdropOpacity = 0.7,
+    this.backdropLauncher = true,
     this.panelOpacityPoints = const <double>[0.0, 1.0, 1.0, 1.0],
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
@@ -463,6 +465,7 @@ class ThemeColors {
     String? backdropType,
     String? backdropPath,
     double? backdropOpacity,
+    bool? backdropLauncher,
     List<double>? panelOpacityPoints,
     String? panelOpacityBegin,
     String? panelOpacityEnd,
@@ -484,6 +487,7 @@ class ThemeColors {
       backdropType: backdropType ?? this.backdropType,
       backdropPath: backdropPath ?? this.backdropPath,
       backdropOpacity: backdropOpacity ?? this.backdropOpacity,
+      backdropLauncher: backdropLauncher ?? this.backdropLauncher,
       panelOpacityPoints: panelOpacityPoints ?? this.panelOpacityPoints,
       panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
       panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
@@ -508,6 +512,7 @@ class ThemeColors {
       'backdropType': backdropType,
       'backdropPath': backdropPath,
       'backdropOpacity': backdropOpacity,
+      'backdropLauncher': backdropLauncher,
       'panelOpacityPoints': panelOpacityPoints,
       'panelOpacityBegin': panelOpacityBegin,
       'panelOpacityEnd': panelOpacityEnd,
@@ -532,6 +537,7 @@ class ThemeColors {
       backdropType: (map['backdropType'] ?? '') as String,
       backdropPath: (map['backdropPath'] ?? '') as String,
       backdropOpacity: (map['backdropOpacity'] ?? 0.7) as double,
+      backdropLauncher: (map['backdropLauncher'] ?? true) as bool,
       panelOpacityPoints: List<double>.from(
           (map['panelOpacityPoints'] as List<dynamic>?)?.map((dynamic e) => (e as num).toDouble()) ??
               const <double>[0.0, 1.0, 1.0, 1.0]),
@@ -548,7 +554,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, backdropLauncher: $backdropLauncher, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
   }
 
   @override
@@ -569,6 +575,7 @@ class ThemeColors {
         other.backdropPath == backdropPath &&
         other.backdropImages == backdropImages &&
         other.backdropOpacity == backdropOpacity &&
+        other.backdropLauncher == backdropLauncher &&
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
         other.borderRadius == borderRadius &&
@@ -598,20 +605,20 @@ class ThemeColors {
 // #endregion
 }
 
-class QuickMenuDesignThemeSet {
+class QMDesignThemeSet {
   ThemeColors lightTheme;
   ThemeColors darkTheme;
 
-  QuickMenuDesignThemeSet({
+  QMDesignThemeSet({
     required this.lightTheme,
     required this.darkTheme,
   });
 
-  QuickMenuDesignThemeSet copyWith({
+  QMDesignThemeSet copyWith({
     ThemeColors? lightTheme,
     ThemeColors? darkTheme,
   }) {
-    return QuickMenuDesignThemeSet(
+    return QMDesignThemeSet(
       lightTheme: lightTheme ?? this.lightTheme.copyWith(),
       darkTheme: darkTheme ?? this.darkTheme.copyWith(),
     );
@@ -624,8 +631,8 @@ class QuickMenuDesignThemeSet {
     };
   }
 
-  factory QuickMenuDesignThemeSet.fromMap(Map<String, dynamic> map) {
-    return QuickMenuDesignThemeSet(
+  factory QMDesignThemeSet.fromMap(Map<String, dynamic> map) {
+    return QMDesignThemeSet(
       lightTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['lightTheme'] as Map<dynamic, dynamic>)),
       darkTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['darkTheme'] as Map<dynamic, dynamic>)),
     );
@@ -633,14 +640,14 @@ class QuickMenuDesignThemeSet {
 
   String toJson() => json.encode(toMap());
 
-  factory QuickMenuDesignThemeSet.fromJson(String source) =>
-      QuickMenuDesignThemeSet.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory QMDesignThemeSet.fromJson(String source) =>
+      QMDesignThemeSet.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   String toString() => 'QuickMenuDesignThemeSet(lightTheme: $lightTheme, darkTheme: $darkTheme)';
 
   @override
-  bool operator ==(covariant QuickMenuDesignThemeSet other) {
+  bool operator ==(covariant QMDesignThemeSet other) {
     if (identical(this, other)) return true;
 
     return other.lightTheme == lightTheme && other.darkTheme == darkTheme;

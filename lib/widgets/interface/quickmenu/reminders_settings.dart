@@ -8,14 +8,14 @@ import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../widgets/windows_scroll.dart';
 
-class QuickmenuRemindersSettingsPage extends StatefulWidget {
-  const QuickmenuRemindersSettingsPage({super.key});
+class InterfaceQMRemindersSettingsPage extends StatefulWidget {
+  const InterfaceQMRemindersSettingsPage({super.key});
 
   @override
-  State<QuickmenuRemindersSettingsPage> createState() => _QuickmenuRemindersSettingsPageState();
+  State<InterfaceQMRemindersSettingsPage> createState() => _InterfaceQMRemindersSettingsPageState();
 }
 
-class _QuickmenuRemindersSettingsPageState extends State<QuickmenuRemindersSettingsPage> {
+class _InterfaceQMRemindersSettingsPageState extends State<InterfaceQMRemindersSettingsPage> {
   final List<Reminder> reminders = Boxes.reminders;
 
   @override

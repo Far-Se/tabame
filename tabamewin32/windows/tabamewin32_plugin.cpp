@@ -1550,7 +1550,21 @@ void Tabamewin32Plugin::RegisterWithRegistrar(
         }
         return std::nullopt;
       });
-
+  plugin->display_proc_id_ = registrar->RegisterTopLevelWindowProcDelegate(
+      [](HWND, UINT message, WPARAM wParam,
+         LPARAM lParam) -> std::optional<LRESULT> {
+        if (message == WM_DISPLAYCHANGE && channel) {
+          // lParam encodes the new resolution: LOWORD=width, HIWORD=height
+          // wParam is the new bit depth
+          EMap info;
+          info[EVal("width")] = EVal(static_cast<int>(LOWORD(lParam)));
+          info[EVal("height")] = EVal(static_cast<int>(HIWORD(lParam)));
+          info[EVal("bitDepth")] = EVal(static_cast<int>(wParam));
+          channel->InvokeMethod("onDisplayChange",
+                                std::make_unique<EVal>(EVal(info)));
+        }
+        return std::nullopt;
+      });
   channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
         plugin_pointer->HandleMethodCall(call, std::move(result));
@@ -1566,6 +1580,8 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
   UnregisterClipboardUpdateListener(this);
   if (registrar_ != nullptr && clipboard_proc_id_ != -1)
     registrar_->UnregisterTopLevelWindowProcDelegate(clipboard_proc_id_);
+  if (registrar_ != nullptr && display_proc_id_ != -1)
+    registrar_->UnregisterTopLevelWindowProcDelegate(display_proc_id_);
   if (gEventHook)
     UnhookWinEvent(gEventHook);
   if (gMouseHook)

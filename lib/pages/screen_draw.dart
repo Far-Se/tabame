@@ -6,6 +6,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
+import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -219,6 +220,7 @@ enum DrawTool {
   smartDelete,
   spotlight,
   imageDraw,
+  imageFile,
   measureDistance,
 }
 
@@ -937,11 +939,13 @@ class AnnotationController extends ChangeNotifier {
     // All rect-based and region tools: hit inside rect
     if (s.tool == DrawTool.rect ||
         s.tool == DrawTool.sizebox ||
+        s.tool == DrawTool.ellipse ||
         s.tool == DrawTool.blur ||
         s.tool == DrawTool.pixelate ||
         s.tool == DrawTool.smartDelete ||
         s.tool == DrawTool.spotlight ||
         s.tool == DrawTool.imageDraw ||
+        s.tool == DrawTool.imageFile ||
         s.tool == DrawTool.magnifier) {
       return Rect.fromPoints(a, b).inflate(6).contains(pos);
     }
@@ -995,6 +999,30 @@ class AnnotationController extends ChangeNotifier {
       ], true);
   }
 
+  Future<void> addLoadedImage(Uint8List bytes, int width, int height, {Offset? position}) async {
+    final Offset topLeft = position ?? const Offset(200, 200);
+
+    _redoStack.clear();
+    _shapes.add(
+      DrawShape(
+        tool: DrawTool.imageFile,
+        points: <Offset>[
+          topLeft,
+          topLeft + Offset(width.toDouble(), height.toDouble()),
+        ],
+        color: Colors.white,
+        strokeWidth: 1,
+        opacity: 1,
+        imageBytes: bytes,
+        imageW: width,
+        imageH: height,
+      ),
+    );
+
+    setTool(DrawTool.select);
+    selectShapeAt(topLeft + Offset(width / 2, height / 2));
+    notifyListeners();
+  }
   // ── Snap helper ──────────────────────────────────────────────────────────
 
   Offset _snap45(Offset start, Offset end) {
@@ -1385,6 +1413,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                           s.tool == DrawTool.pixelate ||
                           s.tool == DrawTool.smartDelete ||
                           s.tool == DrawTool.imageDraw ||
+                          s.tool == DrawTool.imageFile ||
                           s.tool == DrawTool.magnifier))
                   .map((DrawShape s) => _CommittedImageShape(shape: s))
                   .toList(),
@@ -1527,6 +1556,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         LogicalKeyboardKey.keyD: DrawTool.smartDelete,
         LogicalKeyboardKey.keyO: DrawTool.spotlight,
         LogicalKeyboardKey.keyW: DrawTool.imageDraw,
+        LogicalKeyboardKey.keyK: DrawTool.imageFile,
         LogicalKeyboardKey.keyV: DrawTool.measureDistance,
       };
       if (!lCtrl && toolKeys.containsKey(e.logicalKey)) {
@@ -2705,7 +2735,7 @@ void _paintPixelatedRgba(
 }
 
 // ---------------------------------------------------------------------------
-// Committed image-backed shape widget (blur/pixelate/smartDelete/spotlight/imageDraw)
+// Committed image-backed shape widget (blur/pixelate/smartDelete/spotlight/imageDraw/imageFile)
 // ---------------------------------------------------------------------------
 
 class _CommittedImageShape extends StatefulWidget {
@@ -2759,6 +2789,21 @@ class _CommittedImageShapeState extends State<_CommittedImageShape> {
       );
     }
 
+    if (widget.shape.tool == DrawTool.imageFile) {
+      return Positioned.fromRect(
+        rect: rect,
+        child: IgnorePointer(
+          child: ClipRect(
+            child: Image.memory(
+              widget.shape.imageBytes!,
+              fit: BoxFit.fill,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
+      );
+    }
     return Positioned(
       left: rect.left,
       top: rect.top,
@@ -3408,6 +3453,7 @@ class AnnotationToolbar extends StatelessWidget {
                 ],
               ),
               _ToolBtn(Icons.chat_bubble_outline, DrawTool.infoBalloon, controller, 'Info Balloon (I)'),
+              _LoadImageButton(controller: controller),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.search, DrawTool.magnifier, controller, 'Magnifier (Z)'),
               _ToolBtn(Icons.blur_on, DrawTool.blur, controller, 'Blur Region (F)'),
@@ -3426,11 +3472,12 @@ class AnnotationToolbar extends StatelessWidget {
               // Stroke width: shows current width bar; hover reveals popup
               _WidthPopupBtn(controller),
               const Divider(color: Colors.white24, height: 10),
+
               _ActionBtn(Icons.undo, 'Undo (Ctrl+Z)', () => controller.undo()),
               _ActionBtn(Icons.redo, 'Redo (Ctrl+Y)', () => controller.redo()),
               _ActionBtn(Icons.delete_sweep, 'Clear All', () => controller.clearAll()),
               _ActionBtn(Icons.grid_on, 'Grid (Ctrl+G)', () => controller.toggleGrid()),
-              const Divider(color: Colors.white24, height: 10),
+              // const Divider(color: Colors.white24, height: 10),
               _InfoBtn(controller, monitorRect),
               const Divider(color: Colors.white24, height: 10),
               const _CloseBtn(),
@@ -3477,22 +3524,14 @@ class _InfoBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return CustomTooltip(
       message: 'Hotkeys & Tips',
-      preferBelow: false,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => _showHotkeysModal(context),
-        child: Container(
-          width: 36,
-          height: 36,
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            color: Colors.white10,
-          ),
-          child: const Icon(Icons.info_outline, color: Colors.white70, size: 18),
-        ),
+      child: IconButton(
+        icon: const Icon(Icons.info_outline, size: 18),
+        color: Colors.white70,
+        onPressed: () => _showHotkeysModal(context),
+        padding: const EdgeInsets.all(5),
+        constraints: const BoxConstraints(),
       ),
     );
   }
@@ -3690,7 +3729,7 @@ class _KeyChip extends StatelessWidget {
         for (int i = 0; i < parts.length; i++) ...<Widget>[
           if (i > 0)
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Text('+', style: TextStyle(color: Colors.white38, fontSize: Design.baseFontSize + 1)),
             ),
           _chip(parts[i]),
@@ -4934,6 +4973,53 @@ class _ToolBtnWithFillPopupState extends State<_ToolBtnWithFillPopup> {
   }
 }
 
+class _LoadImageButton extends StatelessWidget {
+  final AnnotationController controller;
+
+  const _LoadImageButton({required this.controller});
+
+  Future<void> _pick(BuildContext context) async {
+    controller.toggleDrawingMode(activated: false);
+    final OpenFilePicker picker = OpenFilePicker()
+      ..filterSpecification = <String, String>{
+        'Image Files': '*.jpg;*.jpeg;*.png;*.webp;*.jfif;*.bmp;*.gif;*.tiff',
+        'All Files': '*.*',
+      }
+      ..defaultFilterIndex = 0
+      ..title = 'Select Image';
+    final File? result = picker.getFile();
+    if (result == null || !result.existsSync()) return;
+
+    final Uint8List bytes = result.readAsBytesSync();
+
+    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+    final ui.FrameInfo frame = await codec.getNextFrame();
+
+    final ui.Image image = frame.image;
+
+    controller.addLoadedImage(
+      bytes,
+      image.width,
+      image.height,
+    );
+    controller.toggleDrawingMode(activated: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomTooltip(
+      message: 'Load Image (K)',
+      child: IconButton(
+        icon: const Icon(Icons.image_outlined, size: 18),
+        color: Colors.white70,
+        onPressed: () => _pick(context),
+        padding: const EdgeInsets.all(5),
+        constraints: const BoxConstraints(),
+      ),
+    );
+  }
+}
+
 class _ToolBtn extends StatelessWidget {
   final IconData icon;
   final DrawTool tool;
@@ -4953,7 +5039,7 @@ class _ToolBtn extends StatelessWidget {
             icon: Icon(icon, size: 18),
             color: active ? Colors.yellowAccent : Colors.white70,
             onPressed: () => ctrl.setTool(tool),
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(5),
             constraints: const BoxConstraints(),
           ),
         );
@@ -4976,7 +5062,7 @@ class _ActionBtn extends StatelessWidget {
         icon: Icon(icon, size: 18),
         color: Colors.white70,
         onPressed: onTap,
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(5),
         constraints: const BoxConstraints(),
       ),
     );

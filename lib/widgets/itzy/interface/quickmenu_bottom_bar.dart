@@ -18,15 +18,15 @@ import '../../widgets/windows_scroll.dart';
 
 enum BottomBarSection { all, trayOnly, weatherSystemOnly }
 
-class QuickmenuBottomBar extends StatefulWidget {
+class QMBottomBar extends StatefulWidget {
   final BottomBarSection section;
-  const QuickmenuBottomBar({super.key, this.section = BottomBarSection.all});
+  const QMBottomBar({super.key, this.section = BottomBarSection.all});
 
   @override
-  QuickmenuBottomBarState createState() => QuickmenuBottomBarState();
+  QMBottomBarState createState() => QMBottomBarState();
 }
 
-class QuickmenuBottomBarState extends State<QuickmenuBottomBar> {
+class QMBottomBarState extends State<QMBottomBar> {
   List<String> pinnedApps = <String>[];
   final Map<String, ExtractedIcon> pinnedAppsIcons = <String, ExtractedIcon>{};
   late Future<void> pinnedAppsLoader;

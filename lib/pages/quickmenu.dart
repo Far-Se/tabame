@@ -38,7 +38,7 @@ class QuickMenu extends StatefulWidget {
   State<QuickMenu> createState() => QuickMenuState();
 }
 
-Future<int> quickMenuWindowSetup() async {
+Future<int> windowsSetupQuickMenu() async {
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(Size(Globals.quickMenuSize.width, 200));
     await WindowManager.instance.setSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
@@ -71,7 +71,7 @@ class QuickMenuState extends State<QuickMenu>
   // --------------------------------------------------------------------------
   // Variables
   // --------------------------------------------------------------------------
-  final Future<int> quickMenuWindow = quickMenuWindowSetup();
+  final Future<int> quickMenuWindow = windowsSetupQuickMenu();
   final FocusNode focusNode = FocusNode();
   final HotkeyHandler handler = HotkeyHandler();
   final Trktivity trk = Trktivity.instance;
@@ -156,6 +156,8 @@ class QuickMenuState extends State<QuickMenu>
 
   @override
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) => _onHotKeyEvent(hotkeyInfo);
+  @override
+  void onDisplayChange(MonitorEvent hotkeyInfo) => _onDisplayChange(hotkeyInfo);
 
   @override
   void onTricktivityEvent(String action, String info) => trk.onTrktivityEvent(action, info);
@@ -520,6 +522,13 @@ class QuickMenuState extends State<QuickMenu>
     }
   }
 
+  void _onDisplayChange(MonitorEvent hotkeyInfo) {
+    Monitor.fetchMonitors();
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (User.s.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
+    });
+  }
+
   void _onHotKeyEvent(HotkeyEvent hotkeyInfo) {
     handler.handle(hotkeyInfo);
   }
@@ -665,7 +674,7 @@ class QuickMenuState extends State<QuickMenu>
                     child: GestureDetector(
                       onTap: () {},
                       child: Container(
-                        key: Globals.quickMenu,
+                        // key: Globals.quickMenu,
                         color: Colors.transparent,
                         child: MouseRegion(
                           onEnter: (PointerEnterEvent event) async {

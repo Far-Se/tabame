@@ -56,17 +56,21 @@ class _LibreStatsState extends State<LibreStats> {
     wTemp = _maxWidth(const <String>['100°', '0°'], valueStyle);
     wRam = _maxWidth(const <String>['100%', '0%'], valueStyle);
     _fetchStats();
-    _statsTimer = Timer.periodic(_kRefreshInterval, (_) async {
-      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
-      await _fetchStats();
-      if (mounted) setState(() {});
-    });
+    _startTimer();
   }
 
   @override
   void dispose() {
     _statsTimer?.cancel();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _statsTimer = Timer.periodic(_kRefreshInterval, (_) async {
+      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
+      await _fetchStats();
+      if (mounted) setState(() {});
+    });
   }
 
   double _extractByName(String body, String text, {String? type}) {

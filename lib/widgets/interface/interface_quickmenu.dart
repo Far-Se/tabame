@@ -42,24 +42,24 @@ class _SettingsPage {
 // ---------------------------------------------------------------------------
 // Main widget — shows a link list, navigates to sub-pages
 // ---------------------------------------------------------------------------
-class QuickmenuSettings extends StatefulWidget {
-  const QuickmenuSettings({super.key});
+class QMSettings extends StatefulWidget {
+  const QMSettings({super.key});
 
   static int? pendingPage;
 
   @override
-  QuickmenuSettingsState createState() => QuickmenuSettingsState();
+  QMSettingsState createState() => QMSettingsState();
 }
 
-class QuickmenuSettingsState extends State<QuickmenuSettings> {
+class QMSettingsState extends State<QMSettings> {
   int? _selectedPage;
 
   @override
   void initState() {
     super.initState();
-    if (QuickmenuSettings.pendingPage != null) {
-      _selectedPage = QuickmenuSettings.pendingPage;
-      QuickmenuSettings.pendingPage = null;
+    if (QMSettings.pendingPage != null) {
+      _selectedPage = QMSettings.pendingPage;
+      QMSettings.pendingPage = null;
     }
   }
 
@@ -74,78 +74,78 @@ class QuickmenuSettingsState extends State<QuickmenuSettings> {
       title: "General",
       subtitle: "UI & Behavior",
       icon: Icons.tune_rounded,
-      builder: () => const QuickmenuGeneralSettings(),
+      builder: () => const InterfaceQMGeneralSettings(),
       stats: () => "${Monitor.list.length} Screens",
     ),
     _SettingsPage(
       title: "QuickActions",
       subtitle: "Top Bar Order",
       icon: Icons.reorder_rounded,
-      builder: () => const QuickmenuTopbarSettings(),
+      builder: () => const InterfaceQMTopbarSettings(),
     ),
     _SettingsPage(
       title: "Taskbar",
       subtitle: "Style & Logic",
       icon: Icons.view_list_outlined,
-      builder: () => const QuickmenuTaskbarSettings(),
+      builder: () => const InterfaceQMTaskbarSettings(),
     ),
     _SettingsPage(
       title: "Bottom Bar",
       subtitle: "Files & Tray",
       icon: Icons.widgets_outlined,
-      builder: () => const QuickmenuBottomBarSettings(),
+      builder: () => const InterfaceQMBottomBarSettings(),
     ),
     _SettingsPage(
       title: "Audio Settings",
       subtitle: "Devices, OSD, Rules",
       icon: Icons.volume_up_rounded,
-      builder: () => const QuickmenuAudioSettings(),
+      builder: () => const InterfaceQMAudioSettings(),
     ),
     _SettingsPage(
       title: "App Audio",
       subtitle: "Media Overlay",
       icon: Icons.audio_file_rounded,
-      builder: () => const QuickmenuAppAudioSettings(),
+      builder: () => const InterfaceQMAppAudioSettings(),
     ),
     _SettingsPage(
       title: "Apps",
       subtitle: "Launcher Groups",
       icon: Icons.apps_rounded,
-      builder: () => const QuickmenuAppsSettingsSub(),
+      builder: () => const InterfaceQMAppsSettingsSub(),
       stats: () => "${Boxes.appCategories.length} Categories",
     ),
     _SettingsPage(
       title: "Bookmarks",
       subtitle: "Saved Projects",
       icon: Icons.bookmarks_rounded,
-      builder: () => const QuickmenuBookmarksSettings(),
+      builder: () => const InterfaceQMBookmarksSettings(),
       stats: () => "${Boxes().bookmarks.length} Groups",
     ),
     _SettingsPage(
       title: "Reminders",
       subtitle: "Tasks & Alerts",
       icon: Icons.notifications_active_rounded,
-      builder: () => const QuickmenuRemindersSettings(),
+      builder: () => const InterfaceQMRemindersSettings(),
       stats: () => "${Boxes.reminders.where((Reminder r) => r.enabled).length} Active",
     ),
     _SettingsPage(
       title: "Custom Actions",
       subtitle: "User Macros",
       icon: Icons.settings_input_component_rounded,
-      builder: () => const QuickmenuCustomQuickActionsSettings(),
+      builder: () => const InterfaceQMCustomQuickActionsSettings(),
     ),
     _SettingsPage(
       title: "QuickSnap",
       subtitle: "Precision Layouts",
       icon: Icons.view_quilt_rounded,
-      builder: () => const QuickmenuQuickGridsSettings(),
+      builder: () => const InterfaceQMQuickGridsSettings(),
       stats: () => "${Boxes.quickGrids.length} Presets",
     ),
     _SettingsPage(
       title: "Launcher",
       subtitle: "Files, Windows, Apps",
       icon: Icons.search_rounded,
-      builder: () => const QuickmenuLauncherSettings(),
+      builder: () => const InterfaceQMLauncherSettings(),
       stats: () => "${Boxes.searchFolders.length} Folders",
     ),
     _SettingsPage(
@@ -602,106 +602,106 @@ class _NavigationTileState extends State<_NavigationTile> with SingleTickerProvi
 // Stateless wrappers for sub-pages
 // ===========================================================================
 
-class QuickmenuGeneralSettings extends StatelessWidget {
-  const QuickmenuGeneralSettings({super.key});
+class InterfaceQMGeneralSettings extends StatelessWidget {
+  const InterfaceQMGeneralSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuGeneralSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMGeneralSettingsPage();
 }
 
-class QuickmenuTopbarSettings extends StatelessWidget {
-  const QuickmenuTopbarSettings({super.key});
+class InterfaceQMTopbarSettings extends StatelessWidget {
+  const InterfaceQMTopbarSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuTopbar();
+  Widget build(BuildContext context) => const QMTopbar();
 }
 
-class QuickmenuTaskbarSettings extends StatelessWidget {
-  const QuickmenuTaskbarSettings({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 10),
-      child: QuickmenuTaskbar(),
-    );
-  }
-}
-
-class QuickmenuTaskbarRewrites extends StatelessWidget {
-  const QuickmenuTaskbarRewrites({super.key});
+class InterfaceQMTaskbarSettings extends StatelessWidget {
+  const InterfaceQMTaskbarSettings({super.key});
   @override
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
-      child: QuickmenuTaskbar(),
+      child: QMTaskbar(),
     );
   }
 }
 
-class QuickmenuBottomBarSettings extends StatelessWidget {
-  const QuickmenuBottomBarSettings({super.key});
+class QmTaskbarRewrites extends StatelessWidget {
+  const QmTaskbarRewrites({super.key});
   @override
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
-      child: QuickmenuBottomBar(section: BottomBarSection.all),
+      child: QMTaskbar(),
     );
   }
 }
 
-class QuickmenuLauncherSettings extends StatelessWidget {
-  const QuickmenuLauncherSettings({super.key});
+class InterfaceQMBottomBarSettings extends StatelessWidget {
+  const InterfaceQMBottomBarSettings({super.key});
   @override
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 10),
-      child: QuickmenuSearchSettings(),
+      child: QMBottomBar(section: BottomBarSection.all),
     );
   }
 }
 
-class QuickmenuGridViewSettings extends StatelessWidget {
-  const QuickmenuGridViewSettings({super.key});
+class InterfaceQMLauncherSettings extends StatelessWidget {
+  const InterfaceQMLauncherSettings({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: InterfaceQMSearchSettings(),
+    );
+  }
+}
+
+class InterfaceQMGridViewSettings extends StatelessWidget {
+  const InterfaceQMGridViewSettings({super.key});
   @override
   Widget build(BuildContext context) => const ViewsInterface();
 }
 
-class QuickmenuCustomQuickActionsSettings extends StatelessWidget {
-  const QuickmenuCustomQuickActionsSettings({super.key});
+class InterfaceQMCustomQuickActionsSettings extends StatelessWidget {
+  const InterfaceQMCustomQuickActionsSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuCustomQuickActionsSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMCustomQuickActionsSettingsPage();
 }
 
-class QuickmenuAppAudioSettings extends StatelessWidget {
-  const QuickmenuAppAudioSettings({super.key});
+class InterfaceQMAppAudioSettings extends StatelessWidget {
+  const InterfaceQMAppAudioSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuAppAudioSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMAppAudioSettingsPage();
 }
 
-class QuickmenuAudioSettings extends StatelessWidget {
-  const QuickmenuAudioSettings({super.key});
+class InterfaceQMAudioSettings extends StatelessWidget {
+  const InterfaceQMAudioSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuAudioSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMAudioSettingsPage();
 }
 
-class QuickmenuAppsSettingsSub extends StatelessWidget {
-  const QuickmenuAppsSettingsSub({super.key});
+class InterfaceQMAppsSettingsSub extends StatelessWidget {
+  const InterfaceQMAppsSettingsSub({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuAppsSettings();
+  Widget build(BuildContext context) => const InterfaceQMAppsSettings();
 }
 
-class QuickmenuQuickGridsSettings extends StatelessWidget {
-  const QuickmenuQuickGridsSettings({super.key});
+class InterfaceQMQuickGridsSettings extends StatelessWidget {
+  const InterfaceQMQuickGridsSettings({super.key});
   @override
   Widget build(BuildContext context) => const QuickSnapSettingsPage();
 }
 
-class QuickmenuBookmarksSettings extends StatelessWidget {
-  const QuickmenuBookmarksSettings({super.key});
+class InterfaceQMBookmarksSettings extends StatelessWidget {
+  const InterfaceQMBookmarksSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuBookmarksSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMBookmarksSettingsPage();
 }
 
-class QuickmenuRemindersSettings extends StatelessWidget {
-  const QuickmenuRemindersSettings({super.key});
+class InterfaceQMRemindersSettings extends StatelessWidget {
+  const InterfaceQMRemindersSettings({super.key});
   @override
-  Widget build(BuildContext context) => const QuickmenuRemindersSettingsPage();
+  Widget build(BuildContext context) => const InterfaceQMRemindersSettingsPage();
 }

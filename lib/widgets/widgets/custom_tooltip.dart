@@ -119,7 +119,7 @@ class _TooltipOverlay extends StatefulWidget {
 }
 
 class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProviderStateMixin {
-  final GlobalKey<State<StatefulWidget>> _key = GlobalKey();
+  // final GlobalKey<State<StatefulWidget>> _key = GlobalKey();
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
@@ -150,7 +150,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final RenderBox? box = _key.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? box = context.findRenderObject() as RenderBox?;
       if (box == null) return;
       final double tooltipWidth = box.size.width;
       final double x = (widget.targetCenter - tooltipWidth / 2).clamp(
@@ -196,7 +196,7 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
               );
             },
             child: Material(
-              key: _key,
+              // key: _key,
               color: Colors.transparent,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),

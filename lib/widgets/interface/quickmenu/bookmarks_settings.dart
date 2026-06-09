@@ -17,14 +17,14 @@ import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
 import '../../widgets/windows_scroll.dart';
 
-class QuickmenuBookmarksSettingsPage extends StatefulWidget {
-  const QuickmenuBookmarksSettingsPage({super.key});
+class InterfaceQMBookmarksSettingsPage extends StatefulWidget {
+  const InterfaceQMBookmarksSettingsPage({super.key});
 
   @override
-  State<QuickmenuBookmarksSettingsPage> createState() => _QuickmenuBookmarksSettingsPageState();
+  State<InterfaceQMBookmarksSettingsPage> createState() => _InterfaceQMBookmarksSettingsPageState();
 }
 
-class _QuickmenuBookmarksSettingsPageState extends State<QuickmenuBookmarksSettingsPage> {
+class _InterfaceQMBookmarksSettingsPageState extends State<InterfaceQMBookmarksSettingsPage> {
   final List<BookmarkGroup> bookmarks = Boxes().bookmarks;
   final Set<String> _expandedGroups = <String>{};
 

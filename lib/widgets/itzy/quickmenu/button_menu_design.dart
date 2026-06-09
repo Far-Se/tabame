@@ -18,6 +18,7 @@ import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/font_picker/models/picker_font.dart';
 import '../../widgets/font_picker/ui/font_picker.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/panel_opacity_gradient_editor.dart';
@@ -194,7 +195,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Future<void> _resetCurrentPalette() async {
-    final QuickMenuDesignThemeSet defaults =
+    final QMDesignThemeSet defaults =
         Settings.createDefaultQuickMenuDesignThemes()[userSettings.currentQuickMenuDesign.name]!;
     await _updateTheme(() {
       if (_paletteMode == _QuickMenuPaletteMode.dark) {
@@ -592,6 +593,31 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                       .toList(),
                 ),
               ),
+              const SizedBox(height: 6),
+              Material(
+                type: MaterialType.transparency,
+                child: ListTile(
+                  visualDensity: const VisualDensity(vertical: -4),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  minTileHeight: 36, // optional
+                  title: Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
+                  onTap: () async {
+                    await _updateTheme(() {
+                      _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
+                      QuickMenuFunctions.syncSelectedBackdrop();
+                    });
+                  },
+                  trailing: MiniToggleSwitch(
+                    value: _selectedTheme.backdropLauncher,
+                    onChanged: (bool value) async {
+                      await _updateTheme(() {
+                        _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
+                        QuickMenuFunctions.syncSelectedBackdrop();
+                      });
+                    },
+                  ),
+                ),
+              )
             ],
           ),
         ],

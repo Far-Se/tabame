@@ -1165,6 +1165,17 @@ class HotkeyEvent {
   }
 }
 
+class MonitorEvent {
+  int width;
+  int height;
+  int bitDepth;
+  MonitorEvent({
+    required this.width,
+    required this.height,
+    required this.bitDepth,
+  });
+}
+
 enum WinEventType {
   foreground,
   nameChange,
@@ -1182,6 +1193,7 @@ enum ViewsAction {
 
 abstract class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
+  void onDisplayChange(MonitorEvent hotkeyInfo) {}
   void onForegroundWindowChanged(int hWnd) {}
   void onTricktivityEvent(String action, String info) {}
   void onWinEventReceived(int hWnd, WinEventType type) {}
@@ -1248,12 +1260,31 @@ class NativeHooks {
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
-    if (!<String>["HotKeyEvent", "TrktivityEvent", "ViewsEvent", "WinEvent", "ClipboardUpdate", "onQuickClickEvent"]
-        .contains(call.method)) {
+    if (!<String>[
+      "HotKeyEvent",
+      "TrktivityEvent",
+      "ViewsEvent",
+      "WinEvent",
+      "ClipboardUpdate",
+      "onQuickClickEvent",
+      "onDisplayChange"
+    ].contains(call.method)) {
       return;
     }
     if (call.method == "ClipboardUpdate") {
       ClipboardHooks._dispatchClipboardUpdate();
+    }
+    if (call.method == 'onDisplayChange') {
+      final Map<dynamic, dynamic> args = call.arguments as Map;
+      final int width = args['width'] as int;
+      final int height = args['height'] as int;
+      final int bitDepth = args['bitDepth'] as int;
+      // await Monitor.fetchMonitors();
+      for (final TabameListener listener in listeners) {
+        if (!listenersObv.contains(listener)) continue;
+        listener.onDisplayChange(MonitorEvent(width: width, height: height, bitDepth: bitDepth));
+      }
+      // fetch once, reactively
     }
     if (call.method == "HotKeyEvent") {
       for (final TabameListener listener in listeners) {

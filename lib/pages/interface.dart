@@ -97,7 +97,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
     PageClass(title: 'Theme', icon: Icons.theater_comedy, widget: const ThemeSetup()),
-    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QuickmenuSettings()),
+    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QMSettings()),
     // PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),

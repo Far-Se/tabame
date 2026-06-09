@@ -28,10 +28,12 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
   final GlobalKey _bottomKey = GlobalKey();
 
   List<Rect> _itemRects = <Rect>[];
+  late _GridPainter _gridPainter;
 
   @override
   void initState() {
     super.initState();
+    _gridPainter = _GridPainter(Design.accent.withValues(alpha: 0.07));
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
   }
 
@@ -59,9 +61,15 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Trigger measurement on every build to handle layout changes (e.g. tray expansion)
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
+    // WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
 
     final ThemeData theme = Theme.of(context);
     final Color accent = userSettings.themeColors.accent;
@@ -116,7 +124,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                             Positioned.fill(
                               child: IgnorePointer(
                                 child: CustomPaint(
-                                  painter: _GridPainter(accent.withValues(alpha: 0.07)),
+                                  painter: _gridPainter, //_GridPainter(accent.withValues(alpha: 0.07)),
                                 ),
                               ),
                             ),

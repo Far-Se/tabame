@@ -121,6 +121,7 @@ class ThemeSetupState extends State<ThemeSetup> {
             theme['backdropImages'] = <String>[];
             theme['backdropType'] = "";
             theme['backdropOpacity'] = 0.7;
+            theme['backdropLauncher'] = true;
             designEntry[themeKey] = theme;
           }
         }
@@ -161,6 +162,7 @@ class ThemeSetupState extends State<ThemeSetup> {
                 theme['backdropImages'] = <String>[];
                 theme['backdropType'] = "";
                 theme['backdropOpacity'] = 0.7;
+                theme['backdropLauncher'] = true;
                 designEntry[themeKey] = theme;
               }
             }
@@ -1097,32 +1099,43 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   }
 
   Widget _buildAppearanceCard(Color accent, Color onSurface) {
-    return _settingsCard(
-      title: "Global Appearance",
-      subtitle: "Define the core behavior of Tabame's dark/light modes.",
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Expanded(
-              child: _buildThemeModeSelector(accent, onSurface),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildDesignTile(
-                "Design Type",
-                "Quickly switch between predefined interface styles.",
-                userSettings.currentQuickMenuDesign,
-                (QuickMenuDesigns design) {
-                  widget.onDesignChanged(design);
-                  setState(() {});
-                },
-              ),
-            ),
-          ],
+    return Column(
+      children: <Widget>[
+        _settingsCard(
+          title: "To see live preview use QuickMenu Design Button",
+          subtitle:
+              "You can see the preview from QuickMenu Design button from QuickMenu QuickActions.\nThis page does not contains all the Design Settings.",
+          child: const SizedBox.shrink(),
         ),
-      ),
+        const SizedBox(height: 12),
+        _settingsCard(
+          title: "Global Appearance",
+          subtitle: "Define the core behavior of Tabame's dark/light modes.",
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Expanded(
+                  child: _buildThemeModeSelector(accent, onSurface),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDesignTile(
+                    "Design Type",
+                    "Quickly switch between predefined interface styles.",
+                    userSettings.currentQuickMenuDesign,
+                    (QuickMenuDesigns design) {
+                      widget.onDesignChanged(design);
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

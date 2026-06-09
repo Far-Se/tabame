@@ -13,14 +13,14 @@ import '../../itzy/quickmenu/button_window_app.dart';
 import '../../widgets/custom_tooltip.dart';
 import 'apps_category_editor.dart';
 
-class QuickmenuAppsSettings extends StatefulWidget {
-  const QuickmenuAppsSettings({super.key});
+class InterfaceQMAppsSettings extends StatefulWidget {
+  const InterfaceQMAppsSettings({super.key});
 
   @override
-  State<QuickmenuAppsSettings> createState() => _QuickmenuAppsSettingsState();
+  State<InterfaceQMAppsSettings> createState() => _InterfaceQMAppsSettingsState();
 }
 
-class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
+class _InterfaceQMAppsSettingsState extends State<InterfaceQMAppsSettings> {
   late List<AppCategory> categories;
   final List<AppItem> listOfApps = <AppItem>[];
 
@@ -223,7 +223,7 @@ class _QuickmenuAppsSettingsState extends State<QuickmenuAppsSettings> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
-          child: QuickmenuAppsCategoryEditor(
+          child: QMAppsCategoryEditor(
             categoryIndex: categoryIndex,
           ),
         ),
@@ -293,7 +293,9 @@ ${jsonEncode(appData)}
                     maxLines: 8,
                     decoration: InputDecoration(
                       hintText: "Paste AI output JSON here...",
-                      hintStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
+                      hintStyle: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(80)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
