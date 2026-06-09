@@ -61,10 +61,7 @@ class FileIndexDb {
   Completer<Database>? _initCompleter;
 
   Future<Database> get database async {
-    // If we have a live db instance, return it immediately.
     if (_db != null) return _db!;
-    // Reuse an in-progress completer, but NOT a completed one — a completed
-    // completer from a previous session would hand back a closed Database.
     if (_initCompleter != null && !_initCompleter!.isCompleted) {
       return _initCompleter!.future;
     }
@@ -108,7 +105,7 @@ class FileIndexDb {
     _db?.close();
     _db = null;
     _isClosed = false;
-    _initCompleter = null; // Reset so database getter re-initializes after repair
+    _initCompleter = null;
 
     final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
     final String path = p.join(appDir.path, dbName);
@@ -135,23 +132,21 @@ class FileIndexDb {
     }
     _isClosed = true;
     _db = null;
-    _initCompleter = null; // Must be reset so database getter re-initializes cleanly
+    _initCompleter = null;
   }
 
-  /// Resets closed state so the [database] getter will reinitialize on next call.
   Future<void> reopen() async {
-    // Clear all cached state so the getter starts fresh.
     _db = null;
     _isClosed = false;
     _initCompleter = null;
-    await database; // Eagerly open so callers get a live connection immediately.
+    await database;
   }
 
   Database _openAndSetupDb(String dbPath) {
     WinUtils.copySqlite3IfItDoesntExistForFuckSake();
 
     final Database db = sqlite3.open(dbPath);
-    db.execute('PRAGMA busy_timeout = 3000;'); // Wait up to 3 s before "database is locked"
+    db.execute('PRAGMA busy_timeout = 3000;');
     db.execute('PRAGMA journal_mode = WAL;');
     db.execute('PRAGMA foreign_keys = ON;');
 
@@ -170,6 +165,21 @@ class FileIndexDb {
         subtitle TEXT,
         stable_identity TEXT,
         FOREIGN KEY(parent_id) REFERENCES nodes(id) ON DELETE CASCADE
+      );
+    ''');
+
+    // -----------------------------------------------------------------
+    // folder_watch table — persists the last-known write time for each
+    // watched root folder so that changes made while the app is closed
+    // are detected on the next launch.
+    //
+    // last_write_time is stored as milliseconds since Unix epoch (INTEGER)
+    // so it survives across sessions without any platform-specific types.
+    // -----------------------------------------------------------------
+    db.execute('''
+      CREATE TABLE IF NOT EXISTS folder_watch (
+        path TEXT PRIMARY KEY NOT NULL,
+        last_write_time INTEGER NOT NULL DEFAULT 0
       );
     ''');
 
@@ -203,8 +213,6 @@ class FileIndexDb {
     db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_app_user_model_id ON nodes(app_user_model_id);');
     db.execute('CREATE INDEX IF NOT EXISTS idx_nodes_stable_identity ON nodes(stable_identity);');
 
-    // FTS5 with trigram tokenizer — each trigger is isolated so a transient
-    // lock on one does not prevent the others from being (re-)created.
     try {
       db.execute('''
         CREATE VIRTUAL TABLE IF NOT EXISTS fts_nodes USING fts5(
@@ -216,12 +224,9 @@ class FileIndexDb {
       ''');
     } catch (e) {
       debugPrint('FTS5 Trigram not supported — full-text search disabled: $e');
-      // Without FTS the LIKE-based fallback in search() still works fine.
       return db;
     }
 
-    // Each DROP + CREATE pair is its own try/catch so a transient lock on
-    // one trigger does not abort the others.
     try {
       db.execute('DROP TRIGGER IF EXISTS nodes_ai;');
       db.execute('''
@@ -261,6 +266,61 @@ class FileIndexDb {
 
     return db;
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // folder_watch CRUD
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Returns the persisted last-write-time for [path], or 0 if not yet stored.
+  int getFolderWatchTime(String path) {
+    final Database? db = _db;
+    if (db == null) return 0;
+    try {
+      final ResultSet rows = db.select(
+        'SELECT last_write_time FROM folder_watch WHERE path = ?',
+        <Object?>[path],
+      );
+      if (rows.isEmpty) return 0;
+      return rows.first['last_write_time'] as int? ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Upserts the last-write-time for [path].
+  void setFolderWatchTime(String path, int lastWriteTimeMs) {
+    _db?.execute(
+      '''
+      INSERT INTO folder_watch (path, last_write_time)
+      VALUES (?, ?)
+      ON CONFLICT(path) DO UPDATE SET last_write_time = excluded.last_write_time
+      ''',
+      <Object?>[path, lastWriteTimeMs],
+    );
+  }
+
+  /// Removes a path from the watch table (called when a root is removed).
+  void deleteFolderWatch(String path) {
+    _db?.execute('DELETE FROM folder_watch WHERE path = ?', <Object?>[path]);
+  }
+
+  /// Returns all persisted watch entries as a map of path → lastWriteTimeMs.
+  Map<String, int> getAllFolderWatchTimes() {
+    final Database? db = _db;
+    if (db == null) return <String, int>{};
+    try {
+      final ResultSet rows = db.select('SELECT path, last_write_time FROM folder_watch');
+      return <String, int>{
+        for (final Row row in rows) row['path'] as String: row['last_write_time'] as int? ?? 0,
+      };
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // nodes helpers (unchanged from original)
+  // ─────────────────────────────────────────────────────────────────────────
 
   int getDescendantCount(String path) {
     final Database? db = _db;

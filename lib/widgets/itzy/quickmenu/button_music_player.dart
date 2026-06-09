@@ -758,7 +758,8 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
 
   Future<void> _disconnectServer() async {
     setState(() => _loading = true);
-    await MusicServerManager.disconnect();
+
+    await MusicServerManager.resetPlayback();
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -783,7 +784,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
         ..clear()
         ..add("Folders");
     });
-    _showInfo("Disconnected from music source.");
+    _showInfo("Playback stopped.");
   }
 
   @override

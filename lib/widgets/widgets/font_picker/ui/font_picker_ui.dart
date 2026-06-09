@@ -5,12 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../models/settings.dart';
-import '../constants/constants.dart';
 import '../constants/fontweights_map.dart';
 import '../constants/translations.dart';
 import '../models/picker_font.dart';
 import 'font_preview.dart';
 import 'font_search.dart';
+
+const String prefsRecentsKey = "font_picker_recents";
 
 class FontPickerUI extends StatefulWidget {
   final ValueChanged<PickerFont> onFontChanged;

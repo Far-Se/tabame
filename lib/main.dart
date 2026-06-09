@@ -19,7 +19,7 @@ import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
 import 'pages/screen_recording.dart';
 import 'pages/spotlight.dart';
-import 'run.dart';
+import 'pages/run.dart';
 import 'widgets/widgets/focus_fix.dart';
 
 Future<void> main(List<String> arguments) async {

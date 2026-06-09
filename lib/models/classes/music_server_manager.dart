@@ -297,6 +297,15 @@ class MusicServerManager {
     }
   }
 
+  static Future<void> resetPlayback() async {
+    try {
+      await saveCurrentQueue();
+      await _clearPlaybackMemory();
+    } catch (e) {
+      debugPrint("MusicServerManager.resetPlayback error: $e");
+    }
+  }
+
   static Future<void> disconnect() async {
     try {
       await saveCurrentQueue();

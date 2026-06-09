@@ -9,7 +9,7 @@ import '../models/classes/boxes/boxes_base.dart';
 import '../models/settings.dart';
 import '../models/theme.dart';
 import '../models/win32/win32.dart' show Win32;
-import 'logic/app_startup.dart';
+import '../logic/app_startup.dart';
 
 const Size _windowSize = Size(480, 360);
 

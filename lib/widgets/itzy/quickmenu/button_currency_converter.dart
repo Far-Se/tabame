@@ -480,17 +480,59 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     );
   }
 
+  void _flipCurrencies() {
+    final String text = _amountController.text.trim();
+    final ParsedConversionInput parsed = _parseConversionInput(text);
+
+    // If the current query is valid, flip it gracefully
+    if (parsed.query != null) {
+      final double amount = parsed.query!.amount;
+      final String from = parsed.query!.fromCurrency.toUpperCase();
+      final String to = parsed.query!.toCurrency.toUpperCase();
+
+      // Format the amount neatly using the existing helper method
+      // final String formattedAmount = amount;
+
+      _amountController.text = "$amount $to to $from";
+    } else {
+      // Fallback if input is messy or blank: flip the last known state variables
+      final String from = _fromCurrency.toUpperCase();
+      final String to = _toCurrency.toUpperCase();
+      _amountController.text = "1 $to to $from";
+    }
+
+    // Move selection cursor to the end of the input field
+    _amountController.selection = const TextSelection.collapsed(offset: 0);
+    _amountFocus.requestFocus();
+  }
+
   Widget _buildAmountField(Color accent, Color onSurface) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          "Amount",
-          style: TextStyle(
-            fontSize: Design.baseFontSize + 2,
-            fontWeight: FontWeight.w600,
-            color: onSurface.withAlpha(185),
-          ),
+        Row(
+          children: <Widget>[
+            Text(
+              "Amount",
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 2,
+                fontWeight: FontWeight.w600,
+                color: onSurface.withAlpha(185),
+              ),
+            ),
+            const Spacer(),
+            // Flip Currency Button
+            IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              splashRadius: 16,
+              color: accent,
+              tooltip: "Flip Currencies",
+              onPressed: _flipCurrencies,
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         TextField(

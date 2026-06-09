@@ -1,11 +1,165 @@
+import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/db/file_index_db.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Win32 FFI — GetFileAttributesExW
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Mirrors the Win32 FILETIME struct (two DWORDs = two Uint32 fields).
+final class _FileTime extends Struct {
+  @Uint32()
+  external int dwLowDateTime;
+  @Uint32()
+  external int dwHighDateTime;
+}
+
+/// Mirrors WIN32_FILE_ATTRIBUTE_DATA (only the fields we need).
+final class _Win32FileAttributeData extends Struct {
+  @Uint32()
+  external int dwFileAttributes;
+
+  external _FileTime ftCreationTime;
+  external _FileTime ftLastAccessTime;
+  external _FileTime ftLastWriteTime;
+
+  @Uint32()
+  external int nFileSizeHigh;
+  @Uint32()
+  external int nFileSizeLow;
+}
+
+typedef _GetFileAttributesExNative = Int32 Function(
+  Pointer<Utf16> lpFileName,
+  Int32 fInfoLevelId,
+  Pointer<_Win32FileAttributeData> lpFileInformation,
+);
+typedef _GetFileAttributesExDart = int Function(
+  Pointer<Utf16> lpFileName,
+  int fInfoLevelId,
+  Pointer<_Win32FileAttributeData> lpFileInformation,
+);
+
+// GetFileExInfoStandard = 0
+const int _kGetFileExInfoStandard = 0;
+
+/// Lazy-loaded binding to kernel32.dll!GetFileAttributesExW.
+final _GetFileAttributesExDart _getFileAttributesEx = () {
+  final DynamicLibrary kernel32 = DynamicLibrary.open('kernel32.dll');
+  return kernel32
+      .lookup<NativeFunction<_GetFileAttributesExNative>>('GetFileAttributesExW')
+      .asFunction<_GetFileAttributesExDart>();
+}();
+
+/// Returns the last-write time of [path] as milliseconds since Unix epoch,
+/// or 0 if the path is inaccessible / does not exist.
+///
+/// Win32 FILETIME counts 100-nanosecond intervals since 1601-01-01.
+/// Unix epoch starts at 1970-01-01 — the offset is 116 444 736 000 000 000
+/// hundred-nanosecond ticks (= 11 644 473 600 seconds).
+int _getFolderLastWriteTimeMs(String path) {
+  final Pointer<Utf16> pathPtr = path.toNativeUtf16();
+  final Pointer<_Win32FileAttributeData> data = calloc<_Win32FileAttributeData>();
+  try {
+    final int result = _getFileAttributesEx(pathPtr, _kGetFileExInfoStandard, data);
+    if (result == 0) return 0;
+
+    final _FileTime ft = data.ref.ftLastWriteTime;
+    // Combine the two DWORDs into a single 64-bit value (ticks since 1601).
+    final int ticks = (ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    // Subtract the epoch offset and convert 100-ns ticks → milliseconds.
+    const int epochOffsetTicks = 116444736000000000;
+    if (ticks < epochOffsetTicks) return 0;
+    return (ticks - epochOffsetTicks) ~/ 10000;
+  } finally {
+    calloc.free(data);
+    calloc.free(pathPtr);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FolderWatch — pure-Dart replacement for the C++ FolderWatch bridge.
+//
+// State is persisted in the `folder_watch` DB table, so changes that happen
+// while the launcher is closed are detected on the next startup.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class FolderWatch {
+  FolderWatch._();
+
+  /// Seeds the DB watch table with current write times for every path that
+  /// is not yet recorded.  Call this once during app init.
+  static Future<void> buildInitialState(List<String> paths) async {
+    for (final String path in paths) {
+      final int stored = FileIndexDb.instance.getFolderWatchTime(path);
+      if (stored == 0) {
+        // First time we see this path — record its current write time so that
+        // next launch we have a baseline to compare against.
+        final int now = _getFolderLastWriteTimeMs(path);
+        FileIndexDb.instance.setFolderWatchTime(path, now);
+      }
+    }
+  }
+
+  /// Compares the current on-disk write time against the value persisted in
+  /// the DB for each path.  Returns paths whose write time has changed (i.e.
+  /// files/folders inside were added, removed, or modified while the app was
+  /// closed or since the last sync).  Also updates the stored times in-place.
+  static Future<List<String>> getChangedFolders() async {
+    final Map<String, int> stored = FileIndexDb.instance.getAllFolderWatchTimes();
+    final List<String> changed = <String>[];
+
+    for (final MapEntry<String, int> entry in stored.entries) {
+      final String path = entry.key;
+      final int storedTime = entry.value;
+      final int currentTime = _getFolderLastWriteTimeMs(path);
+
+      if (currentTime != storedTime) {
+        changed.add(path);
+        // Persist the new time immediately so repeated calls don't re-report
+        // the same path unless it changes again.
+        FileIndexDb.instance.setFolderWatchTime(path, currentTime);
+      }
+    }
+
+    return changed;
+  }
+
+  /// Adds [paths] to the watch table if not already present.
+  static void addFolders(List<String> paths) {
+    for (final String path in paths) {
+      final int stored = FileIndexDb.instance.getFolderWatchTime(path);
+      if (stored == 0) {
+        FileIndexDb.instance.setFolderWatchTime(path, _getFolderLastWriteTimeMs(path));
+      }
+    }
+  }
+
+  /// Removes [paths] from the watch table.
+  static void removeFolders(List<String> paths) {
+    for (final String path in paths) {
+      FileIndexDb.instance.deleteFolderWatch(path);
+    }
+  }
+
+  /// Updates the stored write time for [path] to "now".  Call this after a
+  /// folder has been fully indexed so the next sync only re-indexes on a
+  /// genuine subsequent change.
+  static void markSynced(String path) {
+    final int now = _getFolderLastWriteTimeMs(path);
+    FileIndexDb.instance.setFolderWatchTime(path, now);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FileIndexer
+// ─────────────────────────────────────────────────────────────────────────────
 
 class FileIndexer {
   static final FileIndexer instance = FileIndexer._();
@@ -22,25 +176,30 @@ class FileIndexer {
   Future<Database> _ensureDb() async {
     try {
       final Database db = await FileIndexDb.instance.database;
-      // Probe the connection with a no-op to confirm it is still alive.
       db.execute('SELECT 1');
       return db;
     } catch (_) {
-      // The cached instance is closed or broken — reset and reopen.
       await FileIndexDb.instance.reopen();
       return FileIndexDb.instance.database;
     }
   }
 
   /// Initializes the watchlist with current search folders.
+  /// Seeds DB entries for any path not yet recorded so the very first sync
+  /// has a baseline to compare against.
   Future<void> init() async {
     final List<String> paths = Boxes.searchFolders.map((SearchFolder f) => f.path).toList();
     if (paths.isNotEmpty) {
+      await _ensureDb(); // DB must be open before FolderWatch reads it.
       await FolderWatch.buildInitialState(paths);
     }
   }
 
-  /// Synchronizes the database with the filesystem by checking for changes.
+  /// Synchronizes the database with the filesystem.
+  ///
+  /// Because [FolderWatch] now reads its baseline from the DB rather than an
+  /// in-memory C++ structure, changes that happened while the app was closed
+  /// are detected correctly on first call after launch.
   Future<void> sync() async {
     if (_isIndexing) return;
     _isIndexing = true;
@@ -49,23 +208,19 @@ class FileIndexer {
     indexedCount.value = 0;
 
     try {
-      // Ensure DB is open (reopens automatically if it was closed).
       await _ensureDb();
 
-      // 1. Cleanup orphaned roots (folders removed from settings)
       final List<SearchFolder> allRootsConfig = Boxes.searchFolders;
 
-      // This is a bit expensive if done every time, but necessary if we want to keep DB clean
-      // For now, let's just trust removeFolder is called from UI,
-      // but sync() should also do a sanity check occasionally.
-
-      // 2. Index changed or missing folders
+      // Paths that changed on disk since the last time we recorded them.
       final List<String> changedFolders = await FolderWatch.getChangedFolders();
 
       for (final SearchFolder config in allRootsConfig) {
         final int? existingRootId = FileIndexDb.instance.findNode(null, config.path);
         if (existingRootId == null || changedFolders.contains(config.path)) {
           await _indexFolder(config);
+          // Mark as synced so the next launch uses the post-index write time.
+          FolderWatch.markSynced(config.path);
         }
       }
     } catch (e) {
@@ -75,9 +230,8 @@ class FileIndexer {
       isCompletedNotifier.value = true;
       try {
         final Database db = await FileIndexDb.instance.database;
-        db.execute('PRAGMA shrink_memory;'); // Releases the page cache back to OS
+        db.execute('PRAGMA shrink_memory;');
       } catch (_) {}
-      // Wait 5 seconds before hiding progress
       Future<void>.delayed(const Duration(seconds: 5), () {
         if (!_isIndexing) {
           isIndexingNotifier.value = false;
@@ -98,6 +252,7 @@ class FileIndexer {
     try {
       await _ensureDb();
       await _indexFolder(folder);
+      FolderWatch.markSynced(folder.path);
     } finally {
       _isIndexing = false;
       isCompletedNotifier.value = true;
@@ -135,6 +290,7 @@ class FileIndexer {
 
       for (final SearchFolder config in Boxes.searchFolders) {
         await _indexFolder(config);
+        FolderWatch.markSynced(config.path);
       }
     } catch (e) {
       debugPrint('Error during full reindex: $e');
@@ -150,13 +306,14 @@ class FileIndexer {
     }
   }
 
-  /// Removes a folder from the database index.
+  /// Removes a folder from the index and from the watch table.
   Future<void> removeFolder(String path) async {
     await _ensureDb();
     final int? rootId = FileIndexDb.instance.findNode(null, path);
     if (rootId != null) {
       FileIndexDb.instance.deleteNode(rootId);
     }
+    FolderWatch.removeFolders(<String>[path]);
   }
 
   Future<void> _indexFolder(SearchFolder config) async {
@@ -167,13 +324,10 @@ class FileIndexer {
 
     db.execute('BEGIN TRANSACTION');
     try {
-      // Find or create root
       int? rootId = FileIndexDb.instance.findNode(null, config.path);
       if (rootId == null) {
-        // Roots are always searchable if includeFolders is true
         rootId = FileIndexDb.instance.insertNode(null, config.path, true, isSearchable: config.includeFolders);
       } else {
-        // Clear existing children to avoid duplicates and handle deletions
         FileIndexDb.instance.updateNodeSearchable(rootId, config.includeFolders);
         FileIndexDb.instance.deleteChildren(rootId);
       }
@@ -268,7 +422,6 @@ class FileIndexer {
   }
 
   String _getBasename(String path) {
-    // Fast basename for Windows paths
     final int index = path.lastIndexOf('\\');
     if (index == -1) return path;
     return path.substring(index + 1);
