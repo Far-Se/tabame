@@ -79,6 +79,23 @@ class Design {
       TextStyle(fontSize: baseFontSize + 2, color: userSettings.theme.text.withAlpha(80));
 }
 
+class C {
+  static CrossAxisAlignment get stretch => CrossAxisAlignment.stretch;
+  static CrossAxisAlignment get baseline => CrossAxisAlignment.baseline;
+  static CrossAxisAlignment get start => CrossAxisAlignment.start;
+  static CrossAxisAlignment get center => CrossAxisAlignment.center;
+  static CrossAxisAlignment get end => CrossAxisAlignment.end;
+}
+
+class M {
+  static MainAxisAlignment get center => MainAxisAlignment.center;
+  static MainAxisAlignment get end => MainAxisAlignment.end;
+  static MainAxisAlignment get spaceAround => MainAxisAlignment.spaceAround;
+  static MainAxisAlignment get spaceBetween => MainAxisAlignment.spaceBetween;
+  static MainAxisAlignment get spaceEvenly => MainAxisAlignment.spaceEvenly;
+  static MainAxisAlignment get start => MainAxisAlignment.start;
+}
+
 class Settings {
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;

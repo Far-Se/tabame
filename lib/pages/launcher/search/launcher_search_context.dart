@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../launcher_search_models.dart';
 
 typedef SetSearchingCallback = void Function(bool searching);
-typedef SetResultsCallback = void Function(List<LauncherSearchResultItem> results, {bool isSearching, bool resetSelection});
+typedef SetResultsCallback = void Function(List<LauncherSearchResultItem> results,
+    {bool isSearching, bool resetSelection});
 typedef IsActiveSearchCallback = bool Function(int requestId, String query, {bool trimLeft});
 
 /// A shared mutable token that the owning [State] holds as a field.
@@ -48,6 +49,11 @@ class LauncherSearchContext {
   final SetSearchingCallback _setSearchingRaw;
   final SetResultsCallback _setResultsRaw;
   final IsActiveSearchCallback isActiveSearch;
+  final String? browsingPath;
+  final void Function(String)? onBrowseFolder;
+  final void Function(String)? onOpenFolderInExplorer;
+  final VoidCallback? onGoBack;
+  final bool canGoBack;
 
   LauncherSearchContext({
     required this.buildContext,
@@ -59,6 +65,11 @@ class LauncherSearchContext {
     required SetSearchingCallback setSearching,
     required SetResultsCallback setResults,
     required this.isActiveSearch,
+    this.browsingPath,
+    this.onBrowseFolder,
+    this.onOpenFolderInExplorer,
+    this.onGoBack,
+    this.canGoBack = false,
   })  : _token = token,
         _setSearchingRaw = setSearching,
         _setResultsRaw = setResults;

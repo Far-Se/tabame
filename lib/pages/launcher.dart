@@ -11,6 +11,7 @@ import 'package:sqlite3/sqlite3.dart' hide Row;
 import 'package:tabamewin32/tabamewin32.dart' as native;
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
+import '../models/util/quickmenu_modal.dart';
 import 'launcher_actions_panel.dart';
 
 import '../models/classes/boxes.dart';
@@ -27,6 +28,8 @@ import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../widgets/itzy/quickmenu/button_timers.dart';
+import '../widgets/itzy/quickmenu/button_persistent_reminders.dart';
 import 'launcher/result/result_item_app.dart';
 import 'launcher/result/result_item_bookmark.dart';
 import 'launcher/result/result_item_file.dart';
@@ -140,6 +143,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   bool _isSyncingLauncherAppsCatalog = false;
   final List<String> _copiedFiles = <String>[];
   LauncherDesign _design = LauncherDesign.serene;
+
+  /// Browsing history stack for the desktop `;` mode.
+  /// The last entry is the currently displayed folder.
+  /// Empty means we are at the top-level desktop search.
+  final List<String> _desktopBrowsingStack = <String>[];
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   bool _isSearching = false;
@@ -336,6 +344,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     );
   }
 
+  void _openLauncherPanel(BuildContext context, Widget child) {
+    showQuickMenuModal(
+      context: context,
+      // isScrollControlled: true,
+      // backgroundColor: Colors.transparent,
+      // barrierColor: Colors.transparent,
+      child: child,
+      heightFactor: 0.9,
+      backdropFilter: true,
+    );
+  }
+
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
       // Escape: go back to quickmenu
@@ -351,6 +371,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           HardwareKeyboard.instance.isControlPressed) {
         _copyItem();
         setState(() {});
+        return KeyEventResult.handled;
+      }
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.keyT &&
+          HardwareKeyboard.instance.isAltPressed) {
+        if (Boxes.quickTimers.isNotEmpty) {
+          _openLauncherPanel(context, const TimersWidget());
+        }
+        return KeyEventResult.handled;
+      }
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.keyR &&
+          HardwareKeyboard.instance.isAltPressed) {
+        if (userSettings.persistentReminders.isNotEmpty) {
+          _openLauncherPanel(context, const RemindersPanel());
+        }
         return KeyEventResult.handled;
       }
       if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -960,6 +996,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final LauncherSearchMode searchMode = _searchMode;
     final String normalizedQuery = _getNormalizedQuery(query);
 
+    // Clear desktop browsing stack when the user leaves desktop mode or
+    // changes the search prefix entirely.
+    if (searchMode != LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty) {
+      _desktopBrowsingStack.clear();
+    }
+
     if (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed)) {
       _setResults(_launcherShortcuts, isSearching: false);
       return;
@@ -985,6 +1027,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       setSearching: _setSearching,
       setResults: _setResults,
       isActiveSearch: _isActiveSearch,
+      browsingPath: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty
+          ? _desktopBrowsingStack.last
+          : null,
+      canGoBack: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty,
+      onBrowseFolder: searchMode == LauncherSearchMode.desktopOnly ? _browseDesktopFolder : null,
+      onOpenFolderInExplorer: searchMode == LauncherSearchMode.desktopOnly ? _openFolderInExplorer : null,
+      onGoBack: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty
+          ? _goBackDesktopFolder
+          : null,
     );
 
     switch (searchMode) {
@@ -1869,6 +1920,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (result.isFile) {
+      // In desktop-browse mode, pressing Enter on a Directory drills into it
+      // instead of opening it with the OS default handler.
+      if (_searchMode == LauncherSearchMode.desktopOnly && result.entity is Directory) {
+        _browseDesktopFolder(result.entity!.path);
+        return;
+      }
       _openFile(result.entity!.path, nodeId: result.nodeId);
       return;
     }
@@ -1890,6 +1947,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (result.quickAction != null) {
+      // Intercept the "Open Folder in Explorer" sentinel action that
+      // DesktopSearchHandler pins at the top of browsed-folder results.
+      if (result.quickAction!.id.startsWith('desktop_browse_open_explorer:')) {
+        final String folderPath = result.quickAction!.id.substring('desktop_browse_open_explorer:'.length);
+        _openFolderInExplorer(folderPath);
+        return;
+      }
       _runQuickAction(result.quickAction!);
     }
 
@@ -1928,6 +1992,39 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
+  }
+
+  /// Drills into [folderPath] inside the Launcher (desktop `;` browse mode).
+  /// Pushes [folderPath] onto the history stack so "Go back" can pop it.
+  void _browseDesktopFolder(String folderPath) {
+    setState(() => _desktopBrowsingStack.add(folderPath));
+    _onSearchChanged(_controller.text);
+    // After results render, skip past the two pinned action items
+    // (index 0 = "Open Folder in Explorer", index 1 = "Go Back")
+    // and land on the first real folder/file entry.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _results.length > 2) {
+        _activeIndexNotifier.value = 2;
+      }
+    });
+  }
+
+  /// Pops one level off the desktop browsing stack.
+  /// If the stack becomes empty we return to the normal desktop search.
+  void _goBackDesktopFolder() {
+    if (_desktopBrowsingStack.isEmpty) return;
+    setState(() => _desktopBrowsingStack.removeLast());
+    _onSearchChanged(_controller.text);
+    _resetSelection();
+  }
+
+  /// Opens [folderPath] in Windows Explorer and hides the launcher.
+  void _openFolderInExplorer(String folderPath) {
+    WinUtils.open(folderPath);
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    userSettings.launcherSearchText = '';
+    _desktopBrowsingStack.clear();
   }
 
   void _openAppResult(LauncherAppResult app, {int? nodeId}) {
@@ -2189,8 +2286,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            if (!hasInput && _results.isNotEmpty)
-                              _design.buildSectionHeader(label: 'Results', accent: accent),
+                            if (!hasInput && _results.isNotEmpty) _buildResultsHeaderWithBadges(accent, onSurface),
                             if (Boxes.searchFolders.isEmpty &&
                                 (_searchMode == LauncherSearchMode.filesOnly ||
                                     _searchMode == LauncherSearchMode.mixed))
@@ -2355,7 +2451,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   if (!hasInput && _results.isNotEmpty)
-                                    _design.buildSectionHeader(label: 'Results', accent: accent),
+                                    _buildResultsHeaderWithBadges(accent, onSurface),
                                   if (Boxes.searchFolders.isEmpty &&
                                       (_searchMode == LauncherSearchMode.filesOnly ||
                                           _searchMode == LauncherSearchMode.mixed))
@@ -2469,6 +2565,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   /// Returns the badge shown in the search bar trailing area.
   /// Priority: info badge (transient) > copied files bubble (persistent).
+  Widget _buildResultsHeaderWithBadges(Color accent, Color onSurface) {
+    return Row(
+      children: <Widget>[
+        Expanded(child: _design.buildSectionHeader(label: 'Results', accent: accent)),
+        _LauncherStatusBadges(
+          accent: accent,
+          onSurface: onSurface,
+          onOpenTimers: () => _openLauncherPanel(context, const TimersWidget()),
+          onOpenReminders: () => _openLauncherPanel(context, const RemindersPanel()),
+        ),
+      ],
+    );
+  }
+
   Widget? _buildTrailingBadge(Color accent, Color onSurface) {
     if (_infoText != null) return _buildInfoBadge(accent, onSurface);
     if (_copiedFiles.isNotEmpty) return _buildCopiedFilesBubble(accent, onSurface);
@@ -2633,6 +2743,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Widget _buildFileResult(BuildContext context, ThemeData theme, FileSystemEntity entity, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
     final Color accent = userSettings.themeColors.accent;
+    // In desktop-browse mode, tapping a directory drills into it instead of
+    // opening it with the OS default handler.
+    final VoidCallback onTap = (_searchMode == LauncherSearchMode.desktopOnly && entity is Directory)
+        ? () => _browseDesktopFolder(entity.path)
+        : () => _openFile(entity.path, nodeId: nodeId);
     return _design == LauncherDesign.serene
         ? SereneLauncherFileListItem(
             entity: entity,
@@ -2640,7 +2755,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             isRepeating: isRepeatingKey,
             accent: accent,
             onSurface: theme.colorScheme.onSurface,
-            onTap: () => _openFile(entity.path, nodeId: nodeId),
+            onTap: onTap,
             onHover: () => _selectResultFromMouse(index))
         : LauncherListItem(
             entity: entity,
@@ -2649,7 +2764,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             accent: accent,
             onSurface: theme.colorScheme.onSurface,
             isInHistory: false, // History removed
-            onTap: () => _openFile(entity.path, nodeId: nodeId),
+            onTap: onTap,
             onHover: () => _selectResultFromMouse(index),
             onRemoveFromHistory: () {}, // No-op
           );
@@ -2850,6 +2965,161 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             onTap: () => _openWindow(window),
             onHover: () => _selectResultFromMouse(index),
           );
+  }
+}
+
+class _LauncherStatusBadges extends StatefulWidget {
+  const _LauncherStatusBadges({
+    required this.accent,
+    required this.onSurface,
+    required this.onOpenTimers,
+    required this.onOpenReminders,
+  });
+
+  final Color accent;
+  final Color onSurface;
+  final VoidCallback onOpenTimers;
+  final VoidCallback onOpenReminders;
+
+  @override
+  State<_LauncherStatusBadges> createState() => _LauncherStatusBadgesState();
+}
+
+class _LauncherStatusBadgesState extends State<_LauncherStatusBadges> {
+  Timer? _ticker;
+  String _timerLabel = '';
+
+  @override
+  void initState() {
+    super.initState();
+    Boxes().loadLatestQuickTimers();
+    _updateTimerLabel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) _updateTimerLabel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  void _updateTimerLabel() {
+    if (Boxes.quickTimers.isEmpty) {
+      if (_timerLabel.isNotEmpty) setState(() => _timerLabel = '');
+      return;
+    }
+    Duration diff = Boxes.quickTimers[0].endTime.difference(DateTime.now());
+    for (final QuickTimer t in Boxes.quickTimers) {
+      final Duration d = t.endTime.difference(DateTime.now());
+      if (d < diff) diff = d;
+    }
+    final String label = diff.inMinutes != 0
+        ? "${diff.inSeconds % 60 < 30 ? diff.inMinutes % 60 : (diff.inMinutes % 60) + 1}m"
+        : "${diff.inSeconds % 60}s";
+    if (label != _timerLabel) setState(() => _timerLabel = label);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasTimers = Boxes.quickTimers.isNotEmpty;
+    final bool hasReminders = userSettings.persistentReminders.isNotEmpty;
+    if (!hasTimers && !hasReminders) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (hasTimers)
+            _StatusChip(
+              accent: Colors.orangeAccent,
+              icon: Icons.timer_outlined,
+              label: _timerLabel,
+              tooltip: 'Timers (Alt+T)',
+              onTap: widget.onOpenTimers,
+            ),
+          if (hasTimers && hasReminders) const SizedBox(width: 6),
+          if (hasReminders)
+            _StatusChip(
+              accent: Colors.redAccent,
+              icon: Icons.warning_rounded,
+              label: '${userSettings.persistentReminders.length}',
+              tooltip: 'Reminders (Alt+R)',
+              onTap: widget.onOpenReminders,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatefulWidget {
+  const _StatusChip({
+    required this.accent,
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final Color accent;
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  State<_StatusChip> createState() => _StatusChipState();
+}
+
+class _StatusChipState extends State<_StatusChip> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: _hovered ? widget.accent.withAlpha(45) : widget.accent.withAlpha(22),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: widget.accent.withAlpha(_hovered ? 100 : 50),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(widget.icon, size: 10, color: widget.accent.withAlpha(210)),
+                if (widget.label.isNotEmpty) ...<Widget>[
+                  const SizedBox(width: 3),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: widget.accent.withAlpha(210),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

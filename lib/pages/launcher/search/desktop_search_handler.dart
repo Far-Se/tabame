@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../launcher_search_models.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';
@@ -16,6 +18,50 @@ class DesktopSearchHandler {
         return;
       }
 
+      // -----------------------------------------------------------------------
+      // Browsing mode: a folder has been drilled into — list its contents
+      // directly, with "Open Folder in Explorer" and optionally "Go back"
+      // pinned at the top.
+      // -----------------------------------------------------------------------
+      final String? browsingPath = context.browsingPath;
+      if (browsingPath != null && browsingPath.isNotEmpty) {
+        List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+        try {
+          results = await compute(
+            _listFolderContentsInBackground,
+            <String, Object?>{
+              'folderPath': browsingPath,
+              'query': context.lowerQuery,
+            },
+          );
+        } catch (_) {}
+
+        if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
+          context.setSearching(false);
+          return;
+        }
+
+        final List<LauncherSearchResultItem> pinned = <LauncherSearchResultItem>[
+          // 1. Open Folder in Explorer
+          _buildOpenInExplorerAction(
+            folderPath: browsingPath,
+            onOpen: context.onOpenFolderInExplorer,
+          ),
+          // 2. Go back (only when there is a parent to go back to)
+          if (context.canGoBack) _buildGoBackAction(onGoBack: context.onGoBack),
+        ];
+
+        context.setResults(
+          <LauncherSearchResultItem>[...pinned, ...results],
+          isSearching: false,
+          resetSelection: false,
+        );
+        return;
+      }
+
+      // -----------------------------------------------------------------------
+      // Normal desktop search (original behaviour).
+      // -----------------------------------------------------------------------
       final String desktopPath = WinUtils.getKnownFolderCLSID(0x0000);
       final List<Map<String, Object?>> desktopSearchFolders = <Map<String, Object?>>[
         <String, Object?>{
@@ -39,10 +85,8 @@ class DesktopSearchHandler {
         );
       } catch (_) {}
 
-      // Guard after the async gap: the query may have changed or the widget
-      // may have been disposed while compute was running.
+      // Guard after the async gap.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
-        // setSearching is a no-op when isDisposed.
         context.setSearching(false);
         return;
       }
@@ -54,8 +98,120 @@ class DesktopSearchHandler {
         return entity.uri.pathSegments.isEmpty || entity.uri.pathSegments.last.toLowerCase() != 'desktop.ini';
       }).toList(growable: false);
 
-      // setResults is a no-op when isDisposed.
       context.setResults(results, isSearching: false, resetSelection: false);
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // "Open Folder in Explorer" pinned action
+  // ---------------------------------------------------------------------------
+  static LauncherSearchResultItem _buildOpenInExplorerAction({
+    required String folderPath,
+    void Function(String)? onOpen,
+  }) {
+    void execute() => onOpen?.call(folderPath);
+
+    return LauncherSearchResultItem.quickAction(
+      QuickActionMenuEntry(
+        id: 'desktop_browse_open_explorer:$folderPath',
+        title: 'Open Folder in Explorer',
+        searchTerms: const <String>['open', 'explorer', 'folder'],
+        allowRenderedFallbackExecute: true,
+        onExecute: execute,
+        builder: (BuildContext ctx) {
+          final ThemeData theme = Theme.of(ctx);
+          final Color accent = theme.colorScheme.primary;
+          final Color onSurface = theme.colorScheme.onSurface;
+          return QuickActionListItem(
+            name: "Open Folder in Explorer",
+            accent: accent,
+            onSurface: onSurface,
+            leading: SizedBox(
+              width: 18,
+              child: Icon(Icons.folder_open_rounded, size: 14, color: accent),
+            ),
+            onTap: execute,
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // "Go back" pinned action
+  // ---------------------------------------------------------------------------
+  static LauncherSearchResultItem _buildGoBackAction({
+    VoidCallback? onGoBack,
+  }) {
+    void execute() => onGoBack?.call();
+
+    return LauncherSearchResultItem.quickAction(
+      QuickActionMenuEntry(
+        id: 'desktop_browse_go_back',
+        title: 'Go Back',
+        searchTerms: const <String>['back', 'up', 'parent'],
+        allowRenderedFallbackExecute: true,
+        onExecute: execute,
+        builder: (BuildContext ctx) {
+          final ThemeData theme = Theme.of(ctx);
+          final Color accent = theme.colorScheme.primary;
+          final Color onSurface = theme.colorScheme.onSurface;
+          return QuickActionListItem(
+            name: "Go Back",
+            accent: accent,
+            onSurface: onSurface,
+            leading: SizedBox(
+              width: 18,
+              child: Icon(Icons.arrow_back_rounded, size: 14, color: accent),
+            ),
+            onTap: execute,
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Top-level isolate function: list folder contents (optionally filtered by
+// query) and return them as LauncherSearchResultItems.
+// ---------------------------------------------------------------------------
+List<LauncherSearchResultItem> _listFolderContentsInBackground(Map<String, Object?> args) {
+  final String folderPath = args['folderPath'] as String;
+  final String query = (args['query'] as String? ?? '').toLowerCase();
+
+  final Directory dir = Directory(folderPath);
+  if (!dir.existsSync()) return <LauncherSearchResultItem>[];
+
+  final List<FileSystemEntity> entries = <FileSystemEntity>[];
+  try {
+    entries.addAll(dir.listSync(recursive: false, followLinks: false));
+  } catch (_) {
+    return <LauncherSearchResultItem>[];
+  }
+
+  // Sort: directories first, then files, both alphabetically.
+  entries.sort((FileSystemEntity a, FileSystemEntity b) {
+    final bool aDir = a is Directory;
+    final bool bDir = b is Directory;
+    if (aDir != bDir) return aDir ? -1 : 1;
+    return a.path.toLowerCase().compareTo(b.path.toLowerCase());
+  });
+
+  final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+  for (final FileSystemEntity entity in entries) {
+    final String name = entity.uri.pathSegments.lastWhere((String s) => s.isNotEmpty, orElse: () => entity.path);
+
+    // Skip desktop.ini.
+    if (name.toLowerCase() == 'desktop.ini') continue;
+
+    // Filter by query when the user has typed something.
+    if (query.isNotEmpty && !name.toLowerCase().contains(query)) continue;
+
+    results.add(LauncherSearchResultItem.file(entity));
+
+    if (results.length >= maxLauncherMatches) break;
+  }
+
+  return results;
 }

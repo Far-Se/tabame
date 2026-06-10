@@ -104,7 +104,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
           QuickMenuFunctions.hideQuickMenu();
         },
         builder: (BuildContext context) {
-          return _QuickActionListItem(
+          return QuickActionListItem(
             name: "Open FancyShot Screenshots folder",
             accent: accent,
             onSurface: onSurface,
@@ -139,7 +139,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
         searchTerms: <String>[displayName, e.key],
         onExecute: () => e.value(),
         builder: (BuildContext context) {
-          return _QuickActionListItem(
+          return QuickActionListItem(
             name: displayName,
             accent: accent,
             onSurface: onSurface,
@@ -210,7 +210,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
       searchTerms: searchTerms,
       onExecute: () => executeQuickActionValue(actionIndex),
       builder: (BuildContext context) {
-        return _QuickActionListItem(
+        return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
@@ -230,7 +230,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
         onStateChanged?.call();
       },
       builder: (BuildContext context) {
-        return _QuickActionListItem(
+        return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
@@ -256,7 +256,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
         });
       },
       builder: (BuildContext context) {
-        return _QuickActionListItem(
+        return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
@@ -279,7 +279,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
         WinUtils.runPowerShell(<String>[item.value]);
       },
       builder: (BuildContext context) {
-        return _QuickActionListItem(
+        return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
@@ -296,7 +296,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
       searchTerms: searchTerms,
       onExecute: () => WinUtils.open(item.value, parseParamaters: true),
       builder: (BuildContext context) {
-        return _QuickActionListItem(
+        return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
@@ -355,7 +355,7 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
         searchTerms: <String>[displayName, widgetName],
         builder: (BuildContext context) {
           final GlobalKey buttonKey = GlobalKey();
-          return _QuickActionListItem(
+          return QuickActionListItem(
             name: displayName,
             accent: accent,
             onSurface: onSurface,
@@ -416,7 +416,7 @@ List<QuickActionMenuEntry> _buildAppAudioControlEntries({
         ],
         onExecute: () => handleAppAudioPlayPause(index),
         builder: (BuildContext context) {
-          return _QuickActionListItem(
+          return QuickActionListItem(
             name: control.name.isEmpty ? "App Audio Control ${index + 1}" : control.name,
             accent: accent,
             onSurface: onSurface,
@@ -659,7 +659,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
                   .replaceAllMapped(RegExp(r"([A-Z])"), (Match m) => " ${m.group(1)}")
                   .trim();
               final GlobalKey buttonKey = GlobalKey();
-              return _QuickActionListItem(
+              return QuickActionListItem(
                 name: displayName,
                 accent: userSettings.themeColors.accent,
                 onSurface: widget.onSurface,
@@ -721,14 +721,14 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _QuickActionListItem(
+              QuickActionListItem(
                 name: widget.item.name,
                 accent: accent,
                 onSurface: onSurface,
               ),
               ...List<Widget>.generate(devices?.length ?? 0, (int index) {
                 final AudioDevice device = devices!.elementAt(index);
-                return _QuickActionListItem(
+                return QuickActionListItem(
                   name: device.name,
                   accent: accent,
                   onSurface: onSurface,
@@ -858,8 +858,8 @@ class ListItem extends StatelessWidget {
   }
 }
 
-class _QuickActionListItem extends StatefulWidget {
-  const _QuickActionListItem({
+class QuickActionListItem extends StatefulWidget {
+  const QuickActionListItem({
     required this.name,
     required this.accent,
     required this.onSurface,
@@ -876,10 +876,10 @@ class _QuickActionListItem extends StatefulWidget {
   final bool dense;
 
   @override
-  State<_QuickActionListItem> createState() => _QuickActionListItemState();
+  State<QuickActionListItem> createState() => _QuickActionListItemState();
 }
 
-class _QuickActionListItemState extends State<_QuickActionListItem> {
+class _QuickActionListItemState extends State<QuickActionListItem> {
   bool _hovered = false;
 
   @override
