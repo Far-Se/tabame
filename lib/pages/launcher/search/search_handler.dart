@@ -9,11 +9,23 @@ import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../launcher/result/result_item_bookmark.dart';
 import '../../launcher_search_models.dart';
+import 'desktop_search_handler.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';
 
 class MixedSearchHandler {
   static void handle(LauncherSearchContext context, LauncherSearchMode searchMode) {
+    // -------------------------------------------------------------------------
+    // Browsing mode: user drilled into a folder — delegate entirely to the
+    // DesktopSearchHandler which already handles browsingPath correctly,
+    // injecting "Open Folder in Explorer" + "Go Back" pinned items and listing
+    // the folder contents (filtered by query if one is typed).
+    // -------------------------------------------------------------------------
+    if (context.browsingPath != null && context.browsingPath!.isNotEmpty) {
+      DesktopSearchHandler.handle(context);
+      return;
+    }
+
     final bool shouldRunFilesystem = shouldRunFilesystemSearch(
       searchMode: searchMode,
       normalizedQuery: context.normalizedQuery,

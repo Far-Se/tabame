@@ -373,6 +373,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         setState(() {});
         return KeyEventResult.handled;
       }
+      // Ctrl+Enter or Ctrl+O: open the selected folder in Explorer.
+      if (event is KeyDownEvent &&
+          (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+              event.logicalKey == LogicalKeyboardKey.keyO) &&
+          HardwareKeyboard.instance.isControlPressed) {
+        _openSelectedFolderInExplorer();
+        return KeyEventResult.handled;
+      }
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyT &&
           HardwareKeyboard.instance.isAltPressed) {
@@ -996,9 +1005,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final LauncherSearchMode searchMode = _searchMode;
     final String normalizedQuery = _getNormalizedQuery(query);
 
-    // Clear desktop browsing stack when the user leaves desktop mode or
-    // changes the search prefix entirely.
-    if (searchMode != LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty) {
+    // Clear desktop browsing stack when the user leaves any file-capable mode
+    // or changes the search prefix entirely.
+    if (searchMode != LauncherSearchMode.desktopOnly &&
+        searchMode != LauncherSearchMode.filesOnly &&
+        searchMode != LauncherSearchMode.mixed &&
+        _desktopBrowsingStack.isNotEmpty) {
       _desktopBrowsingStack.clear();
     }
 
@@ -1017,6 +1029,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _runSearch(int requestId, String query, String normalizedQuery, LauncherSearchMode searchMode) {
     if (!_isActiveSearch(requestId, query)) return;
 
+    final bool isFileBrowsingMode = searchMode == LauncherSearchMode.desktopOnly ||
+        searchMode == LauncherSearchMode.filesOnly ||
+        searchMode == LauncherSearchMode.mixed;
     final LauncherSearchContext context = LauncherSearchContext(
       token: _searchToken,
       buildContext: this.context,
@@ -1027,15 +1042,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       setSearching: _setSearching,
       setResults: _setResults,
       isActiveSearch: _isActiveSearch,
-      browsingPath: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty
-          ? _desktopBrowsingStack.last
-          : null,
-      canGoBack: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty,
-      onBrowseFolder: searchMode == LauncherSearchMode.desktopOnly ? _browseDesktopFolder : null,
-      onOpenFolderInExplorer: searchMode == LauncherSearchMode.desktopOnly ? _openFolderInExplorer : null,
-      onGoBack: searchMode == LauncherSearchMode.desktopOnly && _desktopBrowsingStack.isNotEmpty
-          ? _goBackDesktopFolder
-          : null,
+      browsingPath: isFileBrowsingMode && _desktopBrowsingStack.isNotEmpty ? _desktopBrowsingStack.last : null,
+      canGoBack: isFileBrowsingMode && _desktopBrowsingStack.isNotEmpty,
+      onBrowseFolder: isFileBrowsingMode ? _browseDesktopFolder : null,
+      onOpenFolderInExplorer: isFileBrowsingMode ? _openFolderInExplorer : null,
+      onGoBack: isFileBrowsingMode && _desktopBrowsingStack.isNotEmpty ? _goBackDesktopFolder : null,
     );
 
     switch (searchMode) {
@@ -1920,9 +1931,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (result.isFile) {
-      // In desktop-browse mode, pressing Enter on a Directory drills into it
-      // instead of opening it with the OS default handler.
-      if (_searchMode == LauncherSearchMode.desktopOnly && result.entity is Directory) {
+      // Pressing Enter on a Directory always drills into it inside the launcher.
+      if (result.entity is Directory) {
         _browseDesktopFolder(result.entity!.path);
         return;
       }
@@ -2003,7 +2013,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // (index 0 = "Open Folder in Explorer", index 1 = "Go Back")
     // and land on the first real folder/file entry.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _results.length > 2) {
+      if (mounted && _results.length >= 3) {
         _activeIndexNotifier.value = 2;
       }
     });
@@ -2025,6 +2035,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
     _desktopBrowsingStack.clear();
+  }
+
+  /// Opens the currently selected result in Windows Explorer if it is a Directory.
+  /// Triggered by Ctrl+Enter or Ctrl+O.
+  void _openSelectedFolderInExplorer() {
+    if (_results.isEmpty) return;
+    final int idx = _activeIndexNotifier.value.clamp(0, _results.length - 1);
+    final LauncherSearchResultItem item = _results[idx];
+    if (item.isFile && item.entity is Directory) {
+      _openFolderInExplorer(item.entity!.path);
+    }
   }
 
   void _openAppResult(LauncherAppResult app, {int? nodeId}) {
