@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:pool/pool.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
-import 'package:tabamewin32/tabamewin32.dart' as native;
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
 import '../models/util/quickmenu_modal.dart';
@@ -43,7 +40,9 @@ import 'launcher/search/windows_search_handler.dart';
 import 'launcher_search_models.dart';
 import 'launcher/launcher_design.dart';
 import 'launcher/launcher_design_builder.dart';
+import 'launcher/core/launcher_result_executor.dart';
 import 'launcher/result/results_item_serene.dart';
+import 'launcher/services/launcher_app_catalog_service.dart';
 import 'quickmenu_designs/design_backdrop_stable.dart';
 
 export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
@@ -119,8 +118,6 @@ class Launcher extends StatefulWidget {
 }
 
 class LauncherState extends State<Launcher> with QuickMenuTriggers {
-  static const String _launcherAppIconPrefix = 'app_';
-  static const String _launcherAppsFolderPrefix = r'shell:AppsFolder\';
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
   final TextEditingController _controller = TextEditingController();
@@ -140,7 +137,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _launcherFocusRetryTimer;
   LogicalKeyboardKey? _lastPressedKey;
   bool _isRepairingFileIndex = false;
-  bool _isSyncingLauncherAppsCatalog = false;
   final List<String> _copiedFiles = <String>[];
   LauncherDesign _design = LauncherDesign.serene;
 
@@ -524,7 +520,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Future<void> _refreshLauncherCatalogs() async {
     try {
       await FileIndexer.instance.sync();
-      await _syncLauncherAppsCatalog();
+      await LauncherAppCatalogService.instance.sync();
     } catch (error, stackTrace) {
       debugPrint('Launcher: Failed to refresh launcher catalogs: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -532,232 +528,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
     if (!mounted) return;
     _onSearchChanged(_controller.text);
-  }
-
-  Future<void> _syncLauncherAppsCatalog() async {
-    if (_isSyncingLauncherAppsCatalog) return;
-    _isSyncingLauncherAppsCatalog = true;
-
-    try {
-      final Database db = await FileIndexDb.instance.database;
-      final Directory iconCacheDirectory = await _ensureLauncherIconCacheDirectory();
-      final List<native.AppInfo> apps = _dedupeLauncherApps(await native.AppEnumeration.getAllApps());
-
-      final int rootId = FileIndexDb.instance.findNode(null, FileIndexDb.launcherAppsRootName) ??
-          FileIndexDb.instance.insertNode(
-            null,
-            FileIndexDb.launcherAppsRootName,
-            true,
-            isSearchable: false,
-            entryType: SearchResultEntryType.app,
-          );
-
-      final List<SearchResultNode> existingNodes =
-          FileIndexDb.instance.getChildNodes(rootId).where((SearchResultNode node) => node.isApp).toList();
-      final Map<String, SearchResultNode> existingByAumid = <String, SearchResultNode>{
-        for (final SearchResultNode node in existingNodes)
-          if ((node.appUserModelId ?? '').isNotEmpty) node.appUserModelId!: node,
-      };
-      final Map<String, List<SearchResultNode>> existingByStableIdentity = <String, List<SearchResultNode>>{};
-      for (final SearchResultNode node in existingNodes) {
-        final String stableIdentity = node.stableIdentity ?? '';
-        if (stableIdentity.isEmpty) continue;
-        existingByStableIdentity.putIfAbsent(stableIdentity, () => <SearchResultNode>[]).add(node);
-      }
-
-      final Set<int> matchedNodeIds = <int>{};
-      final Set<String> expectedIconFiles = <String>{
-        for (final native.AppInfo app in apps) _launcherAppIconFileName(app.appUserModelId),
-      };
-
-      db.execute('BEGIN IMMEDIATE TRANSACTION');
-      try {
-        for (final native.AppInfo app in apps) {
-          final String name = app.name.trim().isEmpty ? app.appUserModelId : app.name.trim();
-          final String subtitle = app.executable.trim().isNotEmpty ? app.executable.trim() : app.appUserModelId;
-          final String stableIdentity = _buildLauncherAppStableIdentity(app);
-          final String launchTarget = _buildLauncherAppLaunchTarget(app.appUserModelId);
-
-          SearchResultNode? existingNode = existingByAumid[app.appUserModelId];
-          if (existingNode == null && stableIdentity.isNotEmpty) {
-            final List<SearchResultNode>? candidates = existingByStableIdentity[stableIdentity];
-            while (candidates != null && candidates.isNotEmpty) {
-              final SearchResultNode candidate = candidates.removeAt(0);
-              if (matchedNodeIds.contains(candidate.id)) continue;
-              existingNode = candidate;
-              break;
-            }
-          }
-
-          if (existingNode == null) {
-            final int nodeId = FileIndexDb.instance.insertAppNode(
-              rootId,
-              name: name,
-              launchTarget: launchTarget,
-              parsingName: app.parsingName,
-              appUserModelId: app.appUserModelId,
-              subtitle: subtitle,
-              stableIdentity: stableIdentity,
-            );
-            matchedNodeIds.add(nodeId);
-            continue;
-          }
-
-          matchedNodeIds.add(existingNode.id);
-          FileIndexDb.instance.updateAppNode(
-            id: existingNode.id,
-            parentId: rootId,
-            name: name,
-            launchTarget: launchTarget,
-            parsingName: app.parsingName,
-            appUserModelId: app.appUserModelId,
-            subtitle: subtitle,
-            stableIdentity: stableIdentity,
-          );
-        }
-
-        for (final SearchResultNode node in existingNodes) {
-          if (matchedNodeIds.contains(node.id)) continue;
-          FileIndexDb.instance.deleteNode(node.id);
-        }
-
-        db.execute('COMMIT');
-      } catch (_) {
-        db.execute('ROLLBACK');
-        rethrow;
-      }
-
-      await _cacheMissingLauncherAppIcons(apps, iconCacheDirectory);
-      await _removeStaleLauncherAppIcons(iconCacheDirectory, expectedIconFiles);
-    } catch (error, stackTrace) {
-      debugPrint('Launcher: Failed to sync AppEnumeration catalog: $error');
-      debugPrintStack(stackTrace: stackTrace);
-    } finally {
-      _isSyncingLauncherAppsCatalog = false;
-    }
-  }
-
-  List<native.AppInfo> _dedupeLauncherApps(List<native.AppInfo> apps) {
-    final Map<String, native.AppInfo> byAumid = <String, native.AppInfo>{};
-
-    for (final native.AppInfo app in apps) {
-      final String aumid = app.appUserModelId.trim();
-      if (aumid.isEmpty) continue;
-
-      final native.AppInfo? existing = byAumid[aumid];
-      if (existing == null ||
-          (existing.parsingName.trim().isEmpty && app.parsingName.trim().isNotEmpty) ||
-          (existing.executable.trim().isEmpty && app.executable.trim().isNotEmpty)) {
-        byAumid[aumid] = app;
-      }
-    }
-
-    final List<native.AppInfo> deduped = byAumid.values.toList(growable: false);
-    deduped.sort((native.AppInfo a, native.AppInfo b) {
-      final int byName = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      if (byName != 0) return byName;
-      return a.appUserModelId.toLowerCase().compareTo(b.appUserModelId.toLowerCase());
-    });
-    return deduped;
-  }
-
-  Future<Directory> _ensureLauncherIconCacheDirectory() async {
-    final Directory directory = Directory(p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'icon_cache'));
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
-    return directory;
-  }
-
-  String _buildLauncherAppLaunchTarget(String appUserModelId) => '$_launcherAppsFolderPrefix$appUserModelId';
-
-  String _buildLauncherAppStableIdentity(native.AppInfo app) {
-    final String executableName = app.executable.trim().isNotEmpty
-        ? p.basenameWithoutExtension(app.executable.trim())
-        : p.basenameWithoutExtension(app.parsingName.trim());
-
-    return <String>[
-      _normalizeLauncherAppIdentityPart(app.name),
-      _normalizeLauncherAppIdentityPart(executableName),
-      _normalizeLauncherAppIdentityPart(app.arguments),
-    ].join('|');
-  }
-
-  String _normalizeLauncherAppIdentityPart(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-  }
-
-  String _launcherAppIconHash(String appUserModelId) => appUserModelId.hashCode.toString();
-
-  String _launcherAppIconFileName(String appUserModelId) =>
-      '$_launcherAppIconPrefix${_launcherAppIconHash(appUserModelId)}.png';
-
-  Future<void> _cacheMissingLauncherAppIcons(List<native.AppInfo> apps, Directory iconCacheDirectory) async {
-    final Pool pool = Pool(3);
-
-    await Future.wait(apps.map((native.AppInfo app) async {
-      final File iconFile = File(p.join(iconCacheDirectory.path, _launcherAppIconFileName(app.appUserModelId)));
-      if (await iconFile.exists()) return;
-
-      await pool.withResource(() => _cacheLauncherAppIcon(app, iconFile));
-    }));
-
-    await pool.close();
-  }
-
-  Future<void> _cacheLauncherAppIcon(native.AppInfo app, File iconFile) async {
-    if (app.parsingName.trim().isEmpty) return;
-
-    try {
-      final native.AppIconData? icon = await native.AppEnumeration.getAppIcon(app.parsingName, size: 128);
-      if (icon == null || icon.width <= 0 || icon.height <= 0 || icon.pixels.isEmpty) return;
-
-      final ByteData? pngBytes = await _convertLauncherAppIconToPng(icon);
-      if (pngBytes == null) return;
-
-      await iconFile.writeAsBytes(pngBytes.buffer.asUint8List(), flush: true);
-    } catch (error, stackTrace) {
-      debugPrint('Launcher: Failed to cache icon for ${app.appUserModelId}: $error');
-      debugPrintStack(stackTrace: stackTrace);
-    }
-  }
-
-  Future<ByteData?> _convertLauncherAppIconToPng(native.AppIconData icon) {
-    final Completer<ByteData?> completer = Completer<ByteData?>();
-
-    ui.decodeImageFromPixels(
-      icon.pixels,
-      icon.width,
-      icon.height,
-      ui.PixelFormat.bgra8888,
-      (ui.Image image) async {
-        try {
-          final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
-          completer.complete(data);
-        } catch (error, stackTrace) {
-          completer.completeError(error, stackTrace);
-        } finally {
-          image.dispose();
-        }
-      },
-    );
-
-    return completer.future;
-  }
-
-  Future<void> _removeStaleLauncherAppIcons(Directory iconCacheDirectory, Set<String> expectedIconFiles) async {
-    if (!await iconCacheDirectory.exists()) return;
-
-    await for (final FileSystemEntity entity in iconCacheDirectory.list()) {
-      if (entity is! File) continue;
-      final String fileName = p.basename(entity.path);
-      if (!fileName.startsWith(_launcherAppIconPrefix) || !fileName.endsWith('.png')) continue;
-      if (expectedIconFiles.contains(fileName)) continue;
-
-      try {
-        await entity.delete();
-      } catch (_) {}
-    }
   }
 
   @override
@@ -1001,9 +771,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _scrollResultsToTopForQuery(query);
     _searchDebounce?.cancel();
     final int requestId = ++_searchRequestId;
-    setState(() => _searchMode = _getLauncherSearchMode(query));
-    final LauncherSearchMode searchMode = _searchMode;
-    final String normalizedQuery = _getNormalizedQuery(query);
+    final LauncherQuery launcherQuery = LauncherQuery.parse(query);
+    setState(() => _searchMode = launcherQuery.mode);
+    final LauncherSearchMode searchMode = launcherQuery.mode;
+    final String normalizedQuery = launcherQuery.normalized;
 
     // Clear desktop browsing stack when the user leaves any file-capable mode
     // or changes the search prefix entirely.
@@ -1066,7 +837,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _handleAppSearch(context);
         break;
       case LauncherSearchMode.desktopOnly:
-        DesktopSearchHandler.handle(context);
+        FolderSearchHandler.handle(context);
         break;
       case LauncherSearchMode.notionOnly:
         _handleNotionSearch(context);
@@ -1924,50 +1695,29 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (_results.isEmpty || _activeIndexNotifier.value >= _results.length) return;
 
     final LauncherSearchResultItem result = _results[_activeIndexNotifier.value];
-
-    if (result.isShortcut) {
-      _onShortcutPressed(result.shortcut!);
-      return;
-    }
-
-    if (result.isFile) {
-      // Pressing Enter on a Directory always drills into it inside the launcher.
-      if (result.entity is Directory) {
-        _browseDesktopFolder(result.entity!.path);
-        return;
-      }
-      _openFile(result.entity!.path, nodeId: result.nodeId);
-      return;
-    }
-    if (result.isApp) {
-      _openAppResult(result.appResult!, nodeId: result.nodeId);
-      return;
-    }
-    if (result.isWindow) {
-      _openWindow(result.window!);
-      return;
-    }
-    if (result.isBookmark) {
-      _openBookmarkResult(result.bookmarkResult!);
-      return;
-    }
-    if (result.isNotion) {
-      _openNotionResult(result.notionResult!);
-      return;
-    }
-
-    if (result.quickAction != null) {
-      // Intercept the "Open Folder in Explorer" sentinel action that
-      // DesktopSearchHandler pins at the top of browsed-folder results.
-      if (result.quickAction!.id.startsWith('desktop_browse_open_explorer:')) {
-        final String folderPath = result.quickAction!.id.substring('desktop_browse_open_explorer:'.length);
-        _openFolderInExplorer(folderPath);
-        return;
-      }
-      _runQuickAction(result.quickAction!);
-    }
+    LauncherResultExecutor(
+      onShortcut: _onShortcutPressed,
+      onBrowseFolder: _browseDesktopFolder,
+      onOpenFile: _openFile,
+      onOpenApp: _openAppResult,
+      onOpenWindow: _openWindow,
+      onOpenBookmark: _openBookmarkResult,
+      onOpenNotion: _openNotionResult,
+      onRunAction: _executeLauncherActionResult,
+    ).execute(result);
 
     _resetSelection();
+  }
+
+  void _executeLauncherActionResult(QuickActionMenuEntry action) {
+    // Intercept the "Open Folder in Explorer" sentinel action that
+    // DesktopSearchHandler pins at the top of browsed-folder results.
+    if (action.id.startsWith('desktop_browse_open_explorer:')) {
+      final String folderPath = action.id.substring('desktop_browse_open_explorer:'.length);
+      _openFolderInExplorer(folderPath);
+      return;
+    }
+    _runQuickAction(action);
   }
 
   void _openBookmarkResult(BookmarkSearchResult result) {
@@ -2053,8 +1803,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       unawaited(_recordFileOpen(nodeId));
     }
 
-    final String launchTarget =
-        app.appUserModelId.isNotEmpty ? _buildLauncherAppLaunchTarget(app.appUserModelId) : app.launchTarget;
+    final String launchTarget = app.appUserModelId.isNotEmpty
+        ? LauncherAppCatalogService.buildLaunchTarget(app.appUserModelId)
+        : app.launchTarget;
     if (launchTarget.isEmpty) return;
 
     WinUtils.open(launchTarget, parseParamaters: false);
@@ -2091,7 +1842,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     try {
       await FileIndexDb.instance.repair();
       await FileIndexer.instance.fullReindex();
-      await _syncLauncherAppsCatalog();
+      await LauncherAppCatalogService.instance.sync();
       if (mounted) {
         _onSearchChanged(_controller.text);
       }
@@ -2109,44 +1860,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.lastFocusedWinHWND = window.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     userSettings.launcherSearchText = '';
-  }
-
-  LauncherSearchMode _getLauncherSearchMode(String query) {
-    // final String trimmed = query.trimLeft();
-    if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
-    if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
-    if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
-    if (query.startsWith(';')) return LauncherSearchMode.desktopOnly;
-    if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
-    if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
-    if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
-    if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
-    if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
-    if (query.startsWith('>') || query.startsWith('?') || query.startsWith(' ')) {
-      return LauncherSearchMode.filesOnly;
-    }
-    if (query.startsWith("'")) return LauncherSearchMode.bookmarksOnly;
-    return LauncherSearchMode.mixed;
-  }
-
-  String _getNormalizedQuery(String query) {
-    // final String trimmed = query.trimLeft();
-    if (query.startsWith('timer ')) return query.substring(6).trimLeft();
-    if (query.startsWith('cli ')) return query.substring(4).trimLeft();
-    if (query.startsWith('app ')) return query.substring(4).trimLeft();
-    if (query.startsWith('n ')) return query.substring(2).trimLeft();
-    if (query.startsWith('b ')) return query.substring(2).trimLeft();
-    if (query.startsWith('/') ||
-        query.startsWith('.') ||
-        query.startsWith(r'$') ||
-        query.startsWith('>') ||
-        query.startsWith('?') ||
-        query.startsWith(';') ||
-        query.startsWith(' ') ||
-        query.startsWith("'")) {
-      return query.substring(1).trimLeft();
-    }
-    return query;
   }
 
   void _openNotionResult(NotionResult result) {
@@ -2239,10 +1952,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final bool hasInput = _controller.text.trim().isNotEmpty;
     return Theme(
       data: theme.copyWith(
-        textTheme: FontThemeCache.getTextTheme(
-          fontFamily: userSettings.theme.entryFontFamily,
-          isDark: userSettings.isDark(context),
-        ),
+        textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,

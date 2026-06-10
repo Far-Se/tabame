@@ -47,7 +47,7 @@ Future<void> showQuickMenuModal({
         builder: (BuildContext context, bool _, __) {
           final ThemeData modalTheme = userSettings.themeTypeMode == ThemeType.dark
               ? AppTheme.getDarkThemeData(context)
-              : AppTheme.getLightThemeData();
+              : AppTheme.getLightThemeData(context);
           final ColorScheme scheme = modalTheme.colorScheme;
           final Color surface = scheme.surface;
           final Animation<double>? animation = ModalRoute.of(context)?.animation;

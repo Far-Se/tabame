@@ -283,16 +283,27 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             CustomTooltip(
               message: "Change to ${User.s.isDark(context) ? "Light" : "Dark"}",
               child: IconButton(
-                  icon: const Icon(Icons.theater_comedy_sharp),
-                  onPressed: () {
-                    bool isSimple = false;
-                    if (<ThemeType>[ThemeType.light, ThemeType.dark].contains(userSettings.themeType)) isSimple = true;
-                    userSettings.themeType = User.s.isDark(context) ? ThemeType.light : ThemeType.dark;
-                    if (isSimple) Boxes.updateSettings("themeType", userSettings.themeType.index);
+                icon: const Icon(Icons.theater_comedy_sharp),
+                onPressed: () {
+                  bool isSimple = false;
+                  if (<ThemeType>[ThemeType.light, ThemeType.dark].contains(userSettings.themeType)) isSimple = true;
 
-                    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                  }),
-            )
+                  final bool switchingToDark = !User.s.isDark(context);
+                  userSettings.themeType = switchingToDark ? ThemeType.dark : ThemeType.light;
+                  if (isSimple) Boxes.updateSettings("themeType", userSettings.themeType.index);
+
+                  // ✅ Keep _paletteMode in sync with the new theme
+                  setState(() {
+                    _paletteMode = switchingToDark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
+                  });
+
+                  // ✅ Sync the active backdrop path for the newly active theme
+                  QuickMenuFunctions.syncSelectedBackdrop();
+
+                  Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                },
+              ),
+            ),
           ],
         ),
         SliderTheme(
@@ -1022,6 +1033,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         _selectedTheme.uiFontItalic = font.fontStyle == FontStyle.italic;
                       });
                       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                      QuickMenuFunctions.refreshQuickMenu();
                     },
                   ),
                 ),
@@ -1038,7 +1050,15 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         _selectedTheme.entryFontWeight = font.fontWeight.value;
                         _selectedTheme.entryFontItalic = font.fontStyle == FontStyle.italic;
                       });
+                      baseEntryStyle = GoogleFonts.getFont(
+                        userSettings.themeColors.entryFontFamily,
+                        fontSize: userSettings.themeColors.baseFontSize + 2,
+                        color: User.theme.text,
+                        fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
+                        fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                      );
                       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                      QuickMenuFunctions.refreshQuickMenu();
                     },
                   ),
                 ),

@@ -22,7 +22,7 @@ class MixedSearchHandler {
     // the folder contents (filtered by query if one is typed).
     // -------------------------------------------------------------------------
     if (context.browsingPath != null && context.browsingPath!.isNotEmpty) {
-      DesktopSearchHandler.handle(context);
+      FolderSearchHandler.handle(context);
       return;
     }
 

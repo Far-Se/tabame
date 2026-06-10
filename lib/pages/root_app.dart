@@ -81,7 +81,7 @@ class _TabameState extends State<Tabame> {
                   scrollBehavior: MyCustomScrollBehavior(),
                   debugShowCheckedModeBanner: false,
                   title: 'Tabame - Taskbar Menu',
-                  theme: AppTheme.getLightThemeData(),
+                  theme: AppTheme.getLightThemeData(context),
                   darkTheme: AppTheme.getDarkThemeData(context),
                   themeMode: themeMode,
                   home: kDebugMode

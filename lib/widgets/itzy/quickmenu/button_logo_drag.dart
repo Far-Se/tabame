@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 
@@ -27,6 +28,7 @@ class LogoDragButtonState extends State<LogoDragButton> {
           await windowManager.setSize(Size(value.width + 2, value.height + 2));
           await Future<void>.delayed(const Duration(milliseconds: 100));
           await windowManager.setSize(Size(value.width, value.height));
+          QuickMenuFunctions.refreshQuickMenu();
         },
         child: RepaintBoundary(
           child: InkWell(

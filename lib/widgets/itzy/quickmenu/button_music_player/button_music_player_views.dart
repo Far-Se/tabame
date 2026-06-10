@@ -146,8 +146,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                             textAlign: TextAlign.center,
-                                            style: GoogleFonts.getFont(
-                                              userSettings.themeColors.entryFontFamily,
+                                            style: baseEntryStyle.copyWith(
                                               fontSize: 20,
                                               height: 1.15,
                                               fontWeight: FontWeight.w800,
@@ -161,8 +160,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             textAlign: TextAlign.center,
-                                            style: GoogleFonts.getFont(
-                                              userSettings.themeColors.entryFontFamily,
+                                            style: baseEntryStyle.copyWith(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                               color: accent,
@@ -176,8 +174,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               textAlign: TextAlign.center,
-                                              style: GoogleFonts.getFont(
-                                                userSettings.themeColors.entryFontFamily,
+                                              style: baseEntryStyle.copyWith(
                                                 fontSize: Design.baseFontSize + 1,
                                                 color: onSurface.withAlpha(120),
                                               ),

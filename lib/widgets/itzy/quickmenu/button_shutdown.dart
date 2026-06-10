@@ -546,7 +546,7 @@ class _ModeButton extends StatelessWidget {
                 Icon(
                   icon,
                   size: 16,
-                  color: selected ? scheme.onPrimary : scheme.onSurface.withValues(alpha: 0.72),
+                  color: selected ? Design.background : Design.text.withValues(alpha: 0.72),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -555,7 +555,7 @@ class _ModeButton extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: selected ? scheme.onPrimary : scheme.onSurface.withValues(alpha: 0.78),
+                      color: selected ? Design.background : Design.text.withValues(alpha: 0.78),
                     ),
                   ),
                 ),

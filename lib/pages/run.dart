@@ -135,7 +135,7 @@ class CommandRunnerApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.getLightThemeData(),
+      theme: AppTheme.getLightThemeData(context),
       darkTheme: AppTheme.getDarkThemeData(context),
       themeMode: themeMode,
       home: CommandRunnerWindow(arguments, result),

@@ -38,7 +38,7 @@ class ColorPickerApp extends StatelessWidget {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.getLightThemeData(),
+          theme: AppTheme.getLightThemeData(context),
           darkTheme: AppTheme.getDarkThemeData(context),
           themeMode: themeMode,
           home: ColorPickerWindow(isStandalone: isStandalone),

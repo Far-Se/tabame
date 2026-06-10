@@ -8,7 +8,7 @@ import '../../launcher_search_models.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';
 
-class DesktopSearchHandler {
+class FolderSearchHandler {
   static void handle(LauncherSearchContext context) {
     context.setSearching(true);
     Timer(const Duration(milliseconds: 150), () async {
@@ -20,14 +20,16 @@ class DesktopSearchHandler {
 
       // -----------------------------------------------------------------------
       // Browsing mode: a folder has been drilled into — list its contents
-      // directly, with "Open Folder in Explorer" and optionally "Go back"
-      // pinned at the top.
+      // directly from the filesystem (not the DB), with "Open Folder in
+      // Explorer" and optionally "Go back" pinned at the top.
       // -----------------------------------------------------------------------
       final String? browsingPath = context.browsingPath;
       if (browsingPath != null && browsingPath.isNotEmpty) {
-        List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+        // Run in an isolate but return serialized maps — FileSystemEntity
+        // objects cannot cross isolate boundaries.
+        List<Map<String, Object?>> serializedEntries = <Map<String, Object?>>[];
         try {
-          results = await compute(
+          serializedEntries = await compute(
             _listFolderContentsInBackground,
             <String, Object?>{
               'folderPath': browsingPath,
@@ -40,6 +42,11 @@ class DesktopSearchHandler {
           context.setSearching(false);
           return;
         }
+
+        // Reuse the same deserializer used by the normal DB search so that
+        // every item is a proper LauncherFileResult — Ctrl+K, Ctrl+C, the
+        // actions panel, and copy all work automatically.
+        final List<LauncherSearchResultItem> results = deserializeFileMatches(serializedEntries);
 
         final List<LauncherSearchResultItem> pinned = <LauncherSearchResultItem>[
           // 1. Open Folder in Explorer
@@ -173,23 +180,24 @@ class DesktopSearchHandler {
 }
 
 // ---------------------------------------------------------------------------
-// Top-level isolate function: list folder contents (optionally filtered by
-// query) and return them as LauncherSearchResultItems.
+// Top-level isolate function: lists folder contents and returns them as
+// serialized maps so they can safely cross the isolate boundary.
+// The main thread deserializes them with deserializeFileMatches(), which
+// produces proper LauncherFileResult items — identical to DB results.
 // ---------------------------------------------------------------------------
-List<LauncherSearchResultItem> _listFolderContentsInBackground(Map<String, Object?> args) {
+List<Map<String, Object?>> _listFolderContentsInBackground(Map<String, Object?> args) {
   final String folderPath = args['folderPath'] as String;
-  final String query = (args['query'] as String? ?? '').toLowerCase();
+  // final String query = (args['query'] as String? ?? '').toLowerCase();
 
   final Directory dir = Directory(folderPath);
-  if (!dir.existsSync()) return <LauncherSearchResultItem>[];
+  if (!dir.existsSync()) return <Map<String, Object?>>[];
 
   final List<FileSystemEntity> entries = <FileSystemEntity>[];
   try {
     entries.addAll(dir.listSync(recursive: false, followLinks: false));
   } catch (_) {
-    return <LauncherSearchResultItem>[];
+    return <Map<String, Object?>>[];
   }
-
   // Sort: directories first, then files, both alphabetically.
   entries.sort((FileSystemEntity a, FileSystemEntity b) {
     final bool aDir = a is Directory;
@@ -198,20 +206,25 @@ List<LauncherSearchResultItem> _listFolderContentsInBackground(Map<String, Objec
     return a.path.toLowerCase().compareTo(b.path.toLowerCase());
   });
 
-  final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+  final List<Map<String, Object?>> results = <Map<String, Object?>>[];
   for (final FileSystemEntity entity in entries) {
-    final String name = entity.uri.pathSegments.lastWhere((String s) => s.isNotEmpty, orElse: () => entity.path);
+    final String name = entity.uri.pathSegments.lastWhere(
+      (String s) => s.isNotEmpty,
+      orElse: () => entity.path,
+    );
 
     // Skip desktop.ini.
     if (name.toLowerCase() == 'desktop.ini') continue;
 
     // Filter by query when the user has typed something.
-    if (query.isNotEmpty && !name.toLowerCase().contains(query)) continue;
+    // if (query.isNotEmpty && !name.toLowerCase().contains(query)) continue;
 
-    results.add(LauncherSearchResultItem.file(entity));
+    results.add(<String, Object?>{
+      'path': entity.path,
+      'isDirectory': entity is Directory,
+    });
 
     if (results.length >= maxLauncherMatches) break;
   }
-
   return results;
 }

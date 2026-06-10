@@ -797,7 +797,7 @@ extension ColorExtensions on Color {
   }
 }
 
-final TextStyle baseEntryStyle = GoogleFonts.getFont(
+TextStyle baseEntryStyle = GoogleFonts.getFont(
   userSettings.themeColors.entryFontFamily,
   fontSize: userSettings.themeColors.baseFontSize + 2,
   color: User.theme.text,
