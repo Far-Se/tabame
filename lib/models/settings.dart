@@ -25,7 +25,6 @@ import 'win32/win_utils.dart';
 enum TPage {
   quickmenu,
   interface,
-  views,
 }
 
 enum QuickMenuDesigns {
@@ -45,6 +44,11 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.serene => "Serene",
     };
   }
+}
+
+enum LauncherDesign {
+  classic,
+  serene,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
@@ -119,12 +123,13 @@ class Settings {
   bool taskManagerStats = false;
   bool autoOpenTaskManager = false;
   bool quickClickEnabled = false;
-  QuickClickConfig quickClickConfig = QuickClickConfig();
   bool trktivityEnabled = false;
   bool runAsAdministrator = false;
   bool _hideTabameOnUnfocus = true;
   bool quickActionsAtBottom = false;
   bool dragPopupsByIconOnly = false;
+  LauncherDesign launcherDesign = LauncherDesign.classic;
+  QuickClickConfig quickClickConfig = QuickClickConfig();
   bool get hideTabameOnUnfocus => _hideTabameOnUnfocus;
   set hideTabameOnUnfocus(bool value) {
     _hideTabameOnUnfocus = value;
@@ -133,11 +138,11 @@ class Settings {
 
   bool hideTaskbarOnStartup = true;
   bool hideDesktopFiles = false;
-  bool showMediaControlForApp = true;
-  bool showMusicPlayerInTaskbar = true;
-  bool showMediaSessionsInTaskbar = true;
+  bool mediaControlForApp = true;
+  bool musicPlayerInTaskbar = true;
+  bool mediaSessionsInTaskbar = true;
   bool trktivitySaveAllTitles = false;
-  bool showQuickMenuAtTaskbarLevel = true;
+  bool quickMenuAtTaskbarLevel = true;
   String customLogo = "";
   String customSpash = "";
   String launcherSearchText = "";

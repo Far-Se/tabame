@@ -364,7 +364,6 @@ class _DiskCleanupPanelState extends State<DiskCleanupPanel> {
       children: <Widget>[
         PanelHeader(
           title: _settingsMode ? "Disk Cleanup Settings" : "Disk Cleanup",
-          accent: accent,
           icon: _settingsMode ? Icons.tune_rounded : Icons.cleaning_services_rounded,
           buttonIcon: _settingsMode ? Icons.cleaning_services_rounded : Icons.tune_rounded,
           buttonTooltip: _settingsMode ? "Cleanup" : "Settings",

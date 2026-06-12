@@ -446,7 +446,7 @@ class _SidebarTileState extends State<_SidebarTile> {
                       Row(children: <Widget>[
                         if (widget.reminder.persistent)
                           Padding(
-                            padding: EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.only(right: 4),
                             child: Icon(Icons.priority_high_rounded, size: 12, color: Design.accent),
                           ),
                         if (widget.reminder.voiceNotification)

@@ -1890,12 +1890,12 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       shadows: <Shadow>[
-                        Shadow(
+                        const Shadow(
                           color: Colors.black,
                           blurRadius: 24,
                           offset: Offset(0, 4),
                         ),
-                        Shadow(
+                        const Shadow(
                           color: Colors.black,
                           blurRadius: 8,
                           offset: Offset(0, 0),

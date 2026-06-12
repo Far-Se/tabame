@@ -764,7 +764,6 @@ class _NotionWidgetState extends State<NotionWidget> {
       children: <Widget>[
         PanelHeader(
           title: headerTitle,
-          accent: accent,
           icon: _isBrowseMode
               ? Icons.folder_open_rounded
               : _isSetupMode

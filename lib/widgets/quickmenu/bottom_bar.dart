@@ -140,6 +140,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
 
   void _removeLogoDragOverlay() {
     _logoDragOverlayEntry?.remove();
+    _logoDragOverlayEntry?.dispose();
     _logoDragOverlayEntry = null;
   }
 

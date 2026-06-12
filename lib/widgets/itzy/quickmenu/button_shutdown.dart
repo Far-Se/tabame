@@ -120,7 +120,7 @@ class ShutDownWidgetState extends State<ShutDownWidget> with QuickMenuTriggers {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        PanelHeader(title: "Shutdown Scheduler", accent: scheme.primary, icon: Icons.power_settings_new_rounded),
+        const PanelHeader(title: "Shutdown Scheduler", icon: Icons.power_settings_new_rounded),
         Flexible(
           child: SingleChildScrollView(
             child: Padding(

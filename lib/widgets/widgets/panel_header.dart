@@ -8,15 +8,15 @@ import 'mix_widgets.dart';
 class PanelHeader extends StatelessWidget {
   const PanelHeader({
     required this.title,
-    required this.accent,
     required this.icon,
+    this.accent,
     this.buttonPressed,
     this.buttonIcon,
     this.buttonTooltip,
     this.extraActions,
   });
 
-  final Color accent;
+  final Color? accent;
   final String title;
   final IconData icon;
   final VoidCallback? buttonPressed;
@@ -40,7 +40,7 @@ class PanelHeader extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: accent.withAlpha(60),
+            color: (accent ?? Design.accent).withAlpha(60),
             width: 1,
           ),
         ),
@@ -48,7 +48,7 @@ class PanelHeader extends StatelessWidget {
       child: CancelTraversal(
         child: Theme(
           data: Theme.of(context).copyWith(
-            iconTheme: IconThemeData(color: accent, size: 14),
+            iconTheme: IconThemeData(color: (accent ?? Design.accent), size: 14),
             iconButtonTheme: IconButtonThemeData(
               style: ButtonStyle(
                 padding: WidgetStateProperty.all(
@@ -69,10 +69,10 @@ class PanelHeader extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: accent.withAlpha(30),
+                    color: (accent ?? Design.accent).withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, size: 14, color: accent),
+                  child: Icon(icon, size: 14, color: (accent ?? Design.accent)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -94,7 +94,7 @@ class PanelHeader extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                     iconSize: 14,
-                    icon: Icon(buttonIcon, color: accent),
+                    icon: Icon(buttonIcon, color: (accent ?? Design.accent)),
                   ),
                 ),
               ],

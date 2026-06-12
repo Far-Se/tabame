@@ -413,7 +413,6 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
           children: <Widget>[
             PanelHeader(
               title: "Currency Converter",
-              accent: accent,
               icon: Icons.currency_exchange_rounded,
               buttonPressed: _refreshRates,
               buttonIcon: Icons.refresh_rounded,

@@ -304,7 +304,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 itemCount: _windows.length + 1,
                 itemBuilder: (BuildContext context, int xIndex) {
                   if (xIndex == 0) {
-                    if (User.s.showMediaSessionsInTaskbar || User.s.showMusicPlayerInTaskbar) {
+                    if (User.s.mediaSessionsInTaskbar || User.s.musicPlayerInTaskbar) {
                       return const TaskBarMediaCarousel();
                     } else {
                       return const SizedBox.shrink();
@@ -513,7 +513,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
             const SizedBox(width: 8),
             Expanded(child: _buildExpandedTitle()),
             if (_isHovered) ...<Widget>[
-              if (userSettings.showMediaControlForApp && (hasMediaControls || isAudioSource)) ...<Widget>[
+              if (userSettings.mediaControlForApp && (hasMediaControls || isAudioSource)) ...<Widget>[
                 _buildVolumeButton(),
                 _buildMediaButton()
               ],
@@ -615,7 +615,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
             const SizedBox(width: 4),
             Expanded(child: _buildTitle()),
             if (_isHovered) ...<Widget>[
-              if (userSettings.showMediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
+              if (userSettings.mediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
               if (isAudioSource) _buildVolumeButton(),
               _buildCloseButton(),
             ],
@@ -839,10 +839,10 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
 
   List<Widget> _buildPages(MusicItem? musicItem, List<MediaSession> sessions) {
     final List<Widget> pages = <Widget>[];
-    if (musicItem != null && userSettings.showMusicPlayerInTaskbar) {
+    if (musicItem != null && userSettings.musicPlayerInTaskbar) {
       pages.add(TaskBarMusicItem(item: musicItem));
     }
-    if (User.s.showMediaSessionsInTaskbar) {
+    if (User.s.mediaSessionsInTaskbar) {
       for (final MediaSession session in sessions) {
         pages.add(TaskBarMediaSessionItem(session: session));
       }

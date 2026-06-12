@@ -57,7 +57,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
     if (!hasAnyItems) {
       final Color accent = Theme.of(context).colorScheme.primary;
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-        PanelHeader(title: "Apps", accent: accent, icon: Icons.apps),
+        const PanelHeader(title: "Apps", icon: Icons.apps),
         Flexible(
             child: Center(
           child: Padding(
@@ -100,7 +100,7 @@ class _QuickMenuAppsState extends State<QuickMenuApps> {
       color: Colors.transparent,
       child: Column(
         children: <Widget>[
-          PanelHeader(title: "Apps", accent: userSettings.themeColors.accent, icon: Icons.apps),
+          const PanelHeader(title: "Apps", icon: Icons.apps),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

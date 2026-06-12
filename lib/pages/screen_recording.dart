@@ -1207,7 +1207,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Text(
+                                const Text(
                                   'Recording Settings',
                                   style: TextStyle(
                                     fontSize: 15,
@@ -1442,7 +1442,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       'FFmpeg system audio recording requires '
                                       '"virtual-audio-capturer" to be installed.',
                                       style: TextStyle(
-                                        color: Color(0xFFE0E0E0),
+                                        color: const Color(0xFFE0E0E0),
                                         fontSize: Design.baseFontSize + 1,
                                         height: 1.4,
                                       ),

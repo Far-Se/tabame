@@ -256,7 +256,6 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
       children: <Widget>[
         PanelHeader(
           title: title,
-          accent: accent,
           icon: icon,
           buttonIcon: buttonIcon,
           buttonTooltip: buttonTooltip,

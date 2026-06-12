@@ -3,11 +3,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui';
-
+import 'dart:math';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
 import 'package:screenshot/screenshot.dart';
@@ -178,7 +178,7 @@ class FancyshotState extends State<Fancyshot> {
   img.Image? photo;
   Color bgColor = const Color(0xFF121723);
   String? selectedProfile;
-  bool _previewActualSize = false;
+  // final bool _previewActualSize = false;
   bool _autosavePending = false;
   DateTime? _lastAutosavedAt;
   Timer? _autosaveTimer;
@@ -267,20 +267,20 @@ class FancyshotState extends State<Fancyshot> {
     _scheduleAutosave(immediate: immediate);
   }
 
-  File? _latestScreenshotFile() {
-    final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots');
-    if (!screenshotsRoot.existsSync()) return null;
+  // File? _latestScreenshotFile() {
+  //   final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots');
+  //   if (!screenshotsRoot.existsSync()) return null;
 
-    final List<File> screenshotFiles = screenshotsRoot
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((File file) => file.path.toLowerCase().endsWith('.png'))
-        .toList();
-    if (screenshotFiles.isEmpty) return null;
+  //   final List<File> screenshotFiles = screenshotsRoot
+  //       .listSync(recursive: true)
+  //       .whereType<File>()
+  //       .where((File file) => file.path.toLowerCase().endsWith('.png'))
+  //       .toList();
+  //   if (screenshotFiles.isEmpty) return null;
 
-    screenshotFiles.sort((File a, File b) => b.statSync().modified.compareTo(a.statSync().modified));
-    return screenshotFiles.first;
-  }
+  //   screenshotFiles.sort((File a, File b) => b.statSync().modified.compareTo(a.statSync().modified));
+  //   return screenshotFiles.first;
+  // }
 
   Color _samplePreviewColor(img.Image decoded) {
     final img.Pixel pixel32 = decoded.getPixelSafe(0, 0);
@@ -289,9 +289,13 @@ class FancyshotState extends State<Fancyshot> {
     return Color(hex);
   }
 
-  void _loadLatestScreenshotPreview() {
-    final File? latestFile = _latestScreenshotFile();
-    if (latestFile == null) {
+  void _loadLatestScreenshotPreview() async {
+    final math.Random random = Random();
+    final int n = random.nextInt(12) + 1;
+
+    final ByteData bytes = await rootBundle.load('resources/gradient/gradient$n.jpg');
+    capture = bytes.buffer.asUint8List();
+    if (capture == null) {
       setState(() {
         capture = null;
         photo = null;
@@ -299,32 +303,49 @@ class FancyshotState extends State<Fancyshot> {
       });
       return;
     }
-
-    try {
-      final Uint8List bytes = latestFile.readAsBytesSync();
-      final img.Image? decoded = img.decodeImage(bytes);
-      if (decoded == null) {
-        setState(() {
-          capture = null;
-          photo = null;
-          bgColor = const Color(0xFF121723);
-        });
-        return;
-      }
-
-      setState(() {
-        capture = bytes;
-        photo = decoded;
-        bgColor = _samplePreviewColor(decoded);
-      });
-    } catch (_) {
-      setState(() {
-        capture = null;
-        photo = null;
-        bgColor = const Color(0xFF121723);
-      });
-    }
+    final img.Image? decoded = img.decodeImage(capture!);
+    setState(() {
+      photo = decoded;
+      bgColor = capture == null ? const Color(0xFF121723) : _samplePreviewColor(decoded!);
+    });
   }
+
+  // void _loadLatestScreenshotPreview2() {
+  //   final File? latestFile = _latestScreenshotFile();
+  //   if (latestFile == null) {
+  //     setState(() {
+  //       capture = null;
+  //       photo = null;
+  //       bgColor = const Color(0xFF121723);
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     final Uint8List bytes = latestFile.readAsBytesSync();
+  //     final img.Image? decoded = img.decodeImage(bytes);
+  //     if (decoded == null) {
+  //       setState(() {
+  //         capture = null;
+  //         photo = null;
+  //         bgColor = const Color(0xFF121723);
+  //       });
+  //       return;
+  //     }
+
+  //     setState(() {
+  //       capture = bytes;
+  //       photo = decoded;
+  //       bgColor = _samplePreviewColor(decoded);
+  //     });
+  //   } catch (_) {
+  //     setState(() {
+  //       capture = null;
+  //       photo = null;
+  //       bgColor = const Color(0xFF121723);
+  //     });
+  //   }
+  // }
 
   int _abgrToArgb(int argbColor) {
     final int r = (argbColor >> 16) & 0xFF;
@@ -565,30 +586,30 @@ class FancyshotState extends State<Fancyshot> {
         child: Column(
           children: <Widget>[
             const SizedBox(height: 3),
-            Text(
-              'LIVE PREVIEW',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-                color: colorScheme.onSurface.withValues(alpha: 0.58),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
-              ),
-              child: Row(
-                children: <Widget>[
-                  const Spacer(),
-                  IconButton(
-                    tooltip: _previewActualSize ? 'Fit preview' : 'Actual size',
-                    onPressed: () => setState(() => _previewActualSize = !_previewActualSize),
-                    icon: Icon(_previewActualSize ? Icons.fit_screen_rounded : Icons.fullscreen_rounded),
-                  ),
-                ],
-              ),
-            ),
+            // Text(
+            //   'LIVE PREVIEW',
+            //   style: theme.textTheme.labelSmall?.copyWith(
+            //     fontWeight: FontWeight.w700,
+            //     letterSpacing: 1.0,
+            //     color: colorScheme.onSurface.withValues(alpha: 0.58),
+            //   ),
+            // ),
+            // Container(
+            //   padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+            //   decoration: BoxDecoration(
+            //     border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.08))),
+            //   ),
+            //   child: Row(
+            //     children: <Widget>[
+            //       const Spacer(),
+            //       IconButton(
+            //         tooltip: _previewActualSize ? 'Fit preview' : 'Actual size',
+            //         onPressed: () => setState(() => _previewActualSize = !_previewActualSize),
+            //         icon: Icon(_previewActualSize ? Icons.fit_screen_rounded : Icons.fullscreen_rounded),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             Expanded(
               child: ColoredBox(
                 // color: const Color(0xFF1A1A1A),

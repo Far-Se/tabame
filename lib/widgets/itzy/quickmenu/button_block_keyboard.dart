@@ -183,9 +183,8 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> with QuickMenuT
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        PanelHeader(
+        const PanelHeader(
           title: "Block Keyboard",
-          accent: accent,
           icon: Icons.keyboard_hide_rounded,
         ),
         Flexible(

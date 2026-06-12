@@ -903,20 +903,23 @@ class _QuickActionListItemState extends State<QuickActionListItem> {
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: widget.onTap,
+            splashColor: Colors.transparent,
+            hoverColor: Colors.transparent,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: widget.dense ? 5 : 6),
               child: Row(
                 children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: _hovered ? 2.5 : 0,
-                    height: 14,
-                    margin: EdgeInsets.only(right: _hovered ? 7 : 0),
-                    decoration: BoxDecoration(
-                      color: userSettings.themeColors.accent,
-                      borderRadius: BorderRadius.circular(2),
+                  if (User.s.launcherDesign == LauncherDesign.classic)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: _hovered ? 2.5 : 0,
+                      height: 14,
+                      margin: EdgeInsets.only(right: _hovered ? 7 : 0),
+                      decoration: BoxDecoration(
+                        color: userSettings.themeColors.accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
                   if (widget.leading != null) ...<Widget>[
                     widget.leading!,
                     const SizedBox(width: 8),

@@ -159,10 +159,10 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Taskbar Level Positioning",
             subtitle: "Maintain QuickMenu alignment with taskbar height",
-            value: userSettings.showQuickMenuAtTaskbarLevel,
+            value: userSettings.quickMenuAtTaskbarLevel,
             onChanged: (bool v) async {
-              userSettings.showQuickMenuAtTaskbarLevel = v;
-              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", userSettings.showQuickMenuAtTaskbarLevel);
+              userSettings.quickMenuAtTaskbarLevel = v;
+              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", userSettings.quickMenuAtTaskbarLevel);
               if (!mounted) return;
               setState(() {});
             },
@@ -211,10 +211,10 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Show Media Sessions",
             subtitle: "It will show curent Media Session like Music Player or Youtube/Browser",
-            value: userSettings.showMediaSessionsInTaskbar,
+            value: userSettings.mediaSessionsInTaskbar,
             onChanged: (bool v) async {
-              userSettings.showMediaSessionsInTaskbar = v;
-              await Boxes.updateSettings("showMediaSessionsInTaskbar", userSettings.showMediaSessionsInTaskbar);
+              userSettings.mediaSessionsInTaskbar = v;
+              await Boxes.updateSettings("showMediaSessionsInTaskbar", userSettings.mediaSessionsInTaskbar);
               if (!mounted) return;
               setState(() {});
             },

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
 import '../../../widgets/widgets/custom_tooltip.dart';
+import 'result_row.dart';
 
 // ---------------------------------------------------------------------------
 // Bookmark search result union type
@@ -60,7 +60,7 @@ class BookmarkSearchResult {
 // Bookmark / CLI / App search list item widget
 // ---------------------------------------------------------------------------
 
-class BookmarkSearchListItem extends StatefulWidget {
+class BookmarkSearchListItem extends StatelessWidget {
   const BookmarkSearchListItem({
     super.key,
     required this.result,
@@ -81,88 +81,22 @@ class BookmarkSearchListItem extends StatefulWidget {
   final VoidCallback onHover;
 
   @override
-  State<BookmarkSearchListItem> createState() => _BookmarkSearchListItemState();
-}
-
-class _BookmarkSearchListItemState extends State<BookmarkSearchListItem> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final bool highlighted = _hovered || widget.isSelected;
-    final int animMs = widget.isRepeating ? 50 : 200;
-    final BookmarkSearchResult result = widget.result;
-
-    return MouseRegion(
-      onHover: (PointerHoverEvent event) {
-        if (event.delta != Offset.zero) {
-          setState(() => _hovered = true);
-          widget.onHover();
-        }
-      },
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: animMs),
-        curve: widget.isRepeating ? Curves.linear : Curves.easeIn,
-        margin: const EdgeInsets.symmetric(vertical: 2),
-        decoration: BoxDecoration(
-          color: highlighted ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: widget.onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              children: <Widget>[
-                AnimatedContainer(
-                  duration: Duration(milliseconds: animMs),
-                  width: highlighted ? 2.5 : 0,
-                  height: 22,
-                  margin: EdgeInsets.only(right: highlighted ? 7 : 0),
-                  decoration: BoxDecoration(
-                    color: userSettings.themeColors.accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                _buildIcon(result, userSettings.themeColors.accent),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        result.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: entryStyle(highlighted, fontSize: Design.baseFontSize + 2),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        result.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: Design.baseFontSize,
-                          color: highlighted ? widget.onSurface.withAlpha(170) : widget.onSurface.withAlpha(130),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Kind badge
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: _KindBadge(
-                      kind: result.kind, accent: userSettings.themeColors.accent, onSurface: widget.onSurface),
-                ),
-              ],
-            ),
-          ),
-        ),
+    return LauncherResultRow(
+      isSelected: isSelected,
+      isRepeating: isRepeating,
+      accent: accent,
+      onSurface: onSurface,
+      onTap: onTap,
+      onHover: onHover,
+      icon: SizedBox(
+        width: 20,
+        height: 20,
+        child: _buildIcon(result, userSettings.themeColors.accent),
       ),
+      title: result.title,
+      subtitle: result.subtitle,
+      badge: _KindBadge(kind: result.kind, accent: userSettings.themeColors.accent, onSurface: onSurface),
     );
   }
 
@@ -219,7 +153,7 @@ class _KindBadge extends StatelessWidget {
       case BookmarkResultKind.appItem:
         label = 'APP';
         icon = Icons.apps_rounded;
-        color = Colors.green;
+        color = const Color(0xFF00523A);
     }
     return CustomTooltip(
       verticalOffset: 45,

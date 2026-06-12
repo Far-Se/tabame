@@ -66,6 +66,7 @@ class _CustomTooltipState extends State<CustomTooltip> {
 
   void _removeTooltip() {
     _overlayEntry?.remove();
+    _overlayEntry?.dispose();
     _overlayEntry = null;
     _showTimer?.cancel();
   }
@@ -153,10 +154,14 @@ class _TooltipOverlayState extends State<_TooltipOverlay> with SingleTickerProvi
       final RenderBox? box = context.findRenderObject() as RenderBox?;
       if (box == null) return;
       final double tooltipWidth = box.size.width;
-      final double x = (widget.targetCenter - tooltipWidth / 2).clamp(
-        widget.screenMargin,
-        widget.screenWidth - tooltipWidth - widget.screenMargin,
-      );
+      double x = 0;
+
+      try {
+        x = (widget.targetCenter - tooltipWidth / 2).clamp(
+          widget.screenMargin,
+          widget.screenWidth - tooltipWidth - widget.screenMargin,
+        );
+      } catch (_) {}
       setState(() {
         _left = x;
         _positioned = true;

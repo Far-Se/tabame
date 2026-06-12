@@ -73,9 +73,8 @@ class RemindersPanelState extends State<RemindersPanel> {
 
     return Column(
       children: <Widget>[
-        PanelHeader(
+        const PanelHeader(
           title: "REMINDERS",
-          accent: accent,
           icon: Icons.warning_rounded,
         ),
         Expanded(

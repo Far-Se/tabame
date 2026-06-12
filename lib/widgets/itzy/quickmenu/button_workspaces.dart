@@ -277,9 +277,8 @@ class _WorkspacesPanelState extends State<WorkspacesPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        PanelHeader(
+        const PanelHeader(
           title: 'Workspaces',
-          accent: accent,
           icon: Icons.dashboard_customize_rounded,
         ),
         const SizedBox(height: 8),

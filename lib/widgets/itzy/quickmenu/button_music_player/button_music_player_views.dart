@@ -1437,10 +1437,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 ),
                 const SizedBox(width: 8),
                 MiniToggleSwitch(
-                  value: userSettings.showMusicPlayerInTaskbar,
+                  value: userSettings.musicPlayerInTaskbar,
                   activeThumbColor: accent,
                   onChanged: (bool val) async {
-                    userSettings.showMusicPlayerInTaskbar = val;
+                    userSettings.musicPlayerInTaskbar = val;
                     await Boxes.updateSettings("showMusicPlayerInTaskbar", val);
                     setState(() {});
                   },

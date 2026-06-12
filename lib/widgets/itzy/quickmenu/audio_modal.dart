@@ -186,7 +186,6 @@ class AudioBoxState extends State<AudioBox> {
         children: <Widget>[
           PanelHeader(
             title: "Audio Settings",
-            accent: accent,
             icon: Icons.volume_up_rounded,
             extraActions: <Widget>[
               IconButton(

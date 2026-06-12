@@ -146,7 +146,6 @@ class VaultsWidgetState extends State<VaultsWidget> {
     if (_creating) {
       return PanelHeader(
         title: "New Vault",
-        accent: accent,
         icon: Icons.shield_rounded,
         buttonPressed: () => setState(() {
           _creating = false;
@@ -158,7 +157,6 @@ class VaultsWidgetState extends State<VaultsWidget> {
 
     return PanelHeader(
       title: "Vaults",
-      accent: accent,
       icon: Icons.lock_outline_rounded,
       buttonPressed: () => setState(() => _creating = true),
       buttonIcon: Icons.add,

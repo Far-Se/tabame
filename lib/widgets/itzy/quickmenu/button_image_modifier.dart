@@ -538,7 +538,6 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
         // ── Header ──
         PanelHeader(
           title: 'Image Converter',
-          accent: accent,
           icon: Icons.transform_rounded,
           extraActions: <Widget>[
             IconButton(
@@ -680,7 +679,6 @@ class _SettingsSubPageState extends State<_SettingsSubPage> {
       children: <Widget>[
         PanelHeader(
           title: 'Watched Folders',
-          accent: accent,
           icon: Icons.folder_special_outlined,
           extraActions: <Widget>[
             IconButton(
@@ -1055,7 +1053,6 @@ class _ConverterPageState extends State<_ConverterPage> {
           PanelHeader(
             title:
                 'Convert  •  ${widget.clipboardBytes != null ? 'Clipboard' : '${widget.files.length} image${widget.files.length == 1 ? '' : 's'}'}',
-            accent: accent,
             icon: Icons.auto_fix_high_rounded,
             extraActions: <Widget>[
               IconButton(

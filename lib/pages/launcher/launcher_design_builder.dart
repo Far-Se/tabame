@@ -7,7 +7,7 @@ import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 
 // ---------------------------------------------------------------------------
-// Public helpers that the LauncherState uses to switch designs
+// Extension: per-design widget factories used by LauncherState
 // ---------------------------------------------------------------------------
 
 extension LauncherDesignBuilder on LauncherDesign {
@@ -61,6 +61,7 @@ extension LauncherDesignBuilder on LauncherDesign {
     }
   }
 
+  /// Builds the search bar for this design variant.
   Widget buildSearchBar({
     required Color surface,
     required Color accent,
@@ -128,7 +129,7 @@ extension LauncherDesignBuilder on LauncherDesign {
 }
 
 // ---------------------------------------------------------------------------
-// Classic search bar (extracted from launcher.dart for parity)
+// Classic search bar
 // ---------------------------------------------------------------------------
 
 class _ClassicSearchBar extends StatelessWidget {
@@ -271,12 +272,24 @@ class _SereneSearchBar extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// SereneLauncherFrame
+// ---------------------------------------------------------------------------
+
+/// The frosted-glass outer frame used by the Serene design.
+///
+/// This widget:
+/// 1. Applies backdrop blur + frosted surface.
+/// 2. Injects a [LauncherTheme] with [LauncherDesign.serene] so that all
+///    descendant result-item widgets automatically inherit the Serene variant
+///    without needing an explicit parameter.
 class SereneLauncherFrame extends StatelessWidget {
   const SereneLauncherFrame({
     super.key,
     required this.child,
     required this.accent,
   });
+
   final Widget child;
   final Color accent;
 
@@ -285,33 +298,83 @@ class SereneLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool hasBackdrop =
         userSettings.themeColors.backdropType.isNotEmpty && userSettings.activeBackdropPath.isNotEmpty;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 360),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: surface.withAlpha(hasBackdrop ? 180 : 240),
-            border: Border.all(color: Colors.white.withAlpha(18)),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.black.withAlpha(60),
-                blurRadius: 40,
-                spreadRadius: -4,
-                offset: const Offset(0, 16),
-              ),
+
+    // Wrap in LauncherTheme so descendants can read the design without a
+    // parameter chain.
+    return LauncherTheme(
+      data: const LauncherThemeData(design: LauncherDesign.serene),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 360),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: surface.withAlpha(hasBackdrop ? 180 : 240),
+              border: Border.all(color: Colors.white.withAlpha(18)),
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withAlpha(60),
+                  blurRadius: 40,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Design.backdropLauncher
+                ? Stack(
+                    children: <Widget>[
+                      const StableBackdrop(),
+                      child,
+                    ],
+                  )
+                : child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ClassicLauncherFrame
+// ---------------------------------------------------------------------------
+
+/// The glass-card outer frame used by the Classic design.
+///
+/// Mirrors [SereneLauncherFrame]: wraps [child] in a [LauncherTheme] with
+/// [LauncherDesign.classic] so descendants inherit the correct variant.
+class ClassicLauncherFrame extends StatelessWidget {
+  const ClassicLauncherFrame({
+    super.key,
+    required this.child,
+    required this.surface,
+    required this.accent,
+  });
+
+  final Widget child;
+  final Color surface;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return LauncherTheme(
+      data: const LauncherThemeData(design: LauncherDesign.classic),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 360),
+        decoration: LauncherDesign.classic.outerDecoration(
+          surface: surface,
+          accent: accent,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            children: <Widget>[
+              if (Design.backdropLauncher) const StableBackdrop(),
+              child,
             ],
           ),
-          child: Design.backdropLauncher
-              ? Stack(
-                  children: <Widget>[
-                    const StableBackdrop(),
-                    child,
-                  ],
-                )
-              : child,
         ),
       ),
     );

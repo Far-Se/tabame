@@ -55,6 +55,7 @@ class Boxes {
     if (pref.getString("language") == null) {
       await pref.setBool("DEBUGGING", false);
       await pref.setInt("quickMenuDesign", QuickMenuDesigns.modern.index);
+      await pref.setInt("launcherDesign", LauncherDesign.classic.index);
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
       await pref.setInt("themeType", ThemeType.system.index);
@@ -68,6 +69,7 @@ class Boxes {
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
       await pref.setBool("showMediaControlForApp", true);
       await pref.setBool("showMusicPlayerInTaskbar", true);
+      await pref.setBool("showMediaSessionsInTaskbar", true);
       await pref.setBool("showTrayBar", true);
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
@@ -118,6 +120,8 @@ class Boxes {
     // Fetch all settings
     userSettings
       ..quickMenuDesign = pref.getInt("quickMenuDesign") ?? userSettings.quickMenuDesign
+      ..launcherDesign =
+          LauncherDesign.values[(pref.getInt("launcherDesign") ?? 0).clamp(0, LauncherDesign.values.length - 1)]
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
       ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
@@ -152,16 +156,16 @@ class Boxes {
           ? QuickClickConfig.fromMap(jsonDecode(pref.getString("quickClickConfig")!) as Map<String, dynamic>)
           : userSettings.quickClickConfig
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? userSettings.hideTabameOnUnfocus
+      ..mediaControlForApp = pref.getBool("showMediaControlForApp") ?? userSettings.mediaControlForApp
       ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? userSettings.lastQuickSnapZoneId
       ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? userSettings.quickActionsAtBottom
       ..dragPopupsByIconOnly = pref.getBool("dragPopupsByIconOnly") ?? userSettings.dragPopupsByIconOnly
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? userSettings.hideTaskbarOnStartup
       ..persistentReminders = pref.getStringList("persistentReminders") ?? userSettings.persistentReminders
-      ..showMediaControlForApp = pref.getBool("showMediaControlForApp") ?? userSettings.showMediaControlForApp
-      ..showMusicPlayerInTaskbar = pref.getBool("showMusicPlayerInTaskbar") ?? userSettings.showMusicPlayerInTaskbar
+      ..musicPlayerInTaskbar = pref.getBool("showMusicPlayerInTaskbar") ?? userSettings.musicPlayerInTaskbar
       ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? userSettings.trktivitySaveAllTitles
-      ..showQuickMenuAtTaskbarLevel =
-          pref.getBool("showQuickMenuAtTaskbarLevel") ?? userSettings.showQuickMenuAtTaskbarLevel
+      ..mediaSessionsInTaskbar = pref.getBool("showMediaSessionsInTaskbar") ?? userSettings.mediaSessionsInTaskbar
+      ..quickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? userSettings.quickMenuAtTaskbarLevel
       ..lightSwitchMode = LightSwitchMode.values[pref.getInt("lightSwitchMode") ?? 0]
       ..lightSwitchSunriseOffset = pref.getInt("lightSwitchSunriseOffset") ?? 0
       ..lightSwitchSunsetOffset = pref.getInt("lightSwitchSunsetOffset") ?? 0

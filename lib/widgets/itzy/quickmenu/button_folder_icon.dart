@@ -290,7 +290,6 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
       children: <Widget>[
         PanelHeader(
           title: 'Folder Icon',
-          accent: accent,
           icon: Icons.folder_special_rounded,
           extraActions: <Widget>[
             IconButton(
@@ -592,7 +591,6 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
             // ── Header ──
             PanelHeader(
               title: 'Info',
-              accent: User.theme.accent,
               icon: Icons.auto_fix_high_rounded,
               extraActions: <Widget>[
                 IconButton(

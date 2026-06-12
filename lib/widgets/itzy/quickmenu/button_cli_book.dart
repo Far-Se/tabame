@@ -653,7 +653,6 @@ class CliBookWidgetState extends State<CliBookWidget> {
         else
           PanelHeader(
             title: "CliBook",
-            accent: accent,
             icon: Icons.bookmark_rounded,
             extraActions: <Widget>[
               IconButton(
@@ -764,7 +763,8 @@ class CliBookWidgetState extends State<CliBookWidget> {
                                     Text(
                                       "Store your frequently used CLI commands and snippets here for quick access.",
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(128)),
+                                      style:
+                                          TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(128)),
                                     ),
                                   ],
                                 ),
@@ -895,7 +895,8 @@ class _CliBookItemState extends State<_CliBookItem> {
                   opacity: _hovered ? 1.0 : 0.0,
                   child: _copied
                       ? Text("Copied!",
-                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: userSettings.themeColors.accent.withAlpha(170)))
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 2, color: userSettings.themeColors.accent.withAlpha(170)))
                       : Icon(Icons.copy, size: 13, color: userSettings.themeColors.accent.withAlpha(170)),
                 ),
                 const SizedBox(width: 8),

@@ -116,9 +116,8 @@ class CountDownWidgetState extends State<CountDownWidget> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        PanelHeader(
+        const PanelHeader(
           title: "Countdown",
-          accent: accent,
           icon: Icons.timer_outlined,
         ),
 

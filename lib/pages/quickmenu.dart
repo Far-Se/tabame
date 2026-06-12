@@ -607,7 +607,10 @@ class QuickMenuState extends State<QuickMenu>
             //if (!Navigator.of(context).canPop()) {
             // Navigator.of(context).pop();
             // } else {
-            QuickMenuFunctions.hideQuickMenu();
+            Future<void>(() async {
+              await QuickMenuFunctions.hideQuickMenu();
+              Win32.activateWindow(Globals.lastFocusedWinHWND);
+            });
             //}
           }
           //_requestQuickMenuFocus(focusWindow: true);

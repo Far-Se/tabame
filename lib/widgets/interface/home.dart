@@ -158,7 +158,7 @@ class _HomeState extends State<Home> {
                 border: Border(top: BorderSide(color: onSurface.withValues(alpha: 0.08))),
               ),
             ),
-            imageBuilder: (uri, title, alt) {
+            imageBuilder: (Uri uri, String? title, String? alt) {
               if (uri.path == "logo") return Image.asset(userSettings.logo, width: 20);
 
               const Map<String, IconData> icons = <String, IconData>{

@@ -7,7 +7,6 @@ import '../../models/util/app_opacity.dart';
 import '../../models/win32/mixed.dart';
 import '../itzy/interface/quickmenu_bottom_bar.dart';
 import 'grid_settings.dart';
-import 'quickmenu/appaudio_settings.dart';
 import 'quickmenu/apps_settings.dart';
 import 'quickmenu/audio_settings.dart';
 import 'quickmenu/bookmarks_settings.dart';
@@ -84,6 +83,12 @@ class QMSettingsState extends State<QMSettings> {
       builder: () => const InterfaceQMTopbarSettings(),
     ),
     _SettingsPage(
+      title: "Custom Actions",
+      subtitle: "User Macros",
+      icon: Icons.settings_input_component_rounded,
+      builder: () => const InterfaceQMCustomQuickActionsSettings(),
+    ),
+    _SettingsPage(
       title: "Taskbar",
       subtitle: "Style & Logic",
       icon: Icons.view_list_outlined,
@@ -95,18 +100,20 @@ class QMSettingsState extends State<QMSettings> {
       icon: Icons.widgets_outlined,
       builder: () => const InterfaceQMBottomBarSettings(),
     ),
+
     _SettingsPage(
       title: "Audio Settings",
       subtitle: "Devices, OSD, Rules",
       icon: Icons.volume_up_rounded,
       builder: () => const InterfaceQMAudioSettings(),
     ),
-    _SettingsPage(
-      title: "App Audio",
-      subtitle: "Media Overlay",
-      icon: Icons.audio_file_rounded,
-      builder: () => const InterfaceQMAppAudioSettings(),
-    ),
+    // _SettingsPage(
+    //   title: "App Audio",
+    //   subtitle: "Media Overlay",
+    //   icon: Icons.audio_file_rounded,
+    //   builder: () => const InterfaceQMAppAudioSettings(),
+    // ),
+
     _SettingsPage(
       title: "Apps",
       subtitle: "Launcher Groups",
@@ -127,12 +134,6 @@ class QMSettingsState extends State<QMSettings> {
       icon: Icons.notifications_active_rounded,
       builder: () => const InterfaceQMRemindersSettings(),
       stats: () => "${Boxes.reminders.where((Reminder r) => r.enabled).length} Active",
-    ),
-    _SettingsPage(
-      title: "Custom Actions",
-      subtitle: "User Macros",
-      icon: Icons.settings_input_component_rounded,
-      builder: () => const InterfaceQMCustomQuickActionsSettings(),
     ),
     _SettingsPage(
       title: "QuickSnap",
@@ -670,11 +671,11 @@ class InterfaceQMCustomQuickActionsSettings extends StatelessWidget {
   Widget build(BuildContext context) => const InterfaceQMCustomQuickActionsSettingsPage();
 }
 
-class InterfaceQMAppAudioSettings extends StatelessWidget {
-  const InterfaceQMAppAudioSettings({super.key});
-  @override
-  Widget build(BuildContext context) => const InterfaceQMAppAudioSettingsPage();
-}
+// class InterfaceQMAppAudioSettings extends StatelessWidget {
+//   const InterfaceQMAppAudioSettings({super.key});
+//   @override
+//   Widget build(BuildContext context) => const InterfaceQMAppAudioSettingsPage();
+// }
 
 class InterfaceQMAudioSettings extends StatelessWidget {
   const InterfaceQMAudioSettings({super.key});

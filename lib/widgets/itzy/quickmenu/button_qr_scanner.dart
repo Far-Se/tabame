@@ -131,7 +131,6 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
       children: <Widget>[
         PanelHeader(
           title: "QR Scanner",
-          accent: accent,
           icon: Icons.qr_code_scanner_rounded,
           buttonPressed: _busy ? null : _scanQrCode,
           buttonIcon: Icons.screenshot_monitor_rounded,

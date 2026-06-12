@@ -330,12 +330,8 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                     if (kReleaseMode) {
                                       if (userSettings.args.contains('-wizardly')) {
                                         exit(0);
-                                      } else if (userSettings.args.contains('-fancyshot')) {
-                                        exit(0);
-                                      } else if (userSettings.args.contains('-interface')) {
-                                        WinUtils.reloadTabameQuickMenu();
-                                        exit(0);
                                       }
+                                      WinUtils.reloadTabameQuickMenu();
                                       exit(0);
                                     } else {
                                       setState(() {

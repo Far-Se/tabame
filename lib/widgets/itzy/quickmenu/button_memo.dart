@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -223,14 +222,13 @@ class MemosWidgetState extends State<MemosWidget> {
           // ---- Header ----
           PanelHeader(
             title: _headerTitle,
-            accent: accent,
             icon: Icons.notes_rounded,
             buttonIcon: _headerButtonIcon,
             buttonTooltip: _headerButtonTooltip,
             buttonPressed: _onHeaderButtonPressed,
             // Show a back/close button on edit & preview pages.
             extraActions: _page != _MemoPage.list
-                ? [
+                ? <Widget>[
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       tooltip: "Back to list",

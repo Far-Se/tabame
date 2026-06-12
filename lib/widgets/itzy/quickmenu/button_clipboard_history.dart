@@ -752,6 +752,7 @@ class _ClipboardHistoryTileState extends State<_ClipboardHistoryTile> {
 
   void _hidePreview() {
     _previewEntry?.remove();
+    _previewEntry?.dispose();
     _previewEntry = null;
   }
 

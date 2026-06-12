@@ -295,7 +295,6 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
         PanelHeader(
             title:
                 _selectedMonthFolder != null ? _selectedMonthFolder!.split(RegExp(r'[\\/]')).last : 'FancyShot Browser',
-            accent: accent,
             icon: _mediaType == _MediaType.screenshots ? Icons.photo_camera_outlined : Icons.videocam_outlined,
             extraActions: _selectedMonthFolder != null
                 ? <Widget>[

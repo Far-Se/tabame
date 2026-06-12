@@ -37,7 +37,6 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
       children: <Widget>[
         PanelHeader(
           title: window.title,
-          accent: accent,
           icon: Icons.window_rounded,
         ),
         Flexible(

@@ -496,7 +496,6 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
       children: <Widget>[
         PanelHeader(
           title: _adding ? "Add Authenticator" : "Authenticator",
-          accent: accent,
           icon: _adding ? Icons.qr_code_2_rounded : Icons.shield_outlined,
           extraActions: <Widget>[
             CustomTooltip(

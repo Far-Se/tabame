@@ -310,14 +310,14 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
         _buildToggleSetting(
           title: 'Show media control for each app',
           subtitle: 'Expose media controls directly from QuickMenu app entries',
-          value: userSettings.showMediaControlForApp,
+          value: userSettings.mediaControlForApp,
           onChanged: (bool value) async {
-            userSettings.showMediaControlForApp = value;
+            userSettings.mediaControlForApp = value;
             await Boxes.updateSettings('showMediaControlForApp', value);
             if (mounted) setState(() {});
           },
         ),
-        if (userSettings.showMediaControlForApp)
+        if (userSettings.mediaControlForApp)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: _buildMediaAppsField(),
@@ -375,12 +375,6 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
       onChanged: () {
         setState(() {});
       },
-      onOpenAppAudio: () {
-        final QMSettingsState? state = context.findAncestorStateOfType<QMSettingsState>();
-        if (state != null) {
-          state.openPage(5);
-        }
-      },
     );
   }
 
@@ -409,6 +403,99 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
     );
   }
 
+  Widget _buildAppAudioBanner(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final QMSettingsState? state = context.findAncestorStateOfType<QMSettingsState>();
+          state?.openPage(5);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: <Color>[
+                scheme.primary.withValues(alpha: 0.12),
+                scheme.primary.withValues(alpha: 0.06),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: scheme.primary.withValues(alpha: 0.20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.graphic_eq_rounded, size: 22, color: scheme.primary),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'App Audio Controls',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Provision isolated media controls for specific applications',
+                        style: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: scheme.primary.withValues(alpha: 0.18)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        'Configure',
+                        style: TextStyle(
+                          fontSize: Design.baseFontSize + 2,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 14, color: scheme.primary),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -425,6 +512,8 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
                 constraints: const BoxConstraints(maxWidth: 800),
                 child: Column(
                   children: <Widget>[
+                    _buildAppAudioBanner(context),
+                    const SizedBox(height: 16),
                     if (!Audio.canRunAudioModule) ...<Widget>[
                       _buildWarningCard('Audio Module unavailable on this Windows install. Investigating...'),
                       const SizedBox(height: 16),
@@ -454,12 +543,10 @@ class _QuickmenuVolumeRulesCard extends StatefulWidget {
   const _QuickmenuVolumeRulesCard({
     required this.volumes,
     required this.onChanged,
-    required this.onOpenAppAudio,
   });
 
   final List<DefaultVolume> volumes;
   final VoidCallback onChanged;
-  final VoidCallback onOpenAppAudio;
 
   @override
   State<_QuickmenuVolumeRulesCard> createState() => _QuickmenuVolumeRulesCardState();
@@ -662,17 +749,6 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                     },
                   ),
                 const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: widget.onOpenAppAudio,
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                      label: const Text('Open App Audio'),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

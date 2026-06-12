@@ -110,7 +110,6 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
             PanelHeader(
               title: "Subscriptions",
               icon: Icons.subscriptions,
-              accent: userSettings.themeColors.accent,
               buttonPressed: () => Navigator.of(context).pop(),
               buttonIcon: Icons.close,
             ),
@@ -687,7 +686,8 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
         Positioned(
           right: 0,
           top: 0,
-          child: Text("logo.dev ", style: TextStyle(fontSize: Design.baseFontSize, color: userSettings.themeColors.text)),
+          child:
+              Text("logo.dev ", style: TextStyle(fontSize: Design.baseFontSize, color: userSettings.themeColors.text)),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -881,7 +881,8 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text("Total/mo", style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
+                    Text("Total/mo",
+                        style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
                     Text("\$${totalMonthly.toStringAsFixed(2)}",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface)),
                   ],
@@ -928,8 +929,8 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                     return CircleAvatar(
                         backgroundColor: s.color.withValues(alpha: 0.2),
                         radius: 16,
-                        child:
-                            Text(s.name.substring(0, 1).toUpperCase(), style: TextStyle(color: s.color, fontSize: Design.baseFontSize + 2)));
+                        child: Text(s.name.substring(0, 1).toUpperCase(),
+                            style: TextStyle(color: s.color, fontSize: Design.baseFontSize + 2)));
                   },
                 ),
                 title: Text(s.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: onSurface)),
@@ -937,7 +938,8 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                   children: <Widget>[
                     Icon(IconData(cat.iconCodePoint, fontFamily: cat.fontFamily), size: 10, color: cat.color),
                     const SizedBox(width: 4),
-                    Text(cat.name, style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
+                    Text(cat.name,
+                        style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
                     if (!s.isActive) ...<Widget>[
                       const SizedBox(width: 8),
                       Container(
@@ -1027,7 +1029,8 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
             color: userSettings.themeColors.accent.withValues(alpha: 0.28),
             borderRadius: BorderRadius.circular(99),
           ),
-          child: Text("$count", style: TextStyle(fontSize: Design.baseFontSize, color: userSettings.themeColors.accent)),
+          child:
+              Text("$count", style: TextStyle(fontSize: Design.baseFontSize, color: userSettings.themeColors.accent)),
         ),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: onSurface.withValues(alpha: 0.2))),

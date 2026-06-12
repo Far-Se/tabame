@@ -1057,7 +1057,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
       padding: const EdgeInsets.all(16),
       children: <Widget>[
         _buildStatsDashboard(accent, onSurface),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         _buildOverviewSummary(onSurface),
         const SizedBox(height: 24),
         _buildVisualSection(accent, onSurface),

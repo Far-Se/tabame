@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
+import 'result_row.dart';
 
 // ---------------------------------------------------------------------------
 // File icon helper
@@ -65,84 +65,24 @@ class LauncherListItem extends StatelessWidget {
     final String path = entity.path;
     final int sepIdx = path.lastIndexOf(Platform.pathSeparator);
     final String name = sepIdx >= 0 ? path.substring(sepIdx + 1) : path;
-    final int animMs = isRepeating ? 50 : 200;
-    final Curve animCurve = isRepeating ? Curves.linear : Curves.easeOutCubic;
-
-    return RepaintBoundary(
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onHover: (PointerHoverEvent event) {
-          if (event.delta != Offset.zero) onHover();
-        },
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: animMs),
-            curve: animCurve,
-            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: BoxDecoration(
-              color: isSelected ? userSettings.themeColors.accent.withAlpha(55) : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Row(
-                children: <Widget>[
-                  // Selection indicator bar
-                  AnimatedContainer(
-                    duration: Duration(milliseconds: animMs),
-                    curve: animCurve,
-                    width: isSelected ? 2.5 : 0,
-                    height: 22,
-                    margin: EdgeInsets.only(right: isSelected ? 7 : 0),
-                    decoration: BoxDecoration(
-                      color: userSettings.themeColors.accent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  FileResultIcon(path: path),
-                  const SizedBox(width: 8),
-
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          name.replaceFirst('.lnk', ''),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: entryStyle(isSelected),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          path,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: Design.baseFontSize,
-                            color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // File / Dir badge
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: _FileKindBadge(
-                      isDirectory: entity.path.split('.').length != 2,
-                      accent: userSettings.themeColors.accent,
-                      onSurface: onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return LauncherResultRow(
+      isSelected: isSelected,
+      isRepeating: isRepeating,
+      accent: accent,
+      onSurface: onSurface,
+      onTap: onTap,
+      onHover: onHover,
+      icon: SizedBox(
+        width: 20,
+        height: 20,
+        child: FileResultIcon(path: path),
+      ),
+      title: name.replaceFirst('.lnk', ''),
+      subtitle: path,
+      badge: _FileKindBadge(
+        isDirectory: entity.path.split('.').length != 2,
+        accent: userSettings.themeColors.accent,
+        onSurface: onSurface,
       ),
     );
   }

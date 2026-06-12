@@ -239,7 +239,6 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 if (widget.showPanelHeader)
                   PanelHeader(
                     title: widget.title,
-                    accent: accent,
                     icon: Icons.emoji_emotions_outlined,
                     buttonPressed: _close,
                     buttonIcon: Icons.close_rounded,

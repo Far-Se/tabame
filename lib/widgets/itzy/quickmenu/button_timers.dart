@@ -155,7 +155,6 @@ class TimersWidgetState extends State<TimersWidget> {
       children: <Widget>[
         PanelHeader(
           title: "Quick Timers",
-          accent: accent,
           icon: Icons.timer_outlined,
           buttonIcon: Boxes.lastQuickTimers.isNotEmpty ? Icons.history_toggle_off_rounded : null,
           buttonTooltip: "Clear Recent History",

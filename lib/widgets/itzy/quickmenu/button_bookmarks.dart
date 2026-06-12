@@ -216,7 +216,6 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
         else
           PanelHeader(
             title: "Bookmarks",
-            accent: accent,
             icon: Icons.bookmark_rounded,
             buttonIcon: Icons.add_rounded,
             buttonTooltip: "Create Category",

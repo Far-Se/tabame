@@ -18,15 +18,8 @@ class FolderSearchHandler {
         return;
       }
 
-      // -----------------------------------------------------------------------
-      // Browsing mode: a folder has been drilled into — list its contents
-      // directly from the filesystem (not the DB), with "Open Folder in
-      // Explorer" and optionally "Go back" pinned at the top.
-      // -----------------------------------------------------------------------
       final String? browsingPath = context.browsingPath;
       if (browsingPath != null && browsingPath.isNotEmpty) {
-        // Run in an isolate but return serialized maps — FileSystemEntity
-        // objects cannot cross isolate boundaries.
         List<Map<String, Object?>> serializedEntries = <Map<String, Object?>>[];
         try {
           serializedEntries = await compute(
@@ -43,18 +36,13 @@ class FolderSearchHandler {
           return;
         }
 
-        // Reuse the same deserializer used by the normal DB search so that
-        // every item is a proper LauncherFileResult — Ctrl+K, Ctrl+C, the
-        // actions panel, and copy all work automatically.
         final List<LauncherSearchResultItem> results = deserializeFileMatches(serializedEntries);
 
         final List<LauncherSearchResultItem> pinned = <LauncherSearchResultItem>[
-          // 1. Open Folder in Explorer
           _buildOpenInExplorerAction(
             folderPath: browsingPath,
             onOpen: context.onOpenFolderInExplorer,
           ),
-          // 2. Go back (only when there is a parent to go back to)
           if (context.canGoBack) _buildGoBackAction(onGoBack: context.onGoBack),
         ];
 
@@ -66,9 +54,6 @@ class FolderSearchHandler {
         return;
       }
 
-      // -----------------------------------------------------------------------
-      // Normal desktop search (original behaviour).
-      // -----------------------------------------------------------------------
       final String desktopPath = WinUtils.getKnownFolderCLSID(0x0000);
       final List<Map<String, Object?>> desktopSearchFolders = <Map<String, Object?>>[
         <String, Object?>{
@@ -92,7 +77,6 @@ class FolderSearchHandler {
         );
       } catch (_) {}
 
-      // Guard after the async gap.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
         context.setSearching(false);
         return;
@@ -109,9 +93,6 @@ class FolderSearchHandler {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // "Open Folder in Explorer" pinned action
-  // ---------------------------------------------------------------------------
   static LauncherSearchResultItem _buildOpenInExplorerAction({
     required String folderPath,
     void Function(String)? onOpen,
@@ -144,9 +125,6 @@ class FolderSearchHandler {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // "Go back" pinned action
-  // ---------------------------------------------------------------------------
   static LauncherSearchResultItem _buildGoBackAction({
     VoidCallback? onGoBack,
   }) {
@@ -179,12 +157,6 @@ class FolderSearchHandler {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Top-level isolate function: lists folder contents and returns them as
-// serialized maps so they can safely cross the isolate boundary.
-// The main thread deserializes them with deserializeFileMatches(), which
-// produces proper LauncherFileResult items — identical to DB results.
-// ---------------------------------------------------------------------------
 List<Map<String, Object?>> _listFolderContentsInBackground(Map<String, Object?> args) {
   final String folderPath = args['folderPath'] as String;
   // final String query = (args['query'] as String? ?? '').toLowerCase();

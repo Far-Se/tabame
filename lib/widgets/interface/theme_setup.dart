@@ -5,6 +5,7 @@ import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 
 import '../../models/classes/boxes.dart';
@@ -728,8 +729,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                 const SizedBox(height: 10),
                 Text(
                   "Preview text using $family",
-                  style: TextStyle(
-                    fontFamily: family,
+                  style: GoogleFonts.getFont(
+                    family,
                     fontWeight: AppTheme.getFontWeight(weight),
                     fontStyle: italic ? FontStyle.italic : FontStyle.normal,
                     fontSize: 15,

@@ -42,6 +42,8 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
   List<_ColorOutputEntry> _formats = _defaultColorOutputEntries();
   String? _selectedFormatId = _defaultColorOutputEntries().first.id;
   bool _settingsMode = false;
+  bool _editMode = false;
+  ColorGridSample? _editedSample;
   _FormatSettingsPage _settingsPage = _FormatSettingsPage.library;
   String? _copiedMessage;
   Timer? _copiedTimer;
@@ -91,7 +93,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Theme.of(context).colorScheme.primary;
+    final Color accent = Design.accent;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -129,9 +131,9 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     windowManager.startDragging();
                   },
                   child: PanelHeader(
-                    title: _settingsMode ? "Color Formats" : "Color Picker",
-                    accent: accent,
-                    icon: _settingsMode ? Icons.tune_rounded : Icons.palette_outlined,
+                    title: _editMode ? "Edit Color" : (_settingsMode ? "Color Formats" : "Color Picker"),
+                    icon:
+                        _editMode ? Icons.edit_rounded : (_settingsMode ? Icons.tune_rounded : Icons.palette_outlined),
                     extraActions: <Widget>[
                       if (!widget.isStandalone)
                         CustomTooltip(
@@ -139,6 +141,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                           child: IconButton(
                             onPressed: () => setState(() {
                               _settingsMode = !_settingsMode;
+                              _editMode = false;
                               if (_settingsMode == false) {
                                 _settingsPage = _FormatSettingsPage.library;
                               }
@@ -172,9 +175,11 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 180),
-                    child: _settingsMode
-                        ? _buildSettingsPage(accent, const ColorGridSample(r: 150, g: 100, b: 60, hex: "96643c"))
-                        : _buildPickerView(capture, sample, formattedValue),
+                    child: _editMode
+                        ? _buildColorEditorPage(accent)
+                        : (_settingsMode
+                            ? _buildSettingsPage(accent, const ColorGridSample(r: 150, g: 100, b: 60, hex: "96643c"))
+                            : _buildPickerView(capture, sample, formattedValue)),
                   ),
                 ),
               ],
@@ -295,6 +300,24 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
             _buildFormatSelector(),
             const SizedBox(height: 8),
             _buildPreviewCard(capture, sample, formattedValue),
+            const SizedBox(height: 6),
+            OutlinedButton.icon(
+              onPressed: sample == null
+                  ? null
+                  : () {
+                      setState(() {
+                        _editedSample = sample;
+                        _editMode = true;
+                      });
+                    },
+              icon: const Icon(Icons.edit_rounded, size: 13),
+              label: const Text("Edit color"),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                visualDensity: VisualDensity.compact,
+                textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+              ),
+            ),
             const SizedBox(height: 8),
             _buildGridCard(capture),
           ],
@@ -441,6 +464,9 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                           selectedColumn: _selectedColumn,
                           accent: Theme.of(context).colorScheme.primary,
                           outline: Theme.of(context).colorScheme.onSurface,
+                          overrideRow: _editedSample != null ? _selectedRow : null,
+                          overrideColumn: _editedSample != null ? _selectedColumn : null,
+                          overrideColor: _editedSample?.color,
                         ),
                       ),
                     ),
@@ -545,6 +571,36 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
           },
         ),
       ),
+    );
+  }
+
+  // ── Color Editor ──────────────────────────────────────────────────────────
+
+  Widget _buildColorEditorPage(Color accent) {
+    final ColorGridSample? base = _editedSample;
+    if (base == null) {
+      return const SizedBox.shrink();
+    }
+    return _ColorEditorView(
+      key: ValueKey<String>(base.hex),
+      initial: base,
+      accent: accent,
+      onBack: () => setState(() {
+        _editMode = false;
+        _editedSample = null;
+      }),
+      onApply: (ColorGridSample updated) {
+        setState(() {
+          _editedSample = updated;
+          _editMode = false;
+        });
+        // The edited color is stored in _editedSample.
+        // Copy to clipboard using the currently selected format if desired.
+        final _ColorOutputEntry? fmt = _selectedFormat;
+        if (fmt != null) {
+          unawaited(_copyOutput(_formatSample(updated, fmt)));
+        }
+      },
     );
   }
 
@@ -1169,11 +1225,17 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
     setState(() {
       _selectedColumn = tappedColumn;
       _selectedRow = tappedRow;
+      // Clear any pending edit override so the new cell shows its real color.
+      _editedSample = null;
     });
   }
 
   ColorGridSample? _selectedSample(ColorPickerCapture? capture) {
     if (capture == null || capture.grid.isEmpty) return null;
+    // If the user applied an edit to the currently-selected cell, return that
+    // instead of the original captured value so the preview card and format
+    // output both reflect the modified color.
+    if (_editedSample != null) return _editedSample;
     final int row = _selectedRow.clamp(0, capture.rowCount - 1);
     final int column = _selectedColumn.clamp(0, capture.columnCount - 1);
     return capture.grid[row][column];
@@ -1986,6 +2048,9 @@ class _ColorGridPainter extends CustomPainter {
     required this.selectedColumn,
     required this.accent,
     required this.outline,
+    this.overrideRow,
+    this.overrideColumn,
+    this.overrideColor,
   });
 
   final ColorPickerCapture capture;
@@ -1993,6 +2058,9 @@ class _ColorGridPainter extends CustomPainter {
   final int selectedColumn;
   final Color accent;
   final Color outline;
+  final int? overrideRow;
+  final int? overrideColumn;
+  final Color? overrideColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2009,13 +2077,15 @@ class _ColorGridPainter extends CustomPainter {
     for (int row = 0; row < capture.rowCount; row++) {
       for (int column = 0; column < capture.columnCount; column++) {
         final ColorGridSample sample = capture.grid[row][column];
+        final bool isOverride = overrideColor != null && row == overrideRow && column == overrideColumn;
+        final Color cellColor = isOverride ? overrideColor! : sample.color;
         final Rect rect = Rect.fromLTWH(
           column * cellWidth,
           row * cellHeight,
           cellWidth,
           cellHeight,
         );
-        canvas.drawRect(rect, Paint()..color = sample.color);
+        canvas.drawRect(rect, Paint()..color = cellColor);
       }
     }
 
@@ -2087,6 +2157,783 @@ class _ColorGridPainter extends CustomPainter {
         oldDelegate.selectedRow != selectedRow ||
         oldDelegate.selectedColumn != selectedColumn ||
         oldDelegate.accent != accent ||
-        oldDelegate.outline != outline;
+        oldDelegate.outline != outline ||
+        oldDelegate.overrideRow != overrideRow ||
+        oldDelegate.overrideColumn != overrideColumn ||
+        oldDelegate.overrideColor != overrideColor;
   }
+}
+
+// ── Color Editor View ─────────────────────────────────────────────────────
+
+enum _EditorColorSpace { rgb, cmyk, hsl, oklch }
+
+class _ColorEditorView extends StatefulWidget {
+  const _ColorEditorView({
+    super.key,
+    required this.initial,
+    required this.accent,
+    required this.onBack,
+    required this.onApply,
+  });
+
+  final ColorGridSample initial;
+  final Color accent;
+  final VoidCallback onBack;
+  final ValueChanged<ColorGridSample> onApply;
+
+  @override
+  State<_ColorEditorView> createState() => _ColorEditorViewState();
+}
+
+class _ColorEditorViewState extends State<_ColorEditorView> {
+  _EditorColorSpace _space = _EditorColorSpace.rgb;
+
+  // Current color stored as linear 0-1 float channels (always updated together)
+  late double _r; // 0–255
+  late double _g;
+  late double _b;
+
+  @override
+  void initState() {
+    super.initState();
+    _r = widget.initial.r.toDouble();
+    _g = widget.initial.g.toDouble();
+    _b = widget.initial.b.toDouble();
+  }
+
+  // ── Derived conversions ─────────────────────────────────────────────────
+
+  Color get _color => Color.fromARGB(255, _r.round(), _g.round(), _b.round());
+
+  String get _hexString {
+    final int ri = _r.round().clamp(0, 255);
+    final int gi = _g.round().clamp(0, 255);
+    final int bi = _b.round().clamp(0, 255);
+    return '#${ri.toRadixString(16).padLeft(2, '0')}${gi.toRadixString(16).padLeft(2, '0')}${bi.toRadixString(16).padLeft(2, '0')}'
+        .toUpperCase();
+  }
+
+  // HSL
+  HSLColor get _hsl => HSLColor.fromColor(_color);
+
+  void _setFromHsl(double h, double s, double l) {
+    final Color c = HSLColor.fromAHSL(1, h.clamp(0, 360), s.clamp(0, 1), l.clamp(0, 1)).toColor();
+    setState(() {
+      _r = c.red.toDouble();
+      _g = c.green.toDouble();
+      _b = c.blue.toDouble();
+    });
+  }
+
+  // CMYK
+  ({double c, double m, double y, double k}) get _cmyk {
+    final double rn = _r / 255;
+    final double gn = _g / 255;
+    final double bn = _b / 255;
+    final double maxCh = math.max(rn, math.max(gn, bn));
+    final double k = 1 - maxCh;
+    if (k >= 0.9999) return (c: 0, m: 0, y: 0, k: 1);
+    return (
+      c: (1 - rn - k) / (1 - k),
+      m: (1 - gn - k) / (1 - k),
+      y: (1 - bn - k) / (1 - k),
+      k: k,
+    );
+  }
+
+  void _setFromCmyk(double c, double m, double y, double k) {
+    final double ri = 255 * (1 - c.clamp(0, 1)) * (1 - k.clamp(0, 1));
+    final double gi = 255 * (1 - m.clamp(0, 1)) * (1 - k.clamp(0, 1));
+    final double bi = 255 * (1 - y.clamp(0, 1)) * (1 - k.clamp(0, 1));
+    setState(() {
+      _r = ri.clamp(0, 255);
+      _g = gi.clamp(0, 255);
+      _b = bi.clamp(0, 255);
+    });
+  }
+
+  // OKLCH
+  ({double l, double c, double h}) get _oklch {
+    final double red = _srgbToLinearStatic(_r / 255);
+    final double green = _srgbToLinearStatic(_g / 255);
+    final double blue = _srgbToLinearStatic(_b / 255);
+    final double lms = 0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue;
+    final double mms = 0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue;
+    final double sms = 0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue;
+    final double lp = _cbrtStatic(lms);
+    final double mp = _cbrtStatic(mms);
+    final double sp = _cbrtStatic(sms);
+    final double L = 0.2104542553 * lp + 0.793617785 * mp - 0.0040720468 * sp;
+    final double a = 1.9779984951 * lp - 2.428592205 * mp + 0.4505937099 * sp;
+    final double b = 0.0259040371 * lp + 0.7827717662 * mp - 0.808675766 * sp;
+    final double chroma = math.sqrt(a * a + b * b);
+    double hue = math.atan2(b, a) * 180 / math.pi;
+    if (hue < 0) hue += 360;
+    return (l: L, c: chroma, h: hue);
+  }
+
+  void _setFromOklch(double L, double C, double H) {
+    final double Lc = L.clamp(0.0, 1.0);
+    final double Cc = C.clamp(0.0, 0.4);
+    final double rad = H * math.pi / 180;
+    final double a = Cc * math.cos(rad);
+    final double b = Cc * math.sin(rad);
+
+    // Oklab -> LMS
+    final double lp = Lc + 0.3963377774 * a + 0.2158037573 * b;
+    final double mp = Lc - 0.1055613458 * a - 0.0638541728 * b;
+    final double sp = Lc - 0.0894841775 * a - 1.2914855480 * b;
+
+    final double lms = lp * lp * lp;
+    final double mms = mp * mp * mp;
+    final double sms = sp * sp * sp;
+
+    // LMS -> linear sRGB
+    final double linR = 4.0767416621 * lms - 3.3077115913 * mms + 0.2309699292 * sms;
+    final double linG = -1.2684380046 * lms + 2.6097574011 * mms - 0.3413193965 * sms;
+    final double linB = -0.0041960863 * lms - 0.7034186147 * mms + 1.7076147010 * sms;
+
+    double toSrgb(double v) {
+      final double clamped = v.clamp(0.0, 1.0);
+      if (clamped <= 0.0031308) return clamped * 12.92;
+      return 1.055 * math.pow(clamped, 1 / 2.4) - 0.055;
+    }
+
+    setState(() {
+      _r = (toSrgb(linR) * 255).clamp(0, 255);
+      _g = (toSrgb(linG) * 255).clamp(0, 255);
+      _b = (toSrgb(linB) * 255).clamp(0, 255);
+    });
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color onSurface = theme.colorScheme.onSurface;
+    final Color accent = widget.accent;
+
+    return WindowsScrollView(
+      key: const ValueKey<String>('colorEditorView'),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          // Color preview swatch
+          _buildEditorSwatch(onSurface),
+          const SizedBox(height: 10),
+          // Space selector tabs
+          _buildSpaceTabs(accent, onSurface),
+          const SizedBox(height: 10),
+          // Sliders for active space
+          _buildSpaceSliders(accent, onSurface),
+          const SizedBox(height: 14),
+          // Action row
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: widget.onBack,
+                  icon: const Icon(Icons.arrow_back_rounded, size: 13),
+                  label: const Text("Back"),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    visualDensity: VisualDensity.compact,
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    final int ri = _r.round().clamp(0, 255);
+                    final int gi = _g.round().clamp(0, 255);
+                    final int bi = _b.round().clamp(0, 255);
+                    final String hex =
+                        '${ri.toRadixString(16).padLeft(2, '0')}${gi.toRadixString(16).padLeft(2, '0')}${bi.toRadixString(16).padLeft(2, '0')}';
+                    widget.onApply(ColorGridSample(r: ri, g: gi, b: bi, hex: hex));
+                  },
+                  icon: const Icon(
+                    Icons.check_rounded,
+                    size: 13,
+                    color: Color(0xFF11332A),
+                  ),
+                  label: const Text("Apply & copy"),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    visualDensity: VisualDensity.compact,
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditorSwatch(Color onSurface) {
+    final Color swatch = _color;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: swatch.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: swatch.withValues(alpha: 0.32)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: swatch.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: swatch,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.55)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                _hexString,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'rgb(${_r.round()}, ${_g.round()}, ${_b.round()})',
+                style: TextStyle(
+                  fontSize: Design.baseFontSize + 1,
+                  color: onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpaceTabs(Color accent, Color onSurface) {
+    return Row(
+      children: _EditorColorSpace.values.map((_EditorColorSpace space) {
+        final bool selected = _space == space;
+        final String label = switch (space) {
+          _EditorColorSpace.rgb => 'RGB',
+          _EditorColorSpace.cmyk => 'CMYK',
+          _EditorColorSpace.hsl => 'HSL',
+          _EditorColorSpace.oklch => 'OKLCH',
+        };
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _space = space),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              decoration: BoxDecoration(
+                color: selected ? accent.withValues(alpha: 0.14) : onSurface.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: selected ? accent.withValues(alpha: 0.35) : onSurface.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: Design.baseFontSize + 1,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? accent : onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSpaceSliders(Color accent, Color onSurface) {
+    return switch (_space) {
+      _EditorColorSpace.rgb => _buildRgbSliders(accent, onSurface),
+      _EditorColorSpace.cmyk => _buildCmykSliders(accent, onSurface),
+      _EditorColorSpace.hsl => _buildHslSliders(accent, onSurface),
+      _EditorColorSpace.oklch => _buildOklchSliders(accent, onSurface),
+    };
+  }
+
+  // ── RGB ─────────────────────────────────────────────────────────────────
+
+  Widget _buildRgbSliders(Color accent, Color onSurface) {
+    return Column(
+      children: <Widget>[
+        _buildColorSlider(
+          label: 'R',
+          value: _r / 255,
+          displayValue: _r.round().toString(),
+          unit: '/ 255',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              Color.fromARGB(255, 0, _g.round(), _b.round()),
+              Color.fromARGB(255, 255, _g.round(), _b.round()),
+            ],
+          ),
+          thumbColor: Color.fromARGB(255, _r.round(), 40, 40),
+          onSurface: onSurface,
+          onChanged: (double v) => setState(() => _r = v * 255),
+        ),
+        _buildColorSlider(
+          label: 'G',
+          value: _g / 255,
+          displayValue: _g.round().toString(),
+          unit: '/ 255',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              Color.fromARGB(255, _r.round(), 0, _b.round()),
+              Color.fromARGB(255, _r.round(), 255, _b.round()),
+            ],
+          ),
+          thumbColor: Color.fromARGB(255, 40, _g.round(), 40),
+          onSurface: onSurface,
+          onChanged: (double v) => setState(() => _g = v * 255),
+        ),
+        _buildColorSlider(
+          label: 'B',
+          value: _b / 255,
+          displayValue: _b.round().toString(),
+          unit: '/ 255',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              Color.fromARGB(255, _r.round(), _g.round(), 0),
+              Color.fromARGB(255, _r.round(), _g.round(), 255),
+            ],
+          ),
+          thumbColor: Color.fromARGB(255, 40, 40, _b.round()),
+          onSurface: onSurface,
+          onChanged: (double v) => setState(() => _b = v * 255),
+        ),
+      ],
+    );
+  }
+
+  // ── CMYK ────────────────────────────────────────────────────────────────
+
+  Widget _buildCmykSliders(Color accent, Color onSurface) {
+    final ({double c, double m, double y, double k}) cmyk = _cmyk;
+    return Column(
+      children: <Widget>[
+        _buildColorSlider(
+          label: 'C',
+          value: cmyk.c,
+          displayValue: '${(cmyk.c * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[_cmykToColor(0, cmyk.m, cmyk.y, cmyk.k), _cmykToColor(1, cmyk.m, cmyk.y, cmyk.k)],
+          ),
+          thumbColor: const Color(0xFF00AEEF),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromCmyk(v, cmyk.m, cmyk.y, cmyk.k),
+        ),
+        _buildColorSlider(
+          label: 'M',
+          value: cmyk.m,
+          displayValue: '${(cmyk.m * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[_cmykToColor(cmyk.c, 0, cmyk.y, cmyk.k), _cmykToColor(cmyk.c, 1, cmyk.y, cmyk.k)],
+          ),
+          thumbColor: const Color(0xFFEC008C),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromCmyk(cmyk.c, v, cmyk.y, cmyk.k),
+        ),
+        _buildColorSlider(
+          label: 'Y',
+          value: cmyk.y,
+          displayValue: '${(cmyk.y * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[_cmykToColor(cmyk.c, cmyk.m, 0, cmyk.k), _cmykToColor(cmyk.c, cmyk.m, 1, cmyk.k)],
+          ),
+          thumbColor: const Color(0xFFFFF200),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromCmyk(cmyk.c, cmyk.m, v, cmyk.k),
+        ),
+        _buildColorSlider(
+          label: 'K',
+          value: cmyk.k,
+          displayValue: '${(cmyk.k * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[_cmykToColor(cmyk.c, cmyk.m, cmyk.y, 0), _cmykToColor(cmyk.c, cmyk.m, cmyk.y, 1)],
+          ),
+          thumbColor: const Color(0xFF444444),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromCmyk(cmyk.c, cmyk.m, cmyk.y, v),
+        ),
+      ],
+    );
+  }
+
+  Color _cmykToColor(double c, double m, double y, double k) {
+    return Color.fromARGB(
+      255,
+      ((1 - c) * (1 - k) * 255).round().clamp(0, 255),
+      ((1 - m) * (1 - k) * 255).round().clamp(0, 255),
+      ((1 - y) * (1 - k) * 255).round().clamp(0, 255),
+    );
+  }
+
+  // ── HSL ─────────────────────────────────────────────────────────────────
+
+  Widget _buildHslSliders(Color accent, Color onSurface) {
+    final HSLColor hsl = _hsl;
+    return Column(
+      children: <Widget>[
+        _buildColorSlider(
+          label: 'H',
+          value: hsl.hue / 360,
+          displayValue: hsl.hue.round().toString(),
+          unit: '°',
+          trackGradient: const LinearGradient(
+            colors: <Color>[
+              Color(0xFFFF0000),
+              Color(0xFFFFFF00),
+              Color(0xFF00FF00),
+              Color(0xFF00FFFF),
+              Color(0xFF0000FF),
+              Color(0xFFFF00FF),
+              Color(0xFFFF0000),
+            ],
+          ),
+          thumbColor: HSLColor.fromAHSL(1, hsl.hue, 1, 0.5).toColor(),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromHsl(v * 360, hsl.saturation, hsl.lightness),
+        ),
+        _buildColorSlider(
+          label: 'S',
+          value: hsl.saturation,
+          displayValue: '${(hsl.saturation * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              HSLColor.fromAHSL(1, hsl.hue, 0, hsl.lightness).toColor(),
+              HSLColor.fromAHSL(1, hsl.hue, 1, hsl.lightness).toColor(),
+            ],
+          ),
+          thumbColor: HSLColor.fromAHSL(1, hsl.hue, hsl.saturation, 0.45).toColor(),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromHsl(hsl.hue, v, hsl.lightness),
+        ),
+        _buildColorSlider(
+          label: 'L',
+          value: hsl.lightness,
+          displayValue: '${(hsl.lightness * 100).round()}',
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              Colors.black,
+              HSLColor.fromAHSL(1, hsl.hue, hsl.saturation, 0.5).toColor(),
+              Colors.white,
+            ],
+          ),
+          thumbColor: HSLColor.fromAHSL(1, hsl.hue, hsl.saturation, hsl.lightness).toColor(),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromHsl(hsl.hue, hsl.saturation, v),
+        ),
+      ],
+    );
+  }
+
+  // ── OKLCH ───────────────────────────────────────────────────────────────
+
+  Widget _buildOklchSliders(Color accent, Color onSurface) {
+    final ({double c, double h, double l}) oklch = _oklch;
+    return Column(
+      children: <Widget>[
+        _buildColorSlider(
+          label: 'L',
+          value: oklch.l.clamp(0.0, 1.0),
+          displayValue: (oklch.l * 100).toStringAsFixed(1),
+          unit: '%',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              Colors.black,
+              _oklchToColor(0.5, oklch.c, oklch.h),
+              Colors.white,
+            ],
+          ),
+          thumbColor: _oklchToColor(oklch.l.clamp(0.0, 1.0), oklch.c, oklch.h),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromOklch(v, oklch.c, oklch.h),
+        ),
+        _buildColorSlider(
+          label: 'C',
+          value: (oklch.c / 0.4).clamp(0.0, 1.0),
+          displayValue: oklch.c.toStringAsFixed(3),
+          unit: '',
+          trackGradient: LinearGradient(
+            colors: <Color>[
+              _oklchToColor(oklch.l, 0, oklch.h),
+              _oklchToColor(oklch.l, 0.4, oklch.h),
+            ],
+          ),
+          thumbColor: _oklchToColor(oklch.l, oklch.c, oklch.h),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromOklch(oklch.l, v * 0.4, oklch.h),
+        ),
+        _buildColorSlider(
+          label: 'H',
+          value: oklch.h / 360,
+          displayValue: oklch.h.toStringAsFixed(1),
+          unit: '°',
+          trackGradient: const LinearGradient(
+            colors: <Color>[
+              Color(0xFFFF0000),
+              Color(0xFFFFFF00),
+              Color(0xFF00FF00),
+              Color(0xFF00FFFF),
+              Color(0xFF0000FF),
+              Color(0xFFFF00FF),
+              Color(0xFFFF0000),
+            ],
+          ),
+          thumbColor: _oklchToColor(oklch.l, oklch.c, oklch.h),
+          onSurface: onSurface,
+          onChanged: (double v) => _setFromOklch(oklch.l, oklch.c, v * 360),
+        ),
+      ],
+    );
+  }
+
+  Color _oklchToColor(double L, double C, double H) {
+    final double rad = H * math.pi / 180;
+    final double a = C * math.cos(rad);
+    final double b = C * math.sin(rad);
+    final double lp = L + 0.3963377774 * a + 0.2158037573 * b;
+    final double mp = L - 0.1055613458 * a - 0.0638541728 * b;
+    final double sp = L - 0.0894841775 * a - 1.2914855480 * b;
+    final double lms = lp * lp * lp;
+    final double mms = mp * mp * mp;
+    final double sms = sp * sp * sp;
+    final double linR = (4.0767416621 * lms - 3.3077115913 * mms + 0.2309699292 * sms).clamp(0.0, 1.0);
+    final double linG = (-1.2684380046 * lms + 2.6097574011 * mms - 0.3413193965 * sms).clamp(0.0, 1.0);
+    final double linB = (-0.0041960863 * lms - 0.7034186147 * mms + 1.7076147010 * sms).clamp(0.0, 1.0);
+    double toSrgb(double v) {
+      if (v <= 0.0031308) return v * 12.92;
+      return 1.055 * math.pow(v, 1 / 2.4) - 0.055;
+    }
+
+    return Color.fromARGB(
+      255,
+      (toSrgb(linR) * 255).round().clamp(0, 255),
+      (toSrgb(linG) * 255).round().clamp(0, 255),
+      (toSrgb(linB) * 255).round().clamp(0, 255),
+    );
+  }
+
+  // ── Shared slider widget ────────────────────────────────────────────────
+
+  Widget _buildColorSlider({
+    required String label,
+    required double value,
+    required String displayValue,
+    required String unit,
+    required LinearGradient trackGradient,
+    required Color thumbColor,
+    required Color onSurface,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              SizedBox(
+                width: 18,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _GradientSlider(
+                  value: value.clamp(0.0, 1.0),
+                  gradient: trackGradient,
+                  thumbColor: thumbColor,
+                  onChanged: onChanged,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 52,
+                child: Text(
+                  '$displayValue$unit',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1,
+                    fontWeight: FontWeight.w600,
+                    color: onSurface.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Gradient Slider ───────────────────────────────────────────────────────
+
+class _GradientSlider extends StatelessWidget {
+  const _GradientSlider({
+    required this.value,
+    required this.gradient,
+    required this.thumbColor,
+    required this.onChanged,
+  });
+
+  final double value;
+  final LinearGradient gradient;
+  final Color thumbColor;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        const double thumbRadius = 10.0;
+        const double trackHeight = 12.0;
+        final double trackWidth = constraints.maxWidth;
+        final double thumbX = thumbRadius + value * (trackWidth - thumbRadius * 2);
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragUpdate: (DragUpdateDetails d) {
+            final double newVal = ((d.localPosition.dx - thumbRadius) / (trackWidth - thumbRadius * 2)).clamp(0.0, 1.0);
+            onChanged(newVal);
+          },
+          onTapDown: (TapDownDetails d) {
+            final double newVal = ((d.localPosition.dx - thumbRadius) / (trackWidth - thumbRadius * 2)).clamp(0.0, 1.0);
+            onChanged(newVal);
+          },
+          child: SizedBox(
+            height: thumbRadius * 2 + 4,
+            width: trackWidth,
+            child: CustomPaint(
+              painter: _GradientSliderPainter(
+                value: value,
+                gradient: gradient,
+                thumbColor: thumbColor,
+                thumbX: thumbX,
+                trackHeight: trackHeight,
+                thumbRadius: thumbRadius,
+                outlineColor: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GradientSliderPainter extends CustomPainter {
+  const _GradientSliderPainter({
+    required this.value,
+    required this.gradient,
+    required this.thumbColor,
+    required this.thumbX,
+    required this.trackHeight,
+    required this.thumbRadius,
+    required this.outlineColor,
+  });
+
+  final double value;
+  final LinearGradient gradient;
+  final Color thumbColor;
+  final double thumbX;
+  final double trackHeight;
+  final double thumbRadius;
+  final Color outlineColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cy = size.height / 2;
+    final Rect trackRect = Rect.fromLTWH(0, cy - trackHeight / 2, size.width, trackHeight);
+    final RRect trackRRect = RRect.fromRectAndRadius(trackRect, Radius.circular(trackHeight / 2));
+
+    // checker for transparency hint
+    final Paint checkerPaint = Paint()..color = Colors.white.withValues(alpha: 0.12);
+    canvas.drawRRect(trackRRect, checkerPaint);
+
+    // gradient track
+    final Paint gradPaint = Paint()..shader = gradient.createShader(trackRect);
+    canvas.drawRRect(trackRRect, gradPaint);
+
+    // track outline
+    canvas.drawRRect(
+      trackRRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8
+        ..color = outlineColor.withValues(alpha: 0.18),
+    );
+
+    // thumb shadow
+    canvas.drawCircle(
+      Offset(thumbX, cy),
+      thumbRadius,
+      Paint()..color = Colors.black.withValues(alpha: 0.3),
+    );
+
+    // thumb fill
+    canvas.drawCircle(Offset(thumbX, cy), thumbRadius - 1, Paint()..color = thumbColor);
+
+    // thumb white ring
+    canvas.drawCircle(
+      Offset(thumbX, cy),
+      thumbRadius - 1,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = Colors.white.withValues(alpha: 0.9),
+    );
+
+    // thumb dark ring
+    canvas.drawCircle(
+      Offset(thumbX, cy),
+      thumbRadius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.black.withValues(alpha: 0.35),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GradientSliderPainter old) =>
+      old.value != value || old.thumbColor != thumbColor || old.gradient != gradient;
 }

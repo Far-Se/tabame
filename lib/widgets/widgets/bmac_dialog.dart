@@ -39,9 +39,8 @@ class BMACDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                PanelHeader(
+                const PanelHeader(
                   title: "Support Tabame",
-                  accent: accent,
                   icon: Icons.favorite_rounded,
                 ),
                 Padding(

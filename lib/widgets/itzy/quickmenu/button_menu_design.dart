@@ -12,7 +12,6 @@ import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
 import '../../../models/win32/win_utils.dart';
-import '../../../pages/launcher/launcher_design.dart';
 import '../../interface/theme_setup.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
@@ -53,7 +52,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   late _QuickMenuPaletteMode _paletteMode;
   late final List<Map<ColorSwatch<Object>, String>> _lightPresets;
   late final List<Map<ColorSwatch<Object>, String>> _darkPresets;
-  LauncherDesign launcherDesign = LauncherDesign.classic;
 
   bool _isBackdropProcessing = false;
   int _backdropProcessingTotal = 0;
@@ -63,8 +61,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   void initState() {
     super.initState();
 
-    final int savedIndex = Boxes.pref.getInt('launcherDesign') ?? 0;
-    launcherDesign = LauncherDesign.values[savedIndex.clamp(0, LauncherDesign.values.length - 1)];
     _paletteMode =
         userSettings.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
     _lightPresets = <Map<ColorSwatch<Object>, String>>[
@@ -274,7 +270,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       children: <Widget>[
         PanelHeader(
           title: "QuickMenu Design",
-          accent: accent,
           icon: Icons.dashboard_customize_outlined,
           buttonPressed: _resetCurrentPalette,
           buttonTooltip: "Reset To Default Colors",
@@ -394,7 +389,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 QuickMenuDesigns design = QuickMenuDesigns.classic;
                 bool selected = isQuickMenu
                     ? userSettings.currentQuickMenuDesign == design
-                    : launcherDesign == LauncherDesign.values[index];
+                    : User.s.launcherDesign == LauncherDesign.values[index];
 
                 if (isQuickMenu) {
                   design = QuickMenuDesigns.values[index];
@@ -412,7 +407,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                             _switchDesign(design);
                           } else {
                             await Boxes.pref.setInt("launcherDesign", index);
-                            launcherDesign = LauncherDesign.values[index];
+                            User.s.launcherDesign = LauncherDesign.values[index];
                             setState(() {});
                           }
                         },

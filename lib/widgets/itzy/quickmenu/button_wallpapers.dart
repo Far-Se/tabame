@@ -192,7 +192,6 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
       children: <Widget>[
         PanelHeader(
           title: widget.title,
-          accent: accent,
           icon: Icons.wallpaper_rounded,
         ),
         Padding(
@@ -499,6 +498,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
 
   void _hidePreview() {
     _previewEntry?.remove();
+    _previewEntry?.dispose();
     _previewEntry = null;
   }
 

@@ -341,9 +341,8 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       heightFactor: 0.96,
       child: Column(
         children: <Widget>[
-          PanelHeader(
+          const PanelHeader(
             title: "Calculator Guide",
-            accent: accent,
             icon: Icons.help_outline_rounded,
           ),
           Expanded(
@@ -444,7 +443,6 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
           children: <Widget>[
             PanelHeader(
               title: "Calculator",
-              accent: accent,
               icon: Icons.calculate_outlined,
               extraActions: <Widget>[
                 if (_statusMessage != null) ...<Widget>[
