@@ -92,11 +92,11 @@ class BookmarkSearchListItem extends StatelessWidget {
       icon: SizedBox(
         width: 20,
         height: 20,
-        child: _buildIcon(result, userSettings.themeColors.accent),
+        child: _buildIcon(result, Design.accent),
       ),
       title: result.title,
       subtitle: result.subtitle,
-      badge: _KindBadge(kind: result.kind, accent: userSettings.themeColors.accent, onSurface: onSurface),
+      badge: _KindBadge(kind: result.kind, accent: Design.accent, onSurface: onSurface),
     );
   }
 

@@ -18,11 +18,11 @@ class MainMenuSereneWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color surface = theme.colorScheme.surface;
     final bool isDark = theme.brightness == Brightness.dark;
 
-    final List<double> points = userSettings.themeColors.panelOpacityPoints;
+    final List<double> points = Design.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> maskColors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -30,9 +30,9 @@ class MainMenuSereneWidget extends StatelessWidget {
       maskColors.add(Colors.white.withValues(alpha: points[i + 1]));
     }
 
-    final double radius = User.theme.borderRadius;
-    final double tintStrength = (userSettings.themeColors.gradientAlpha.clamp(0, 255)) / 255.0;
-    final double baseAlpha = userSettings.activeBackdropPath.isNotEmpty ? 0.72 : 0.88;
+    final double radius = Design.borderRadius;
+    final double tintStrength = (Design.gradientAlpha.clamp(0, 255)) / 255.0;
+    final double baseAlpha = user.activeBackdropPath.isNotEmpty ? 0.72 : 0.88;
     final Color panelBase = surface.withValues(alpha: baseAlpha);
 
     final Color glowColor = Color.alphaBlend(
@@ -54,15 +54,6 @@ class MainMenuSereneWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[
-              // ── Layer 0: backdrop image ──────────────────────────────────
-              // Lives OUTSIDE the BackdropFilter so the blur never
-              // re-snapshots it.  Tooltip repaints or any other dirty-region
-              // above this layer cannot cause it to flicker.
-
-              // ── Layer 1: frosted-glass panel ─────────────────────────────
-              // BackdropFilter now only sees Layer 0 (the backdrop image or
-              // the window content behind the panel) — never the UI content
-              // column, which is promoted to Layer 2.
               Positioned.fill(
                 child: RepaintBoundary(
                   child: BackdropFilter(
@@ -71,8 +62,8 @@ class MainMenuSereneWidget extends StatelessWidget {
                       blendMode: BlendMode.dstIn,
                       shaderCallback: (Rect bounds) {
                         return LinearGradient(
-                          begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                          end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                          begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
+                          end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
                           colors: maskColors,
                           stops: stops,
                         ).createShader(bounds);
@@ -100,26 +91,20 @@ class MainMenuSereneWidget extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const StableBackdrop(),
-
-              // ── Layer 2: UI content ───────────────────────────────────────
-              // Promoted to its own RepaintBoundary so tooltip hovers,
-              // hover-state changes, or any widget repaint here cannot
-              // propagate down into the BackdropFilter's snapshot region.
+              if (Design.hasBackdrop) const StableBackdrop(),
               RepaintBoundary(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    if (!userSettings.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickActionsAtBottom) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
                         child: const TopBar(),
                       ),
                       _Hairline(color: dividerColor),
-                    ] else if (userSettings.bottomBarOnTop)
+                    ] else if (user.bottomBarOnTop)
                       const PinnedAndTrayList()
                     else
                       const SizedBox(height: 3),
@@ -128,9 +113,9 @@ class MainMenuSereneWidget extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: _Hairline(color: dividerColor),
                     ),
-                    if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
-                    if (userSettings.taskManagerStats) const TaskbarStats(),
-                    if (userSettings.libreStats) const LibreStats(),
+                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.taskManagerStats) const TaskbarStats(),
+                    if (user.libreStats) const LibreStats(),
                     Container(
                       padding: const EdgeInsets.fromLTRB(0, 4, 2, 6),
                       child: const BottomBar(),

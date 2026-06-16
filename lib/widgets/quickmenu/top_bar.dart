@@ -56,7 +56,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
-    if (userSettings.quickActionsAtBottom) return const SizedBox.shrink();
+    if (user.quickActionsAtBottom) return const SizedBox.shrink();
     return Theme(
       data: Theme.of(context).copyWith(
           iconTheme: IconThemeData(
@@ -80,7 +80,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!userSettings.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(width: 4),
                     const LogoDragButton(),
                     const SizedBox(width: 4)
@@ -91,7 +91,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                       child: BarWithButtons(
                         height: 25,
                         children: <Widget>[
-                          if (userSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                          if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
                           ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i])
                         ],
                       ),
@@ -99,7 +99,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                 ],
               ),
             ),
-            if (userSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
+            if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
             const OpenSettingsButton(),
             const SizedBox(width: 2),
           ],

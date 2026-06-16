@@ -106,7 +106,7 @@ class MouseInfoWidgetState extends State<MouseInfoWidget> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(

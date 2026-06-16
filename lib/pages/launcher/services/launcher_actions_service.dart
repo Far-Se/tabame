@@ -540,7 +540,7 @@ class LauncherActionsBuilder {
     // Mirrors the pattern used throughout launcher.dart.
     QuickMenuFunctions.hideQuickMenu();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
   }
 }
 

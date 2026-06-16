@@ -291,7 +291,8 @@ class CliBookWidgetState extends State<CliBookWidget> {
           const SizedBox(height: 8),
           Text(
             "Preview",
-            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: onSurface),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: onSurface),
           ),
           const SizedBox(height: 6),
           Container(
@@ -303,7 +304,8 @@ class CliBookWidgetState extends State<CliBookWidget> {
             ),
             child: SelectableText(
               resolvedCommand,
-              style: TextStyle(fontSize: Design.baseFontSize + 2, height: 1.45, color: onSurface.withAlpha(200)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2, height: 1.45, color: onSurface.withAlpha(200)),
             ),
           ),
           const SizedBox(height: 16),
@@ -551,7 +553,7 @@ class CliBookWidgetState extends State<CliBookWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -719,7 +721,9 @@ class CliBookWidgetState extends State<CliBookWidget> {
                                 ),
                                 child: Text(
                                   r"Use ${varName} inside the command if this item needs values at run time. Example: cd ${projectFolder}",
-                                  style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(160)),
+                                  style: TextStyle(
+                                      fontSize: Design.baseFontSize + 2,
+                                      color: onSurface.withAlpha(160)),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -763,8 +767,9 @@ class CliBookWidgetState extends State<CliBookWidget> {
                                     Text(
                                       "Store your frequently used CLI commands and snippets here for quick access.",
                                       textAlign: TextAlign.center,
-                                      style:
-                                          TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(128)),
+                                      style: TextStyle(
+                                          fontSize: Design.baseFontSize + 2,
+                                          color: onSurface.withAlpha(128)),
                                     ),
                                   ],
                                 ),
@@ -838,7 +843,7 @@ class _CliBookItemState extends State<_CliBookItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
+          color: _hovered ? Design.accent.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -872,7 +877,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                   height: 14,
                   margin: EdgeInsets.only(right: _hovered ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accent,
+                    color: Design.accent,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -896,8 +901,9 @@ class _CliBookItemState extends State<_CliBookItem> {
                   child: _copied
                       ? Text("Copied!",
                           style: TextStyle(
-                              fontSize: Design.baseFontSize + 2, color: userSettings.themeColors.accent.withAlpha(170)))
-                      : Icon(Icons.copy, size: 13, color: userSettings.themeColors.accent.withAlpha(170)),
+                              fontSize: Design.baseFontSize + 2,
+                              color: Design.accent.withAlpha(170)))
+                      : Icon(Icons.copy, size: 13, color: Design.accent.withAlpha(170)),
                 ),
                 const SizedBox(width: 8),
                 if (widget.onEdit != null)
@@ -922,7 +928,7 @@ class _CliBookItemState extends State<_CliBookItem> {
                     borderRadius: BorderRadius.circular(6),
                     child: Padding(
                       padding: const EdgeInsets.all(3),
-                      child: Icon(Icons.tune_rounded, size: 13, color: userSettings.themeColors.accent.withAlpha(220)),
+                      child: Icon(Icons.tune_rounded, size: 13, color: Design.accent.withAlpha(220)),
                     ),
                   ),
                 ),

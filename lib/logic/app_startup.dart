@@ -54,12 +54,12 @@ class AppStartup {
     if (arguments.isNotEmpty) {
       if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
       String argString = arguments.join(" ");
-      userSettings.args = <String>[...arguments];
+      user.args = <String>[...arguments];
       if (argString.contains("interface")) {
-        userSettings.page = TPage.interface;
+        user.page = TPage.interface;
       }
     }
-    Debug.add("Parsed arguments ${userSettings.page}");
+    Debug.add("Parsed arguments ${user.page}");
   }
 
   static Future<void> registerServices() async {
@@ -72,14 +72,14 @@ class AppStartup {
 
   static Future<bool> checkAdminAndRestart() async {
     if (kReleaseMode &&
-        userSettings.runAsAdministrator &&
+        user.runAsAdministrator &&
         !WinUtils.isAdministrator() &&
-        !userSettings.args.join(' ').contains('-tryadmin')) {
+        !user.args.join(' ').contains('-tryadmin')) {
       Debug.add("Trying Admin");
-      userSettings.args.add('-tryadmin');
+      user.args.add('-tryadmin');
       WinUtils.closeAllTabameExProcesses();
       Debug.add("Closed all tabame processed");
-      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${userSettings.args.join('" "')}"');
+      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${user.args.join('" "')}"');
       Debug.add("Started New");
       Timer(const Duration(seconds: 1), () {
         Debug.add("Started Close Current");
@@ -87,7 +87,7 @@ class AppStartup {
       });
       return true;
     }
-    if (userSettings.args.contains("-restarted")) {
+    if (user.args.contains("-restarted")) {
       Future<void>.delayed(const Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
     }
     return false;
@@ -96,7 +96,7 @@ class AppStartup {
   static void registerHooks() {
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
-      if (userSettings.args.contains("-interface") && Boxes.remap.isEmpty) {
+      if (user.args.contains("-interface") && Boxes.remap.isEmpty) {
         NativeHooks.registerCallHandler();
       } else {
         NativeHooks.registerCallHandler();
@@ -106,11 +106,11 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
-    if (userSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+    if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
       late String title;
-      if (userSettings.args.contains("-wizardly")) {
+      if (user.args.contains("-wizardly")) {
         title = "Wizardly";
-      } else if (userSettings.args.contains("-fancyshot")) {
+      } else if (user.args.contains("-fancyshot")) {
         title = "Fancyshot";
       } else {
         title = "Interface";
@@ -153,8 +153,8 @@ class AppStartup {
   static Future<void> finalizeStartup() async {
     Debug.add("Setting transparency");
     await setWindowAsTransparent();
-    if (userSettings.quickClickEnabled) {
-      await QuickClick.registerQuickClick(userSettings.quickClickConfig);
+    if (user.quickClickEnabled) {
+      await QuickClick.registerQuickClick(user.quickClickConfig);
       await QuickClick.disableQuickClick();
     }
     Debug.add("Set transparency");

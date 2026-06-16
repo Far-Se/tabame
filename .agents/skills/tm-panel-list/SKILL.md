@@ -31,9 +31,9 @@ The `tm-panel-list` style is used for sidebars, modals, and narrow configuration
 
 ### Typography
 
-- **Card Title**: `fontSize: Design.baseFontSize + 2.5`, `fontWeight: FontWeight.w700`.
-- **Card Description**: `fontSize: Design.baseFontSize + 0.5`, `color: onSurface.withAlpha(150)`, `height: 1.25`.
-- **Meta Chips**: `fontSize: Design.baseFontSize + 0.5`, `fontWeight: FontWeight.w700`.
+- **Card Title**: `fontSize: userSettings.themeColors.baseFontSize + 2.5`, `fontWeight: FontWeight.w700`.
+- **Card Description**: `fontSize: userSettings.themeColors.baseFontSize + 0.5`, `color: onSurface.withAlpha(150)`, `height: 1.25`.
+- **Meta Chips**: `fontSize: userSettings.themeColors.baseFontSize + 0.5`, `fontWeight: FontWeight.w700`.
 
 ## Key Components & Patterns
 
@@ -78,7 +78,7 @@ Compact badges for showing values (hex codes, percentages, toggles).
 Used for design types or mode switching within a card.
 
 - `ChoiceChip` with `visualDensity: VisualDensity.compact`.
-- `labelStyle`: `fontSize: Design.baseFontSize + 1.5`.
+- `labelStyle`: `fontSize: userSettings.themeColors.baseFontSize + 1.5`.
 - Selected color: `userSettings.themeColors.accentColor.withAlpha(18)`.
 
 ### 4. Color Swatches/Pickers

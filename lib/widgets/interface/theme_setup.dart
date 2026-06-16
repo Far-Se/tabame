@@ -71,8 +71,8 @@ Map<ColorSwatch<Object>, String> getPredefinedColorSet(List<List<int>> predefine
 class ThemeSetupState extends State<ThemeSetup> {
   bool changed = false;
 
-  ThemeColors savedLightTheme = userSettings.lightTheme.copyWith();
-  ThemeColors savedDarkTheme = userSettings.darkTheme.copyWith();
+  ThemeColors savedLightTheme = user.lightTheme.copyWith();
+  ThemeColors savedDarkTheme = user.darkTheme.copyWith();
 
   List<Map<ColorSwatch<Object>, String>> predefinedColorsLight = <Map<ColorSwatch<Object>, String>>[
     getPredefinedColorSet(lightThemeOptions, 0),
@@ -100,19 +100,19 @@ class ThemeSetupState extends State<ThemeSetup> {
   }
 
   void _onSaved() async {
-    if (userSettings.themeTypeMode == ThemeType.dark) {
+    if (user.themeTypeMode == ThemeType.dark) {
       await Boxes.saveActiveQuickMenuThemes();
-      savedDarkTheme = userSettings.darkTheme.copyWith();
-      Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+      savedDarkTheme = user.darkTheme.copyWith();
+      Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
     } else {
       await Boxes.saveActiveQuickMenuThemes();
-      savedLightTheme = userSettings.lightTheme.copyWith();
+      savedLightTheme = user.lightTheme.copyWith();
     }
     setState(() => changed = false);
   }
 
   Future<void> _exportThemes() async {
-    final Map<String, dynamic> data = jsonDecode(userSettings.quickMenuDesignThemesToJson());
+    final Map<String, dynamic> data = jsonDecode(user.quickMenuDesignThemesToJson());
     for (final dynamic designEntry in data.values) {
       if (designEntry is Map<dynamic, dynamic>) {
         for (final String themeKey in <String>['lightTheme', 'darkTheme']) {
@@ -170,7 +170,7 @@ class ThemeSetupState extends State<ThemeSetup> {
           }
         }
 
-        userSettings.loadQuickMenuDesignThemesFromJson(jsonEncode(data));
+        user.loadQuickMenuDesignThemesFromJson(jsonEncode(data));
         await Boxes.saveActiveQuickMenuThemes(notify: true);
 
         // Update local state to reflect imported themes for current design
@@ -201,48 +201,48 @@ class ThemeSetupState extends State<ThemeSetup> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               child: Material(
                 type: MaterialType.transparency,
-                child: userSettings.themeTypeMode == ThemeType.dark
+                child: user.themeTypeMode == ThemeType.dark
                     ? ThemeSetupWidget(
                         title: "Dark Theme",
                         savedColors: savedDarkTheme,
-                        currentColors: userSettings.darkTheme,
+                        currentColors: user.darkTheme,
                         onChanged: () => setState(() => changed = true),
                         onGradientChanged: (double e) {
-                          userSettings.darkTheme.gradientAlpha = e.toInt();
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          user.darkTheme.gradientAlpha = e.toInt();
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                         },
                         onBackdropOpacityChanged: (double e) {
-                          userSettings.darkTheme.backdropOpacity = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          user.darkTheme.backdropOpacity = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                         },
                         onPanelOpacityPointsChanged: (List<double> e) {
-                          userSettings.darkTheme.panelOpacityPoints = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          user.darkTheme.panelOpacityPoints = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityBeginChanged: (String e) {
-                          userSettings.darkTheme.panelOpacityBegin = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          user.darkTheme.panelOpacityBegin = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityEndChanged: (String e) {
-                          userSettings.darkTheme.panelOpacityEnd = e;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          user.darkTheme.panelOpacityEnd = e;
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onColorChanged: (Color color, int i) {
-                          if (i == 0) userSettings.darkTheme.background = color;
-                          if (i == 1) userSettings.darkTheme.text = color;
-                          if (i == 2) userSettings.darkTheme.accent = color;
+                          if (i == 0) user.darkTheme.background = color;
+                          if (i == 1) user.darkTheme.text = color;
+                          if (i == 2) user.darkTheme.accent = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                          Boxes.updateSettings("previewThemeDark", jsonDecode(userSettings.darkTheme.toJson()));
+                          Boxes.updateSettings("previewThemeDark", jsonDecode(user.darkTheme.toJson()));
                         },
                         predefinedColors: predefinedColorsDark,
                         themeOptions: darkThemeOptions,
                         onDesignChanged: (QuickMenuDesigns design) async {
                           await Boxes.switchQuickMenuDesign(design);
-                          savedDarkTheme = userSettings.darkTheme.copyWith();
-                          savedLightTheme = userSettings.lightTheme.copyWith();
+                          savedDarkTheme = user.darkTheme.copyWith();
+                          savedLightTheme = user.lightTheme.copyWith();
                           setState(() => changed = false);
                         },
                         onExport: _exportThemes,
@@ -251,41 +251,41 @@ class ThemeSetupState extends State<ThemeSetup> {
                     : ThemeSetupWidget(
                         title: "Light Theme",
                         savedColors: savedLightTheme,
-                        currentColors: userSettings.lightTheme,
+                        currentColors: user.lightTheme,
                         onChanged: () => setState(() => changed = true),
                         onGradientChanged: (double e) {
-                          userSettings.lightTheme.gradientAlpha = e.toInt();
+                          user.lightTheme.gradientAlpha = e.toInt();
                         },
                         onBackdropOpacityChanged: (double e) {
-                          userSettings.lightTheme.backdropOpacity = e;
+                          user.lightTheme.backdropOpacity = e;
                         },
                         onPanelOpacityPointsChanged: (List<double> e) {
-                          userSettings.lightTheme.panelOpacityPoints = e;
+                          user.lightTheme.panelOpacityPoints = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityBeginChanged: (String e) {
-                          userSettings.lightTheme.panelOpacityBegin = e;
+                          user.lightTheme.panelOpacityBegin = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onPanelOpacityEndChanged: (String e) {
-                          userSettings.lightTheme.panelOpacityEnd = e;
+                          user.lightTheme.panelOpacityEnd = e;
 
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         onColorChanged: (Color color, int i) {
-                          if (i == 0) userSettings.lightTheme.background = color;
-                          if (i == 1) userSettings.lightTheme.text = color;
-                          if (i == 2) userSettings.lightTheme.accent = color;
+                          if (i == 0) user.lightTheme.background = color;
+                          if (i == 1) user.lightTheme.text = color;
+                          if (i == 2) user.lightTheme.accent = color;
                           Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                         },
                         predefinedColors: predefinedColorsLight,
                         themeOptions: lightThemeOptions,
                         onDesignChanged: (QuickMenuDesigns design) async {
                           await Boxes.switchQuickMenuDesign(design);
-                          savedDarkTheme = userSettings.darkTheme.copyWith();
-                          savedLightTheme = userSettings.lightTheme.copyWith();
+                          savedDarkTheme = user.darkTheme.copyWith();
+                          savedLightTheme = user.lightTheme.copyWith();
                           setState(() => changed = false);
                         },
                         onExport: _exportThemes,
@@ -413,15 +413,15 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   }
 
   Future<void> _setThemeType(ThemeType? value) async {
-    userSettings.themeType = value ?? ThemeType.system;
-    await Boxes.updateSettings("themeType", userSettings.themeType.index);
+    user.themeType = value ?? ThemeType.system;
+    await Boxes.updateSettings("themeType", user.themeType.index);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
 
   Future<void> _pickThemeStart() async {
-    final int hour = (userSettings.themeScheduleMin ~/ 60);
-    final int minute = (userSettings.themeScheduleMin % 60);
+    final int hour = (user.themeScheduleMin ~/ 60);
+    final int minute = (user.themeScheduleMin % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -432,15 +432,15 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
       },
     );
     if (timePicker == null) return;
-    userSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
-    await Boxes.updateSettings("themeScheduleMin", userSettings.themeScheduleMin);
+    user.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
+    await Boxes.updateSettings("themeScheduleMin", user.themeScheduleMin);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
 
   Future<void> _pickThemeEnd() async {
-    final int hour = (userSettings.themeScheduleMax ~/ 60);
-    final int minute = (userSettings.themeScheduleMax % 60);
+    final int hour = (user.themeScheduleMax ~/ 60);
+    final int minute = (user.themeScheduleMax % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -452,9 +452,9 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     );
     if (timePicker == null) return;
     final int newTime = (timePicker.hour) * 60 + (timePicker.minute);
-    if (newTime < userSettings.themeScheduleMin) return;
-    userSettings.themeScheduleMax = newTime;
-    await Boxes.updateSettings("themeScheduleMax", userSettings.themeScheduleMax);
+    if (newTime < user.themeScheduleMin) return;
+    user.themeScheduleMax = newTime;
+    await Boxes.updateSettings("themeScheduleMax", user.themeScheduleMax);
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
@@ -523,7 +523,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent.withValues(alpha: 1.0);
+    final Color accent = Design.accent.withValues(alpha: 1.0);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -936,7 +936,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
   Widget _buildDesignTile(
       String title, String subtitle, QuickMenuDesigns current, ValueChanged<QuickMenuDesigns> onSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accent.withValues(alpha: 1.0);
+    final Color accent = Design.accent.withValues(alpha: 1.0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1125,7 +1125,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                   child: _buildDesignTile(
                     "Design Type",
                     "Quickly switch between predefined interface styles.",
-                    userSettings.currentQuickMenuDesign,
+                    user.currentQuickMenuDesign,
                     (QuickMenuDesigns design) {
                       widget.onDesignChanged(design);
                       setState(() {});
@@ -1163,7 +1163,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                       const Text("Theme Mode", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                       const SizedBox(height: 3),
                       Text(
-                        switch (userSettings.themeType) {
+                        switch (user.themeType) {
                           ThemeType.system => "Following Windows settings",
                           ThemeType.light => "Always use light theme",
                           ThemeType.dark => "Always use dark theme",
@@ -1182,7 +1182,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                       hoverColor: accent.withValues(alpha: 0.05),
                     ),
                     child: PopupMenuButton<ThemeType>(
-                      initialValue: userSettings.themeType,
+                      initialValue: user.themeType,
                       tooltip: "Select Theme Mode",
                       onSelected: _setThemeType,
                       offset: const Offset(0, 40),
@@ -1193,11 +1193,11 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           child: Row(
                             children: <Widget>[
                               Icon(
-                                type == userSettings.themeType
+                                type == user.themeType
                                     ? Icons.radio_button_checked_rounded
                                     : Icons.radio_button_off_rounded,
                                 size: 16,
-                                color: type == userSettings.themeType ? accent : onSurface.withValues(alpha: 0.5),
+                                color: type == user.themeType ? accent : onSurface.withValues(alpha: 0.5),
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -1224,7 +1224,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             Text(
-                              switch (userSettings.themeType) {
+                              switch (user.themeType) {
                                 ThemeType.system => "System",
                                 ThemeType.light => "Light",
                                 ThemeType.dark => "Dark",
@@ -1244,7 +1244,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
               ],
             ),
           ),
-          if (userSettings.themeType == ThemeType.schedule) ...<Widget>[
+          if (user.themeType == ThemeType.schedule) ...<Widget>[
             const SizedBox(height: 8),
             _buildScheduleTimes(accent, onSurface),
           ],
@@ -1258,9 +1258,9 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          _timeChipRedesigned("From", userSettings.themeScheduleMin.formatTime(), _pickThemeStart, accent, onSurface),
+          _timeChipRedesigned("From", user.themeScheduleMin.formatTime(), _pickThemeStart, accent, onSurface),
           const SizedBox(width: 16),
-          _timeChipRedesigned("To", userSettings.themeScheduleMax.formatTime(), _pickThemeEnd, accent, onSurface),
+          _timeChipRedesigned("To", user.themeScheduleMax.formatTime(), _pickThemeEnd, accent, onSurface),
         ],
       ),
     );
@@ -1382,11 +1382,11 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
 
                             final String removedPath = widget.currentColors.backdropImages[index];
                             widget.currentColors.backdropImages.remove(removedPath);
-                            if (userSettings.activeBackdropPath == removedPath) {
+                            if (user.activeBackdropPath == removedPath) {
                               if (widget.currentColors.backdropImages.isNotEmpty) {
-                                userSettings.activeBackdropPath = widget.currentColors.backdropImages.first;
+                                user.activeBackdropPath = widget.currentColors.backdropImages.first;
                               } else {
-                                userSettings.activeBackdropPath = "";
+                                user.activeBackdropPath = "";
                               }
                             }
                             // final String removedPath = widget.currentColors.backdropImages;

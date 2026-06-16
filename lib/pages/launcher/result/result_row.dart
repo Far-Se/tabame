@@ -177,7 +177,7 @@ class LauncherResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return User.s.launcherDesign == LauncherDesign.serene ? _buildSerene(context) : _buildClassic(context);
+    return user.launcherDesign == LauncherDesign.serene ? _buildSerene(context) : _buildClassic(context);
   }
 
   // ── Classic ────────────────────────────────────────────────────────────────

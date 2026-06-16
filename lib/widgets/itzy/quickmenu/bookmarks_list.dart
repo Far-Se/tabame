@@ -325,10 +325,10 @@ class _BookmarkRowItemState extends State<_BookmarkRowItem> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 1.5),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accent.withAlpha(25) : onSurface.withAlpha(5),
+          color: _hovered ? Design.accent.withAlpha(25) : onSurface.withAlpha(5),
           borderRadius: BorderRadius.circular(9),
           border: Border.all(
-            color: _hovered ? userSettings.themeColors.accent.withAlpha(60) : onSurface.withAlpha(12),
+            color: _hovered ? Design.accent.withAlpha(60) : onSurface.withAlpha(12),
           ),
         ),
         child: InkWell(
@@ -464,10 +464,9 @@ class _BookmarkGridItemState extends State<_BookmarkGridItem> {
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
-              color: _hovered ? userSettings.themeColors.accent.withAlpha(35) : onSurface.withAlpha(10),
+              color: _hovered ? Design.accent.withAlpha(35) : onSurface.withAlpha(10),
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                  color: _hovered ? userSettings.themeColors.accent.withAlpha(110) : onSurface.withAlpha(18), width: 1),
+              border: Border.all(color: _hovered ? Design.accent.withAlpha(110) : onSurface.withAlpha(18), width: 1),
             ),
             child: Center(
               child: BookmarkIcon(

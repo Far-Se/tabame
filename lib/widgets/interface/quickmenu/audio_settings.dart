@@ -79,10 +79,10 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
   }
 
   Future<void> _setVolumeOSDStyle(VolumeOSDStyle? value) async {
-    userSettings.volumeOSDStyle = value ?? VolumeOSDStyle.normal;
+    user.volumeOSDStyle = value ?? VolumeOSDStyle.normal;
     WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
-    WinUtils.setVolumeOSDStyle(type: userSettings.volumeOSDStyle, applyStyle: true);
-    await Boxes.updateSettings('volumeOSDStyle', userSettings.volumeOSDStyle.index);
+    WinUtils.setVolumeOSDStyle(type: user.volumeOSDStyle, applyStyle: true);
+    await Boxes.updateSettings('volumeOSDStyle', user.volumeOSDStyle.index);
     if (!mounted) return;
     setState(() {});
   }
@@ -270,30 +270,30 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
         _buildToggleSetting(
           title: 'Multimedia',
           subtitle: 'Apply volume and mute actions to the main playback device',
-          value: userSettings.audioMultimedia,
+          value: user.audioMultimedia,
           onChanged: (bool value) async {
-            userSettings.audioMultimedia = value;
-            await Boxes.updateSettings('audio', userSettings.audio);
+            user.audioMultimedia = value;
+            await Boxes.updateSettings('audio', user.audio);
             if (mounted) setState(() {});
           },
         ),
         _buildToggleSetting(
           title: 'Console',
           subtitle: 'Include the system console role when changing volume',
-          value: userSettings.audioConsole,
+          value: user.audioConsole,
           onChanged: (bool value) async {
-            userSettings.audioConsole = value;
-            await Boxes.updateSettings('audio', userSettings.audio);
+            user.audioConsole = value;
+            await Boxes.updateSettings('audio', user.audio);
             if (mounted) setState(() {});
           },
         ),
         _buildToggleSetting(
           title: 'Communications',
           subtitle: 'Include call-oriented devices in global audio actions',
-          value: userSettings.audioCommunications,
+          value: user.audioCommunications,
           onChanged: (bool value) async {
-            userSettings.audioCommunications = value;
-            await Boxes.updateSettings('audio', userSettings.audio);
+            user.audioCommunications = value;
+            await Boxes.updateSettings('audio', user.audio);
             if (mounted) setState(() {});
           },
         ),
@@ -310,14 +310,14 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
         _buildToggleSetting(
           title: 'Show media control for each app',
           subtitle: 'Expose media controls directly from QuickMenu app entries',
-          value: userSettings.mediaControlForApp,
+          value: user.mediaControlForApp,
           onChanged: (bool value) async {
-            userSettings.mediaControlForApp = value;
+            user.mediaControlForApp = value;
             await Boxes.updateSettings('showMediaControlForApp', value);
             if (mounted) setState(() {});
           },
         ),
-        if (userSettings.mediaControlForApp)
+        if (user.mediaControlForApp)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             child: _buildMediaAppsField(),
@@ -335,7 +335,7 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: RadioGroup<VolumeOSDStyle>(
-            groupValue: userSettings.volumeOSDStyle,
+            groupValue: user.volumeOSDStyle,
             onChanged: _setVolumeOSDStyle,
             child: Column(
               children: <Widget>[
@@ -521,7 +521,7 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
                     _buildTargetingCard(),
                     const SizedBox(height: 16),
                     _buildMediaIntegrationCard(),
-                    if (userSettings.isWindows10) ...<Widget>[
+                    if (user.isWindows10) ...<Widget>[
                       const SizedBox(height: 16),
                       _buildVolumeOsdCard(),
                     ],
@@ -619,8 +619,8 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
               children: <Widget>[
                 InkWell(
                   onTap: () async {
-                    userSettings.volumeSetBack = !userSettings.volumeSetBack;
-                    await Boxes.updateSettings('volumeSetBack', userSettings.volumeSetBack);
+                    user.volumeSetBack = !user.volumeSetBack;
+                    await Boxes.updateSettings('volumeSetBack', user.volumeSetBack);
                     if (mounted) setState(() {});
                   },
                   borderRadius: BorderRadius.circular(10),
@@ -647,9 +647,9 @@ class _QuickmenuVolumeRulesCardState extends State<_QuickmenuVolumeRulesCard> {
                           ),
                         ),
                         MiniToggleSwitch(
-                          value: userSettings.volumeSetBack,
+                          value: user.volumeSetBack,
                           onChanged: (bool value) async {
-                            userSettings.volumeSetBack = value;
+                            user.volumeSetBack = value;
                             await Boxes.updateSettings('volumeSetBack', value);
                             if (mounted) setState(() {});
                           },

@@ -30,8 +30,8 @@ class QuickClickOverlay extends StatefulWidget {
 }
 
 class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListener {
-  final List<String> rows = userSettings.quickClickConfig.verticalKeys.toUpperCaseAll().split('');
-  final List<String> cols = userSettings.quickClickConfig.horizontalKeys.toUpperCaseAll().split('');
+  final List<String> rows = user.quickClickConfig.verticalKeys.toUpperCaseAll().split('');
+  final List<String> cols = user.quickClickConfig.horizontalKeys.toUpperCaseAll().split('');
 
   late double screenWidth;
   late double screenHeight;
@@ -95,7 +95,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     super.initState();
     Win32.setWindowInvisible(true);
     NativeHooks.addListener(this);
-    QuickClick.setQuickClickHotkeys(userSettings.quickClickConfig);
+    QuickClick.setQuickClickHotkeys(user.quickClickConfig);
     QuickClick.enableQuickClick();
     _enableDpiAwareness();
 
@@ -360,7 +360,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   }
 
   Widget _buildInfoModal() {
-    final QuickClickConfig config = userSettings.quickClickConfig;
+    final QuickClickConfig config = user.quickClickConfig;
     final String hKeys = config.horizontalKeys.toUpperCase();
     final String vKeys = config.verticalKeys.toUpperCase();
     final ColorScheme colors = Theme.of(context).colorScheme;
@@ -470,7 +470,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
               width: 30,
               height: 30,
               child: CustomPaint(
-                painter: RightTrianglePainter(color: userSettings.themeColors.accent),
+                painter: RightTrianglePainter(color: Design.accent),
               ),
             ),
           ),
@@ -492,7 +492,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
 
   // Phase 1 – picker: 4 quadrants with a letter at the center seam.
   Widget _buildZonePicker() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final double hw = screenWidth / 2;
     final double hh = screenHeight / 2;
 
@@ -544,8 +544,8 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   // giving the user finer precision within that quadrant.
   Widget _buildZonedGrid() {
     final Rect zone = _zoneRect;
-    final Color accent = userSettings.themeColors.accent;
-    final Color text = userSettings.themeColors.text;
+    final Color accent = Design.accent;
+    final Color text = Design.text;
 
     return Stack(
       children: <Widget>[
@@ -740,8 +740,8 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   }
 
   Widget _buildLabels() {
-    final Color accent = userSettings.themeColors.accent;
-    final Color text = userSettings.themeColors.text;
+    final Color accent = Design.accent;
+    final Color text = Design.text;
 
     return Stack(
       children: <Widget>[
@@ -954,13 +954,13 @@ class _CoordChip extends StatelessWidget {
         color: const Color(0xFF0D0F14).withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: userSettings.themeColors.accent.withValues(alpha: 0.22),
+          color: Design.accent.withValues(alpha: 0.22),
         ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: userSettings.themeColors.accent,
+          color: Design.accent,
           fontSize: Design.baseFontSize + 2,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.4,
@@ -977,7 +977,7 @@ class _HintKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return Container(
       width: 30,
       height: 30,
@@ -1004,7 +1004,7 @@ class _DragBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -1209,14 +1209,14 @@ class GridPainter extends CustomPainter {
 
       canvas.drawRect(
         rect,
-        Paint()..color = userSettings.themeColors.accent.withValues(alpha: 0.08),
+        Paint()..color = Design.accent.withValues(alpha: 0.08),
       );
       canvas.drawRect(
         rect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5
-          ..color = userSettings.themeColors.accent.withValues(alpha: 0.45),
+          ..color = Design.accent.withValues(alpha: 0.45),
       );
     }
 
@@ -1225,7 +1225,7 @@ class GridPainter extends CustomPainter {
       final double x = leftOffset + selectedCol! * cellW;
       canvas.drawRect(
         Rect.fromLTWH(x, topOffset, cellW, gridH),
-        Paint()..color = userSettings.themeColors.accent.withValues(alpha: 0.05),
+        Paint()..color = Design.accent.withValues(alpha: 0.05),
       );
     }
 
@@ -1234,13 +1234,13 @@ class GridPainter extends CustomPainter {
       final double y = topOffset + selectedRow! * cellH;
       canvas.drawRect(
         Rect.fromLTWH(leftOffset, y, gridW, cellH),
-        Paint()..color = userSettings.themeColors.accent.withValues(alpha: 0.05),
+        Paint()..color = Design.accent.withValues(alpha: 0.05),
       );
     }
 
     // ── grid lines ───────────────────────────────────────────────────────────
     final Paint linePaint = Paint()
-      ..color = userSettings.themeColors.accent.withValues(alpha: 0.10)
+      ..color = Design.accent.withValues(alpha: 0.10)
       ..strokeWidth = 1;
 
     // Vertical lines (cols.length + 1 lines, starting at leftOffset).

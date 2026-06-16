@@ -311,12 +311,15 @@ class QMTopbarState extends State<QMTopbar> {
                       child: TextField(
                         controller: _searchController,
                         onChanged: (String value) => setState(() => _disabledSearchQuery = value.toLowerCase()),
-                        style:
-                            TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500, color: onSurface),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 2,
+                            fontWeight: FontWeight.w500,
+                            color: onSurface),
                         decoration: InputDecoration(
                           hintText: 'Search disabled…',
-                          hintStyle:
-                              TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.4)),
+                          hintStyle: TextStyle(
+                              fontSize: Design.baseFontSize + 2,
+                              color: onSurface.withValues(alpha: 0.4)),
                           prefixIcon: Icon(Icons.search_rounded, size: 16, color: onSurface.withValues(alpha: 0.4)),
                           suffixIcon: _disabledSearchQuery.isNotEmpty
                               ? GestureDetector(

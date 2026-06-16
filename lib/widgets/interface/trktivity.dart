@@ -318,12 +318,12 @@ class TrktivityPageState extends State<TrktivityPage> {
                 children: <Widget>[
                   CheckboxListTile(
                     onChanged: (bool? e) => setState(() {
-                      userSettings.trktivityEnabled = !userSettings.trktivityEnabled;
-                      Boxes.updateSettings("trktivityEnabled", userSettings.trktivityEnabled);
-                      enableTrcktivity(userSettings.trktivityEnabled);
+                      user.trktivityEnabled = !user.trktivityEnabled;
+                      Boxes.updateSettings("trktivityEnabled", user.trktivityEnabled);
+                      enableTrcktivity(user.trktivityEnabled);
                     }),
                     controlAffinity: ListTileControlAffinity.leading,
-                    value: userSettings.trktivityEnabled,
+                    value: user.trktivityEnabled,
                     title: Text(
                       "Trktivity",
                       style: Theme.of(context).textTheme.headlineSmall,
@@ -332,7 +332,7 @@ class TrktivityPageState extends State<TrktivityPage> {
                       WinUtils.open("${WinUtils.getTabameAppDataFolder()}\\trktivity");
                     }),
                   ),
-                  !userSettings.trktivityEnabled
+                  !user.trktivityEnabled
                       ? const Markdown(
                           shrinkWrap: true,
                           data: '''
@@ -379,12 +379,12 @@ It records keystrokes, mouse movement and active Window.
                                   if (showFilters) ...<Widget>[
                                     CheckBoxWidget(
                                       onChanged: (bool e) {
-                                        userSettings.trktivitySaveAllTitles = e;
+                                        user.trktivitySaveAllTitles = e;
                                         Boxes.updateSettings("trktivitySaveAllTitles", e);
                                         setState(() {});
                                       },
                                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      value: userSettings.trktivitySaveAllTitles,
+                                      value: user.trktivitySaveAllTitles,
                                       text: "Save All Window Titles",
                                     ),
                                     TextButton.icon(
@@ -398,7 +398,8 @@ It records keystrokes, mouse movement and active Window.
                                         setState(() => showFilters = true);
                                       },
                                       icon: const Icon(Icons.add_rounded, size: 18),
-                                      label: Text("Add Rule", style: TextStyle(fontSize: Design.baseFontSize + 2)),
+                                      label: Text("Add Rule",
+                                          style: TextStyle(fontSize: Design.baseFontSize + 2)),
                                     )
                                   ],
                                 ],

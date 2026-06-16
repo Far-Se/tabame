@@ -136,12 +136,12 @@ class FirstRunState extends State<FirstRun> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(
-                  color: User.theme.accent.withAlpha(40),
+                  color: Design.accent.withAlpha(40),
                   width: 1,
                 ),
               ),
-              shadowColor: User.theme.accent.withValues(alpha: 0.3),
-              backgroundColor: User.theme.background,
+              shadowColor: Design.accent.withValues(alpha: 0.3),
+              backgroundColor: Design.background,
               title: Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               actions: <Widget>[
                 ElevatedButton(
@@ -185,7 +185,7 @@ class FirstRunState extends State<FirstRun> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
@@ -1016,9 +1016,9 @@ class FirstRunState extends State<FirstRun> {
                       accent: accent,
                       title: "Run as administrator",
                       description: "Recommended. This helps Tabame focus and manage elevated windows more reliably.",
-                      value: userSettings.runAsAdministrator,
+                      value: user.runAsAdministrator,
                       onChanged: (bool value) async {
-                        userSettings.runAsAdministrator = value;
+                        user.runAsAdministrator = value;
                         await Boxes.updateSettings("runAsAdministrator", value);
                         if (!mounted) return;
                         setState(() {});
@@ -1031,9 +1031,9 @@ class FirstRunState extends State<FirstRun> {
                       title: "Auto check for updates",
                       description:
                           "Tabame will check for new versions on startup and notify you if an update is available.",
-                      value: userSettings.autoCheckForUpdates,
+                      value: user.autoCheckForUpdates,
                       onChanged: (bool value) async {
-                        userSettings.autoCheckForUpdates = value;
+                        user.autoCheckForUpdates = value;
                         await Boxes.updateSettings("autoUpdate", value);
                         if (!mounted) return;
                         setState(() {});
@@ -1051,9 +1051,9 @@ class FirstRunState extends State<FirstRun> {
                       title: "Hide taskbar on startup",
                       description: "Useful if you want QuickMenu to be the main launcher and keep the desktop calmer."
                           "\nAtention: You can show the taskbar by moving the mouse at the bottom of the screen then pressing the selected hotkey",
-                      value: userSettings.hideTaskbarOnStartup,
+                      value: user.hideTaskbarOnStartup,
                       onChanged: (bool value) async {
-                        userSettings.hideTaskbarOnStartup = value;
+                        user.hideTaskbarOnStartup = value;
                         await Boxes.updateSettings("hideTaskbarOnStartup", value);
                         if (!mounted) return;
                         setState(() {});
@@ -1066,13 +1066,13 @@ class FirstRunState extends State<FirstRun> {
                       title: "Enable Trktivity",
                       description:
                           "Stores activity history locally, including keystrokes, mouse movement, and active window titles.",
-                      value: userSettings.trktivityEnabled,
+                      value: user.trktivityEnabled,
                       trailing: InfoWidget("Open saved data folder", onTap: () {
                         WinUtils.open(WinUtils.getTabameAppDataFolder());
                       }),
                       onChanged: (bool value) {
                         setState(() {
-                          userSettings.trktivityEnabled = value;
+                          user.trktivityEnabled = value;
                           Boxes.updateSettings("trktivityEnabled", value);
                           enableTrcktivity(value);
                         });

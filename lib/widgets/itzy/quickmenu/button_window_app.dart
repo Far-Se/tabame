@@ -5,13 +5,12 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../models/classes/boxes/boxes_base.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/extracted_icon.dart';
-
-// ── Messages ─────────────────────────────────────────────────────────────────
 
 class _IconRequest {
   final int id;
@@ -21,208 +20,493 @@ class _IconRequest {
 
 class _IconResponse {
   final int id;
-  final ExtractedIcon data;
+  final ExtractedIcon data; // Uint8List | String | null
   const _IconResponse({required this.id, required this.data});
 }
 
-// ── Worker entry point ────────────────────────────────────────────────────────
+// Sent once, on startup, to give workers a port for teardown signals.
+class _ShutdownSignal {
+  const _ShutdownSignal();
+}
 
 void _iconWorkerEntry(SendPort mainSendPort) {
-  final ReceivePort workerPort = ReceivePort();
-  mainSendPort.send(workerPort.sendPort);
+  final ReceivePort port = ReceivePort();
+  mainSendPort.send(port.sendPort); // handshake
 
-  workerPort.listen((dynamic message) {
-    if (message is _IconRequest) {
+  port.listen((dynamic msg) {
+    if (msg is _ShutdownSignal) {
+      port.close();
+      return;
+    }
+    if (msg is _IconRequest) {
+      ExtractedIcon result;
       try {
-        final ExtractedIcon data = WinUtils.extractIcon(message.path);
-        mainSendPort.send(_IconResponse(id: message.id, data: data));
+        result = WinUtils.extractIcon(msg.path);
       } catch (e, st) {
-        Debug.add('Worker error for ${message.path}: $e');
-        Debug.add('$st');
-        mainSendPort.send(_IconResponse(id: message.id, data: null));
+        // Debug.add is isolate-safe because it only writes to a global list.
+        Debug.add('worker: extractIcon failed for ${msg.path}: $e\n$st');
+        result = null;
       }
+      mainSendPort.send(_IconResponse(id: msg.id, data: result));
     }
   });
 }
 
-// ── Worker pool ───────────────────────────────────────────────────────────────
-
-class _WorkerHandle {
-  final ReceivePort responsePort;
-  final Completer<SendPort> ready = Completer<SendPort>();
-
-  _WorkerHandle(this.responsePort);
-}
-
-class _IconWorkerPool {
-  _IconWorkerPool._();
-  static final _IconWorkerPool instance = _IconWorkerPool._();
+class _WorkerPool {
+  _WorkerPool._();
+  static final _WorkerPool instance = _WorkerPool._();
 
   static const int _poolSize = 3;
-  static const Duration _requestTimeout = Duration(seconds: 8);
+  static const Duration _timeout = Duration(seconds: 8);
 
-  final List<SendPort> _workerSendPorts = <SendPort>[];
-  final Map<int, Completer<ExtractedIcon>> _pending = <int, Completer<ExtractedIcon>>{};
+  Future<void>? _initFuture;
+  bool _disposed = false;
+
+  final List<_Worker> _workers = <_Worker>[];
+  final Map<int, _PendingRequest> _pending = <int, _PendingRequest>{};
   int _nextId = 0;
   int _rrIndex = 0;
 
-  Future<void>? _initFuture;
-
-  Future<void> _ensureInitialized() {
-    _initFuture ??= _spawnAll();
-    return _initFuture!;
-  }
+  Future<void> _ensureReady() => _initFuture ??= _spawnAll();
 
   Future<void> _spawnAll() async {
     for (int i = 0; i < _poolSize; i++) {
-      final ReceivePort responsePort = ReceivePort();
-      final _WorkerHandle handle = _WorkerHandle(responsePort);
-
-      responsePort.listen((dynamic message) {
-        if (message is SendPort) {
-          if (!handle.ready.isCompleted) {
-            handle.ready.complete(message);
-          }
-          return;
-        }
-
-        if (message is _IconResponse) {
-          final Completer<ExtractedIcon>? completer = _pending.remove(message.id);
-          if (completer != null && !completer.isCompleted) {
-            completer.complete(message.data);
-          }
-        }
-      });
-
-      await Isolate.spawn(_iconWorkerEntry, responsePort.sendPort);
-
-      final SendPort workerSendPort = await handle.ready.future;
-      _workerSendPorts.add(workerSendPort);
+      _workers.add(await _Worker.spawn(_onResponse));
     }
+  }
+
+  void _onResponse(_IconResponse resp) {
+    final _PendingRequest? req = _pending.remove(resp.id);
+    req?.complete(resp.data);
   }
 
   Future<ExtractedIcon> extractIcon(String path) async {
-    await _ensureInitialized();
+    if (_disposed) return null;
+    await _ensureReady();
 
     final int id = _nextId++;
-    final Completer<ExtractedIcon> completer = Completer<ExtractedIcon>();
-    _pending[id] = completer;
+    final _PendingRequest req = _PendingRequest(id: id, path: path, timeout: _timeout, onTimeout: _onTimeout);
+    _pending[id] = req;
 
-    final SendPort port = _workerSendPorts[_rrIndex++ % _poolSize];
-    port.send(_IconRequest(id: id, path: path));
+    _workers[_rrIndex++ % _poolSize].send(_IconRequest(id: id, path: path));
+    return req.future;
+  }
 
-    final Timer timeout = Timer(_requestTimeout, () {
-      final Completer<ExtractedIcon>? pendingCompleter = _pending.remove(id);
-      if (pendingCompleter != null && !pendingCompleter.isCompleted) {
-        Debug.add('Icon extraction timed out for $path');
-        pendingCompleter.complete(null);
+  void _onTimeout(int id) {
+    final _PendingRequest? req = _pending.remove(id);
+    if (req != null) {
+      Debug.add('worker: timeout for ${req.path}');
+      req.complete(null);
+    }
+  }
+
+  Future<void> dispose() async {
+    _disposed = true;
+    for (final _PendingRequest req in _pending.values) {
+      req.complete(null);
+    }
+    _pending.clear();
+    for (final _Worker w in _workers) {
+      w.shutdown();
+    }
+    _workers.clear();
+    _initFuture = null;
+  }
+}
+
+class _Worker {
+  _Worker._(this._sendPort, this._receivePort);
+
+  final SendPort _sendPort;
+  final ReceivePort _receivePort;
+
+  static Future<_Worker> spawn(void Function(_IconResponse) onResponse) async {
+    final ReceivePort receivePort = ReceivePort();
+    await Isolate.spawn(_iconWorkerEntry, receivePort.sendPort);
+
+    final Completer<SendPort> ready = Completer<SendPort>();
+    bool handshakeDone = false;
+
+    receivePort.listen((dynamic msg) {
+      if (!handshakeDone) {
+        if (msg is SendPort && !ready.isCompleted) {
+          handshakeDone = true;
+          ready.complete(msg);
+        }
+        return;
       }
+      if (msg is _IconResponse) onResponse(msg);
     });
 
-    return completer.future.whenComplete(timeout.cancel);
+    final SendPort workerSend = await ready.future;
+    return _Worker._(workerSend, receivePort);
+  }
+
+  void send(_IconRequest req) => _sendPort.send(req);
+
+  void shutdown() {
+    _sendPort.send(const _ShutdownSignal());
+    _receivePort.close();
   }
 }
 
-// ── Extension-type icon cache (with TTL) ─────────────────────────────────────
+class _PendingRequest {
+  _PendingRequest({
+    required this.id,
+    required this.path,
+    required Duration timeout,
+    required void Function(int) onTimeout,
+  }) {
+    _timer = Timer(timeout, () => onTimeout(id));
+  }
 
-class _ExtIconEntry {
-  final ExtractedIcon icon;
-  final DateTime expiresAt;
+  final int id;
+  final String path;
+  final Completer<ExtractedIcon> _completer = Completer<ExtractedIcon>();
+  late final Timer _timer;
 
-  _ExtIconEntry(this.icon) : expiresAt = DateTime.now().add(_ExtIconCache._ttl);
+  Future<ExtractedIcon> get future => _completer.future;
 
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
+  void complete(ExtractedIcon data) {
+    _timer.cancel();
+    if (!_completer.isCompleted) _completer.complete(data);
+  }
 }
 
-class _ExtIconCache {
-  _ExtIconCache._();
-  static final _ExtIconCache instance = _ExtIconCache._();
+class IconDiskCache {
+  IconDiskCache._();
+  static final IconDiskCache instance = IconDiskCache._();
 
-  static const Duration _ttl = Duration(minutes: 15);
+  static const Duration _ttl = Duration(days: 7);
 
-  // Extensions whose icon depends on the specific file, not just its type.
-  // These are always looked up per-path and never stored in this cache.
-  static const Set<String> _perFileExtensions = <String>{
-    '.exe',
-    '.lnk',
-    '.url',
-    '.ico',
+  static const Set<String> _junkHashes = <String>{
+    'a326e0850b34c1935b2e3499fc986380',
+    '5b290ed4dac06a15d465c7f0f9d5003b',
   };
 
-  final Map<String, _ExtIconEntry> _cache = <String, _ExtIconEntry>{};
+  late final String _cacheDir;
+  bool _initialized = false;
 
-  /// Returns the extension key for [path], or null if this path must be
-  /// resolved per-file (custom icon types, directories, empty paths).
-  static String? extensionKey(String path) {
-    final String trimmed = path.trim();
-    if (trimmed.isEmpty) return null;
-
-    // Treat bare directory paths (no extension) as per-file.
-    final String ext = trimmed.contains('.') ? '.${trimmed.split('.').last.toLowerCase()}' : '';
-    if (ext.isEmpty || _perFileExtensions.contains(ext)) return null;
-
-    // Also treat paths that look like directories (end with separator).
-    if (trimmed.endsWith('/') || trimmed.endsWith(r'\')) return null;
-
-    try {
-      if (Directory(trimmed).existsSync()) return null;
-    } catch (_) {}
-
-    return ext;
+  Future<void> init() async {
+    if (_initialized) return;
+    _cacheDir = p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'icon_cache');
+    await Directory(_cacheDir).create(recursive: true);
+    _initialized = true;
   }
 
-  ExtractedIcon? get(String ext) {
-    final _ExtIconEntry? entry = _cache[ext];
-    if (entry == null) return null;
-    if (entry.isExpired) {
-      _cache.remove(ext);
+  Future<Uint8List?> load(String sourceKey) async {
+    final File f = _fileFor(sourceKey);
+    if (!f.existsSync()) return null;
+    if (DateTime.now().difference(f.lastModifiedSync()) > _ttl) {
+      f.deleteSync();
       return null;
     }
-    return entry.icon;
+    try {
+      return await f.readAsBytes();
+    } catch (_) {
+      return null;
+    }
   }
 
-  /// Returns true if a live (non-expired) entry exists for [ext].
-  bool has(String ext) {
-    final _ExtIconEntry? entry = _cache[ext];
-    if (entry == null) return false;
-    if (entry.isExpired) {
-      _cache.remove(ext);
-      return false;
-    }
+  Future<bool> save(String sourceKey, Uint8List bytes) async {
+    final String hash = crypto.md5.convert(bytes).toString();
+    if (_junkHashes.contains(hash)) return false;
+    try {
+      await _fileFor(sourceKey).writeAsBytes(bytes, flush: true);
+    } catch (_) {}
     return true;
   }
 
-  void set(String ext, ExtractedIcon icon) {
-    _cache[ext] = _ExtIconEntry(icon);
+  Future<void> evictExpired() async {
+    try {
+      await for (final FileSystemEntity e in Directory(_cacheDir).list()) {
+        if (e is File) {
+          final DateTime mod = e.lastModifiedSync();
+          if (DateTime.now().difference(mod) > _ttl) await e.delete();
+        }
+      }
+    } catch (_) {}
   }
 
-  void remove(String ext) => _cache.remove(ext);
+  Future<int> sizeInBytes() async {
+    int total = 0;
+    try {
+      await for (final FileSystemEntity e in Directory(_cacheDir).list()) {
+        if (e is File) total += e.lengthSync();
+      }
+    } catch (_) {}
+    return total;
+  }
 
-  int get length => _cache.length;
-
-  /// Evict all expired entries. Call periodically if needed.
-  void evictExpired() {
-    _cache.removeWhere((_, _ExtIconEntry e) => e.isExpired);
+  File _fileFor(String key) {
+    final String hash = crypto.sha1.convert(key.codeUnits).toString();
+    return File(p.join(_cacheDir, '$hash.ico'));
   }
 }
 
-// ── Widget ────────────────────────────────────────────────────────────────────
+class _LruEntry {
+  _LruEntry({required this.icon, required this.key});
+  final ExtractedIcon icon;
+  final String key;
+  final DateTime expiresAt = DateTime.now().add(_MemCache._ttl);
+  bool get expired => DateTime.now().isAfter(expiresAt);
+}
+
+class _MemCache {
+  _MemCache(this._maxEntries);
+
+  static const Duration _ttl = Duration(minutes: 15);
+  final int _maxEntries;
+
+  final Map<String, _LruEntry> _map = <String, _LruEntry>{};
+
+  ExtractedIcon? get(String key) {
+    final _LruEntry? e = _map[key];
+    if (e == null) return null;
+    if (e.expired) {
+      _map.remove(key);
+      return null;
+    }
+    _map.remove(key);
+    _map[key] = e;
+    return e.icon;
+  }
+
+  bool has(String key) => get(key) != null;
+
+  void put(String key, ExtractedIcon icon) {
+    _map.remove(key);
+    _map[key] = _LruEntry(icon: icon, key: key);
+    _evictIfNeeded();
+  }
+
+  void _evictIfNeeded() {
+    while (_map.length > _maxEntries) {
+      _map.remove(_map.keys.first);
+    }
+  }
+
+  void evictExpired() => _map.removeWhere((_, _LruEntry e) => e.expired);
+
+  int get length => _map.length;
+}
+
+const Set<String> _perFileExtensions = <String>{'.exe', '.lnk', '.url', '.ico'};
+
+// resolved per-file.
+String? _extKey(String path) {
+  final String t = path.trim();
+  if (t.isEmpty || t.endsWith('/') || t.endsWith(r'\')) return null;
+  try {
+    if (Directory(t).existsSync()) return null;
+  } catch (_) {}
+  final int dot = t.lastIndexOf('.');
+  if (dot < 0) return null;
+  final String ext = '.${t.substring(dot + 1).toLowerCase()}';
+  return _perFileExtensions.contains(ext) ? null : ext;
+}
+
+class IconService {
+  IconService._();
+  static final IconService instance = IconService._();
+
+  final _MemCache _extMem = _MemCache(200);
+  final _MemCache _pathMem = _MemCache(150);
+
+  final Map<String, Future<ExtractedIcon>> _inFlight = <String, Future<ExtractedIcon>>{};
+
+  Future<ExtractedIcon>? _folderIconFuture;
+
+  bool _diskReady = false;
+
+  // ── Initialisation ──────────────────────────────────────────────────────
+
+  Future<void> init() async {
+    if (_diskReady) return;
+    await IconDiskCache.instance.init();
+    _diskReady = true;
+  }
+
+  // ── Public API ──────────────────────────────────────────────────────────
+
+  Future<ExtractedIcon> getIcon(String rawPath) {
+    final String path = _applyRewrite(rawPath);
+    if (path.isEmpty) return Future<ExtractedIcon>.value(null);
+    return _resolve(path);
+  }
+
+  void prefetch(Iterable<String> paths) {
+    for (final String p in paths) {
+      getIcon(p);
+    }
+  }
+
+  // ── Resolution pipeline ─────────────────────────────────────────────────
+
+  Future<ExtractedIcon> _resolve(String path) {
+    // ── .url: never cache (target can change at any time) ────────────────
+    if (path.toLowerCase().endsWith('.url')) {
+      return _WorkerPool.instance.extractIcon(path);
+    }
+
+    // ── Default folder icon (shared singleton) ───────────────────────────
+    if (WinUtils.usesDefaultFolderIcon(path)) {
+      return _resolveFolderIcon(path);
+    }
+
+    // ── Extension-type cache (.mp3, .pdf, …) ────────────────────────────
+    final String? ek = _extKey(path);
+    if (ek != null) return _resolveByExt(path, ek);
+
+    // ── Per-path cache (.exe, .lnk, directories, …) ─────────────────────
+    return _resolveByPath(path);
+  }
+
+  Future<ExtractedIcon> _resolveFolderIcon(String path) {
+    return _folderIconFuture ??= _resolveFolderAsync(path);
+  }
+
+  Future<ExtractedIcon> _resolveFolderAsync(String path) async {
+    try {
+      final ExtractedIcon icon = await _fetchAndCache(path);
+      if (!_isUsable(icon)) {
+        _folderIconFuture = null;
+        return null;
+      }
+      return icon;
+    } catch (e, st) {
+      Debug.add('IconService: folder icon failed for $path: $e\n$st');
+      _folderIconFuture = null;
+      return null;
+    }
+  }
+
+  Future<ExtractedIcon> _resolveByExt(String path, String extKey) {
+    final ExtractedIcon? mem = _extMem.get(extKey);
+    if (mem != null) return Future<ExtractedIcon>.value(mem);
+
+    return _inFlight.putIfAbsent(extKey, () => _resolveExtAsync(path, extKey));
+  }
+
+  Future<ExtractedIcon> _resolveExtAsync(String path, String extKey) async {
+    try {
+      if (_diskReady) {
+        final Uint8List? disk = await IconDiskCache.instance.load(extKey);
+        if (disk != null) {
+          _extMem.put(extKey, disk);
+          return disk;
+        }
+      }
+      return await _fetchAndCache(path, cacheKey: extKey, useExtMem: true);
+    } finally {
+      _inFlight.remove(extKey);
+    }
+  }
+
+  Future<ExtractedIcon> _resolveByPath(String path) {
+    final ExtractedIcon? mem = _pathMem.get(path);
+    if (mem != null) return Future<ExtractedIcon>.value(mem);
+
+    return _inFlight.putIfAbsent(path, () => _resolvePathAsync(path));
+  }
+
+  Future<ExtractedIcon> _resolvePathAsync(String path) async {
+    try {
+      if (_diskReady) {
+        final Uint8List? disk = await IconDiskCache.instance.load(path);
+        if (disk != null) {
+          _pathMem.put(path, disk);
+          return disk;
+        }
+      }
+      return await _fetchAndCache(path, cacheKey: path, useExtMem: false);
+    } finally {
+      _inFlight.remove(path);
+    }
+  }
+
+  Future<ExtractedIcon> _fetchAndCache(
+    String path, {
+    String? cacheKey,
+    bool useExtMem = false,
+    ExtractedIcon Function(ExtractedIcon)? onSuccess,
+    void Function()? onError,
+  }) async {
+    try {
+      ExtractedIcon raw = await _WorkerPool.instance.extractIcon(path);
+      if (onSuccess != null) raw = onSuccess(raw);
+
+      if (!_isUsable(raw)) return null;
+
+      if (raw is Uint8List && _diskReady) {
+        final String key = cacheKey ?? path;
+        final bool saved = await IconDiskCache.instance.save(key, raw);
+        if (!saved) return null; // junk icon — don't cache
+      }
+
+      // Promote to memory cache.
+      if (cacheKey != null) {
+        if (useExtMem) {
+          _extMem.put(cacheKey, raw);
+        } else {
+          _pathMem.put(cacheKey, raw);
+        }
+      }
+
+      return raw;
+    } catch (e, st) {
+      Debug.add('IconService: extraction failed for $path: $e\n$st');
+      onError?.call();
+      return null;
+    }
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  static String _applyRewrite(String path) {
+    if (path.trim().isEmpty) return '';
+    final String rewrite = Boxes.getIconRewrite(path);
+    return rewrite.isNotEmpty ? rewrite : path;
+  }
+
+  static bool _isUsable(ExtractedIcon icon) {
+    if (icon == null) return false;
+    if (icon is Uint8List) {
+      if (icon.isEmpty) return false;
+      const Set<String> junk = <String>{
+        'a326e0850b34c1935b2e3499fc986380',
+        '5b290ed4dac06a15d465c7f0f9d5003b',
+      };
+      return !junk.contains(crypto.md5.convert(icon).toString());
+    }
+    if (icon is String) return icon.isNotEmpty;
+    return false;
+  }
+
+  // ── Stats & maintenance ──────────────────────────────────────────────────
+
+  int get memCacheSize => _extMem.length + _pathMem.length;
+  int get inFlightCount => _inFlight.length;
+
+  Future<String> diskCacheSizeKb() async {
+    final int bytes = await IconDiskCache.instance.sizeInBytes();
+    return '${(bytes / 1024).toStringAsFixed(2)} KB';
+  }
+
+  void evictExpiredMemory() {
+    _extMem.evictExpired();
+    _pathMem.evictExpired();
+  }
+
+  Future<void> evictExpiredDisk() => IconDiskCache.instance.evictExpired();
+
+  Future<void> dispose() async {
+    _inFlight.clear();
+    await _WorkerPool.instance.dispose();
+  }
+}
 
 class WindowsAppButton extends StatefulWidget {
-  // Per-path cache for files whose icon is file-specific (.exe, .lnk, etc.).
-  static final Map<String, Future<ExtractedIcon>> iconFutureCache = <String, Future<ExtractedIcon>>{};
-  static Future<ExtractedIcon>? _defaultFolderIconFuture;
-
-  // Tracks which paths in iconFutureCache have already resolved.
-  // We can't ask a Future if it's complete directly in Dart, so we maintain
-  // this set ourselves inside the .then() callback.
-  static final Set<String> _resolvedPaths = <String>{};
-
-  final String path;
-  final String? arguments;
-  final VoidCallback? onTap;
-  final Widget? placeholder;
-
   const WindowsAppButton({
     super.key,
     required this.path,
@@ -231,134 +515,17 @@ class WindowsAppButton extends StatefulWidget {
     this.placeholder,
   });
 
-  static Future<ExtractedIcon> getIcon(String path) {
-    if (path.trim().isEmpty) {
-      return Future<ExtractedIcon>.value(null);
-    }
+  final String path;
+  final String? arguments;
+  final VoidCallback? onTap;
+  final Widget? placeholder;
 
-    // .url files are never cached — they can change their target at any time.
-    if (path.endsWith('.url')) {
-      return _IconWorkerPool.instance.extractIcon(path);
-    }
+  static Future<ExtractedIcon> getIcon(String path) => IconService.instance.getIcon(path);
 
-    if (WinUtils.usesDefaultFolderIcon(path)) {
-      return _defaultFolderIconFuture ??= _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
-        if (result is Uint8List) {
-          final String hash = crypto.md5.convert(result).toString();
-          if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
-            _defaultFolderIconFuture = null;
-            return null;
-          }
-        }
-        return result;
-      }).catchError((Object error, StackTrace stackTrace) {
-        Debug.add('Folder icon extraction failed for $path: $error');
-        Debug.add('$stackTrace');
-        _defaultFolderIconFuture = null;
-        return null as ExtractedIcon;
-      });
-    }
+  static void prefetch(Iterable<String> paths) => IconService.instance.prefetch(paths);
 
-    // ── Extension-type cache (e.g. .mp3, .txt, .pdf …) ──────────────────────
-    final String? extKey = _ExtIconCache.extensionKey(path);
-    if (extKey != null) {
-      if (_ExtIconCache.instance.has(extKey)) {
-        return Future<ExtractedIcon>.value(_ExtIconCache.instance.get(extKey));
-      }
-      // Not cached yet — extract once, then store by extension.
-      return _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
-        if (result == null) return null;
-        if (result is Uint8List) {
-          final String hash = crypto.md5.convert(result).toString();
-          if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
-            return null;
-          }
-        }
-        _ExtIconCache.instance.set(extKey, result);
-        return result;
-      }).catchError((Object error, StackTrace stackTrace) {
-        Debug.add('Icon extraction failed for $path ($extKey): $error');
-        Debug.add('$stackTrace');
-        return null as ExtractedIcon;
-      });
-    }
-
-    // ── Per-path cache (.exe, .lnk, directories …) ───────────────────────────
-    //
-    // Only evict when over the limit, and only evict entries that have already
-    // resolved. Evicting an in-flight future would leave any widget still
-    // awaiting it hanging forever — the .then() would never fire because the
-    // future object was removed from the cache but the worker still owns it.
-    if (iconFutureCache.length > 100) {
-      _evictOneResolvedEntry();
-    }
-
-    return iconFutureCache.putIfAbsent(
-      path,
-      () {
-        final Future<ExtractedIcon> future = _IconWorkerPool.instance.extractIcon(path).then((ExtractedIcon result) {
-          _resolvedPaths.add(path);
-          if (result == null) {
-            return null;
-          }
-          if (result is Uint8List) {
-            final String hash = crypto.md5.convert(result).toString();
-            if (hash == 'a326e0850b34c1935b2e3499fc986380' || hash == '5b290ed4dac06a15d465c7f0f9d5003b') {
-              return null;
-            }
-          }
-          return result;
-        }).catchError((Object error, StackTrace stackTrace) {
-          Debug.add('Icon extraction failed for $path: $error');
-          Debug.add('$stackTrace');
-          _resolvedPaths.add(path);
-          return null as ExtractedIcon;
-        });
-        return future;
-      },
-    );
-  }
-
-  static void _evictOneResolvedEntry() {
-    for (final String key in iconFutureCache.keys.toList()) {
-      if (_resolvedPaths.contains(key)) {
-        iconFutureCache.remove(key);
-        _resolvedPaths.remove(key);
-        return;
-      }
-    }
-  }
-
-  static int getCacheSize() {
-    return iconFutureCache.length + _ExtIconCache.instance.length;
-  }
-
-  static Future<String> getCacheInKb() async {
-    int totalSize = 0;
-
-    // Per-path cache
-    for (final Future<ExtractedIcon> future in iconFutureCache.values) {
-      final ExtractedIcon data = await future;
-      if (data is Uint8List) {
-        totalSize += data.length;
-      } else if (data is String && File(data).existsSync()) {
-        totalSize += File(data).lengthSync();
-      }
-    }
-
-    // Extension-type cache (values are already resolved)
-    _ExtIconCache.instance.evictExpired();
-    for (final _ExtIconEntry entry in _ExtIconCache.instance._cache.values) {
-      final ExtractedIcon data = entry.icon;
-      if (data is Uint8List) {
-        totalSize += data.length;
-      } else if (data is String && File(data).existsSync()) {
-        totalSize += File(data).lengthSync();
-      }
-    }
-
-    return "${(totalSize / 1024).toStringAsFixed(2)} KB";
-  }
+  static int getCacheSize() => IconService.instance.memCacheSize;
+  static Future<String> getCacheInKb() => IconService.instance.diskCacheSizeKb();
 
   @override
   State<WindowsAppButton> createState() => _WindowsAppButtonState();
@@ -366,42 +533,39 @@ class WindowsAppButton extends StatefulWidget {
 
 class _WindowsAppButtonState extends State<WindowsAppButton> {
   ExtractedIcon? _icon;
-
-  String? _loadingFor;
+  Object? _loadTag;
 
   @override
   void initState() {
     super.initState();
-    _startLoad(widget.path);
+    _load(widget.path);
   }
 
   @override
-  void didUpdateWidget(covariant WindowsAppButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.path != widget.path) {
-      // Clear the stale icon immediately so the placeholder shows while the
-      // new one loads, then kick off a fresh load.
+  void didUpdateWidget(covariant WindowsAppButton old) {
+    super.didUpdateWidget(old);
+    if (old.path != widget.path) {
       setState(() => _icon = null);
-      _startLoad(widget.path);
+      _load(widget.path);
     }
   }
 
-  void _startLoad(String path) {
-    String displayPath = path;
-    final String rewrite = Boxes.getIconRewrite(displayPath);
-    if (rewrite.isNotEmpty) displayPath = rewrite;
+  @override
+  void dispose() {
+    _loadTag = null;
+    super.dispose();
+  }
 
-    _loadingFor = displayPath;
+  void _load(String path) {
+    final Object tag = Object();
+    _loadTag = tag;
 
-    final String expectedPath = displayPath;
-
-    WindowsAppButton.getIcon(displayPath).then((ExtractedIcon? result) {
-      if (!mounted || _loadingFor != expectedPath) return;
-      setState(() => _icon = result);
-    }).catchError((Object error, StackTrace stackTrace) {
-      Debug.add('_startLoad error for $displayPath: $error');
-      Debug.add('$stackTrace');
-      if (!mounted || _loadingFor != expectedPath) return;
+    IconService.instance.getIcon(path).then((ExtractedIcon? icon) {
+      if (!mounted || _loadTag != tag) return;
+      setState(() => _icon = icon);
+    }, onError: (Object e, StackTrace st) {
+      Debug.add('WindowsAppButton: load error for $path: $e\n$st');
+      if (!mounted || _loadTag != tag) return;
       setState(() => _icon = null);
     });
   }
@@ -410,17 +574,17 @@ class _WindowsAppButtonState extends State<WindowsAppButton> {
   Widget build(BuildContext context) {
     final Widget fallback = widget.placeholder ?? const SizedBox(width: 32, height: 32);
 
-    if (_icon == null) return GestureDetector(onTap: widget.onTap, child: fallback);
-
     return GestureDetector(
       onTap: widget.onTap,
-      child: buildExtractedIcon(
-        _icon,
-        width: 32,
-        height: 32,
-        gaplessPlayback: true,
-        fallback: fallback,
-      ),
+      child: _icon == null
+          ? fallback
+          : buildExtractedIcon(
+              _icon,
+              width: 32,
+              height: 32,
+              gaplessPlayback: true,
+              fallback: fallback,
+            ),
     );
   }
 }

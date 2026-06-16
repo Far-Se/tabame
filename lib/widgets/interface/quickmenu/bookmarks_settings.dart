@@ -35,7 +35,7 @@ class _InterfaceQMBookmarksSettingsPageState extends State<InterfaceQMBookmarksS
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -148,7 +148,7 @@ class _InterfaceQMBookmarksSettingsPageState extends State<InterfaceQMBookmarksS
             key: ValueKey<int>(index),
             groupIndex: index,
             bookmarks: bookmarks,
-            accent: userSettings.themeColors.accent,
+            accent: Design.accent,
             scrollController: sc,
             onSaved: (BookmarkGroup g) async {
               bookmarks[index] = g;

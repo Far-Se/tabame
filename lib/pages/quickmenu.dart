@@ -181,9 +181,9 @@ class QuickMenuState extends State<QuickMenu>
 
     WinHotkeys.update();
     ClipboardHistoryStore.clearCache();
-    if (userSettings.trktivityEnabled) enableTrcktivity(userSettings.trktivityEnabled);
+    if (user.trktivityEnabled) enableTrcktivity(user.trktivityEnabled);
     Globals.changingPages = false;
-    if (userSettings.trktivityEnabled) trk.startTimer();
+    if (user.trktivityEnabled) trk.startTimer();
     WallpaperService.instance.init();
     FileIndexer.instance.init();
     WinUtils.deleteOldFiles("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache", days: 4);
@@ -274,8 +274,8 @@ class QuickMenuState extends State<QuickMenu>
 
   Future<void> _onViewsEvent(ViewsAction action, int hWnd) async {
     if (action == ViewsAction.open) {
-      if (!userSettings.quickSnapOverlay) return;
-      if (Boxes.quickGrids.isEmpty && !userSettings.quickSnapGrid) return;
+      if (!user.quickSnapOverlay) return;
+      if (Boxes.quickGrids.isEmpty && !user.quickSnapGrid) return;
       if (Navigator.of(context).canPop()) Navigator.of(context).pop();
       _savedQuickMenuSize = await windowManager.getSize();
 
@@ -330,7 +330,7 @@ class QuickMenuState extends State<QuickMenu>
 
   DateTime lastTimeShown = DateTime.now();
   Future<void> _onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    userSettings.launcherSearchText = "";
+    user.launcherSearchText = "";
     Globals.clearQuickMenuSearchInput();
     unixVisible = DateTime.now().millisecondsSinceEpoch;
     Globals.quickMenuPage = type;
@@ -340,8 +340,8 @@ class QuickMenuState extends State<QuickMenu>
       // PaintingBinding.instance.imageCache.clear();
 
       if (Navigator.of(context).canPop()) {
-        if (userSettings.hideTabameOnUnfocus) {
-          if (!userSettings.keepPopupsOpen) {
+        if (user.hideTabameOnUnfocus) {
+          if (!user.keepPopupsOpen) {
             Navigator.of(context).pop();
           } else {
             if (DateTime.now().difference(lastTimeShown).inSeconds > 30) {
@@ -351,7 +351,7 @@ class QuickMenuState extends State<QuickMenu>
         }
       }
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
-        userSettings.launcherSearchText = "";
+        user.launcherSearchText = "";
         await WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height));
         await windowManager.center();
         await windowManager.focus();
@@ -378,7 +378,7 @@ class QuickMenuState extends State<QuickMenu>
       lastTimeShown = DateTime.now();
       // FocusScope.of(context).unfocus();
       tryPop = true;
-      userSettings.launcherSearchText = "";
+      user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
       if (mounted) setState(() {});
     }
@@ -467,12 +467,12 @@ class QuickMenuState extends State<QuickMenu>
 
   void _onForegroundWindowChanged(int hWnd) {
     if (hWnd != Win32.hWnd) Globals.lastFocusedWinHWND = hWnd;
-    if (userSettings.hookedWins.containsKey(hWnd)) {
-      for (int win in userSettings.hookedWins[hWnd]!) {
+    if (user.hookedWins.containsKey(hWnd)) {
+      for (int win in user.hookedWins[hWnd]!) {
         if (Win32.winExists(win)) {
           Win32.surfaceWindow(win);
         } else {
-          userSettings.hookedWins[hWnd]?.remove(win);
+          user.hookedWins[hWnd]?.remove(win);
         }
       }
       Win32.surfaceWindow(hWnd);
@@ -496,7 +496,7 @@ class QuickMenuState extends State<QuickMenu>
               break;
           }
           if (RegExp(def.match, caseSensitive: false).hasMatch(stringCheck)) {
-            if (userSettings.volumeSetBack) {
+            if (user.volumeSetBack) {
               Audio.getVolume(AudioDeviceType.output).then((double value) {
                 previousVolume = value;
                 Audio.setVolume(def.volume / 100, AudioDeviceType.output);
@@ -513,7 +513,7 @@ class QuickMenuState extends State<QuickMenu>
         previousVolume = 0.0;
       }
     }
-    if (userSettings.hideTabameOnUnfocus &&
+    if (user.hideTabameOnUnfocus &&
         QuickMenuFunctions.isQuickMenuVisible &&
         Globals.quickMenuPage == QuickMenuPage.quickMenu &&
         !QuickMenuFunctions.keepOpen) {
@@ -525,7 +525,7 @@ class QuickMenuState extends State<QuickMenu>
   void _onDisplayChange(MonitorEvent hotkeyInfo) {
     Monitor.fetchMonitors();
     Future<void>.delayed(const Duration(milliseconds: 700), () {
-      if (User.s.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
+      if (user.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     });
   }
 
@@ -619,7 +619,7 @@ class QuickMenuState extends State<QuickMenu>
         // CTRL + H shortcut
         if (keyEvent.logicalKey == LogicalKeyboardKey.keyH && HardwareKeyboard.instance.isControlPressed) {
           if (keyEvent is KeyDownEvent) {
-            userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus;
+            user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
             if (mounted) setState(() {});
           }
           return KeyEventResult.handled;
@@ -657,7 +657,7 @@ class QuickMenuState extends State<QuickMenu>
       },
       child: GestureDetector(
         onTap: () {
-          if (userSettings.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
+          if (user.hideTabameOnUnfocus && QuickMenuFunctions.isQuickMenuVisible) {
             QuickMenuFunctions.hideQuickMenu();
           }
         },
@@ -667,8 +667,7 @@ class QuickMenuState extends State<QuickMenu>
             alignment: Alignment.topLeft,
             child: Stack(
               children: <Widget>[
-                if (userSettings.customSpash != "")
-                  Positioned(child: Image.file(File(userSettings.customSpash), height: 30), left: 10),
+                if (user.customSpash != "") Positioned(child: Image.file(File(user.customSpash), height: 30), left: 10),
                 Padding(
                   padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
                   child: DragToResizeArea(

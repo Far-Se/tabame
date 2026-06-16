@@ -26,7 +26,7 @@ Future<void> showQuickMenuModal({
   final ({int height, int width}) size = Win32.getSize();
   maxWidth ??= size.width * 0.85;
   if (maxWidth < 280) maxWidth = 280;
-  if (Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups) {
+  if (Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups) {
     maxWidth = Boxes.launcherSizeWidth;
   }
   return showModalBottomSheet<void>(
@@ -45,7 +45,7 @@ Future<void> showQuickMenuModal({
       return ValueListenableBuilder<bool>(
         valueListenable: Globals.themeChangeNotifier,
         builder: (BuildContext context, bool _, __) {
-          final ThemeData modalTheme = userSettings.themeTypeMode == ThemeType.dark
+          final ThemeData modalTheme = user.themeTypeMode == ThemeType.dark
               ? AppTheme.getDarkThemeData(context)
               : AppTheme.getLightThemeData(context);
           final ColorScheme scheme = modalTheme.colorScheme;
@@ -61,14 +61,14 @@ Future<void> showQuickMenuModal({
               }
               if (keyEvent.logicalKey == LogicalKeyboardKey.keyH && HardwareKeyboard.instance.isControlPressed) {
                 if (keyEvent is KeyDownEvent) {
-                  userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus;
+                  user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
                 }
                 return KeyEventResult.handled;
               }
               return KeyEventResult.ignored;
             },
             child: FractionallySizedBox(
-              heightFactor: Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups
+              heightFactor: Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups
                   ? 0.95
                   : heightFactor,
               child: Theme(
@@ -114,9 +114,9 @@ Future<void> showQuickMenuModal({
                               borderRadius: BorderRadius.circular(16),
                               color: surface.withValues(
                                   alpha:
-                                      Globals.quickMenuPage == QuickMenuPage.launcher && userSettings.launcherFullPopups
+                                      Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups
                                           ? 1
-                                          : switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
+                                          : switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
                                               QuickMenuDesigns.modern => 0.95,
                                               QuickMenuDesigns.classic => 0.88,
                                               QuickMenuDesigns.interface => 0.93,

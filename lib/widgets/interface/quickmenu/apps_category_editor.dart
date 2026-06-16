@@ -245,8 +245,8 @@ class _QMAppsCategoryEditorState extends State<QMAppsCategoryEditor> {
                   foregroundColor: primary,
                 ),
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                label:
-                    Text("IMPORT FILE", style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800)),
+                label: Text("IMPORT FILE",
+                    style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800)),
               ),
             ],
           ),
@@ -295,7 +295,9 @@ class _QMAppsCategoryEditorState extends State<QMAppsCategoryEditor> {
                 label: Text(
                   "DELETE CATEGORY",
                   style: TextStyle(
-                      color: theme.colorScheme.error, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w800),
+                      color: theme.colorScheme.error,
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w800),
                 ),
               ),
               const Spacer(),
@@ -437,7 +439,8 @@ class _QMAppsCategoryEditorState extends State<QMAppsCategoryEditor> {
           Text(
             "This category is currently empty",
             style: TextStyle(
-                fontSize: Design.baseFontSize + 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+                fontSize: Design.baseFontSize + 1,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
           ),
         ],
       ),

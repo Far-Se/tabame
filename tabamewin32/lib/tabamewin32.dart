@@ -1651,33 +1651,33 @@ class WinTray {
   }
 }
 
-class FolderWatch {
-  FolderWatch._();
+// class FolderWatch {
+//   FolderWatch._();
 
-  static Future<void> buildInitialState(List<String> paths) async {
-    await addFoldersToWatchlist(paths);
-  }
+//   static Future<void> buildInitialState(List<String> paths) async {
+//     await addFoldersToWatchlist(paths);
+//   }
 
-  static Future<List<String>> getChangedFolders() async {
-    final List<dynamic>? result = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getChangedFolders');
-    return result?.cast<String>() ?? <String>[];
-  }
+//   static Future<List<String>> getChangedFolders() async {
+//     final List<dynamic>? result = await tabameWin32MethodChannel.invokeListMethod<dynamic>('getChangedFolders');
+//     return result?.cast<String>() ?? <String>[];
+//   }
 
-  static Future<void> addFoldersToWatchlist(List<String> paths) async {
-    await tabameWin32MethodChannel.invokeMethod<void>(
-      'addFoldersToWatchlist',
-      <String, dynamic>{'paths': paths},
-    );
-  }
+//   static Future<void> addFoldersToWatchlist(List<String> paths) async {
+//     await tabameWin32MethodChannel.invokeMethod<void>(
+//       'addFoldersToWatchlist',
+//       <String, dynamic>{'paths': paths},
+//     );
+//   }
 
-  /// Removes folders from the internal watchlist.
-  static Future<void> removeFoldersFromWatchlist(List<String> paths) async {
-    await tabameWin32MethodChannel.invokeMethod<void>(
-      'removeFoldersFromWatchlist',
-      <String, dynamic>{'paths': paths},
-    );
-  }
-}
+//   /// Removes folders from the internal watchlist.
+//   static Future<void> removeFoldersFromWatchlist(List<String> paths) async {
+//     await tabameWin32MethodChannel.invokeMethod<void>(
+//       'removeFoldersFromWatchlist',
+//       <String, dynamic>{'paths': paths},
+//     );
+//   }
+// }
 
 class QuickClickConfig {
   final String horizontalKeys;

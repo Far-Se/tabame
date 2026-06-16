@@ -10,7 +10,7 @@ class AppTheme {
   static ThemeData getLightThemeData(BuildContext context) => getThemeData(context, isDark: false);
 
   static ThemeData getThemeData(BuildContext context, {required bool isDark}) {
-    final ThemeColors theme = isDark ? userSettings.darkTheme : userSettings.lightTheme;
+    final ThemeColors theme = isDark ? user.darkTheme : user.lightTheme;
     final ThemeData base = isDark ? ThemeData.dark() : ThemeData.light();
 
     late TextTheme uiFont;

@@ -459,7 +459,8 @@ class HotKeyActionState extends State<HotKeyAction> {
           Icon(Icons.info_outline_rounded, color: colors.primary.withValues(alpha: 0.4), size: 16),
           const SizedBox(width: 8),
           Text("No actions defined yet",
-              style: TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.7), fontSize: Design.baseFontSize + 2)),
+              style:
+                  TextStyle(color: colors.onSurfaceVariant.withValues(alpha: 0.7), fontSize: Design.baseFontSize + 2)),
         ],
       ),
     );

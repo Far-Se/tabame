@@ -16,12 +16,12 @@ class _HideDesktopFilesButtonState extends State<HideDesktopFilesButton> {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "Desktop Files: ${userSettings.hideDesktopFiles ? 'Hidden' : 'Visible'}",
-      icon: Icon(userSettings.hideDesktopFiles ? Icons.desktop_access_disabled_outlined : Icons.folder_open),
+      message: "Desktop Files: ${user.hideDesktopFiles ? 'Hidden' : 'Visible'}",
+      icon: Icon(user.hideDesktopFiles ? Icons.desktop_access_disabled_outlined : Icons.folder_open),
       onTap: () {
-        userSettings.hideDesktopFiles = !userSettings.hideDesktopFiles;
-        Boxes.updateSettings("hideDesktopFiles", userSettings.hideDesktopFiles);
-        if (userSettings.hideDesktopFiles) {
+        user.hideDesktopFiles = !user.hideDesktopFiles;
+        Boxes.updateSettings("hideDesktopFiles", user.hideDesktopFiles);
+        if (user.hideDesktopFiles) {
           WinUtils.toggleDesktopFiles(visible: false);
         } else {
           WinUtils.toggleDesktopFiles(visible: true);

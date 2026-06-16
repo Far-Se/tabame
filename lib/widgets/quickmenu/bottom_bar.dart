@@ -20,19 +20,19 @@ class PinnedAndTrayList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double height = userSettings.expandedTaskbar ? 32 : 27;
-    Globals.heights.pinnedAndTray = (userSettings.taskManagerStats || userSettings.libreStats) ? height * 2 : height;
+    final double height = user.expandedTaskbar ? 32 : 27;
+    Globals.heights.pinnedAndTray = (user.taskManagerStats || user.libreStats) ? height * 2 : height;
     return Container(
       height: height,
       width: double.infinity,
       child: Padding(
-        padding: !userSettings.expandedTaskbar
+        padding: !user.expandedTaskbar
             ? const EdgeInsets.fromLTRB(7, 3, 3, 3)
             : const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: userSettings.bottomBarOnTop
+          children: user.bottomBarOnTop
               ? <Widget>[
                   Expanded(
                     flex: 6,
@@ -50,12 +50,12 @@ class PinnedAndTrayList extends StatelessWidget {
                     ),
                   ),
                   if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  if (userSettings.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
+                  if (user.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
                 ]
               : <Widget>[
-                  if (userSettings.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
+                  if (user.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
                   if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  if (userSettings.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
+                  if (user.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
                 ],
         ),
       ),
@@ -147,7 +147,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !userSettings.bottomBarOnTop) _syncLogoDragOverlay();
+      if (mounted && !user.bottomBarOnTop) _syncLogoDragOverlay();
     });
     return Theme(
       data: Theme.of(context).copyWith(
@@ -162,10 +162,10 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
               height: 25.1,
               children: <Widget>[
                 if (kDebugMode) const TestingButton(),
-                if (userSettings.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+                if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
                 ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
-                if (userSettings.lastChangelog != Globals.version) const CheckChangelogButton(),
-                if (!userSettings.bottomBarOnTop) const OpenSettingsButton(),
+                if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
+                if (!user.bottomBarOnTop) const OpenSettingsButton(),
               ],
             )
           : const SizedBox.shrink(),

@@ -15,11 +15,11 @@ class ChangeThemeButton extends StatelessWidget {
       message: "Change Theme",
       icon: const Icon(Icons.theater_comedy_sharp),
       onTap: () {
-        if (userSettings.themeType == ThemeType.system &&
+        if (user.themeType == ThemeType.system &&
             MediaQuery.of(context).platformBrightness == Brightness.dark) {
-          userSettings.themeType = ThemeType.dark;
+          user.themeType = ThemeType.dark;
         }
-        userSettings.themeType = userSettings.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
+        user.themeType = user.themeType == ThemeType.dark ? ThemeType.light : ThemeType.dark;
         Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
       },
     );

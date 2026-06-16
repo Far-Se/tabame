@@ -285,7 +285,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

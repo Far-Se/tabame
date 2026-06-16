@@ -43,9 +43,9 @@ class SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
-    if (!runOnStartup) userSettings.runAsAdministrator = false;
-    final Color accent = userSettings.themeColors.accent;
-    final Color background = userSettings.themeColors.background;
+    if (!runOnStartup) user.runAsAdministrator = false;
+    final Color accent = Design.accent;
+    final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return WindowsScrollView(
@@ -203,8 +203,8 @@ class SettingsPageState extends State<SettingsPage> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (Boxes.updateDownloadLink != null && userSettings.newVersion != Globals.version) {
-                          Boxes.installUpdate(Boxes.updateDownloadLink!, userSettings.newVersion);
+                        if (Boxes.updateDownloadLink != null && user.newVersion != Globals.version) {
+                          Boxes.installUpdate(Boxes.updateDownloadLink!, user.newVersion);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -237,10 +237,10 @@ class SettingsPageState extends State<SettingsPage> {
           _toggleTile(
             title: "Auto Update",
             subtitle: "Download new releases automatically when available.",
-            value: userSettings.autoCheckForUpdates,
+            value: user.autoCheckForUpdates,
             onChanged: (bool value) async {
-              setState(() => userSettings.autoCheckForUpdates = value);
-              Boxes.updateSettings("autoUpdate", userSettings.autoCheckForUpdates);
+              setState(() => user.autoCheckForUpdates = value);
+              Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
             },
           ),
           const SizedBox(height: 8),
@@ -272,7 +272,7 @@ class SettingsPageState extends State<SettingsPage> {
                 await WinUtils.setStartUpShortcut(true);
               } else {
                 await WinUtils.setStartUpShortcut(false);
-                userSettings.runAsAdministrator = false;
+                user.runAsAdministrator = false;
                 await Boxes.updateSettings("runAsAdministrator", false);
               }
               if (!mounted) return;
@@ -284,8 +284,8 @@ class SettingsPageState extends State<SettingsPage> {
             _toggleTile(
               title: "Run as Administrator",
               subtitle: "Needed for some focus, close, and tray-control actions.",
-              value: userSettings.runAsAdministrator,
-              trailing: !userSettings.runAsAdministrator || WinUtils.isAdministrator()
+              value: user.runAsAdministrator,
+              trailing: !user.runAsAdministrator || WinUtils.isAdministrator()
                   ? null
                   : CustomTooltip(
                       message: "Restart as Admin",
@@ -309,7 +309,7 @@ class SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
               onChanged: (bool value) async {
-                userSettings.runAsAdministrator = value;
+                user.runAsAdministrator = value;
                 await Boxes.updateSettings("runAsAdministrator", value);
                 if (!mounted) return;
                 setState(() {});
@@ -320,10 +320,10 @@ class SettingsPageState extends State<SettingsPage> {
           _toggleTile(
             title: "Hide Taskbar on Startup",
             subtitle: "Apply your taskbar visibility preference immediately.",
-            value: userSettings.hideTaskbarOnStartup,
+            value: user.hideTaskbarOnStartup,
             onChanged: (bool value) async {
-              userSettings.hideTaskbarOnStartup = value;
-              Boxes.updateSettings("hideTaskbarOnStartup", userSettings.hideTaskbarOnStartup);
+              user.hideTaskbarOnStartup = value;
+              Boxes.updateSettings("hideTaskbarOnStartup", user.hideTaskbarOnStartup);
               if (!mounted) return;
               setState(() {});
             },
@@ -481,31 +481,30 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
         children: <Widget>[
           RadioGroup<LightSwitchMode>(
             onChanged: (LightSwitchMode? val) async {
-              userSettings.lightSwitchMode = val ?? LightSwitchMode.off;
-              await Boxes.updateSettings("lightSwitchMode", userSettings.lightSwitchMode.index);
-              if (userSettings.lightSwitchMode == LightSwitchMode.sunrise) {
+              user.lightSwitchMode = val ?? LightSwitchMode.off;
+              await Boxes.updateSettings("lightSwitchMode", user.lightSwitchMode.index);
+              if (user.lightSwitchMode == LightSwitchMode.sunrise) {
                 await SolarCalculator.updateSolarData(force: true);
               }
-              userSettings.setScheduleThemeChange();
+              user.setScheduleThemeChange();
               setState(() {});
             },
-            groupValue: userSettings.lightSwitchMode,
+            groupValue: user.lightSwitchMode,
             child: Column(
               children: <Widget>[
-                _radioTileGeneric(
-                    "Off", LightSwitchMode.off, (LightSwitchMode mode) => userSettings.lightSwitchMode == mode),
+                _radioTileGeneric("Off", LightSwitchMode.off, (LightSwitchMode mode) => user.lightSwitchMode == mode),
                 const SizedBox(height: 8),
-                _radioTileGeneric("Fixed Hours", LightSwitchMode.fixed,
-                    (LightSwitchMode mode) => userSettings.lightSwitchMode == mode),
+                _radioTileGeneric(
+                    "Fixed Hours", LightSwitchMode.fixed, (LightSwitchMode mode) => user.lightSwitchMode == mode),
                 const SizedBox(height: 8),
                 _radioTileGeneric("Sunrise to Sundown", LightSwitchMode.sunrise,
-                    (LightSwitchMode mode) => userSettings.lightSwitchMode == mode),
+                    (LightSwitchMode mode) => user.lightSwitchMode == mode),
               ],
             ),
           ),
-          if (userSettings.lightSwitchMode != LightSwitchMode.off) ...<Widget>[
+          if (user.lightSwitchMode != LightSwitchMode.off) ...<Widget>[
             const SizedBox(height: 20),
-            if (userSettings.lightSwitchMode == LightSwitchMode.fixed) ...<Widget>[
+            if (user.lightSwitchMode == LightSwitchMode.fixed) ...<Widget>[
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -515,15 +514,14 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
                 ),
                 child: Row(
                   children: <Widget>[
-                    Expanded(
-                        child: _timeChip("Light Mode", userSettings.themeScheduleMin.formatTime(), _pickThemeStart)),
+                    Expanded(child: _timeChip("Light Mode", user.themeScheduleMin.formatTime(), _pickThemeStart)),
                     const SizedBox(width: 10),
-                    Expanded(child: _timeChip("Dark Mode", userSettings.themeScheduleMax.formatTime(), _pickThemeEnd)),
+                    Expanded(child: _timeChip("Dark Mode", user.themeScheduleMax.formatTime(), _pickThemeEnd)),
                   ],
                 ),
               ),
             ],
-            if (userSettings.lightSwitchMode == LightSwitchMode.sunrise) ...<Widget>[
+            if (user.lightSwitchMode == LightSwitchMode.sunrise) ...<Widget>[
               _buildSunCycleVisualizer(accent, onSurface),
               const SizedBox(height: 16),
               _buildOffsetSliders(accent, onSurface),
@@ -535,8 +533,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Widget _buildSunCycleVisualizer(Color accent, Color onSurface) {
-    final int sunrise = userSettings.lightSwitchSunrise + userSettings.lightSwitchSunriseOffset;
-    final int sunset = userSettings.lightSwitchSunset + userSettings.lightSwitchSunsetOffset;
+    final int sunrise = user.lightSwitchSunrise + user.lightSwitchSunriseOffset;
+    final int sunset = user.lightSwitchSunset + user.lightSwitchSunsetOffset;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,8 +542,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            _miniInfo("SUNRISE", userSettings.lightSwitchSunrise.formatTime()),
-            _miniInfo("SUNSET", userSettings.lightSwitchSunset.formatTime()),
+            _miniInfo("SUNRISE", user.lightSwitchSunrise.formatTime()),
+            _miniInfo("SUNSET", user.lightSwitchSunset.formatTime()),
           ],
         ),
         const SizedBox(height: 8),
@@ -576,11 +574,11 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
         _singleOffsetSlider(
           title: "Morning Offset",
           icon: Icons.wb_sunny_rounded,
-          value: userSettings.lightSwitchSunriseOffset,
+          value: user.lightSwitchSunriseOffset,
           onChanged: (int val) async {
-            setState(() => userSettings.lightSwitchSunriseOffset = val);
-            await Boxes.updateSettings("lightSwitchSunriseOffset", userSettings.lightSwitchSunriseOffset);
-            userSettings.setScheduleThemeChange();
+            setState(() => user.lightSwitchSunriseOffset = val);
+            await Boxes.updateSettings("lightSwitchSunriseOffset", user.lightSwitchSunriseOffset);
+            user.setScheduleThemeChange();
           },
           accent: accent,
           onSurface: onSurface,
@@ -589,11 +587,11 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
         _singleOffsetSlider(
           title: "Evening Offset",
           icon: Icons.nights_stay_rounded,
-          value: userSettings.lightSwitchSunsetOffset,
+          value: user.lightSwitchSunsetOffset,
           onChanged: (int val) async {
-            setState(() => userSettings.lightSwitchSunsetOffset = val);
-            await Boxes.updateSettings("lightSwitchSunsetOffset", userSettings.lightSwitchSunsetOffset);
-            userSettings.setScheduleThemeChange();
+            setState(() => user.lightSwitchSunsetOffset = val);
+            await Boxes.updateSettings("lightSwitchSunsetOffset", user.lightSwitchSunsetOffset);
+            user.setScheduleThemeChange();
           },
           accent: accent,
           onSurface: onSurface,
@@ -674,7 +672,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   Widget _radioTileGeneric<T>(String label, T value, bool Function(T) isSelected) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool selected = isSelected(value);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return Container(
       decoration: BoxDecoration(
@@ -828,7 +826,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Widget _timeChip(String label, String value, Future<void> Function() onTap) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
@@ -892,15 +890,15 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
       updateResponse = "Latest version installed!";
       showUpdateButtons = false;
     } else {
-      updateResponse = "New version ${userSettings.newVersion} detected!";
+      updateResponse = "New version ${user.newVersion} detected!";
       showUpdateButtons = true;
     }
     setState(() {});
   }
 
   Future<void> _pickThemeStart() async {
-    final int hour = (userSettings.themeScheduleMin ~/ 60);
-    final int minute = (userSettings.themeScheduleMin % 60);
+    final int hour = (user.themeScheduleMin ~/ 60);
+    final int minute = (user.themeScheduleMin % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -911,16 +909,16 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
       },
     );
     if (timePicker == null) return;
-    userSettings.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
-    await Boxes.updateSettings("themeScheduleMin", userSettings.themeScheduleMin);
-    userSettings.setScheduleThemeChange();
+    user.themeScheduleMin = (timePicker.hour) * 60 + (timePicker.minute);
+    await Boxes.updateSettings("themeScheduleMin", user.themeScheduleMin);
+    user.setScheduleThemeChange();
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }
 
   Future<void> _pickThemeEnd() async {
-    final int hour = (userSettings.themeScheduleMax ~/ 60);
-    final int minute = (userSettings.themeScheduleMax % 60);
+    final int hour = (user.themeScheduleMax ~/ 60);
+    final int minute = (user.themeScheduleMax % 60);
     final TimeOfDay? timePicker = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: hour, minute: minute),
@@ -932,10 +930,10 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
     );
     if (timePicker == null) return;
     final int newTime = (timePicker.hour) * 60 + (timePicker.minute);
-    if (newTime < userSettings.themeScheduleMin) return;
-    userSettings.themeScheduleMax = newTime;
-    await Boxes.updateSettings("themeScheduleMax", userSettings.themeScheduleMax);
-    userSettings.setScheduleThemeChange();
+    if (newTime < user.themeScheduleMin) return;
+    user.themeScheduleMax = newTime;
+    await Boxes.updateSettings("themeScheduleMax", user.themeScheduleMax);
+    user.setScheduleThemeChange();
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     setState(() {});
   }

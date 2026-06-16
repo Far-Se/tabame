@@ -57,7 +57,7 @@ class TimersButtonState extends State<TimersButton> {
               child: Text(
                 remainingTimer,
                 softWrap: false,
-                style: TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: userSettings.themeColors.text),
+                style: TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: Design.text),
               ),
             )
           : const Icon(Icons.timer_sharp),
@@ -147,7 +147,7 @@ class TimersWidgetState extends State<TimersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -397,7 +397,7 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -458,7 +458,7 @@ class _ActiveTimerRowState extends State<_ActiveTimerRow> {
 
   @override
   Widget build(BuildContext context) {
-    final Color rowAccent = widget.overdue ? Colors.orange : userSettings.themeColors.accent;
+    final Color rowAccent = widget.overdue ? Colors.orange : Design.accent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -545,7 +545,7 @@ class ListLatestQuickTimersState extends State<ListLatestQuickTimers> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -610,7 +610,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
+          color: _hovered ? Design.accent.withAlpha(60) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
@@ -627,7 +627,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                   height: 14,
                   margin: EdgeInsets.only(right: _hovered ? 7 : 0),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accent,
+                    color: Design.accent,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -635,7 +635,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: userSettings.themeColors.accent.withAlpha(28),
+                    color: Design.accent.withAlpha(28),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -643,7 +643,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                     style: TextStyle(
                       fontSize: Design.baseFontSize,
                       fontWeight: FontWeight.w700,
-                      color: userSettings.themeColors.accent.withAlpha(200),
+                      color: Design.accent.withAlpha(200),
                     ),
                   ),
                 ),
@@ -654,7 +654,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                     widget.name,
                     style: TextStyle(
                       fontSize: Design.baseFontSize + 2,
-                      fontWeight: FontWeight(userSettings.theme.uiFontWeight),
+                      fontWeight: FontWeight(Design.uiFontWeight),
                       color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(200),
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -664,8 +664,7 @@ class _RecentTimerRowState extends State<_RecentTimerRow> {
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
                   opacity: _hovered ? 1.0 : 0.0,
-                  child:
-                      Icon(Icons.play_arrow_rounded, size: 13, color: userSettings.themeColors.accent.withAlpha(170)),
+                  child: Icon(Icons.play_arrow_rounded, size: 13, color: Design.accent.withAlpha(170)),
                 ),
                 const SizedBox(width: 2),
                 // Delete

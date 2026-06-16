@@ -40,7 +40,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   }
 
   Future<void> _handleWindowSize() async {
-    final bool isMatrix = QuickMenuDesigns.values[userSettings.quickMenuDesign] == QuickMenuDesigns.matrix;
+    final bool isMatrix = QuickMenuDesigns.values[user.quickMenuDesign] == QuickMenuDesigns.matrix;
     if (isMatrix) {
       final Size size = await windowManager.getSize();
       if (size.width < 340) {
@@ -69,7 +69,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
 
   @override
   Widget build(BuildContext context) {
-    return switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
+    return switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
       QuickMenuDesigns.classic => MainMenuClassicWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.interface => MainMenuInterfaceWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.modern => MainMenuModernWidget(key: ValueKey<int>(_refreshCounter)),

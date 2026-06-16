@@ -122,7 +122,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void _startTimer() {
     _mainTimer = Timer.periodic(kTimerInterval, (Timer timer) {
       if (_keepFetching && !_fetching) {
-        if (GetForegroundWindow() != Win32.hWnd && userSettings.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
+        if (GetForegroundWindow() != Win32.hWnd && user.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
           if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 400) {
             _keepFetching = false;
             QuickMenuFunctions.hideQuickMenu();
@@ -273,9 +273,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         }
       });
     }
-    Globals.heights.taskbar =
-        ((userSettings.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * _windows.length)
-            .clamp(150, userSettings.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
+    Globals.heights.taskbar = ((user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * _windows.length)
+        .clamp(150, user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _keepFetching = true),
@@ -285,7 +284,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
           type: MaterialType.transparency,
           child: Container(
             constraints: BoxConstraints(
-                minHeight: 150, maxHeight: userSettings.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
+                minHeight: 150, maxHeight: user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
             child: ShaderMask(
               shaderCallback: (Rect rect) {
                 return const LinearGradient(
@@ -304,7 +303,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 itemCount: _windows.length + 1,
                 itemBuilder: (BuildContext context, int xIndex) {
                   if (xIndex == 0) {
-                    if (User.s.mediaSessionsInTaskbar || User.s.musicPlayerInTaskbar) {
+                    if (user.mediaSessionsInTaskbar || user.musicPlayerInTaskbar) {
                       return const TaskBarMediaCarousel();
                     } else {
                       return const SizedBox.shrink();
@@ -361,7 +360,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   Widget _buildMonitorSeparator(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 1),
       child: Divider(height: 1, color: accent.withAlpha(40)),
@@ -418,13 +417,13 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final bool isSelected = widget.isSelected;
     final bool isHovered = _isHovered;
-    final bool expanded = userSettings.expandedTaskbar;
+    final bool expanded = user.expandedTaskbar;
     final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight;
 
-    if (userSettings.taskManagerStats && widget.window.process.exe.toLowerCase() == "taskmgr.exe") {
+    if (user.taskManagerStats && widget.window.process.exe.toLowerCase() == "taskmgr.exe") {
       return const SizedBox.shrink();
     }
     return MouseRegion(
@@ -456,7 +455,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
     final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
     final bool highlighted = widget.isSelected || _isHovered;
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -513,7 +512,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
             const SizedBox(width: 8),
             Expanded(child: _buildExpandedTitle()),
             if (_isHovered) ...<Widget>[
-              if (userSettings.mediaControlForApp && (hasMediaControls || isAudioSource)) ...<Widget>[
+              if (user.mediaControlForApp && (hasMediaControls || isAudioSource)) ...<Widget>[
                 _buildVolumeButton(),
                 _buildMediaButton()
               ],
@@ -526,7 +525,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildExpandedTitle() {
-    final Color onSurface = userSettings.themeColors.text;
+    final Color onSurface = Design.text;
     final bool highlighted = widget.isSelected || _isHovered;
     final String processName = widget.window.process.exe.replaceFirst('.exe', '');
 
@@ -539,15 +538,15 @@ class _TaskBarItemState extends State<TaskBarItem> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.getFont(
-            userSettings.themeColors.entryFontFamily,
+            Design.entryFontFamily,
             fontSize: Design.baseFontSize + 2,
             color: highlighted ? onSurface : onSurface.withAlpha(200),
             // letterSpacing: 1.1,
-            fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+            fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
             fontWeight: widget.isSelected
                 ? FontWeight.w600
                 : FontWeight(
-                    userSettings.themeColors.entryFontWeight,
+                    Design.entryFontWeight,
                   ),
           ),
         ),
@@ -598,8 +597,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
                     Positioned(
                       left: 18,
                       top: 3,
-                      child:
-                          Icon(Icons.push_pin_rounded, size: 8, color: userSettings.themeColors.accent.withAlpha(140)),
+                      child: Icon(Icons.push_pin_rounded, size: 8, color: Design.accent.withAlpha(140)),
                     ),
                   if (Caches.audioMixer.contains(widget.window.process.pId) ||
                       Caches.audioMixer.contains(widget.window.process.mainPID) ||
@@ -615,7 +613,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
             const SizedBox(width: 4),
             Expanded(child: _buildTitle()),
             if (_isHovered) ...<Widget>[
-              if (userSettings.mediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
+              if (user.mediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
               if (isAudioSource) _buildVolumeButton(),
               _buildCloseButton(),
             ],
@@ -626,7 +624,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildMediaButton() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
       borderRadius: BorderRadius.circular(6),
@@ -640,7 +638,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildVolumeButton() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
       borderRadius: BorderRadius.circular(6),
@@ -658,9 +656,9 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildCloseButton() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return Padding(
-      padding: EdgeInsets.only(right: !userSettings.expandedTaskbar && WindowWatcher.list.length > 10 ? 5.0 : 0),
+      padding: EdgeInsets.only(right: !user.expandedTaskbar && WindowWatcher.list.length > 10 ? 5.0 : 0),
       child: InkWell(
         hoverColor: Colors.red.withAlpha(40),
         borderRadius: BorderRadius.circular(6),
@@ -717,7 +715,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   Widget _buildMuteButton() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return HoverScaleButton(
       zoom: 1.8,
       onTap: _muteWindow,
@@ -739,7 +737,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   Widget _buildHelpBadge() {
     if (widget.window.helpText.isEmpty) return const SizedBox.shrink();
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return CustomTooltip(
       message: widget.window.helpText,
       child: Container(
@@ -767,14 +765,14 @@ class _TaskBarItemState extends State<TaskBarItem> {
       maxLines: 1,
       softWrap: false,
       style: GoogleFonts.getFont(
-        userSettings.theme.entryFontFamily,
+        Design.entryFontFamily,
         fontSize: 13,
         letterSpacing: 0.3,
-        fontStyle: userSettings.theme.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+        fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
         fontWeight: widget.isSelected
             ? FontWeight.w600
             : FontWeight(
-                userSettings.theme.entryFontWeight,
+                Design.entryFontWeight,
               ),
       ),
     );
@@ -839,10 +837,10 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
 
   List<Widget> _buildPages(MusicItem? musicItem, List<MediaSession> sessions) {
     final List<Widget> pages = <Widget>[];
-    if (musicItem != null && userSettings.musicPlayerInTaskbar) {
+    if (musicItem != null && user.musicPlayerInTaskbar) {
       pages.add(TaskBarMusicItem(item: musicItem));
     }
-    if (User.s.mediaSessionsInTaskbar) {
+    if (user.mediaSessionsInTaskbar) {
       for (final MediaSession session in sessions) {
         pages.add(TaskBarMediaSessionItem(session: session));
       }
@@ -922,9 +920,9 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
   Widget _buildCarousel(List<Widget> pages) {
     if (pages.isEmpty) return const SizedBox.shrink();
 
-    final bool expanded = userSettings.expandedTaskbar;
+    final bool expanded = user.expandedTaskbar;
     final double itemHeight = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     // Clamp current page in case the source list shrank.
     if (_currentPage >= pages.length) {
@@ -1064,8 +1062,8 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final bool expanded = userSettings.expandedTaskbar;
+    final Color accent = Design.accent;
+    final bool expanded = user.expandedTaskbar;
     final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
 
     return MouseRegion(
@@ -1107,7 +1105,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                             style: TextStyle(
                               fontSize: Design.baseFontSize + 2,
                               fontWeight: FontWeight.w600,
-                              color: userSettings.themeColors.text,
+                              color: Design.text,
                             ),
                           ),
                           !expanded
@@ -1118,7 +1116,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: Design.baseFontSize,
-                                    color: userSettings.themeColors.text.withAlpha(160),
+                                    color: Design.text.withAlpha(160),
                                   ),
                                 ),
                           const SizedBox(height: 4),
@@ -1138,13 +1136,13 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   }
 
   Widget _buildCoverArt() {
-    final double size = userSettings.expandedTaskbar ? 32 : 20;
+    final double size = user.expandedTaskbar ? 32 : 20;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: userSettings.themeColors.accent.withAlpha(20),
+        color: Design.accent.withAlpha(20),
       ),
       clipBehavior: Clip.antiAlias,
       child: widget.item.localArtworkSmallPath != null && File(widget.item.localArtworkSmallPath!).existsSync()
@@ -1175,7 +1173,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   }
 
   Widget _buildControls() {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -1303,8 +1301,8 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final bool expanded = userSettings.expandedTaskbar;
+    final Color accent = Design.accent;
+    final bool expanded = user.expandedTaskbar;
     final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
 
     return MouseRegion(
@@ -1343,7 +1341,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
                           style: TextStyle(
                             fontSize: Design.baseFontSize + 2,
                             fontWeight: FontWeight.w600,
-                            color: userSettings.themeColors.text,
+                            color: Design.text,
                           ),
                         ),
                         if (expanded)
@@ -1353,7 +1351,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: Design.baseFontSize,
-                              color: userSettings.themeColors.text.withAlpha(160),
+                              color: Design.text.withAlpha(160),
                             ),
                           ),
                       ],
@@ -1370,14 +1368,14 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
   }
 
   Widget _buildCoverArt() {
-    final double size = userSettings.expandedTaskbar ? 32 : 20;
+    final double size = user.expandedTaskbar ? 32 : 20;
     final ImageProvider<Object>? image = widget.session.thumbnailImage;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: userSettings.themeColors.accent.withAlpha(20),
+        color: Design.accent.withAlpha(20),
       ),
       clipBehavior: Clip.antiAlias,
       child: image != null

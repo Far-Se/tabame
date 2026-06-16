@@ -31,20 +31,20 @@ class _LibreStatsState extends State<LibreStats> {
   late double wRam;
 
   final TextStyle labelStyle = GoogleFonts.getFont(
-    userSettings.themeColors.uiFontFamily,
-    fontSize: userSettings.expandedTaskbar ? 11.5 : 10.5,
+    Design.uiFontFamily,
+    fontSize: user.expandedTaskbar ? 11.5 : 10.5,
     letterSpacing: 0.4,
-    fontStyle: userSettings.themeColors.uiFontItalic ? FontStyle.italic : FontStyle.normal,
-    fontWeight: FontWeight(userSettings.themeColors.uiFontWeight),
-    color: userSettings.themeColors.text,
+    fontStyle: Design.uiFontItalic ? FontStyle.italic : FontStyle.normal,
+    fontWeight: FontWeight(Design.uiFontWeight),
+    color: Design.text,
   );
 
   final TextStyle valueStyle = GoogleFonts.getFont(
-    userSettings.themeColors.entryFontFamily,
-    fontSize: userSettings.expandedTaskbar ? 12.5 : 11.5,
-    fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-    fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
-    color: userSettings.themeColors.text,
+    Design.entryFontFamily,
+    fontSize: user.expandedTaskbar ? 12.5 : 11.5,
+    fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+    fontWeight: FontWeight(Design.entryFontWeight),
+    color: Design.text,
   );
 
   String? baseUrl;
@@ -146,8 +146,8 @@ class _LibreStatsState extends State<LibreStats> {
 
   @override
   Widget build(BuildContext context) {
-    final double height = userSettings.expandedTaskbar ? 32 : 27;
-    final Color onSurface = userSettings.themeColors.text;
+    final double height = user.expandedTaskbar ? 32 : 27;
+    final Color onSurface = Design.text;
 
     // Fixed widths per column — measured once against the widest possible value.
     final double wCpuLbl = _measureText('CPU ', labelStyle);
@@ -213,7 +213,7 @@ class _LibreStatsState extends State<LibreStats> {
               child: InkWell(
                 onTap: _focusTaskManager,
                 borderRadius: BorderRadius.circular(10),
-                hoverColor: userSettings.themeColors.accent.withAlpha(10),
+                hoverColor: Design.accent.withAlpha(10),
                 splashColor: Colors.transparent,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(5, 3, 5, 3),

@@ -69,7 +69,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return QuickMenuPanel(
@@ -908,8 +908,8 @@ class _WeatherPanelState extends State<WeatherPanel> {
             "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset",
         "timezone": "auto",
         "forecast_days": "7",
-        if (userSettings.weatherUnit == "u") "temperature_unit": "fahrenheit",
-        if (userSettings.weatherUnit == "u") "wind_speed_unit": "mph",
+        if (user.weatherUnit == "u") "temperature_unit": "fahrenheit",
+        if (user.weatherUnit == "u") "wind_speed_unit": "mph",
       },
     );
 
@@ -1015,7 +1015,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
       } catch (_) {}
     }
 
-    final List<String> legacyWeather = Boxes.pref.getStringList("weather") ?? userSettings.weather;
+    final List<String> legacyWeather = Boxes.pref.getStringList("weather") ?? user.weather;
     if (legacyWeather.length > 1) {
       final List<String> parts = legacyWeather[1].split(',');
       if (parts.length >= 2) {
@@ -1045,11 +1045,11 @@ class _WeatherPanelState extends State<WeatherPanel> {
   }
 
   String _formatTemp(double value) {
-    return "${value.round()} ${userSettings.weatherUnit == "u" ? "F" : "C"}";
+    return "${value.round()} ${user.weatherUnit == "u" ? "F" : "C"}";
   }
 
   String _formatSpeed(double value) {
-    return "${value.round()} ${userSettings.weatherUnit == "u" ? "mph" : "km/h"}";
+    return "${value.round()} ${user.weatherUnit == "u" ? "mph" : "km/h"}";
   }
 
   IconData _weatherIcon(int code) {

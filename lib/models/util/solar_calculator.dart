@@ -10,11 +10,11 @@ class SolarCalculator {
     final int nowUnix = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     // Refresh only if 12h passed or forced
-    if (!force && (nowUnix - userSettings.lightSwitchLastFetch < 12 * 3600)) {
+    if (!force && (nowUnix - user.lightSwitchLastFetch < 12 * 3600)) {
       return;
     }
 
-    final List<String> latLong = userSettings.weatherLatLong.split(',');
+    final List<String> latLong = user.weatherLatLong.split(',');
     if (latLong.length < 2) return;
 
     final String lat = latLong[0].trim();
@@ -34,13 +34,13 @@ class SolarCalculator {
           final DateTime sunrise = DateTime.parse(sunriseStr);
           final DateTime sunset = DateTime.parse(sunsetStr);
 
-          userSettings.lightSwitchSunrise = sunrise.hour * 60 + sunrise.minute;
-          userSettings.lightSwitchSunset = sunset.hour * 60 + sunset.minute;
-          userSettings.lightSwitchLastFetch = nowUnix;
+          user.lightSwitchSunrise = sunrise.hour * 60 + sunrise.minute;
+          user.lightSwitchSunset = sunset.hour * 60 + sunset.minute;
+          user.lightSwitchLastFetch = nowUnix;
 
-          await Boxes.updateSettings("lightSwitchSunrise", userSettings.lightSwitchSunrise);
-          await Boxes.updateSettings("lightSwitchSunset", userSettings.lightSwitchSunset);
-          await Boxes.updateSettings("lightSwitchLastFetch", userSettings.lightSwitchLastFetch);
+          await Boxes.updateSettings("lightSwitchSunrise", user.lightSwitchSunrise);
+          await Boxes.updateSettings("lightSwitchSunset", user.lightSwitchSunset);
+          await Boxes.updateSettings("lightSwitchLastFetch", user.lightSwitchLastFetch);
         }
       }
     } catch (e) {

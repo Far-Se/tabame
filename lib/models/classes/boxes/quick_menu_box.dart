@@ -50,9 +50,9 @@ class QuickMenuFunctions {
   static const String defaultBackdropPath = 'resources/gradient/gradient0.jpg';
 
   static void syncSelectedBackdrop({String? selectedPath}) {
-    final ThemeColors currentTheme = userSettings.themeColors;
+    final ThemeColors currentTheme = user.themeColors;
     if (currentTheme.backdropType == '') {
-      userSettings.activeBackdropPath = '';
+      user.activeBackdropPath = '';
       currentTheme.backdropPath = '';
       return;
     }
@@ -68,7 +68,7 @@ class QuickMenuFunctions {
       nextPath = '';
     }
 
-    userSettings.activeBackdropPath = nextPath;
+    user.activeBackdropPath = nextPath;
     currentTheme.backdropPath = nextPath;
   }
 

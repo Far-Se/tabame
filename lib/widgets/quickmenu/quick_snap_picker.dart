@@ -154,34 +154,34 @@ class _QuickSnapPickerState extends State<QuickSnapPicker> {
   Widget build(BuildContext context) {
     if (_selectedPreset != null || _presets.length == 1) {
       _selectedPreset ??= _presets.first;
-      userSettings.lastQuickSnapZoneId = _selectedPreset!.id;
+      user.lastQuickSnapZoneId = _selectedPreset!.id;
       return _ZoneGrid(
         preset: _selectedPreset!,
         onZoneTapped: _applyZone,
         onBack: () {
-          userSettings.lastQuickSnapZoneId = "";
+          user.lastQuickSnapZoneId = "";
           setState(() => _selectedPreset = null);
         },
       );
-    } else if (userSettings.lastQuickSnapZoneId != "") {
-      if (_presets.any((QuickGrid element) => element.id == userSettings.lastQuickSnapZoneId)) {
-        _selectedPreset = _presets.firstWhere((QuickGrid element) => element.id == userSettings.lastQuickSnapZoneId);
+    } else if (user.lastQuickSnapZoneId != "") {
+      if (_presets.any((QuickGrid element) => element.id == user.lastQuickSnapZoneId)) {
+        _selectedPreset = _presets.firstWhere((QuickGrid element) => element.id == user.lastQuickSnapZoneId);
         return _ZoneGrid(
           preset: _selectedPreset!,
           onZoneTapped: _applyZone,
           onBack: () {
-            userSettings.lastQuickSnapZoneId = "";
+            user.lastQuickSnapZoneId = "";
             setState(() => _selectedPreset = null);
           },
         );
       } else {
-        userSettings.lastQuickSnapZoneId = "";
+        user.lastQuickSnapZoneId = "";
       }
     }
     return _PresetList(
       presets: _presets,
       onPresetTapped: (QuickGrid preset) {
-        userSettings.lastQuickSnapZoneId = preset.id;
+        user.lastQuickSnapZoneId = preset.id;
         setState(() => _selectedPreset = preset);
       },
     );
@@ -199,7 +199,7 @@ class _PresetList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     if (presets.isEmpty) {
@@ -272,7 +272,7 @@ class _PresetTileState extends State<_PresetTile> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 130),
-          color: _hov ? userSettings.themeColors.accent.withValues(alpha: 0.08) : Colors.transparent,
+          color: _hov ? Design.accent.withValues(alpha: 0.08) : Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: <Widget>[
@@ -283,7 +283,7 @@ class _PresetTileState extends State<_PresetTile> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(5),
                   child: CustomPaint(
-                    painter: _MiniPainter(preset: widget.preset, accent: userSettings.themeColors.accent),
+                    painter: _MiniPainter(preset: widget.preset, accent: Design.accent),
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -331,7 +331,7 @@ class _ZoneGridState extends State<_ZoneGrid> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(

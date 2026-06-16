@@ -26,7 +26,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -40,9 +40,9 @@ class ViewsInterfaceState extends State<ViewsInterface> {
               const SizedBox(height: 16),
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 250),
-                opacity: userSettings.quickSnapGrid ? 1.0 : 0.5,
+                opacity: user.quickSnapGrid ? 1.0 : 0.5,
                 child: IgnorePointer(
-                  ignoring: !userSettings.quickSnapGrid,
+                  ignoring: !user.quickSnapGrid,
                   child: Column(
                     children: <Widget>[
                       _buildConfigurationHub(accent),
@@ -93,12 +93,12 @@ class ViewsInterfaceState extends State<ViewsInterface> {
             ),
           ),
           _toggleChip(
-            label: userSettings.quickSnapGrid ? "ACTIVE" : "OFFLINE",
-            value: userSettings.quickSnapGrid,
+            label: user.quickSnapGrid ? "ACTIVE" : "OFFLINE",
+            value: user.quickSnapGrid,
             onChanged: (bool value) {
               setState(() {
-                userSettings.quickSnapGrid = value;
-                Boxes.updateSettings("quickSnapGrid", userSettings.quickSnapGrid);
+                user.quickSnapGrid = value;
+                Boxes.updateSettings("quickSnapGrid", user.quickSnapGrid);
               });
             },
           ),
@@ -440,7 +440,7 @@ class ViewsInterfaceState extends State<ViewsInterface> {
   }
 
   Widget _toggleChip({required String label, required bool value, required ValueChanged<bool> onChanged}) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(20),

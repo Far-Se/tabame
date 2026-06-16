@@ -21,9 +21,9 @@ class _ChangelogState extends State<Changelog> {
   @override
   void initState() {
     super.initState();
-    if (userSettings.lastChangelog != Globals.version) {
-      userSettings.lastChangelog = Globals.version;
-      Boxes.updateSettings("lastChangelog", userSettings.lastChangelog);
+    if (user.lastChangelog != Globals.version) {
+      user.lastChangelog = Globals.version;
+      Boxes.updateSettings("lastChangelog", user.lastChangelog);
     }
   }
 

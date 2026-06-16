@@ -175,9 +175,9 @@ class _WorkspacesPanelState extends State<WorkspacesPanel> {
         return window.hWnd != hWnd && window.process.exe.toLowerCase().endsWith(area.hookTo.toLowerCase());
       }).firstOrNull;
       if (targetWindow != null) {
-        userSettings.hookedWins[hWnd] ??= <int>[];
-        if (!userSettings.hookedWins[hWnd]!.contains(targetWindow.hWnd)) {
-          userSettings.hookedWins[hWnd]!.add(targetWindow.hWnd);
+        user.hookedWins[hWnd] ??= <int>[];
+        if (!user.hookedWins[hWnd]!.contains(targetWindow.hWnd)) {
+          user.hookedWins[hWnd]!.add(targetWindow.hWnd);
         }
       }
     }
@@ -270,7 +270,7 @@ class _WorkspacesPanelState extends State<WorkspacesPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(

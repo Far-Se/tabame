@@ -195,7 +195,9 @@ class QMSettingsState extends State<QMSettings> {
               Text("Dashboard", style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
               Text("Configuration & Sub-systems",
                   style: TextStyle(
-                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: theme.hintColor)),
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w600,
+                      color: theme.hintColor)),
             ],
           ),
         ),
@@ -240,7 +242,9 @@ class QMSettingsState extends State<QMSettings> {
                       const SizedBox(height: 4),
                       Text(
                         "Try a different keyword or browse the grid.",
-                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.2)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            color: onSurface.withValues(alpha: 0.2)),
                       ),
                     ],
                   ),

@@ -568,7 +568,15 @@ class FileIndexDb {
       ''', args);
 
       if (rows.isNotEmpty) {
-        return _materializeSearchResults(rows);
+        final List<SearchResultNode> nodes = _materializeSearchResults(rows);
+        final String lq = trimmedQuery.toLowerCase();
+        nodes.sort((SearchResultNode a, SearchResultNode b) {
+          final double sa = _fuzzyScore(a.name.toLowerCase(), lq, 0);
+          final double sb = _fuzzyScore(b.name.toLowerCase(), lq, 0);
+          // Primary: fuzzy tier. Secondary: times_opened (already baked into DB ordering).
+          return sb.compareTo(sa);
+        });
+        return nodes;
       }
 
       return _searchFuzzyFallback(db, trimmedQuery, limit: limit, entryTypes: entryTypes);
@@ -641,7 +649,25 @@ class FileIndexDb {
     final int dotIndex = name.lastIndexOf('.');
     final String stem = dotIndex > 0 ? name.substring(0, dotIndex) : name;
 
-    if (name.contains(query)) return 1000.0 + timesOpened;
+    // Tier 1 — exact full name match (e.g. query "test.dart" == name "test.dart")
+    if (name == query) return 4000.0 + timesOpened;
+
+    // Tier 2 — exact stem match (query "test" == stem "test" of "test.dart")
+    if (stem == query) return 3500.0 + timesOpened;
+
+    // Tier 3 — name starts with query (e.g. "test_util.dart" for query "test")
+    if (name.startsWith(query)) return 3000.0 + timesOpened;
+
+    // Tier 4 — stem starts with query (e.g. stem "test_util" for query "test")
+    if (stem.startsWith(query)) return 2500.0 + timesOpened;
+
+    // Tier 5 — name contains query as a substring (e.g. "music_db_test.dart")
+    // Score is penalised by how much extra characters surround the match,
+    // so shorter names rank higher when multiple files contain the query.
+    if (name.contains(query)) {
+      final double brevityBonus = query.length / name.length * 100;
+      return 1000.0 + brevityBonus + timesOpened;
+    }
 
     if (_isSubsequence(query, name)) {
       final double density = query.length / name.length;

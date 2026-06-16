@@ -61,8 +61,8 @@ class _TabButtonState extends State<_TabButton> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: <Color>[
-                          userSettings.themeColors.accent.withAlpha(45),
-                          userSettings.themeColors.accent.withAlpha(15),
+                          Design.accent.withAlpha(45),
+                          Design.accent.withAlpha(15),
                         ],
                       )
                     : null,
@@ -70,14 +70,14 @@ class _TabButtonState extends State<_TabButton> {
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(
                   color: widget.active
-                      ? userSettings.themeColors.accent.withAlpha(120)
+                      ? Design.accent.withAlpha(120)
                       : Theme.of(context).colorScheme.onSurface.withAlpha(_hovered ? 28 : 12),
                   width: 1,
                 ),
                 boxShadow: widget.active
                     ? <BoxShadow>[
                         BoxShadow(
-                          color: userSettings.themeColors.accent.withAlpha(15),
+                          color: Design.accent.withAlpha(15),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -89,7 +89,7 @@ class _TabButtonState extends State<_TabButton> {
                   widget.icon,
                   size: 17,
                   color: widget.active
-                      ? userSettings.themeColors.accent
+                      ? Design.accent
                       : Theme.of(context).colorScheme.onSurface.withAlpha(_hovered ? 180 : 110),
                 ),
               ),
@@ -120,7 +120,7 @@ class _TimelineTimeLabel extends StatelessWidget {
           softWrap: false,
           overflow: TextOverflow.visible,
           style: GoogleFonts.getFont(
-            userSettings.themeColors.entryFontFamily,
+            Design.entryFontFamily,
             fontSize: Design.baseFontSize + 0.5,
             color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
             letterSpacing: 0.4,
@@ -187,10 +187,9 @@ class _CoverArt extends StatelessWidget {
     final Widget fallback = Container(
       width: size,
       height: size,
-      decoration:
-          BoxDecoration(color: userSettings.themeColors.accent.withAlpha(20), borderRadius: BorderRadius.circular(12)),
-      child: Icon(item.isFolder ? Icons.album_rounded : Icons.music_note_rounded,
-          size: size * 0.38, color: userSettings.themeColors.accent),
+      decoration: BoxDecoration(color: Design.accent.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+      child:
+          Icon(item.isFolder ? Icons.album_rounded : Icons.music_note_rounded, size: size * 0.38, color: Design.accent),
     );
 
     final String? localArtworkPath = size >= 96 ? item.localArtworkLargePath : item.localArtworkSmallPath;
@@ -255,14 +254,11 @@ class _MusicRowState extends State<_MusicRow> {
             duration: duration,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _hovered
-                  ? userSettings.themeColors.accent.withAlpha(14)
-                  : Theme.of(context).colorScheme.onSurface.withAlpha(7),
+              color: _hovered ? Design.accent.withAlpha(14) : Theme.of(context).colorScheme.onSurface.withAlpha(7),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: _hovered
-                      ? userSettings.themeColors.accent.withAlpha(52)
-                      : Theme.of(context).colorScheme.onSurface.withAlpha(14)),
+                  color:
+                      _hovered ? Design.accent.withAlpha(52) : Theme.of(context).colorScheme.onSurface.withAlpha(14)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -331,7 +327,7 @@ class _MusicRowState extends State<_MusicRow> {
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.all(6),
-                              child: Icon(action.icon, size: 15, color: userSettings.themeColors.accent),
+                              child: Icon(action.icon, size: 15, color: Design.accent),
                             ),
                           ),
                         ),
@@ -412,14 +408,11 @@ class _PlaylistRowState extends State<_PlaylistRow> {
             duration: duration,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _hovered
-                  ? userSettings.themeColors.accent.withAlpha(14)
-                  : Theme.of(context).colorScheme.onSurface.withAlpha(8),
+              color: _hovered ? Design.accent.withAlpha(14) : Theme.of(context).colorScheme.onSurface.withAlpha(8),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: _hovered
-                      ? userSettings.themeColors.accent.withAlpha(52)
-                      : Theme.of(context).colorScheme.onSurface.withAlpha(18)),
+                  color:
+                      _hovered ? Design.accent.withAlpha(52) : Theme.of(context).colorScheme.onSurface.withAlpha(18)),
             ),
             child: Row(
               children: <Widget>[
@@ -462,7 +455,7 @@ class _PlaylistRowState extends State<_PlaylistRow> {
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.all(6),
-                              child: Icon(action.icon, size: 15, color: userSettings.themeColors.accent),
+                              child: Icon(action.icon, size: 15, color: Design.accent),
                             ),
                           ),
                         ),
@@ -496,9 +489,9 @@ class _SmartPlaylistRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: userSettings.themeColors.accent.withAlpha(10),
+          color: Design.accent.withAlpha(10),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: userSettings.themeColors.accent.withAlpha(36)),
+          border: Border.all(color: Design.accent.withAlpha(36)),
         ),
         child: Row(
           children: <Widget>[
@@ -527,7 +520,7 @@ class _SmartPlaylistRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 18, color: userSettings.themeColors.accent),
+            Icon(Icons.chevron_right_rounded, size: 18, color: Design.accent),
           ],
         ),
       ),
@@ -559,7 +552,7 @@ class _PlaylistPickerRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(Icons.playlist_add_check_rounded, size: 17, color: userSettings.themeColors.accent),
+            Icon(Icons.playlist_add_check_rounded, size: 17, color: Design.accent),
             const SizedBox(width: 9),
             Expanded(
               child: Text(
@@ -643,8 +636,8 @@ class _PlayerTrackMenuButton extends StatelessWidget {
       child: PopupMenuButton<_PlayerTrackMenuAction>(
         position: PopupMenuPosition.under,
         tooltip: "",
-        color: Color.alphaBlend(userSettings.themeColors.accent.withAlpha(16), Theme.of(context).colorScheme.surface),
-        surfaceTintColor: userSettings.themeColors.accent.withAlpha(30),
+        color: Color.alphaBlend(Design.accent.withAlpha(16), Theme.of(context).colorScheme.surface),
+        surfaceTintColor: Design.accent.withAlpha(30),
         elevation: 8,
         borderRadius: BorderRadius.circular(16),
         onSelected: onSelected,
@@ -678,7 +671,7 @@ class _PlayerTrackMenuButton extends StatelessWidget {
       height: 34,
       child: Row(
         children: <Widget>[
-          Icon(icon, size: 16, color: userSettings.themeColors.accent),
+          Icon(icon, size: 16, color: Design.accent),
           const SizedBox(width: 9),
           Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700)),
         ],
@@ -747,28 +740,28 @@ class _TransportButtonState extends State<_TransportButton> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: <Color>[
-                          userSettings.themeColors.accent.withAlpha(220),
-                          userSettings.themeColors.accent.withAlpha(140),
+                          Design.accent.withAlpha(220),
+                          Design.accent.withAlpha(140),
                         ],
                       )
                     : null,
                 color: widget.isPrimary
                     ? null
                     : (widget.active
-                        ? userSettings.themeColors.accent.withAlpha(30)
+                        ? Design.accent.withAlpha(30)
                         : Theme.of(context).colorScheme.onSurface.withAlpha(8)),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: widget.isPrimary
-                      ? userSettings.themeColors.accent.withAlpha(180)
+                      ? Design.accent.withAlpha(180)
                       : (widget.active
-                          ? userSettings.themeColors.accent.withAlpha(100)
+                          ? Design.accent.withAlpha(100)
                           : Theme.of(context).colorScheme.onSurface.withAlpha(20)),
                 ),
                 boxShadow: widget.isPrimary
                     ? <BoxShadow>[
                         BoxShadow(
-                          color: userSettings.themeColors.accent.withAlpha(_hovered ? 80 : 50),
+                          color: Design.accent.withAlpha(_hovered ? 80 : 50),
                           blurRadius: _hovered ? 18 : 14,
                           offset: Offset(0, _hovered ? 6 : 5),
                         ),
@@ -789,9 +782,7 @@ class _TransportButtonState extends State<_TransportButton> {
                   color: widget.isPrimary
                       ? Theme.of(context).colorScheme.surface
                       : (widget.enabled
-                          ? (widget.active
-                              ? userSettings.themeColors.accent
-                              : Theme.of(context).colorScheme.onSurface.withAlpha(170))
+                          ? (widget.active ? Design.accent : Theme.of(context).colorScheme.onSurface.withAlpha(170))
                           : Theme.of(context).colorScheme.onSurface.withAlpha(55)),
                 ),
               ),
@@ -821,7 +812,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        Icon(icon, size: 14, color: userSettings.themeColors.accent),
+        Icon(icon, size: 14, color: Design.accent),
         const SizedBox(width: 6),
         Text(label.toUpperCase(),
             style: TextStyle(
@@ -833,13 +824,9 @@ class _SectionLabel extends StatelessWidget {
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: userSettings.themeColors.accent.withAlpha(24), borderRadius: BorderRadius.circular(999)),
+            decoration: BoxDecoration(color: Design.accent.withAlpha(24), borderRadius: BorderRadius.circular(999)),
             child: Text("$count",
-                style: TextStyle(
-                    fontSize: Design.baseFontSize,
-                    fontWeight: FontWeight.w800,
-                    color: userSettings.themeColors.accent)),
+                style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: Design.accent)),
           ),
         ],
         const SizedBox(width: 8),
@@ -859,9 +846,8 @@ class _IconPill extends StatelessWidget {
     return Container(
       width: 32,
       height: 32,
-      decoration:
-          BoxDecoration(color: userSettings.themeColors.accent.withAlpha(20), borderRadius: BorderRadius.circular(9)),
-      child: Icon(icon, size: 17, color: userSettings.themeColors.accent),
+      decoration: BoxDecoration(color: Design.accent.withAlpha(20), borderRadius: BorderRadius.circular(9)),
+      child: Icon(icon, size: 17, color: Design.accent),
     );
   }
 }
@@ -903,10 +889,9 @@ class _QuickLaunchTileState extends State<_QuickLaunchTile> {
         duration: duration,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accent.withAlpha(14) : widget.onSurface.withAlpha(7),
+          color: _hovered ? Design.accent.withAlpha(14) : widget.onSurface.withAlpha(7),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: _hovered ? userSettings.themeColors.accent.withAlpha(48) : widget.onSurface.withAlpha(14)),
+          border: Border.all(color: _hovered ? Design.accent.withAlpha(48) : widget.onSurface.withAlpha(14)),
         ),
         child: Row(
           children: <Widget>[
@@ -948,7 +933,7 @@ class _QuickLaunchTileState extends State<_QuickLaunchTile> {
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(
                           padding: const EdgeInsets.all(5),
-                          child: Icon(action.icon, size: 14, color: userSettings.themeColors.accent),
+                          child: Icon(action.icon, size: 14, color: Design.accent),
                         ),
                       ),
                     ),
@@ -976,8 +961,7 @@ class _MiniIconButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.all(6),
-        child: Icon(icon,
-            size: 16, color: accent != null ? accent!.withAlpha(220) : userSettings.themeColors.accent.withAlpha(220)),
+        child: Icon(icon, size: 16, color: accent != null ? accent!.withAlpha(220) : Design.accent.withAlpha(220)),
       ),
     );
   }
@@ -1047,7 +1031,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(icon, size: 42, color: userSettings.themeColors.accent.withAlpha(170)),
+            Icon(icon, size: 42, color: Design.accent.withAlpha(170)),
             const SizedBox(height: 12),
             Text(title,
                 textAlign: TextAlign.center,
@@ -1080,26 +1064,24 @@ class _StatusStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: userSettings.themeColors.background,
+      color: Design.background,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        color: userSettings.themeColors.accent.withAlpha(18),
+        color: Design.accent.withAlpha(18),
         child: Row(
           children: <Widget>[
-            Icon(Icons.info_outline_rounded, size: 14, color: userSettings.themeColors.accent),
+            Icon(Icons.info_outline_rounded, size: 14, color: Design.accent),
             const SizedBox(width: 8),
             Expanded(
                 child: Text(message,
                     style: TextStyle(
-                        fontSize: Design.baseFontSize + 1,
-                        fontWeight: FontWeight.w700,
-                        color: userSettings.themeColors.accent))),
+                        fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.accent))),
             InkWell(
               onTap: onClose,
               borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: const EdgeInsets.all(2),
-                child: Icon(Icons.close_rounded, size: 14, color: userSettings.themeColors.accent),
+                child: Icon(Icons.close_rounded, size: 14, color: Design.accent),
               ),
             ),
           ],

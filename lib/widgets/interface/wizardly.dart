@@ -39,7 +39,7 @@ class WizardlyState extends State<Wizardly> {
   @override
   void initState() {
     super.initState();
-    if (!userSettings.args.contains("-wizardly")) {
+    if (!user.args.contains("-wizardly")) {
       pages.add(WizardPage(
           title: "Hosts Editor",
           widget: () => const HostsEditor(),
@@ -123,8 +123,8 @@ class WizardlyState extends State<Wizardly> {
                       pages.length,
                       (int i) => ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: userSettings.themeColors.accent.withAlpha(currentPage == i ? 50 : 12),
-                          foregroundColor: userSettings.themeColors.accent,
+                          backgroundColor: Design.accent.withAlpha(currentPage == i ? 50 : 12),
+                          foregroundColor: Design.accent,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

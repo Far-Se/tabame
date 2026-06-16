@@ -119,7 +119,7 @@ class WinUtils {
     final RegistryKey currentVersionKey =
         Registry.openPath(RegistryHive.localMachine, path: r'SOFTWARE\Microsoft\Windows NT\CurrentVersion');
     final int currentBuildNumber = currentVersionKey.getValueAsInt("CurrentBuild") ?? 0;
-
+    currentVersionKey.close();
     return currentBuildNumber >= 22000;
   }
 
@@ -271,33 +271,69 @@ class WinUtils {
     setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
 
-  static void startOnStartup({String? exeFilePath, String? arguments}) {
-    // ! doenst work
-    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    final Pointer<Pointer<COMObject>> shellLinkPointer = calloc<Pointer<COMObject>>();
-    final Pointer<COMObject> persistFilePointer = calloc<COMObject>();
+  static void startOnStartup({
+    String? exeFilePath,
+    String? arguments,
+  }) {
+    final int hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
-    exeFilePath ??= Platform.resolvedExecutable;
-    final String workingDirectory = Directory(exeFilePath).parent.path;
-    final IShellLink shellLink = IShellLink(shellLinkPointer.cast());
+    // S_OK or S_FALSE mean COM is initialized
+    final bool initialized = hr >= 0;
 
-    shellLink.setPath(TEXT(exeFilePath));
-    shellLink.setWorkingDirectory(TEXT(workingDirectory));
-    shellLink.setShowCmd(SW_SHOWNORMAL);
+    final Pointer<Pointer<COMObject>> shellLinkPtr = calloc<Pointer<COMObject>>();
 
-    if (arguments != null) {
-      shellLink.setArguments(TEXT(arguments));
+    try {
+      exeFilePath ??= Platform.resolvedExecutable;
+      final String workingDirectory = Directory(exeFilePath).parent.path;
+
+      final IShellLink shellLink = IShellLink(shellLinkPtr.cast());
+
+      final Pointer<Utf16> exePtr = exeFilePath.toNativeUtf16();
+      final Pointer<Utf16> workingDirPtr = workingDirectory.toNativeUtf16();
+      final Pointer<Utf16>? argsPtr = arguments?.toNativeUtf16();
+
+      try {
+        shellLink.setPath(exePtr);
+        shellLink.setWorkingDirectory(workingDirPtr);
+        shellLink.setShowCmd(SW_SHOWNORMAL);
+
+        if (argsPtr != null) {
+          shellLink.setArguments(argsPtr);
+        }
+
+        final IPersistFile persistFile = IPersistFile(shellLink.toInterface(IID_IPersistFile));
+
+        try {
+          final String startupFolderPath = getKnownFolderCLSID(CSIDL_STARTUP);
+          final String shortcutName = File(exeFilePath).uri.pathSegments.last.replaceFirst('.exe', '.lnk');
+
+          final Pointer<Utf16> shortcutPath = '$startupFolderPath\\$shortcutName'.toNativeUtf16();
+
+          try {
+            persistFile.save(shortcutPath, TRUE);
+          } finally {
+            calloc.free(shortcutPath);
+          }
+        } finally {
+          persistFile.release();
+        }
+      } finally {
+        calloc.free(exePtr);
+        calloc.free(workingDirPtr);
+
+        if (argsPtr != null) {
+          calloc.free(argsPtr);
+        }
+
+        shellLink.release();
+      }
+    } finally {
+      calloc.free(shellLinkPtr);
+
+      if (initialized) {
+        CoUninitialize();
+      }
     }
-
-    final IPersistFile persistFile = IPersistFile(shellLink.toInterface(IID_IPersistFile));
-    final String startupFolderPath = getKnownFolderCLSID(CSIDL_STARTUP);
-    final String shortcutName = File(exeFilePath).uri.pathSegments.last.replaceFirst(".exe", ".lnk");
-    persistFile.save(TEXT("$startupFolderPath\\$shortcutName"), TRUE);
-    persistFile.release();
-    shellLink.release();
-    CoUninitialize();
-    free(shellLinkPointer);
-    free(persistFilePointer);
   }
 
   static String getStartupShortcut() {
@@ -384,11 +420,11 @@ class WinUtils {
 
   static void closeAllTabameExProcesses() {
     final List<int> windowHandles = enumWindows();
+    final int mainHandle = Win32.getMainHandle();
     for (final int windowHandle in windowHandles) {
-      if (Win32.getClass(windowHandle) == "TABAME_WIN32_WINDOW" && windowHandle != Win32.hWnd) {
-        if (!Win32.getTitle(windowHandle).contains("Debug")) {
-          Win32.closeWindow(windowHandle);
-        }
+      if (Win32.getClass(windowHandle) == "TABAME_WIN32_WINDOW" && windowHandle != mainHandle) {
+        if (Win32.getTitle(windowHandle).contains("Debug")) continue;
+        Win32.closeWindow(windowHandle);
       }
     }
   }
@@ -644,7 +680,7 @@ class WinUtils {
     launchWithExplorer(path, arguments: arguments, workingDirectory: resolvedWorkingDirectory);
     return;
     // ignore: dead_code
-    if (arguments == null && !shouldParseParameters && userSettings.runAsAdministrator && !path.startsWith("http")) {
+    if (arguments == null && !shouldParseParameters && user.runAsAdministrator && !path.startsWith("http")) {
       //! you can gain admin priv with one command, but there is no command to de-elevate yourself or app you are launching.
       //! only way I've found is to start powershell that starts explorer THAT starts the file.
       runPowerShell(<String>['explorer.exe "$path"']);
@@ -665,7 +701,7 @@ class WinUtils {
     final RegExp commandPattern = RegExp(r"^([a-z0-9-_]+) (.*?)$");
     if (commandPattern.hasMatch(path)) {
       final RegExpMatch commandMatch = commandPattern.firstMatch(path)!;
-      if (!userSettings.runAsAdministrator) {
+      if (!user.runAsAdministrator) {
         ShellExecute(
             NULL, TEXT("open"), TEXT(commandMatch.group(1)!), TEXT(commandMatch.group(2)!), nullptr, SW_SHOWNORMAL);
         return;
@@ -764,11 +800,14 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     return <int>[pos.X, pos.Y];
   }
 
+  static Timer? alwaysRun;
   static void alwaysAwakeRun(bool state) {
     if (state == false) {
+      alwaysRun?.cancel();
       SetThreadExecutionState(ES_CONTINUOUS);
     } else {
-      Timer.periodic(const Duration(seconds: 45), (Timer timer) {
+      alwaysRun?.cancel();
+      alwaysRun = Timer.periodic(const Duration(seconds: 45), (Timer timer) {
         if (Globals.alwaysAwake == false) {
           SetThreadExecutionState(ES_CONTINUOUS);
           timer.cancel();
@@ -825,6 +864,7 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
             SetWindowRgn(volumeWindowHandle, osdRegionHandle, 1);
             final int windowDeviceContext = GetWindowDC(volumeWindowHandle);
             SetBkColor(windowDeviceContext, 0xFF00FF00);
+            ReleaseDC(volumeWindowHandle, windowDeviceContext);
           } else {
             SetWindowRgn(volumeWindowHandle, 0, 1);
           }
@@ -893,27 +933,49 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     return defaultResult;
   } */
   static Future<void> downloadFile(String url, String filename, Function callback) async {
-    final http.Client httpClient = http.Client();
-    final http.Request request = http.Request('GET', Uri.parse(url));
-    final Future<http.StreamedResponse> streamedResponse = httpClient.send(request);
+    final http.Client client = http.Client();
 
-    final List<List<int>> dataChunks = <List<int>>[];
-    streamedResponse.asStream().listen((http.StreamedResponse response) {
-      response.stream.listen((List<int> chunk) {
-        dataChunks.add(chunk);
-      }, onDone: () async {
-        final File destinationFile = File(filename);
-        final Uint8List fileBytes = Uint8List(response.contentLength!);
-        int byteOffset = 0;
-        for (final List<int> chunk in dataChunks) {
-          fileBytes.setRange(byteOffset, byteOffset + chunk.length, chunk);
-          byteOffset += chunk.length;
-        }
-        await destinationFile.writeAsBytes(fileBytes);
-        callback();
-      });
-    });
+    try {
+      final http.Request request = http.Request('GET', Uri.parse(url));
+      final http.StreamedResponse response = await client.send(request);
+
+      final File file = File(filename);
+      final IOSink sink = file.openWrite();
+
+      try {
+        await response.stream.pipe(sink);
+      } finally {
+        await sink.close();
+      }
+
+      callback();
+    } finally {
+      client.close();
+    }
   }
+
+  // static Future<void> downloadFile2(String url, String filename, Function callback) async {
+  //   final http.Client httpClient = http.Client();
+  //   final http.Request request = http.Request('GET', Uri.parse(url));
+  //   final Future<http.StreamedResponse> streamedResponse = httpClient.send(request);
+
+  //   final List<List<int>> dataChunks = <List<int>>[];
+  //   streamedResponse.asStream().listen((http.StreamedResponse response) {
+  //     response.stream.listen((List<int> chunk) {
+  //       dataChunks.add(chunk);
+  //     }, onDone: () async {
+  //       final File destinationFile = File(filename);
+  //       final Uint8List fileBytes = Uint8List(response.contentLength!);
+  //       int byteOffset = 0;
+  //       for (final List<int> chunk in dataChunks) {
+  //         fileBytes.setRange(byteOffset, byteOffset + chunk.length, chunk);
+  //         byteOffset += chunk.length;
+  //       }
+  //       await destinationFile.writeAsBytes(fileBytes);
+  //       callback();
+  //     });
+  //   });
+  // }
 
   static bool isScreenClipping() {
     final int foregroundWindowHandle = GetForegroundWindow();
@@ -967,21 +1029,26 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
 
   static Future<bool> screenCapture() async {
     await Clipboard.setData(const ClipboardData(text: ''));
-    ShellExecute(
-      0,
-      "open".toNativeUtf16(),
-      "ms-screenclip://?clippingMode=Rectangle".toNativeUtf16(),
-      nullptr,
-      nullptr,
-      SW_SHOWNORMAL,
-    );
+
+    final Pointer<Utf16> operation = "open".toNativeUtf16();
+    final Pointer<Utf16> uri = "ms-screenclip://?clippingMode=Rectangle".toNativeUtf16();
+
+    try {
+      ShellExecute(0, operation, uri, nullptr, nullptr, SW_SHOWNORMAL);
+    } finally {
+      calloc.free(operation);
+      calloc.free(uri);
+    }
+
     await Future<void>.delayed(const Duration(seconds: 1));
 
     while (isScreenClipping()) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
+
     final String tempFolder = getTempFolder();
     await WinClipboard().saveClipboardToPng("$tempFolder\\capture.png");
+
     return true;
   }
 
@@ -1290,9 +1357,9 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
     return hIconToBytes(iconHandle);
   }
 
-  static Future<Uint8List?> getIconPng(int hIcon) async {
-    return await getIconPng(hIcon);
-  }
+  // static Future<Uint8List?> getIconPng(int hIcon) async {
+  //   return await getIconPng(hIcon);
+  // }
 
   static Uint8List? hIconToBytes(int hIcon, {int nColorBits = 32}) {
     if (hIcon == NULL) {

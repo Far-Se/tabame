@@ -105,8 +105,8 @@ class _TaskbarStatsState extends State<TaskbarStats> {
   @override
   Widget build(BuildContext context) {
     if (WindowWatcher.taskManagerStats == "") return const SizedBox.shrink();
-    final double height = userSettings.expandedTaskbar ? 32 : 27;
-    final Color onSurface = userSettings.themeColors.text;
+    final double height = user.expandedTaskbar ? 32 : 27;
+    final Color onSurface = Design.text;
     final List<({String label, String value})> metrics = _parseStats(_stats);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -122,10 +122,10 @@ class _TaskbarStatsState extends State<TaskbarStats> {
             child: InkWell(
               onTap: metrics.isEmpty ? null : _focusTaskManager,
               borderRadius: BorderRadius.circular(10),
-              hoverColor: userSettings.themeColors.accent.withAlpha(10),
+              hoverColor: Design.accent.withAlpha(10),
               splashColor: Colors.transparent,
               child: Padding(
-                padding: !userSettings.expandedTaskbar
+                padding: !user.expandedTaskbar
                     ? const EdgeInsets.fromLTRB(7, 3, 3, 3)
                     : const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
@@ -139,8 +139,8 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                           children: metrics.map((({String label, String value}) metric) {
                             return Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: userSettings.expandedTaskbar ? 8 : 6,
-                                vertical: userSettings.expandedTaskbar ? 4 : 3,
+                                horizontal: user.expandedTaskbar ? 8 : 6,
+                                vertical: user.expandedTaskbar ? 4 : 3,
                               ),
                               child: RichText(
                                 maxLines: 1,
@@ -150,22 +150,22 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                                     TextSpan(
                                       text: '${metric.label} ',
                                       style: GoogleFonts.getFont(
-                                        userSettings.themeColors.uiFontFamily,
-                                        fontSize: userSettings.expandedTaskbar ? 11.5 : 10.5,
+                                        Design.uiFontFamily,
+                                        fontSize: user.expandedTaskbar ? 11.5 : 10.5,
                                         letterSpacing: 0.4,
                                         fontStyle:
-                                            userSettings.themeColors.uiFontItalic ? FontStyle.italic : FontStyle.normal,
-                                        fontWeight: FontWeight(userSettings.themeColors.uiFontWeight),
-                                        color: userSettings.themeColors.text,
+                                            Design.uiFontItalic ? FontStyle.italic : FontStyle.normal,
+                                        fontWeight: FontWeight(Design.uiFontWeight),
+                                        color: Design.text,
                                       ),
                                     ),
                                     TextSpan(
                                       text: metric.value,
                                       style: GoogleFonts.getFont(
-                                        userSettings.themeColors.entryFontFamily,
-                                        fontSize: userSettings.expandedTaskbar ? 12.5 : 11.5,
-                                        color: userSettings.themeColors.text,
-                                        fontStyle: userSettings.themeColors.entryFontItalic
+                                        Design.entryFontFamily,
+                                        fontSize: user.expandedTaskbar ? 12.5 : 11.5,
+                                        color: Design.text,
+                                        fontStyle: Design.entryFontItalic
                                             ? FontStyle.italic
                                             : FontStyle.normal,
                                       ),
@@ -182,7 +182,7 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                         child: Text(
                           "",
                           style: TextStyle(
-                            fontSize: userSettings.expandedTaskbar ? 12 : 11,
+                            fontSize: user.expandedTaskbar ? 12 : 11,
                             fontWeight: FontWeight.w700,
                             color: onSurface,
                           ),

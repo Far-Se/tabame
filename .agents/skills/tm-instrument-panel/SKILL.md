@@ -102,7 +102,7 @@ Widget _buildSectionLabel({
       Text(
         label.toUpperCase(),
         style: TextStyle(
-          fontSize: Design.baseFontSize + 1,
+          fontSize: userSettings.themeColors.baseFontSize + 1,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           color: onSurface,
@@ -115,7 +115,7 @@ Widget _buildSectionLabel({
           color: userSettings.themeColors.accentColor.withAlpha(28),
           borderRadius: BorderRadius.circular(99),
         ),
-        child: Text("$count", style: TextStyle(fontSize: Design.baseFontSize, color: userSettings.themeColors.accentColor)),
+        child: Text("$count", style: TextStyle(fontSize: userSettings.themeColors.baseFontSize, color: userSettings.themeColors.accentColor)),
       ),
       const SizedBox(width: 8),
       Expanded(child: Divider(height: 1, color: onSurface.withAlpha(20))),
@@ -157,7 +157,7 @@ Widget _buildFixedBottomBar({
           child: Text(
             label,
             style: TextStyle(
-              fontSize: Design.baseFontSize + 1.5,
+              fontSize: userSettings.themeColors.baseFontSize + 1.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
               color: userSettings.themeColors.accentColor,

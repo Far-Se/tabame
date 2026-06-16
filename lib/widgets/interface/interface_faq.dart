@@ -101,8 +101,8 @@ class FaqPageState extends State<FaqPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final Color background = userSettings.themeColors.background;
+    final Color accent = Design.accent;
+    final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return WindowsScrollView(
@@ -157,7 +157,9 @@ class FaqPageState extends State<FaqPage> {
                   icon: const Icon(Icons.feedback_outlined, size: 16),
                   label: Text(
                     "Send Feedback & Suggestions",
-                    style: entryStyle(null, fontSize: Design.baseFontSize + 2, color: User.theme.background),
+                    style: entryStyle(null,
+                        fontSize: Design.baseFontSize + 2,
+                        color: Design.background),
                   ),
                 ),
               ],

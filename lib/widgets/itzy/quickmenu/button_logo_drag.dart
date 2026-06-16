@@ -37,7 +37,7 @@ class LogoDragButtonState extends State<LogoDragButton> {
             hoverColor: Colors.transparent,
             splashColor: Colors.transparent,
             onTap: () {
-              userSettings.hideTabameOnUnfocus = !userSettings.hideTabameOnUnfocus;
+              user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
             },
             child: Stack(
               children: <Widget>[
@@ -45,17 +45,17 @@ class LogoDragButtonState extends State<LogoDragButton> {
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
                   child: Align(
                       alignment: Alignment.centerLeft,
-                      child: userSettings.customLogo == ""
-                          ? Image.asset(userSettings.logo, width: 15)
-                          : Image.file(File(userSettings.customLogo), width: 15)),
+                      child: user.customLogo == ""
+                          ? Image.asset(user.logo, width: 15)
+                          : Image.file(File(user.customLogo), width: 15)),
                 ),
-                if (!userSettings.hideTabameOnUnfocus)
+                if (!user.hideTabameOnUnfocus)
                   Positioned(
                     top: 0,
                     right: 0,
                     child: CustomPaint(
                       size: const Size(6, 6),
-                      painter: TrianglePainter(userSettings.themeColors.accent.withValues(alpha: 0.5)),
+                      painter: TrianglePainter(Design.accent.withValues(alpha: 0.5)),
                     ),
                   ),
               ],

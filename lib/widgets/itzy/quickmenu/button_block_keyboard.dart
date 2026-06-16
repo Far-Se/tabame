@@ -176,7 +176,7 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> with QuickMenuT
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -437,7 +437,7 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return InkWell(

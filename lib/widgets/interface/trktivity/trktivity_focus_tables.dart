@@ -30,9 +30,12 @@ class TrktivityFocusTables extends StatelessWidget {
               title: "Applications",
               icon: Icons.apps_rounded,
               trackList: wTrackList,
-              totalTime: wTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.time : 0)),
-              totalKeys: wTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.keyboard : 0)),
-              totalMouse: wTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.mouse : 0)),
+              totalTime: wTrackList.fold(
+                  0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.time : 0)),
+              totalKeys: wTrackList.fold(
+                  0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.keyboard : 0)),
+              totalMouse: wTrackList.fold(
+                  0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "idle.exe" ? e.value.mouse : 0)),
               idleKey: "idle.exe",
             ),
           ),
@@ -45,9 +48,12 @@ class TrktivityFocusTables extends StatelessWidget {
                 title: "Window Titles",
                 icon: Icons.subtitles_rounded,
                 trackList: tTrackList,
-                totalTime: tTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.time : 0)),
-                totalKeys: tTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.keyboard : 0)),
-                totalMouse: tTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.mouse : 0)),
+                totalTime:
+                    tTrackList.fold(0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.time : 0)),
+                totalKeys: tTrackList.fold(
+                    0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.keyboard : 0)),
+                totalMouse: tTrackList.fold(
+                    0, (int p, MapEntry<String, MTrack> e) => p + (e.key != "Idle" ? e.value.mouse : 0)),
                 idleKey: "Idle",
               ),
             ),
@@ -77,7 +83,9 @@ class TrktivityFocusTables extends StatelessWidget {
             children: <Widget>[
               Icon(icon, size: 20, color: colorScheme.primary),
               const SizedBox(width: 12),
-              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold))),
+              Expanded(
+                  child: Text(title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold))),
               _buildColumnHeader(context, "Time", 70),
               _buildColumnHeader(context, "Keys", 55),
               _buildColumnHeader(context, "Mouse", 55),
@@ -90,7 +98,11 @@ class TrktivityFocusTables extends StatelessWidget {
           child: Row(
             children: <Widget>[
               Expanded(
-                child: Text("Total", style: Theme.of(context).textTheme.labelLarge?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w600)),
+                child: Text("Total",
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w600)),
               ),
               _buildValueCell(context, timeFormat(totalTime), 70, isBold: true, color: colorScheme.primary),
               _buildValueCell(context, totalKeys.formatInt(), 55, isBold: true, color: colorScheme.primary),
@@ -128,10 +140,13 @@ class TrktivityFocusTables extends StatelessWidget {
                             ),
                           ),
                           _buildValueCell(context, track.value.timeFormat, 70,
-                              color: track.key == idleKey ? colorScheme.onSurface.withValues(alpha: 0.5) : colorScheme.primary.withValues(alpha: 0.8)),
+                              color: track.key == idleKey
+                                  ? colorScheme.onSurface.withValues(alpha: 0.5)
+                                  : colorScheme.primary.withValues(alpha: 0.8)),
                           _buildValueCell(context, track.value.keyboard.formatInt(), 55,
                               color: track.key == idleKey ? colorScheme.onSurface.withValues(alpha: 0.5) : null),
-                          _buildValueCell(context, track.value.mouse.formatInt(), 55, color: track.key == idleKey ? colorScheme.onSurface.withValues(alpha: 0.5) : null),
+                          _buildValueCell(context, track.value.mouse.formatInt(), 55,
+                              color: track.key == idleKey ? colorScheme.onSurface.withValues(alpha: 0.5) : null),
                         ],
                       ),
                     ),

@@ -246,7 +246,7 @@ class Trktivity {
       : _filters;
 
   void add(TrktivityType type, String value) {
-    if (!userSettings.trktivityEnabled) return;
+    if (!user.trktivityEnabled) return;
 
     if (type == TrktivityType.idle) {
       final String data = TrktivityData(e: "idle.exe", t: "w", tl: "Idle").toJson();
@@ -256,7 +256,7 @@ class Trktivity {
       String title = "";
       if (filterInfo.hasFilters) {
         title = filterInfo.result;
-      } else if (userSettings.trktivitySaveAllTitles) {
+      } else if (user.trktivitySaveAllTitles) {
         title = filterInfo.title;
       } else if (type == TrktivityType.title) {
         return;

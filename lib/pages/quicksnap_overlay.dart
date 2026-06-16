@@ -113,15 +113,15 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
     setMatrix();
     settings.load().then((_) {
       setMatrix();
-      if (userSettings.lastQuickSnapZoneId.isNotEmpty) {
+      if (user.lastQuickSnapZoneId.isNotEmpty) {
         final int index = Boxes.quickGrids.indexWhere(
-          (QuickGrid p) => p.id == userSettings.lastQuickSnapZoneId,
+          (QuickGrid p) => p.id == user.lastQuickSnapZoneId,
         );
         if (index != -1) {
           _activeIndex = index;
         }
       }
-      if (_activeIndex == -1 && !userSettings.quickSnapGrid && Boxes.quickGrids.isNotEmpty) {
+      if (_activeIndex == -1 && !user.quickSnapGrid && Boxes.quickGrids.isNotEmpty) {
         _activeIndex = 0;
       }
       if (mounted) setState(() {});
@@ -222,8 +222,8 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
         }
         if (newHoveredIndex != -2 && newHoveredIndex != _activeIndex) {
           setState(() => _activeIndex = newHoveredIndex);
-          userSettings.lastQuickSnapZoneId = newHoveredIndex >= 0 ? Boxes.quickGrids[newHoveredIndex].id : '';
-          Boxes.updateSettings('lastQuickSnapZoneId', userSettings.lastQuickSnapZoneId);
+          user.lastQuickSnapZoneId = newHoveredIndex >= 0 ? Boxes.quickGrids[newHoveredIndex].id : '';
+          Boxes.updateSettings('lastQuickSnapZoneId', user.lastQuickSnapZoneId);
         }
       }
 
@@ -455,7 +455,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final List<QuickGrid> presets = Boxes.quickGrids;
 
     // BUG FIX #3: sync key map by id so renamed/reordered presets get fresh keys.
@@ -465,7 +465,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       _presetKeyMap.putIfAbsent(p.id, () => GlobalKey());
     }
 
-    final bool showGrid = userSettings.quickSnapGrid;
+    final bool showGrid = user.quickSnapGrid;
     final bool hasPresets = presets.isNotEmpty;
     final bool showTopBar = showGrid || hasPresets;
 

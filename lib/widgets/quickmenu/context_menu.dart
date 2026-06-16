@@ -28,7 +28,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -172,14 +172,14 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
         for (final Window win in windows)
           _HookWindowTile(
             window: win,
-            isHooked: (userSettings.hookedWins[widget.hWnd] ?? <int>[]).contains(win.hWnd),
+            isHooked: (user.hookedWins[widget.hWnd] ?? <int>[]).contains(win.hWnd),
             accent: accent,
             onTap: () {
               setState(() {
-                userSettings.hookedWins[widget.hWnd] ??= <int>[];
-                userSettings.hookedWins[widget.hWnd]!.toggle(win.hWnd);
-                if (userSettings.hookedWins[widget.hWnd]!.isEmpty) {
-                  userSettings.hookedWins.remove(widget.hWnd);
+                user.hookedWins[widget.hWnd] ??= <int>[];
+                user.hookedWins[widget.hWnd]!.toggle(win.hWnd);
+                if (user.hookedWins[widget.hWnd]!.isEmpty) {
+                  user.hookedWins.remove(widget.hWnd);
                 }
               });
             },

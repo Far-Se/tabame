@@ -98,10 +98,10 @@ class QMBottomBarState extends State<QMBottomBar> {
               subtitle: Text("Display RAM and CPU usage in the quick menu",
                   style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.speed, size: 20),
-              value: userSettings.showSystemUsage,
+              value: user.showSystemUsage,
               onChanged: (bool newValue) async {
-                userSettings.showSystemUsage = newValue;
-                await Boxes.updateSettings("showSystemUsage", userSettings.showSystemUsage);
+                user.showSystemUsage = newValue;
+                await Boxes.updateSettings("showSystemUsage", user.showSystemUsage);
                 if (mounted) setState(() {});
               },
             ),
@@ -111,20 +111,20 @@ class QMBottomBarState extends State<QMBottomBar> {
               subtitle: Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp. Must run Tabame as admin!",
                   style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.insights, size: 20),
-              value: userSettings.libreStats,
+              value: user.libreStats,
               onChanged: (bool newValue) async {
-                userSettings.libreStats = newValue;
-                await Boxes.updateSettings("libreStats", userSettings.libreStats);
+                user.libreStats = newValue;
+                await Boxes.updateSettings("libreStats", user.libreStats);
                 if (newValue == true) {
-                  userSettings.taskManagerStats = false;
-                  userSettings.autoOpenTaskManager = false;
-                  await Boxes.updateSettings("taskManagerStats", userSettings.taskManagerStats);
-                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                  user.taskManagerStats = false;
+                  user.autoOpenTaskManager = false;
+                  await Boxes.updateSettings("taskManagerStats", user.taskManagerStats);
+                  await Boxes.updateSettings("autoOpenTaskManager", user.autoOpenTaskManager);
                 }
                 if (mounted) setState(() {});
               },
             ),
-            if (userSettings.libreStats) ...<Widget>[
+            if (user.libreStats) ...<Widget>[
               ListTile(
                 title: CustomTextField(
                   labelText: "URL",
@@ -155,31 +155,31 @@ class QMBottomBarState extends State<QMBottomBar> {
               subtitle: Text("If TaskManger is open, put it on at the bottom of the screen",
                   style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.query_stats, size: 20),
-              value: userSettings.taskManagerStats,
+              value: user.taskManagerStats,
               onChanged: (bool newValue) async {
-                userSettings.taskManagerStats = newValue;
-                await Boxes.updateSettings("taskManagerStats", userSettings.taskManagerStats);
+                user.taskManagerStats = newValue;
+                await Boxes.updateSettings("taskManagerStats", user.taskManagerStats);
                 if (newValue == false) {
-                  userSettings.autoOpenTaskManager = false;
-                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                  user.autoOpenTaskManager = false;
+                  await Boxes.updateSettings("autoOpenTaskManager", user.autoOpenTaskManager);
                 } else {
-                  userSettings.libreStats = false;
-                  await Boxes.updateSettings("libreStats", userSettings.libreStats);
+                  user.libreStats = false;
+                  await Boxes.updateSettings("libreStats", user.libreStats);
                 }
                 if (mounted) setState(() {});
               },
             ),
-            if (userSettings.taskManagerStats)
+            if (user.taskManagerStats)
               SwitchListTile(
                 title:
                     const Text("Auto start TaskManager", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 subtitle: Text("Open TaskManager on startup so you can always see PC stats",
                     style: TextStyle(fontSize: Design.baseFontSize + 2)),
                 secondary: const Icon(Icons.dataset_linked, size: 20),
-                value: userSettings.autoOpenTaskManager,
+                value: user.autoOpenTaskManager,
                 onChanged: (bool newValue) async {
-                  userSettings.autoOpenTaskManager = newValue;
-                  await Boxes.updateSettings("autoOpenTaskManager", userSettings.autoOpenTaskManager);
+                  user.autoOpenTaskManager = newValue;
+                  await Boxes.updateSettings("autoOpenTaskManager", user.autoOpenTaskManager);
                   if (mounted) setState(() {});
                 },
               ),
@@ -188,14 +188,14 @@ class QMBottomBarState extends State<QMBottomBar> {
               subtitle:
                   Text("Show system tray icons in the bottom bar", style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.expand_less, size: 20),
-              value: userSettings.showTrayBar,
+              value: user.showTrayBar,
               onChanged: (bool newValue) async {
-                userSettings.showTrayBar = newValue;
-                await Boxes.updateSettings("showTrayBar", userSettings.showTrayBar);
+                user.showTrayBar = newValue;
+                await Boxes.updateSettings("showTrayBar", user.showTrayBar);
                 if (mounted) setState(() {});
               },
             ),
-            if (userSettings.showTrayBar)
+            if (user.showTrayBar)
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: _buildTrayList(),
@@ -361,9 +361,9 @@ class QMBottomBarState extends State<QMBottomBar> {
                 tooltip: "Reload Tray List",
                 style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
                 onPressed: () {
-                  userSettings.showTrayBar = false;
+                  user.showTrayBar = false;
                   setState(() {});
-                  userSettings.showTrayBar = true;
+                  user.showTrayBar = true;
                   setState(() {});
                 },
               ),
@@ -560,14 +560,14 @@ class QMBottomBarState extends State<QMBottomBar> {
               subtitle:
                   Text("Display local weather in the bottom bar", style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.wb_sunny_outlined, size: 20),
-              value: userSettings.showWeather,
+              value: user.showWeather,
               onChanged: (bool newValue) async {
-                userSettings.showWeather = newValue;
-                await Boxes.updateSettings("showWeather", userSettings.showWeather);
+                user.showWeather = newValue;
+                await Boxes.updateSettings("showWeather", user.showWeather);
                 if (mounted) setState(() {});
               },
             ),
-            if (userSettings.showWeather)
+            if (user.showWeather)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
@@ -578,10 +578,10 @@ class QMBottomBarState extends State<QMBottomBar> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text("Use Celsius", style: TextStyle(fontSize: 13)),
                         secondary: const Icon(Icons.thermostat, size: 20),
-                        value: userSettings.weatherUnit == "m",
+                        value: user.weatherUnit == "m",
                         onChanged: (bool newValue) async {
-                          userSettings.weatherUnit = newValue ? "m" : "u";
-                          await Boxes.updateSettings("weather", userSettings.weather);
+                          user.weatherUnit = newValue ? "m" : "u";
+                          await Boxes.updateSettings("weather", user.weather);
                           if (mounted) setState(() {});
                         },
                       ),
@@ -598,11 +598,11 @@ class QMBottomBarState extends State<QMBottomBar> {
                           helperStyle: TextStyle(fontSize: Design.baseFontSize),
                         ),
                         style: const TextStyle(fontSize: 13),
-                        controller: TextEditingController(text: userSettings.weatherLatLong),
+                        controller: TextEditingController(text: user.weatherLatLong),
                         onSubmitted: (String value) async {
                           if (value.isEmpty) return;
-                          userSettings.weatherLatLong = value;
-                          await Boxes.updateSettings("weather", userSettings.weather);
+                          user.weatherLatLong = value;
+                          await Boxes.updateSettings("weather", user.weather);
                           if (mounted) setState(() {});
                         },
                       ),
@@ -694,8 +694,8 @@ class QMBottomBarState extends State<QMBottomBar> {
         final Map<String, dynamic> res = (data["results"] as List<dynamic>)[0] as Map<String, dynamic>;
         if (res.containsKey("latitude") && res.containsKey("longitude")) {
           final String e = "${res["latitude"]}, ${res["longitude"]}";
-          userSettings.weatherLatLong = e;
-          await Boxes.updateSettings("weather", userSettings.weather);
+          user.weatherLatLong = e;
+          await Boxes.updateSettings("weather", user.weather);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Location set to ${res["name"]}, ${res["country"]}"),
@@ -715,8 +715,8 @@ class QMBottomBarState extends State<QMBottomBar> {
         final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
         if (data.containsKey("lat") && data.containsKey("lon")) {
           final String e = "${data["lat"]}, ${data["lon"]}";
-          userSettings.weatherLatLong = e;
-          await Boxes.updateSettings("weather", userSettings.weather);
+          user.weatherLatLong = e;
+          await Boxes.updateSettings("weather", user.weather);
           if (mounted) setState(() {});
         }
       }

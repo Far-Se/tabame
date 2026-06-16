@@ -28,7 +28,7 @@ class _InterfaceQMRemindersSettingsPageState extends State<InterfaceQMRemindersS
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -147,7 +147,7 @@ class _InterfaceQMRemindersSettingsPageState extends State<InterfaceQMRemindersS
           child: ReminderBuilder(
             key: ValueKey<int>(index),
             remindersIndex: index,
-            accent: userSettings.themeColors.accent,
+            accent: Design.accent,
             scrollController: sc,
             onSaved: (Reminder r) async {
               reminders[index] = r.copyWith();

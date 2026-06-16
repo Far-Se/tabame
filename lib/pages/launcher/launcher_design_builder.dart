@@ -296,8 +296,7 @@ class SereneLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    final bool hasBackdrop =
-        userSettings.themeColors.backdropType.isNotEmpty && userSettings.activeBackdropPath.isNotEmpty;
+    final bool hasBackdrop = Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
 
     // Wrap in LauncherTheme so descendants can read the design without a
     // parameter chain.

@@ -168,7 +168,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       description: 'Translate text',
       usage: r'$translate "hello" from en to ro',
       icon: Icons.translate_rounded,
-      debounce: const Duration(milliseconds: 550),
+      debounce: const Duration(milliseconds: 650),
       handler: _buildFunctionTranslateResults,
     ),
     _LauncherFunctionCommand(
@@ -385,7 +385,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyR &&
           HardwareKeyboard.instance.isAltPressed) {
-        if (userSettings.persistentReminders.isNotEmpty) {
+        if (user.persistentReminders.isNotEmpty) {
           _openLauncherPanel(context, const RemindersPanel());
         }
         return KeyEventResult.handled;
@@ -400,7 +400,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         Timer(const Duration(milliseconds: 100), () {
           WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
           Globals.quickMenuPage = QuickMenuPage.quickMenu;
-          userSettings.launcherSearchText = '';
+          user.launcherSearchText = '';
           QuickMenuFunctions.refreshQuickMenu();
           Win32.setWindowInvisible(false);
         });
@@ -441,8 +441,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void initState() {
     super.initState();
     QuickMenuFunctions.addListener(this);
-    _design = User.s.launcherDesign;
-    _controller.text = userSettings.launcherSearchText;
+    _design = user.launcherDesign;
+    _controller.text = user.launcherSearchText;
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
@@ -486,7 +486,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
 
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
     Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.removeListener(_onFocusManagerChanged);
     _isRepeatingKey.dispose();
@@ -666,6 +666,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _windowRefreshTimer;
   String _lastScrollResetQuery = '';
   int _searchRequestId = 0;
+  DateTime? _lastFolderSyncTime;
+  bool _isFolderSyncing = false;
   // Remove this field entirely:
   // And _startWindowRefreshLoop becomes simply:
   void _startWindowRefreshLoop() {
@@ -761,43 +763,67 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // Search logic
   // ---------------------------------------------------------------------------
 
+  int _searchGeneration = 0;
+
   void _onSearchChanged(String query) {
-    userSettings.launcherSearchText = query;
+    user.launcherSearchText = query;
     _scrollResultsToTopForQuery(query);
     _searchDebounce?.cancel();
-    final int requestId = ++_searchRequestId;
+
     final LauncherQuery launcherQuery = LauncherQuery.parse(query);
-    setState(() => _searchMode = launcherQuery.mode);
     final LauncherSearchMode searchMode = launcherQuery.mode;
     final String normalizedQuery = launcherQuery.normalized;
 
-    // Clear desktop browsing stack when the user leaves any file-capable mode
-    // or changes the search prefix entirely.
-    if (searchMode != LauncherSearchMode.desktopOnly &&
-        searchMode != LauncherSearchMode.filesOnly &&
-        searchMode != LauncherSearchMode.mixed &&
-        _folderBrowsingStack.isNotEmpty) {
+    if (searchMode != LauncherSearchMode.desktopOnly && /* ... */ _folderBrowsingStack.isNotEmpty) {
       _folderBrowsingStack.clear();
     }
 
+    final int gen = ++_searchGeneration;
+
     if (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed)) {
+      setState(() {
+        _searchMode = searchMode;
+        _isSearching = false;
+      });
       _setResults(_launcherShortcuts, isSearching: false);
       return;
     }
+    final Duration debounce = _debounceForMode(searchMode, normalizedQuery);
 
-    _setSearching(true);
-    _searchDebounce = Timer(const Duration(milliseconds: 50), () {
-      if (!_isActiveSearch(requestId, query)) return;
-      _runSearch(requestId, query, normalizedQuery, searchMode);
+    setState(() {
+      _searchMode = searchMode;
+      _isSearching = true;
+    });
+
+    _searchDebounce = Timer(debounce, () {
+      if (!mounted || gen != _searchGeneration) return;
+      _runSearch(gen, query, normalizedQuery, searchMode);
     });
   }
 
+  Duration _debounceForMode(LauncherSearchMode mode, String normalizedQuery) {
+    if (mode == LauncherSearchMode.functionCommand) {
+      final String cmd = normalizedQuery.trimLeft().split(RegExp(r'\s+')).first.toLowerCase();
+      final _LauncherFunctionCommand? command = _findFunctionCommand(cmd);
+      if (command != null && command.debounce > Duration.zero) {
+        return command.debounce;
+      }
+    }
+    return const Duration(milliseconds: 180);
+  }
+
+  bool _isActiveSearch(int gen) => mounted && gen == _searchGeneration;
+
   void _runSearch(int requestId, String query, String normalizedQuery, LauncherSearchMode searchMode) {
-    if (!_isActiveSearch(requestId, query)) return;
+    if (!_isActiveSearch(requestId)) return;
 
     final bool isFileBrowsingMode = searchMode == LauncherSearchMode.desktopOnly ||
         searchMode == LauncherSearchMode.filesOnly ||
         searchMode == LauncherSearchMode.mixed;
+
+    if (isFileBrowsingMode && normalizedQuery.isNotEmpty) {
+      _syncChangedFoldersAndRefresh(query, normalizedQuery, searchMode);
+    }
     final LauncherSearchContext context = LauncherSearchContext(
       token: _searchToken,
       buildContext: this.context,
@@ -807,7 +833,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       lowerQuery: normalizedQuery.toLowerCase(),
       setSearching: _setSearching,
       setResults: _setResults,
-      isActiveSearch: _isActiveSearch,
+      isActiveSearch: (int requestId, String query, {bool trimLeft = false}) => _isActiveSearch(requestId),
       browsingPath: isFileBrowsingMode && _folderBrowsingStack.isNotEmpty ? _folderBrowsingStack.last : null,
       canGoBack: isFileBrowsingMode && _folderBrowsingStack.isNotEmpty,
       onBrowseFolder: isFileBrowsingMode ? _browseFolder : null,
@@ -846,6 +872,52 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       default:
         MixedSearchHandler.handle(context, searchMode);
         break;
+    }
+  }
+
+  /// Checks for changed watched folders and re-indexes them in the background.
+  /// If any folders changed, re-triggers the current search so results reflect
+  /// the updated index. Uses a cooldown to avoid hammering the filesystem on
+  /// every keystroke.
+  Future<void> _syncChangedFoldersAndRefresh(
+    String query,
+    String normalizedQuery,
+    LauncherSearchMode searchMode,
+  ) async {
+    // Only one sync at a time, and no more than once every 5 seconds.
+    if (_isFolderSyncing || FileIndexer.instance.isIndexing) return;
+    final DateTime now = DateTime.now();
+    if (_lastFolderSyncTime != null && now.difference(_lastFolderSyncTime!) < const Duration(seconds: 5)) {
+      return;
+    }
+
+    _isFolderSyncing = true;
+    _lastFolderSyncTime = now;
+
+    try {
+      final List<String> changedFolders = await FolderWatch.getChangedFolders();
+      if (changedFolders.isEmpty) return;
+
+      // Re-index every changed root folder.
+      final List<SearchFolder> allRoots = Boxes.searchFolders;
+      for (final SearchFolder config in allRoots) {
+        if (changedFolders.any((String changed) => config.path == changed || changed.startsWith(config.path))) {
+          await FileIndexer.instance.syncFolder(config);
+        }
+      }
+
+      // If the user is still searching the same query, re-run it against the
+      // freshly updated index.
+      if (!mounted) return;
+      final String currentQuery = _controller.text;
+      if (currentQuery == query) {
+        final int newRequestId = ++_searchRequestId;
+        _runSearch(newRequestId, query, normalizedQuery, searchMode);
+      }
+    } catch (e) {
+      debugPrint('Launcher: background folder sync failed: $e');
+    } finally {
+      _isFolderSyncing = false;
     }
   }
 
@@ -907,7 +979,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onExecute: () => _createLauncherTimer(timer),
       builder: (BuildContext context) {
         final ThemeData theme = Theme.of(context);
-        final Color accent = userSettings.themeColors.accent;
+        final Color accent = Design.accent;
         final Color onSurface = theme.colorScheme.onSurface;
         return InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -976,7 +1048,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _finishLauncherFunctionExecution() {
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
 
     if (mounted) {
@@ -1010,7 +1082,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
     if (command.debounce > Duration.zero) {
       await Future<void>.delayed(command.debounce);
-      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      if (!context.isActiveSearch(context.requestId, input)) return;
     }
 
     context.setSearching(true);
@@ -1449,7 +1521,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onExecute: onExecute,
       builder: (BuildContext context) {
         final ThemeData theme = Theme.of(context);
-        final Color accent = userSettings.themeColors.accent;
+        final Color accent = Design.accent;
         final Color onSurface = theme.colorScheme.onSurface;
         return InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -1532,10 +1604,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
   }
 
-  bool _isActiveSearch(int requestId, String query, {bool trimLeft = false}) {
-    if (!mounted || requestId != _searchRequestId) return false;
-    return trimLeft ? _controller.text.trimLeft() == query : _controller.text == query;
-  }
+  // bool _isActiveSearch(int requestId, String query, {bool trimLeft = false}) {
+  //   if (!mounted || requestId != _searchRequestId) return false;
+  //   return trimLeft ? _controller.text.trimLeft() == query : _controller.text == query;
+  // }
 
   void _setSearching(bool value) {
     if (!mounted || _isSearching == value) return;
@@ -1720,16 +1792,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       case BookmarkResultKind.bookmark:
         WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
         QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
-        userSettings.launcherSearchText = '';
+        user.launcherSearchText = '';
       case BookmarkResultKind.cliBook:
         // Copy the CLI command to clipboard.
         Clipboard.setData(ClipboardData(text: result.cli!.value));
         QuickMenuFunctions.hideQuickMenu();
-        userSettings.launcherSearchText = '';
+        user.launcherSearchText = '';
       case BookmarkResultKind.appItem:
         WinUtils.open(result.app!.path, arguments: result.app!.arguments);
         QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
-        userSettings.launcherSearchText = '';
+        user.launcherSearchText = '';
     }
   }
 
@@ -1746,7 +1818,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
   }
 
   /// Drills into [folderPath] inside the Launcher (desktop `;` browse mode).
@@ -1778,7 +1850,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     WinUtils.open(folderPath);
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
     _folderBrowsingStack.clear();
   }
 
@@ -1806,7 +1878,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     WinUtils.open(launchTarget, parseParamaters: false);
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
   }
 
   Future<void> _recordFileOpen(int nodeId) async {
@@ -1854,7 +1926,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Win32.activateWindow(window.hWnd);
     Globals.lastFocusedWinHWND = window.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
   }
 
   void _openNotionResult(NotionResult result) {
@@ -1862,7 +1934,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     WinUtils.open(result.url);
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
-    userSettings.launcherSearchText = '';
+    user.launcherSearchText = '';
   }
 
   void _syncQuickActionKeys(List<LauncherSearchResultItem> results) {
@@ -1936,16 +2008,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // final TextSelection savedSelection = _controller.selection;
     _focusNode.requestFocus();
 
-    Future<void>.delayed(const Duration(milliseconds: 4),
-        () => handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length)));
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length)));
+    Future<void>.delayed(const Duration(milliseconds: 4), () {
+      if (mounted) handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length));
+    });
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length));
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -2232,7 +2308,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildShortcutResult(BuildContext context, ThemeData theme, LauncherShortcut shortcut, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2290,7 +2366,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildBookmarkResult(BuildContext context, ThemeData theme, BookmarkSearchResult result, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return BookmarkSearchListItem(
       result: result,
       isSelected: isSelected,
@@ -2304,7 +2380,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildFileResult(BuildContext context, ThemeData theme, FileSystemEntity entity, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final VoidCallback onTap = (_searchMode == LauncherSearchMode.desktopOnly && entity is Directory)
         ? () {
             print('BrowseFolder');
@@ -2330,7 +2406,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildAppResult(BuildContext context, ThemeData theme, LauncherAppResult app, int? nodeId, int index,
       bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return LauncherAppListItem(
       app: app,
       isSelected: isSelected,
@@ -2344,7 +2420,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildNotionResult(
       BuildContext context, ThemeData theme, NotionResult result, int index, bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2407,7 +2483,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildInfoResult(BuildContext context, ThemeData theme, LauncherInfoResult result, int index, bool isSelected,
       bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return MouseRegion(
@@ -2468,7 +2544,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       bool isSelected, bool isRepeatingKey) {
     // final GlobalKey actionKey = _quickActionKeys.putIfAbsent(quickAction.id, () => GlobalKey());
     final GlobalKey? actionKey = _quickActionKeys[quickAction.id];
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final bool showSplash = _quickActionSplashId == quickAction.id;
 
     return MouseRegion(
@@ -2498,7 +2574,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   Widget _buildWindowResult(
       BuildContext context, ThemeData theme, Window window, int index, bool isSelected, bool isRepeatingKey) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return WindowSearchListItem(
       window: window,
       isSelected: isSelected,
@@ -2567,7 +2643,7 @@ class _LauncherStatusBadgesState extends State<_LauncherStatusBadges> {
   @override
   Widget build(BuildContext context) {
     final bool hasTimers = Boxes.quickTimers.isNotEmpty;
-    final bool hasReminders = userSettings.persistentReminders.isNotEmpty;
+    final bool hasReminders = user.persistentReminders.isNotEmpty;
     if (!hasTimers && !hasReminders) return const SizedBox.shrink();
 
     return Padding(
@@ -2588,7 +2664,7 @@ class _LauncherStatusBadgesState extends State<_LauncherStatusBadges> {
             _StatusChip(
               accent: Design.accent,
               icon: Icons.warning_rounded,
-              label: '${userSettings.persistentReminders.length}',
+              label: '${user.persistentReminders.length}',
               tooltip: 'Reminders (Alt+R)',
               onTap: widget.onOpenReminders,
             ),

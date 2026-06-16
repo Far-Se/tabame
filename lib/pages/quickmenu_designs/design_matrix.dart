@@ -72,10 +72,10 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
     // WidgetsBinding.instance.addPostFrameCallback((_) => _updateClip());
 
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color surface = theme.colorScheme.surface;
 
-    final List<double> points = userSettings.themeColors.panelOpacityPoints;
+    final List<double> points = Design.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> colors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -101,8 +101,8 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                     blendMode: BlendMode.dstIn,
                     shaderCallback: (Rect bounds) {
                       return LinearGradient(
-                        begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                        end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                        begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
+                        end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
                         colors: colors,
                         stops: stops,
                       ).createShader(bounds);
@@ -110,16 +110,16 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Color.alphaBlend(
-                          accent.withValues(alpha: userSettings.themeColors.gradientAlpha / 255.0),
-                          surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 1.0),
+                          accent.withValues(alpha: Design.gradientAlpha / 255.0),
+                          surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.7 : 1.0),
                         ),
-                        borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                        borderRadius: BorderRadius.circular(Design.borderRadius),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                        borderRadius: BorderRadius.circular(Design.borderRadius),
                         child: Stack(
                           children: <Widget>[
-                            const StableBackdrop(),
+                            if (Design.hasBackdrop) const StableBackdrop(),
                             // Technical Grid Overlay
                             Positioned.fill(
                               child: IgnorePointer(
@@ -149,7 +149,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: userSettings.quickActionsAtBottom && !userSettings.bottomBarOnTop
+                  children: user.quickActionsAtBottom && !user.bottomBarOnTop
                       ? _buildBottomQuickActionsSections()
                       : _buildDefaultSections(),
                 ),
@@ -163,10 +163,10 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
 
   List<Widget> _buildDefaultSections() {
     return <Widget>[
-      _sectionCard(key: _topKey, child: userSettings.bottomBarOnTop ? const PinnedAndTrayList() : const TopBar()),
+      _sectionCard(key: _topKey, child: user.bottomBarOnTop ? const PinnedAndTrayList() : const TopBar()),
       const SizedBox(height: 8),
       _sectionCard(key: _taskKey, child: const TaskBar()),
-      if (!userSettings.bottomBarOnTop) ...<Widget>[
+      if (!user.bottomBarOnTop) ...<Widget>[
         const SizedBox(height: 8),
         _sectionCard(
             key: _listKey,
@@ -181,8 +181,8 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (userSettings.taskManagerStats) const TaskbarStats(withTopDivider: false),
-              if (userSettings.libreStats) const LibreStats(withTopDivider: false),
+              if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
+              if (user.libreStats) const LibreStats(withTopDivider: false),
               const SizedBox(height: 6),
               const BottomBar(),
             ],
@@ -203,8 +203,8 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
           children: <Widget>[
             const PinnedAndTrayList(),
             const SizedBox(height: 6),
-            if (userSettings.taskManagerStats) const TaskbarStats(),
-            if (userSettings.libreStats) const LibreStats(),
+            if (user.taskManagerStats) const TaskbarStats(),
+            if (user.libreStats) const LibreStats(),
             const BottomBar(),
           ],
         ),

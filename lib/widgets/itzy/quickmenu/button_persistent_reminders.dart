@@ -32,12 +32,12 @@ class _PersistentRemindersWidgetState extends State<PersistentRemindersWidget> w
 
   @override
   Widget build(BuildContext context) {
-    final int count = userSettings.persistentReminders.length;
+    final int count = user.persistentReminders.length;
     return ModalButton(
       actionName: "Reminders",
       onSecondaryTap: () {
-        userSettings.persistentReminders.clear();
-        Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
+        user.persistentReminders.clear();
+        Boxes.pref.setStringList("persistentReminders", user.persistentReminders);
         QuickMenuFunctions.refreshQuickMenu();
         setState(() {});
       },
@@ -68,7 +68,7 @@ class RemindersPanel extends StatefulWidget {
 class RemindersPanelState extends State<RemindersPanel> {
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -80,7 +80,7 @@ class RemindersPanelState extends State<RemindersPanel> {
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(12),
-            child: userSettings.persistentReminders.isEmpty
+            child: user.persistentReminders.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 40),
@@ -102,15 +102,15 @@ class RemindersPanelState extends State<RemindersPanel> {
                           label: "Active",
                           accent: accent,
                           onSurface: onSurface,
-                          count: userSettings.persistentReminders.length,
+                          count: user.persistentReminders.length,
                           icon: Icons.notifications_active_outlined,
                         ),
                         const SizedBox(height: 10),
                         ...List<Widget>.generate(
-                          userSettings.persistentReminders.length,
+                          user.persistentReminders.length,
                           (int index) => _buildReminderCard(
                             index: index,
-                            text: userSettings.persistentReminders.elementAt(index),
+                            text: user.persistentReminders.elementAt(index),
                             accent: accent,
                             onSurface: onSurface,
                           ),
@@ -120,14 +120,14 @@ class RemindersPanelState extends State<RemindersPanel> {
                   ),
           ),
         ),
-        if (userSettings.persistentReminders.isNotEmpty)
+        if (user.persistentReminders.isNotEmpty)
           _buildFixedBottomBar(
             context: context,
             accent: Colors.redAccent,
             label: "CLEAR ALL REMINDERS",
             onTap: () {
-              userSettings.persistentReminders.clear();
-              Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
+              user.persistentReminders.clear();
+              Boxes.pref.setStringList("persistentReminders", user.persistentReminders);
               QuickMenuFunctions.refreshQuickMenu();
               setState(() {});
             },
@@ -187,8 +187,8 @@ class RemindersPanelState extends State<RemindersPanel> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          userSettings.persistentReminders.removeAt(index);
-          Boxes.pref.setStringList("persistentReminders", userSettings.persistentReminders);
+          user.persistentReminders.removeAt(index);
+          Boxes.pref.setStringList("persistentReminders", user.persistentReminders);
           QuickMenuFunctions.refreshQuickMenu();
           setState(() {});
         },

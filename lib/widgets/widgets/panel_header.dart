@@ -26,7 +26,7 @@ class PanelHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return !userSettings.dragPopupsByIconOnly
+    return !user.dragPopupsByIconOnly
         ? GestureDetector(
             behavior: HitTestBehavior.translucent,
             onPanStart: (DragStartDetails details) => windowManager.startDragging(),
@@ -81,7 +81,7 @@ class PanelHeader extends StatelessWidget {
                   title,
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
-                  style: entryStyle(true, fontSize: 13, letterSpacing: 0.3),
+                  style: entryStyle(true, fontSize: 13, letterSpacing: 0.3, color: Design.text),
                 ),
               ),
               const SizedBox(width: 10),

@@ -780,7 +780,8 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
+                    textStyle:
+                        TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -836,7 +837,8 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Expanded(
                       child: TextField(
                         controller: _customOutputController,
-                        style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
                         decoration: _formatInputDecoration(
                           hint: "Build your format template here...",
                           icon: Icons.code_rounded,
@@ -2341,7 +2343,8 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     visualDensity: VisualDensity.compact,
-                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+                    textStyle:
+                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -2366,7 +2369,8 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     visualDensity: VisualDensity.compact,
-                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
+                    textStyle:
+                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

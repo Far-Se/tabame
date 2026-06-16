@@ -47,8 +47,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
     includedString = Boxes.pref.getString("searchIncluded") ?? "";
     excludedString = Boxes.pref.getString("searchExcluded") ?? r"^\.[a-z];node_modules;build";
     openInCode = Boxes.pref.getBool("searchUseVSCode") ?? false;
-    if (userSettings.args.contains("-wizardly")) {
-      searchFolder = userSettings.args[0].replaceAll('"', '');
+    if (user.args.contains("-wizardly")) {
+      searchFolder = user.args[0].replaceAll('"', '');
     }
   }
 
@@ -60,8 +60,8 @@ class SearchTextWidgetState extends State<SearchTextWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final Color background = userSettings.themeColors.background;
+    final Color accent = Design.accent;
+    final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final List<String> filesWithMatches = groupedResults.keys.toList();
 
@@ -635,13 +635,10 @@ class _FileResultCardState extends State<_FileResultCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                        color: userSettings.themeColors.accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12)),
+                        color: Design.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                     child: Text("${widget.matches.length} matches",
                         style: TextStyle(
-                            color: userSettings.themeColors.accent,
-                            fontSize: Design.baseFontSize,
-                            fontWeight: FontWeight.bold)),
+                            color: Design.accent, fontSize: Design.baseFontSize, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 8),
                   _buildTinyIconButton(
@@ -680,11 +677,8 @@ class _FileResultCardState extends State<_FileResultCard> {
             Row(
               children: <Widget>[
                 Text("LINE ${o.line}",
-                    style: TextStyle(
-                        fontSize: 9,
-                        color: userSettings.themeColors.accent,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5)),
+                    style:
+                        TextStyle(fontSize: 9, color: Design.accent, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 const SizedBox(width: 8),
                 Text("COL ${o.col}",
                     style: TextStyle(

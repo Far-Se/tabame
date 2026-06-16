@@ -126,11 +126,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   void initState() {
     super.initState();
     WinUtils.fixDrawBug();
-    if (userSettings.args.contains("-wizardly")) {
+    if (user.args.contains("-wizardly")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Wizardly");
-    } else if (userSettings.args.contains("-fancyshot")) {
+    } else if (user.args.contains("-fancyshot")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Fancyshot");
-    } else if (userSettings.args.contains("-changelog")) {
+    } else if (user.args.contains("-changelog")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
     } else if (Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
@@ -280,7 +280,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                       padding: const EdgeInsets.only(left: 12),
                                       child: Row(
                                         children: <Widget>[
-                                          Image(image: AssetImage(userSettings.logo), width: 16),
+                                          Image(image: AssetImage(user.logo), width: 16),
                                           const SizedBox(width: 8),
                                           Text(
                                             "Tabame",
@@ -328,11 +328,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   isCloseButton: true,
                                   onTap: () async {
                                     if (kReleaseMode) {
-                                      if (userSettings.args.contains('-wizardly')) {
+                                      if (user.args.contains('-wizardly')) {
                                         exit(0);
                                       }
                                       WinUtils.reloadTabameQuickMenu();
-                                      exit(0);
+                                      Future<void>.delayed(const Duration(milliseconds: 100), () => exit(0));
                                     } else {
                                       setState(() {
                                         closing = true;
@@ -557,7 +557,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                           const SizedBox(height: 4),
                                                                           if (sponsorImageLight != null)
                                                                             Image.file(
-                                                                              userSettings.themeType == ThemeType.light
+                                                                              user.themeType == ThemeType.light
                                                                                   ? sponsorImageLight!
                                                                                   : sponsorImageDark!,
                                                                               height: 40,
@@ -765,9 +765,7 @@ class _BMACFooterState extends State<_BMACFooter> with SingleTickerProviderState
                       child: Icon(
                         Icons.coffee_rounded,
                         size: 14,
-                        color: isHovered
-                            ? userSettings.themeColors.accent
-                            : Theme.of(context).colorScheme.onSurface.withAlpha(80),
+                        color: isHovered ? Design.accent : Theme.of(context).colorScheme.onSurface.withAlpha(80),
                       ),
                     ),
                   );

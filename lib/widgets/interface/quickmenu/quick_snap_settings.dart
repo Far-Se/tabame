@@ -69,10 +69,10 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
               Transform.scale(
                 scale: 0.8,
                 child: MiniToggleSwitch(
-                  value: userSettings.quickSnapOverlay,
+                  value: user.quickSnapOverlay,
                   onChanged: (bool value) {
                     setState(() {
-                      userSettings.quickSnapOverlay = value;
+                      user.quickSnapOverlay = value;
                       Boxes.updateSettings('quickSnapOverlay', value);
                     });
                   },
@@ -164,7 +164,7 @@ class _QuickSnapSettingsPageState extends State<QuickSnapSettingsPage> {
 
   Widget _buildList() {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -252,7 +252,7 @@ class _ZoneListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(
@@ -309,7 +309,7 @@ class _ZoneMiniPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: CustomPaint(
@@ -448,7 +448,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool isFreestyle = _zone.layoutType == QuickGridLayoutType.freestyle;
 
@@ -839,7 +839,7 @@ class _ZoneCanvasState extends State<_ZoneCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
@@ -1220,7 +1220,7 @@ class _ZoneFreestyleCanvasState extends State<_ZoneFreestyleCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return LayoutBuilder(
@@ -1628,7 +1628,8 @@ class _ManualZoneEditor extends StatelessWidget {
           // Summary text
           SelectableText(
             'L:${lPct.toStringAsFixed(1)}%  T:${tPct.toStringAsFixed(1)}%  R:${rPct.toStringAsFixed(1)}%  B:${bPct.toStringAsFixed(1)}%  W:${wPct.toStringAsFixed(1)}%  H:${hPct.toStringAsFixed(1)}%',
-            style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5), fontFamily: 'monospace'),
+            style: TextStyle(
+                fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.5), fontFamily: 'monospace'),
           ),
         ],
       ),
@@ -1683,7 +1684,7 @@ class _PctFieldState extends State<_PctField> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Expanded(
@@ -1691,7 +1692,8 @@ class _PctFieldState extends State<_PctField> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(widget.label,
-              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: onSurface.withValues(alpha: 0.6))),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 4),
           SizedBox(
             height: 34,
@@ -1780,7 +1782,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.remove_rounded,
             onTap: widget.value > 0 ? () => widget.onChanged(widget.value - 1) : null,
-            accent: userSettings.themeColors.accent,
+            accent: Design.accent,
           ),
           Expanded(
             child: Focus(
@@ -1799,7 +1801,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: userSettings.themeColors.accent, width: 1.5),
+                    borderSide: BorderSide(color: Design.accent, width: 1.5),
                   ),
                 ),
                 onChanged: (String v) {
@@ -1812,7 +1814,7 @@ class _GapSpinnerState extends State<_GapSpinner> {
           _SpinBtn(
             icon: Icons.add_rounded,
             onTap: widget.value < 200 ? () => widget.onChanged(widget.value + 1) : null,
-            accent: userSettings.themeColors.accent,
+            accent: Design.accent,
           ),
         ],
       ),
@@ -1877,11 +1879,15 @@ class _InfoChip extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 11, color: faint ? onSurface.withValues(alpha: 0.45) : accent.withValues(alpha: 0.8)),
             const SizedBox(width: 4),
-            Text('$label: ', style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: faint ? 0.45 : 0.65))),
+            Text('$label: ',
+                style:
+                    TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: faint ? 0.45 : 0.65))),
             SelectableText(
               value,
               style: TextStyle(
-                  fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: faint ? onSurface.withValues(alpha: 0.65) : accent),
+                  fontSize: Design.baseFontSize,
+                  fontWeight: FontWeight.w700,
+                  color: faint ? onSurface.withValues(alpha: 0.65) : accent),
             ),
           ],
         ),
@@ -1982,7 +1988,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Padding(
@@ -2025,7 +2031,7 @@ class _GridSettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(

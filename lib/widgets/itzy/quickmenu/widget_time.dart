@@ -45,9 +45,9 @@ class _TimeWidgetState extends State<TimeWidget> {
   }
 
   void _onTap() {
-    userSettings.noopKeyListener = true;
+    user.noopKeyListener = true;
     WinKeys.send("{#LWIN}C");
-    Future<void>.delayed(const Duration(milliseconds: 500), () => userSettings.noopKeyListener = false);
+    Future<void>.delayed(const Duration(milliseconds: 500), () => user.noopKeyListener = false);
   }
 
   @override
@@ -55,7 +55,7 @@ class _TimeWidgetState extends State<TimeWidget> {
     final String timeStr = DateFormat('hh:mm:ss').format(_now);
     final String dateStr = DateFormat('dd MMM').format(_now);
     final String dayStr = DateFormat('EE').format(_now);
-    final FontWeight fontWeight = FontWeight(userSettings.theme.entryFontWeight);
+    final FontWeight fontWeight = FontWeight(Design.entryFontWeight);
 
     if (widget.inline) {
       return InkWell(
@@ -66,8 +66,8 @@ class _TimeWidgetState extends State<TimeWidget> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              _buildText(timeStr, userSettings.expandedTaskbar ? 12.5 : 11.5, fontWeight, minWidth: 70, maxWidth: 100),
-              _buildText("$dayStr $dateStr", userSettings.expandedTaskbar ? 12.5 : 11.5, fontWeight,
+              _buildText(timeStr, user.expandedTaskbar ? 12.5 : 11.5, fontWeight, minWidth: 70, maxWidth: 100),
+              _buildText("$dayStr $dateStr", user.expandedTaskbar ? 12.5 : 11.5, fontWeight,
                   minWidth: 60, maxWidth: 100),
             ],
           ),
@@ -105,7 +105,7 @@ class _TimeWidgetState extends State<TimeWidget> {
   Widget _buildText(String text, double fontSize, FontWeight weight, {double? minWidth, double? maxWidth}) {
     Widget child = Text(
       text,
-      style: GoogleFonts.getFont(User.theme.entryFontFamily, fontSize: fontSize, fontWeight: weight),
+      style: GoogleFonts.getFont(Design.entryFontFamily, fontSize: fontSize, fontWeight: weight),
       overflow: TextOverflow.ellipsis,
     );
 

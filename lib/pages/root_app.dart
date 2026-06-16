@@ -30,10 +30,10 @@ class _TabameState extends State<Tabame> {
   void initState() {
     super.initState();
     Debug.add("Tabame: init");
-    ThemeType theme = userSettings.themeTypeMode;
+    ThemeType theme = user.themeTypeMode;
     Timer.periodic(const Duration(minutes: 1), (Timer timer) {
-      if (theme != userSettings.themeTypeMode) {
-        theme = userSettings.themeTypeMode;
+      if (theme != user.themeTypeMode) {
+        theme = user.themeTypeMode;
         Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
         if (mounted) setState(() {});
       }
@@ -42,7 +42,7 @@ class _TabameState extends State<Tabame> {
     // ignore: deprecated_member_use
     final SingletonFlutterWindow window = WidgetsBinding.instance.window;
     window.onPlatformBrightnessChanged = () {
-      theme = userSettings.themeTypeMode;
+      theme = user.themeTypeMode;
       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
       if (mounted) setState(() {});
     };
@@ -70,9 +70,9 @@ class _TabameState extends State<Tabame> {
             builder: (_, bool refreshed, __) {
               Debug.add("Tabame: Theme");
               ThemeMode scheduled = ThemeMode.system;
-              ThemeType themeType = userSettings.themeType;
+              ThemeType themeType = user.themeType;
               if (themeType.index == 3) {
-                scheduled = userSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+                scheduled = user.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
               }
               ThemeMode themeMode =
                   <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
@@ -90,8 +90,8 @@ class _TabameState extends State<Tabame> {
                           allowImplicitScrolling: false,
                           physics: const NeverScrollableScrollPhysics(),
                           itemBuilder: (BuildContext context, int index) {
-                            Debug.add("Tabame: $index ${userSettings.args.join(':')}");
-                            if (userSettings.args.contains("-interface") || Boxes.remap.isEmpty) {
+                            Debug.add("Tabame: $index ${user.args.join(':')}");
+                            if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
                               return const Interface();
                             }
                             if (index == Pages.interface.index) {
@@ -100,7 +100,7 @@ class _TabameState extends State<Tabame> {
                             return const QuickMenu();
                           },
                         )
-                      : (userSettings.args.contains("-interface") || Boxes.remap.isEmpty)
+                      : (user.args.contains("-interface") || Boxes.remap.isEmpty)
                           ? const Interface()
                           : const QuickMenu());
             },

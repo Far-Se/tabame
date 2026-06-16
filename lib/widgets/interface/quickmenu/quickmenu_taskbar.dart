@@ -159,10 +159,10 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Taskbar Level Positioning",
             subtitle: "Maintain QuickMenu alignment with taskbar height",
-            value: userSettings.quickMenuAtTaskbarLevel,
+            value: user.quickMenuAtTaskbarLevel,
             onChanged: (bool v) async {
-              userSettings.quickMenuAtTaskbarLevel = v;
-              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", userSettings.quickMenuAtTaskbarLevel);
+              user.quickMenuAtTaskbarLevel = v;
+              await Boxes.updateSettings("showQuickMenuAtTaskbarLevel", user.quickMenuAtTaskbarLevel);
               if (!mounted) return;
               setState(() {});
             },
@@ -171,10 +171,10 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Expanded Taskbar",
             subtitle: "High-density technical list with process labels",
-            value: userSettings.expandedTaskbar,
+            value: user.expandedTaskbar,
             onChanged: (bool v) async {
-              userSettings.expandedTaskbar = v;
-              await Boxes.updateSettings("expandedTaskbar", userSettings.expandedTaskbar);
+              user.expandedTaskbar = v;
+              await Boxes.updateSettings("expandedTaskbar", user.expandedTaskbar);
               if (!mounted) return;
               setState(() {});
             },
@@ -183,25 +183,25 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Quick Actions at the bottom",
             subtitle: "Put Quick Action on the bottom, between pinned and tray",
-            value: userSettings.quickActionsAtBottom,
+            value: user.quickActionsAtBottom,
             onChanged: (bool v) async {
-              userSettings.quickActionsAtBottom = v;
-              userSettings.bottomBarOnTop = false;
-              await Boxes.updateSettings("quickActionsAtBottom", userSettings.quickActionsAtBottom);
-              await Boxes.updateSettings("bottomBarOnTop", userSettings.bottomBarOnTop);
+              user.quickActionsAtBottom = v;
+              user.bottomBarOnTop = false;
+              await Boxes.updateSettings("quickActionsAtBottom", user.quickActionsAtBottom);
+              await Boxes.updateSettings("bottomBarOnTop", user.bottomBarOnTop);
               if (!mounted) return;
               setState(() {});
             },
           ),
-          if (userSettings.quickActionsAtBottom) ...<Widget>[
+          if (user.quickActionsAtBottom) ...<Widget>[
             const Divider(height: 1),
             _buildToggleTile(
               title: "Bottom Bar at top",
               subtitle: "Put Buttom bar at the top to not get crowded",
-              value: userSettings.bottomBarOnTop,
+              value: user.bottomBarOnTop,
               onChanged: (bool v) async {
-                userSettings.bottomBarOnTop = v;
-                await Boxes.updateSettings("bottomBarOnTop", userSettings.bottomBarOnTop);
+                user.bottomBarOnTop = v;
+                await Boxes.updateSettings("bottomBarOnTop", user.bottomBarOnTop);
                 if (!mounted) return;
                 setState(() {});
               },
@@ -211,10 +211,10 @@ class _QMTaskbarState extends State<QMTaskbar> {
           _buildToggleTile(
             title: "Show Media Sessions",
             subtitle: "It will show curent Media Session like Music Player or Youtube/Browser",
-            value: userSettings.mediaSessionsInTaskbar,
+            value: user.mediaSessionsInTaskbar,
             onChanged: (bool v) async {
-              userSettings.mediaSessionsInTaskbar = v;
-              await Boxes.updateSettings("showMediaSessionsInTaskbar", userSettings.mediaSessionsInTaskbar);
+              user.mediaSessionsInTaskbar = v;
+              await Boxes.updateSettings("showMediaSessionsInTaskbar", user.mediaSessionsInTaskbar);
               if (!mounted) return;
               setState(() {});
             },
@@ -253,7 +253,7 @@ class _QMTaskbarState extends State<QMTaskbar> {
   Widget _buildStyleTile(TaskBarAppsStyle style) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final bool isSelected = userSettings.taskBarAppsStyle == style;
+    final bool isSelected = user.taskBarAppsStyle == style;
 
     String title = "";
     String subtitle = "";
@@ -289,8 +289,8 @@ class _QMTaskbarState extends State<QMTaskbar> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
-          userSettings.taskBarAppsStyle = style;
-          await Boxes.updateSettings("taskBarAppsStyle", userSettings.taskBarAppsStyle.index);
+          user.taskBarAppsStyle = style;
+          await Boxes.updateSettings("taskBarAppsStyle", user.taskBarAppsStyle.index);
           if (!mounted) return;
           setState(() {});
         },
@@ -939,7 +939,7 @@ class _AllBadgesModalState extends State<_AllBadgesModal> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

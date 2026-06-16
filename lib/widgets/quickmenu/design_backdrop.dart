@@ -14,11 +14,11 @@ class DesignBackdrop extends StatelessWidget {
     return ValueListenableBuilder<bool>(
         valueListenable: Globals.themeChangeNotifier,
         builder: (_, bool refreshed, __) {
-          final String activePath = userSettings.activeBackdropPath;
+          final String activePath = user.activeBackdropPath;
           if (activePath.isEmpty) return const SizedBox.shrink();
 
           final bool isAsset = activePath.startsWith('resources/');
-          final double opacityClamped = userSettings.themeColors.backdropOpacity.clamp(0.0, 1.0);
+          final double opacityClamped = Design.backdropOpacity.clamp(0.0, 1.0);
 
           return RepaintBoundary(
             child: Stack(

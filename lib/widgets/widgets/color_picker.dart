@@ -220,7 +220,8 @@ class _CustomColorPickerState extends State<CustomColorPicker> {
                   child: TextField(
                     controller: hexController,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, letterSpacing: 1),
                     decoration: InputDecoration(
                       prefixText: "#",
                       isDense: true,

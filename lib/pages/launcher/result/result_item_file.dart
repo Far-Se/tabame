@@ -81,7 +81,7 @@ class LauncherListItem extends StatelessWidget {
       subtitle: path,
       badge: _FileKindBadge(
         isDirectory: entity.path.split('.').length != 2,
-        accent: userSettings.themeColors.accent,
+        accent: Design.accent,
         onSurface: onSurface,
       ),
     );

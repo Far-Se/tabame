@@ -54,33 +54,34 @@ enum LauncherDesign {
 enum LightSwitchMode { off, fixed, sunrise }
 
 class User {
-  static ThemeColors get theme => userSettings.themeColors;
-  static ThemeColors get t => userSettings.themeColors;
-  static Settings get s => userSettings;
+  // static ThemeColors get theme => Design;
+  // static ThemeColors get t => Design;
+  static Settings get s => user;
 }
 
 class Design {
-  static Color get background => userSettings.theme.background;
-  static Color get text => userSettings.theme.text;
-  static Color get accent => userSettings.theme.accent;
-  static int get gradientAlpha => userSettings.theme.gradientAlpha;
-  static String get uiFontFamily => userSettings.theme.uiFontFamily;
-  static int get uiFontWeight => userSettings.theme.uiFontWeight;
-  static bool get uiFontItalic => userSettings.theme.uiFontItalic;
-  static String get entryFontFamily => userSettings.theme.entryFontFamily;
-  static int get entryFontWeight => userSettings.theme.entryFontWeight;
-  static bool get entryFontItalic => userSettings.theme.entryFontItalic;
-  static List<String> get backdropImages => userSettings.theme.backdropImages;
-  static String get backdropType => userSettings.theme.backdropType;
-  static double get backdropOpacity => userSettings.theme.backdropOpacity;
-  static bool get backdropLauncher => userSettings.theme.backdropLauncher;
-  static List<double> get panelOpacityPoints => userSettings.theme.panelOpacityPoints;
-  static String get panelOpacityBegin => userSettings.theme.panelOpacityBegin;
-  static String get panelOpacityEnd => userSettings.theme.panelOpacityEnd;
-  static double get borderRadius => userSettings.theme.borderRadius;
-  static double get baseFontSize => userSettings.theme.baseFontSize;
+  static Color get background => user.themeColors.background;
+  static Color get text => user.themeColors.text;
+  static Color get accent => user.themeColors.accent;
+  static int get gradientAlpha => user.themeColors.gradientAlpha;
+  static String get uiFontFamily => user.themeColors.uiFontFamily;
+  static int get uiFontWeight => user.themeColors.uiFontWeight;
+  static bool get uiFontItalic => user.themeColors.uiFontItalic;
+  static String get entryFontFamily => user.themeColors.entryFontFamily;
+  static int get entryFontWeight => user.themeColors.entryFontWeight;
+  static bool get entryFontItalic => user.themeColors.entryFontItalic;
+  static List<String> get backdropImages => user.themeColors.backdropImages;
+  static String get backdropType => user.themeColors.backdropType;
+  static double get backdropOpacity => user.themeColors.backdropOpacity;
+  static bool get backdropLauncher => user.themeColors.backdropLauncher;
+  static List<double> get panelOpacityPoints => user.themeColors.panelOpacityPoints;
+  static String get panelOpacityBegin => user.themeColors.panelOpacityBegin;
+  static String get panelOpacityEnd => user.themeColors.panelOpacityEnd;
+  static double get borderRadius => user.themeColors.borderRadius;
+  static double get baseFontSize => user.themeColors.baseFontSize;
+  static bool get hasBackdrop => Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
   static final TextStyle fontSize2Alpha80 =
-      TextStyle(fontSize: baseFontSize + 2, color: userSettings.theme.text.withAlpha(80));
+      TextStyle(fontSize: baseFontSize + 2, color: user.themeColors.text.withAlpha(80));
 }
 
 class C {
@@ -178,8 +179,8 @@ class Settings {
   ThemeColors get theme => themeColors;
   ThemeType themeType = ThemeType.system;
   bool isDark(BuildContext context) =>
-      userSettings.themeType == ThemeType.dark ||
-      (userSettings.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark);
+      user.themeType == ThemeType.dark ||
+      (user.themeType == ThemeType.system && MediaQuery.of(context).platformBrightness == Brightness.dark);
 
   // Light Switch
   LightSwitchMode lightSwitchMode = LightSwitchMode.off;
@@ -461,7 +462,7 @@ class Settings {
   Timer? themeScheduleChangeTimer;
   void setScheduleThemeChange() {
     themeScheduleChangeTimer?.cancel();
-    if (userSettings.lightSwitchMode == LightSwitchMode.off) return;
+    if (user.lightSwitchMode == LightSwitchMode.off) return;
 
     final int start =
         lightSwitchMode == LightSwitchMode.sunrise ? (lightSwitchSunrise + lightSwitchSunriseOffset) : themeScheduleMin;
@@ -505,30 +506,30 @@ class Settings {
   Map<int, List<int>> hookedWins = <int, List<int>>{};
 }
 
-Settings userSettings = Settings();
+Settings user = Settings();
 void checkThemeChange() {
-  ThemeType newType = userSettings.themeTypeMode;
-  if (userSettings.themeType == ThemeType.system) {
+  ThemeType newType = user.themeTypeMode;
+  if (user.themeType == ThemeType.system) {
     if (WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark) {
       newType = ThemeType.dark;
     } else {
       newType = ThemeType.light;
     }
-  } else if (userSettings.themeType == ThemeType.schedule) {
-    final int start = userSettings.lightSwitchMode == LightSwitchMode.sunrise
-        ? (userSettings.lightSwitchSunrise + userSettings.lightSwitchSunriseOffset)
-        : userSettings.themeScheduleMin;
-    final int end = userSettings.lightSwitchMode == LightSwitchMode.sunrise
-        ? (userSettings.lightSwitchSunset + userSettings.lightSwitchSunsetOffset)
-        : userSettings.themeScheduleMax;
+  } else if (user.themeType == ThemeType.schedule) {
+    final int start = user.lightSwitchMode == LightSwitchMode.sunrise
+        ? (user.lightSwitchSunrise + user.lightSwitchSunriseOffset)
+        : user.themeScheduleMin;
+    final int end = user.lightSwitchMode == LightSwitchMode.sunrise
+        ? (user.lightSwitchSunset + user.lightSwitchSunsetOffset)
+        : user.themeScheduleMax;
     final DateTime now0 = DateTime.now();
     final int now = (now0.hour * 60) + now0.minute;
     newType = now.isBetweenEqual(start, end) ? ThemeType.light : ThemeType.dark;
   } else {
-    newType = userSettings.themeType;
+    newType = user.themeType;
   }
-  if (userSettings.themeTypeMode != newType) {
-    userSettings.themeTypeMode = newType;
+  if (user.themeTypeMode != newType) {
+    user.themeTypeMode = newType;
     QuickMenuFunctions.refreshQuickMenu();
     // QmTaskbarRewrites
     // InterfaceQMBookmarksSettings
@@ -553,15 +554,15 @@ Future<void> registerAll() async {
     if (QuickMenuFunctions.isQuickMenuVisible) checkThemeChange();
   });
   Timer.periodic(const Duration(seconds: 5), (Timer timer) {
-    if (!userSettings.hideDesktopFiles) return;
+    if (!user.hideDesktopFiles) return;
     WinUtils.toggleDesktopFiles(visible: false);
   });
   //register
   await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? true : false);
   Debug.add("Registered: Boxes");
   //Schedule Theme
-  userSettings.setScheduleThemeChange();
-  if (userSettings.lightSwitchMode == LightSwitchMode.sunrise) {
+  user.setScheduleThemeChange();
+  if (user.lightSwitchMode == LightSwitchMode.sunrise) {
     SolarCalculator.updateSolarData();
   }
   Debug.add("Registered: ScheduleTheme");
@@ -803,19 +804,19 @@ extension ColorExtensions on Color {
 }
 
 TextStyle baseEntryStyle = GoogleFonts.getFont(
-  userSettings.themeColors.entryFontFamily,
-  fontSize: userSettings.themeColors.baseFontSize + 2,
-  color: User.theme.text,
+  Design.entryFontFamily,
+  fontSize: Design.baseFontSize + 2,
+  color: Design.text,
   fontWeight: FontWeight(
-    userSettings.themeColors.entryFontWeight,
+    Design.entryFontWeight,
   ),
-  fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+  fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
 );
 TextStyle entryStyle(bool? isSelected, {double? fontSize, double? letterSpacing, Color? color}) {
   return baseEntryStyle.copyWith(
-    fontSize: fontSize ?? userSettings.themeColors.baseFontSize + 2,
+    fontSize: fontSize ?? Design.baseFontSize + 2,
     letterSpacing: letterSpacing ?? 1.4,
-    color: color ?? ((isSelected ?? false) ? User.theme.text : User.theme.text.withAlpha(200)),
+    color: color ?? ((isSelected ?? false) ? Design.text : Design.text.withAlpha(200)),
   );
 }
 

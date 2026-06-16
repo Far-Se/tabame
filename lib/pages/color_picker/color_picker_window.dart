@@ -29,9 +29,9 @@ class ColorPickerApp extends StatelessWidget {
       valueListenable: Globals.themeChangeNotifier,
       builder: (BuildContext context, _, __) {
         ThemeMode scheduled = ThemeMode.system;
-        ThemeType themeType = userSettings.themeType;
+        ThemeType themeType = user.themeType;
         if (themeType.index == 3) {
-          scheduled = userSettings.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
+          scheduled = user.themeTypeMode == ThemeType.dark ? ThemeMode.dark : ThemeMode.light;
         }
         ThemeMode themeMode =
             <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
@@ -169,7 +169,7 @@ class _ColorPickerWindowState extends State<ColorPickerWindow> with WindowListen
       _center = capture.center;
     });
 
-    if (widget.isStandalone || userSettings.args.contains("-colorPicker")) {
+    if (widget.isStandalone || user.args.contains("-colorPicker")) {
       final List<List<ColorGridSample>> gridSamples =
           List<List<ColorGridSample>>.generate(capture.grid.length, (int row) {
         return List<ColorGridSample>.generate(capture.grid[row].length, (int col) {

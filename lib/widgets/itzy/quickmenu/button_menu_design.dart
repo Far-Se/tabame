@@ -61,8 +61,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   void initState() {
     super.initState();
 
-    _paletteMode =
-        userSettings.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
+    _paletteMode = user.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
     _lightPresets = <Map<ColorSwatch<Object>, String>>[
       getPredefinedColorSet(lightThemeOptions, 0, maximum: 24),
       getPredefinedColorSet(lightThemeOptions, 1, maximum: 24),
@@ -81,7 +80,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   ThemeColors get _selectedTheme {
-    return _paletteMode == _QuickMenuPaletteMode.dark ? userSettings.darkTheme : userSettings.lightTheme;
+    return _paletteMode == _QuickMenuPaletteMode.dark ? user.darkTheme : user.lightTheme;
   }
 
   List<Map<ColorSwatch<Object>, String>> get _presetOptions {
@@ -183,7 +182,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   int get _selectedGradientIndex {
-    final String path = userSettings.activeBackdropPath;
+    final String path = user.activeBackdropPath;
     final RegExp re = RegExp(r'gradient(\d+)\.jpg$');
     final Match? m = re.firstMatch(path);
     if (m == null) return -1;
@@ -191,13 +190,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Future<void> _resetCurrentPalette() async {
-    final QMDesignThemeSet defaults =
-        Settings.createDefaultQuickMenuDesignThemes()[userSettings.currentQuickMenuDesign.name]!;
+    final QMDesignThemeSet defaults = Settings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.name]!;
     await _updateTheme(() {
       if (_paletteMode == _QuickMenuPaletteMode.dark) {
-        userSettings.darkTheme = defaults.darkTheme.copyWith();
+        user.darkTheme = defaults.darkTheme.copyWith();
       } else {
-        userSettings.lightTheme = defaults.lightTheme.copyWith();
+        user.lightTheme = defaults.lightTheme.copyWith();
       }
     });
   }
@@ -261,7 +259,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Column(
@@ -276,16 +274,16 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           buttonIcon: Icons.history,
           extraActions: <Widget>[
             CustomTooltip(
-              message: "Change to ${User.s.isDark(context) ? "Light" : "Dark"}",
+              message: "Change to ${user.isDark(context) ? "Light" : "Dark"}",
               child: IconButton(
                 icon: const Icon(Icons.theater_comedy_sharp),
                 onPressed: () {
                   bool isSimple = false;
-                  if (<ThemeType>[ThemeType.light, ThemeType.dark].contains(userSettings.themeType)) isSimple = true;
+                  if (<ThemeType>[ThemeType.light, ThemeType.dark].contains(user.themeType)) isSimple = true;
 
-                  final bool switchingToDark = !User.s.isDark(context);
-                  userSettings.themeType = switchingToDark ? ThemeType.dark : ThemeType.light;
-                  if (isSimple) Boxes.updateSettings("themeType", userSettings.themeType.index);
+                  final bool switchingToDark = !user.isDark(context);
+                  user.themeType = switchingToDark ? ThemeType.dark : ThemeType.light;
+                  if (isSimple) Boxes.updateSettings("themeType", user.themeType.index);
 
                   // ✅ Keep _paletteMode in sync with the new theme
                   setState(() {
@@ -388,12 +386,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               itemBuilder: (BuildContext context, int index) {
                 QuickMenuDesigns design = QuickMenuDesigns.classic;
                 bool selected = isQuickMenu
-                    ? userSettings.currentQuickMenuDesign == design
-                    : User.s.launcherDesign == LauncherDesign.values[index];
+                    ? user.currentQuickMenuDesign == design
+                    : user.launcherDesign == LauncherDesign.values[index];
 
                 if (isQuickMenu) {
                   design = QuickMenuDesigns.values[index];
-                  selected = userSettings.currentQuickMenuDesign == design;
+                  selected = user.currentQuickMenuDesign == design;
                 }
                 return ChoiceChip(
                   label: isQuickMenu
@@ -407,7 +405,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                             _switchDesign(design);
                           } else {
                             await Boxes.pref.setInt("launcherDesign", index);
-                            User.s.launcherDesign = LauncherDesign.values[index];
+                            user.launcherDesign = LauncherDesign.values[index];
                             setState(() {});
                           }
                         },
@@ -606,7 +604,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   visualDensity: const VisualDensity(vertical: -4),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   minTileHeight: 36, // optional
-                  title: Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
+                  title:
+                      Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
                   onTap: () async {
                     await _updateTheme(() {
                       _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
@@ -702,7 +701,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                             child: Center(
                               child: Text(
                                 '${index + 1}',
-                                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
+                                style: TextStyle(
+                                    fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
                               ),
                             ),
                           ),
@@ -757,7 +757,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         children: <Widget>[
           Text(
             "Custom Backdrop Image",
-            style: TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
+            style:
+                TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
           ),
           const SizedBox(height: 2),
           Text(
@@ -799,7 +800,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               itemCount: _selectedTheme.backdropImages.length,
               itemBuilder: (BuildContext context, int index) {
                 final String path = _selectedTheme.backdropImages[index];
-                final bool isActive = userSettings.activeBackdropPath == path;
+                final bool isActive = user.activeBackdropPath == path;
                 return Stack(
                   children: <Widget>[
                     Positioned.fill(
@@ -1046,11 +1047,11 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         _selectedTheme.entryFontItalic = font.fontStyle == FontStyle.italic;
                       });
                       baseEntryStyle = GoogleFonts.getFont(
-                        userSettings.themeColors.entryFontFamily,
-                        fontSize: userSettings.themeColors.baseFontSize + 2,
-                        color: User.theme.text,
-                        fontWeight: FontWeight(userSettings.themeColors.entryFontWeight),
-                        fontStyle: userSettings.themeColors.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                        Design.entryFontFamily,
+                        fontSize: Design.baseFontSize + 2,
+                        color: Design.text,
+                        fontWeight: FontWeight(Design.entryFontWeight),
+                        fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                       );
                       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                       QuickMenuFunctions.refreshQuickMenu();

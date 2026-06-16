@@ -18,10 +18,10 @@ class MainMenuModernWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color surface = theme.colorScheme.surface;
 
-    final List<double> points = userSettings.themeColors.panelOpacityPoints;
+    final List<double> points = Design.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> colors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -35,7 +35,7 @@ class MainMenuModernWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 90,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(User.theme.borderRadius),
+        borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[
             // Background Layer (Transparent Gradient applied via ShaderMask)
@@ -45,24 +45,22 @@ class MainMenuModernWidget extends StatelessWidget {
                   blendMode: BlendMode.dstIn,
                   shaderCallback: (Rect bounds) {
                     return LinearGradient(
-                      begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                      end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                      begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
+                      end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
                       colors: colors,
                       stops: stops,
                     ).createShader(bounds);
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                      borderRadius: BorderRadius.circular(Design.borderRadius),
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: <Color>[
-                          surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.95),
-                          Color.alphaBlend(
-                              accent.withAlpha((userSettings.themeColors.gradientAlpha * 24 / 100).toInt()), surface),
-                          Color.alphaBlend(
-                              accent.withAlpha((userSettings.themeColors.gradientAlpha * 10 / 100).toInt()), surface),
+                          surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.8 : 0.95),
+                          Color.alphaBlend(accent.withAlpha((Design.gradientAlpha * 24 / 100).toInt()), surface),
+                          Color.alphaBlend(accent.withAlpha((Design.gradientAlpha * 10 / 100).toInt()), surface),
                         ],
                       ),
                       border: Border.all(color: accent.withAlpha(28)),
@@ -75,10 +73,10 @@ class MainMenuModernWidget extends StatelessWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                      borderRadius: BorderRadius.circular(Design.borderRadius),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.9),
+                          color: surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.7 : 0.9),
                           border: Border.all(color: accent.withAlpha(18)),
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
@@ -86,11 +84,13 @@ class MainMenuModernWidget extends StatelessWidget {
                             colors: <Color>[Colors.white.withAlpha(14), Colors.transparent],
                           ),
                         ),
-                        child: const Stack(
-                          children: <Widget>[
-                            StableBackdrop(),
-                          ],
-                        ),
+                        child: Design.hasBackdrop
+                            ? const Stack(
+                                children: <Widget>[
+                                  StableBackdrop(),
+                                ],
+                              )
+                            : null,
                       ),
                     ),
                   ),
@@ -104,7 +104,7 @@ class MainMenuModernWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!userSettings.quickActionsAtBottom)
+                  if (!user.quickActionsAtBottom)
                     const Padding(
                       padding: EdgeInsets.fromLTRB(3, 3, 6, 4),
                       child: TopBar(),
@@ -112,10 +112,10 @@ class MainMenuModernWidget extends StatelessWidget {
                   else
                     const PinnedAndTrayList(),
                   const TaskBar(),
-                  Divider(thickness: 1, height: 1, color: userSettings.themeColors.text.withValues(alpha: 0.08)),
-                  if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
-                  if (userSettings.taskManagerStats) const TaskbarStats(),
-                  if (userSettings.libreStats) const LibreStats(),
+                  Divider(thickness: 1, height: 1, color: Design.text.withValues(alpha: 0.08)),
+                  if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (user.taskManagerStats) const TaskbarStats(),
+                  if (user.libreStats) const LibreStats(),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(0, 4, 1, 6),
                     child: BottomBar(),

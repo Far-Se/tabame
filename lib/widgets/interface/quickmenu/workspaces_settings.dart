@@ -104,7 +104,7 @@ class _WorkspacesSettingsPageState extends State<WorkspacesSettingsPage> {
   Widget _buildDashboard() {
     final ThemeData theme = Theme.of(context);
     final Color onSurface = theme.colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -182,7 +182,7 @@ class _WorkspaceListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     final Set<int> monitors =
@@ -258,7 +258,7 @@ class _WorkspacePreviewThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return ClipRRect(
@@ -506,7 +506,7 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     final String name = _nameController.text.trim().isEmpty ? _workspace.name : _nameController.text.trim();
@@ -669,7 +669,7 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: userSettings.themeColors.accent.withValues(alpha: 0.35)),
+            borderSide: BorderSide(color: Design.accent.withValues(alpha: 0.35)),
           ),
           filled: true,
           fillColor: onSurface.withValues(alpha: 0.03),
@@ -722,7 +722,7 @@ class _WorkspacePreviewSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
     return Container(

@@ -64,7 +64,7 @@ class VaultsWidgetState extends State<VaultsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -429,7 +429,7 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
 
           return _VaultItemTile(
             item: item,
-            accent: userSettings.themeColors.accent,
+            accent: Design.accent,
             onSurface: widget.onSurface,
             onEdit: () => setState(() {
               _editingIndex = index;
@@ -451,7 +451,7 @@ class _VaultDetailWidgetState extends State<VaultDetailWidget> {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration:
-          BoxDecoration(color: userSettings.themeColors.accent.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+          BoxDecoration(color: Design.accent.withAlpha(15), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: <Widget>[
           _buildField(controller: _keyEdit, label: "Key", icon: Icons.key),
@@ -521,17 +521,17 @@ Widget _buildField(
 
       labelStyle: TextStyle(
         fontSize: Design.baseFontSize + 2,
-        color: userSettings.themeColors.text.withAlpha(110),
+        color: Design.text.withAlpha(110),
       ),
 
       prefixIcon: Icon(
         icon,
         size: 16,
-        color: userSettings.themeColors.accent,
+        color: Design.accent,
       ),
 
       filled: true,
-      fillColor: userSettings.themeColors.accent.withAlpha(10),
+      fillColor: Design.accent.withAlpha(10),
 
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 10,
@@ -546,7 +546,7 @@ Widget _buildField(
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(
-          color: userSettings.themeColors.accent.withAlpha(90),
+          color: Design.accent.withAlpha(90),
         ),
       ),
     ),
@@ -569,7 +569,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-            color: _hovered ? userSettings.themeColors.accent.withAlpha(60) : Colors.transparent,
+            color: _hovered ? Design.accent.withAlpha(60) : Colors.transparent,
             borderRadius: BorderRadius.circular(8)),
         child: InkWell(
           onTap: () {
@@ -604,7 +604,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                   Text("Copied!",
                       style: TextStyle(
                           fontSize: Design.baseFontSize,
-                          color: userSettings.themeColors.accent,
+                          color: Design.accent,
                           fontWeight: FontWeight.bold)),
                 if (_hovered && !_copied) ...<Widget>[
                   IconButton(

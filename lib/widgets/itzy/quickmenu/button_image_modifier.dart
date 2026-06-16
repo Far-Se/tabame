@@ -529,7 +529,7 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
   }
 
   Widget _buildMainPage(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -671,7 +671,7 @@ class _SettingsSubPageState extends State<_SettingsSubPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
@@ -1041,7 +1041,7 @@ class _ConverterPageState extends State<_ConverterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Scaffold(
@@ -1395,7 +1395,7 @@ class _SectionLabel extends StatelessWidget {
       style: TextStyle(
           fontSize: Design.baseFontSize + 1,
           fontWeight: FontWeight.w700,
-          color: User.theme.text.withAlpha(150),
+          color: Design.text.withAlpha(150),
           letterSpacing: 0.4),
     );
   }
@@ -1449,7 +1449,7 @@ class _FormatButton extends StatelessWidget {
       onPressed: onTap,
       style: TextButton.styleFrom(
         backgroundColor: active ? accent.withAlpha(30) : accent.withAlpha(8),
-        foregroundColor: User.theme.text.withAlpha(150),
+        foregroundColor: Design.text.withAlpha(150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         minimumSize: Size.zero,
         shape: RoundedRectangleBorder(

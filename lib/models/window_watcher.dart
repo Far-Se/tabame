@@ -137,7 +137,7 @@ class WindowWatcher {
     }
 
     await handleIcons();
-    await orderBy(userSettings.taskBarAppsStyle);
+    await orderBy(user.taskBarAppsStyle);
     firstEverRun = false;
     return true;
   }

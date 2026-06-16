@@ -118,7 +118,7 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
     _monitorCount = Monitor.list.length;
     _folderPath = (widget.initialFolderPath?.trim().isNotEmpty ?? false)
         ? widget.initialFolderPath!.trim()
-        : userSettings.wallpapersFolder;
+        : user.wallpapersFolder;
     _currentWallpaperPath = WinUtils.getDesktopBackgroundType() == DesktopBackgroundType.wallpaper
         ? WinUtils.getDesktopWallpaperPath()
         : null;
@@ -176,7 +176,7 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
 
     _folderPath = dir.path;
     if (widget.saveSelectionToSettings) {
-      userSettings.wallpapersFolder = dir.path;
+      user.wallpapersFolder = dir.path;
       await Boxes.updateSettings("wallpapersFolder", dir.path);
     }
     _refreshImages();
@@ -184,7 +184,7 @@ class _WallpapersPanelState extends State<WallpapersPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final bool folderExists = _folderPath.trim().isNotEmpty && Directory(_folderPath).existsSync();
 
     return Column(
@@ -387,7 +387,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Icon(Icons.monitor_rounded, size: 18, color: userSettings.themeColors.accent),
+                Icon(Icons.monitor_rounded, size: 18, color: Design.accent),
                 const SizedBox(width: 8),
                 const Text(
                   "Select Display",
@@ -399,7 +399,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
             SizedBox(
               height: 180,
               child: _MonitorLayoutPicker(
-                accent: userSettings.themeColors.accent,
+                accent: Design.accent,
                 onSelect: (int monitorIndex) {
                   setState(() => _selectedMonitor = monitorIndex);
                   Navigator.of(context).pop();
@@ -515,10 +515,10 @@ class _WallpaperRowState extends State<_WallpaperRow> {
         curve: Curves.easeOut,
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: _hovered ? userSettings.themeColors.accent.withAlpha(20) : Colors.transparent,
+          color: _hovered ? Design.accent.withAlpha(20) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: widget.isCurrent ? userSettings.themeColors.accent.withAlpha(150) : onSurface.withAlpha(18),
+            color: widget.isCurrent ? Design.accent.withAlpha(150) : onSurface.withAlpha(18),
           ),
         ),
         child: InkWell(
@@ -552,12 +552,12 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                         return Container(
                           width: 64,
                           height: 40,
-                          color: userSettings.themeColors.accent.withAlpha(20),
+                          color: Design.accent.withAlpha(20),
                           alignment: Alignment.center,
                           child: Icon(
                             snap.hasError ? Icons.broken_image_outlined : Icons.image_outlined,
                             size: 16,
-                            color: userSettings.themeColors.accent.withAlpha(180),
+                            color: Design.accent.withAlpha(180),
                           ),
                         );
                       },
@@ -585,9 +585,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                         widget.isCurrent ? "Current wallpaper" : "Set as wallpaper",
                         style: TextStyle(
                           fontSize: Design.baseFontSize,
-                          color: widget.isCurrent
-                              ? userSettings.themeColors.accent.withAlpha(220)
-                              : onSurface.withAlpha(140),
+                          color: widget.isCurrent ? Design.accent.withAlpha(220) : onSurface.withAlpha(140),
                         ),
                       ),
                     ],
@@ -610,7 +608,7 @@ class _WallpaperRowState extends State<_WallpaperRow> {
                 Icon(
                   widget.isCurrent ? Icons.check_circle_rounded : Icons.wallpaper_rounded,
                   size: 16,
-                  color: widget.isCurrent ? userSettings.themeColors.accent : onSurface.withAlpha(_hovered ? 180 : 120),
+                  color: widget.isCurrent ? Design.accent : onSurface.withAlpha(_hovered ? 180 : 120),
                 ),
               ],
             ),
@@ -722,16 +720,16 @@ class _MonitorItemState extends State<_MonitorItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: _hovered ? userSettings.themeColors.accent.withAlpha(40) : onSurface.withAlpha(15),
+            color: _hovered ? Design.accent.withAlpha(40) : onSurface.withAlpha(15),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _hovered ? userSettings.themeColors.accent : onSurface.withAlpha(50),
+              color: _hovered ? Design.accent : onSurface.withAlpha(50),
               width: _hovered ? 2 : 1,
             ),
             boxShadow: _hovered
                 ? <BoxShadow>[
                     BoxShadow(
-                      color: userSettings.themeColors.accent.withAlpha(40),
+                      color: Design.accent.withAlpha(40),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -745,7 +743,7 @@ class _MonitorItemState extends State<_MonitorItem> {
               Icon(
                 Icons.monitor_rounded,
                 size: 20,
-                color: _hovered ? userSettings.themeColors.accent : onSurface.withAlpha(180),
+                color: _hovered ? Design.accent : onSurface.withAlpha(180),
               ),
               const SizedBox(height: 4),
               Text(
@@ -753,7 +751,7 @@ class _MonitorItemState extends State<_MonitorItem> {
                 style: TextStyle(
                   fontSize: Design.baseFontSize + 2,
                   fontWeight: FontWeight.bold,
-                  color: _hovered ? userSettings.themeColors.accent : onSurface.withAlpha(180),
+                  color: _hovered ? Design.accent : onSurface.withAlpha(180),
                 ),
               ),
             ],

@@ -220,7 +220,7 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     final String title;
@@ -452,7 +452,9 @@ class _TranslatorPanelState extends State<TranslatorPanel> {
             child: Text(
               "Recent",
               style: TextStyle(
-                  fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w800, color: onSurface.withAlpha(110)),
+                  fontSize: Design.baseFontSize + 0.5,
+                  fontWeight: FontWeight.w800,
+                  color: onSurface.withAlpha(110)),
             ),
           ),
           const SizedBox(height: 6),
@@ -633,7 +635,9 @@ class _TargetSummary extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: onSurface.withAlpha(170)),
               ),
             ),
             Icon(Icons.tune_rounded, size: 14, color: accent),
@@ -681,7 +685,9 @@ class _FromSummary extends StatelessWidget {
             Text(
               "From:",
               style: TextStyle(
-                  fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(120)),
+                  fontSize: Design.baseFontSize + 1.5,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface.withAlpha(120)),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -690,7 +696,9 @@ class _FromSummary extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: onSurface.withAlpha(170)),
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: onSurface.withAlpha(170)),
               ),
             ),
             Icon(Icons.chevron_right_rounded, size: 16, color: accent),
@@ -743,7 +751,9 @@ class _TranslationCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w800, color: onSurface.withAlpha(150)),
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w800,
+                      color: onSurface.withAlpha(150)),
                 ),
               ),
               if (!hasError)
@@ -820,14 +830,17 @@ class _LanguageRow extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: onSurface),
               ),
             ),
             const SizedBox(width: 8),
             Text(
               code.toUpperCase(),
-              style:
-                  TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w800, color: onSurface.withAlpha(95)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize,
+                  fontWeight: FontWeight.w800,
+                  color: onSurface.withAlpha(95)),
             ),
           ],
         ),
@@ -860,7 +873,9 @@ class _InfoStrip extends StatelessWidget {
             child: Text(
               message,
               style: TextStyle(
-                  fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: onSurface.withAlpha(145)),
+                  fontSize: Design.baseFontSize + 1,
+                  fontWeight: FontWeight.w600,
+                  color: onSurface.withAlpha(145)),
             ),
           ),
         ],
@@ -896,7 +911,8 @@ class _EmptyTranslationState extends StatelessWidget {
           Text(
             "Auto-detect source language, then translate to your selected targets.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130), height: 1.25),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(130), height: 1.25),
           ),
         ],
       ),

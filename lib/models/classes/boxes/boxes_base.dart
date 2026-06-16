@@ -48,8 +48,8 @@ class Boxes {
       pref = await SaveSettings.getInstance();
     }
 
-    userSettings.isWindows10 = WinUtils.isWindows10();
-    Debug.add("Registered: Loaded Box info (win10: ${userSettings.isWindows10} | ${Platform.operatingSystemVersion})");
+    user.isWindows10 = WinUtils.isWindows10();
+    Debug.add("Registered: Loaded Box info (win10: ${user.isWindows10} | ${Platform.operatingSystemVersion})");
 
     // First-run defaults
     if (pref.getString("language") == null) {
@@ -59,9 +59,9 @@ class Boxes {
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
       await pref.setInt("themeType", ThemeType.system.index);
-      await pref.setString("quickMenuDesignThemes", userSettings.quickMenuDesignThemesToJson());
-      await pref.setString("lightTheme", userSettings.lightTheme.toJson());
-      await pref.setString("darkTheme", userSettings.darkTheme.toJson());
+      await pref.setString("quickMenuDesignThemes", user.quickMenuDesignThemesToJson());
+      await pref.setString("lightTheme", user.lightTheme.toJson());
+      await pref.setString("darkTheme", user.darkTheme.toJson());
       await pref.setString("language", Platform.localeName.substring(0, 2));
       await pref.setStringList("weather", <String>["10 C", "52.52437, 13.41053", "m"]);
       await pref.setBool("hideTaskbarOnStartup", false);
@@ -77,7 +77,7 @@ class Boxes {
       await pref.setBool("libreStats", false);
       await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("quickClickEnabled", false);
-      await pref.setString("quickClickConfig", jsonEncode(userSettings.quickClickConfig.toMap()));
+      await pref.setString("quickClickConfig", jsonEncode(user.quickClickConfig.toMap()));
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -118,54 +118,54 @@ class Boxes {
     }
 
     // Fetch all settings
-    userSettings
-      ..quickMenuDesign = pref.getInt("quickMenuDesign") ?? userSettings.quickMenuDesign
+    user
+      ..quickMenuDesign = pref.getInt("quickMenuDesign") ?? user.quickMenuDesign
       ..launcherDesign =
           LauncherDesign.values[(pref.getInt("launcherDesign") ?? 0).clamp(0, LauncherDesign.values.length - 1)]
       ..taskBarAppsStyle = TaskBarAppsStyle.values[pref.getInt("taskBarAppsStyle") ?? 0]
       ..volumeOSDStyle = VolumeOSDStyle.values[pref.getInt("volumeOSDStyle") ?? 0]
       ..language = pref.getString("language") ?? Platform.localeName.substring(0, 2)
-      ..audio = pref.getStringList("audio") ?? userSettings.audio
-      ..weather = pref.getStringList("weather") ?? userSettings.weather
-      ..customLogo = pref.getString("customLogo") ?? userSettings.customLogo
-      ..newVersion = pref.getString("newVersion") ?? userSettings.newVersion
-      ..showTrayBar = pref.getBool("showTrayBar") ?? userSettings.showTrayBar
-      ..showWeather = pref.getBool("showWeather") ?? userSettings.showWeather
-      ..customSpash = pref.getString("customSpash") ?? userSettings.customSpash
-      ..volumeSetBack = pref.getBool("volumeSetBack") ?? userSettings.volumeSetBack
-      ..quickSnapGrid = pref.getBool("quickSnapGrid") ?? userSettings.quickSnapGrid
-      ..lastChangelog = pref.getString("lastChangelog") ?? userSettings.lastChangelog
-      ..bottomBarOnTop = pref.getBool("bottomBarOnTop") ?? userSettings.bottomBarOnTop
-      ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? userSettings.keepPopupsOpen
-      ..expandedTaskbar = pref.getBool("expandedTaskbar") ?? userSettings.expandedTaskbar
-      ..showSystemUsage = pref.getBool("showSystemUsage") ?? userSettings.showSystemUsage
-      ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? userSettings.themeScheduleMin
-      ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? userSettings.themeScheduleMax
-      ..taskManagerStats = pref.getBool("taskManagerStats") ?? userSettings.taskManagerStats
-      ..libreStats = pref.getBool("libreStats") ?? userSettings.libreStats
-      ..quickSnapOverlay = pref.getBool("quickSnapOverlay") ?? userSettings.quickSnapOverlay
-      ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? userSettings.hideDesktopFiles
-      ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? userSettings.trktivityEnabled
-      ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? userSettings.autoCheckForUpdates
-      ..wallpapersFolder = pref.getString("wallpapersFolder") ?? userSettings.wallpapersFolder
-      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? userSettings.runAsAdministrator
-      ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? userSettings.launcherFullPopups
-      ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? userSettings.autoOpenTaskManager
-      ..quickClickEnabled = pref.getBool("quickClickEnabled") ?? userSettings.quickClickEnabled
+      ..audio = pref.getStringList("audio") ?? user.audio
+      ..weather = pref.getStringList("weather") ?? user.weather
+      ..customLogo = pref.getString("customLogo") ?? user.customLogo
+      ..newVersion = pref.getString("newVersion") ?? user.newVersion
+      ..showTrayBar = pref.getBool("showTrayBar") ?? user.showTrayBar
+      ..showWeather = pref.getBool("showWeather") ?? user.showWeather
+      ..customSpash = pref.getString("customSpash") ?? user.customSpash
+      ..volumeSetBack = pref.getBool("volumeSetBack") ?? user.volumeSetBack
+      ..quickSnapGrid = pref.getBool("quickSnapGrid") ?? user.quickSnapGrid
+      ..lastChangelog = pref.getString("lastChangelog") ?? user.lastChangelog
+      ..bottomBarOnTop = pref.getBool("bottomBarOnTop") ?? user.bottomBarOnTop
+      ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? user.keepPopupsOpen
+      ..expandedTaskbar = pref.getBool("expandedTaskbar") ?? user.expandedTaskbar
+      ..showSystemUsage = pref.getBool("showSystemUsage") ?? user.showSystemUsage
+      ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? user.themeScheduleMin
+      ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? user.themeScheduleMax
+      ..taskManagerStats = pref.getBool("taskManagerStats") ?? user.taskManagerStats
+      ..libreStats = pref.getBool("libreStats") ?? user.libreStats
+      ..quickSnapOverlay = pref.getBool("quickSnapOverlay") ?? user.quickSnapOverlay
+      ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? user.hideDesktopFiles
+      ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
+      ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
+      ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
+      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? user.runAsAdministrator
+      ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? user.launcherFullPopups
+      ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? user.autoOpenTaskManager
+      ..quickClickEnabled = pref.getBool("quickClickEnabled") ?? user.quickClickEnabled
       ..quickClickConfig = pref.getString("quickClickConfig") != null
           ? QuickClickConfig.fromMap(jsonDecode(pref.getString("quickClickConfig")!) as Map<String, dynamic>)
-          : userSettings.quickClickConfig
-      ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? userSettings.hideTabameOnUnfocus
-      ..mediaControlForApp = pref.getBool("showMediaControlForApp") ?? userSettings.mediaControlForApp
-      ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? userSettings.lastQuickSnapZoneId
-      ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? userSettings.quickActionsAtBottom
-      ..dragPopupsByIconOnly = pref.getBool("dragPopupsByIconOnly") ?? userSettings.dragPopupsByIconOnly
-      ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? userSettings.hideTaskbarOnStartup
-      ..persistentReminders = pref.getStringList("persistentReminders") ?? userSettings.persistentReminders
-      ..musicPlayerInTaskbar = pref.getBool("showMusicPlayerInTaskbar") ?? userSettings.musicPlayerInTaskbar
-      ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? userSettings.trktivitySaveAllTitles
-      ..mediaSessionsInTaskbar = pref.getBool("showMediaSessionsInTaskbar") ?? userSettings.mediaSessionsInTaskbar
-      ..quickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? userSettings.quickMenuAtTaskbarLevel
+          : user.quickClickConfig
+      ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? user.hideTabameOnUnfocus
+      ..mediaControlForApp = pref.getBool("showMediaControlForApp") ?? user.mediaControlForApp
+      ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? user.lastQuickSnapZoneId
+      ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? user.quickActionsAtBottom
+      ..dragPopupsByIconOnly = pref.getBool("dragPopupsByIconOnly") ?? user.dragPopupsByIconOnly
+      ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? user.hideTaskbarOnStartup
+      ..persistentReminders = pref.getStringList("persistentReminders") ?? user.persistentReminders
+      ..musicPlayerInTaskbar = pref.getBool("showMusicPlayerInTaskbar") ?? user.musicPlayerInTaskbar
+      ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? user.trktivitySaveAllTitles
+      ..mediaSessionsInTaskbar = pref.getBool("showMediaSessionsInTaskbar") ?? user.mediaSessionsInTaskbar
+      ..quickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? user.quickMenuAtTaskbarLevel
       ..lightSwitchMode = LightSwitchMode.values[pref.getInt("lightSwitchMode") ?? 0]
       ..lightSwitchSunriseOffset = pref.getInt("lightSwitchSunriseOffset") ?? 0
       ..lightSwitchSunsetOffset = pref.getInt("lightSwitchSunsetOffset") ?? 0
@@ -207,28 +207,28 @@ class Boxes {
     final ThemeColors? storedDarkTheme = savedDarkThemeJson == null ? null : ThemeColors.fromJson(savedDarkThemeJson);
 
     if (savedQuickMenuThemesJson == null || savedQuickMenuThemesJson.trim().isEmpty) {
-      userSettings.hydrateQuickMenuDesignThemes();
+      user.hydrateQuickMenuDesignThemes();
       if (storedLightTheme != null || storedDarkTheme != null) {
-        userSettings.applyThemesForDesign(
-          userSettings.currentQuickMenuDesign,
+        user.applyThemesForDesign(
+          user.currentQuickMenuDesign,
           fallbackLightTheme: storedLightTheme,
           fallbackDarkTheme: storedDarkTheme,
         );
       } else {
-        userSettings.applyThemesForDesign(userSettings.currentQuickMenuDesign);
+        user.applyThemesForDesign(user.currentQuickMenuDesign);
       }
-      await pref.setString("quickMenuDesignThemes", userSettings.quickMenuDesignThemesToJson());
+      await pref.setString("quickMenuDesignThemes", user.quickMenuDesignThemesToJson());
     } else {
-      userSettings.loadQuickMenuDesignThemesFromJson(savedQuickMenuThemesJson);
-      userSettings.applyThemesForDesign(
-        userSettings.currentQuickMenuDesign,
+      user.loadQuickMenuDesignThemesFromJson(savedQuickMenuThemesJson);
+      user.applyThemesForDesign(
+        user.currentQuickMenuDesign,
         fallbackLightTheme: storedLightTheme,
         fallbackDarkTheme: storedDarkTheme,
       );
     }
 
-    await pref.setString("lightTheme", userSettings.lightTheme.toJson());
-    await pref.setString("darkTheme", userSettings.darkTheme.toJson());
+    await pref.setString("lightTheme", user.lightTheme.toJson());
+    await pref.setString("darkTheme", user.darkTheme.toJson());
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     Debug.add("Registered: Theme");
 
@@ -261,27 +261,27 @@ class Boxes {
     mediaControls = pref.getStringList("mediaControls") ??
         <String>["Spotify.exe", "chrome.exe", "firefox.exe", "brave.exe", "Music.UI.exe"];
 
-    if (userSettings.previewTheme) return;
+    if (user.previewTheme) return;
     if (justLoad) return;
 
-    if (userSettings.page == TPage.quickmenu) {
+    if (user.page == TPage.quickmenu) {
       loadQuickTimers();
       clearIconCache();
       shutDownScheduler();
       if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
 
-      if (userSettings.hideTaskbarOnStartup) {
+      if (user.hideTaskbarOnStartup) {
         WinUtils.toggleTaskbar(visible: false);
         Debug.add("Registered: Taskbar");
       }
-      if (userSettings.isWindows10 && userSettings.volumeOSDStyle != VolumeOSDStyle.normal) {
+      if (user.isWindows10 && user.volumeOSDStyle != VolumeOSDStyle.normal) {
         WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
-        WinUtils.setVolumeOSDStyle(type: userSettings.volumeOSDStyle, applyStyle: true);
+        WinUtils.setVolumeOSDStyle(type: user.volumeOSDStyle, applyStyle: true);
         Debug.add("Registered: Volume");
       }
-      if (userSettings.autoCheckForUpdates) checkForUpdates(autoInstall: false);
+      if (user.autoCheckForUpdates) checkForUpdates(autoInstall: false);
 
-      if (userSettings.autoOpenTaskManager) {
+      if (user.autoOpenTaskManager) {
         if (Win32.getProcessIdsByName('taskmgr.exe').isEmpty) {
           unawaited(Process.start('cmd', <String>['/c', 'start', '', '/min', 'taskmgr'],
               mode: ProcessStartMode.detached, runInShell: false));
@@ -422,17 +422,17 @@ class Boxes {
   }
 
   static Future<void> saveActiveQuickMenuThemes({bool notify = false}) async {
-    userSettings.saveActiveThemesToCurrentDesign();
-    await pref.setString("quickMenuDesignThemes", userSettings.quickMenuDesignThemesToJson());
-    await pref.setString("lightTheme", userSettings.lightTheme.toJson());
-    await pref.setString("darkTheme", userSettings.darkTheme.toJson());
+    user.saveActiveThemesToCurrentDesign();
+    await pref.setString("quickMenuDesignThemes", user.quickMenuDesignThemesToJson());
+    await pref.setString("lightTheme", user.lightTheme.toJson());
+    await pref.setString("darkTheme", user.darkTheme.toJson());
     if (notify) Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
   }
 
   static Future<void> switchQuickMenuDesign(QuickMenuDesigns design, {bool notify = true}) async {
-    userSettings.saveActiveThemesToCurrentDesign();
-    userSettings.quickMenuDesign = design.index;
-    userSettings.applyThemesForDesign(design);
+    user.saveActiveThemesToCurrentDesign();
+    user.quickMenuDesign = design.index;
+    user.applyThemesForDesign(design);
     QuickMenuFunctions.syncSelectedBackdrop();
 
     await pref.setInt("quickMenuDesign", design.index);
@@ -1019,11 +1019,11 @@ class Boxes {
       if (assetDownloadLink == "") return -1;
 
       updateDownloadLink = assetDownloadLink;
-      userSettings.newVersion = latestRelease["tag_name"];
-      pref.setString("newVersion", userSettings.newVersion);
+      user.newVersion = latestRelease["tag_name"];
+      pref.setString("newVersion", user.newVersion);
 
       if (autoInstall) {
-        unawaited(installUpdate(assetDownloadLink, userSettings.newVersion));
+        unawaited(installUpdate(assetDownloadLink, user.newVersion));
       }
       Debug.add("Updates: Checked");
       return 1;

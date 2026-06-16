@@ -1751,7 +1751,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
               child: CustomPaint(
                 painter: _RecordingActivePainter(
                   highlightRect: _activeRecordingRect,
-                  accent: settings_model.userSettings.theme.accent,
+                  accent: settings_model.Design.accent,
                 ),
               ),
             ),
@@ -1878,7 +1878,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                     dragCurrent: _dragCurrent,
                     highlightRect: highlightRect,
                     monitorRect: _targetMode == RecordingTargetMode.monitor ? _currentMonitorRect : Rect.zero,
-                    accent: settings_model.userSettings.theme.accent,
+                    accent: settings_model.Design.accent,
                     targetMode: _targetMode,
                   ),
                   child: const SizedBox.expand(),

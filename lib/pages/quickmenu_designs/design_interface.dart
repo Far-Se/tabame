@@ -18,13 +18,13 @@ class MainMenuInterfaceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData themeX = Theme.of(context);
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color surface = themeX.colorScheme.surface;
-    final double gradientStrength = (userSettings.themeColors.gradientAlpha.clamp(1, 100)) / 100;
+    final double gradientStrength = (Design.gradientAlpha.clamp(1, 100)) / 100;
     final double outerAccentAlpha = 0.04 + (gradientStrength * 0.08);
     final double innerAccentAlpha = 0.05 + (gradientStrength * 0.10);
-    final double headerAccentAlpha = userSettings.themeColors.gradientAlpha == 0 ? 0 : 0.04 + (gradientStrength * 0.12);
-    final List<double> points = userSettings.themeColors.panelOpacityPoints;
+    final double headerAccentAlpha = Design.gradientAlpha == 0 ? 0 : 0.04 + (gradientStrength * 0.12);
+    final List<double> points = Design.panelOpacityPoints;
     final List<double> stops = <double>[];
     final List<Color> colors = <Color>[];
     for (int i = 0; i < points.length; i += 2) {
@@ -38,7 +38,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 90,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(User.theme.borderRadius),
+        borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[
             // Background Layer
@@ -48,22 +48,22 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                 blendMode: BlendMode.dstIn,
                 shaderCallback: (Rect bounds) {
                   return LinearGradient(
-                    begin: panelAlignmentMap[userSettings.themeColors.panelOpacityBegin] ?? Alignment.topCenter,
-                    end: panelAlignmentMap[userSettings.themeColors.panelOpacityEnd] ?? Alignment.bottomCenter,
+                    begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
+                    end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
                     colors: colors,
                     stops: stops,
                   ).createShader(bounds);
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                    borderRadius: BorderRadius.circular(Design.borderRadius),
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: <Color>[
                         Color.alphaBlend(accent.withValues(alpha: outerAccentAlpha),
-                            surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.98)),
-                        surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.7 : 0.95),
+                            surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.8 : 0.98)),
+                        surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.7 : 0.95),
                       ],
                     ),
                     border: Border.all(color: themeX.colorScheme.onSurface.withValues(alpha: 0.08)),
@@ -76,10 +76,10 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(User.theme.borderRadius),
+                    borderRadius: BorderRadius.circular(Design.borderRadius),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: surface.withValues(alpha: userSettings.activeBackdropPath.isNotEmpty ? 0.8 : 0.90),
+                        color: surface.withValues(alpha: user.activeBackdropPath.isNotEmpty ? 0.8 : 0.90),
                         border: Border.all(color: accent.withValues(alpha: innerAccentAlpha)),
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -93,11 +93,13 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-                      child: const Stack(
-                        children: <Widget>[
-                          StableBackdrop(),
-                        ],
-                      ),
+                      child: Design.hasBackdrop
+                          ? const Stack(
+                              children: <Widget>[
+                                StableBackdrop(),
+                              ],
+                            )
+                          : null,
                     ),
                   ),
                 ),
@@ -110,10 +112,10 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!userSettings.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickActionsAtBottom) ...<Widget>[
                     Container(padding: const EdgeInsets.fromLTRB(4, 5, 10, 6), child: const TopBar()),
                     Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08))
-                  ] else if (userSettings.bottomBarOnTop)
+                  ] else if (user.bottomBarOnTop)
                     const PinnedAndTrayList()
                   else
                     const SizedBox(height: 3),
@@ -123,9 +125,9 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                     child:
                         Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08)),
                   ),
-                  if (!userSettings.bottomBarOnTop) const PinnedAndTrayList(),
-                  if (userSettings.taskManagerStats) const TaskbarStats(),
-                  if (userSettings.libreStats) const LibreStats(),
+                  if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (user.taskManagerStats) const TaskbarStats(),
+                  if (user.libreStats) const LibreStats(),
                   Container(padding: const EdgeInsets.fromLTRB(0, 4, 2, 6), child: const BottomBar()),
                 ],
               ),

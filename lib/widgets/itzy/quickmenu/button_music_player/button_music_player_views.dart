@@ -1437,10 +1437,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 ),
                 const SizedBox(width: 8),
                 MiniToggleSwitch(
-                  value: userSettings.musicPlayerInTaskbar,
+                  value: user.musicPlayerInTaskbar,
                   activeThumbColor: accent,
                   onChanged: (bool val) async {
-                    userSettings.musicPlayerInTaskbar = val;
+                    user.musicPlayerInTaskbar = val;
                     await Boxes.updateSettings("showMusicPlayerInTaskbar", val);
                     setState(() {});
                   },
@@ -1669,15 +1669,15 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       hintText: hint,
       hintStyle:
           TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).colorScheme.onSurface.withAlpha(110)),
-      prefixIcon: Icon(icon, size: 16, color: userSettings.themeColors.accent),
+      prefixIcon: Icon(icon, size: 16, color: Design.accent),
       suffixIcon: suffix,
       filled: true,
-      fillColor: userSettings.themeColors.accent.withAlpha(10),
+      fillColor: Design.accent.withAlpha(10),
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: userSettings.themeColors.accent.withAlpha(90)),
+        borderSide: BorderSide(color: Design.accent.withAlpha(90)),
       ),
     );
   }

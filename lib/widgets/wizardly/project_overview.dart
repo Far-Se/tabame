@@ -636,8 +636,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     includeFiles = Boxes.pref.getString("projectOverviewIncluded") ?? "";
     excludeFiles = Boxes.pref.getString("projectOverviewExcluded") ?? r"^\.[a-z];node_modules;(json|ml)$;\w{5,}$";
 
-    if (userSettings.args.contains("-wizardly")) {
-      _folderController.text = userSettings.args[0].replaceAll('"', '');
+    if (user.args.contains("-wizardly")) {
+      _folderController.text = user.args[0].replaceAll('"', '');
     }
   }
 
@@ -796,7 +796,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
               const SizedBox(height: 8),
               Text(
                 "Running background tasks...",
-                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
               ),
             ],
           ),
@@ -807,8 +808,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final Color background = userSettings.themeColors.background;
+    final Color accent = Design.accent;
+    final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Stack(
@@ -867,8 +868,9 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                             _folderController.text.isEmpty
                                 ? "No folder selected"
                                 : _folderController.text.truncate(60, suffix: "..."),
-                            style:
-                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 2,
+                                color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -933,8 +935,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         tooltip: "",
         onPressed: onPressed,
         style: IconButton.styleFrom(
-          backgroundColor: isSelected ? userSettings.themeColors.accent.withValues(alpha: 0.1) : Colors.transparent,
-          foregroundColor: isSelected ? userSettings.themeColors.accent : onSurface.withValues(alpha: 0.6),
+          backgroundColor: isSelected ? Design.accent.withValues(alpha: 0.1) : Colors.transparent,
+          foregroundColor: isSelected ? Design.accent : onSurface.withValues(alpha: 0.6),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
@@ -1188,8 +1190,10 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                     value: percentage,
                     color: extColors[lang] ?? Colors.grey,
                     radius: 50,
-                    titleStyle:
-                        TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.bold, color: Colors.white),
+                    titleStyle: TextStyle(
+                        fontSize: Design.baseFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   );
                 }),
               ),
@@ -1226,10 +1230,12 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
         children: <Widget>[
           Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Text(lang, style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2)),
+          Text(lang,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2)),
           const SizedBox(width: 6),
           Text(lines.decimal,
-              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6))),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6))),
         ],
       ),
     );
@@ -1244,7 +1250,8 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
             const Text("File Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Spacer(),
             Text("${result!.files.length} files tracked",
-                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5))),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5))),
           ],
         ),
         const SizedBox(height: 12),
@@ -1277,8 +1284,8 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
         children: <Widget>[
           Expanded(
               flex: 4,
-              child:
-                  Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
+              child: Text("File Path",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
           _buildSortableHeader("Lines", 1, 70, onSurface, tooltip: "Total Lines"),
           _buildSortableHeader("Code", 2, 70, onSurface, tooltip: "Lines of code"),
           _buildSortableHeader("Comms.", 3, 70, onSurface, tooltip: "Comments"),
@@ -1306,10 +1313,10 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: Design.baseFontSize + 2,
-                      color: isSelected ? userSettings.themeColors.accent : onSurface.withValues(alpha: 0.5))),
+                      color: isSelected ? Design.accent : onSurface.withValues(alpha: 0.5))),
               if (isSelected)
                 Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    size: 16, color: userSettings.themeColors.accent),
+                    size: 16, color: Design.accent),
             ],
           ),
         ),
@@ -1342,7 +1349,8 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                         WinUtils.open("${_folderController.text}\\${file.path}");
                       },
                       child: Text(file.path.lastChars(35, addDots: true),
-                          style: TextStyle(fontSize: Design.baseFontSize + 2), overflow: TextOverflow.ellipsis)),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2),
+                          overflow: TextOverflow.ellipsis)),
                 )),
               ],
             ),
@@ -1552,13 +1560,15 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(headerMsg, style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6))),
+        Text(headerMsg,
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6))),
         const SizedBox(height: 12),
         Row(
           children: <Widget>[

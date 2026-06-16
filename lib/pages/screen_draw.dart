@@ -2150,7 +2150,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
             width: dw,
             child: StatefulBuilder(
               builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
-                backgroundColor: userSettings.themeColors.background,
+                backgroundColor: Design.background,
                 insetPadding: EdgeInsets.zero,
                 title: Text(
                   ctrl.activeTool == DrawTool.infoBalloon ? 'Info Balloon Text' : 'Enter Text',
@@ -2352,7 +2352,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
             width: dw,
             child: StatefulBuilder(
               builder: (BuildContext ctx2, StateSetter setSt) => AlertDialog(
-                backgroundColor: userSettings.themeColors.background,
+                backgroundColor: Design.background,
                 insetPadding: EdgeInsets.zero,
                 title: const Text('Pick Emoji', style: TextStyle(color: Colors.white)),
                 content: SizedBox(
@@ -2365,7 +2365,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: userSettings.themeColors.background,
+                          color: Design.background,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: Colors.white12),
                         ),

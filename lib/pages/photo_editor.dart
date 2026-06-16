@@ -642,7 +642,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
   List<FancyShotProfile> _editorFancyShotProfiles = <FancyShotProfile>[];
   String? _selectedEditorPresetName;
   final Map<String, ui.Image> _shapeImages = <String, ui.Image>{};
-  ThemeColors get _theme => userSettings.theme;
+  ThemeColors get _theme => user.theme;
   bool _shiftHeld = false;
   Offset? _lastSelectPos;
   Offset? _dragStart;
@@ -864,7 +864,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: userSettings.theme.accent.withValues(alpha: 0.8),
+              backgroundColor: Design.accent.withValues(alpha: 0.8),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2114,7 +2114,7 @@ class _EditorPainter extends CustomPainter {
 
   void _paintGrid(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = userSettings.theme.text.withValues(alpha: 0.08)
+      ..color = Design.text.withValues(alpha: 0.08)
       ..strokeWidth = 0.5;
     for (double x = 0; x < size.width; x += 50) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
@@ -2251,9 +2251,9 @@ class _EditorWindowBar extends StatelessWidget {
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: userSettings.theme.background.lighten(4),
+          color: Design.background.lighten(4),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-          border: Border(bottom: BorderSide(color: userSettings.theme.text.withValues(alpha: 0.06))),
+          border: Border(bottom: BorderSide(color: Design.text.withValues(alpha: 0.06))),
         ),
         child: Row(
           children: <Widget>[
@@ -2262,7 +2262,7 @@ class _EditorWindowBar extends StatelessWidget {
                 onPressed: onBack,
                 tooltip: 'Back to Capture',
                 icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                color: userSettings.theme.text.withValues(alpha: 0.7),
+                color: Design.text.withValues(alpha: 0.7),
               )
             else
               const SizedBox(width: 20),
@@ -2274,8 +2274,8 @@ class _EditorWindowBar extends StatelessWidget {
                   Text(
                     'Photo Editor',
                     style: GoogleFonts.getFont(
-                      userSettings.theme.uiFontFamily,
-                      color: userSettings.theme.text,
+                      Design.uiFontFamily,
+                      color: Design.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -2286,8 +2286,8 @@ class _EditorWindowBar extends StatelessWidget {
                       fileName,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.getFont(
-                        userSettings.theme.uiFontFamily,
-                        color: userSettings.theme.text.withValues(alpha: 0.4),
+                        Design.uiFontFamily,
+                        color: Design.text.withValues(alpha: 0.4),
                         fontSize: Design.baseFontSize + 1,
                       ),
                     ),
@@ -2358,8 +2358,7 @@ class _WindowBarButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isClose ? Colors.redAccent.withValues(alpha: 0.0) : Colors.transparent,
           ),
-          child: Icon(icon,
-              size: 18, color: isClose ? Colors.redAccent.shade100 : userSettings.theme.text.withValues(alpha: 0.7)),
+          child: Icon(icon, size: 18, color: isClose ? Colors.redAccent.shade100 : Design.text.withValues(alpha: 0.7)),
         ),
       ),
     );
@@ -2388,9 +2387,9 @@ class _EditorToolbar extends StatelessWidget {
     return Container(
       width: 52,
       decoration: BoxDecoration(
-        color: userSettings.theme.background.darken(2).withValues(alpha: 0.9),
+        color: Design.background.darken(2).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: userSettings.theme.text.withValues(alpha: 0.1)),
+        border: Border.all(color: Design.text.withValues(alpha: 0.1)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: SingleChildScrollView(
@@ -2439,8 +2438,8 @@ class _EditorToolbar extends StatelessWidget {
             Text(
               '${(zoomFactor * 100).round()}%',
               style: GoogleFonts.getFont(
-                userSettings.theme.uiFontFamily,
-                color: userSettings.theme.text.withValues(alpha: 0.4),
+                Design.uiFontFamily,
+                color: Design.text.withValues(alpha: 0.4),
                 fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.bold,
               ),
@@ -2472,7 +2471,7 @@ class _EditorToolBtn extends StatelessWidget {
           message: tooltip,
           child: IconButton(
             icon: Icon(icon, size: 18),
-            color: active ? userSettings.theme.accent : userSettings.theme.text.withValues(alpha: 0.7),
+            color: active ? Design.accent : Design.text.withValues(alpha: 0.7),
             onPressed: () => ctrl.setTool(tool),
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(),
@@ -2496,7 +2495,7 @@ class _TipBtn extends StatelessWidget {
       message: tooltip,
       child: IconButton(
         icon: Icon(icon, size: 18),
-        color: userSettings.theme.text.withValues(alpha: 0.7),
+        color: Design.text.withValues(alpha: 0.7),
         onPressed: onTap,
         padding: const EdgeInsets.all(6),
         constraints: const BoxConstraints(),
@@ -2899,7 +2898,7 @@ class _SaveButtonState extends State<_SaveButton> {
             const SizedBox(width: 10),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: userSettings.theme.accent,
+                backgroundColor: Design.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

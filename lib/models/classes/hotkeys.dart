@@ -971,15 +971,15 @@ class HotKeyInfo {
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(
           AudioDeviceType.output,
-          console: userSettings.audioConsole,
-          multimedia: userSettings.audioMultimedia,
-          communications: userSettings.audioCommunications,
+          console: user.audioConsole,
+          multimedia: user.audioMultimedia,
+          communications: user.audioCommunications,
         ),
     "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
           AudioDeviceType.input,
-          console: userSettings.audioConsole,
-          multimedia: userSettings.audioMultimedia,
-          communications: userSettings.audioCommunications,
+          console: user.audioConsole,
+          multimedia: user.audioMultimedia,
+          communications: user.audioCommunications,
         ),
     "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input)
         .then((bool isMuted) => Audio.setMuteAudioDevice(!isMuted, AudioDeviceType.input)),

@@ -19,13 +19,13 @@ class OpenSettingsButton extends StatelessWidget {
       child: SizedBox(
         width: 25,
         child: CustomTooltip(
-          message: userSettings.autoCheckForUpdates && Globals.version != userSettings.newVersion
+          message: user.autoCheckForUpdates && Globals.version != user.newVersion
               ? "New Version Available"
               : "Settings",
           child: IconButton(
             padding: const EdgeInsets.all(0),
             splashRadius: 25,
-            icon: userSettings.autoCheckForUpdates && Globals.version != userSettings.newVersion
+            icon: user.autoCheckForUpdates && Globals.version != user.newVersion
                 ? const Icon(Icons.new_releases)
                 : const Icon(Icons.settings),
             onPressed: () {

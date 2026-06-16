@@ -162,28 +162,28 @@ class Win32 {
     }
   }
 
-  @Deprecated("Outdated method one getWindowsExePath or getProcessExePath")
-  static String getWindowExeModulePath(int hWnd) {
-    final LPWSTR moduleNameBuffer = wsalloc(MAX_PATH);
-    GetWindowModuleFileName(hWnd, moduleNameBuffer, MAX_PATH);
-    String moduleName = moduleNameBuffer.toDartString();
-    free(moduleNameBuffer);
-    if (moduleName == "") {
-      final Pointer<Uint32> processIdPointer = calloc<Uint32>();
-      GetWindowThreadProcessId(hWnd, processIdPointer);
-      final int processId = processIdPointer.value;
-      free(processIdPointer);
-      final int processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
-      if (processHandle == 0) {
-        final LPWSTR executablePathBuffer = wsalloc(MAX_PATH);
-        GetModuleFileNameEx(processHandle, 0, executablePathBuffer, MAX_PATH);
-        moduleName = executablePathBuffer.toDartString();
-        free(executablePathBuffer);
-      }
-      CloseHandle(processHandle);
-    }
-    return moduleName;
-  }
+  // @Deprecated("Outdated method one getWindowsExePath or getProcessExePath")
+  // static String getWindowExeModulePath(int hWnd) {
+  //   final LPWSTR moduleNameBuffer = wsalloc(MAX_PATH);
+  //   GetWindowModuleFileName(hWnd, moduleNameBuffer, MAX_PATH);
+  //   String moduleName = moduleNameBuffer.toDartString();
+  //   free(moduleNameBuffer);
+  //   if (moduleName == "") {
+  //     final Pointer<Uint32> processIdPointer = calloc<Uint32>();
+  //     GetWindowThreadProcessId(hWnd, processIdPointer);
+  //     final int processId = processIdPointer.value;
+  //     free(processIdPointer);
+  //     final int processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+  //     if (processHandle == 0) {
+  //       final LPWSTR executablePathBuffer = wsalloc(MAX_PATH);
+  //       GetModuleFileNameEx(processHandle, 0, executablePathBuffer, MAX_PATH);
+  //       moduleName = executablePathBuffer.toDartString();
+  //       free(executablePathBuffer);
+  //     }
+  //     CloseHandle(processHandle);
+  //   }
+  //   return moduleName;
+  // }
 
   static String getWindowExePath(int hWnd) {
     return HwndPath.getFullPathString(hWnd);
@@ -787,7 +787,7 @@ class Win32 {
     popupSize.ref.cx = windowSize.width;
     popupSize.ref.cy = Globals.quickMenuCurrentHeight.toInt();
     // popupSize.ref.cy = Globals.heights.allSummed.toInt() + 20;
-    if (userSettings.quickMenuAtTaskbarLevel == false) {
+    if (user.quickMenuAtTaskbarLevel == false) {
       popupSize.ref.cy += 30;
     }
     popupSize.ref.cy += 3;
@@ -799,8 +799,8 @@ class Win32 {
     horizontalPosition = popupBounds.ref.left.toDouble();
     verticalPosition = popupBounds.ref.top.toDouble();
 
-    if (userSettings.quickMenuAtTaskbarLevel == true) {
-      switch (QuickMenuDesigns.values[userSettings.quickMenuDesign]) {
+    if (user.quickMenuAtTaskbarLevel == true) {
+      switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
         case QuickMenuDesigns.classic:
           verticalPosition -= 30;
           break;
@@ -1221,31 +1221,45 @@ class HwndPath {
   }
 
   static HwndInfo getFullPath(int hWnd) {
-    final HwndInfo? cachedPath = _hwndPathCache[hWnd];
-    if (cachedPath != null && !cachedPath.isAppx) {
-      return HwndInfo(isAppx: cachedPath.isAppx, path: cachedPath.path);
+    final HwndInfo? cached = _hwndPathCache[hWnd];
+
+    if (cached != null) {
+      if (IsWindow(hWnd) != FALSE) {
+        return HwndInfo(isAppx: cached.isAppx, path: cached.path);
+      }
+
+      // stale HWND
+      _hwndPathCache.remove(hWnd);
     }
 
-    // Limit the cache to only [_cacheLimit] entries.
-    if (_hwndPathCache.length > _cacheLimit) {
+    if (_hwndPathCache.length >= _cacheLimit) {
       _hwndPathCache.remove(_hwndPathCache.keys.first);
     }
 
     final HwndInfo hwndPath = getWindowExePath(hWnd);
+
     String exePath = hwndPath.path;
     bool isAppx = hwndPath.isAppx;
+
     if (_needsAppxInstallLocation(exePath)) {
       isAppx = true;
+
       final String appx = GetAppxInstallLocation(hWnd);
-      exePath = "";
-      if (appx != "") {
-        exePath = "${WinUtils.getProgramFilesFolder()}\\WindowsApps\\$appx";
-      }
+
+      exePath = appx.isNotEmpty ? "${WinUtils.getProgramFilesFolder()}\\WindowsApps\\$appx" : "";
     }
 
-    final HwndInfo resolvedPath = HwndInfo(isAppx: isAppx, path: exePath);
-    _hwndPathCache[hWnd] = resolvedPath;
-    return HwndInfo(isAppx: resolvedPath.isAppx, path: resolvedPath.path);
+    final HwndInfo resolved = HwndInfo(
+      isAppx: isAppx,
+      path: exePath,
+    );
+
+    _hwndPathCache[hWnd] = resolved;
+
+    return HwndInfo(
+      isAppx: resolved.isAppx,
+      path: resolved.path,
+    );
   }
 
   static String getFullPathString(int hWnd) {

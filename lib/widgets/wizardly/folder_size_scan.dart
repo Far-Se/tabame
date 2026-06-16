@@ -105,8 +105,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
   void initState() {
     redrawWidget = ValueNotifier<bool>(false);
 
-    if (userSettings.args.contains("-wizardly")) {
-      currentFolder = userSettings.args[0].replaceAll('"', '');
+    if (user.args.contains("-wizardly")) {
+      currentFolder = user.args[0].replaceAll('"', '');
     }
     super.initState();
   }
@@ -119,8 +119,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = userSettings.themeColors.accent;
-    final Color background = userSettings.themeColors.background;
+    final Color accent = Design.accent;
+    final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Padding(
@@ -137,7 +137,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
               children: <Widget>[
                 Text(
                   "For a more in-depth and professional scanner, use ",
-                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5)),
                 ),
                 InkWell(
                   onTap: () => WinUtils.open("https://diskanalyzer.com/"),
@@ -198,8 +199,9 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                             currentFolder.isEmpty
                                 ? "Pick a folder to scan storage usage"
                                 : currentFolder.truncate(70, suffix: "..."),
-                            style:
-                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 2,
+                                color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -277,7 +279,9 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             child: Text(
               "Folders only, drives are blocked",
               style: TextStyle(
-                  fontSize: Design.baseFontSize + 1, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                  fontSize: Design.baseFontSize + 1,
+                  color: Colors.orange.shade800,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -294,7 +298,8 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
       ),
       child: Text(
         processedFiles.trim(),
-        style: TextStyle(fontSize: Design.baseFontSize + 2, color: accent, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(fontSize: Design.baseFontSize + 2, color: accent, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -353,14 +358,17 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
                     SizedBox(
                         width: 86,
                         child: Text(getFileSize(DirectoryScan.main.size, 1),
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
                     const PercentageBar(percent: 100, barWidth: 56),
                     const SizedBox(width: 12),
                     Expanded(
                       child: MouseScrollWidget(
                         child: Text(
                           DirectoryScan.main.path,
-                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.78)),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 2,
+                              color: onSurface.withValues(alpha: 0.78)),
                         ),
                       ),
                     ),
@@ -427,7 +435,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: userSettings.themeColors.background)),
+                child: Text("Ok", style: TextStyle(color: Design.background)),
               ),
             ],
           );
@@ -450,7 +458,7 @@ class FileSizeWidgetState extends State<FileSizeWidget> {
             actions: <Widget>[
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text("Ok", style: TextStyle(color: userSettings.themeColors.background)),
+                child: Text("Ok", style: TextStyle(color: Design.background)),
               ),
             ],
           );
@@ -521,7 +529,7 @@ class _FolderInfoState extends State<FolderInfo> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final Color accent = userSettings.themeColors.accent;
+    final Color accent = Design.accent;
     String parentDirectory = widget.directory;
     if (parentDirectory.endsWith("\\")) parentDirectory = parentDirectory.substring(0, parentDirectory.length - 1);
     final List<MapEntry<String, int>> list = DirectoryScan.getSubFolders(parentDirectory);
@@ -579,7 +587,8 @@ class _FolderInfoState extends State<FolderInfo> {
                   SizedBox(
                     width: 86,
                     child: Text(getFileSize(dir.size, 1),
-                        style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold)),
                   ),
                   PercentageBar(percent: percent, barWidth: barWidth),
                   const SizedBox(width: 12),
@@ -587,7 +596,9 @@ class _FolderInfoState extends State<FolderInfo> {
                     child: MouseScrollWidget(
                       child: Text(
                         shortName,
-                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.85)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 2,
+                            color: onSurface.withValues(alpha: 0.85)),
                       ),
                     ),
                   ),
@@ -617,7 +628,7 @@ class _FolderInfoState extends State<FolderInfo> {
                               actions: <Widget>[
                                 ElevatedButton(
                                   onPressed: () => Navigator.of(context).pop(),
-                                  child: Text("Cancel", style: TextStyle(color: userSettings.themeColors.background)),
+                                  child: Text("Cancel", style: TextStyle(color: Design.background)),
                                 ),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -704,14 +715,17 @@ class _FolderInfoState extends State<FolderInfo> {
                     SizedBox(
                         width: 86,
                         child: Text(getFileSize(file.value, 1),
-                            style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold))),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold))),
                     PercentageBar(percent: percent, barWidth: barWidth),
                     const SizedBox(width: 12),
                     Expanded(
                       child: MouseScrollWidget(
                         child: Text(
                           file.key.replaceFirst("$parentDirectory\\", ""),
-                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.82)),
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 2,
+                              color: onSurface.withValues(alpha: 0.82)),
                         ),
                       ),
                     ),
@@ -734,7 +748,7 @@ class _FolderInfoState extends State<FolderInfo> {
                                 actions: <Widget>[
                                   ElevatedButton(
                                     onPressed: () => Navigator.of(context).pop(),
-                                    child: Text("Cancel", style: TextStyle(color: userSettings.themeColors.background)),
+                                    child: Text("Cancel", style: TextStyle(color: Design.background)),
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

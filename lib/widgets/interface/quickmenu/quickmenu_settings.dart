@@ -58,9 +58,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Hide when losing focus",
           subtitle: "Close Tabame when clicking external windows",
-          value: userSettings.hideTabameOnUnfocus,
+          value: user.hideTabameOnUnfocus,
           onChanged: (bool val) async {
-            userSettings.hideTabameOnUnfocus = val;
+            user.hideTabameOnUnfocus = val;
             await Boxes.updateSettings("hideTabameOnUnfocus", val);
             setState(() {});
           },
@@ -68,9 +68,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Keep popups persistent",
           subtitle: "Prevent detached popups from closing on unfocus",
-          value: userSettings.keepPopupsOpen,
+          value: user.keepPopupsOpen,
           onChanged: (bool val) async {
-            userSettings.keepPopupsOpen = val;
+            user.keepPopupsOpen = val;
             await Boxes.updateSettings("keepPopupsOpen", val);
             setState(() {});
           },
@@ -78,9 +78,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Drag popups by icon only",
           subtitle: "Drag around the QuickMenu by Popup header icon only rather than the header.",
-          value: userSettings.dragPopupsByIconOnly,
+          value: user.dragPopupsByIconOnly,
           onChanged: (bool val) async {
-            userSettings.dragPopupsByIconOnly = val;
+            user.dragPopupsByIconOnly = val;
             await Boxes.updateSettings("dragPopupsByIconOnly", val);
             setState(() {});
           },
@@ -88,22 +88,22 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Quick Actions at the bottom",
           subtitle: "Put Quick Action on the bottom, between pinned and tray.",
-          value: userSettings.quickActionsAtBottom,
+          value: user.quickActionsAtBottom,
           onChanged: (bool val) async {
-            userSettings.quickActionsAtBottom = val;
-            userSettings.bottomBarOnTop = false;
+            user.quickActionsAtBottom = val;
+            user.bottomBarOnTop = false;
             await Boxes.updateSettings("quickActionsAtBottom", val);
             await Boxes.updateSettings("bottomBarOnTop", val);
             setState(() {});
           },
         ),
-        if (userSettings.quickActionsAtBottom)
+        if (user.quickActionsAtBottom)
           _buildToggleSetting(
             title: "Bottom Bar at top",
             subtitle: "Put Buttom bar at the top to not get crowded.",
-            value: userSettings.bottomBarOnTop,
+            value: user.bottomBarOnTop,
             onChanged: (bool val) async {
-              userSettings.bottomBarOnTop = val;
+              user.bottomBarOnTop = val;
               await Boxes.updateSettings("bottomBarOnTop", val);
               setState(() {});
             },
@@ -111,10 +111,10 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Launcher Full Width Popups",
           subtitle: "Launcher Popups will be full width",
-          value: userSettings.launcherFullPopups,
+          value: user.launcherFullPopups,
           onChanged: (bool v) async {
-            userSettings.launcherFullPopups = v;
-            await Boxes.updateSettings("launcherFullPopups", userSettings.launcherFullPopups);
+            user.launcherFullPopups = v;
+            await Boxes.updateSettings("launcherFullPopups", user.launcherFullPopups);
             if (!mounted) return;
             setState(() {});
           },
@@ -132,9 +132,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildToggleSetting(
           title: "Compact Tray Bar",
           subtitle: "Display system tray icons in the panel",
-          value: userSettings.showTrayBar,
+          value: user.showTrayBar,
           onChanged: (bool val) async {
-            userSettings.showTrayBar = val;
+            user.showTrayBar = val;
             await Boxes.updateSettings("showTrayBar", val);
             setState(() {});
           },
@@ -142,15 +142,15 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         _buildImageSetting(
           title: "Primary Logo",
           subtitle: "Replace the default QuickMenu icon",
-          imagePath: userSettings.customLogo,
-          defaultAsset: userSettings.logo,
+          imagePath: user.customLogo,
+          defaultAsset: user.logo,
           onChanged: _pickLogoImage,
         ),
         const SizedBox(height: 4),
         _buildImageSetting(
           title: "Splash Header",
           subtitle: "Floating image centered above the panel",
-          imagePath: userSettings.customSpash,
+          imagePath: user.customSpash,
           onChanged: _pickSplashImage,
         ),
       ],
@@ -178,7 +178,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
   }
 
   Widget _buildDesignTile(QuickMenuDesigns design) {
-    final bool isSelected = userSettings.quickMenuDesign == design.index;
+    final bool isSelected = user.quickMenuDesign == design.index;
     final ThemeData theme = Theme.of(context);
 
     return InkWell(
@@ -393,25 +393,25 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
 
   Future<void> _pickLogoImage(bool enabled) async {
     if (!enabled) {
-      userSettings.customLogo = "";
+      user.customLogo = "";
     } else {
       final File? result = _pickPngFile();
       if (result == null) return;
-      userSettings.customLogo = result.path;
+      user.customLogo = result.path;
     }
-    await Boxes.updateSettings("customLogo", userSettings.customLogo);
+    await Boxes.updateSettings("customLogo", user.customLogo);
     setState(() {});
   }
 
   Future<void> _pickSplashImage(bool enabled) async {
     if (!enabled) {
-      userSettings.customSpash = "";
+      user.customSpash = "";
     } else {
       final File? result = _pickPngFile();
       if (result == null) return;
-      userSettings.customSpash = result.path;
+      user.customSpash = result.path;
     }
-    await Boxes.updateSettings("customSpash", userSettings.customSpash);
+    await Boxes.updateSettings("customSpash", user.customSpash);
     setState(() {});
   }
 
