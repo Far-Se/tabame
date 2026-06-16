@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.dart_tool/
+.pub-cache/
+
+# Build outputs
+build/
+dist/
+out/
+
+# Caches & logs
+.cache/
+*.log
+
+# Secrets (use caution — see note below)
+.env
+*.key
+secrets/
