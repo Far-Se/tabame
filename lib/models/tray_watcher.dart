@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:tabamewin32/tabamewin32.dart';
@@ -73,6 +74,7 @@ class TrayWatcher {
 
       if (cachedTrayInfo != null) {
         trayInfo.iconData = cachedTrayInfo.iconData;
+        trayInfo.appxIconPath = cachedTrayInfo.appxIconPath;
       }
 
       // Only load/update icon if the item is visible and the icon handle changed
@@ -86,6 +88,15 @@ class TrayWatcher {
           } catch (e) {
             // Silently fail for individual icons
           }
+        }
+
+        // Appx/UWP apps usually expose a process-private HICON that can't be
+        // rendered from our process (hIconToBytes returns the 1-byte
+        // placeholder). Fall back to the package's manifest logo, the same way
+        // the window switcher and audio mixer resolve Appx icons. Resolved once
+        // and then carried forward via the cache above.
+        if (trayInfo.iconData.length <= 1 && trayInfo.appxIconPath.isEmpty) {
+          trayInfo.appxIconPath = _resolveAppxIconPath(processPath.path);
         }
       } else {
         // If invisible, clear heavy icon data from the object (keep it in global cache if needed later)
@@ -116,6 +127,41 @@ class TrayWatcher {
 
     return true;
   }
+
+  /// Resolves the on-disk manifest logo for an Appx/UWP app given its process
+  /// exe path (which, for packaged apps, lives under `...\WindowsApps\...`).
+  /// Returns "" for non-packaged apps or when no logo could be found.
+  static String _resolveAppxIconPath(String exePath) {
+    if (exePath.isEmpty || !exePath.toLowerCase().contains("windowsapps")) return "";
+
+    // Prefer the package root (`...\WindowsApps\<PackageFullName>\`) which always
+    // contains AppxManifest.xml, even when the running exe is in a subfolder.
+    final String root = _appxPackageRoot(exePath);
+    String icon = Win32.getManifestIcon(root);
+    if (icon.isNotEmpty && File(icon).existsSync()) return icon;
+
+    // Fallback: the folder of the exe itself (covers manifests placed alongside).
+    final String normalized = exePath.replaceAll('/', '\\');
+    final int slash = normalized.lastIndexOf('\\');
+    if (slash > 0) {
+      icon = Win32.getManifestIcon(normalized.substring(0, slash));
+      if (icon.isNotEmpty && File(icon).existsSync()) return icon;
+    }
+    return "";
+  }
+
+  /// Given an exe path under WindowsApps, returns the package-root folder:
+  /// the first path segment after `WindowsApps\` (the `<PackageFullName>` dir).
+  static String _appxPackageRoot(String exePath) {
+    final String normalized = exePath.replaceAll('/', '\\');
+    const String marker = "windowsapps\\";
+    final int idx = normalized.toLowerCase().indexOf(marker);
+    if (idx == -1) return normalized;
+    final int afterMarker = idx + marker.length;
+    final int nextSlash = normalized.indexOf('\\', afterMarker);
+    if (nextSlash == -1) return normalized;
+    return normalized.substring(0, nextSlash);
+  }
 }
 
 class TrayBarInfo extends ExtendedTrayIcon {
@@ -124,6 +170,11 @@ class TrayBarInfo extends ExtendedTrayIcon {
   int brightness = 0;
   bool isPinned = false;
   Uint8List iconData = Uint8List.fromList(<int>[0]);
+
+  /// For Appx/UWP apps whose tray HICON can't be rendered cross-process,
+  /// the resolved on-disk path to the package's manifest logo. Empty when
+  /// not applicable or unresolved.
+  String appxIconPath = "";
   TrayBarInfo({
     required this.processPath,
     required this.processExe,

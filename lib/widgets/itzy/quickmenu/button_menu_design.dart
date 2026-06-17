@@ -359,19 +359,45 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
 
   Widget _buildDesignsCard(String type, Color accent, Color onSurface) {
     final bool isQuickMenu = type == "QuickMenu";
+    final String items =
+        isQuickMenu ? QuickMenuDesigns.values.length.toString() : LauncherDesign.values.length.toString();
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       decoration: _cardDecoration(onSurface, accent: accent),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            isQuickMenu ? "QuickMenu Design Type" : "Launcher Design Type",
-            style: TextStyle(
-              fontSize: Design.baseFontSize + 2.5,
-              fontWeight: FontWeight.w700,
-              color: onSurface,
-            ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      isQuickMenu ? "QuickMenu Design Type" : "Launcher Design Type",
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize + 2.5,
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Choose one of the $items Designs.",
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize + 0.5,
+                        color: onSurface.withAlpha(150),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildMetaChip(
+                label: items,
+                background: accent.withAlpha(18),
+                foreground: accent.withAlpha(220),
+              ),
+            ],
           ),
           const SizedBox(height: 7),
           SizedBox(
@@ -604,8 +630,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   visualDensity: const VisualDensity(vertical: -4),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   minTileHeight: 36, // optional
-                  title:
-                      Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
+                  title: Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
                   onTap: () async {
                     await _updateTheme(() {
                       _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
@@ -701,8 +726,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                             child: Center(
                               child: Text(
                                 '${index + 1}',
-                                style: TextStyle(
-                                    fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
+                                style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withAlpha(100)),
                               ),
                             ),
                           ),
@@ -757,8 +781,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
         children: <Widget>[
           Text(
             "Custom Backdrop Image",
-            style:
-                TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
+            style: TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
           ),
           const SizedBox(height: 2),
           Text(

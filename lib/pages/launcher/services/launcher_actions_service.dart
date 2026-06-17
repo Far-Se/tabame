@@ -225,7 +225,7 @@ class LauncherActionsBuilder {
     final List<ShellMenuItem> shellActions = await ShellContextMenu.getMenuItems(path);
     final List<LauncherAction> newList = <LauncherAction>[];
     for (final ShellMenuItem action in shellActions) {
-      if (<String>["Cut", "Copy"].contains(action.label)) continue;
+      if (<String>["Cut", "Copy"].contains(action.verb)) continue;
       newList.add(LauncherAction(
         label: action.label,
         icon: action.iconBytes == null ? _iconForVerb(action.label) : null,

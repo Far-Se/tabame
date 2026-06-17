@@ -839,13 +839,11 @@ void HotkeyResetH(Tabamewin32Plugin *, const MethodCall &,
 
 void HotkeyUnHookH(Tabamewin32Plugin *, const MethodCall &,
                    MethodResult result) {
-  if (g_EventHook)
-    UnhookWinEvent(g_EventHook);
+  UninstallEventHooks();
   if (g_MouseHook)
     UnhookWindowsHookEx(g_MouseHook);
   if (g_KeyboardHook)
     UnhookWindowsHookEx(g_KeyboardHook);
-  g_EventHook = nullptr;
   g_MouseHook = nullptr;
   g_KeyboardHook = nullptr;
   ResetDoubleAltGestureState();
@@ -859,10 +857,7 @@ void HotkeyHookH(Tabamewin32Plugin *, const MethodCall &, MethodResult result) {
   if (!g_KeyboardHook)
     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook,
                                       GetModuleHandle(nullptr), 0);
-  if (!g_EventHook)
-    g_EventHook =
-        SetWinEventHook(EVENT_MIN, EVENT_MAX, nullptr, EventHook, 0, 0,
-                        WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+  InstallEventHooks();
   OK(result, true);
 }
 
@@ -1586,8 +1581,7 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     UnhookWinEvent(gEventHook);
   if (gMouseHook)
     UnhookWindowsHookEx(gMouseHook);
-  if (g_EventHook)
-    UnhookWinEvent(g_EventHook);
+  UninstallEventHooks();
   if (g_MouseHook)
     UnhookWindowsHookEx(g_MouseHook);
   if (g_KeyboardHook)

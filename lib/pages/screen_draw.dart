@@ -64,7 +64,7 @@ Future<void> startScreenDraw() async {
     size: Size(vWidth.toDouble(), vHeight.toDouble()),
     center: false,
     backgroundColor: Colors.transparent,
-    skipTaskbar: true,
+    skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: false,
     title: 'Tabame Screen Draw',
@@ -358,6 +358,11 @@ class AnnotationController extends ChangeNotifier {
   bool drawingModeActive = true;
   bool overlayVisible = true;
 
+  /// When false (e.g. embedded in screen capture), drawing-mode/visibility
+  /// toggles skip the Win32 window side effects (click-through, synthetic
+  /// click, show/hide) that only make sense for the standalone screen-draw window.
+  bool manageWindow = true;
+
   // Tool
   DrawTool activeTool = DrawTool.pen;
 
@@ -454,47 +459,53 @@ class AnnotationController extends ChangeNotifier {
     if (drawingModeActive) {
       activeTool = DrawTool.select;
       selectMode = true;
-      Win32Window.disableClickThrough();
-      Future<void>.delayed(const Duration(milliseconds: 100), () async {
-        await windowManager.show();
-        await WindowManager.instance.focus();
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        final Pointer<INPUT> inputs = calloc<INPUT>(2);
+    }
+    if (manageWindow) {
+      if (drawingModeActive) {
+        Win32Window.disableClickThrough();
+        Future<void>.delayed(const Duration(milliseconds: 100), () async {
+          await windowManager.show();
+          await WindowManager.instance.focus();
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          final Pointer<INPUT> inputs = calloc<INPUT>(2);
 
-        // Left button down
-        inputs[0]
-          ..type = INPUT_MOUSE
-          ..mi.dx = 0
-          ..mi.dy = 0
-          ..mi.mouseData = 0
-          ..mi.dwFlags = MOUSEEVENTF_LEFTDOWN
-          ..mi.time = 0
-          ..mi.dwExtraInfo = 0;
+          // Left button down
+          inputs[0]
+            ..type = INPUT_MOUSE
+            ..mi.dx = 0
+            ..mi.dy = 0
+            ..mi.mouseData = 0
+            ..mi.dwFlags = MOUSEEVENTF_LEFTDOWN
+            ..mi.time = 0
+            ..mi.dwExtraInfo = 0;
 
-        // Left button up
-        inputs[1]
-          ..type = INPUT_MOUSE
-          ..mi.dx = 0
-          ..mi.dy = 0
-          ..mi.mouseData = 0
-          ..mi.dwFlags = MOUSEEVENTF_LEFTUP
-          ..mi.time = 0
-          ..mi.dwExtraInfo = 0;
+          // Left button up
+          inputs[1]
+            ..type = INPUT_MOUSE
+            ..mi.dx = 0
+            ..mi.dy = 0
+            ..mi.mouseData = 0
+            ..mi.dwFlags = MOUSEEVENTF_LEFTUP
+            ..mi.time = 0
+            ..mi.dwExtraInfo = 0;
 
-        SendInput(2, inputs, sizeOf<INPUT>());
+          SendInput(2, inputs, sizeOf<INPUT>());
 
-        calloc.free(inputs);
-      });
-    } else {
-      Win32Window.enableClickThrough();
+          calloc.free(inputs);
+        });
+      } else {
+        Win32Window.enableClickThrough();
+      }
     }
     notifyListeners();
   }
 
   void toggleVisibility() {
     overlayVisible = !overlayVisible;
-    if (overlayVisible) WindowManager.instance.focus();
-    Win32Window.setVisible(overlayVisible);
+    if (manageWindow) {
+      if (overlayVisible) WindowManager.instance.focus();
+      Win32Window.setVisible(overlayVisible);
+    }
     notifyListeners();
     Future<void>.delayed(const Duration(milliseconds: 100), () {
       // Win32.activeWindowUnderCursor();
@@ -1064,7 +1075,7 @@ class AnnotationShell extends StatefulWidget {
   State<AnnotationShell> createState() => _AnnotationShellState();
 }
 
-class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
+class _AnnotationShellState extends State<AnnotationShell> with TabameListener, WindowListener {
   final AnnotationController _ctrl = AnnotationController();
   Timer? _timer;
 
@@ -1082,6 +1093,7 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     super.initState();
     NativeHooks.registerCallHandler();
     NativeHooks.addListener(this);
+    WindowManager.instance.addListener(this);
     Settings.load();
 
     _ctrl.captureAndClose = Settings.getBool("captureAndClose") ?? false;
@@ -1207,10 +1219,26 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener {
     }
   }
 
+  //@override
+  //void onWindowFocus() {
+  //    // if (!_ctrl.overlayVisible) _ctrl.toggleVisibility();
+  //    Future<void>.delayed(const Duration(milliseconds: 300), () {
+  //      if (!_ctrl.drawingModeActive) _ctrl.toggleDrawingMode(activated: true);
+  //});
+  //}
+
+  //@override
+  //void onWindowBlur() {
+  //    Future<void>.delayed(const Duration(milliseconds: 300), () {
+  //      if (_ctrl.drawingModeActive) _ctrl.toggleDrawingMode(activated: false);
+  //});
+  //}
+
   @override
   void dispose() {
     _timer?.cancel();
     NativeHooks.removeListener(this);
+    WindowManager.instance.removeListener(this);
     unawaited(NativeHooks.unHook());
     _ctrl.dispose();
     super.dispose();
@@ -1240,11 +1268,38 @@ class AnnotationOverlay extends StatefulWidget {
   final AnnotationController controller;
   final Rect currentMonitorRect;
   final Offset virtualOrigin;
+
+  /// When embedded in another surface (e.g. screen capture) the overlay hides
+  /// screen-draw-only chrome (its own capture button, status bar, window-close)
+  /// and routes close requests through [onClose] instead of closing the window.
+  final bool embedded;
+
+  /// When false the overlay renders the committed drawings read-only (no
+  /// toolbar, gestures, crosshair) so the host surface keeps pointer control.
+  final bool interactive;
+
+  /// Widget-local position to anchor the floating toolbox at (e.g. the cursor
+  /// position when summoned). Null = anchor the toolbar to the monitor corner.
+  final Offset? toolboxAnchor;
+
+  /// Invoked when the user closes the toolbox while [embedded].
+  final VoidCallback? onClose;
+
+  /// When set, the built-in Screen Capture tool routes its selected region here
+  /// (widget-local coords) instead of running screen-draw's own capture/clipboard
+  /// flow. Lets the host (e.g. screen capture) bake annotations and apply its
+  /// own post-capture pipeline.
+  final Future<void> Function(Rect localRect)? onCaptureRegion;
   const AnnotationOverlay({
     super.key,
     required this.controller,
     required this.currentMonitorRect,
     required this.virtualOrigin,
+    this.embedded = false,
+    this.interactive = true,
+    this.toolboxAnchor,
+    this.onClose,
+    this.onCaptureRegion,
   });
 
   @override
@@ -1260,6 +1315,15 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   Offset? _lastSelectPos;
   Offset? _captureStart;
   Offset? _captureCurrent;
+
+  /// Hides the floating toolbox while a region/pixel tool grabs screen pixels,
+  /// so the toolbar never appears inside a blur/pixelate/spotlight region.
+  bool _hideToolbarForCapture = false;
+
+  /// Set once the clean (toolbar-free) snapshot has been taken at the start of a
+  /// region drag, so live-preview fetches don't grab the screen before the
+  /// toolbar has actually been hidden.
+  bool _regionSnapshotReady = false;
 
   // Live screen-captured region shapes (refetch on drag): blur, pixelate, smartDelete, spotlight, magnifier
   // Key = tool, value = shape being previewed
@@ -1354,10 +1418,75 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     final ui.Size size = MediaQuery.of(context).size;
     final Rect monRect = widget.currentMonitorRect;
 
-    // Toolbar and status bar anchor to the active monitor.
+    // Read-only mode: render committed shapes + vector annotations only, with no
+    // toolbar, gestures, crosshair or status bar. Used when this overlay is
+    // embedded in another surface (e.g. screen capture) while drawing is paused,
+    // so the host keeps pointer control but the drawings stay visible.
+    if (!widget.interactive) {
+      return IgnorePointer(
+        child: Stack(
+          children: <Widget>[
+            ListenableBuilder(
+              listenable: ctrl,
+              builder: (_, __) => Stack(
+                children: ctrl.shapes
+                    .where((DrawShape s) => s.imageBytes != null && s.tool == DrawTool.spotlight)
+                    .map((DrawShape s) => _CommittedImageShape(shape: s))
+                    .toList(),
+              ),
+            ),
+            Positioned.fill(
+              child: CustomPaint(
+                size: size,
+                painter: AnnotationPainter(
+                  shapes: ctrl.shapes,
+                  currentShape: null,
+                  currentEnd: null,
+                  guides: ctrl.guides,
+                  gridVisible: false,
+                  gridSpacing: ctrl.gridSpacing,
+                  drawingMode: false,
+                ),
+              ),
+            ),
+            ListenableBuilder(
+              listenable: ctrl,
+              builder: (_, __) => Stack(
+                children: ctrl.shapes
+                    .where((DrawShape s) =>
+                        s.imageBytes != null &&
+                        (s.tool == DrawTool.blur ||
+                            s.tool == DrawTool.pixelate ||
+                            s.tool == DrawTool.smartDelete ||
+                            s.tool == DrawTool.imageDraw ||
+                            s.tool == DrawTool.imageFile ||
+                            s.tool == DrawTool.magnifier))
+                    .map((DrawShape s) => _CommittedImageShape(shape: s))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Toolbar and status bar anchor to the active monitor, or to an explicit
+    // toolbox anchor (the cursor position when summoned in screen capture).
     // Fall back to (8,8) relative to virtual canvas if monRect not yet known.
-    final double toolbarLeft = (monRect.isEmpty ? 0 : monRect.left) + 8;
-    final double toolbarTop = (monRect.isEmpty ? 0 : monRect.top) + 8;
+    double toolbarLeft;
+    double toolbarTop;
+    if (widget.toolboxAnchor != null) {
+      final Rect m = monRect.isEmpty ? (Offset.zero & size) : monRect;
+      final double tw = _toolbarSize.width;
+      final double th = _toolbarSize.height;
+      final double maxLeft = (m.right - tw - 4).clamp(m.left + 4, double.infinity);
+      final double maxTop = (m.bottom - th - 4).clamp(m.top + 4, double.infinity);
+      toolbarLeft = (widget.toolboxAnchor!.dx + 12).clamp(m.left + 4, maxLeft);
+      toolbarTop = (widget.toolboxAnchor!.dy - th / 2).clamp(m.top + 4, maxTop);
+    } else {
+      toolbarLeft = (monRect.isEmpty ? 0 : monRect.left) + 8;
+      toolbarTop = (monRect.isEmpty ? 0 : monRect.top) + 8;
+    }
     final double statusLeft = (monRect.isEmpty ? 0 : monRect.left) + 8;
     final double statusBottom = monRect.isEmpty ? 8 : (size.height - monRect.bottom) + 8;
 
@@ -1431,14 +1560,20 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
           //     _magnifierCenter != null)
           //   _MagnifierLens(center: _magnifierCenter!, shape: _magnifierShape!),
           // Toolbar anchored to active monitor
-          if (ctrl.drawingModeActive)
+          if (ctrl.drawingModeActive && !_hideToolbarForCapture)
             Positioned(
               left: toolbarLeft,
               top: toolbarTop,
-              child: AnnotationToolbar(key: _toolbarKey, controller: ctrl, monitorRect: widget.currentMonitorRect),
+              child: AnnotationToolbar(
+                key: _toolbarKey,
+                controller: ctrl,
+                monitorRect: widget.currentMonitorRect,
+                embedded: widget.embedded,
+                onClose: widget.onClose,
+              ),
             ),
-          // Status bar anchored to active monitor
-          if (ctrl.drawingModeActive)
+          // Status bar anchored to active monitor (hidden when embedded)
+          if (ctrl.drawingModeActive && !widget.embedded)
             Positioned(
               bottom: statusBottom,
               left: statusLeft,
@@ -1509,7 +1644,11 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (e is KeyUpEvent) {
       if (e.logicalKey == LogicalKeyboardKey.escape) {
         timer?.cancel();
-        ctrl.toggleVisibility();
+        if (widget.embedded) {
+          widget.onClose?.call();
+        } else {
+          ctrl.toggleVisibility();
+        }
       }
     } else if (e is KeyDownEvent) {
       final bool lCtrl = HardwareKeyboard.instance.isControlPressed;
@@ -1525,7 +1664,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         }
       }
       if (e.logicalKey == LogicalKeyboardKey.delete) ctrl.deleteSelected();
-      if (e.logicalKey == LogicalKeyboardKey.escape) {
+      if (e.logicalKey == LogicalKeyboardKey.escape && !widget.embedded) {
         timer = Timer(const Duration(milliseconds: 400), () {
           WindowManager.instance.close();
           // ctrl.toggleDrawingMode(activated: false);
@@ -1608,6 +1747,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       setState(() {
         _captureStart = pos;
         _captureCurrent = pos;
+        // Hide the toolbox while selecting / taking the capture region.
+        _hideToolbarForCapture = true;
       });
       return;
     }
@@ -1633,20 +1774,26 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
 
     if (_isRegionTool(ctrl.activeTool)) {
-      //hide crosshair
-
       setState(() {
         selectMode = true;
         _captureStart = pos;
         _captureCurrent = pos;
+        // Hide the toolbox so it isn't captured into the region's pixels.
+        _hideToolbarForCapture = true;
+        _regionSnapshotReady = false;
       });
       // Freeze the monitor once for this drawing-mode activation / monitor.
       // The preview and commit below crop from this cache; they do not capture
-      // the live overlay while the mouse moves.
-      unawaited(_ensureRegionToolSnapshot(ctrl.activeTool).then((_) {
+      // the live overlay while the mouse moves. Wait for the toolbar-free frame
+      // to reach the screen before snapshotting it.
+      unawaited(() async {
+        await WidgetsBinding.instance.endOfFrame;
+        await Future<void>.delayed(const Duration(milliseconds: 32));
+        await _ensureRegionToolSnapshot(ctrl.activeTool);
+        _regionSnapshotReady = true;
         if (!mounted || !_isLiveRegionTool(ctrl.activeTool)) return;
-        unawaited(_fetchLiveRegion(Rect.fromPoints(pos, pos)));
-      }));
+        unawaited(_fetchLiveRegion(Rect.fromPoints(pos, _captureCurrent ?? pos)));
+      }());
       return;
     }
     ctrl.startShape(pos);
@@ -1664,7 +1811,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
     if (_isRegionTool(ctrl.activeTool) && _captureStart != null) {
       setState(() => _captureCurrent = pos);
-      if (_isLiveRegionTool(ctrl.activeTool)) {
+      if (_isLiveRegionTool(ctrl.activeTool) && _regionSnapshotReady) {
         final Rect region = Rect.fromPoints(_captureStart!, pos);
         if (_usesCaptureMonitorTool(ctrl.activeTool)) {
           _debounceLiveRegionFetch(region);
@@ -1706,7 +1853,26 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     if (!ctrl.drawingModeActive) return;
 
     if (ctrl.activeTool == DrawTool.screenCapture) {
-      unawaited(_copyCaptureSelection());
+      if (widget.onCaptureRegion != null) {
+        // Embedded: hand the region to the host (e.g. screen capture) so it can
+        // bake annotations and run its own post-capture pipeline.
+        final Offset? s = _captureStart;
+        final Offset? c = _captureCurrent;
+        setState(() {
+          _captureStart = null;
+          _captureCurrent = null;
+          _hideToolbarForCapture = false;
+        });
+        if (s != null && c != null) {
+          final Rect r = Rect.fromPoints(s, c).normalized();
+          if (r.width > 2 && r.height > 2) await widget.onCaptureRegion!(r);
+        }
+      } else {
+        // Standalone: keep the toolbar hidden through the (delayed) live grab,
+        // then restore it.
+        await _copyCaptureSelection();
+        if (mounted) setState(() => _hideToolbarForCapture = false);
+      }
       return;
     }
 
@@ -1717,6 +1883,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         _captureStart = null;
         _captureCurrent = null;
         _liveRegionShape = null;
+        _hideToolbarForCapture = false;
+        _regionSnapshotReady = false;
       });
       if (region.width > 4 && region.height > 4) {
         // Await so _commitLiveRegion crops from the current frozen snapshot,
@@ -1742,6 +1910,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       setState(() {
         _captureStart = null;
         _captureCurrent = null;
+        _hideToolbarForCapture = false;
       });
       return;
     }
@@ -1820,7 +1989,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   Future<void> _commitMagnifierAt(Offset center) async {
     const double radius = 90.0;
     final Rect localRect = Rect.fromCenter(center: center, width: radius * 2, height: radius * 2);
+    // Hide the toolbox so it isn't captured into the magnifier lens.
+    if (mounted) setState(() => _hideToolbarForCapture = true);
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 32));
     final Uint8List? bytes = await _captureMonitorRegion(localRect, force: true);
+    if (mounted) setState(() => _hideToolbarForCapture = false);
     if (bytes == null || !mounted) return;
     ctrl.commitImageShape(
       DrawTool.magnifier,
@@ -2101,8 +2275,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   Future<void> _showTextDialog(Offset pos) async {
     final TextEditingController tc = TextEditingController();
     bool localBg = ctrl.textBackground;
-    // Text color is always the toolbar stroke color — shown as preview only.
-    final Color textFgColor = ctrl.strokeColor;
+    // Text colour is editable inside this modal (defaults to the toolbar colour).
+    Color localTextColor = ctrl.textColor ?? ctrl.strokeColor;
     // Background color starts from last used bg or black.
     Color localBgColor = ctrl.textBgColor ?? Colors.black;
     double localSize = ctrl.fontSize;
@@ -2174,6 +2348,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         ),
                         onSubmitted: (String v) {
                           ctrl.textBackground = localBg;
+                          ctrl.textColor = localTextColor;
                           ctrl.textBgColor = localBgColor;
                           ctrl.fontSize = localSize;
                           ctrl.textFontFamily = localFontFamily;
@@ -2244,22 +2419,34 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                         ],
                       ]),
                       const SizedBox(height: 8),
-                      // Text color preview (always from toolbar)
+                      // Text color picker
                       Row(children: <Widget>[
                         Text('Text color:', style: TextStyle(color: Colors.white70, fontSize: Design.baseFontSize + 2)),
                         const SizedBox(width: 8),
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: textFgColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white54, width: 1.5),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: AppColor.palette
+                                  .map((Color c) => GestureDetector(
+                                        onTap: () => setSt(() => localTextColor = c),
+                                        child: Container(
+                                          width: 20,
+                                          height: 20,
+                                          margin: const EdgeInsets.only(right: 4),
+                                          decoration: BoxDecoration(
+                                            color: c,
+                                            shape: BoxShape.circle,
+                                            border: localTextColor == c
+                                                ? Border.all(color: Colors.white, width: 2)
+                                                : Border.all(color: Colors.white24),
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Text('(from toolbar)',
-                            style: TextStyle(color: Colors.white38, fontSize: Design.baseFontSize + 1)),
                       ]),
                       const SizedBox(height: 8),
                       // Background toggle + background color picker
@@ -2316,6 +2503,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
                   TextButton(
                     onPressed: () {
                       ctrl.textBackground = localBg;
+                      ctrl.textColor = localTextColor;
                       ctrl.textBgColor = localBgColor;
                       ctrl.fontSize = localSize;
                       ctrl.textFontFamily = localFontFamily;
@@ -3399,7 +3587,19 @@ class _StatusBar extends StatelessWidget {
 class AnnotationToolbar extends StatelessWidget {
   final AnnotationController controller;
   final Rect monitorRect;
-  const AnnotationToolbar({super.key, required this.controller, required this.monitorRect});
+
+  /// When embedded in another surface (e.g. screen capture), screen-draw-only
+  /// chrome (its own capture button, window-close button) is hidden and the
+  /// close button instead invokes [onClose].
+  final bool embedded;
+  final VoidCallback? onClose;
+  const AnnotationToolbar({
+    super.key,
+    required this.controller,
+    required this.monitorRect,
+    this.embedded = false,
+    this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3418,7 +3618,10 @@ class AnnotationToolbar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               _ToolBtn(Icons.mouse_rounded, DrawTool.select, controller, 'Select (S)'),
-              _ScreenCaptureBtnWithPopup(ctrl: controller),
+              if (embedded)
+                _ToolBtn(Icons.screenshot_monitor_rounded, DrawTool.screenCapture, controller, 'Capture Region (C)')
+              else
+                _ScreenCaptureBtnWithPopup(ctrl: controller),
               const Divider(color: Colors.white24, height: 10),
               _ToolBtn(Icons.edit, DrawTool.pen, controller, 'Pen (P)'),
               _ToolBtn(Icons.highlight, DrawTool.highlight, controller, 'Highlight (H)'),
@@ -3480,7 +3683,7 @@ class AnnotationToolbar extends StatelessWidget {
               // const Divider(color: Colors.white24, height: 10),
               _InfoBtn(controller, monitorRect),
               const Divider(color: Colors.white24, height: 10),
-              const _CloseBtn(),
+              if (embedded) _CloseBtn(onClose: onClose) else const _CloseBtn(),
             ],
           ),
         ),
@@ -3491,16 +3694,17 @@ class AnnotationToolbar extends StatelessWidget {
 
 // ── Close button ──────────────────────────────────────────────────────────────
 class _CloseBtn extends StatelessWidget {
-  const _CloseBtn();
+  final VoidCallback? onClose;
+  const _CloseBtn({this.onClose});
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Close Screen Draw',
+      message: onClose != null ? 'Close Toolbox' : 'Close Screen Draw',
       preferBelow: false,
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
-        onTap: () => windowManager.close(),
+        onTap: () => onClose != null ? onClose!() : windowManager.close(),
         child: Container(
           width: 36,
           height: 36,
@@ -3651,7 +3855,7 @@ class _HotkeysModal extends StatelessWidget {
                     ]),
                     SizedBox(height: 16),
                     _HkSection('Tips', <_HkEntry>[
-                      _HkEntry('Text color', 'Always uses the active toolbar color'),
+                      _HkEntry('Text color', 'Choose color in the text dialog (defaults to toolbar color)'),
                       _HkEntry('Text background', 'Choose color in the text dialog'),
                       _HkEntry('Balloon body', 'Choose color in the balloon dialog'),
                       _HkEntry('Measure distance',
@@ -4980,29 +5184,34 @@ class _LoadImageButton extends StatelessWidget {
 
   Future<void> _pick(BuildContext context) async {
     controller.toggleDrawingMode(activated: false);
-    final OpenFilePicker picker = OpenFilePicker()
-      ..filterSpecification = <String, String>{
-        'Image Files': '*.jpg;*.jpeg;*.png;*.webp;*.jfif;*.bmp;*.gif;*.tiff',
-        'All Files': '*.*',
-      }
-      ..defaultFilterIndex = 0
-      ..title = 'Select Image';
-    final File? result = picker.getFile();
-    if (result == null || !result.existsSync()) return;
+    try {
+      final OpenFilePicker picker = OpenFilePicker()
+        ..filterSpecification = <String, String>{
+          'Image Files': '*.jpg;*.jpeg;*.png;*.webp;*.jfif;*.bmp;*.gif;*.tiff',
+          'All Files': '*.*',
+        }
+        ..defaultFilterIndex = 0
+        ..title = 'Select Image';
+      final File? result = picker.getFile();
+      if (result == null || !result.existsSync()) return;
 
-    final Uint8List bytes = result.readAsBytesSync();
+      final Uint8List bytes = result.readAsBytesSync();
 
-    final ui.Codec codec = await ui.instantiateImageCodec(bytes);
-    final ui.FrameInfo frame = await codec.getNextFrame();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
 
-    final ui.Image image = frame.image;
+      final ui.Image image = frame.image;
 
-    controller.addLoadedImage(
-      bytes,
-      image.width,
-      image.height,
-    );
-    controller.toggleDrawingMode(activated: true);
+      controller.addLoadedImage(
+        bytes,
+        image.width,
+        image.height,
+      );
+    } finally {
+      // Always restore drawing mode — even if the picker was cancelled — so the
+      // toolbox/overlay never gets stuck in pass-through.
+      controller.toggleDrawingMode(activated: true);
+    }
   }
 
   @override
@@ -5179,8 +5388,8 @@ class AnnotationPainter extends CustomPainter {
   void _drawText(Canvas canvas, DrawShape s, Offset pos) {
     if (s.text == null || s.text!.isEmpty) return;
     final double fs = s.fontSize ?? (s.strokeWidth * 8 + 12);
-    // Text color = stroke color (the main toolbar color)
-    final Color tc = s.color;
+    // Text color = the colour chosen in the dialog, falling back to stroke color.
+    final Color tc = s.textColor ?? s.color;
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: s.text,
@@ -5209,8 +5418,8 @@ class AnnotationPainter extends CustomPainter {
     const double tailH = 14.0;
     const double radius = 8.0;
     final double fs = s.fontSize ?? (s.strokeWidth * 6 + 12);
-    // Text color = stroke color (main toolbar color), balloon body = textBgColor or s.color
-    final Color tc = s.color;
+    // Text color = the colour chosen in the dialog (fallback stroke); balloon body = textBgColor or s.color
+    final Color tc = s.textColor ?? s.color;
     final Color balloonColor = s.textBgColor ?? s.color;
     final TextPainter tp = TextPainter(
       text: TextSpan(

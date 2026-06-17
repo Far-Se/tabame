@@ -18,6 +18,41 @@ import '../../launcher_search_models.dart';
 
 const int maxLauncherMatches = 30;
 
+// Building the full quick-action catalog (a widget builder + closures for every
+// entry) on every keystroke is wasteful. Cache it briefly so a burst of
+// keystrokes reuses one build; the short TTL plus the signature keep it fresh
+// against theme changes or quick-action edits.
+List<QuickActionMenuEntry>? _cachedQuickActionEntries;
+String? _cachedQuickActionSignature;
+DateTime? _cachedQuickActionBuiltAt;
+
+List<QuickActionMenuEntry> _allQuickActionEntries(BuildContext context) {
+  final ThemeData theme = Theme.of(context);
+  final String signature = '${Boxes.quickActions.length}'
+      '|${theme.brightness}'
+      '|${Design.accent.hashCode}'
+      '|${theme.colorScheme.onSurface.hashCode}';
+  final DateTime now = DateTime.now();
+  final List<QuickActionMenuEntry>? cached = _cachedQuickActionEntries;
+  if (cached != null &&
+      _cachedQuickActionSignature == signature &&
+      _cachedQuickActionBuiltAt != null &&
+      now.difference(_cachedQuickActionBuiltAt!) < const Duration(seconds: 2)) {
+    return cached;
+  }
+
+  final List<QuickActionMenuEntry> entries = buildQuickActionMenuEntries(
+    context,
+    onStateChanged: () {
+      // We might need to handle this differently if we are outside the state
+    },
+  );
+  _cachedQuickActionEntries = entries;
+  _cachedQuickActionSignature = signature;
+  _cachedQuickActionBuiltAt = now;
+  return entries;
+}
+
 List<LauncherSearchResultItem> composeResults({
   required List<QuickActionMenuEntry> quickActionMatches,
   required List<Window> windowMatches,
@@ -75,34 +110,48 @@ List<BookmarkSearchResult> findBookmarkMatches(
   final String lowerQuery = query.toLowerCase();
   final List<BookmarkSearchResult> results = <BookmarkSearchResult>[];
 
+  const int kindLimit = 10;
+
+  int bookmarkCount = 0;
   for (final BookmarkGroup g in Boxes().bookmarks) {
     for (final BookmarkInfo b in g.bookmarks) {
       if (kinds != null && !kinds.contains(BookmarkResultKind.bookmark)) continue;
+      if (bookmarkCount >= kindLimit) break;
       if (query.isEmpty || b.title.toLowerCase().contains(lowerQuery)) {
         results.add(BookmarkSearchResult.bookmark(b));
+        bookmarkCount++;
       }
     }
+    if (bookmarkCount >= kindLimit) break;
   }
 
+  int cliCount = 0;
   for (final CliBookCategory category in Boxes().cliBook) {
     for (final CliBookItem item in category.items) {
       if (kinds != null && !kinds.contains(BookmarkResultKind.cliBook)) continue;
+      if (cliCount >= kindLimit) break;
       if (item.key.isEmpty) continue;
       if (query.isEmpty ||
           item.key.toLowerCase().contains(lowerQuery) ||
           item.value.toLowerCase().contains(lowerQuery)) {
         results.add(BookmarkSearchResult.cli(item));
+        cliCount++;
       }
     }
+    if (cliCount >= kindLimit) break;
   }
 
+  int appCount = 0;
   for (final AppCategory category in Boxes.appCategories) {
     for (final AppItem app in category.items) {
       if (kinds != null && !kinds.contains(BookmarkResultKind.appItem)) continue;
+      if (appCount >= kindLimit) break;
       if (query.isEmpty || app.name.toLowerCase().contains(lowerQuery) || app.path.toLowerCase().contains(lowerQuery)) {
         results.add(BookmarkSearchResult.app(app));
+        appCount++;
       }
     }
+    if (appCount >= kindLimit) break;
   }
 
   return results;
@@ -113,15 +162,14 @@ List<QuickActionMenuEntry> findQuickActionMatches(
   String query, {
   bool includeAllOnEmpty = false,
 }) {
-  final List<QuickActionMenuEntry> allEntries = buildQuickActionMenuEntries(
-    context,
-    onStateChanged: () {
-      // We might need to handle this differently if we are outside the state
-    },
-  );
+  // Skip building the catalog entirely when we'd return nothing anyway.
+  if ((query.isEmpty || query == ' ') && !includeAllOnEmpty) {
+    return <QuickActionMenuEntry>[];
+  }
+
+  final List<QuickActionMenuEntry> allEntries = _allQuickActionEntries(context);
 
   if (query.isEmpty || query == ' ') {
-    if (!includeAllOnEmpty) return <QuickActionMenuEntry>[];
     return allEntries;
   }
 

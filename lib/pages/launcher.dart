@@ -208,6 +208,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       aliases: <String>['calc'],
       handler: _buildFunctionCalculatorResults,
     ),
+    _LauncherFunctionCommand(
+      name: 'design',
+      description: 'Change launcher design',
+      usage: r'$design serene',
+      icon: Icons.palette_outlined,
+      handler: _buildFunctionDesignResults,
+    ),
   ];
 
   late final List<LauncherSearchResultItem> _launcherShortcuts = <LauncherSearchResultItem>[
@@ -485,6 +492,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
+    _resultKeys.clear();
+    _quickActionKeys.clear();
 
     user.launcherSearchText = '';
     Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
@@ -577,6 +586,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
+    if (_results.isEmpty) return;
     if (key == LogicalKeyboardKey.arrowDown) {
       _activeIndexNotifier.value = ((_activeIndexNotifier.value + 1) % _results.length).toInt();
     } else if (key == LogicalKeyboardKey.arrowUp) {
@@ -627,6 +637,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _scrollToActiveIndexFallback(int index) {
+    if (!_scrollController.hasClients) return;
+
     const double estimatedItemHeight = 49.0;
     final double viewportHeight = _scrollController.position.viewportDimension;
     final double itemTop = index * estimatedItemHeight;
@@ -665,7 +677,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _searchDebounce;
   Timer? _windowRefreshTimer;
   String _lastScrollResetQuery = '';
-  int _searchRequestId = 0;
   DateTime? _lastFolderSyncTime;
   bool _isFolderSyncing = false;
   // Remove this field entirely:
@@ -734,13 +745,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (!_canConsumePendingInput) return;
 
     final String pendingLauncherQuickAction = Globals.takeLauncherQuickAction();
-    if (pendingLauncherQuickAction.isNotEmpty) {
+    final bool hasPendingAction = pendingLauncherQuickAction.isNotEmpty;
+    if (hasPendingAction) {
       _pendingLauncherQuickAction = pendingLauncherQuickAction;
       _pendingLauncherQuickActionAttempt = 0;
     }
 
     final String pending = Globals.takeQuickMenuSearchInput();
-    if (pending.isEmpty) return;
+    if (pending.isEmpty) {
+      // A quick action may have been queued without (or after losing) its
+      // accompanying search text. Re-run the current search anyway so the
+      // pending action still gets its chance to execute once results render.
+      if (hasPendingAction) _onSearchChanged(_controller.text);
+      return;
+    }
 
     final TextEditingValue currentValue = _controller.value;
     final TextSelection selection = currentValue.selection.isValid
@@ -911,8 +929,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (!mounted) return;
       final String currentQuery = _controller.text;
       if (currentQuery == query) {
-        final int newRequestId = ++_searchRequestId;
-        _runSearch(newRequestId, query, normalizedQuery, searchMode);
+        // Re-run as the *current* generation so the in-handler guards
+        // (_isActiveSearch compares against _searchGeneration) actually pass.
+        _runSearch(_searchGeneration, query, normalizedQuery, searchMode);
       }
     } catch (e) {
       debugPrint('Launcher: background folder sync failed: $e');
@@ -1080,11 +1099,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       return;
     }
 
-    if (command.debounce > Duration.zero) {
-      await Future<void>.delayed(command.debounce);
-      if (!context.isActiveSearch(context.requestId, input)) return;
-    }
-
+    // NOTE: command.debounce is already applied by _debounceForMode before
+    // _runSearch fires, so we must NOT delay again here (that doubled latency).
     context.setSearching(true);
     try {
       final List<LauncherSearchResultItem> results = await command.handler(commandInput);
@@ -1323,6 +1339,53 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.calculate_rounded,
       parser: Parsers().calculator,
     );
+  }
+
+  Future<List<LauncherSearchResultItem>> _buildFunctionDesignResults(String input) async {
+    final String trimmed = input.trim().toLowerCase();
+
+    LauncherDesign? findDesign(String name) {
+      for (final LauncherDesign d in LauncherDesign.values) {
+        if (d.name.toLowerCase() == name) return d;
+      }
+      return null;
+    }
+
+    void applyDesign(LauncherDesign design) {
+      Boxes.pref.setInt('launcherDesign', design.index);
+      user.launcherDesign = design;
+      setState(() => _design = design);
+      _onSearchChanged(_controller.text);
+      _requestLauncherFocus();
+    }
+
+    if (trimmed.isNotEmpty) {
+      final LauncherDesign? matched = findDesign(trimmed);
+      if (matched != null) {
+        return <LauncherSearchResultItem>[
+          LauncherSearchResultItem.quickAction(_buildFunctionAction(
+            id: 'function-design-apply:${matched.name}',
+            title: 'Switch to ${matched.name[0].toUpperCase()}${matched.name.substring(1)} design',
+            subtitle: matched == _design ? 'Currently active' : 'Launcher design',
+            icon: Icons.palette_outlined,
+            searchTerms: <String>['design', matched.name],
+            onExecute: () => applyDesign(matched),
+          )),
+        ];
+      }
+    }
+
+    return LauncherDesign.values.map((LauncherDesign d) {
+      final bool isActive = d == _design;
+      return LauncherSearchResultItem.quickAction(_buildFunctionAction(
+        id: 'function-design:${d.name}',
+        title: '${d.name[0].toUpperCase()}${d.name.substring(1)}',
+        subtitle: isActive ? 'Currently active' : 'Switch to this design',
+        icon: isActive ? Icons.check_circle_outline_rounded : Icons.palette_outlined,
+        searchTerms: <String>['design', d.name],
+        onExecute: () => applyDesign(d),
+      ));
+    }).toList(growable: false);
   }
 
   Future<List<LauncherSearchResultItem>> _buildFunctionUnitResults(String input) async {
@@ -1676,14 +1739,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         snapshot.where((LauncherSearchResultItem r) => r.isFile && r.entity != null).toList();
     if (fileItems.isEmpty) return;
 
-    final List<LauncherSearchResultItem> stale = <LauncherSearchResultItem>[];
+    // Stat every candidate in parallel instead of serially on the UI isolate,
+    // so a slow/network path can't stall the whole prune one entry at a time.
+    final List<FileSystemEntityType> types = await Future.wait(
+      fileItems.map((LauncherSearchResultItem item) => FileSystemEntity.type(item.entity!.path)),
+    );
 
-    for (final LauncherSearchResultItem item in fileItems) {
-      final FileSystemEntityType type = await FileSystemEntity.type(item.entity!.path);
-      if (type == FileSystemEntityType.notFound) {
-        stale.add(item);
-      }
-    }
+    final List<LauncherSearchResultItem> stale = <LauncherSearchResultItem>[
+      for (int i = 0; i < fileItems.length; i++)
+        if (types[i] == FileSystemEntityType.notFound) fileItems[i],
+    ];
 
     if (stale.isEmpty) return;
     if (!mounted) return;
@@ -1700,7 +1765,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     // Update the visible results only if the list has not already changed.
-    if (!mounted || !identical(_results, snapshot)) return;
+    if (!mounted) return;
+    if (!identical(_results, snapshot)) return;
 
     final Set<String> staleIds = stale.map((LauncherSearchResultItem r) => r.id).toSet();
     final List<LauncherSearchResultItem> pruned =
@@ -1921,7 +1987,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
   }
 
-  void _openWindow(Window window) async {
+  Future<void> _openWindow(Window window) async {
     await QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Win32.activateWindow(window.hWnd);
     Globals.lastFocusedWinHWND = window.hWnd;
@@ -2020,8 +2086,40 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color accent = Design.accent;
+    final ThemeData baseTheme = Theme.of(context);
+    final bool isDark = baseTheme.brightness == Brightness.dark;
+    final bool isTerminal = _design == LauncherDesign.terminal;
+    final bool isZen = _design == LauncherDesign.zen;
+    final bool isGlass = _design == LauncherDesign.glass;
+    // Terminal and Zen force their own palette + text theme. Every result
+    // builder reads its colors from this theme, so they all inherit the look
+    // without per-builder branching. Terminal keeps the user accent (phosphor);
+    // Zen replaces it with a calm moss. Glass keeps the theme colors (its glass
+    // picks them up) and only forces Inter for the iOS feel.
+    final Color accent = isZen ? ZenTokens.accent(isDark) : Design.accent;
+    final ThemeData theme = isTerminal
+        ? baseTheme.copyWith(
+            colorScheme: baseTheme.colorScheme.copyWith(
+              surface: TerminalTokens.bg,
+              onSurface: TerminalTokens.fg,
+            ),
+            highlightColor: accent.withAlpha(38),
+            textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme)
+                .apply(bodyColor: TerminalTokens.fg, displayColor: TerminalTokens.fg),
+          )
+        : isZen
+            ? baseTheme.copyWith(
+                colorScheme: baseTheme.colorScheme.copyWith(
+                  surface: ZenTokens.bg(isDark),
+                  onSurface: ZenTokens.fg(isDark),
+                ),
+                highlightColor: accent.withAlpha(isDark ? 42 : 30),
+                textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme)
+                    .apply(bodyColor: ZenTokens.fg(isDark), displayColor: ZenTokens.fg(isDark)),
+              )
+            : isGlass
+                ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                : baseTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -2039,8 +2137,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             behavior: HitTestBehavior.translucent,
             onPanStart: (_) => windowManager.startDragging(),
             child: Icon(
-              Icons.search_rounded,
               // Token-driven: no inline ternary on _design.
+              launcherTheme.searchIcon,
               size: launcherTheme.searchIconSize,
               color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
             ),
@@ -2195,12 +2293,41 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           accent: accent,
           child: innerContent,
         ),
+      LauncherDesign.command => CommandLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
+      LauncherDesign.terminal => TerminalLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
+      LauncherDesign.zen => ZenLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
+      LauncherDesign.glass => GlassLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: theme.copyWith(
-        textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
-      ),
+      data: (isTerminal || isZen || isGlass)
+          ? theme
+          : theme.copyWith(
+              textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
+            ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: _resetSelection,
@@ -2382,13 +2509,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       bool isSelected, bool isRepeatingKey) {
     final Color accent = Design.accent;
     final VoidCallback onTap = (_searchMode == LauncherSearchMode.desktopOnly && entity is Directory)
-        ? () {
-            print('BrowseFolder');
-            _browseFolder(entity.path);
-          }
-        : () {
-            _openFile(entity.path, nodeId: nodeId);
-          };
+        ? () => _browseFolder(entity.path)
+        : () => _openFile(entity.path, nodeId: nodeId);
 
     // Read the active design from the nearest LauncherTheme instead of _design.
     return LauncherListItem(
@@ -2634,6 +2756,9 @@ class _LauncherStatusBadgesState extends State<_LauncherStatusBadges> {
       final Duration d = t.endTime.difference(DateTime.now());
       if (d < diff) diff = d;
     }
+    // A timer that has just elapsed yields a negative remaining duration until
+    // it is cleared; clamp so the badge never shows "-5s" / negative minutes.
+    if (diff.isNegative) diff = Duration.zero;
     final String label = diff.inMinutes != 0
         ? "${diff.inSeconds % 60 < 30 ? diff.inMinutes % 60 : (diff.inMinutes % 60) + 1}m"
         : "${diff.inSeconds % 60}s";

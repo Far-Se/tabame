@@ -4,6 +4,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import 'design_aurora.dart';
 import 'design_classic.dart';
 import 'design_interface.dart';
 import 'design_matrix.dart';
@@ -75,6 +76,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.modern => MainMenuModernWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.matrix => MainMenuMatrixWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.serene => MainMenuSereneWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.aurora => MainMenuAuroraWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

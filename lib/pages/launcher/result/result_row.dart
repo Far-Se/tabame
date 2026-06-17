@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/settings.dart';
+import '../launcher_design.dart';
 
 abstract final class _SereneTokens {
   // Row geometry
@@ -177,7 +178,437 @@ class LauncherResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return user.launcherDesign == LauncherDesign.serene ? _buildSerene(context) : _buildClassic(context);
+    return switch (user.launcherDesign) {
+      LauncherDesign.serene => _buildSerene(context),
+      LauncherDesign.command => _buildCommand(context),
+      LauncherDesign.terminal => _buildTerminal(context),
+      LauncherDesign.zen => _buildZen(context),
+      LauncherDesign.glass => _buildGlass(context),
+      LauncherDesign.classic => _buildClassic(context),
+    };
+  }
+
+  // ── Glass (iOS Liquid Glass) ───────────────────────────────────────────────
+  // The selected row becomes a floating glass lozenge — a translucent capsule
+  // with a bright rim, accent tint, and a soft glow. Icons sit in frosted nests.
+
+  Widget _buildGlass(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final int animMs = isRepeating ? 80 : 220;
+    final Curve curve = isRepeating ? Curves.linear : Curves.easeOutCubic;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: curve,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: isSelected
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: <Color>[
+                        Color.alphaBlend(Colors.white.withAlpha(isDark ? 26 : 130), accent.withAlpha(isDark ? 44 : 26)),
+                        accent.withAlpha(isDark ? 34 : 18),
+                      ],
+                    ),
+                    border: Border.all(color: Colors.white.withAlpha(isDark ? 46 : 150), width: 1),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: accent.withAlpha(isDark ? 34 : 26),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  )
+                : null,
+            child: Row(
+              children: <Widget>[
+                // Frosted icon nest.
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withAlpha(isDark ? (isSelected ? 24 : 14) : (isSelected ? 150 : 100)),
+                    border: Border.all(color: Colors.white.withAlpha(isDark ? 34 : 130), width: 0.8),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            title ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GlassTokens.font(
+                              fontSize: Design.baseFontSize + 2,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? onSurface : onSurface.withAlpha(225),
+                              height: 1.25,
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            subtitle ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GlassTokens.font(
+                              fontSize: Design.baseFontSize,
+                              fontWeight: FontWeight.w400,
+                              color: onSurface.withAlpha(isSelected ? 165 : 120),
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                ),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: badge,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Zen ──────────────────────────────────────────────────────────────────
+  // Airy, low-contrast rows with generous breathing room. Selection is a soft
+  // rounded "leaf pill" with a rounded stem — no hard edges, slow gentle motion.
+
+  Widget _buildZen(BuildContext context) {
+    // Deliberately unhurried — calm motion, never snappy (even on key-repeat).
+    final Duration dur = Duration(milliseconds: isRepeating ? 120 : 300);
+    const Curve curve = Curves.easeInOutSine;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: dur,
+            curve: curve,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: isSelected ? accent.withAlpha(30) : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: <Widget>[
+                // Soft rounded "stem" that grows on selection.
+                AnimatedContainer(
+                  duration: dur,
+                  curve: curve,
+                  width: isSelected ? 3 : 0,
+                  height: 20,
+                  margin: EdgeInsets.only(right: isSelected ? 10 : 0),
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(180),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                // Soft squircle icon nest.
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha(isSelected ? 34 : 20),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            title ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: ZenTokens.soft(
+                              fontSize: Design.baseFontSize + 2,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? onSurface : onSurface.withAlpha(225),
+                              height: 1.25,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            subtitle ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: ZenTokens.soft(
+                              fontSize: Design.baseFontSize,
+                              fontWeight: FontWeight.w400,
+                              color: onSurface.withAlpha(isSelected ? 150 : 115),
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                ),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: badge,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Terminal ─────────────────────────────────────────────────────────────
+  // A monospace console line: a `❯` caret + block-fill highlight on the active
+  // row, phosphor-bright title, dimmed path. Colors are forced to the console
+  // palette so it reads as a command prompt regardless of the active theme.
+
+  Widget _buildTerminal(BuildContext context) {
+    final int animMs = isRepeating ? 40 : 120;
+    final Curve curve = isRepeating ? Curves.linear : Curves.easeOut;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: curve,
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: const EdgeInsets.fromLTRB(6, 4, 8, 4),
+            decoration: BoxDecoration(
+              color: isSelected ? accent.withAlpha(36) : Colors.transparent,
+              borderRadius: BorderRadius.circular(3),
+              border: Border(
+                left: BorderSide(
+                  color: isSelected ? accent : Colors.transparent,
+                  width: 2.5,
+                ),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                // Selection caret — the TUI line cursor.
+                SizedBox(
+                  width: 14,
+                  child: Text(
+                    isSelected ? '❯' : ' ',
+                    style: TerminalTokens.mono(
+                      fontSize: Design.baseFontSize + 1,
+                      color: accent.withAlpha(230),
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 18, height: 18, child: Center(child: icon)),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            title ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TerminalTokens.mono(
+                              fontSize: Design.baseFontSize + 1,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? accent : TerminalTokens.fg,
+                              height: 1.25,
+                            ),
+                          ),
+                          Text(
+                            subtitle ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TerminalTokens.mono(
+                              fontSize: Design.baseFontSize - 1,
+                              color: isSelected ? TerminalTokens.fg.withAlpha(190) : TerminalTokens.dim,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                ),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: badge,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Command ──────────────────────────────────────────────────────────────
+  // A dense console row: a bright left rail + faint accent fill on selection,
+  // a bordered square icon chip, and a trailing ↵ key on the active row.
+
+  Widget _buildCommand(BuildContext context) {
+    final int animMs = isRepeating ? 50 : 160;
+    final Curve curve = isRepeating ? Curves.linear : Curves.easeOutCubic;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: curve,
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: <Color>[accent.withAlpha(48), accent.withAlpha(14)],
+                    )
+                  : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 5, 8, 5),
+              child: Row(
+                children: <Widget>[
+                  // Bright selection rail.
+                  AnimatedContainer(
+                    duration: Duration(milliseconds: animMs),
+                    curve: curve,
+                    width: isSelected ? 3 : 0,
+                    height: 26,
+                    margin: EdgeInsets.only(right: isSelected ? 7 : 0),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Bordered square icon chip.
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(isSelected ? 26 : 14),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: accent.withAlpha(isSelected ? 70 : 36)),
+                    ),
+                    child: icon,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: content ??
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              title ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: entryStyle(
+                                isSelected,
+                                fontSize: Design.baseFontSize + 1.5,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              subtitle ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: Design.baseFontSize - 0.5,
+                                letterSpacing: 0.1,
+                                color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
+                              ),
+                            ),
+                          ],
+                        ),
+                  ),
+                  if (badge != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: badge,
+                    ),
+                  // Trailing enter key — only on the active row.
+                  AnimatedSize(
+                    duration: Duration(milliseconds: animMs),
+                    curve: curve,
+                    child: isSelected
+                        ? Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: accent.withAlpha(30),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: accent.withAlpha(80)),
+                              ),
+                              child: Text(
+                                '↵',
+                                style: TextStyle(
+                                  fontSize: Design.baseFontSize + 1,
+                                  height: 1.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: accent.withAlpha(220),
+                                ),
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Classic ────────────────────────────────────────────────────────────────

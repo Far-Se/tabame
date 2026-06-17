@@ -446,11 +446,9 @@ class FancyshotState extends State<Fancyshot> {
       builder: (BuildContext context, BoxConstraints outer) {
         // Compute the natural (scale=1) canvas size to find the fit scale.
         // frameW/frameH must match _mainLayerSize exactly (scale=1):
-        //   capture + imagePadding*2  (frameBorderWidth is inset, not additive)
-        final double scaledW = srcW * filters.imageScale;
-        final double scaledH = srcH * filters.imageScale;
-        final double frameW = scaledW + filters.imagePadding * 2;
-        final double frameH = scaledH + filters.imagePadding * 2 + (filters.showBrowserFrame ? 32 : 0);
+        //   capture (native size) + imagePadding*2  (frameBorderWidth is inset, not additive)
+        final double frameW = srcW + filters.imagePadding * 2;
+        final double frameH = srcH + filters.imagePadding * 2 + (filters.showBrowserFrame ? 32 : 0);
         double naturalW = frameW + filters.backgroundPadding * 2;
         double naturalH = frameH + filters.backgroundPadding * 2;
         final double? ratio = <int, double>{1: 1, 2: 3 / 2, 3: 4 / 3, 4: 16 / 9, 5: 9 / 16}[filters.aspectRatio];
@@ -732,14 +730,6 @@ class FancyshotState extends State<Fancyshot> {
                     min: 0,
                     max: 28,
                     onChanged: (double v) => _updateFilters(() => filters.borderRadius = v),
-                  ),
-                  _CompactSlider(
-                    label: 'Image Scale',
-                    value: filters.imageScale,
-                    min: 0.8,
-                    decimals: 2,
-                    max: 1.35,
-                    onChanged: (double v) => _updateFilters(() => filters.imageScale = v),
                   ),
                   _CompactSlider(
                     label: 'Frame Border',
@@ -2595,9 +2585,12 @@ class _FancyShotFrameSurface extends StatelessWidget {
   final double sourceHeight;
   final Uint8List? captureBytesForBackground;
   final double scale;
+  // The main image always renders at its native source size (only the
+  // preview-fit `scale` applies). Decorations — padding, border, browser
+  // frame, background, and aspect ratio — wrap around it without resizing it.
   Size get _captureSize => Size(
-        sourceWidth * profile.imageScale * scale,
-        sourceHeight * profile.imageScale * scale,
+        sourceWidth * scale,
+        sourceHeight * scale,
       );
 
   // The main layer's outer dimensions: capture + imagePadding on all sides +

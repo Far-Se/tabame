@@ -145,17 +145,28 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                         message: info.processExe,
                         child: Boxes.getIconRewrite(info.processPath) != ""
                             ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
-                            : Image.memory(
-                                info.iconData,
-                                fit: BoxFit.scaleDown,
-                                gaplessPlayback: true,
-                                width: 16.1,
-                                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                    const Icon(
-                                  Icons.check_box_outline_blank,
-                                  size: 16,
-                                ),
-                              )),
+                            // Appx apps whose tray HICON couldn't be rendered fall back to the
+                            // package manifest logo resolved in TrayWatcher.fetchTray.
+                            : info.iconData.length <= 1 && info.appxIconPath != ""
+                                ? Image.file(
+                                    File(info.appxIconPath),
+                                    fit: BoxFit.scaleDown,
+                                    gaplessPlayback: true,
+                                    width: 16.1,
+                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                        const Icon(Icons.check_box_outline_blank, size: 16),
+                                  )
+                                : Image.memory(
+                                    info.iconData,
+                                    fit: BoxFit.scaleDown,
+                                    gaplessPlayback: true,
+                                    width: 16.1,
+                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                        const Icon(
+                                      Icons.check_box_outline_blank,
+                                      size: 16,
+                                    ),
+                                  )),
                   ),
                 ),
               ),

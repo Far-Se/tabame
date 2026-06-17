@@ -215,6 +215,7 @@ class QuickMenuState extends State<QuickMenu>
     NativeHooks.removeListener(this);
     ClipboardHooks.removeListener(this);
     QuickMenuFunctions.removeListener(this);
+    WindowManager.instance.removeListener(this);
     _quickMenuFocusRetryTimer?.cancel();
     focusNode.dispose();
   }

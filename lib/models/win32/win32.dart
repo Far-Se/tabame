@@ -25,6 +25,15 @@ class Win32 {
 
   // Window handles and metadata
   static int getMainHandle() {
+    if (hWnd == 0 || IsWindow(hWnd) == 0) {
+      // re-resolve if unset or destroyed
+      final int? mainWindowHandle = getMainWindowHandle();
+      hWnd = mainWindowHandle != null ? GetAncestor(mainWindowHandle, 2) : getMainHandleByClass();
+    }
+    return hWnd;
+  }
+
+  static int getMainHandleEx() {
     if (hWnd == 0) {
       final int? mainWindowHandle = getMainWindowHandle();
       if (mainWindowHandle != null) {
@@ -815,6 +824,9 @@ class Win32 {
           horizontalPosition -= 10;
           break;
         case QuickMenuDesigns.serene:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.aurora:
           verticalPosition -= 40;
           break;
       }

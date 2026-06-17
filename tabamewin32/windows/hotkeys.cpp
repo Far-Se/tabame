@@ -101,7 +101,8 @@ static DWORD doubleAltActiveVk = 0;
 // Hook handles for this subsystem
 HHOOK g_KeyboardHook = nullptr;
 HHOOK g_MouseHook = nullptr;
-HWINEVENTHOOK g_EventHook = nullptr;
+// Win event hooks — one entry per registered event range (see InstallEventHooks).
+std::vector<HWINEVENTHOOK> g_EventHooks;
 
 void SetKeyboardBlockerEnabled(bool enabled) {
   keyboardBlockerEnabled.store(enabled);
@@ -1134,6 +1135,44 @@ VOID CALLBACK EventHook(HWINEVENTHOOK /*hWinEventHook*/, DWORD dwEvent,
       viewsState = 0;
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Win event hook install / uninstall
+// ---------------------------------------------------------------------------
+// Register only the specific events EventHook() actually consumes. Registering
+// the full EVENT_MIN..EVENT_MAX range would invoke the callback for every
+// accessibility event system-wide — most notably EVENT_OBJECT_LOCATIONCHANGE,
+// which fires on every mouse move/caret blink — adding needless overhead to the
+// whole OS input pipeline. MOVESIZESTART/MOVESIZEEND are contiguous so they
+// share one range; NAMECHANGE uses a single-event range to exclude the adjacent
+// (and very noisy) LOCATIONCHANGE.
+void InstallEventHooks() {
+  static const struct {
+    DWORD eventMin;
+    DWORD eventMax;
+  } kRanges[] = {
+      {EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND},
+      {EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND},
+      {EVENT_OBJECT_NAMECHANGE, EVENT_OBJECT_NAMECHANGE},
+  };
+
+  if (!g_EventHooks.empty())
+    return;
+
+  for (const auto &range : kRanges) {
+    HWINEVENTHOOK hook =
+        SetWinEventHook(range.eventMin, range.eventMax, nullptr, EventHook, 0, 0,
+                        WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+    if (hook)
+      g_EventHooks.push_back(hook);
+  }
+}
+
+void UninstallEventHooks() {
+  for (HWINEVENTHOOK hook : g_EventHooks)
+    UnhookWinEvent(hook);
+  g_EventHooks.clear();
 }
 
 #endif // TABAMEWIN32_HOTKEYS

@@ -33,6 +33,7 @@ enum QuickMenuDesigns {
   serene,
   matrix,
   interface,
+  aurora,
   ;
 
   String get name {
@@ -42,6 +43,7 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.interface => "Interface",
       QuickMenuDesigns.matrix => "Matrix",
       QuickMenuDesigns.serene => "Serene",
+      QuickMenuDesigns.aurora => "Aurora",
     };
   }
 }
@@ -49,6 +51,10 @@ enum QuickMenuDesigns {
 enum LauncherDesign {
   classic,
   serene,
+  command,
+  terminal,
+  zen,
+  glass,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
@@ -362,6 +368,32 @@ class Settings {
           entryFontFamily: 'Nunito',
           entryFontWeight: 600,
           borderRadius: 10,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.aurora.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xff080706),
+          textColor: const Color(0xff241B3A),
+          accentColor: const Color(0xffC9D0D0),
+          gradientAlpha: 0,
+          uiFontFamily: 'Sora',
+          uiFontWeight: 500,
+          entryFontFamily: 'Sora',
+          entryFontWeight: 600,
+          borderRadius: 14,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0B0B14),
+          textColor: const Color(0xffEDEAFB),
+          accentColor: const Color(0xff9B83FF),
+          gradientAlpha: 78,
+          uiFontFamily: 'Sora',
+          uiFontWeight: 500,
+          entryFontFamily: 'Sora',
+          entryFontWeight: 600,
+          borderRadius: 14,
           baseFontSize: 10,
         ),
       ),

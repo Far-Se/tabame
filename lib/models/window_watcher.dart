@@ -143,10 +143,11 @@ class WindowWatcher {
   }
 
   static Future<bool> handleIcons() async {
-    if (list.length != icons.length) {
-      icons.removeWhere((int key, ExtractedIcon value) => !list.any((Window w) => w.hWnd == key));
-      iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
-    }
+    // Keep the cache scoped to currently-open windows only. Prune every cycle
+    // (not just when the counts differ) so a window closing while another opens
+    // — which leaves the counts equal — can't leave stale icon bytes behind.
+    icons.removeWhere((int key, ExtractedIcon value) => !list.any((Window w) => w.hWnd == key));
+    iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
 
     for (Window win in list) {
       //?APPX

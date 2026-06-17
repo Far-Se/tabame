@@ -28,6 +28,9 @@ import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/custom_tooltip.dart';
 import 'photo_editor.dart';
+// Reuse the screen-draw annotation engine (controller, overlay, tools). `show`
+// avoids clashing with this file's own `Settings`/`ScreenCapture` classes.
+import 'screen_draw.dart' show AnnotationController, AnnotationOverlay, DrawTool;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Isolate helpers — must be top-level so compute() can send them
@@ -1043,6 +1046,23 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   bool _captureEnabled = true;
   bool _applyingPreset = false;
   Timer? _tickerTimer;
+
+  // ── Annotation (screen-draw) overlay ────────────────────────────────────────
+  /// Lazily-created drawing engine. Non-null once the toolbox has been summoned
+  /// at least once; its committed shapes stay rendered until the window closes.
+  AnnotationController? _annot;
+
+  /// True while the floating toolbox is open and drawing gestures are active
+  /// (region selection is suspended). Toggled with the middle mouse button.
+  bool _annotateMode = false;
+
+  /// Widget-local position the toolbox is anchored to (the middle-click point).
+  Offset? _toolboxAnchor;
+
+  /// True for the brief window where capture chrome (dim, crosshair, settings)
+  /// is hidden so a live BitBlt of an annotated region sees only the frozen
+  /// background plus the drawings.
+  bool _cleanShot = false;
   // final Set<String> _pressedScreenCaptureHotkeys = <String>{};
   final Map<int, FrozenMonitorSnapshot> _frozenMonitorSnapshots = <int, FrozenMonitorSnapshot>{};
   final Map<int, ui.Image> _frozenMonitorImages = <int, ui.Image>{};
@@ -1194,6 +1214,43 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       _captureStart = null;
       _captureCurrent = null;
       _capturing = false;
+    });
+  }
+
+  // ── Annotation toolbox ──────────────────────────────────────────────────────
+
+  /// Summon (or dismiss) the screen-draw toolbox anchored at [anchor]
+  /// (widget-local coords). Drawing stays active until dismissed; any committed
+  /// shapes remain visible afterwards so they can be baked into the next shot.
+  void _toggleAnnotate(Offset anchor) {
+    setState(() {
+      if (_annotateMode) {
+        _annotateMode = false;
+        _annot?.drawingModeActive = false;
+      } else {
+        // manageWindow:false — skip the Win32 click-through/synthetic-click side
+        // effects that only make sense for the standalone screen-draw window.
+        final AnnotationController ctrl = _annot ??= (AnnotationController()..manageWindow = false);
+        ctrl.drawingModeActive = true;
+        // Default to the capture tool so the user can immediately drag a region
+        // to capture; drawing tools are one click away in the toolbox.
+        ctrl.setTool(DrawTool.screenCapture);
+        _toolboxAnchor = anchor;
+        _annotateMode = true;
+        // Cancel any in-progress region selection so the two don't fight.
+        _captureStart = null;
+        _captureCurrent = null;
+        _capturing = false;
+        _windowHighlight = null;
+      }
+    });
+  }
+
+  void _exitAnnotate() {
+    if (!_annotateMode) return;
+    setState(() {
+      _annotateMode = false;
+      _annot?.drawingModeActive = false;
     });
   }
 
@@ -1547,6 +1604,68 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     );
   }
 
+  /// Capture [screenRect] (screen coords) from the live composited screen so the
+  /// screen-draw annotations are baked into the result. Capture chrome (dim,
+  /// crosshair, settings button, toolbox) is hidden for a frame first so only
+  /// the frozen background + drawings are grabbed.
+  Future<Uint8List?> _captureAnnotatedRegionToPng(Rect screenRect) async {
+    if (mounted) setState(() => _cleanShot = true);
+    // Let the chrome-free frame paint, then settle, before grabbing pixels.
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+
+    final int w = screenRect.width.round().clamp(1, 1000000);
+    final int h = screenRect.height.round().clamp(1, 1000000);
+    final Uint8List? rgba = _captureScreenRectRgbaLive(screenRect);
+
+    if (mounted) setState(() => _cleanShot = false);
+    if (rgba == null) return null;
+    return ScreenCapture.encodeRgbaToPng(rgba, w, h);
+  }
+
+  /// Grab a screen rect (physical screen coords) via GDI into an RGBA buffer.
+  Uint8List? _captureScreenRectRgbaLive(Rect screenRect) {
+    final int x = screenRect.left.round();
+    final int y = screenRect.top.round();
+    final int w = screenRect.width.round().clamp(1, 1000000);
+    final int h = screenRect.height.round().clamp(1, 1000000);
+
+    final int screenDc = GetDC(NULL);
+    final int memDc = CreateCompatibleDC(screenDc);
+    final int bmp = CreateCompatibleBitmap(screenDc, w, h);
+    SelectObject(memDc, bmp);
+    BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY | CAPTUREBLT);
+
+    final Pointer<BITMAPINFO> bmi = calloc<BITMAPINFO>();
+    final Pointer<Uint8> bgra = calloc<Uint8>(w * h * 4);
+    try {
+      bmi.ref.bmiHeader.biSize = sizeOf<BITMAPINFOHEADER>();
+      bmi.ref.bmiHeader.biWidth = w;
+      bmi.ref.bmiHeader.biHeight = -h;
+      bmi.ref.bmiHeader.biPlanes = 1;
+      bmi.ref.bmiHeader.biBitCount = 32;
+      bmi.ref.bmiHeader.biCompression = BI_RGB;
+
+      if (GetDIBits(memDc, bmp, 0, h, bgra.cast(), bmi, DIB_RGB_COLORS) == 0) return null;
+
+      final Uint8List rgba = Uint8List(w * h * 4);
+      final Uint8List src = bgra.asTypedList(w * h * 4);
+      for (int i = 0; i < src.length; i += 4) {
+        rgba[i] = src[i + 2];
+        rgba[i + 1] = src[i + 1];
+        rgba[i + 2] = src[i];
+        rgba[i + 3] = 255;
+      }
+      return rgba;
+    } finally {
+      DeleteObject(bmp);
+      DeleteDC(memDc);
+      ReleaseDC(NULL, screenDc);
+      calloc.free(bgra);
+      calloc.free(bmi);
+    }
+  }
+
   // bool _isAnyKeyPressed(List<int> keys) => keys.any((int vk) => GetKeyState(vk) < 0);
 
   /// When Ctrl is held, constrain [current] so the selection from [start] forms
@@ -1581,6 +1700,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   @override
   void dispose() {
     _tickerTimer?.cancel();
+    _annot?.dispose();
     for (final ui.Image image in _frozenMonitorImages.values) {
       image.dispose();
     }
@@ -1613,307 +1733,361 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       return const SizedBox.expand();
     }
 
-    return KeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
-      autofocus: true,
-      onKeyEvent: (KeyEvent e) {
-        if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
-          if (!widget.freezeMode && _liveSnapshotReady) {
-            _resetLiveSnapshot();
-          } else {
-            closeMainWindow();
-          }
-        }
+    return Listener(
+      // Top-level so the middle button toggles the toolbox even when the cursor
+      // is over the toolbar itself (which would otherwise swallow the click).
+      onPointerDown: (PointerDownEvent e) {
+        if (e.buttons == kMiddleMouseButton) _toggleAnnotate(e.localPosition);
       },
-      child: Stack(
-        children: <Widget>[
-          if (showFrozenBg)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  size: size,
-                  painter: _AllMonitorsFrozenPainter(
-                    images: _frozenMonitorImages,
-                    snapshots: _frozenMonitorSnapshots,
-                    virtualOrigin: _virtualOrigin,
+      child: KeyboardListener(
+        focusNode: FocusNode()..requestFocus(),
+        autofocus: true,
+        onKeyEvent: (KeyEvent e) {
+          if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
+            if (_annotateMode) {
+              _exitAnnotate();
+            } else if (!widget.freezeMode && _liveSnapshotReady) {
+              _resetLiveSnapshot();
+            } else {
+              closeMainWindow();
+            }
+          }
+        },
+        child: Stack(
+          children: <Widget>[
+            if (showFrozenBg)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    size: size,
+                    painter: _AllMonitorsFrozenPainter(
+                      images: _frozenMonitorImages,
+                      snapshots: _frozenMonitorSnapshots,
+                      virtualOrigin: _virtualOrigin,
+                    ),
                   ),
                 ),
               ),
-            ),
-          // Dim overlay with crosshair region selector
-          Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (PointerDownEvent event) {
-                if ((event.buttons & kSecondaryMouseButton) != 0) {
-                  if (_capturing) {
-                    _resetActiveCaptureSelection();
-                  } else if (!widget.freezeMode && _liveSnapshotReady) {
-                    _resetLiveSnapshot();
-                  } else {
-                    closeMainWindow();
-                  }
-                  return;
-                }
-
-                // Record down position and snapshot the current window highlight
-                // so we can detect a click (no drag) in onPanEnd.
-                _livePointerDown = event.localPosition;
-                _livePointerCurrent = event.localPosition;
-                _clickedWindowRect = _windowHighlight;
-
-                if (!widget.freezeMode && !_liveSnapshotReady) {
-                  _livePointerHeld = true;
-                  unawaited(_captureLiveSnapshot());
-                }
-              },
-              onPointerMove: (PointerMoveEvent event) {
-                if ((event.buttons & kSecondaryMouseButton) != 0 && _capturing) {
-                  _resetActiveCaptureSelection();
-                  return;
-                }
-
-                // Track position continuously so we can replay it once the
-                // live snapshot is ready.
-                if (!widget.freezeMode && _liveSnapshotLoading) {
-                  _livePointerCurrent = event.localPosition;
-                }
-
-                // Once the snapshot is ready and capture is active, keep
-                // updating the selection rectangle from raw pointer events so
-                // there is no gap between snapshot-ready and first GestureDetector
-                // onPanUpdate.
-                if (_capturing && _captureStart != null) {
-                  setState(() => _captureCurrent = _constrainToSquare(_captureStart!, event.localPosition));
-                }
-              },
-              onPointerUp: (PointerUpEvent event) {
-                _livePointerHeld = false;
-
-                if (_capturing && _captureStart != null && _liveSnapshotReady) {
-                  final Offset s = _captureStart!;
-                  final Offset e = _constrainToSquare(s, _captureCurrent ?? s);
-                  setState(() {
-                    _captureStart = null;
-                    _captureCurrent = null;
-                    _capturing = false;
-                  });
-                  final Rect localRect = Rect.fromPoints(s, e);
-                  if (localRect.width < 4 || localRect.height < 4) {
-                    _resetLiveSnapshot();
-                    return;
-                  }
-                  unawaited(_doCaptureWithDelay(localRect));
-                }
-              },
-              child: GestureDetector(
+            // Dim overlay with crosshair region selector
+            Positioned.fill(
+              child: Listener(
                 behavior: HitTestBehavior.opaque,
-                onPanStart: (DragStartDetails d) {
-                  // In live mode before snapshot is ready, we let the Listener
-                  // handle everything; GestureDetector is bypassed.
-                  if (!widget.freezeMode && !_liveSnapshotReady) return;
-
-                  setState(() {
-                    _windowHighlight = null;
-                    _captureStart = d.localPosition;
-                    _captureCurrent = d.localPosition;
-                    _capturing = true;
-                  });
-                },
-                onPanUpdate: (DragUpdateDetails d) {
-                  if (!_capturing || _captureStart == null) return;
-                  setState(() => _captureCurrent = _constrainToSquare(_captureStart!, d.localPosition));
-                },
-                onPanEnd: (_) async {
-                  if (_captureStart == null || _captureCurrent == null) {
-                    _capturing = false;
-                    return;
-                  }
-                  final Offset s = _captureStart!;
-                  final Offset e = _constrainToSquare(s, _captureCurrent!);
-                  setState(() {
-                    _captureStart = null;
-                    _captureCurrent = null;
-                    _capturing = false;
-                  });
-                  final Rect localRect = Rect.fromPoints(s, e);
-                  if (localRect.width < 6 || localRect.height < 6) {
-                    // Treat as a click — use the window that was highlighted
-                    // at pointer-down time (snapshotted into _clickedWindowRect).
-                    final Rect? winRect = _clickedWindowRect;
-                    _clickedWindowRect = null;
-                    if (winRect != null && !winRect.isEmpty) {
-                      await _doCaptureWithDelay(winRect);
-                    } else if (!widget.freezeMode) {
+                onPointerDown: (PointerDownEvent event) {
+                  // Middle button is handled by the top-level Listener (so it works
+                  // even when the cursor is over the toolbar); ignore it here.
+                  if (event.buttons == kMiddleMouseButton) return;
+                  if (_annotateMode) return; // drawing overlay owns the pointer
+                  if ((event.buttons & kSecondaryMouseButton) != 0) {
+                    if (_capturing) {
+                      _resetActiveCaptureSelection();
+                    } else if (!widget.freezeMode && _liveSnapshotReady) {
                       _resetLiveSnapshot();
+                    } else {
+                      closeMainWindow();
                     }
                     return;
                   }
-                  _clickedWindowRect = null;
-                  await _doCaptureWithDelay(localRect);
+
+                  // Record down position and snapshot the current window highlight
+                  // so we can detect a click (no drag) in onPanEnd.
+                  _livePointerDown = event.localPosition;
+                  _livePointerCurrent = event.localPosition;
+                  _clickedWindowRect = _windowHighlight;
+
+                  if (!widget.freezeMode && !_liveSnapshotReady) {
+                    _livePointerHeld = true;
+                    unawaited(_captureLiveSnapshot());
+                  }
                 },
-                child: CustomPaint(
-                  size: size,
-                  painter: _CapturePainter(
-                    start: _captureStart,
-                    current: _captureCurrent,
-                    windowHighlight: _windowHighlight,
-                  ),
-                ),
-              ),
-            ),
-          ),
+                onPointerMove: (PointerMoveEvent event) {
+                  if (_annotateMode) return;
+                  if ((event.buttons & kSecondaryMouseButton) != 0 && _capturing) {
+                    _resetActiveCaptureSelection();
+                    return;
+                  }
 
-          // Crosshair cursor layer
-          if (!_capturing)
-            Positioned.fill(
-              child: _CrosshairCursor(
-                freezeMode: widget.freezeMode,
-                frozenSnapshots: _frozenMonitorSnapshots,
-                virtualOrigin: _virtualOrigin,
-                onWindowHighlight: (Rect? r) {
-                  if (_windowHighlight != r) setState(() => _windowHighlight = r);
+                  // Track position continuously so we can replay it once the
+                  // live snapshot is ready.
+                  if (!widget.freezeMode && _liveSnapshotLoading) {
+                    _livePointerCurrent = event.localPosition;
+                  }
+
+                  // Once the snapshot is ready and capture is active, keep
+                  // updating the selection rectangle from raw pointer events so
+                  // there is no gap between snapshot-ready and first GestureDetector
+                  // onPanUpdate.
+                  if (_capturing && _captureStart != null) {
+                    setState(() => _captureCurrent = _constrainToSquare(_captureStart!, event.localPosition));
+                  }
                 },
+                onPointerUp: (PointerUpEvent event) {
+                  if (_annotateMode) return;
+                  _livePointerHeld = false;
+
+                  if (_capturing && _captureStart != null && _liveSnapshotReady) {
+                    final Offset s = _captureStart!;
+                    final Offset e = _constrainToSquare(s, _captureCurrent ?? s);
+                    setState(() {
+                      _captureStart = null;
+                      _captureCurrent = null;
+                      _capturing = false;
+                    });
+                    final Rect localRect = Rect.fromPoints(s, e);
+                    if (localRect.width < 4 || localRect.height < 4) {
+                      _resetLiveSnapshot();
+                      return;
+                    }
+                    unawaited(_doCaptureWithDelay(localRect));
+                  }
+                },
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // Null while annotating so this recognizer leaves the gesture
+                  // arena and the drawing overlay (on top) wins pan gestures.
+                  onPanStart: _annotateMode
+                      ? null
+                      : (DragStartDetails d) {
+                          // In live mode before snapshot is ready, we let the Listener
+                          // handle everything; GestureDetector is bypassed.
+                          if (!widget.freezeMode && !_liveSnapshotReady) return;
+
+                          setState(() {
+                            _windowHighlight = null;
+                            _captureStart = d.localPosition;
+                            _captureCurrent = d.localPosition;
+                            _capturing = true;
+                          });
+                        },
+                  onPanUpdate: _annotateMode
+                      ? null
+                      : (DragUpdateDetails d) {
+                          if (!_capturing || _captureStart == null) return;
+                          setState(() => _captureCurrent = _constrainToSquare(_captureStart!, d.localPosition));
+                        },
+                  onPanEnd: _annotateMode
+                      ? null
+                      : (_) async {
+                          if (_captureStart == null || _captureCurrent == null) {
+                            _capturing = false;
+                            return;
+                          }
+                          final Offset s = _captureStart!;
+                          final Offset e = _constrainToSquare(s, _captureCurrent!);
+                          setState(() {
+                            _captureStart = null;
+                            _captureCurrent = null;
+                            _capturing = false;
+                          });
+                          final Rect localRect = Rect.fromPoints(s, e);
+                          if (localRect.width < 6 || localRect.height < 6) {
+                            // Treat as a click — use the window that was highlighted
+                            // at pointer-down time (snapshotted into _clickedWindowRect).
+                            final Rect? winRect = _clickedWindowRect;
+                            _clickedWindowRect = null;
+                            if (winRect != null && !winRect.isEmpty) {
+                              await _doCaptureWithDelay(winRect);
+                            } else if (!widget.freezeMode) {
+                              _resetLiveSnapshot();
+                            }
+                            return;
+                          }
+                          _clickedWindowRect = null;
+                          await _doCaptureWithDelay(localRect);
+                        },
+                  child: CustomPaint(
+                    size: size,
+                    painter: (_annotateMode || _cleanShot)
+                        ? null
+                        : _CapturePainter(
+                            start: _captureStart,
+                            current: _captureCurrent,
+                            windowHighlight: _windowHighlight,
+                          ),
+                  ),
+                ),
               ),
             ),
 
-          // Loading indicator while live snapshot is being captured.
-          if (!widget.freezeMode && _liveSnapshotLoading)
-            Positioned(
-              left: _currentMonitorRect.left,
-              top: _currentMonitorRect.top,
-              width: _currentMonitorRect.width,
-              height: _currentMonitorRect.height,
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.30),
-                  alignment: Alignment.center,
+            // Screen-draw annotation overlay. Read-only (drawings stay visible but
+            // the host keeps pointer control) unless the toolbox is open. Sits
+            // above the dim layer so annotations are always visible. Wrapped in a
+            // ListenableBuilder so it repaints live as the controller changes.
+            if (_annot != null)
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: _annot!,
+                  builder: (_, __) => AnnotationOverlay(
+                    controller: _annot!,
+                    currentMonitorRect: _currentMonitorRect,
+                    virtualOrigin: _virtualOrigin,
+                    embedded: true,
+                    interactive: _annotateMode && !_cleanShot,
+                    toolboxAnchor: (_annotateMode && !_cleanShot) ? _toolboxAnchor : null,
+                    onClose: _exitAnnotate,
+                    onCaptureRegion: (Rect localRect) async {
+                      // Capture from inside the toolbox: leave drawing mode so the
+                      // toolbox/crosshair are gone, then run the normal capture
+                      // pipeline. forceLive grabs the composited screen (so drawings
+                      // bake in and it works even with no live snapshot pre-taken).
+                      _exitAnnotate();
+                      await _doCaptureWithDelay(localRect, forceLive: true);
+                    },
+                  ),
+                ),
+              ),
+
+            // Crosshair cursor layer
+            if (!_capturing && !_annotateMode && !_cleanShot)
+              Positioned.fill(
+                child: _CrosshairCursor(
+                  freezeMode: widget.freezeMode,
+                  frozenSnapshots: _frozenMonitorSnapshots,
+                  virtualOrigin: _virtualOrigin,
+                  onWindowHighlight: (Rect? r) {
+                    if (_windowHighlight != r) setState(() => _windowHighlight = r);
+                  },
+                ),
+              ),
+
+            // Loading indicator while live snapshot is being captured.
+            if (!widget.freezeMode && _liveSnapshotLoading)
+              Positioned(
+                left: _currentMonitorRect.left,
+                top: _currentMonitorRect.top,
+                width: _currentMonitorRect.width,
+                height: _currentMonitorRect.height,
+                child: IgnorePointer(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10141C),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Capturing screen…',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                    color: Colors.black.withValues(alpha: 0.30),
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10141C),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Capturing screen…',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          Positioned(
-            top: _currentMonitorRect.top + 16,
-            left: _currentMonitorRect.left,
-            width: _currentMonitorRect.width,
-            child: Center(
-              child: _CaptureSettingsButton(
-                activeAction: _captureChoices().firstWhere((CaptureActionChoice c) => c.id == _captureActionId),
-                activePresetName: _selectedFancyShotPresetName,
-                onTap: () => _showCaptureSettingsModal(context),
+            if (!_annotateMode && !_cleanShot)
+              Positioned(
+                top: _currentMonitorRect.top + 16,
+                left: _currentMonitorRect.left,
+                width: _currentMonitorRect.width,
+                child: Center(
+                  child: _CaptureSettingsButton(
+                    activeAction: _captureChoices().firstWhere((CaptureActionChoice c) => c.id == _captureActionId),
+                    activePresetName: _selectedFancyShotPresetName,
+                    onTap: () => _showCaptureSettingsModal(context),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          if (_applyingPreset)
-            Positioned(
-              left: _currentMonitorRect.left,
-              top: _currentMonitorRect.top,
-              width: _currentMonitorRect.width,
-              height: _currentMonitorRect.height,
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.36),
-                  alignment: Alignment.center,
+            if (_applyingPreset)
+              Positioned(
+                left: _currentMonitorRect.left,
+                top: _currentMonitorRect.top,
+                width: _currentMonitorRect.width,
+                height: _currentMonitorRect.height,
+                child: IgnorePointer(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10141C),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white24),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.28),
-                          blurRadius: 22,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Applying preset',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                    color: Colors.black.withValues(alpha: 0.36),
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10141C),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white24),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.28),
+                            blurRadius: 22,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Applying preset',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          // Countdown overlay — shown when _captureDelaySeconds > 0 and ticking.
-          if (_countdownValue != null)
-            Positioned(
-              left: _currentMonitorRect.left,
-              top: _currentMonitorRect.top,
-              width: _currentMonitorRect.width,
-              height: _currentMonitorRect.height,
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$_countdownValue',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize + 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: <Shadow>[
-                        const Shadow(
-                          color: Colors.black,
-                          blurRadius: 24,
-                          offset: Offset(0, 4),
-                        ),
-                        const Shadow(
-                          color: Colors.black,
-                          blurRadius: 8,
-                          offset: Offset(0, 0),
-                        ),
-                      ],
+            // Countdown overlay — shown when _captureDelaySeconds > 0 and ticking.
+            if (_countdownValue != null)
+              Positioned(
+                left: _currentMonitorRect.left,
+                top: _currentMonitorRect.top,
+                width: _currentMonitorRect.width,
+                height: _currentMonitorRect.height,
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$_countdownValue',
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize + 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: <Shadow>[
+                          const Shadow(
+                            color: Colors.black,
+                            blurRadius: 24,
+                            offset: Offset(0, 4),
+                          ),
+                          const Shadow(
+                            color: Colors.black,
+                            blurRadius: 8,
+                            offset: Offset(0, 0),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _doCaptureWithDelay(Rect rect) async {
+  Future<void> _doCaptureWithDelay(Rect rect, {bool forceLive = false}) async {
     if (_captureDelaySeconds == 0) {
-      await _doCapture(rect);
+      await _doCapture(rect, forceLive: forceLive);
       return;
     }
 
@@ -1935,10 +2109,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       _captureEnabled = true;
     });
     await player.dispose();
-    await _doCapture(rect);
+    await _doCapture(rect, forceLive: forceLive);
   }
 
-  Future<void> _doCapture(Rect localRect) async {
+  Future<void> _doCapture(Rect localRect, {bool forceLive = false}) async {
     // Convert to screen coordinates
     final Pointer<POINT> clientTopLeft = calloc<POINT>();
     try {
@@ -1957,7 +2131,11 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
       Uint8List? pngBytes;
 
-      if (widget.freezeMode) {
+      if (forceLive || (_annot != null && _annot!.shapes.isNotEmpty)) {
+        // Annotated / toolbox capture: bake the drawings in by grabbing the
+        // composited screen (frozen background + annotations) live, chrome hidden.
+        pngBytes = await _captureAnnotatedRegionToPng(screenRect);
+      } else if (widget.freezeMode) {
         // Freeze mode: snapshots are already captured; no need to hide window.
         if (_frozenSnapshotWarmup != null) {
           await _frozenSnapshotWarmup;
@@ -2482,6 +2660,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
                 ],
               ),
             ),
+            _buildSectionLabel(label: 'Press Middle Mouse to open ScreenDraw toolbar', icon: Icons.draw_outlined),
             const Divider(height: 1, color: Colors.white10),
 
             _buildSectionLabel(label: 'CAPTURE ENGINE', icon: Icons.screenshot_monitor_outlined),

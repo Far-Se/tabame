@@ -860,6 +860,7 @@ class HotKeyInfo {
       final int windowHwnd = Win32.findWindow("Tabame Screen Draw");
       if (windowHwnd != 0) {
         Win32.closeWindow(windowHwnd);
+        // Win32.activateWindow(windowHwnd);
       } else {
         WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw", admin: false);
       }
