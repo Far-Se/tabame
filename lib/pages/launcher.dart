@@ -1356,7 +1356,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       user.launcherDesign = design;
       setState(() => _design = design);
       _onSearchChanged(_controller.text);
-      _requestLauncherFocus();
+      // Focus is still present right now, but the debounce (180 ms) + async
+      // result rebuild will often steal it.  Re-request after everything settles.
+      Future<void>.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _focusNode.requestFocus();
+      });
     }
 
     if (trimmed.isNotEmpty) {

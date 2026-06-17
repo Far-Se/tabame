@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
+import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
@@ -264,14 +266,14 @@ extension LauncherDesignBuilder on LauncherDesign {
         );
       case LauncherDesign.terminal:
         return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 3),
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 3),
           child: Text(
             ':: ${label.toLowerCase()} ${'─' * 24}',
             maxLines: 1,
             overflow: TextOverflow.clip,
             style: TerminalTokens.mono(
               fontSize: Design.baseFontSize - 0.5,
-              color: accent.withAlpha(150),
+              color: accent.withAlpha(100),
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
@@ -639,11 +641,11 @@ class _CommandSearchBar extends StatelessWidget {
           // Bright prompt underline — the blinking-cursor line of the console.
           Container(
             height: 1.5,
-            margin: const EdgeInsets.symmetric(horizontal: 12),
+            // margin: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(1),
               gradient: LinearGradient(
-                colors: <Color>[accent.withAlpha(180), accent.withAlpha(30)],
+                colors: <Color>[accent.withAlpha(100), accent.withAlpha(30)],
               ),
             ),
           ),
@@ -972,39 +974,52 @@ class _TerminalTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: TerminalTokens.chrome,
-        border: Border(bottom: BorderSide(color: accent.withAlpha(40))),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: accent.withAlpha(220), shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'QuickLaunch',
-            style: TerminalTokens.mono(
-              fontSize: Design.baseFontSize - 1,
-              color: TerminalTokens.dim,
-              letterSpacing: 0.3,
+    return GestureDetector(
+      onPanStart: (DragStartDetails _) {
+        windowManager.startDragging();
+      },
+      child: Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: TerminalTokens.chrome,
+          border: Border(bottom: BorderSide(color: accent.withAlpha(40))),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: accent.withAlpha(220), shape: BoxShape.circle),
             ),
-          ),
-          const Spacer(),
-          Text(
-            '─  ☐  ✕',
-            style: TerminalTokens.mono(
-              fontSize: Design.baseFontSize - 1,
-              color: TerminalTokens.dim,
-              letterSpacing: 1.5,
+            const SizedBox(width: 8),
+            Text(
+              'QuickLaunch',
+              style: TerminalTokens.mono(
+                fontSize: Design.baseFontSize - 1,
+                color: TerminalTokens.dim,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
-        ],
+            const Spacer(),
+            GestureDetector(
+              onTap: () {
+                QuickMenuFunctions.hideQuickMenu();
+              },
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Text(
+                  '─  ✕',
+                  style: TerminalTokens.mono(
+                    fontSize: Design.baseFontSize - 1,
+                    color: TerminalTokens.dim,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1403,7 +1418,7 @@ class GlassLauncherFrame extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: <Color>[
-                    Color.alphaBlend(Colors.white.withAlpha(isDark ? 26 : 92), baseFill),
+                    Color.alphaBlend(Colors.white.withAlpha(isDark ? 60 : 92), baseFill),
                     baseFill,
                     Color.alphaBlend(accent.withAlpha(isDark ? 46 : 30), baseFill),
                   ],

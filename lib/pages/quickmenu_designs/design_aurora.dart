@@ -10,18 +10,6 @@ import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
-/// Aurora — a deliberate departure from the other QuickMenu designs.
-///
-/// Where the existing designs are symmetric rounded slabs that differ only in
-/// their background fill, Aurora reinterprets the shell itself:
-///   * an asymmetric, diagonal silhouette (big radius top-left/bottom-right,
-///     tight on the other corners) so the panel reads as a leaning "ribbon";
-///   * a luminous vertical spine pinned to the left edge with a live pip,
-///     giving the menu a single directional anchor;
-///   * a two-tone aurora wash — the accent plus a hue-rotated sibling — drifting
-///     diagonally behind a soft surface;
-///   * the window switcher recessed into an "instrument screen" well so the list
-///     feels like a display set into the panel rather than free-floating rows.
 class MainMenuAuroraWidget extends StatelessWidget {
   const MainMenuAuroraWidget({super.key});
 
@@ -48,12 +36,14 @@ class MainMenuAuroraWidget extends StatelessWidget {
         .toColor();
 
     final double r = Design.borderRadius;
-    final BorderRadius shape = BorderRadius.only(
-      topLeft: Radius.circular(r + 16),
-      bottomRight: Radius.circular(r + 16),
-      topRight: Radius.circular((r * 0.3) + 3),
-      bottomLeft: Radius.circular((r * 0.3) + 3),
-    );
+    final BorderRadius shape = r == 0
+        ? const BorderRadius.all(Radius.circular(0))
+        : BorderRadius.only(
+            topLeft: Radius.circular(r + 16),
+            bottomRight: Radius.circular(r + 16),
+            topRight: Radius.circular((r * 0.3) + 3),
+            bottomLeft: Radius.circular((r * 0.3) + 3),
+          );
 
     final Color panelBase = surface.withValues(alpha: hasBackdrop ? 0.74 : (isDark ? 0.96 : 0.97));
     final Color hairline = text.withValues(alpha: 0.08);
@@ -230,8 +220,6 @@ class MainMenuAuroraWidget extends StatelessWidget {
   }
 }
 
-/// Vertical accent rail pinned to the left edge, fading top→bottom with a live
-/// pip near the top — Aurora's single directional anchor.
 class _AuroraSpine extends StatelessWidget {
   const _AuroraSpine({required this.accent, required this.intensity});
 

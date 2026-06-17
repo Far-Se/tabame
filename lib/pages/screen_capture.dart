@@ -2589,7 +2589,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
             ),
             const Divider(height: 1, color: Colors.white10),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
@@ -2697,7 +2697,8 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
 
             // Actions Section
             _buildSectionLabel(label: 'AFTER CAPTURE', icon: Icons.bolt_outlined),
-            Flexible(
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: min(widget.captureChoices.length, 5) * 40.0),
               child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -2722,7 +2723,8 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
 
             // FancyShot Section
             _buildSectionLabel(label: 'FANCYSHOT PRESET', icon: Icons.auto_awesome),
-            Flexible(
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: min(1 + widget.fancyShotPresets.length, 5) * 40.0),
               child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
