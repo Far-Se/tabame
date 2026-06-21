@@ -39,9 +39,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
 
-    env:
-      PUB_CACHE: ${{ runner.temp }}\pub-cache
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
