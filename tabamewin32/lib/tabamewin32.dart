@@ -534,6 +534,19 @@ Future<String> getTextOCR(int x, int y, int width, int height, int type) async {
   return result ?? '';
 }
 
+/// Runs Windows OCR over raw BGRA pixels (four bytes per pixel, straight alpha).
+Future<String> recognizeBgraPixels(Uint8List pixels, int width, int height) async {
+  final String? result = await tabameWin32MethodChannel.invokeMethod<String>(
+    'recognizeBgraPixels',
+    <String, dynamic>{
+      'pixels': pixels,
+      'width': width,
+      'height': height,
+    },
+  );
+  return result ?? '';
+}
+
 enum ScreenRecordingTargetType {
   region,
   monitor,
@@ -1648,6 +1661,26 @@ class WinTray {
         'clickType': clickType.index,
       },
     );
+    return result ?? false;
+  }
+}
+
+class WinSystray {
+  WinSystray._();
+
+  static Future<bool> startMonitor() async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('startSystrayMonitor');
+    return result ?? false;
+  }
+
+  static Future<List<ExtendedTrayIcon>> snapshotIcons() async {
+    final List<dynamic>? raw = await tabameWin32MethodChannel.invokeListMethod<dynamic>('snapshotSystrayMonitorIcons');
+    if (raw == null) return <ExtendedTrayIcon>[];
+    return raw.cast<Map<Object?, Object?>>().map(ExtendedTrayIcon._fromMap).toList();
+  }
+
+  static Future<bool> stopMonitor() async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('stopSystrayMonitor');
     return result ?? false;
   }
 }

@@ -1,0 +1,245 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Choose how this build is published."
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - official
+      tag_name:
+        description: "Optional release tag. Official defaults to v<pubspec version>; nightly defaults to nightly."
+        required: false
+        type: string
+      run_tests:
+        description: "Run Flutter tests before packaging."
+        required: true
+        default: false
+        type: boolean
+  push:
+    tags:
+      - "v*"
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.event_name == 'schedule' && 'nightly' || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build and publish Windows package
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    env:
+      PUB_CACHE: ${{ runner.temp }}\pub-cache
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        shell: pwsh
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        shell: pwsh
+        run: flutter pub get
+
+      - name: Run tests
+        if: ${{ inputs.run_tests == true }}
+        shell: pwsh
+        run: flutter test
+
+      - name: Build Windows app
+        shell: pwsh
+        run: flutter build windows --release
+
+      - name: Prepare package metadata
+        id: meta
+        shell: pwsh
+        run: |
+          $pubspec = Get-Content pubspec.yaml -Raw
+          if ($pubspec -notmatch '(?m)^version:\s*([^\s+]+)') {
+            throw "Could not find version in pubspec.yaml"
+          }
+
+          $appVersion = $Matches[1]
+          $shortSha = "${{ github.sha }}".Substring(0, 7)
+          $dateStamp = Get-Date -Format "yyyyMMdd"
+          $releaseType = "${{ inputs.release_type }}"
+
+          if ("${{ github.event_name }}" -eq "schedule") {
+            $releaseType = "nightly"
+          } elseif ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
+            $releaseType = "official"
+          } elseif ([string]::IsNullOrWhiteSpace($releaseType)) {
+            $releaseType = "nightly"
+          }
+
+          $tagName = "${{ inputs.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tagName)) {
+            if ($releaseType -eq "official") {
+              if ("${{ github.ref_type }}" -eq "tag") {
+                $tagName = "${{ github.ref_name }}"
+              } else {
+                $tagName = "v$appVersion"
+              }
+            } else {
+              $tagName = "nightly"
+            }
+          }
+
+          if ($releaseType -eq "official") {
+            $releaseName = "Tabame $tagName"
+            $assetName = "tabame-$tagName-windows.zip"
+            $prerelease = "false"
+            $latest = "true"
+          } else {
+            $releaseName = "Tabame Nightly"
+            $assetName = "tabame-nightly-windows.zip"
+            $prerelease = "true"
+            $latest = "false"
+          }
+
+          "app_version=$appVersion" >> $env:GITHUB_OUTPUT
+          "asset_name=$assetName" >> $env:GITHUB_OUTPUT
+          "date_stamp=$dateStamp" >> $env:GITHUB_OUTPUT
+          "latest=$latest" >> $env:GITHUB_OUTPUT
+          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+          "release_name=$releaseName" >> $env:GITHUB_OUTPUT
+          "release_type=$releaseType" >> $env:GITHUB_OUTPUT
+          "short_sha=$shortSha" >> $env:GITHUB_OUTPUT
+          "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+
+      - name: Package Windows build
+        id: package
+        shell: pwsh
+        run: |
+          $candidatePaths = @(
+            "build\windows\x64\runner\Release",
+            "build\windows\runner\Release"
+          )
+          $releaseDir = $candidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $releaseDir) {
+            throw "Could not find Flutter Windows release output."
+          }
+
+          $sqliteDll = Join-Path $releaseDir "windows\sqlite3.dll"
+          if (Test-Path $sqliteDll) {
+            Move-Item -LiteralPath $sqliteDll -Destination (Join-Path $releaseDir "sqlite3.dll") -Force
+          } else {
+            Write-Warning "sqlite3.dll was not found in $releaseDir\windows; continuing without moving it."
+          }
+
+          $distDir = "dist"
+          New-Item -ItemType Directory -Force $distDir | Out-Null
+          $zipPath = Join-Path $distDir "${{ steps.meta.outputs.asset_name }}"
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+
+          Compress-Archive -Path (Join-Path $releaseDir "*") -DestinationPath $zipPath -CompressionLevel Optimal
+          $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          $hashLine = "$hash  ${{ steps.meta.outputs.asset_name }}"
+          $hashLine | Set-Content -Path "$zipPath.sha256" -NoNewline
+
+          "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
+          "sha256_path=$zipPath.sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Move nightly tag to this commit
+        if: ${{ steps.meta.outputs.release_type == 'nightly' }}
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "${{ steps.meta.outputs.tag_name }}" "${{ github.sha }}"
+          git push origin "refs/tags/${{ steps.meta.outputs.tag_name }}" --force
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.asset_name }}
+          path: |
+            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.sha256_path }}
+          if-no-files-found: error
+
+      - name: Write release notes
+        shell: pwsh
+        run: |
+          $notes = @"
+          Windows ${{ steps.meta.outputs.release_type }} build for Tabame.
+
+          Version: ${{ steps.meta.outputs.app_version }}
+          Commit: ${{ github.sha }}
+          Build date: ${{ steps.meta.outputs.date_stamp }}
+
+          Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
+          "@
+
+          $notes | Set-Content -Path release-notes.md
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.meta.outputs.tag_name }}
+          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          LATEST: ${{ steps.meta.outputs.latest }}
+          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
+          SHA256_PATH: ${{ steps.package.outputs.sha256_path }}
+        run: |
+          $releaseExists = $true
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $releaseExists = $false
+          }
+
+          if ($releaseExists) {
+            $editArgs = @(
+              "release", "edit", $env:RELEASE_TAG,
+              "--title", $env:RELEASE_NAME,
+              "--notes-file", "release-notes.md"
+            )
+            if ($env:PRERELEASE -eq "true") {
+              $editArgs += "--prerelease"
+            }
+            if ($env:LATEST -eq "true") {
+              $editArgs += "--latest"
+            }
+            gh @editArgs
+          } else {
+            $createArgs = @(
+              "release", "create", $env:RELEASE_TAG,
+              "--target", "${{ github.sha }}",
+              "--title", $env:RELEASE_NAME,
+              "--notes-file", "release-notes.md"
+            )
+            if ($env:PRERELEASE -eq "true") {
+              $createArgs += "--prerelease"
+            }
+            if ($env:LATEST -eq "false") {
+              $createArgs += "--latest=false"
+            } else {
+              $createArgs += "--latest"
+            }
+            gh @createArgs
+          }
+
+          gh release upload $env:RELEASE_TAG $env:ZIP_PATH $env:SHA256_PATH --clobber

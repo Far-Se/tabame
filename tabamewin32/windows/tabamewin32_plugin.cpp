@@ -67,6 +67,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "system_utils.cpp"
 #include "taskbar_uia.cpp"
 #include "tray_extended.cpp"
+#include "systray_monitor.cpp"
 #include "win_hooks.cpp"
 #include "window_utils.cpp"
 #include "windows_theme.cpp"
@@ -109,6 +110,9 @@ inline double Double(const EMap &m, const char *k) {
 }
 inline std::string Str(const EMap &m, const char *k) {
   return std::get<std::string>(m.at(EVal(k)));
+}
+inline std::vector<uint8_t> Bytes(const EMap &m, const char *k) {
+  return std::get<std::vector<uint8_t>>(m.at(EVal(k)));
 }
 } // namespace Args
 
@@ -1024,6 +1028,38 @@ void ClickTrayNotifyIconH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, ClickTrayIconUia(tipName, isOverflow, clickType));
 }
 
+void StartSystrayMonitorH(Tabamewin32Plugin *, const MethodCall &,
+                          MethodResult result) {
+  OK(result, StartSystrayMonitor());
+}
+
+void SnapshotSystrayMonitorIconsH(Tabamewin32Plugin *, const MethodCall &,
+                                  MethodResult result) {
+  const auto icons = SnapshotSystrayMonitorIcons();
+  flutter::EncodableList list;
+  list.reserve(icons.size());
+  for (const auto &icon : icons) {
+    EMap m;
+    m[EVal("toolTip")] = EVal(Encoding::WideToUtf8(icon.toolTip));
+    m[EVal("processId")] = EVal(icon.processId);
+    m[EVal("hWnd")] =
+        EVal(static_cast<int>(reinterpret_cast<LONG_PTR>(icon.appHwnd)));
+    m[EVal("uID")] = EVal(static_cast<int>(icon.uID));
+    m[EVal("uCallbackMsg")] = EVal(static_cast<int>(icon.uCallbackMsg));
+    m[EVal("hIcon")] =
+        EVal(static_cast<int>(reinterpret_cast<LONG_PTR>(icon.hIcon)));
+    m[EVal("isVisible")] = EVal(icon.isVisible);
+    m[EVal("isOverflow")] = EVal(icon.isOverflow);
+    list.emplace_back(EVal(m));
+  }
+  OK(result, EVal(list));
+}
+
+void StopSystrayMonitorH(Tabamewin32Plugin *, const MethodCall &,
+                         MethodResult result) {
+  OK(result, StopSystrayMonitor());
+}
+
 void SetWindowThemeH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   auto &a = Args::Map(call);
@@ -1070,6 +1106,27 @@ void GetTextOCRH(Tabamewin32Plugin *, const MethodCall &call,
 
   std::thread([shared_result, x, y, width, height, type]() {
     const OcrResult ocr = GetTextOCR(x, y, width, height, type);
+    if (!ocr.success) {
+      shared_result->Error(ocr.errorCode, ocr.errorMessage);
+      return;
+    }
+    shared_result->Success(EVal(ocr.text));
+  }).detach();
+}
+
+void RecognizeBgraPixelsH(Tabamewin32Plugin *, const MethodCall &call,
+                          MethodResult result) {
+  auto &a = Args::Map(call);
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::vector<uint8_t> pixels = Args::Bytes(a, "pixels");
+  const int width = Args::Int(a, "width");
+  const int height = Args::Int(a, "height");
+
+  std::thread([shared_result, pixels = std::move(pixels), width, height]() {
+    const OcrResult ocr = RecognizeBgraPixels(pixels, width, height);
     if (!ocr.success) {
       shared_result->Error(ocr.errorCode, ocr.errorMessage);
       return;
@@ -1483,11 +1540,16 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       // Extended tray
       {"enumAllTrayIcons", Handlers::EnumAllTrayIconsH},
       {"clickTrayNotifyIcon", Handlers::ClickTrayNotifyIconH},
+      {"startSystrayMonitor", Handlers::StartSystrayMonitorH},
+      {"snapshotSystrayMonitorIcons",
+       Handlers::SnapshotSystrayMonitorIconsH},
+      {"stopSystrayMonitor", Handlers::StopSystrayMonitorH},
       {"setWindowTheme", Handlers::SetWindowThemeH},
       {"captureMonitor", Handlers::CaptureMonitorH},
       {"captureMonitorBitmapAlternative",
        Handlers::CaptureMonitorBitmapAlternativeH},
       {"getTextOCR", Handlers::GetTextOCRH},
+      {"recognizeBgraPixels", Handlers::RecognizeBgraPixelsH},
       {"excludeWindowFromCapture", Handlers::ExcludeWindowFromCaptureH},
       {"includeWindowFromCapture", Handlers::IncludeWindowFromCaptureH},
       {"startScreenRecording", Handlers::StartScreenRecordingH},
@@ -1590,6 +1652,7 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     Gdiplus::GdiplusShutdown(gdiplusToken);
   if (quickClickController_)
     quickClickController_->Stop();
+  StopSystrayMonitor();
   ShutdownScreenRecording();
   ShutdownTaskbarUia();
 }

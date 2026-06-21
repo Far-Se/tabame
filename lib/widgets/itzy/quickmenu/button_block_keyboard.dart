@@ -68,7 +68,7 @@ class _BlockKeyboardPanelState extends State<BlockKeyboardPanel> with QuickMenuT
     if (actionName == "StartBlockingKeyboard") {
       print("EXECUTING");
       QuickMenuFunctions.keepOpen = true;
-      await Future<void>.delayed(const Duration(milliseconds: 300), () {});
+      await Future<void>.delayed(const Duration(milliseconds: 100), () {});
       _minutesController.text = "9999";
       _secondsController.text = "00";
       _start();

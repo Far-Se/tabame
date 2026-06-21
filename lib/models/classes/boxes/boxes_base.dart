@@ -75,6 +75,7 @@ class Boxes {
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("taskManagerStats", false);
+      await pref.setBool("trayBarAlternative", false);
       await pref.setBool("libreStats", false);
       await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("quickClickEnabled", false);
@@ -144,6 +145,7 @@ class Boxes {
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? user.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? user.themeScheduleMax
       ..taskManagerStats = pref.getBool("taskManagerStats") ?? user.taskManagerStats
+      ..trayBarAlternative = pref.getBool("trayBarAlternative") ?? user.trayBarAlternative
       ..libreStats = pref.getBool("libreStats") ?? user.libreStats
       ..quickSnapOverlay = pref.getBool("quickSnapOverlay") ?? user.quickSnapOverlay
       ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? user.hideDesktopFiles

@@ -34,6 +34,7 @@ import '../../widgets/itzy/quickmenu/button_menu_design.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
 import '../../widgets/itzy/quickmenu/button_music_player.dart';
 import '../../widgets/itzy/quickmenu/button_notion.dart';
+import '../../widgets/itzy/quickmenu/button_ocr.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -210,6 +211,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "QrScannerButton": QuickAction(
     icon: Icons.qr_code_scanner_rounded,
     widget: () => const QrScannerButton(),
+  ),
+  "OcrButton": QuickAction(
+    icon: Icons.text_snippet_outlined,
+    widget: () => const OcrButton(),
   ),
   "ColorPickerButton": QuickAction(
     icon: Icons.palette_outlined,

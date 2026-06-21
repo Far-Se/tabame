@@ -26,9 +26,19 @@ class TrayBar extends StatefulWidget {
 }
 
 class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
+  // static const bool _useSystrayAlternative = true;
   late Timer mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
   bool fetching = false;
+
+  void fetchActiveTray() {
+    if (user.trayBarAlternative) {
+      fetchSystrayTray();
+    } else {
+      fetchTray();
+    }
+  }
+
   void fetchTray() async {
     fetching = true;
     await TrayWatcher.fetchTray();
@@ -38,9 +48,20 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     if (mounted) setState(() {});
   }
 
+  void fetchSystrayTray() async {
+    fetching = true;
+    final bool fetched = await SystrayWatcher.fetchTray();
+    fetching = false;
+    tray = fetched
+        ? <TrayBarInfo>[...SystrayWatcher.trayList.where((TrayBarInfo element) => element.isVisible)]
+        : <TrayBarInfo>[];
+
+    if (mounted) setState(() {});
+  }
+
   void init() {
     QuickMenuFunctions.addListener(this);
-    fetchTray();
+    fetchActiveTray();
     mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);
     Debug.add("QuickMenu: Tray");
   }
@@ -49,7 +70,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     // if (!QuickMenuFunctions.isQuickMenuVisible && kReleaseMode) return;
     if (QuickMenuFunctions.isQuickMenuVisible) {
       // PaintingBinding.instance.imageCache.clear();
-      if (!fetching) fetchTray();
+      if (!fetching) fetchActiveTray();
     }
   }
 
@@ -57,7 +78,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
     if (type != QuickMenuPage.quickMenu) return;
     if (visible) {
-      fetchTray();
+      fetchActiveTray();
     } else {}
   }
 
@@ -72,6 +93,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   void dispose() {
     PaintingBinding.instance.imageCache.clear();
     QuickMenuFunctions.removeListener(this);
+    if (user.trayBarAlternative) unawaited(SystrayWatcher.stop());
     mainTimer.cancel();
     super.dispose();
   }

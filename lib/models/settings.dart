@@ -131,6 +131,7 @@ class Settings {
   bool noopKeyListener = false;
   bool showSystemUsage = false;
   bool taskManagerStats = false;
+  bool trayBarAlternative = false;
   bool autoOpenTaskManager = false;
   bool quickClickEnabled = false;
   bool trktivityEnabled = false;

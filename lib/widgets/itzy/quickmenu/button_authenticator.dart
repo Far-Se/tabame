@@ -7,12 +7,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:win32/win32.dart';
 
 import '../../../models/classes/authenticator_entry.dart';
 import '../../../models/classes/authenticator_manager.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
+import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/modal_button.dart';
@@ -166,7 +168,9 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
 
     try {
       QuickMenuFunctions.keepOpen = true;
+      ShowWindow(Win32.hWnd, SW_HIDE);
       await WinUtils.screenCapture();
+      ShowWindow(Win32.hWnd, SW_SHOW);
 
       Timer(const Duration(milliseconds: 1000), () async {
         QuickMenuFunctions.keepOpen = false;
@@ -1211,8 +1215,7 @@ class _AuthenticatorTileState extends State<_AuthenticatorTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color:
-              _hovered ? Design.accent.withAlpha(20) : Design.accent.withAlpha(10),
+          color: _hovered ? Design.accent.withAlpha(20) : Design.accent.withAlpha(10),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _hovered ? Design.accent.withAlpha(70) : widget.onSurface.withAlpha(20),

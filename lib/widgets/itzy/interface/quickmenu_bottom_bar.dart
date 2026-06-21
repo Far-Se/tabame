@@ -394,6 +394,18 @@ class QMBottomBarState extends State<QMBottomBar> {
             );
           },
         ),
+        SwitchListTile(
+          title: const Text("Use SysTray Alternative", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          subtitle: Text("This aproach is more effective, but it can break the traybar data fetching for other Apps.",
+              style: TextStyle(fontSize: Design.baseFontSize + 2)),
+          secondary: const Icon(Icons.horizontal_distribute, size: 20),
+          value: user.trayBarAlternative,
+          onChanged: (bool newValue) async {
+            user.trayBarAlternative = newValue;
+            await Boxes.updateSettings("trayBarAlternative", user.trayBarAlternative);
+            if (mounted) setState(() {});
+          },
+        ),
         _infoMessageForTray(
             "You can long press to open .exe if normal click doesn't work. Also double click and Right click might work depends on the app"),
         const SizedBox(height: 8),

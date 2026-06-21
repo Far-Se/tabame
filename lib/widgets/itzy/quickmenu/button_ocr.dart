@@ -1,37 +1,34 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/qr_capture_decoder.dart';
+import '../../../models/util/ocr_capture_decoder.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
-class QrScannerButton extends StatelessWidget {
-  const QrScannerButton({super.key});
+class OcrButton extends StatelessWidget {
+  const OcrButton({super.key});
   @override
   Widget build(BuildContext context) {
-    return ModalButton(
-        actionName: "QR Scanner", icon: const Icon(Icons.qr_code_scanner_rounded), child: () => const QrScannerPanel());
+    return ModalButton(actionName: "OCR", icon: const Icon(Icons.text_snippet_outlined), child: () => const OcrPanel());
   }
 }
 
-class QrScannerPanel extends StatefulWidget {
-  final bool justScanned;
-  const QrScannerPanel({super.key, this.justScanned = false});
+class OcrPanel extends StatefulWidget {
+  const OcrPanel({super.key});
 
   @override
-  State<QrScannerPanel> createState() => _QrScannerPanelState();
+  State<OcrPanel> createState() => _OcrPanelState();
 }
 
-class _QrScannerPanelState extends State<QrScannerPanel> {
+class _OcrPanelState extends State<OcrPanel> {
   bool _busy = false;
   bool _copied = false;
   String? _result;
@@ -45,64 +42,53 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.justScanned) {
-      _scanQrCode(justScanned: true);
-    }
-  }
-
-  Future<void> _scanQrCode({bool justScanned = false}) async {
+  Future<void> _captureText() async {
     setState(() {
       _busy = true;
       _copied = false;
       _errorMessage = null;
-      _infoMessage = 'Capture the QR code on screen.';
+      _infoMessage = 'Capture the text on screen.';
     });
+
+    final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
 
     try {
       QuickMenuFunctions.keepOpen = true;
 
       ShowWindow(Win32.hWnd, SW_HIDE);
       await WinUtils.screenCapture();
-      ShowWindow(Win32.hWnd, SW_SHOW);
 
+      ShowWindow(Win32.hWnd, SW_SHOW);
       Timer(const Duration(milliseconds: 1000), () async {
         QuickMenuFunctions.keepOpen = false;
       });
-      //   await QuickMenuFunctions.toggleQuickMenu(visible: true);
-      //   await Future<void>.delayed(const Duration(milliseconds: 260));
-      //   QuickMenuFunctions.triggerQuickAction("QrScanner");
-      // });
 
-      final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
       final File captureFile = File(capturePath);
       if (!captureFile.existsSync()) {
         throw const FormatException('No capture image was saved.');
       }
 
-      final String? decoded = await compute<String, String?>(
-        decodeQrValueFromCapturedPng,
-        capturePath,
-      );
-
-      if (decoded == null || decoded.trim().isEmpty) {
-        throw const FormatException('No QR code could be read from the capture.');
+      final String? recognized = await recognizeTextFromCapturedPng(capturePath);
+      if (recognized == null || recognized.isEmpty) {
+        throw const FormatException('No text could be recognized from the capture.');
       }
 
       if (!mounted) return;
       setState(() {
-        _result = decoded.trim();
-        _infoMessage = 'QR code decoded.';
+        _result = recognized;
+        _infoMessage = 'Text recognized.';
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e is FormatException ? e.message : 'Unable to capture and scan the QR code.';
+        _errorMessage = e is FormatException ? e.message : 'Unable to capture and recognize text.';
         _infoMessage = null;
       });
     } finally {
+      final File captureFile = File(capturePath);
+      if (captureFile.existsSync()) {
+        captureFile.deleteSync();
+      }
       if (mounted) {
         setState(() {
           _busy = false;
@@ -135,9 +121,9 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         PanelHeader(
-          title: "QR Scanner",
-          icon: Icons.qr_code_scanner_rounded,
-          buttonPressed: _busy ? null : _scanQrCode,
+          title: "OCR",
+          icon: Icons.text_snippet_outlined,
+          buttonPressed: _busy ? null : _captureText,
           buttonIcon: Icons.screenshot_monitor_rounded,
         ),
         if (_busy) const LinearProgressIndicator(minHeight: 1.5),
@@ -160,7 +146,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         Text(
-                          "Capture a QR code from the screen and show only the decoded output.",
+                          "Capture a region of the screen and extract any text it contains.",
                           style: TextStyle(
                             fontSize: Design.baseFontSize + 2,
                             height: 1.3,
@@ -169,16 +155,16 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
-                          onPressed: _busy ? null : _scanQrCode,
+                          onPressed: _busy ? null : _captureText,
                           icon: const Icon(Icons.screenshot_monitor_rounded, size: 16),
-                          label: Text(_result == null ? "Scan QR Code" : "Scan Again"),
+                          label: Text(_result == null ? "Capture Text" : "Capture Again"),
                         ),
                       ],
                     ),
                   ),
                   if (_infoMessage != null) ...<Widget>[
                     const SizedBox(height: 10),
-                    _QrStatusStrip(
+                    _OcrStatusStrip(
                       message: _infoMessage!,
                       accent: accent,
                       background: accent.withAlpha(16),
@@ -186,7 +172,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
                   ],
                   if (_errorMessage != null) ...<Widget>[
                     const SizedBox(height: 10),
-                    _QrStatusStrip(
+                    _OcrStatusStrip(
                       message: _errorMessage!,
                       accent: Colors.redAccent,
                       background: Colors.redAccent.withAlpha(24),
@@ -214,10 +200,10 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.qr_code_2_rounded, size: 32, color: accent.withAlpha(150)),
+          Icon(Icons.text_snippet_outlined, size: 32, color: accent.withAlpha(150)),
           const SizedBox(height: 10),
           Text(
-            "No result yet",
+            "No text yet",
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -226,7 +212,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
           ),
           const SizedBox(height: 6),
           Text(
-            "Start a capture and select the QR code area on screen.",
+            "Start a capture and select the area on screen that has the text.",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: Design.baseFontSize + 1,
@@ -256,11 +242,11 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Icon(Icons.data_object_rounded, size: 16, color: accent),
+                  Icon(Icons.notes_rounded, size: 16, color: accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "Decoded Output",
+                      "Recognized Text",
                       style: TextStyle(
                         fontSize: Design.baseFontSize + 2,
                         fontWeight: FontWeight.w700,
@@ -295,8 +281,8 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
   }
 }
 
-class _QrStatusStrip extends StatelessWidget {
-  const _QrStatusStrip({
+class _OcrStatusStrip extends StatelessWidget {
+  const _OcrStatusStrip({
     required this.message,
     required this.accent,
     required this.background,

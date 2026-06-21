@@ -935,7 +935,10 @@ class HotKeyInfo {
     },
     "BlockKeyboard": () async {
       await QuickMenuFunctions.openQuickMenuWithAction("BlockKeyboard", center: true);
-      QuickMenuFunctions.triggerQuickAction("StartBlockingKeyboard");
+
+      await Future<void>.delayed(const Duration(milliseconds: 300), () {
+        QuickMenuFunctions.triggerQuickAction("StartBlockingKeyboard");
+      });
     },
     "ShowStartMenu": () {
       int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);

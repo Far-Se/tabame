@@ -17,118 +17,116 @@ int _trayIconCacheKey(ExtendedTrayIcon icon) {
   return Object.hash(icon.hWnd, icon.uID, icon.uCallbackMsg, icon.isOverflow);
 }
 
+Future<List<TrayBarInfo>> _buildTrayBarInfoList(
+  List<ExtendedTrayIcon> winTray,
+  Map<int, TrayBarInfo> trayCache, {
+  bool sort = true,
+}) async {
+  final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
+  final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
+
+  final List<TrayBarInfo> newList = <TrayBarInfo>[];
+  final Set<int> activeIconKeys = <int>{};
+  final Set<int> processIds = <int>{};
+  int taskManagerProcessId = -1;
+  for (ExtendedTrayIcon element in winTray) {
+    if (element.toolTip.contains("%")) {
+      final RegExp regex = RegExp(r'(\d+)%');
+      final List<int> result =
+          regex.allMatches(element.toolTip).map((RegExpMatch m) => int.parse(m.group(1)!)).toList();
+      if (result.length == 4) {
+        taskManagerProcessId = element.processId;
+        WindowWatcher.taskManagerStats = "CPU ${result[0]}% RAM ${result[1]}% DISK ${result[2]}% NET ${result[3]}%";
+      }
+    }
+    if (processIds.contains(element.processId)) continue;
+    processIds.add(element.processId);
+    final int hWnd = element.hWnd;
+    final int iconKey = _trayIconCacheKey(element);
+    activeIconKeys.add(iconKey);
+
+    final String processExePath = Win32.getProcessExePath(element.processId);
+    HwndInfo processPath = HwndInfo(path: processExePath, isAppx: false);
+    if (processPath.path.isEmpty && hWnd != 0) {
+      final int ancestor = GetAncestor(hWnd, 2);
+      processPath = HwndPath.getFullPath(ancestor != 0 ? ancestor : hWnd);
+    }
+    String exe = Win32.getExe(processPath.path);
+
+    // Skip background/system items that aren't real tray icons or are explorer junk
+    if (processPath.path.contains("explorer.exe") && element.toolTip.isEmpty) continue;
+
+    final TrayBarInfo? cachedTrayInfo = trayCache[iconKey];
+    final TrayBarInfo trayInfo = TrayBarInfo(
+      processPath: processPath.path,
+      processExe: exe,
+      toolTip: element.toolTip,
+      processId: element.processId,
+      hWnd: hWnd,
+      uID: element.uID,
+      uCallbackMsg: element.uCallbackMsg,
+      hIcon: element.hIcon,
+      isVisible: !hidden.contains(exe) && !processPath.path.contains("explorer.exe"),
+      isOverflow: element.isOverflow,
+    )..isPinned = pinned.contains(exe);
+
+    if (cachedTrayInfo != null) {
+      trayInfo.iconData = cachedTrayInfo.iconData;
+      // trayInfo.appxIconPath = cachedTrayInfo.appxIconPath;
+    }
+
+    // Only load/update icon if the item is visible and the icon handle changed
+    if (trayInfo.isVisible) {
+      if (__trayIconHandleCache[iconKey] != element.hIcon || trayInfo.iconData.length <= 1) {
+        try {
+          final Uint8List? icon = WinUtils.hIconToBytes(element.hIcon);
+          trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
+          __trayIconCache[iconKey] = trayInfo.iconData;
+          __trayIconHandleCache[iconKey] = element.hIcon;
+        } catch (e) {
+          // Silently fail for individual icons
+        }
+      }
+
+      // if (trayInfo.appxIconPath.isEmpty) {
+      //   trayInfo.appxIconPath = TrayWatcher._resolveAppxIconPath(processPath.path);
+      // }
+    } else {
+      // If invisible, clear heavy icon data from the object (keep it in global cache if needed later)
+      trayInfo.iconData = Uint8List.fromList(<int>[0]);
+    }
+
+    trayCache[iconKey] = trayInfo;
+    newList.add(trayInfo);
+  }
+  if (taskManagerProcessId == -1) WindowWatcher.taskManagerStats = '';
+
+  // Efficient cleanup of stale items
+  trayCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
+  __trayIconCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
+  __trayIconHandleCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
+
+  if (sort) {
+    newList.sort((TrayBarInfo a, TrayBarInfo b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isVisible && !b.isVisible) return -1;
+      if (!a.isVisible && b.isVisible) return 1;
+      return 0;
+    });
+  }
+
+  return newList;
+}
+
 class TrayWatcher {
   static List<TrayBarInfo> trayList = <TrayBarInfo>[];
   static final Map<int, TrayBarInfo> _trayCache = <int, TrayBarInfo>{};
   TrayWatcher._();
 
   static Future<bool> fetchTray({bool sort = true}) async {
-    final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
-    final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
     final List<ExtendedTrayIcon> winTray = await WinTray.enumAllIcons();
-
-    final List<TrayBarInfo> newList = <TrayBarInfo>[];
-    final Set<int> activeIconKeys = <int>{};
-    final Set<int> processIds = <int>{};
-    int taskManagerProcessId = -1;
-    for (ExtendedTrayIcon element in winTray) {
-      if (element.toolTip.contains("%")) {
-        final RegExp regex = RegExp(r'(\d+)%');
-        final List<int> result =
-            regex.allMatches(element.toolTip).map((RegExpMatch m) => int.parse(m.group(1)!)).toList();
-        if (result.length == 4) {
-          taskManagerProcessId = element.processId;
-          WindowWatcher.taskManagerStats = "CPU ${result[0]}% RAM ${result[1]}% DISK ${result[2]}% NET ${result[3]}%";
-        }
-      }
-      if (processIds.contains(element.processId)) continue;
-      processIds.add(element.processId);
-      final int hWnd = element.hWnd;
-      final int iconKey = _trayIconCacheKey(element);
-      activeIconKeys.add(iconKey);
-
-      final String processExePath = Win32.getProcessExePath(element.processId);
-      HwndInfo processPath = HwndInfo(path: processExePath, isAppx: false);
-      if (processPath.path.isEmpty && hWnd != 0) {
-        final int ancestor = GetAncestor(hWnd, 2);
-        processPath = HwndPath.getFullPath(ancestor != 0 ? ancestor : hWnd);
-      }
-      String exe = Win32.getExe(processPath.path);
-
-      // Skip background/system items that aren't real tray icons or are explorer junk
-      if (processPath.path.contains("explorer.exe") && element.toolTip.isEmpty) continue;
-
-      final TrayBarInfo? cachedTrayInfo = _trayCache[iconKey];
-      final TrayBarInfo trayInfo = TrayBarInfo(
-        processPath: processPath.path,
-        processExe: exe,
-        toolTip: element.toolTip,
-        processId: element.processId,
-        hWnd: hWnd,
-        uID: element.uID,
-        uCallbackMsg: element.uCallbackMsg,
-        hIcon: element.hIcon,
-        isVisible: !hidden.contains(exe) && !processPath.path.contains("explorer.exe"),
-        isOverflow: element.isOverflow,
-      )..isPinned = pinned.contains(exe);
-
-      if (cachedTrayInfo != null) {
-        trayInfo.iconData = cachedTrayInfo.iconData;
-        trayInfo.appxIconPath = cachedTrayInfo.appxIconPath;
-      }
-
-      // Only load/update icon if the item is visible and the icon handle changed
-      if (trayInfo.isVisible) {
-        if (__trayIconHandleCache[iconKey] != element.hIcon || trayInfo.iconData.length <= 1) {
-          try {
-            final Uint8List? icon = WinUtils.hIconToBytes(element.hIcon);
-            trayInfo.iconData = icon ?? Uint8List.fromList(<int>[0]);
-            __trayIconCache[iconKey] = trayInfo.iconData;
-            __trayIconHandleCache[iconKey] = element.hIcon;
-          } catch (e) {
-            // Silently fail for individual icons
-          }
-        }
-
-        // Packaged (Appx/UWP) apps expose a process-private HICON that often
-        // can't be rendered from our process. Worse, every shell-based icon
-        // resolver (IShellItemImageFactory / AppsFolder) returns nothing when
-        // Tabame runs elevated, because those brokers are bound to the
-        // interactive medium-integrity shell. Reading the package's manifest
-        // logo straight off disk is the only source that works in BOTH the
-        // elevated and non-elevated case, so prefer it for every packaged app
-        // (same approach as the window switcher / audio mixer). Resolved once
-        // per exe path and carried forward via the cache above.
-        if (trayInfo.appxIconPath.isEmpty) {
-          trayInfo.appxIconPath = _resolveAppxIconPath(processPath.path);
-        }
-      } else {
-        // If invisible, clear heavy icon data from the object (keep it in global cache if needed later)
-        trayInfo.iconData = Uint8List.fromList(<int>[0]);
-      }
-
-      _trayCache[iconKey] = trayInfo;
-      newList.add(trayInfo);
-    }
-    if (taskManagerProcessId == -1) WindowWatcher.taskManagerStats = '';
-
-    // Efficient cleanup of stale items
-    _trayCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
-    __trayIconCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
-    __trayIconHandleCache.removeWhere((int key, _) => !activeIconKeys.contains(key));
-
-    trayList = newList;
-
-    if (sort) {
-      trayList.sort((TrayBarInfo a, TrayBarInfo b) {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        if (a.isVisible && !b.isVisible) return -1;
-        if (!a.isVisible && b.isVisible) return 1;
-        return 0;
-      });
-    }
-
+    trayList = await _buildTrayBarInfoList(winTray, _trayCache, sort: sort);
     return true;
   }
 
@@ -138,6 +136,7 @@ class TrayWatcher {
   /// (including the empty "not found" result) are cached per exe path so the
   /// manifest is parsed at most once, not on every 600ms refresh tick.
   static final Map<String, String> _appxIconByExe = <String, String>{};
+  // ignore: unused_element
   static String _resolveAppxIconPath(String exePath) {
     if (exePath.isEmpty || !exePath.toLowerCase().contains("windowsapps")) return "";
 
@@ -177,6 +176,32 @@ class TrayWatcher {
     final int nextSlash = normalized.indexOf('\\', afterMarker);
     if (nextSlash == -1) return normalized;
     return normalized.substring(0, nextSlash);
+  }
+}
+
+class SystrayWatcher {
+  static List<TrayBarInfo> trayList = <TrayBarInfo>[];
+  static final Map<int, TrayBarInfo> _trayCache = <int, TrayBarInfo>{};
+  static bool _monitorStarted = false;
+  SystrayWatcher._();
+
+  static Future<bool> fetchTray({bool sort = true}) async {
+    if (!_monitorStarted) {
+      _monitorStarted = await WinSystray.startMonitor();
+      if (!_monitorStarted) return false;
+    }
+
+    final List<ExtendedTrayIcon> winTray = await WinSystray.snapshotIcons();
+    trayList = await _buildTrayBarInfoList(winTray, _trayCache, sort: sort);
+    return true;
+  }
+
+  static Future<void> stop() async {
+    if (!_monitorStarted) return;
+    await WinSystray.stopMonitor();
+    _monitorStarted = false;
+    trayList = <TrayBarInfo>[];
+    _trayCache.clear();
   }
 }
 
