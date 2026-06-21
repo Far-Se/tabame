@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
@@ -470,16 +471,17 @@ class _TaskBarItemState extends State<TaskBarItem> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         child: Row(
           children: <Widget>[
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: highlighted ? 2.5 : 0,
-              height: 18,
-              margin: EdgeInsets.only(right: highlighted ? 7 : 0),
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(2),
+            if (user.taskbarHoverSlide)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: highlighted ? 2.5 : 0,
+                height: 18,
+                margin: EdgeInsets.only(right: highlighted ? 7 : 0),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
             SizedBox(
               width: 25,
               height: 24,
@@ -832,8 +834,14 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
   late PageController _pageController;
   int _currentPage = 0;
 
-  final StreamController<List<MediaSession>> _mediaSessionController = StreamController<List<MediaSession>>.broadcast();
   List<MediaSession> _lastMediaSessions = <MediaSession>[];
+
+  // Perceptual (average) hash of each session's last-seen thumbnail, keyed by
+  // session id. SMTC re-encodes the artwork stream on every read, so raw bytes
+  // differ each fetch — we compare downscaled pixels instead to detect a real
+  // visual change (e.g. browser swaps its generic icon for the album art).
+  final Map<String, int?> _lastThumbHash = <String, int?>{};
+  static const int _kThumbHashThreshold = 6; // Hamming distance (out of 64).
 
   List<Widget> _buildPages(MusicItem? musicItem, List<MediaSession> sessions) {
     final List<Widget> pages = <Widget>[];
@@ -853,64 +861,115 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    timer = Timer.periodic(kTimerInterval, (_) => _pollMediaSession());
+    timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
   }
 
   @override
   void dispose() {
-    _mediaSessionController.close();
     _pageController.dispose();
     timer?.cancel();
     super.dispose();
   }
 
+  void _emitSessions(List<MediaSession> sessions) {
+    if (!mounted) return;
+    setState(() => _lastMediaSessions = sessions);
+  }
+
   void _pollMediaSession({bool forced = false}) async {
-    if (_mediaSessionController.isClosed) {
-      return;
-    }
     if (!QuickMenuFunctions.isQuickMenuVisible) return;
     try {
       final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
       final List<MediaSession> sessions = result.sessions.where((MediaSession s) => s.title.isNotEmpty).toList();
+
+      // Perceptual hash of each thumbnail this fetch (null when no artwork).
+      final Map<String, int?> newHashes = <String, int?>{
+        for (final MediaSession s in sessions) s.id: _thumbnailHash(s.thumbnail),
+      };
+
       // Emit only when something meaningful changed to avoid rebuilds.
       bool changed = sessions.length != _lastMediaSessions.length;
       if (!changed) {
         for (int i = 0; i < sessions.length; i++) {
           final MediaSession n = sessions[i];
           final MediaSession o = _lastMediaSessions[i];
-          // print(n);
-          // print(o);
           if (n.id != o.id || n.playbackStatus != o.playbackStatus || n.title != o.title || n.artist != o.artist) {
             changed = true;
-            Future<void>.delayed(const Duration(seconds: 5), () {
-              _lastMediaSessions = sessions;
-              if (!_mediaSessionController.isClosed) {
-                _mediaSessionController.add(sessions);
-              }
-            });
             break;
           }
-          if (n.thumbnail != null && o.thumbnail != null && n.thumbnail.hashCode != o.thumbnail.hashCode) {
+          // Same track — detect a real (visual) artwork swap via perceptual hash.
+          if (_thumbnailChanged(_lastThumbHash[o.id], newHashes[n.id])) {
+            changed = true;
             break;
           }
         }
       }
 
+      _lastThumbHash
+        ..clear()
+        ..addAll(newHashes);
+
       if (changed || forced) {
-        _lastMediaSessions = sessions;
-        if (!_mediaSessionController.isClosed) {
-          _mediaSessionController.add(sessions);
-        }
+        _emitSessions(sessions);
       }
     } catch (_) {
       // SMTC unavailable — emit empty list so the UI hides the carousel.
+      _lastThumbHash.clear();
       if (_lastMediaSessions.isNotEmpty) {
-        _lastMediaSessions = <MediaSession>[];
-        if (!_mediaSessionController.isClosed) {
-          _mediaSessionController.add(<MediaSession>[]);
-        }
+        _emitSessions(<MediaSession>[]);
       }
     }
+  }
+
+  /// True when the artwork visibly changed: appeared, disappeared, or its
+  /// perceptual hash drifted beyond [_kThumbHashThreshold] bits.
+  bool _thumbnailChanged(int? oldHash, int? newHash) {
+    if (oldHash == null && newHash == null) return false;
+    if (oldHash == null || newHash == null) return true;
+    return _popcount(oldHash ^ newHash) > _kThumbHashThreshold;
+  }
+
+  /// 64-bit average hash (aHash): downscale to 8x8 grayscale, then set each bit
+  /// to whether that pixel is >= the mean luminance. Robust to re-encoding, so
+  /// the same picture yields the same hash even when the raw bytes differ.
+  int? _thumbnailHash(Uint8List? bytes) {
+    if (bytes == null || bytes.isEmpty) return null;
+    try {
+      final img.Image? decoded = img.decodeImage(bytes);
+      if (decoded == null) return null;
+      final img.Image gray = img.grayscale(
+        img.copyResize(decoded, width: 8, height: 8, interpolation: img.Interpolation.average),
+      );
+
+      final List<int> lums = <int>[];
+      int total = 0;
+      for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+          final int l = gray.getPixel(x, y).r.toInt(); // grayscale: r == g == b
+          lums.add(l);
+          total += l;
+        }
+      }
+
+      final double avg = total / 64.0;
+      int hash = 0;
+      for (int i = 0; i < 64; i++) {
+        if (lums[i] >= avg) hash |= 1 << i;
+      }
+      return hash;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Number of set bits (Hamming weight) — unsigned shift handles bit 63.
+  int _popcount(int x) {
+    int count = 0;
+    while (x != 0) {
+      count += x & 1;
+      x = x >>> 1;
+    }
+    return count;
   }
 
   void _goTo(int index) {
@@ -979,22 +1038,14 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<MediaSession>>(
-      stream: _mediaSessionController.stream,
-      initialData: _lastMediaSessions,
-      builder: (BuildContext context, AsyncSnapshot<List<MediaSession>> mediaSnapshot) {
-        final List<MediaSession> smtcSessions = mediaSnapshot.data ?? <MediaSession>[];
+    return StreamBuilder<SequenceState?>(
+      stream: MusicServerManager.player.sequenceStateStream,
+      builder: (BuildContext context, AsyncSnapshot<SequenceState?> seqSnapshot) {
+        final SequenceState? sequenceState = seqSnapshot.data;
+        final MusicItem? musicItem =
+            sequenceState?.currentSource?.tag is MusicItem ? sequenceState!.currentSource!.tag as MusicItem : null;
 
-        return StreamBuilder<SequenceState?>(
-          stream: MusicServerManager.player.sequenceStateStream,
-          builder: (BuildContext context, AsyncSnapshot<SequenceState?> seqSnapshot) {
-            final SequenceState? sequenceState = seqSnapshot.data;
-            final MusicItem? musicItem =
-                sequenceState?.currentSource?.tag is MusicItem ? sequenceState!.currentSource!.tag as MusicItem : null;
-
-            return _buildCarousel(_buildPages(musicItem, smtcSessions));
-          },
-        );
+        return _buildCarousel(_buildPages(musicItem, _lastMediaSessions));
       },
     );
   }

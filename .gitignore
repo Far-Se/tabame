@@ -41,6 +41,7 @@ website_old/
 desktop.ini
 test.plugins
 .vscode
+yasb
 # Web related
 lib/generated_plugin_registrant.dart
 

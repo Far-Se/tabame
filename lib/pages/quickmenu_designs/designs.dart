@@ -10,6 +10,7 @@ import 'design_interface.dart';
 import 'design_matrix.dart';
 import 'design_modern.dart';
 import 'design_serene.dart';
+import 'design_terminal.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -77,6 +78,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.matrix => MainMenuMatrixWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.serene => MainMenuSereneWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.aurora => MainMenuAuroraWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.terminal => MainMenuTerminalWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

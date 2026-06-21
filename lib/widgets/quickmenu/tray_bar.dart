@@ -79,113 +79,155 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     if (tray.isEmpty || !user.showTrayBar) return Container();
-    return ShaderMask(
-      shaderCallback: (Rect rect) {
-        return const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-          stops: <double>[0.0, 0.93, 1.0],
-        ).createShader(rect);
-      },
-      blendMode: BlendMode.dstOut,
-      child: WindowsScrollView(
-        scrollDirection: Axis.horizontal,
-        showScrollbar: false,
-        child: Row(
-          children: <Widget>[
-            for (final TrayBarInfo info in tray)
-              GestureDetector(
-                onSecondaryTap: () async {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  // WinTray.click(info, clickType: TrayClickType.right);
-                  // final List<TrayInfo> icons = await enumTrayIcons();
-                  // final TrayInfo? thisTray = icons.firstWhereOrNull((TrayInfo e) => e.processID == info.processID);
-                  // int hWnd = info.hWnd;
-                  // if (thisTray != null) {
-                  //   // hWnd = thisTray.hWnd;
-                  //   print(<int>{info.uCallbackMessage, thisTray.uCallbackMessage});
-                  //   print(<int>{info.uID, thisTray.uID});
-                  // }
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                },
-                onLongPress: () {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
-                },
-                onSecondaryLongPress: () async {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinTray.click(info, clickType: TrayClickType.right);
-                },
-                onTertiaryTapUp: (TapUpDetails e) {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinTray.click(info, clickType: TrayClickType.middle);
-                },
-                child: InkWell(
-                  onTap: () async {
+    Theme.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: ShaderMask(
+        shaderCallback: (Rect rect) {
+          return const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+            stops: <double>[0.0, 0.93, 1.0],
+          ).createShader(rect);
+        },
+        blendMode: BlendMode.dstOut,
+        child: WindowsScrollView(
+          scrollDirection: Axis.horizontal,
+          showScrollbar: false,
+          child: Row(
+            children: <Widget>[
+              for (final TrayBarInfo info in tray)
+                GestureDetector(
+                  onSecondaryTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    sendClick(info, TrayClickType.left);
+                    sendTrayClick(info, TrayClickType.right);
                   },
-                  onDoubleTap: () async {
+                  onLongPress: () {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                    child: CustomTooltip(
-                        message: info.processExe,
-                        child: Boxes.getIconRewrite(info.processPath) != ""
-                            ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
-                            // Appx apps whose tray HICON couldn't be rendered fall back to the
-                            // package manifest logo resolved in TrayWatcher.fetchTray.
-                            : info.iconData.length <= 1 && info.appxIconPath != ""
-                                ? Image.file(
-                                    File(info.appxIconPath),
-                                    fit: BoxFit.scaleDown,
-                                    gaplessPlayback: true,
-                                    width: 16.1,
-                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                        const Icon(Icons.check_box_outline_blank, size: 16),
-                                  )
-                                : Image.memory(
-                                    info.iconData,
-                                    fit: BoxFit.scaleDown,
-                                    gaplessPlayback: true,
-                                    width: 16.1,
-                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                        const Icon(
-                                      Icons.check_box_outline_blank,
-                                      size: 16,
-                                    ),
-                                  )),
+                  onSecondaryLongPress: () async {
+                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                    WinTray.click(info, clickType: TrayClickType.right);
+                  },
+                  onTertiaryTapUp: (TapUpDetails e) {
+                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                    WinTray.click(info, clickType: TrayClickType.middle);
+                  },
+                  child: InkWell(
+                    hoverColor: Design.text.withAlpha(30),
+                    borderRadius: BorderRadius.circular(3),
+                    onTap: () async {
+                      if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                      sendTrayClick(info, TrayClickType.left);
+                    },
+                    onDoubleTap: () async {
+                      if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                      sendTrayClick(info, TrayClickType.doubleClick);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                      child: CustomTooltip(
+                          message: info.processExe,
+                          child: Boxes.getIconRewrite(info.processPath) != ""
+                              ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
+                              // Packaged (Appx/UWP) apps: prefer the manifest logo resolved in
+                              // TrayWatcher.fetchTray. It's the only icon source that survives
+                              // running Tabame elevated (shell/HICON paths don't).
+                              : info.appxIconPath != ""
+                                  ? Image.file(
+                                      File(info.appxIconPath),
+                                      fit: BoxFit.scaleDown,
+                                      gaplessPlayback: true,
+                                      width: 16.1,
+                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                          const Icon(Icons.check_box_outline_blank, size: 16),
+                                    )
+                                  : Image.memory(
+                                      info.iconData,
+                                      fit: BoxFit.scaleDown,
+                                      gaplessPlayback: true,
+                                      width: 16.1,
+                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                          const Icon(
+                                        Icons.check_box_outline_blank,
+                                        size: 16,
+                                      ),
+                                    )),
+                    ),
                   ),
                 ),
-              ),
-            const SizedBox(width: 5.1),
-          ],
+              const SizedBox(width: 5.1),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-void sendClick(ExtendedTrayIcon element, TrayClickType clickType) async {
+// Modern shell notification codes — not reliably exported by package:win32, so
+// pinned to their documented literal values.
+const int _kNinSelect = 0x0400; // WM_USER + 0  (V3+ left-click "select")
+const int _kNinContextMenu = 0x007B; // == WM_CONTEXTMENU (V3+ right-click)
+
+/// Packs two 16-bit values into a 32-bit MAKELPARAM/MAKEWPARAM word.
+int _packCoord(int low, int high) => (low & 0xFFFF) | ((high & 0xFFFF) << 16);
+
+/// Delivers a tray-icon mouse interaction the way Explorer itself does, so it
+/// works across both legacy (`NOTIFYICON_VERSION` ≤ 3) and modern
+/// (`NOTIFYICON_VERSION_4`) apps.
+///
+/// We read icons straight off the tray toolbar and therefore don't know each
+/// icon's registered version, so:
+///   1. We grant the owning process foreground rights first — otherwise
+///      Windows' foreground lock silently swallows the context menu / window
+///      the app tries to show (this is the main reason right-clicks were a
+///      "hit or miss" with raw PostMessage).
+///   2. We send BOTH the legacy and the V4 wParam/lParam layouts. Each app only
+///      recognizes the layout matching its own version and ignores the other,
+///      so there's no double-trigger.
+///   3. After button-up we send `NIN_SELECT` / `NIN_CONTEXTMENU`, which V3+ apps
+///      act on instead of the raw `WM_*BUTTONUP`.
+///
+/// Mirrors yasb/systray's `IconWidget.send_action` (systray_widget.py).
+void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
+  if (info.hWnd == 0 || info.uCallbackMsg == 0) return;
+
   final Pointer<POINT> point = calloc<POINT>();
   GetCursorPos(point);
-  final int x = point.ref.x;
-  final int y = point.ref.y;
+  final int cx = point.ref.x;
+  final int cy = point.ref.y;
   free(point);
-  WinTray.click(element, clickType: TrayClickType.left);
-  // interval 10ms move mosue back to pos
-  await Future<void>.delayed(const Duration(milliseconds: 400));
-  SetCursorPos(x, y);
+
+  // Lift the foreground lock for the owning process so its menu can appear.
+  if (info.processId != 0) AllowSetForegroundWindow(info.processId);
+
+  void deliver(int message) {
+    // Legacy layout: wParam = uID, lParam = message.
+    SendNotifyMessage(info.hWnd, info.uCallbackMsg, info.uID, _packCoord(message, 0));
+    // V4 layout: wParam = cursor (x, y), lParam = (message, uID).
+    SendNotifyMessage(info.hWnd, info.uCallbackMsg, _packCoord(cx, cy), _packCoord(message, info.uID));
+  }
+
+  switch (clickType) {
+    case TrayClickType.left:
+      deliver(WM_LBUTTONDOWN);
+      deliver(WM_LBUTTONUP);
+      deliver(_kNinSelect);
+      break;
+    case TrayClickType.right:
+      deliver(WM_RBUTTONDOWN);
+      deliver(WM_RBUTTONUP);
+      deliver(_kNinContextMenu);
+      break;
+    case TrayClickType.middle:
+      deliver(WM_MBUTTONDOWN);
+      deliver(WM_MBUTTONUP);
+      break;
+    case TrayClickType.doubleClick:
+      deliver(WM_LBUTTONDBLCLK);
+      break;
+  }
 }

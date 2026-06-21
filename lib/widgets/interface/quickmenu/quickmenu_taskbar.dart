@@ -181,6 +181,18 @@ class _QMTaskbarState extends State<QMTaskbar> {
           ),
           const Divider(height: 1),
           _buildToggleTile(
+            title: "Hover Slide Indicator",
+            subtitle: "Slide item left and show accent bar on hover; off = color highlight only",
+            value: user.taskbarHoverSlide,
+            onChanged: (bool v) async {
+              user.taskbarHoverSlide = v;
+              await Boxes.updateSettings("taskbarHoverSlide", user.taskbarHoverSlide);
+              if (!mounted) return;
+              setState(() {});
+            },
+          ),
+          const Divider(height: 1),
+          _buildToggleTile(
             title: "Quick Actions at the bottom",
             subtitle: "Put Quick Action on the bottom, between pinned and tray",
             value: user.quickActionsAtBottom,

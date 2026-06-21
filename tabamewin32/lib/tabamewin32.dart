@@ -1275,6 +1275,7 @@ class NativeHooks {
       ClipboardHooks._dispatchClipboardUpdate();
     }
     if (call.method == 'onDisplayChange') {
+      // ignore: always_specify_types
       final Map<dynamic, dynamic> args = call.arguments as Map;
       final int width = args['width'] as int;
       final int height = args['height'] as int;

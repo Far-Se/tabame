@@ -780,8 +780,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                   style: FilledButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle:
-                        TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -837,8 +836,7 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     Expanded(
                       child: TextField(
                         controller: _customOutputController,
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w600),
                         decoration: _formatInputDecoration(
                           hint: "Build your format template here...",
                           icon: Icons.code_rounded,
@@ -2222,9 +2220,9 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
   void _setFromHsl(double h, double s, double l) {
     final Color c = HSLColor.fromAHSL(1, h.clamp(0, 360), s.clamp(0, 1), l.clamp(0, 1)).toColor();
     setState(() {
-      _r = c.red.toDouble();
-      _g = c.green.toDouble();
-      _b = c.blue.toDouble();
+      _r = c.red8bit.toDouble();
+      _g = c.green8bit.toDouble();
+      _b = c.blue8bit.toDouble();
     });
   }
 
@@ -2276,16 +2274,16 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
   }
 
   void _setFromOklch(double L, double C, double H) {
-    final double Lc = L.clamp(0.0, 1.0);
-    final double Cc = C.clamp(0.0, 0.4);
+    final double lCc = L.clamp(0.0, 1.0);
+    final double cCc = C.clamp(0.0, 0.4);
     final double rad = H * math.pi / 180;
-    final double a = Cc * math.cos(rad);
-    final double b = Cc * math.sin(rad);
+    final double a = cCc * math.cos(rad);
+    final double b = cCc * math.sin(rad);
 
     // Oklab -> LMS
-    final double lp = Lc + 0.3963377774 * a + 0.2158037573 * b;
-    final double mp = Lc - 0.1055613458 * a - 0.0638541728 * b;
-    final double sp = Lc - 0.0894841775 * a - 1.2914855480 * b;
+    final double lp = lCc + 0.3963377774 * a + 0.2158037573 * b;
+    final double mp = lCc - 0.1055613458 * a - 0.0638541728 * b;
+    final double sp = lCc - 0.0894841775 * a - 1.2914855480 * b;
 
     final double lms = lp * lp * lp;
     final double mms = mp * mp * mp;
@@ -2343,8 +2341,7 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     visualDensity: VisualDensity.compact,
-                    textStyle:
-                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -2369,8 +2366,7 @@ class _ColorEditorViewState extends State<_ColorEditorView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                     visualDensity: VisualDensity.compact,
-                    textStyle:
-                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
+                    textStyle: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

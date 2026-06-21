@@ -1387,7 +1387,10 @@ class AuthenticatorLogoStore {
   final Map<String, Future<Uint8List?>> _inFlight = <String, Future<Uint8List?>>{};
 
   Future<Uint8List?> getLogo(AuthenticatorEntry entry) async {
-    final String query = _queryForEntry(entry);
+    return getLogoForQuery(_queryForEntry(entry));
+  }
+
+  Future<Uint8List?> getLogoForQuery(String query) async {
     if (query.isEmpty) return null;
 
     final Future<Uint8List?>? current = _inFlight[query];

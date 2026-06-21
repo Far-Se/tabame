@@ -26,9 +26,8 @@ class PinnedAndTrayList extends StatelessWidget {
       height: height,
       width: double.infinity,
       child: Padding(
-        padding: !user.expandedTaskbar
-            ? const EdgeInsets.fromLTRB(7, 3, 3, 3)
-            : const EdgeInsets.symmetric(horizontal: 10),
+        padding:
+            !user.expandedTaskbar ? const EdgeInsets.fromLTRB(7, 3, 3, 3) : const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,

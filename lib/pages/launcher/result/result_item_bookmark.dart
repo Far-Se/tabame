@@ -103,7 +103,14 @@ class BookmarkSearchListItem extends StatelessWidget {
   Widget _buildIcon(BookmarkSearchResult result, Color accent) {
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
-        return BookmarkIcon(mark: result.bookmark!, size: 16);
+        if (!result.bookmark!.preferInputIcon) {
+          final String emoji = result.bookmark!.emoji.isNotEmpty ? result.bookmark!.emoji : "❖";
+          return Transform.translate(
+              offset: const Offset(-2, -6), child: Text(emoji, style: const TextStyle(fontSize: 14)));
+        } else {
+          return BookmarkIcon(mark: result.bookmark!, size: 16);
+        }
+      // return icon;
       case BookmarkResultKind.cliBook:
         return Icon(Icons.terminal_rounded, size: 16, color: accent.withAlpha(200));
       case BookmarkResultKind.appItem:

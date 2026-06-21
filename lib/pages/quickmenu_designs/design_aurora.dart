@@ -39,8 +39,8 @@ class MainMenuAuroraWidget extends StatelessWidget {
     final BorderRadius shape = r == 0
         ? const BorderRadius.all(Radius.circular(0))
         : BorderRadius.only(
-            topLeft: Radius.circular(r + 16),
-            bottomRight: Radius.circular(r + 16),
+            topLeft: Radius.circular(r),
+            bottomRight: Radius.circular(r),
             topRight: Radius.circular((r * 0.3) + 3),
             bottomLeft: Radius.circular((r * 0.3) + 3),
           );
@@ -202,8 +202,8 @@ class MainMenuAuroraWidget extends StatelessWidget {
                       ),
 
                       if (!user.bottomBarOnTop) const PinnedAndTrayList(),
-                      if (user.taskManagerStats) const TaskbarStats(),
-                      if (user.libreStats) const LibreStats(),
+                      if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
+                      if (user.libreStats) const LibreStats(withTopDivider: false),
                       Container(
                         padding: const EdgeInsets.fromLTRB(0, 4, 4, 7),
                         child: const BottomBar(),

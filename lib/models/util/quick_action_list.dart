@@ -37,6 +37,7 @@ import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
 import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
@@ -295,7 +296,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.power_settings_new_rounded,
     widget: () => const ShutDownButton(),
   ),
-  "CloseOnFocusLossButton (Ctrl+H)": QuickAction(
+  "CloseOnFocusLossButton(Ctrl+H )": QuickAction(
     icon: Icons.visibility,
     widget: () => const CloseOnFocusLossButton(),
   ),
@@ -314,5 +315,9 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "WorkspacesButton": QuickAction(
     icon: Icons.dashboard_customize_outlined,
     widget: () => const WorkspacesButton(),
+  ),
+  "QuickMenuSettingsButton": QuickAction(
+    icon: Icons.tune_rounded,
+    widget: () => const QuickMenuSettingsButton(),
   ),
 };

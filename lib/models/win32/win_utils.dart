@@ -1991,7 +1991,7 @@ class ClipboardExtension {
     for (int attempt = 0; attempt < 5 && opened == 0; attempt++) {
       opened = OpenClipboard(NULL);
       if (opened == 0) {
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
       }
     }
     if (opened == 0) {

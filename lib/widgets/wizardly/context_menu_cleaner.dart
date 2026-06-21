@@ -31,6 +31,7 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
   void initState() {
     super.initState();
     isAdmin = WinUtils.isAdministrator();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scan());
   }
 
   Future<void> _scan() async {
@@ -319,7 +320,10 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
     final bool isSelected = target == type;
     final Color accent = Design.accent;
     return InkWell(
-      onTap: () => setState(() => target = type),
+      onTap: () {
+        setState(() => target = type);
+        _scan();
+      },
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

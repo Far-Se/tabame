@@ -8,8 +8,11 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
 // import '../../../models/win32/win32.dart';
+import '../../../models/settings.dart';
+import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class TestingButton extends StatefulWidget {
@@ -29,6 +32,13 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
+        if (kReleaseMode || true) {
+          showQuickMenuModal(
+            context: context,
+            child: const TestingChild(),
+          );
+          return;
+        }
         final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
 
         print('Current: ${result.currentSession?.title}');
@@ -100,6 +110,34 @@ class _TestingButtonState extends State<TestingButton> {
         // await Future<void>.delayed(const Duration(milliseconds: 400));
         // SetCursorPos(x, y);
       },
+    );
+  }
+}
+
+class TestingChild extends StatelessWidget {
+  const TestingChild({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: M.start,
+      crossAxisAlignment: C.start,
+      children: <Widget>[
+        const PanelHeader(icon: Icons.science, title: "Debug"),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+          child: Column(
+            mainAxisAlignment: M.start,
+            crossAxisAlignment: C.start,
+            children: <Widget>[
+              Text('user.runAsAdministrator : ${user.runAsAdministrator}'),
+              Text('WinUtils.isAdministrator : ${WinUtils.isAdministrator()}'),
+              Text('user.args.contains -tryadmin: ${user.args.join(' ').contains('-tryadmin')}'),
+              Text('user.args: ${user.args.join(' ')}'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

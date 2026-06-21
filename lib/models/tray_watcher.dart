@@ -90,12 +90,16 @@ class TrayWatcher {
           }
         }
 
-        // Appx/UWP apps usually expose a process-private HICON that can't be
-        // rendered from our process (hIconToBytes returns the 1-byte
-        // placeholder). Fall back to the package's manifest logo, the same way
-        // the window switcher and audio mixer resolve Appx icons. Resolved once
-        // and then carried forward via the cache above.
-        if (trayInfo.iconData.length <= 1 && trayInfo.appxIconPath.isEmpty) {
+        // Packaged (Appx/UWP) apps expose a process-private HICON that often
+        // can't be rendered from our process. Worse, every shell-based icon
+        // resolver (IShellItemImageFactory / AppsFolder) returns nothing when
+        // Tabame runs elevated, because those brokers are bound to the
+        // interactive medium-integrity shell. Reading the package's manifest
+        // logo straight off disk is the only source that works in BOTH the
+        // elevated and non-elevated case, so prefer it for every packaged app
+        // (same approach as the window switcher / audio mixer). Resolved once
+        // per exe path and carried forward via the cache above.
+        if (trayInfo.appxIconPath.isEmpty) {
           trayInfo.appxIconPath = _resolveAppxIconPath(processPath.path);
         }
       } else {
@@ -130,24 +134,36 @@ class TrayWatcher {
 
   /// Resolves the on-disk manifest logo for an Appx/UWP app given its process
   /// exe path (which, for packaged apps, lives under `...\WindowsApps\...`).
-  /// Returns "" for non-packaged apps or when no logo could be found.
+  /// Returns "" for non-packaged apps or when no logo could be found. Results
+  /// (including the empty "not found" result) are cached per exe path so the
+  /// manifest is parsed at most once, not on every 600ms refresh tick.
+  static final Map<String, String> _appxIconByExe = <String, String>{};
   static String _resolveAppxIconPath(String exePath) {
     if (exePath.isEmpty || !exePath.toLowerCase().contains("windowsapps")) return "";
 
+    final String key = exePath.toLowerCase();
+    final String? cached = _appxIconByExe[key];
+    if (cached != null) return cached;
+
+    String result = "";
     // Prefer the package root (`...\WindowsApps\<PackageFullName>\`) which always
     // contains AppxManifest.xml, even when the running exe is in a subfolder.
     final String root = _appxPackageRoot(exePath);
     String icon = Win32.getManifestIcon(root);
-    if (icon.isNotEmpty && File(icon).existsSync()) return icon;
-
-    // Fallback: the folder of the exe itself (covers manifests placed alongside).
-    final String normalized = exePath.replaceAll('/', '\\');
-    final int slash = normalized.lastIndexOf('\\');
-    if (slash > 0) {
-      icon = Win32.getManifestIcon(normalized.substring(0, slash));
-      if (icon.isNotEmpty && File(icon).existsSync()) return icon;
+    if (icon.isNotEmpty && File(icon).existsSync()) {
+      result = icon;
+    } else {
+      // Fallback: the folder of the exe itself (covers manifests placed alongside).
+      final String normalized = exePath.replaceAll('/', '\\');
+      final int slash = normalized.lastIndexOf('\\');
+      if (slash > 0) {
+        icon = Win32.getManifestIcon(normalized.substring(0, slash));
+        if (icon.isNotEmpty && File(icon).existsSync()) result = icon;
+      }
     }
-    return "";
+
+    _appxIconByExe[key] = result;
+    return result;
   }
 
   /// Given an exe path under WindowsApps, returns the package-root folder:

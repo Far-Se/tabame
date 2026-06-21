@@ -16,13 +16,6 @@ import 'error_handler.dart';
 class AppStartup {
   static Future<void> initialize() async {
     Debug.register(clean: true);
-    if (File("${WinUtils.getTabameAppDataFolder()}\\enable_debug.txt").existsSync()) {
-      Debug.register(clean: false);
-    }
-    if (File("${WinUtils.getTabameAppDataFolder()}\\disable_audio.txt").existsSync()) {
-      Audio.alreadySet = true;
-      Audio.canRunAudioModule = false;
-    }
 
     Debug.add("===");
     Debug.add("Started");

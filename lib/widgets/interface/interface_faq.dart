@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
@@ -30,59 +31,50 @@ const List<_FaqItem> _faqItems = <_FaqItem>[
       answer:
           "Tabame is a lightweight Windows utility that tries to replace the taskbar. It also includes extra features, such as Fancyshot, Screen Drawing and Recording, QuickGrid, QuickClick, Trktivity, Wizardly and more."),
   _FaqItem(
-    question: "How do I open Tabame?",
-    answer: "You set a hotkey to open QuickMenu preferably a mouse button and another hotkey to open Launcher.",
-  ),
+      question: "How do I open Tabame?",
+      answer: "You set a hotkey to open QuickMenu preferably a mouse button and another hotkey to open Launcher."),
   _FaqItem(
-    question: "Sometimes the app looks weird and I can not click on anything?",
-    answer:
-        "You can fix it by right clicking on the QuickMenu top left Logo (even if its not visible). This is caused by multiple async functions running at once when QuickMenu is shown and I can not duplicate it on Debug Mode, only on Release and it happens one time at few days, randomly.",
-  ),
+      question: "Sometimes the app looks weird and I can not click on anything?",
+      answer:
+          "You can fix it by right clicking on the QuickMenu top left Logo (even if its not visible). This is caused by multiple async functions running at once when QuickMenu is shown and I can not duplicate it on Debug Mode, only on Release and it happens one time at few days, randomly."),
   _FaqItem(
-    question: "Why does Tabame ask for administrator privileges?",
-    answer:
-        """Some features — such as closing protected system windows, forcing focus on elevated apps — require elevated permissions. You can enable "Run as Administrator" in Settings → Configuration. The app needs to be restarted.""",
-  ),
+      question: "How can I control YouTube Music with this app?",
+      answer:
+          "First install this Chromium Extension: [Youtube Music Hotkeys](https://chromewebstore.google.com/detail/youtube-music-hotkeys/gmicamikenkmohannnkechnknflncomf), Set up some specific hotkeys like Alt + Shift [8,9,0,-,=]. Then In Tabame Settings, Go to QuickMenu -> Audio Settings -> App Audio Controls -> Create a new one then setup your hotkeys. Then in QuickActions, Add the App Audio ControlX to your Toolbar."),
   _FaqItem(
-    question: "How do I make Tabame start with Windows?",
-    answer: """
-Go to Settings → Configuration and enable "Launch at Startup". Tabame will register a start-up shortcut in your shell startup folder automatically.""",
-  ),
+      question: "Why does Tabame ask for administrator privileges?",
+      answer:
+          """Some features — such as closing protected system windows, forcing focus on elevated apps — require elevated permissions. You can enable "Run as Administrator" in Settings → Configuration. The app needs to be restarted."""),
+  _FaqItem(question: "How do I make Tabame start with Windows?", answer: """
+Go to Settings → Configuration and enable "Launch at Startup". Tabame will register a start-up shortcut in your shell startup folder automatically."""),
   _FaqItem(
-    question: "Where are my settings stored?",
-    answer:
-        "All settings are saved in settings.json inside %LocalAppData%\\Tabame\\. You can open that folder directly from Settings → Data & Tools. To back up or migrate, simply copy that file.",
-  ),
+      question: "Where are my settings stored?",
+      answer:
+          "All settings are saved in settings.json inside %LocalAppData%\\Tabame\\. You can open that folder directly from Settings → Data & Tools. To back up or migrate, simply copy that file."),
   _FaqItem(
-    question: "How do I update Tabame?",
-    answer:
-        """Open Settings → System Status and press "Check for Updates". If a new version is available you can install it with one click via PowerShell, or download it manually from GitHub Releases.""",
-  ),
+      question: "How do I update Tabame?",
+      answer:
+          """Open Settings → System Status and press "Check for Updates". If a new version is available you can install it with one click via PowerShell, or download it manually from GitHub Releases."""),
   _FaqItem(
-    question: "What is the Light Switch feature?",
-    answer:
-        "Light Switch automatically switches your Windows theme between light and dark mode. You can set fixed on/off times, or let Tabame calculate local sunrise and sunset based on your coordinates.",
-  ),
+      question: "What is the Light Switch feature?",
+      answer:
+          "Light Switch automatically switches your Windows theme between light and dark mode. You can set fixed on/off times, or let Tabame calculate local sunrise and sunset based on your coordinates."),
   _FaqItem(
-    question: "What is Wizardly?",
-    answer:
-        """Wizardly contains multiple tools, such as Text Search, Project Overview (count lines of code), Rename Files, Scan Folder Size, Context Menu Cleaner, Wallpaper Scheduler and Hosts Editor.""",
-  ),
+      question: "What is Wizardly?",
+      answer:
+          """Wizardly contains multiple tools, such as Text Search, Project Overview (count lines of code), Rename Files, Scan Folder Size, Context Menu Cleaner, Wallpaper Scheduler and Hosts Editor."""),
   _FaqItem(
-    question: "How do I completely uninstall Tabame?",
-    answer:
-        """Go to Settings → Data & Tools and click "UNINSTALL TABAME". You will be asked to type a confirmation phrase. Tabame will then disable all integrations, remove its app-data folder, and delete its own executable.""",
-  ),
+      question: "How do I completely uninstall Tabame?",
+      answer:
+          """Go to Settings → Data & Tools and click "UNINSTALL TABAME". You will be asked to type a confirmation phrase. Tabame will then disable all integrations, remove its app-data folder, and delete its own executable."""),
   _FaqItem(
-    question: "Tabame isn't responding to my hotkey. What should I try?",
-    answer:
-        """First make sure no other application has registered the same shortcut. If you enabled "Run as Administrator" at startup, Tabame must also be running as admin to intercept hotkeys from elevated windows. Finally, try restarting Tabame from the system tray.""",
-  ),
+      question: "Tabame isn't responding to my hotkey. What should I try?",
+      answer:
+          """First make sure no other application has registered the same shortcut. If you enabled "Run as Administrator" at startup, Tabame must also be running as admin to intercept hotkeys from elevated windows. Finally, try restarting Tabame from the system tray."""),
   _FaqItem(
-    question: "How can I report a bug or request a feature?",
-    answer:
-        """Use the "Send Feedback & Suggestions" button at the top of this page. It will open the GitHub Issues page where you can file a bug report or a feature request using the provided templates.""",
-  ),
+      question: "How can I report a bug or request a feature?",
+      answer:
+          """Use the "Send Feedback & Suggestions" button at the top of this page. It will open the GitHub Issues page where you can file a bug report or a feature request using the provided templates."""),
 ];
 
 // ---------------------------------------------------------------------------
@@ -157,9 +149,7 @@ class FaqPageState extends State<FaqPage> {
                   icon: const Icon(Icons.feedback_outlined, size: 16),
                   label: Text(
                     "Send Feedback & Suggestions",
-                    style: entryStyle(null,
-                        fontSize: Design.baseFontSize + 2,
-                        color: Design.background),
+                    style: entryStyle(null, fontSize: Design.baseFontSize + 2, color: Design.background),
                   ),
                 ),
               ],
@@ -309,12 +299,25 @@ class FaqPageState extends State<FaqPage> {
                       thickness: 1,
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      item.answer,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.55,
-                        color: onSurface.withValues(alpha: 0.85),
+                    MarkdownBody(
+                      shrinkWrap: true,
+                      data: item.answer,
+                      onTapLink: (String text, String? href, String title) {
+                        if (href != null) WinUtils.open(href);
+                      },
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(
+                          fontSize: 13,
+                          height: 1.55,
+                          color: onSurface.withValues(alpha: 0.85),
+                        ),
+                        a: TextStyle(
+                          fontSize: 13,
+                          height: 1.55,
+                          color: Design.accent,
+                          decoration: TextDecoration.underline,
+                          decorationColor: Design.accent,
+                        ),
                       ),
                     ),
                   ],

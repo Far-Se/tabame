@@ -34,6 +34,7 @@ enum QuickMenuDesigns {
   matrix,
   interface,
   aurora,
+  terminal,
   ;
 
   String get name {
@@ -44,6 +45,7 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.matrix => "Matrix",
       QuickMenuDesigns.serene => "Serene",
       QuickMenuDesigns.aurora => "Aurora",
+      QuickMenuDesigns.terminal => "Terminal",
     };
   }
 }
@@ -123,6 +125,7 @@ class Settings {
   bool volumeSetBack = false;
   bool keepPopupsOpen = true;
   bool expandedTaskbar = true;
+  bool taskbarHoverSlide = true;
   bool bottomBarOnTop = false;
   bool launcherFullPopups = false;
   bool noopKeyListener = false;
@@ -394,6 +397,32 @@ class Settings {
           entryFontFamily: 'Sora',
           entryFontWeight: 600,
           borderRadius: 14,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.terminal.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF1E1E1E),
+          textColor: const Color(0xFFD4D4D4),
+          accentColor: const Color(0xFF00C7FF),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C0C0C),
+          textColor: const Color(0xFFCCCCCC),
+          accentColor: const Color(0xFF39D353),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 4,
           baseFontSize: 10,
         ),
       ),
@@ -771,17 +800,41 @@ enum ThemeType { system, light, dark, schedule }
 
 class Debug {
   Debug._();
+
+  static const int maxLines = 500;
+
   static File theFile = File("${WinUtils.getTabameAppDataFolder()}\\debug.log");
+
   static bool enabled = false;
+
   static void register({bool clean = true}) {
     enabled = true;
-    theFile.writeAsStringSync("========\n", mode: clean ? FileMode.write : FileMode.append);
+
+    _trimToLastLines(theFile, maxLines);
+
+    theFile.writeAsStringSync("========\n", mode: clean ? FileMode.writeOnlyAppend : FileMode.append);
+
     File("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log")
         .writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
   }
 
+  static void _trimToLastLines(File file, int keepLines) {
+    if (!file.existsSync()) {
+      file.createSync(recursive: true);
+      return;
+    }
+
+    final List<String> lines = file.readAsLinesSync();
+
+    if (lines.length > keepLines) {
+      final List<String> trimmed = lines.sublist(lines.length - keepLines);
+      file.writeAsStringSync("${trimmed.join('\n')}\n");
+    }
+  }
+
   static void print(String text) {
     if (!enabled) return;
+
     if (kReleaseMode) {
       theFile.writeAsStringSync("$text\n", mode: FileMode.append);
     } else {
@@ -791,17 +844,25 @@ class Debug {
 
   static void add(String text) {
     if (!enabled) return;
+
     theFile.writeAsStringSync("$text\n", mode: FileMode.append);
   }
 
   static void error(String text) {
-    if (!theFile.existsSync()) theFile.createSync(recursive: true);
-    theFile.writeAsStringSync("ERROR: $text\n", mode: FileMode.append);
+    if (!theFile.existsSync()) {
+      theFile.createSync(recursive: true);
+    }
+
+    theFile.writeAsStringSync(
+      "ERROR: $text\n",
+      mode: FileMode.append,
+    );
   }
 
   static void methodDebug({bool clean = true}) {
     File("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log")
         .writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
+
     enableDebug("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log");
   }
 }

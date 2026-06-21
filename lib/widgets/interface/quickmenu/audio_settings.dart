@@ -10,7 +10,7 @@ import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/mini_switch.dart';
-import '../interface_quickmenu.dart';
+import 'appaudio_settings.dart';
 
 class InterfaceQMAudioSettingsPage extends StatefulWidget {
   const InterfaceQMAudioSettingsPage({super.key});
@@ -26,6 +26,7 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
   bool _mediaAppsSaving = false;
   String? _mediaAppsStatus;
   late List<DefaultVolume> _volumeRules;
+  bool _showAppAudio = false;
 
   @override
   void initState() {
@@ -410,10 +411,7 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          final QMSettingsState? state = context.findAncestorStateOfType<QMSettingsState>();
-          state?.openPage(5);
-        },
+        onTap: () => setState(() => _showAppAudio = true),
         borderRadius: BorderRadius.circular(16),
         child: Ink(
           decoration: BoxDecoration(
@@ -498,6 +496,28 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
 
   @override
   Widget build(BuildContext context) {
+    if (_showAppAudio) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: <Widget>[
+                IconButton(
+                  onPressed: () => setState(() => _showAppAudio = false),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                  tooltip: 'Back to Audio Settings',
+                ),
+                const SizedBox(width: 8),
+                const Text('App Audio Controls', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const Expanded(child: InterfaceQMAppAudioSettingsPage()),
+        ],
+      );
+    }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool isWide = constraints.maxWidth > 800;

@@ -25,6 +25,7 @@ import 'widgets/widgets/focus_fix.dart';
 Future<void> main(List<String> arguments) async {
   AppStartup.parseArguments(arguments);
   // return startSpotlight();
+  // Test.
 
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   // return startScreenCapture();
@@ -39,7 +40,6 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-msgbox")) return showMessage(arguments);
   if (arguments.contains("-run")) return showRunStatus(arguments);
 
-  if (await AppStartup.checkAdminAndRestart()) return;
   // PaintingBinding.instance.imageCache.maximumSize = 50;
 
   runZonedGuarded(
@@ -47,6 +47,7 @@ Future<void> main(List<String> arguments) async {
       WidgetsFlutterBinding.ensureInitialized();
       await AppStartup.registerServices();
       AppStartup.registerHooks();
+      if (await AppStartup.checkAdminAndRestart()) return;
       await AppStartup.setupWindow(arguments);
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;

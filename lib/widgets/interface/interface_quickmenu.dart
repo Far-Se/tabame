@@ -7,6 +7,7 @@ import '../../models/util/app_opacity.dart';
 import '../../models/win32/mixed.dart';
 import '../itzy/interface/quickmenu_bottom_bar.dart';
 import 'grid_settings.dart';
+import 'quickmenu/appaudio_settings.dart';
 import 'quickmenu/apps_settings.dart';
 import 'quickmenu/audio_settings.dart';
 import 'quickmenu/bookmarks_settings.dart';
@@ -195,9 +196,7 @@ class QMSettingsState extends State<QMSettings> {
               Text("Dashboard", style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
               Text("Configuration & Sub-systems",
                   style: TextStyle(
-                      fontSize: Design.baseFontSize + 1,
-                      fontWeight: FontWeight.w600,
-                      color: theme.hintColor)),
+                      fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: theme.hintColor)),
             ],
           ),
         ),
@@ -242,9 +241,7 @@ class QMSettingsState extends State<QMSettings> {
                       const SizedBox(height: 4),
                       Text(
                         "Try a different keyword or browse the grid.",
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize + 1,
-                            color: onSurface.withValues(alpha: 0.2)),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.2)),
                       ),
                     ],
                   ),
@@ -675,11 +672,11 @@ class InterfaceQMCustomQuickActionsSettings extends StatelessWidget {
   Widget build(BuildContext context) => const InterfaceQMCustomQuickActionsSettingsPage();
 }
 
-// class InterfaceQMAppAudioSettings extends StatelessWidget {
-//   const InterfaceQMAppAudioSettings({super.key});
-//   @override
-//   Widget build(BuildContext context) => const InterfaceQMAppAudioSettingsPage();
-// }
+class InterfaceQMAppAudioSettings extends StatelessWidget {
+  const InterfaceQMAppAudioSettings({super.key});
+  @override
+  Widget build(BuildContext context) => const InterfaceQMAppAudioSettingsPage();
+}
 
 class InterfaceQMAudioSettings extends StatelessWidget {
   const InterfaceQMAudioSettings({super.key});

@@ -827,7 +827,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         return command.debounce;
       }
     }
-    return const Duration(milliseconds: 180);
+    return const Duration(milliseconds: 100);
   }
 
   bool _isActiveSearch(int gen) => mounted && gen == _searchGeneration;

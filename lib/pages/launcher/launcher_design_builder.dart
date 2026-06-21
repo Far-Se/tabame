@@ -122,13 +122,13 @@ extension LauncherDesignBuilder on LauncherDesign {
           borderRadius: BorderRadius.circular(28),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: accent.withAlpha(40),
-              blurRadius: 50,
-              spreadRadius: -12,
+              color: accent.withAlpha(100),
+              blurRadius: 30,
+              spreadRadius: -19,
               offset: const Offset(0, 18),
             ),
             BoxShadow(
-              color: Colors.black.withAlpha(45),
+              color: Colors.black.withAlpha(70),
               blurRadius: 30,
               spreadRadius: -8,
               offset: const Offset(0, 12),

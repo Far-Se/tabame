@@ -64,6 +64,7 @@ class Boxes {
       await pref.setString("darkTheme", user.darkTheme.toJson());
       await pref.setString("language", Platform.localeName.substring(0, 2));
       await pref.setStringList("weather", <String>["10 C", "52.52437, 13.41053", "m"]);
+      await pref.setBool("taskbarHoverSlide", true);
       await pref.setBool("hideTaskbarOnStartup", false);
       await pref.setBool("hideDesktopFiles", false);
       await pref.setBool("showQuickMenuAtTaskbarLevel", true);
@@ -138,6 +139,7 @@ class Boxes {
       ..bottomBarOnTop = pref.getBool("bottomBarOnTop") ?? user.bottomBarOnTop
       ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? user.keepPopupsOpen
       ..expandedTaskbar = pref.getBool("expandedTaskbar") ?? user.expandedTaskbar
+      ..taskbarHoverSlide = pref.getBool("taskbarHoverSlide") ?? user.taskbarHoverSlide
       ..showSystemUsage = pref.getBool("showSystemUsage") ?? user.showSystemUsage
       ..themeScheduleMin = pref.getInt("themeScheduleMin") ?? user.themeScheduleMin
       ..themeScheduleMax = pref.getInt("themeScheduleMax") ?? user.themeScheduleMax
