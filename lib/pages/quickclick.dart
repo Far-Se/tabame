@@ -111,7 +111,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     Timer(const Duration(milliseconds: 200), () {
       _refocusPreviousWindow();
       WinUtils.makeWindowClickThrough(true);
-      Win32.setWindowInvisible(false);
+      // Reveal is handled frame-synced by QuickMenuState._onQuickMenuSwitchedPage.
     });
   }
 

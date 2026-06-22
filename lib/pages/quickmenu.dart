@@ -389,6 +389,21 @@ class QuickMenuState extends State<QuickMenu>
     // if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     Win32.setWindowInvisible(true);
     if (oldType == QuickMenuPage.quickClick) WinUtils.makeWindowClickThrough(false);
+
+    // Entering QuickClick: keep the window transparent (layered alpha 0), paint
+    // the QuickClick overlay, wait for the frame to actually rasterize, then
+    // reveal it. This is frame-synced rather than a blind delay, so the user
+    // never sees the previous page or a half-built QuickClick frame.
+    if (newType == QuickMenuPage.quickClick) {
+      Globals.quickMenuPage = newType;
+      if (mounted) setState(() {});
+      // Two frames: the first builds QuickClickOverlay (its initState lays out
+      // monitor size/position), the second lets that geometry settle.
+      await WidgetsBinding.instance.endOfFrame;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      Win32.setWindowInvisible(false);
+    }
     // SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
   }
 

@@ -1,359 +1,479 @@
 <div align="center">
      <img src="resources/logo_light.png" width="80px">
     <h1>Tabame</h1>
+    <p><em>A taskbar replacement that turned into the Windows toolbox I always wanted.</em></p>
 </div>
 
 ![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
 
 ![promote_dark](https://user-images.githubusercontent.com/20853986/204138108-e57e9b1b-4d2b-445e-b8cb-4480d188ebb9.png#gh-dark-mode-only)
 
-## 🤔 What is this app about?
+## 🤔 What is this?
 
-Main purpose of this app is to be a replacement for the Taskbar, but in meanwhile I've added more features that can come in handy sometimes. It's not about the 30px you add on your screen, but to limit distraction that comes from flashes, badges, notifications and other apps Microsoft forcefully tries to push to their users.
-### **Best way to use:**
-- **You can bind the QuickMenu on:**
-- Mouse Side buttons, most mouses have them.
-- Any extra mouse button. Open your mouse software, bind it to something like `CTRL+ALT+SHIFT+F9` then focus Tabame and press the button on field above.
-- If you do not have any extra buttons on your mouse, you can bind it to something simple like `Alt+Shift+A` (or Z), it's easy for the fingers.
+I started this just to replace the Windows taskbar. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
 
-### You can watch a small demo here:
+Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day.
 
-| <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> 	|
-|------	|------	|
+It's all made by one person (me), for the way I actually use my computer. It's free, it's open source, and it tries to stay out of your way until you press a hotkey.
 
-# 📥 How to Install
+### The best way to use it
 
-Go to [Release page](https://github.com/Far-Se/tabame/releases/latest). It is in right sidebar. Download either installer.ps1 or tabame.zip
+Everything starts from one hotkey. Pick something comfortable and bind the QuickMenu to it:
 
-## Easiest way to install:
+- **A mouse side button** - most mice have them, and it's the nicest way to summon the menu.
+- **Any extra mouse button** - open your mouse software, bind the button to something like `CTRL+ALT+SHIFT+F9`, then set that same combo inside Tabame.
+- **No spare buttons?** Use something easy for your fingers like `Alt+Shift+A` (or `Z`).
+
+### A small demo
+
+| <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+
+# 📥 How to install
+
+Go to the [Releases page](https://github.com/Far-Se/tabame/releases/latest) (it's in the right sidebar). Grab either `installer.ps1` or `tabame.zip`.
+
+## Easiest way:
+
 1. Download **installer.ps1**
 2. Open your **Downloads folder**
-3. Right click and press **"Run with PowerShell"**
-4. Complete main setup and it's done 😄 
-
+3. Right click it and pick **"Run with PowerShell"**
+4. Walk through the setup and you're done 😄
 
 | ![image](https://user-images.githubusercontent.com/20853986/184855270-4bf0f8d9-ec81-4b22-aee6-1b1df97fc459.png) | ![image](https://user-images.githubusercontent.com/20853986/184855277-f484dc64-b0e9-4468-afb0-44c0ed8f0c0a.png) |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 
-## Manual Install:
-1. Download zip archive.
-2. Extract it in a folder you want.
-3. Open tabame.exe
+## Manual install:
+
+1. Download the zip.
+2. Extract it wherever you like.
+3. Open `tabame.exe`.
 
 ### 📤 How to uninstall:
-If you installed it with installer.ps1 Open file explorer, in address bar write `%localappdata%` then delete folder `Tabame`.
-If you manually installed it, delete the folder where you placed it.
 
-## 🐛 If you encounter any errors or bugs:
-Please submit a [issue here](https://github.com/Far-Se/tabame/issues), it will be very helpful. On my Computer it works, but each PC can be different.
+If you used `installer.ps1`: open File Explorer, type `%localappdata%` in the address bar, and delete the `Tabame` folder.
+If you installed manually: just delete the folder where you put it.
 
-**Please also provide errors.log file**. You can find it here: `%localappdata%/Tabame`. Open File Explorer and paste that in Address Bar.
+## 🐛 Found a bug?
 
-Thanks to @elvinvandalen for helping me fix a bug where the app crashed on start because AudioPropertyStore was bugged for some users.
+Please [open an issue](https://github.com/Far-Se/tabame/issues) - it really helps. It works on my machine, but every PC is a little different.
 
-**Known Issue**: for a small amount of users Audio Module makes the app crash, if you experience crash on startup and still want to use Tabame, open folder
-`%localappdata%/Tabame` and create a file called `disable_audio.txt` then start Tabame again.
+**Please attach your `errors.log`.** You'll find it at `%localappdata%/Tabame` (paste that into the Explorer address bar).
 
-## Make your own:
-This project is open source, which means you can compile your own version.
-1. Install Flutter for Windows
-2. Open Visual Studio Installer, on Individual Components select ATL Dependencies and install.
-3. Open a console in Tabame folder and run `.\build.ps1 -Config Release`
-4. If you want to rebuild an existing Windows build tree from terminal, run `.\build.ps1 -UseCMake -Config Debug`
-5. The script reuses Visual Studio's bundled CMake for direct CMake builds, which avoids version-mismatch issues with a newer `cmake.exe` on PATH.
-6. The exe is in `build\windows\runner\Release`
-7. You can open vsCode and debug the app.
+## 🛠️ Build it yourself
 
-# Written in Flutter
-Which means it consumes very little resources and disk space. 
+It's open source, so you can compile your own copy and now with AI, you can customize it however you want.
 
-On idle cpu is 0.0% and when in use is below 3%.
+1. Install Flutter for Windows.
+2. Open the Visual Studio Installer → Individual Components → install **ATL Dependencies**.
+3. Open a terminal in the Tabame source code folder and run `flutter run`.
+4. To rebuild an existing Windows build tree, run `flutter build windows`.
+5. The script reuses Visual Studio's bundled CMake for direct builds, which avoids version mismatches with a newer `cmake.exe` on your PATH.
+6. The exe lands in `build\windows\runner\Release`.
+7. You can open it in VS Code and debug from there.
 
-Ram usage is below 50 MB, usually around 40 MB.
+## ⚡ Written in Flutter
 
-It takes only 26.5 MB of space.
+That means it's light. It barely touches your CPU when idle and stays low even when you're using it, and RAM usage is small for what it does. It starts fast and doesn't get in the way.
 
-**Works very fast, no interruptions**
+In full idle it sits at around 80 MB or RAM and 0% CPU and in heavy usage around 150 MB with 3% cpu if it's Visible.
 
+---
 
-# Main Features
-[🎛️ QuickMenu](#%EF%B8%8F-quickmenu)  
+# What's inside
 
-[🎚️ QuickRun](#%EF%B8%8F-quickrun) 
+Tabame is basically one fast popup with a lot packed into it. Here's the tour.
 
-[🎨 Theme](#-theme) 
+- [🎛️ QuickMenu](#%EF%B8%8F-quickmenu) - the main popup
+- [🚀 Launcher](#-launcher) - type to find anything
+- [⚡ QuickActions](#-quickactions) - one menu for everything Tabame can do
+- [🪟 QuickSnap](#-quicksnap) - snap windows into custom zones
+- [🖱️ QuickClick](#%EF%B8%8F-quickclick) - move the mouse with your keyboard
+- [🎶 Audio & Music](#-audio--music)
+- [🖥️ Screen Tools](#%EF%B8%8F-screen-tools) - draw, capture, edit, record, spotlight, color pick
+- [⌨️ Hotkeys](#%EF%B8%8F-hotkeys)
+- [📚 Books & Notes](#-books--notes) - bookmarks, apps, CLI, Notion, memos
+- [🔐 Vault & Authenticator](#-vault--authenticator)
+- [📋 Clipboard History](#-clipboard-history)
+- [📅 Tasks](#-tasks) - reminders & page watchers
+- [📝 Trktivity](#-trktivity) - local activity tracking
+- [✨ Wizardly](#-wizardly) - file & folder tools
+- [🎨 Theme](#-theme)
+- [🙃 Outro](#-outro)
 
-[🎶 Audio](#-audio) 
+---
 
-[⌨️ Hotkeys](#%EF%B8%8F-hotkeys) 
+# 🎛️ QuickMenu
 
-[📕 Bookmarks](#-bookmarks)
+This is the popup that appears when you press your hotkey. It has three parts.
 
-[📝 Trktivity](#-trktivity)
+## Top bar
 
-[📅 Tasks](#-tasks)
+Audio control, volume control, quick action buttons, pinned apps, a Desktop button and the settings button.
 
-[✨ Wizardly](#-wizardly)
+**Audio control**
 
-[🧩 Views](#-views) (v1.1)
+- Left click → open the Audio box to manage devices and per-app volume.
+- Right click → switch the default output device.
+- Middle click → mute / unmute.
+- Scroll → change volume.
 
-[🧰 QuickActionsMenu](#-quickactionsmenu) (v1.2)
+**Media control**
 
-[📷 Fancyshot](#-fancyshot) (v1.2)
+- Left click → play / pause.
+- Right click → next track.
+- Middle click → previous track.
+- Scroll → change volume.
 
-[🙃 Outro](#-outro)
+The rest of the top bar is filled with **QuickAction buttons** - you decide which ones live there. See the [QuickActions](#-quickactions) section for the full list.
 
-# **🎛️ QuickMenu**
+## Taskbar
 
-This is the menu that will popup when you are pressing the main hotkey. It is divided in 3 sections:
+Your open windows, listed out. Each row shows the icon, whether it's making sound, whether it's pinned, the monitor number, the title, a media control and a close button.
 
-## **Top bar**
-Contains audio control, volume control, quick actions, pinned apps, Desktop Button and settings button.
+- **Right click** a window to move it to another desktop, pin it, or force-close it.
+- **Drag** it left or right to send it to a different virtual desktop.
+- **Middle click** to open the [QuickSnap](#-quicksnap) zone picker for that window.
 
-### **Audio Control**
-- Left click to open Audio Box, where you can modify audio devices.
-- Right click to switch default audio output.
-- Middle button to mute or un-mute.
-- Scroll up or down to change volume level.
-  
-### **Volume Control**
-- Left click sends Play or Pause signal.
-- Right click sends Next Track.
-- Middle button sends Previous Track.
-- Scroll up or down to change volume level.
-
-### **Quick Actions**
-- Task Manager Button - Opens Task Manager
-- Virtual Desktop Button - Left Click to move to Right(Next) Desktop, right click for Left(Previous) Desktop
-- Toggle Taskbar Button - Hides or shows taskbar
-- Pin Window Button - Sets last focused window always on top
-- Mic Mute Button - Mutes microphone, right click to switch Device Input.
-- Always Awake Button - Keeps screen on
-- Change Theme Button - Changes between Dark to White. It does not change the settings too!
-- Hide Desktop Files Button - Hides/Shows files on desktop, good if you do not always use them.
-- Toggle Hidden Files Button - Hides/Shows hidden files.
-- **v1.2**
-- Fancyshot - Screen Capture with editor.
-- Bookmarks - See your saved Bookmarks.
-- Countdown - A countdown for quick access.
-- Timers - Create Quick Timers. (v1.3:Timers save after restart)
-- Quick Actions Menu - A dedicated menu with Quick Actions.
-- Close on Focus Loss - If you want to keep QuickMenu on screen, toggle this.
-- **v1.3**
-- Custom Chars - You can save custom chars or browse different language accents or currency symbols.
-- Schedule Shutdown - Schendule a Computer shutdown at a specific hour or after a specific period.
-- Memos - Save your memos.
-
-
-## **Taskbar**
-Contains your opened windows, it shows the icon, if it makes sound, if it is pinned, Monitor Number, Title, Media Control and Close button.
-
-**You can right click a listed window to move it to right or left Desktop, pin or force close**
-
-**You can drag to left or right to switch the app to a different Desktop**
-
-You can show QuickMenu at Taskbar Level or TopBar Level. You can order windows by monitor, activity, or only current monitor.
-
-You can rewrite app titles using regex, example:
+You can show the menu at taskbar level or top-bar level, and order windows by monitor, by activity, or show only the current monitor. You can also **rewrite window titles with regex** if some app's titles annoy you:
 
 ![example](https://user-images.githubusercontent.com/20853986/185778878-14ef5a6f-0981-4e7d-aa68-a5afc5b7feb4.png)
 
-## **Bottom Bar**
-Main elements of bottom bar are the time and the weather.
-It also shows:
+## Bottom bar
 
-### **Tray icons**
-It shows a list of existing tray icons. You can hide/pin icons from settings. You can simulate click on the icon, or open icon's executable. Some apps do not listen to native clicks so you can set the second option!
+The time and the weather, plus:
 
-### **PowerShell Scripts**
-You can pin PowerShell scripts for easy access, either write the code directly or make a `.ps1` file and then set as command `Invoke-Item path\to\script.ps1`
+- **Tray icons** - a list of your real tray icons. You can hide or pin them, click them, or open their executable directly (some apps ignore simulated clicks, so there's a second option for that).
+- **Pinned Apps** - List of pinned Apps and Files.
+- **System info** - your CPU and RAM usage at a glance, or LibreHardwareMonitor Stats or Taskbar Stats.
 
-### **System Information**
-Your CPU and RAM usage.
+If things get crowded you can move pinned apps and tray icons onto the same row. And you can swap the icon or add a splash image above the menu if you want to brand it as your own.
 
-### **You can move pinned apps and tray icons on the same level at the bottom** if the UI becomes too crowded.
+---
 
-### **You can change the icon and add a splash image above the menu** if you brand it as your own or to add your company logo.
+# 🚀 Launcher
 
+The Launcher is one text box that searches everything. Open it straight from the QuickMenu (just start typing) or bind it to its own hotkey.
 
-# **🎚️ QuickRun**
-QuickRun can be launched directly from QuickMenu, just start typing. You can also set a hotkey to open it specifically.
+By default it blends results from files, windows and apps. If you want to narrow it down, start your query with a prefix:
 
-**BE AWARE**: shortcuts always have a space after letters. You can add regex as last parameter. Look at calculator or currency converter.
+| Prefix             | What it searches                        |
+| ------------------ | --------------------------------------- |
+| _(nothing)_        | Mixed results: files, windows, apps     |
+| `/`                | QuickActions                            |
+| `.`                | Active windows                          |
+| `>` `?` or a space | Deep file search (your indexed folders) |
+| `'`                | Apps + bookmarks together               |
+| `b `               | Bookmarks only                          |
+| `cli `             | Your CLI snippet book                   |
+| `app `             | Apps only                               |
+| `;`                | Desktop files                           |
+| `n `               | Notion documents                        |
+| `$`                | Function commands (see below)           |
+| `timer `           | Make a timer right away                 |
 
-Consists of:
+## Function commands (`$`)
 
-## Converters
-- Calculator: default shortcut is `c `. You can divide multiple math equations with | and use x,y,z,a,b,c as variables. It supports complex equations. Example: `66*20/12` ... `c 75 | x * 20% | x - y | z * 30% | z-a` ... `c 2+3*sqrt(4)`
-- Unit converter: Default is `u `. Supports length, mass, temperature, volume, speed, digital, area, energy, force, fuel, power, pressure, shoe, time, torque
-Example: `u 1 in to cm` ... `u 1 mass`
-- Currency converter: default is `cur `. It uses [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api/tree/1/latest/currencies) repository to get latest rates. Example: `cur 100 eur to usd` ... `100 usd to eur` ... `100$ to eur`
-- Color converter: default is `col `. Converts from and to: hex `#` or `0x`, rgba, hsla, hsv, cmyk. Example: `col #ff00ff` ... `rgba(123,255,54,12)`
-- Time zones: default is `tz `. Shows current time in specific timezone, contains DTS as well.
+Quick one-off tools you can run inline without leaving the box:
 
-## Processors
-- **Shortcuts: default is `s `. It is good to bookmark links or search**
-- **Memo: default is `m `. Good to save commands, text, info that you might need later**
-- Regex: default is `rgx `. You can test regex if you ever need to.
-- Lorem: default is `lorem `. It generates lorem ipsum text, Example: `lorem 3 long headers`
-- Encoders: default is `enc `. Use ! to encode and @ to decode. supports url, base, rot13, ascii.
+- `$timer` - start a quick countdown.
+- `$translate` - translate text on the spot.
+- `$unit` - convert units (length, mass, temperature, volume, speed, data, area, energy, and more).
+- `$cur` - currency conversion using live rates ([fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api)).
+- `$c` - a calculator. You can chain equations with `|` and use variables like `x`, `y`, `z`. Example: `$c 75 | x * 20% | x - y`.
 
-## Utility
-- Bookmarks: default is `b `. You open your saved bookmarks from Interface.
-- Timer: default is `t `. Use this to set quick timers, for example for `t 5 tea` to remind you in 5 minutes to drink your tea and not forget it for 4 hours.
-- Variable: default is `v `. Use this in combination with Hotkeys if you need to reset a variable.
-- Send keys: default is `k `. You can save specific keys and trigger them from quick menu. For example: `k m` to trigger `MEDIA_NEXT_TRACK` if you don't want to stretch your fingers to the random media next track keyboard button.
+## Indexed file search
 
-# **🎨 Theme**
-You can change the background color, text color and accent color. Also QuickMenu has a slight gradient in the middle, you can change the opacity as well.
+For the deep file search you pick which folders to index. You can set how deep each folder goes (recursion), and filter by file type using preset bundles (Docs, Images, Code) or your own extensions. It re-indexes automatically when things change, and cleans out stale entries so results stay accurate.
 
-You can pick between predefined colors or your own colors.
+---
 
-# **🎶 Audio**
-A main reason I've made this app is to easily manage Audio. You can easily switch between output devices, change volume from hotkeys by moving your mouse and modify specific app volume.
+# ⚡ QuickActions
 
-Each app that makes sound has dedicated media control and you can set default `exe`s that will show them by default.
+QuickActions are the building blocks of Tabame. You can put them on the QuickMenu top bar, bind them to a hotkey, or open them from the **QuickActions Menu** (a searchable list of everything Tabame can do). Here's the whole catalog, grouped.
 
-Also you can modify Volume OSD to hide media, make it thinner or hide it completely.
+### Access & launch
 
+- **Launcher** - open the Launcher.
+- **QuickActionsMenu** - open the searchable list of all actions.
+- **Apps** - your bookmarked apps, grouped into buckets (Apps, Productivity, Editors…).
+- **Bookmarks** - files, commands and websites, grouped by category.
+- **CliBook** - saved CLI commands with custom parameters; copy them, run them, or run them inside a folder.
+- **DesktopFiles** - show your desktop files (handy if you keep the desktop hidden for a clean look).
+- **Notion** - browse and search your Notion workspace.
+- **Memos** - quick notes for later.
+- **Workspaces** - save and reload window layouts.
 
-# **⌨️ Hotkeys**
-I've tried to make a complex system for hotkeys, with one button you can achieve more.
+### Audio & media
 
-- Each hotkey has a list of triggers and each trigger is capable of multiple actions.
-- You can activate window under cursor so data is sent where you want to.
-- You can set a trigger to a specific window by title, exe or class.
-- You can set a trigger to a specific region of the window, in pixels or percentage. The region can be anchored in all 4 points of the window.
-- The trigger can be:
-  - Press
-  - Double Press
-  - Mouse Movement
-    - the trigger can be at the end or while moving.
-  - Hold Duration
-- You can set a variable check if you need more complexity.
+- **Audio** - manage output/input devices and per-app volume.
+- **MediaControl** - generic transport: left = play, right = next, middle = previous.
+- **MusicServer** - the local + Subsonic music player (more below).
+- **AppAudioControl 1–5** - five slots to control a specific app's playback (YouTube Music via a small Chrome extension, MusicBee, Namida, etc.). Left = play/pause, right = next, middle = previous, drag up/down to seek.
+- **MicMute** - one-tap microphone mute.
 
-Actions can be:
-- Send Keys
-- Hotkey
-- Tabame Function
-- Set Var
-- Send Click
+### Visual & capture
 
-Tabame Functions are:
-- Toggle Taskbar 
-- Toggle Quick Menu
-- Show Quick Menu In Center
-- Toggle Quick Run
-- Show Last Active Window
-- Open Audio Settings
-- Toggle Hidden Files
-- Toggle Desktop Files
-- Switch Audio Output
-- Switch Microphone Input
-- Toggle Microphone 
-- Switch Desktop To Right
-- Switch Desktop To Left
+- **ScreenDraw** - draw on top of the desktop.
+- **FancyShot** - screen capture, live or frozen.
+- **ColorPicker** - pixel-accurate color picker.
+- **Spotlight** - dim/blur everything except what you're focused on.
 
-You can set multiple Actions.
+### Security & privacy
 
-Example: With main hotkey, you can open tabame, show previous window, toggle taskbar, open start menu, open `ALT+Z` menu, open new chrome tab, show desktop, change volume level or switch desktops. You do not need to learn new hotkeys for each thing you need.
+- **Vault** - store API keys and secrets, optionally encrypted (PBE with AES-CBC). It's one-way encryption, so don't lose your password!
+- **Authenticator** - generate one-time passwords (OTP). Add accounts via backup file or QR scan, with optional encryption.
+- **ClipboardHistory** - browse what you copied; choose how many days to keep.
+- **BlockKeyboard** - block keyboard input so you can clean your keyboard, or make your PC cat-proof while you're away.
+- **PinWindow** - keep the last active window always on top.
+- **CloseOnFocusLoss** - toggle whether the QuickMenu closes when it loses focus.
 
+### System & environment
 
-# **📕 Bookmarks**
-Here you can create bookmarks for your projects, docs and other items you need to quick access.
+- **TaskManager** - open Task Manager.
+- **VirtualDesktop** - left/right click to move between virtual desktops (it cycles).
+- **ToggleTaskbar** - show/hide the Windows taskbar.
+- **ToggleWallpaperMode** - switch between your wallpaper and a black screen.
+- **ToggleDesktop** - minimize everything and show the desktop.
+- **ToggleWindowsTheme** - flip Windows between light and dark (can be scheduled).
+- **HideDesktopFiles** - hide/show desktop icons for a clean desktop.
+- **ToggleHiddenFiles** - show/hide hidden files in Explorer.
+- **AlwaysAwake** - keep the machine awake while you work.
 
-You can bookmark folders, links or commands.
+### Utilities & reference
 
-You can create groups and that contains your bookmarks. You can set an emoji for each so you can differentiate between them later when you forgot which is which.
+- **Timers** - persistent timers that survive a restart.
+- **Countdown** - a simple countdown.
+- **Calculator** - with variable support.
+- **TimeZone** - compare time zones and plan meetings.
+- **CurrencyConverter** - live rates plus a monthly chart.
+- **Translator** - a Google Translate wrapper.
+- **Weather** - hourly and daily, for multiple locations.
+- **QrScanner** - scan a QR code straight off your screen.
+- **CustomChars** - accents, currency symbols and math characters to copy.
+- **Wallpapers** - browse wallpapers from a folder you pick.
+- **ChangeTheme** - flip the QuickMenu between light and dark.
+- **QuickMenuDesign** - change the QuickMenu layout and colors.
+- **DiskCleanup** - check specific folder sizes and clear them.
+- **ShutDown** - schedule a shutdown at a set time or after a delay; can be persistent.
 
-You can access Bookmarks from QuickMenu/Quickrun by typing `b ` then name of the bookmark, like `b tabame`.
+| You can bind the QuickActions Menu to a hotkey and reach almost everything from one place. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 
-For example I've made a group Tabame where I saved command for vscode, release folder, install folder and github page. When I need to open one, rather the navigate manually, I open QuickRun and type `b tabame` and nagivate with arrows.
+---
 
+# 🪟 QuickSnap
 
-<img src="https://user-images.githubusercontent.com/20853986/200884861-d761c8bc-6885-43d2-86fe-119c1d6b60e3.png" align="right" width="250" height="auto"
-     alt="Trktivity.">
-     
-# **📝 Trktivity**
-Trktivity tracks your activity 🧐. It records keystrokes, mouse pings each 3 seconds and active window exe and title (if you set filters for it). 
+My take on PowerToys FancyZones, for when the built-in Windows snapping isn't flexible enough.
 
-You can view stats per day or a set of days. It generates a graph from 00:00 to 24:00.
+- Start dragging a window and **right click** to pop up preset zones at the top of the screen - drop the window into the one you want.
+- Or **middle click** any window in the QuickMenu taskbar to open the zone picker for it.
 
-It generates a timeline for executable you were focused and for Titles you've created filters for.
-
-By default is disabled, you can enable it, all recorded information is stored locally on your Computer and it is not sent anywhere.
-
-# **📅 Tasks**
-Tasks consists of Reminders and Page Watchers. 
-
-Reminders can be repetitive or one time per day. You can set which days of the week to be active and for repetitive reminders you can set interval when the reminder is active. You can set to receive Toast Notification or Audio Notification. You can use `xNR` to repeat the message, ex `Workout x3`. 
-
-v1.3: 
-- You can create Pesistent Reminders. You will see a warning sign in QuickActions QuickMenu when you receive a new Reminder notification and you need to manually click on it to remove. It's good for meds reminder.
-- You can create Interval Reminders at each other $X$ days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
-
-Page watchers will check a link each to see if specific text exists or not. For example if you made a post on a obscure forum and want to know when you receive a reply, you can set the link, 60 second interval and `\d+ Replies` and when that string changes, you will be notified.
-
-# **✨ Wizardly**
-Wizardly is a set of tools that works with folders. You can add it in Context Menu for easier access.
-
-## **Find Text In Folder**
-You can search text in a folder, recursively. You can use regex, case sensitive or match the whole text only.
-
-Important feature (and why I've made it): You can exclude files/folders, so if you do not want to see results from, for example `node_modules` you can set that in filters. For example Notepad++ and vsCode does not have this feature and it's annoying.
-
-
-## **Project Overview**
-
-It counts lines of code and makes a summary. **You can ignore folders or only show specific file types**.
-
-It shows code lines, non-code lines (lines with 1-2 chars line `[]{}()`), comment lines and empty lines.
-
-It also calculates how many books you could have written with same characters. It was surprising that this project is equivalent of 7 and a half books.
-
-For example, at this time of writing this README.md, Tabame has `27,191 lines` with `761,698 characters` which is impressive in my opinion because I've written it by myself.
-
-## **Rename Files**
-You can rename files in bulk, you can use regex but also Lists. This can be useful when you want to change from **IMG_20220725_121728.jpg** to **25 July 2022.jpg** 
-
-## **Folder Size Scan**
-You can scan folders recursively and see each folder size, you can delete folders.
-
-## **Hosts Editor (v1.3)**
-You can edit hosts files directly from Tabame! You need Admin Privileges to use this.
-
-# **🧩 Views**
-Views is an alternative to PowerToys FancyZones. If presets are not what you need and you need more flexibility, you should try this feature.
-
-It consists of a grid where you can change it's size using scroll wheel. Drag a window, press right click, move the window where you want, hold right click, select a region the release right and left click. When you move again the window, it will regain it's previous size.
-
-**This is not DPI aware. Use PowerToys if you changed your monitor DPI**
-
-## **Hooks**
-With Hooks you can hook multiple windows together, when you focus one, other will surface as well. You can access this feature by right clicking a window in QuickMenu.
-
-Views in actions:
+You can also **hook windows together**: focus one and the others come up with it. Right click a window in the QuickMenu to set that up - handy for keeping a chat window glued to whatever you're working in.
 
 https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-8b9c-e5729c3ca80b.mp4
 
-# **🧰 QuickActionsMenu**
+---
 
-| You can bind Quick Actions Menu to a hotkey and access functions such as setting specific volume, tabame functions, change audio output, and run commands. QuickActionsMenu now includes almost all QuickActions Buttons from QuickMenu. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+# 🖱️ QuickClick
 
-# **📷 Fancyshot**
-With Fancyshot you can capture custom screenshots. You can set a background stock image, custom image, capture itself or transparency. Also you can change image padding or background padding and add a watermark.
+Move the mouse without touching the mouse. QuickClick drops a grid over your screen, each cell labeled with two letters - press the row letter, then the column letter, and the cursor jumps right there. It's great for when your hand's already on the keyboard, or just to give your wrist a break.
 
-You can create custom profiles.
+- **Aim** - the grid columns sit across the top and the rows down the left. Type the column key then the row key (or the other way around) and the cursor lands in that cell.
+- **Click & drag** - dedicated keys for left click, right click and drag, so you never reach for the mouse.
+- **Scroll** - keys for scrolling up/down and left/right.
+- **Nudge** - arrow keys (plus your own extra bindings) for tiny pixel-level adjustments after you've landed.
+- **Zone mode** - split the screen into four quadrants, pick one, then get the full grid _inside_ just that quadrant for much finer aim on big monitors.
+- **Multi-monitor** - jump the grid to the next/previous monitor.
+- **Overlay toggle** - hide the grid lines if they're in the way, and pop up a built-in cheat sheet of every key any time you forget one.
 
-You can bind Fancyshot on a hotkey or add it in QuickMenuActions. 
+All the keys (the grid letters, click/drag/scroll, monitor switching, etc.) are yours to configure.
 
-Interface needs to open in order for the image to drawn.
+---
+
+# 🎶 Audio & Music
+
+Audio was one of the main reasons I built this. You can switch output devices instantly, change volume by scrolling, and set per-app volumes. Every app that makes sound gets its own little media control, and you can choose which `exe`s always show theirs. You can also slim down the Windows volume OSD, hide its media part, or turn it off completely.
+
+## Music player
+
+There's a proper little music player built into the menu - not just play/pause buttons, but a library you can actually browse.
+
+- **Local + server** - one interface for your indexed local folders **and** Subsonic-compatible remote libraries.
+- **Browse your way** - by Artist, Album, or Folder, with recursive folder playback.
+- **Session memory** - it remembers your queue, playlists and search state, so you pick up where you left off.
+- **Gesture playback** - drag to seek, watch buffering, and see live library stats.
+- **Hook external players** - add quick buttons to control Spotify, YouTube Music and others from the same place.
+
+---
+
+# 🖥️ Screen Tools
+
+A set of overlays for drawing on, capturing, focusing and sampling your screen.
+
+## Screen Draw
+
+Draw straight on top of the desktop - great for presentations or explaining something.
+
+- Pen, highlighter, lines, rectangles, ellipses, arrows.
+- Rulers, guides and sequential step markers (1, 2, 3…).
+- Live magnifier, blur and pixelate (good for hiding things on the fly).
+- Text with font and background control.
+- A toggleable grid and keyboard shortcuts to keep it fast.
+
+## Screen Capture
+
+Take a screenshot and edit it right there, no jumping to another app.
+
+- Full annotation suite inside the capture itself.
+- Blur or pixelate sensitive info before you save.
+- Save to disk or copy straight to the clipboard.
+- Markup tools (rulers, arrows, text) for documentation.
+
+## Photo Editor
+
+The same editor that powers screen captures, but you can also open it on any image file (`.png`, `.jpg`, `.bmp`, `.gif`) and mark it up properly. It's a real little image annotator, not just a scribble layer.
+
+- **Draw** - pen, highlighter, lines, rectangles, ellipses and arrows, with a color palette and adjustable stroke.
+- **Measure & label** - rulers, a size box, numbered step counters (1, 2, 3…) and info balloons for callouts.
+- **Text & emoji** - proper text with a font picker and optional background, plus emoji.
+- **Hide things** - blur, pixelate, or **smart delete** a region (it fills the gap to make stuff disappear).
+- **Add to it** - drop in another image, and use the live magnifier or spotlight to draw attention.
+- **Polish it** - apply a FancyShot preset as a backdrop (stock or custom background, padding, watermark) so a plain screenshot ends up looking presentable.
+- **Output** - save the edited image to disk or copy it straight to the clipboard.
+
+## Screen Recording
+
+Record your screen to an `.mp4` without installing yet another recorder.
+
+- **Pick what to record** - a region you draw, a whole monitor, or a single window.
+- **Sound, your way** - record nothing, system audio, your mic, or both at once.
+- **Cursor toggle** - show or hide the mouse cursor in the recording.
+- **Quality control** - set the video bitrate so you can balance file size against sharpness.
+- **Two backends** - it uses Windows' built-in Graphics Capture by default, or you can point it at your own `ffmpeg` command if you want full control.
+
+It runs as a small always-on-top overlay so the controls stay out of your way while you record.
+
+## Spotlight
+
+Dim and blur the whole screen except the part you care about.
+
+- Isolate the active window, or a region you draw.
+- Adjust the blur and dim strength live.
+- Dedicated hotkeys to raise/lower visibility.
+- Built for presenting and focused explanations.
+
+## Color Picker
+
+- A small always-on-top, frameless window for uninterrupted sampling.
+- An 11×11 grid so you can land on the exact pixel.
+- Hex/RGB copied straight to the clipboard.
+- Handy for design work and debugging.
 
 ![1666548921040895](https://user-images.githubusercontent.com/20853986/197408844-5a706e3f-685d-49ff-b41f-d45f03ef5da4.png)
 
+---
+
+# ⌨️ Hotkeys
+
+I tried to make hotkeys do a lot with a little. One key press can chain several actions.
+
+**Each hotkey has triggers, and each trigger can fire multiple actions.**
+
+Triggers can be:
+
+- **Press** - a normal tap.
+- **Double press** - with adjustable timing.
+- **Hold** - fire after holding for a set duration.
+- **Mouse movement** - based on direction, either while moving or at the end.
+- **Region** - only inside a specific part of a window (in pixels or %, anchored to any corner).
+
+You can also limit a trigger to a specific window (by title, exe or class), check a variable for more complex logic, and even use special bindings like mouse buttons 4/5, double-tapping `Alt`, modifier-only holds, and chords.
+
+Actions can be: **send keys**, **send a hotkey**, **run a Tabame function**, **set a variable**, or **send a click**. You can stack as many as you want.
+
+So with a single hotkey you can: open Tabame, jump to your previous window, toggle the taskbar, open the start menu, open a new Chrome tab, change the volume or switch desktops - all without memorizing a different shortcut for each.
+
+---
+
+# 📚 Books & Notes
+
+A few "shelves" for the things you keep coming back to. All reachable from the Launcher.
+
+- **Bookmarks** - save folders, links and commands, organized into groups with an emoji each so you can tell them apart. Open them by typing `b ` then the name, e.g. `b tabame`. I keep a "Tabame" group with the VS Code command, the release folder and the GitHub page - `b tabame` and arrow keys beats clicking around.
+- **Apps** - your bookmarked apps, sorted into categories.
+- **CLI Book** - saved terminal commands, with support for custom parameters (like a file path). Copy, run, or run inside a folder.
+- **Notion** - search and open pages from your Notion workspace.
+- **Memos** - quick notes and snippets you'll want later.
+
+---
+
+# 🔐 Vault & Authenticator
+
+- **Vault** - a place for your API keys, passwords and secrets. Optionally protect it with a password (PBE with AES-CBC). The encryption is one-way, so if you lose the password the data is gone - there's no backdoor.
+- **Authenticator** - a built-in OTP generator (the 6-digit 2FA codes). Add accounts by scanning a QR code or importing a backup file, and encrypt the file if you want.
+
+---
+
+# 📋 Clipboard History
+
+Everything you copy, kept around so you can paste it again later. You decide how many days of history to keep, and you can browse it from the QuickMenu or the Launcher.
+
+---
+
+# 📅 Reminders
+
+**Reminders** can repeat or fire once a day. Choose which weekdays they're active, and for repeating ones set the interval window. You can get a toast notification or an audio one.
+
+- **Persistent reminders** stick around until you click them off - there's a warning sign in the QuickActions menu when one is waiting. Good for medication.
+- **Interval reminders** fire every X days. Set "every 5 days starting Monday" and it'll hit Saturday, then Thursday, then Tuesday, and so on.
+
+---
+
+# 📝 Trktivity
+
+Trktivity tracks how you use your computer 🧐 - keystrokes, mouse pings every few seconds, and which app/window you had focused (if you set filters for it).
+
+- It's **off by default**. Everything stays **on your machine** and is never sent anywhere - it's just normalized JSON files in a local folder you can open straight from the UI.
+- It tells idle time apart from active time, and can merge mouse events to keep logs small.
+- Use regex to normalize noisy window titles per app, and flip a single global switch to kill all tracking.
+
+For viewing, you get **heat maps** of daily intensity, **activity charts** in half-hour buckets, **daily stats** (totals, idle time, multi-day ranges), **focus tables** broken down by app and title, a **timeline** for a chosen range, and **pattern** spotting for your repeated focus/distraction cycles.
+
+<img src="https://user-images.githubusercontent.com/20853986/200884861-d761c8bc-6885-43d2-86fe-119c1d6b60e3.png" align="right" width="250" height="auto" alt="Trktivity.">
+
+---
+
+# ✨ Wizardly
+
+A bunch of file and folder tools. You can add them to the Windows right-click menu for quick access.
+
+- **Search Everywhere** - search text inside a folder, recursively. Use regex, case-sensitivity, or whole-word matching. The reason I built it: you can **exclude** files/folders, so `node_modules` and friends never clutter your results (something Notepad++ and VS Code annoyingly can't do).
+- **Project Overview** - point it at a codebase and it counts lines of code, splits them into code / non-code / comments / empty, and breaks down the language mix. It even works out how many books you could've written with the same number of characters.
+- **Batch Rename** - rename files in bulk with patterns, sequential numbers and lists. Turn `IMG_20220725_121728.jpg` into `25 July 2022.jpg`.
+- **Folder Size Scan** - scan recursively to see what's eating your disk, and delete folders right there.
+- **Context Menu Cleaner** - review the apps that added themselves to your right-click menu and disable the ones you don't want.
+- **Wallpaper Scheduler** - per-monitor wallpaper rotation on a schedule, from a gallery you choose.
+- **Hosts Editor** - edit your system `hosts` file from inside Tabame (needs admin rights).
+
+---
+
+# 🎨 Theme
+
+Make it look how you like. Change the background, text and accent colors - pick from presets or set your own. The QuickMenu has a soft gradient down the middle whose opacity you can tweak too, and there's a light/dark switch that can flip on a schedule.
+
+On top of the colors, both the QuickMenu and the Launcher come with several built-in **designs** (layouts), so you can pick the vibe that fits you instead of being stuck with one look.
+
+**QuickMenu designs** - Classic, Interface, Modern, Matrix, Serene, Aurora and Terminal. Anything from clean-and-simple to a more terminal/hacker look.
+
+**Launcher designs** - Classic, Serene, Command, Terminal, Zen and Glass. Same idea for the search box: from a plain list to a glassy, command-palette style.
+
+Switch designs from the **QuickMenuDesign** action, and brand it as your own with a custom icon and a splash image above the menu if you want.
+
+---
 
 # 🙃 Outro
-I've started this project to learn Dart and Flutter, in my mind I had only `QuickMenu` features/app, but while writing for it I got new ideas for it, and it ended up `Tabame`, random name I came up with.
 
-## If you find this app useful, you can [buy me a coffee](https://www.buymeacoffee.com/far.se). It would be appreciated 😊.
+I started this to learn Dart and Flutter. In my head it was only ever going to be the QuickMenu - but every time I used it I had another idea, and it snowballed into Tabame (a random name I came up with). It's grown a lot, and I'm kind of proud of how much one person managed to cram into it.
+
+### If you find it useful, you can [buy me a coffee](https://www.buymeacoffee.com/far.se) ☕

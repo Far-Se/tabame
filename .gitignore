@@ -74,3 +74,5 @@ MICROSOFT*
 
 # Flutter Demon user preferences (not tracked)
 .fdemon/settings.local.toml
+docs/design-system/
+website/
