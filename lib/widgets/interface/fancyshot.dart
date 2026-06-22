@@ -268,7 +268,7 @@ class FancyshotState extends State<Fancyshot> {
   }
 
   // File? _latestScreenshotFile() {
-  //   final Directory screenshotsRoot = Directory('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots');
+  //   final Directory screenshotsRoot = Directory('${WinUtils.getFancyshotFolder()}\\screenshots');
   //   if (!screenshotsRoot.existsSync()) return null;
 
   //   final List<File> screenshotFiles = screenshotsRoot
@@ -935,20 +935,39 @@ class FancyshotState extends State<Fancyshot> {
             ),
           ),
           const SizedBox(width: 8),
-          FilledButton.tonalIcon(
-            onPressed: _openUploadHostsSettings,
-            icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-            label: const Text('Upload Hosts'),
+          _HeaderButton(
+            icon: Icons.drive_folder_upload_rounded,
+            label: 'Change Folder',
+            onPressed: _pickFancyshotFolder,
           ),
-          const SizedBox(width: 8),
-          FilledButton.tonalIcon(
-            onPressed: () => WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots'),
-            icon: const Icon(Icons.folder_open_rounded, size: 16),
-            label: const Text('Screenshots'),
+          const SizedBox(width: 6),
+          _HeaderButton(
+            icon: Icons.cloud_upload_outlined,
+            label: 'Upload Hosts',
+            onPressed: _openUploadHostsSettings,
+          ),
+          const SizedBox(width: 6),
+          _HeaderButton(
+            icon: Icons.folder_open_rounded,
+            label: 'Screenshots',
+            onPressed: () => WinUtils.open('${WinUtils.getFancyshotFolder()}\\screenshots'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _pickFancyshotFolder() async {
+    print(WinUtils.getFancyshotFolder());
+    final DirectoryPicker dirPicker = DirectoryPicker()
+      ..title = 'Select FancyShot folder'
+      ..initialDirectory = WinUtils.getFancyshotFolder()
+      ..alwaysShowInitialDirectory = true;
+    final Directory? dir = dirPicker.getDirectory();
+    if (dir == null || dir.path.isEmpty) return;
+    user.fancyshotFolder = dir.path;
+    await Boxes.updateSettings('fancyshotFolder', dir.path);
+    if (mounted) setState(() {});
   }
 
   Widget _buildToolLayout(BuildContext context) {
@@ -971,6 +990,55 @@ class FancyshotState extends State<Fancyshot> {
   @override
   Widget build(BuildContext context) {
     return _buildToolLayout(context);
+  }
+}
+
+/// Compact tonal header action button — smaller than [FilledButton.tonalIcon]
+/// so the header's three actions fit comfortably.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Material(
+        color: colorScheme.secondaryContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(icon, size: 14, color: colorScheme.onSecondaryContainer),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

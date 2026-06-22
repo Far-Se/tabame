@@ -1115,7 +1115,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   Widget build(BuildContext context) {
     final Color accent = Design.accent;
     final bool expanded = user.expandedTaskbar;
-    final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
+    final double height = expanded ? Caches.expandedHeight + 2 : kTaskBarItemHeight + 7;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1144,33 +1144,39 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            !expanded
-                                ? "${widget.item.artist ?? "Unknown Artist"} - ${widget.item.title}"
-                                : widget.item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: Design.baseFontSize + 2,
-                              fontWeight: FontWeight.w600,
-                              color: Design.text,
-                            ),
-                          ),
-                          !expanded
-                              ? const SizedBox.shrink()
-                              : Text(
-                                  widget.item.artist ?? "Unknown Artist",
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  !expanded
+                                      ? "${widget.item.artist ?? "Unknown Artist"} - ${widget.item.title}"
+                                      : widget.item.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: Design.baseFontSize,
-                                    color: Design.text.withAlpha(160),
+                                    fontSize: Design.baseFontSize + 2,
+                                    fontWeight: FontWeight.w600,
+                                    color: Design.text,
                                   ),
                                 ),
-                          const SizedBox(height: 4),
+                                !expanded
+                                    ? const SizedBox.shrink()
+                                    : Text(
+                                        widget.item.artist ?? "Unknown Artist",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: Design.baseFontSize,
+                                          color: Design.text.withAlpha(160),
+                                        ),
+                                      ),
+                              ],
+                            ),
+                          ),
                           MusicProgressBar(accent: accent),
                         ],
                       ),
@@ -1354,7 +1360,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
   Widget build(BuildContext context) {
     final Color accent = Design.accent;
     final bool expanded = user.expandedTaskbar;
-    final double height = expanded ? Caches.expandedHeight : kTaskBarItemHeight + 6;
+    final double height = expanded ? Caches.expandedHeight + 2 : kTaskBarItemHeight + 7;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),

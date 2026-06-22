@@ -619,9 +619,11 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
     }
   }
 
-  Future<void> _playFolder(MusicItem item, {bool shuffle = false}) async {
+  Future<void> _playFolder(MusicItem item, {bool shuffle = false, List<MusicItem>? source, int index = 0}) async {
     if (!item.isFolder) {
-      await MusicServerManager.playQueue(<MusicItem>[item]);
+      // Queue the whole folder listing and start at the selected track. playQueue
+      // filters out sub-folders and resolves the index to the matching track.
+      await MusicServerManager.playQueue(source ?? <MusicItem>[item], initialIndex: source == null ? 0 : index);
       if (mounted) setState(() => _tabIndex = 0);
       return;
     }

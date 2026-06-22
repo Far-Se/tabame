@@ -207,8 +207,7 @@ class ScreenUtils {
 
     String shortMonth = intl.DateFormat('MMM').format(date);
 
-    final Directory dir =
-        Directory('${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots\\${date.year} - $shortMonth');
+    final Directory dir = Directory('${WinUtils.getFancyshotFolder()}\\screenshots\\${date.year} - $shortMonth');
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);
       WinUtils.setSortByDateModifiedDesc(dir.path);
@@ -311,7 +310,7 @@ class ScreenRegionCapture {
     final DateTime date = DateTime.now();
     final String shortMonth = intl.DateFormat('MMM').format(date);
     final Directory dir = Directory(
-      '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots\\${date.year} - $shortMonth',
+      '${WinUtils.getFancyshotFolder()}\\screenshots\\${date.year} - $shortMonth',
     );
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);

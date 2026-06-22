@@ -158,6 +158,7 @@ class Settings {
   String customSpash = "";
   String launcherSearchText = "";
   String wallpapersFolder = "";
+  String fancyshotFolder = "";
   String lastQuickSnapZoneId = "";
   String lastChangelog = Globals.version;
   String language = Platform.localeName.substring(0, 2);

@@ -59,6 +59,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
 
   List<Directory> _monthFolders = <Directory>[];
   List<File> _files = <File>[];
+  Map<String, int> _folderSizes = <String, int>{};
 
   // ── Lifecycle ─────────────────────────────
 
@@ -176,8 +177,8 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
   // ── Helpers ───────────────────────────────
 
   String get _rootFolder => _mediaType == _MediaType.screenshots
-      ? '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\screenshots'
-      : '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\recordings';
+      ? '${WinUtils.getFancyshotFolder()}\\screenshots'
+      : '${WinUtils.getFancyshotFolder()}\\recordings';
 
   bool _isMediaFile(String path) {
     final String ext = _extension(path);
@@ -204,6 +205,9 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
     final List<FileStat> stats = await Future.wait(
       dirs.map((Directory f) => f.stat()),
     );
+    final List<int> sizes = await Future.wait(
+      dirs.map((Directory f) => _folderSize(f)),
+    );
 
     final List<MapEntry<Directory, FileStat>> paired = List<MapEntry<Directory, FileStat>>.generate(
       dirs.length,
@@ -212,11 +216,30 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
         return b.value.changed.compareTo(a.value.changed);
       });
 
+    final Map<String, int> sizeMap = <String, int>{
+      for (int i = 0; i < dirs.length; i++) dirs[i].path: sizes[i],
+    };
+
     setState(() {
       _monthFolders = paired.map((MapEntry<Directory, FileStat> e) => e.key).toList();
+      _folderSizes = sizeMap;
       _selectedMonthFolder = null;
       _files = <File>[];
     });
+  }
+
+  Future<int> _folderSize(Directory dir) async {
+    int total = 0;
+    try {
+      await for (final FileSystemEntity entity in dir.list(followLinks: false)) {
+        if (entity is File && _isMediaFile(entity.path)) {
+          try {
+            total += await entity.length();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return total;
   }
 
   Future<void> _loadFiles(String monthFolderPath) async {
@@ -324,7 +347,7 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
                       icon: Icon(Icons.arrow_outward_outlined, size: 18, color: accent),
                       tooltip: 'Open Fancyshot Folder',
                       onPressed: () {
-                        WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
+                        WinUtils.open('${WinUtils.getFancyshotFolder()}');
                         QuickMenuFunctions.hideQuickMenu();
                       },
                       splashRadius: 18,
@@ -387,21 +410,25 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
-      itemCount: _monthFolders.length,
-      itemBuilder: (BuildContext context, int index) {
-        final Directory dir = _monthFolders[index];
-        final String label = _folderLabel(dir);
-        final int count = _fileCount(dir);
-        return _MonthRow(
-          label: label,
-          count: count,
-          accent: accent,
-          onSurface: onSurface,
-          onTap: () => _loadFiles(dir.path),
-        );
-      },
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
+        itemCount: _monthFolders.length,
+        itemBuilder: (BuildContext context, int index) {
+          final Directory dir = _monthFolders[index];
+          final String label = _folderLabel(dir);
+          final int count = _fileCount(dir);
+          return _MonthRow(
+            label: label,
+            count: count,
+            sizeBytes: _folderSizes[dir.path] ?? 0,
+            accent: accent,
+            onSurface: onSurface,
+            onTap: () => _loadFiles(dir.path),
+          );
+        },
+      ),
     );
   }
 
@@ -415,23 +442,26 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
-        childAspectRatio: 1.6,
+    return FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: GridView.builder(
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+          childAspectRatio: 1.6,
+        ),
+        itemCount: _files.length,
+        itemBuilder: (BuildContext context, int index) {
+          return _MediaTile(
+            file: _files[index],
+            accent: accent,
+            onSurface: onSurface,
+            isVideo: _mediaType == _MediaType.recordings,
+          );
+        },
       ),
-      itemCount: _files.length,
-      itemBuilder: (BuildContext context, int index) {
-        return _MediaTile(
-          file: _files[index],
-          accent: accent,
-          onSurface: onSurface,
-          isVideo: _mediaType == _MediaType.recordings,
-        );
-      },
     );
   }
 }
@@ -483,6 +513,7 @@ class _MonthRow extends StatefulWidget {
   const _MonthRow({
     required this.label,
     required this.count,
+    required this.sizeBytes,
     required this.accent,
     required this.onSurface,
     required this.onTap,
@@ -490,6 +521,7 @@ class _MonthRow extends StatefulWidget {
 
   final String label;
   final int count;
+  final int sizeBytes;
   final Color accent;
   final Color onSurface;
   final VoidCallback onTap;
@@ -500,6 +532,9 @@ class _MonthRow extends StatefulWidget {
 
 class _MonthRowState extends State<_MonthRow> {
   bool _hovered = false;
+  bool _focused = false;
+
+  bool get _active => _hovered || _focused;
 
   @override
   Widget build(BuildContext context) {
@@ -510,21 +545,24 @@ class _MonthRowState extends State<_MonthRow> {
         duration: const Duration(milliseconds: 130),
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: _hovered ? widget.accent.withAlpha(22) : Colors.transparent,
+          color: _active ? widget.accent.withAlpha(22) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
+          border: _focused ? Border.all(color: widget.accent.withAlpha(140)) : null,
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: widget.onTap,
+          onFocusChange: (bool focused) => setState(() => _focused = focused),
+          focusColor: widget.accent.withAlpha(22),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             child: Row(
               children: <Widget>[
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 130),
-                  width: _hovered ? 2.5 : 0,
+                  width: _active ? 2.5 : 0,
                   height: 16,
-                  margin: EdgeInsets.only(right: _hovered ? 8 : 0),
+                  margin: EdgeInsets.only(right: _active ? 8 : 0),
                   decoration: BoxDecoration(
                     color: widget.accent,
                     borderRadius: BorderRadius.circular(2),
@@ -533,7 +571,7 @@ class _MonthRowState extends State<_MonthRow> {
                 Icon(
                   Icons.folder_outlined,
                   size: 16,
-                  color: _hovered ? widget.accent : widget.onSurface.withAlpha(160),
+                  color: _active ? widget.accent : widget.onSurface.withAlpha(160),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -542,15 +580,27 @@ class _MonthRowState extends State<_MonthRow> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: _hovered ? widget.onSurface : widget.onSurface.withAlpha(210),
+                      color: _active ? widget.onSurface : widget.onSurface.withAlpha(210),
                     ),
                   ),
                 ),
+                if (widget.sizeBytes > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      _formatBytes(widget.sizeBytes),
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w500,
+                        color: widget.onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ),
                 if (widget.count > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: widget.accent.withAlpha(_hovered ? 40 : 18),
+                      color: widget.accent.withAlpha(_active ? 40 : 18),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -566,7 +616,7 @@ class _MonthRowState extends State<_MonthRow> {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: 16,
-                  color: widget.onSurface.withAlpha(_hovered ? 180 : 80),
+                  color: widget.onSurface.withAlpha(_active ? 180 : 80),
                 ),
               ],
             ),
@@ -575,6 +625,19 @@ class _MonthRowState extends State<_MonthRow> {
       ),
     );
   }
+}
+
+/// Formats a byte count into a short human-readable string (e.g. "12.3 MB").
+String _formatBytes(int bytes) {
+  if (bytes <= 0) return '0 B';
+  const List<String> units = <String>['B', 'KB', 'MB', 'GB', 'TB'];
+  double value = bytes.toDouble();
+  int unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return '${value.toStringAsFixed(unitIndex == 0 ? 0 : 1)} ${units[unitIndex]}';
 }
 
 /// Single media tile in the grid
@@ -597,6 +660,9 @@ class _MediaTile extends StatefulWidget {
 
 class _MediaTileState extends State<_MediaTile> {
   bool _hovered = false;
+  bool _focused = false;
+
+  bool get _active => _hovered || _focused;
 
   String get _fileName => widget.file.path.split(RegExp(r'[\\/]')).last;
 
@@ -626,10 +692,10 @@ class _MediaTileState extends State<_MediaTile> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: _hovered ? widget.accent.withAlpha(160) : widget.onSurface.withAlpha(30),
-            width: _hovered ? 1.5 : 1,
+            color: _active ? widget.accent.withAlpha(160) : widget.onSurface.withAlpha(30),
+            width: _active ? 1.5 : 1,
           ),
-          boxShadow: _hovered
+          boxShadow: _active
               ? <BoxShadow>[
                   BoxShadow(
                     color: widget.accent.withAlpha(25),
@@ -640,86 +706,91 @@ class _MediaTileState extends State<_MediaTile> {
               : null,
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            // Thumbnail
-            widget.isVideo
-                ? _VideoThumb(file: widget.file, onSurface: widget.onSurface)
-                : _ImageThumb(file: widget.file),
+        child: InkWell(
+          onTap: _openFile,
+          onFocusChange: (bool focused) => setState(() => _focused = focused),
+          focusColor: widget.accent.withAlpha(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              // Thumbnail
+              widget.isVideo
+                  ? _VideoThumb(file: widget.file, onSurface: widget.onSurface)
+                  : _ImageThumb(file: widget.file),
 
-            // Overlay on hover
-            if (_hovered)
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 130),
-                opacity: 1.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: <Color>[
-                        Colors.black.withAlpha(0),
-                        Colors.black.withAlpha(180),
+              // Overlay on hover/focus
+              if (_active)
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 130),
+                  opacity: 1.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[
+                          Colors.black.withAlpha(0),
+                          Colors.black.withAlpha(180),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Action buttons (bottom strip on hover/focus)
+              if (_active)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(5),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        if (!widget.isVideo)
+                          _TileActionButton(
+                            icon: Icons.image_outlined,
+                            tooltip: 'Copy image',
+                            accent: widget.accent,
+                            onTap: _copyImage,
+                          ),
+                        _TileActionButton(
+                          icon: Icons.copy_outlined,
+                          tooltip: 'Copy file',
+                          accent: widget.accent,
+                          onTap: _copyFilePath,
+                        ),
+                        _TileActionButton(
+                          icon: Icons.open_in_new_rounded,
+                          tooltip: 'Open',
+                          accent: widget.accent,
+                          onTap: _openFile,
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ),
 
-            // Action buttons (bottom strip on hover)
-            if (_hovered)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      if (!widget.isVideo)
-                        _TileActionButton(
-                          icon: Icons.image_outlined,
-                          tooltip: 'Copy image',
-                          accent: widget.accent,
-                          onTap: _copyImage,
-                        ),
-                      _TileActionButton(
-                        icon: Icons.copy_outlined,
-                        tooltip: 'Copy file',
-                        accent: widget.accent,
-                        onTap: _copyFilePath,
-                      ),
-                      _TileActionButton(
-                        icon: Icons.open_in_new_rounded,
-                        tooltip: 'Open',
-                        accent: widget.accent,
-                        onTap: _openFile,
-                      ),
-                    ],
+              // Filename chip (top, always visible on hover/focus)
+              if (_active)
+                Positioned(
+                  left: 4,
+                  right: 4,
+                  top: 4,
+                  child: Text(
+                    _fileName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white,
+                      shadows: <Shadow>[Shadow(color: Colors.black, blurRadius: 4)],
+                    ),
                   ),
                 ),
-              ),
-
-            // Filename chip (top, always visible on hover)
-            if (_hovered)
-              Positioned(
-                left: 4,
-                right: 4,
-                top: 4,
-                child: Text(
-                  _fileName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.white,
-                    shadows: <Shadow>[Shadow(color: Colors.black, blurRadius: 4)],
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

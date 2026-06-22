@@ -83,6 +83,7 @@ class Boxes {
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
+      await pref.setString("fancyshotFolder", "");
       await pref.setString("lastQuickSnapZoneId", "");
       await pref.setInt("lightSwitchMode", LightSwitchMode.off.index);
       await pref.setInt("lightSwitchSunriseOffset", 0);
@@ -152,6 +153,7 @@ class Boxes {
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
+      ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? user.runAsAdministrator
       ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? user.launcherFullPopups
       ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? user.autoOpenTaskManager

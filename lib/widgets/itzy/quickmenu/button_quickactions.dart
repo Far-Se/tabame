@@ -100,7 +100,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
           "screen recording folder"
         ],
         onExecute: () {
-          WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
+          WinUtils.open('${WinUtils.getFancyshotFolder()}');
           QuickMenuFunctions.hideQuickMenu();
         },
         builder: (BuildContext context) {
@@ -113,7 +113,7 @@ List<QuickActionMenuEntry> buildQuickActionMenuEntries(
               child: Icon(Icons.open_in_browser, size: 14, color: onSurface),
             ),
             onTap: () async {
-              WinUtils.open('${WinUtils.getTabameAppDataFolder()}\\fancyshot');
+              WinUtils.open('${WinUtils.getFancyshotFolder()}');
               QuickMenuFunctions.hideQuickMenu();
             },
           );

@@ -448,8 +448,13 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
   }
 
   Widget _buildTransport(Color accent, SequenceState? sequenceState, MusicItem item) {
-    final bool canPrevious = (sequenceState?.currentIndex ?? 0) > 0;
-    final bool canNext = (sequenceState?.currentIndex ?? 0) < ((sequenceState?.sequence.length ?? 1) - 1);
+    final int queueLength = sequenceState?.sequence.length ?? 0;
+    final int currentIndex = sequenceState?.currentIndex ?? 0;
+    final bool canPrevious = currentIndex > 0;
+    final bool atLastTrack = currentIndex >= queueLength - 1;
+    // Next is enabled whenever there's more than one track; on the last track it
+    // wraps around to the first track instead of being disabled.
+    final bool canNext = queueLength > 1;
     final bool starred = _starredOverrides[item.id] ?? item.starred;
 
     return StreamBuilder<PlayerState>(
@@ -523,7 +528,9 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       tooltip: "Next",
                       enabled: canNext,
                       size: secondarySize,
-                      onTap: MusicServerManager.player.seekToNext,
+                      onTap: atLastTrack
+                          ? () => MusicServerManager.player.seek(Duration.zero, index: 0)
+                          : MusicServerManager.player.seekToNext,
                     ),
                     SizedBox(width: gap),
                     _TransportButton(
@@ -1012,7 +1019,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             _RowAction(
               icon: Icons.play_arrow_rounded,
               tooltip: item.isFolder ? "Play folder" : "Play track",
-              onTap: () => _playFolder(item),
+              onTap: () => _playFolder(item, source: _folderItems, index: index),
             ),
             if (item.isFolder)
               _RowAction(

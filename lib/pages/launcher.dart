@@ -792,13 +792,23 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final LauncherSearchMode searchMode = launcherQuery.mode;
     final String normalizedQuery = launcherQuery.normalized;
 
-    if (searchMode != LauncherSearchMode.desktopOnly && /* ... */ _folderBrowsingStack.isNotEmpty) {
+    // Folder browsing is supported in desktop, files-only and mixed modes (see
+    // isFileBrowsingMode in _runSearch). Only drop the browsing stack when the
+    // query switches to a mode that can't browse — otherwise drilling into a
+    // folder from file/mixed search would clear the stack before the contents
+    // could be listed.
+    final bool isFileBrowsingMode = searchMode == LauncherSearchMode.desktopOnly ||
+        searchMode == LauncherSearchMode.filesOnly ||
+        searchMode == LauncherSearchMode.mixed;
+    if (!isFileBrowsingMode && _folderBrowsingStack.isNotEmpty) {
       _folderBrowsingStack.clear();
     }
 
     final int gen = ++_searchGeneration;
 
-    if (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed)) {
+    final bool isBrowsingFolder = isFileBrowsingMode && _folderBrowsingStack.isNotEmpty;
+    if (!isBrowsingFolder &&
+        (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed))) {
       setState(() {
         _searchMode = searchMode;
         _isSearching = false;

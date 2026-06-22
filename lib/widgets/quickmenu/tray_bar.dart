@@ -102,90 +102,103 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   Widget build(BuildContext context) {
     if (tray.isEmpty || !user.showTrayBar) return Container();
     Theme.of(context);
-    return Material(
-      type: MaterialType.transparency,
-      child: ShaderMask(
-        shaderCallback: (Rect rect) {
-          return const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-            stops: <double>[0.0, 0.93, 1.0],
-          ).createShader(rect);
-        },
-        blendMode: BlendMode.dstOut,
-        child: WindowsScrollView(
-          scrollDirection: Axis.horizontal,
-          showScrollbar: false,
-          child: Row(
-            children: <Widget>[
-              for (final TrayBarInfo info in tray)
-                GestureDetector(
-                  onSecondaryTap: () async {
+    return ShaderMask(
+      shaderCallback: (Rect rect) {
+        return const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, 0.93, 1.0],
+        ).createShader(rect);
+      },
+      blendMode: BlendMode.dstOut,
+      child: WindowsScrollView(
+        scrollDirection: Axis.horizontal,
+        showScrollbar: false,
+        child: Row(
+          children: <Widget>[
+            for (final TrayBarInfo info in tray)
+              GestureDetector(
+                onSecondaryTap: () async {
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                  // sendTrayClick(info, TrayClickType.right);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                },
+                onLongPress: () {
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                  WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
+                },
+                onSecondaryLongPress: () async {
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                  WinTray.click(info, clickType: TrayClickType.right);
+                },
+                onTertiaryTapUp: (TapUpDetails e) {
+                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                  WinTray.click(info, clickType: TrayClickType.middle);
+                },
+                child: InkWell(
+                  hoverColor: Design.text.withAlpha(30),
+                  borderRadius: BorderRadius.circular(3),
+                  onTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    sendTrayClick(info, TrayClickType.right);
+                    sendSimpleClick(info, TrayClickType.left);
+                    // sendTrayClick(info, TrayClickType.left);
                   },
-                  onLongPress: () {
+                  onDoubleTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
+                    // sendTrayClick(info, TrayClickType.doubleClick);
+
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
                   },
-                  onSecondaryLongPress: () async {
-                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    WinTray.click(info, clickType: TrayClickType.right);
-                  },
-                  onTertiaryTapUp: (TapUpDetails e) {
-                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    WinTray.click(info, clickType: TrayClickType.middle);
-                  },
-                  child: InkWell(
-                    hoverColor: Design.text.withAlpha(30),
-                    borderRadius: BorderRadius.circular(3),
-                    onTap: () async {
-                      if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                      sendTrayClick(info, TrayClickType.left);
-                    },
-                    onDoubleTap: () async {
-                      if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                      sendTrayClick(info, TrayClickType.doubleClick);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                      child: CustomTooltip(
-                          message: info.processExe,
-                          child: Boxes.getIconRewrite(info.processPath) != ""
-                              ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
-                              // Packaged (Appx/UWP) apps: prefer the manifest logo resolved in
-                              // TrayWatcher.fetchTray. It's the only icon source that survives
-                              // running Tabame elevated (shell/HICON paths don't).
-                              : info.appxIconPath != ""
-                                  ? Image.file(
-                                      File(info.appxIconPath),
-                                      fit: BoxFit.scaleDown,
-                                      gaplessPlayback: true,
-                                      width: 16.1,
-                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                          const Icon(Icons.check_box_outline_blank, size: 16),
-                                    )
-                                  : Image.memory(
-                                      info.iconData,
-                                      fit: BoxFit.scaleDown,
-                                      gaplessPlayback: true,
-                                      width: 16.1,
-                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                          const Icon(
-                                        Icons.check_box_outline_blank,
-                                        size: 16,
-                                      ),
-                                    )),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                    child: CustomTooltip(
+                      message: info.processExe,
+                      child: Boxes.getIconRewrite(info.processPath) != ""
+                          ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
+                          // Packaged (Appx/UWP) apps: prefer the manifest logo resolved in
+                          // TrayWatcher.fetchTray. It's the only icon source that survives
+                          // running Tabame elevated (shell/HICON paths don't).
+                          : (info.iconData.length == 1
+                              ? fallBackImage(info)
+                              : Image.memory(
+                                  info.iconData,
+                                  fit: BoxFit.scaleDown,
+                                  gaplessPlayback: true,
+                                  width: 16.1,
+                                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                      fallBackImage(info),
+                                )),
                     ),
                   ),
                 ),
-              const SizedBox(width: 5.1),
-            ],
-          ),
+              ),
+            const SizedBox(width: 5.1),
+          ],
         ),
       ),
     );
+  }
+
+  Widget fallBackImage(TrayBarInfo info) {
+    return info.appxIconPath != ""
+        ? Image.file(
+            File(info.appxIconPath),
+            fit: BoxFit.scaleDown,
+            gaplessPlayback: true,
+            width: 16.1,
+            errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                const Icon(Icons.check_box_outline_blank, size: 16),
+          )
+        : const Icon(Icons.check_box_outline_blank, size: 16);
   }
 }
 
@@ -252,4 +265,16 @@ void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
       deliver(WM_LBUTTONDBLCLK);
       break;
   }
+}
+
+void sendSimpleClick(ExtendedTrayIcon element, TrayClickType clickType) async {
+  final Pointer<POINT> point = calloc<POINT>();
+  GetCursorPos(point);
+  final int x = point.ref.x;
+  final int y = point.ref.y;
+  free(point);
+  WinTray.click(element, clickType: TrayClickType.left);
+  // interval 10ms move mosue back to pos
+  await Future<void>.delayed(const Duration(milliseconds: 400));
+  SetCursorPos(x, y);
 }

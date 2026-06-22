@@ -260,6 +260,11 @@ class WinUtils {
     return appDataFolder;
   }
 
+  static String getFancyshotFolder() {
+    if (user.fancyshotFolder.isEmpty) return '${WinUtils.getTabameAppDataFolder()}\\fancyshot';
+    return user.fancyshotFolder;
+  }
+
   static Future<String> folderPicker() async {
     return await pickFolder();
   }

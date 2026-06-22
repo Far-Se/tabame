@@ -72,7 +72,7 @@ Future<List<TrayBarInfo>> _buildTrayBarInfoList(
 
     if (cachedTrayInfo != null) {
       trayInfo.iconData = cachedTrayInfo.iconData;
-      // trayInfo.appxIconPath = cachedTrayInfo.appxIconPath;
+      trayInfo.appxIconPath = cachedTrayInfo.appxIconPath;
     }
 
     // Only load/update icon if the item is visible and the icon handle changed
@@ -87,15 +87,14 @@ Future<List<TrayBarInfo>> _buildTrayBarInfoList(
           // Silently fail for individual icons
         }
       }
-
-      // if (trayInfo.appxIconPath.isEmpty) {
-      //   trayInfo.appxIconPath = TrayWatcher._resolveAppxIconPath(processPath.path);
-      // }
     } else {
       // If invisible, clear heavy icon data from the object (keep it in global cache if needed later)
       trayInfo.iconData = Uint8List.fromList(<int>[0]);
     }
 
+    if (trayInfo.appxIconPath.isEmpty) {
+      trayInfo.appxIconPath = TrayWatcher._resolveAppxIconPath(processPath.path);
+    }
     trayCache[iconKey] = trayInfo;
     newList.add(trayInfo);
   }
@@ -136,7 +135,6 @@ class TrayWatcher {
   /// (including the empty "not found" result) are cached per exe path so the
   /// manifest is parsed at most once, not on every 600ms refresh tick.
   static final Map<String, String> _appxIconByExe = <String, String>{};
-  // ignore: unused_element
   static String _resolveAppxIconPath(String exePath) {
     if (exePath.isEmpty || !exePath.toLowerCase().contains("windowsapps")) return "";
 

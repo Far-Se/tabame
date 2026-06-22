@@ -451,7 +451,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   String _defaultRecordingFolder() {
     final DateTime now = DateTime.now();
     final String month = intl.DateFormat('MMM').format(now);
-    return '${WinUtils.getTabameAppDataFolder()}\\fancyshot\\recordings\\${now.year} - $month';
+    return '${WinUtils.getFancyshotFolder()}\\recordings\\${now.year} - $month';
   }
 
   Future<String> _buildOutputPath() async {
