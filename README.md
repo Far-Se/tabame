@@ -4,9 +4,7 @@
     <p><em>A taskbar replacement that turned into the Windows toolbox I always wanted.</em></p>
 </div>
 
-![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
-
-![promote_dark](https://user-images.githubusercontent.com/20853986/204138108-e57e9b1b-4d2b-445e-b8cb-4480d188ebb9.png#gh-dark-mode-only)
+![promote](https://github.com/user-attachments/assets/db32c793-7358-4307-a4b1-3cdbc7167cb7)
 
 ## 🤔 What is this?
 
