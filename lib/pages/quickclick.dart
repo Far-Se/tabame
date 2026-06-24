@@ -82,6 +82,11 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   Offset _dragCursorPos = Offset.zero;
   Timer? _dragPollTimer;
 
+  // ── cursor indicator state ────────────────────────────────────────────────────
+  // Shown while the overlay is hidden so the user still knows QuickClick is armed.
+  Offset _cursorPos = Offset.zero;
+  Timer? _cursorPollTimer;
+
   int currentMonitor = -1;
   Square monitorData = Square(x: 0, y: 0, width: 0, height: 0);
 
@@ -108,6 +113,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     overlayVisible = Boxes.pref.getBool("quickClickOverlay") ?? true;
     screenWidth = monitorData.width.toDouble();
     screenHeight = monitorData.height.toDouble();
+    if (!overlayVisible) _startCursorIndicator();
     Timer(const Duration(milliseconds: 200), () {
       _refocusPreviousWindow();
       WinUtils.makeWindowClickThrough(true);
@@ -145,6 +151,11 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
           overlayVisible = !overlayVisible;
           Boxes.pref.setBool("quickClickOverlay", overlayVisible);
         });
+        if (overlayVisible) {
+          _stopCursorIndicator();
+        } else {
+          _startCursorIndicator();
+        }
         break;
 
       case 'zoneMode':
@@ -240,11 +251,37 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     if (mounted) setState(() => _isDragging = false);
   }
 
+  // ── cursor indicator helpers ──────────────────────────────────────────────────
+  //
+  // While the overlay is hidden the user still needs to know QuickClick is armed,
+  // so we poll the real cursor at ~60 fps and draw a tiny dot at its bottom-right.
+
+  void _startCursorIndicator() {
+    _cursorPollTimer?.cancel();
+    _cursorPollTimer = Timer.periodic(const Duration(milliseconds: 5), (_) {
+      final Pointer<POINT> pt = calloc<POINT>();
+      GetCursorPos(pt);
+      // Convert absolute screen coords to local overlay coords.
+      final double lx = (pt.ref.x - monitorData.x).toDouble();
+      final double ly = (pt.ref.y - monitorData.y).toDouble();
+      calloc.free(pt);
+      if (mounted) {
+        setState(() => _cursorPos = Offset(lx, ly));
+      }
+    });
+  }
+
+  void _stopCursorIndicator() {
+    _cursorPollTimer?.cancel();
+    _cursorPollTimer = null;
+  }
+
   // ── dispose ─────────────────────────────────────────────────────────────────
 
   @override
   void dispose() {
     _dragPollTimer?.cancel();
+    _cursorPollTimer?.cancel();
     NativeHooks.removeListener(this);
     QuickClick.disableQuickClick();
     _refocusPreviousWindow();
@@ -463,17 +500,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
             child: _CoordChip(label: _currentCoordinate()),
           ),
         ] else
-          Positioned(
-            top: 0,
-            left: 0,
-            child: SizedBox(
-              width: 30,
-              height: 30,
-              child: CustomPaint(
-                painter: RightTrianglePainter(color: Design.accent),
-              ),
-            ),
-          ),
+          _buildCursorIndicator(),
         if (selecting == 2) _buildRowHint(selectedCol!),
         if (selecting == 1) _buildColHint(selectedRow!),
         if (_isDragging) _buildDragIndicator(),
@@ -900,45 +927,36 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     );
   }
 
+  // ── cursor indicator: tiny dot at the cursor's bottom-right ───────────────────
+  //
+  // Rendered only while the overlay is hidden — a low-key reminder that
+  // QuickClick is still capturing keys.
+
+  Widget _buildCursorIndicator() {
+    const double dotSize = 10.0;
+    const double gap = 14.0; // pushed to the bottom-right of the cursor tip
+
+    return Positioned(
+      left: _cursorPos.dx + gap,
+      top: _cursorPos.dy + gap,
+      child: Container(
+        width: dotSize,
+        height: dotSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Design.accent.withValues(alpha: 0.4),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.2)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(color: Design.accent.withValues(alpha: 0.2), blurRadius: 6),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── keyboard handler ────────────────────────────────────────────────────────
 }
 
-class RightTrianglePainter extends CustomPainter {
-  final Color color;
-
-  RightTrianglePainter({required this.color});
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Define the gradient from the top boundary to the bottom boundary
-    final Rect rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final LinearGradient gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: <Color>[
-        color,
-        color.withValues(alpha: 0),
-        color.withValues(alpha: 0),
-      ],
-    );
-
-    final Paint paint = Paint()
-      ..shader = gradient.createShader(rect) // Apply the gradient shader
-      ..style = PaintingStyle.fill;
-
-    final Path path = Path();
-
-    // Draw the top-left right-angle triangle
-    path.moveTo(0, 0);
-    path.lineTo(size.width, 0);
-    path.lineTo(0, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 // ─── small reusable widgets ───────────────────────────────────────────────────
 
 /// The coordinate chip shown in the top-right corner.

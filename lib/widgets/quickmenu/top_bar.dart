@@ -22,21 +22,20 @@ class TopBar extends StatefulWidget {
 
 class _TopBarState extends State<TopBar> with QuickMenuTriggers {
   List<Widget> showWidgets = <Widget>[];
-  Map<String, Widget> widgets = <String, Widget>{};
 
   @override
   void initState() {
     super.initState();
     QuickMenuFunctions.addListener(this);
     Debug.add("QuickMenu: Topbar");
-    widgets.addAll(
-        quickActionsMap.map((String key, QuickAction value) => MapEntry<String, Widget>("$key", value.widget())));
-    final List<String> showWidgetsNames = Boxes().topBarWidgets;
-    for (String x in showWidgetsNames) {
-      if (x == "Deactivated:") break;
-      if (widgets.containsKey(x)) {
-        showWidgets.add(widgets[x]!);
-      }
+    // Only instantiate the widgets that are actually active in the top bar
+    // (everything before the "Deactivated:" marker). Building the full
+    // quickActionsMap up front allocated a widget for every action, including
+    // the deactivated ones that never get mounted.
+    for (final String name in Boxes().topBarWidgets) {
+      if (name == "Deactivated:") break;
+      final QuickAction? action = quickActionsMap[name];
+      if (action != null) showWidgets.add(action.widget());
     }
     Globals.heights.topbar = 25;
   }

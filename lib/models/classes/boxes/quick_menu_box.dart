@@ -114,7 +114,7 @@ class QuickMenuFunctions {
     visible ??= !isQuickMenuVisible;
     isQuickMenuVisible = visible;
     if (Globals.quickMenuPage != type) {
-      for (final QuickMenuTriggers listener in _listeners) {
+      for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;
         await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
       }
@@ -135,6 +135,8 @@ class QuickMenuFunctions {
         }
         Future<void>.delayed(const Duration(milliseconds: 110), () async {
           Win32.setWindowInvisible(false);
+          // ShowWindow(Win32.hWnd, SW_SHOW);
+          Win32.forceRedraw();
           if (forceReposition) {
             if (center) {
               Win32.setCenter(useMouse: true);
@@ -147,6 +149,8 @@ class QuickMenuFunctions {
             await listener.onQuickMenuVisible(type, center);
           }
           shownTime = DateTime.now().millisecondsSinceEpoch;
+
+          // if (IsWindowVisible(Win32.hWnd) == 0 && visible == true) ShowWindow(Win32.hWnd, SW_SHOW);
         });
       } else {
         visible = false;
@@ -156,6 +160,7 @@ class QuickMenuFunctions {
       await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
       if (kDebugMode && !Globals.debugHotkeys) return;
       Win32.setPosition(const Offset(-99999, -99999));
+      // ShowWindow(Win32.hWnd, SW_HIDE);
       hidTime = DateTime.now().millisecondsSinceEpoch;
     }
   }

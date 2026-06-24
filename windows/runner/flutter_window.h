@@ -2,7 +2,9 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -28,6 +30,12 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Channel used by Dart to request a forced repaint, e.g. after the window
+  // is shown again following a hide where DWM may have discarded the
+  // layered surface (see QuickMenuFunctions.toggleQuickMenu in Dart).
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      native_window_channel_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

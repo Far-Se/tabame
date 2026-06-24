@@ -99,7 +99,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       QuickMenuFunctions.addListener(this);
       NativeHooks.addListener(this);
       _fetchWindows();
-      _startTimer();
+      // _startTimer();
     }
   }
 
@@ -112,7 +112,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   @override
   void dispose() {
-    PaintingBinding.instance.imageCache.clear();
+    // PaintingBinding.instance.imageCache.clear();
     _mainTimer?.cancel();
     _scrollController.dispose();
     QuickMenuFunctions.removeListener(this);
@@ -121,6 +121,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   }
 
   void _startTimer() {
+    _mainTimer?.cancel();
     _mainTimer = Timer.periodic(kTimerInterval, (Timer timer) {
       if (_keepFetching && !_fetching) {
         if (GetForegroundWindow() != Win32.hWnd && user.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
@@ -180,9 +181,11 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     if (visible) {
       _keepFetching = true;
       await _fetchWindows();
+      _startTimer();
     } else {
       _keepFetching = false;
       if (mounted) setState(() {});
+      _mainTimer?.cancel();
     }
   }
 
@@ -830,7 +833,7 @@ class TaskBarMediaCarousel extends StatefulWidget {
   State<TaskBarMediaCarousel> createState() => _TaskBarMediaCarouselState();
 }
 
-class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
+class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickMenuTriggers {
   late PageController _pageController;
   int _currentPage = 0;
 
@@ -860,15 +863,28 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> {
   @override
   void initState() {
     super.initState();
+    QuickMenuFunctions.addListener(this);
     _pageController = PageController();
-    timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
+    // timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     timer?.cancel();
+    QuickMenuFunctions.removeListener(this);
     super.dispose();
+  }
+
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (visible) {
+      timer?.cancel();
+      _pollMediaSession();
+      timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
+    } else {
+      timer?.cancel();
+    }
   }
 
   void _emitSessions(List<MediaSession> sessions) {

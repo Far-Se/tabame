@@ -22,6 +22,7 @@ class AppResultIcon extends StatelessWidget {
     if (file.existsSync()) {
       return Image.file(
         file,
+        cacheWidth: (size * MediaQueryData.fromView(WidgetsBinding.instance.window).size.width).round(),
         width: size,
         height: size,
         fit: BoxFit.contain,

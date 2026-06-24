@@ -27,7 +27,7 @@ class TrayBar extends StatefulWidget {
 
 class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   // static const bool _useSystrayAlternative = true;
-  late Timer mainTimer;
+  Timer? mainTimer;
   List<TrayBarInfo> tray = <TrayBarInfo>[];
   bool fetching = false;
 
@@ -62,7 +62,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   void init() {
     QuickMenuFunctions.addListener(this);
     fetchActiveTray();
-    mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);
+    // mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);
     Debug.add("QuickMenu: Tray");
   }
 
@@ -79,7 +79,11 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
     if (type != QuickMenuPage.quickMenu) return;
     if (visible) {
       fetchActiveTray();
-    } else {}
+      mainTimer?.cancel();
+      mainTimer = Timer.periodic(const Duration(milliseconds: 600), checkForNewTrayIcons);
+    } else {
+      mainTimer?.cancel();
+    }
   }
 
   @override
@@ -91,10 +95,10 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
 
   @override
   void dispose() {
-    PaintingBinding.instance.imageCache.clear();
+    // PaintingBinding.instance.imageCache.clear();
     QuickMenuFunctions.removeListener(this);
     if (user.trayBarAlternative) unawaited(SystrayWatcher.stop());
-    mainTimer.cancel();
+    mainTimer?.cancel();
     super.dispose();
   }
 
@@ -171,6 +175,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                               ? fallBackImage(info)
                               : Image.memory(
                                   info.iconData,
+                                  cacheWidth: 32,
                                   fit: BoxFit.scaleDown,
                                   gaplessPlayback: true,
                                   width: 16.1,

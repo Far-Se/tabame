@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/keys.dart';
 import '../../models/win32/win32.dart';
@@ -20,7 +21,7 @@ class TaskbarStats extends StatefulWidget {
   State<TaskbarStats> createState() => _TaskbarStatsState();
 }
 
-class _TaskbarStatsState extends State<TaskbarStats> {
+class _TaskbarStatsState extends State<TaskbarStats> with QuickMenuTriggers {
   static const Duration _kRefreshInterval = Duration(seconds: 1);
   static const List<String> _kMetricOrder = <String>['CPU', 'RAM', 'DISK', 'NET'];
 
@@ -30,7 +31,18 @@ class _TaskbarStatsState extends State<TaskbarStats> {
   @override
   void initState() {
     super.initState();
+    QuickMenuFunctions.addListener(this);
     _stats = _buildStatsLabel(WindowWatcher.taskManagerStats);
+  }
+
+  @override
+  void dispose() {
+    _statsTimer?.cancel();
+    QuickMenuFunctions.removeListener(this);
+    super.dispose();
+  }
+
+  void startTimer() {
     _statsTimer = Timer.periodic(_kRefreshInterval, (_) {
       if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
       final String nextStats = _buildStatsLabel(WindowWatcher.taskManagerStats);
@@ -40,9 +52,16 @@ class _TaskbarStatsState extends State<TaskbarStats> {
   }
 
   @override
-  void dispose() {
-    _statsTimer?.cancel();
-    super.dispose();
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (visible) {
+      _statsTimer?.cancel();
+      final String nextStats = _buildStatsLabel(WindowWatcher.taskManagerStats);
+      if (nextStats == _stats) return;
+      setState(() => _stats = nextStats);
+      startTimer();
+    } else {
+      _statsTimer?.cancel();
+    }
   }
 
   String _buildStatsLabel(String rawStats) {
@@ -153,8 +172,7 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                                         Design.uiFontFamily,
                                         fontSize: user.expandedTaskbar ? 11.5 : 10.5,
                                         letterSpacing: 0.4,
-                                        fontStyle:
-                                            Design.uiFontItalic ? FontStyle.italic : FontStyle.normal,
+                                        fontStyle: Design.uiFontItalic ? FontStyle.italic : FontStyle.normal,
                                         fontWeight: FontWeight(Design.uiFontWeight),
                                         color: Design.text,
                                       ),
@@ -165,9 +183,7 @@ class _TaskbarStatsState extends State<TaskbarStats> {
                                         Design.entryFontFamily,
                                         fontSize: user.expandedTaskbar ? 12.5 : 11.5,
                                         color: Design.text,
-                                        fontStyle: Design.entryFontItalic
-                                            ? FontStyle.italic
-                                            : FontStyle.normal,
+                                        fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                                       ),
                                     ),
                                   ],

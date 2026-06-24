@@ -1,2 +1,24 @@
 CompileFlags:
-  CompilationDatabase: "build/windows/x64"
+  # build/clangd/compile_commands.json is produced by tool\gen-clangd-db.bat
+  # (Ninja generator). The normal `flutter build` uses the Visual Studio CMake
+  # generator, which cannot emit compile_commands.json — re-run that script
+  # after adding new source files / plugins so clangd sees the updated flags.
+  CompilationDatabase: "build/clangd"
+  Add:
+    # C++/WinRT coroutine headers (used by media_session.cpp) aren't supported
+    # by clang's frontend; acknowledge & silence the hard #error.
+    - -D_SILENCE_CLANG_COROUTINE_MESSAGE
+  Remove:
+    # CMakeLists passes /wd"4100" with literal quotes, which clangd's cl driver
+    # rejects as an invalid warning number. Drop it (and the plain form).
+    - /wd*
+    # Don't treat warnings as errors in the editor: many .cpp here are textually
+    # #included into tabamewin32_plugin.cpp, so warnings that never fire in the
+    # real (bundled) translation unit would otherwise show as red errors.
+    - /WX
+    - -WX
+
+Diagnostics:
+  # These files are #included fragments, not standalone units — unused
+  # functions/variables are expected when viewed in isolation.
+  UnusedIncludes: None

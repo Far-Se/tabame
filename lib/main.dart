@@ -48,6 +48,12 @@ Future<void> main(List<String> arguments) async {
       await AppStartup.registerServices();
       AppStartup.registerHooks();
       if (await AppStartup.checkAdminAndRestart()) return;
+      final String exeDir = File(Platform.resolvedExecutable).parent.path;
+      final File sqlite3 = File('$exeDir\\sqlite3.dll');
+      if (!sqlite3.existsSync()) {
+        final File sqlite3InWindows = File('$exeDir\\windows\\sqlite3.dll');
+        if (sqlite3InWindows.existsSync()) sqlite3InWindows.renameSync(sqlite3.path);
+      }
       await AppStartup.setupWindow(arguments);
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;

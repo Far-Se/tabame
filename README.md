@@ -76,13 +76,17 @@ It's open source, so you can compile your own copy and now with AI, you can cust
 
 That means it's light. It barely touches your CPU when idle and stays low even when you're using it, and RAM usage is small for what it does. It starts fast and doesn't get in the way.
 
-In full idle it sits at around 80 MB or RAM and 0% CPU and in heavy usage around 150 MB with 3% cpu if it's Visible.
+In full idle it sits at around 20 MB or RAM and 0% CPU and in heavy usage around 70 MB with 3% cpu if it's Visible.
 
 ---
 
 # What's inside
 
 Tabame is basically one fast popup with a lot packed into it. Here's the tour.
+
+### ⚠️ A well known bug:
+
+Sometimes (2–3 times a week), the app draws incorrectly. To fix this, right-click where the Tabame logo should be.
 
 - [🎛️ QuickMenu](#%EF%B8%8F-quickmenu) - the main popup
 - [🚀 Launcher](#-launcher) - type to find anything

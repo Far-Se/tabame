@@ -104,7 +104,8 @@ void QuickClickController::MovementThreadProc() {
                            std::chrono::steady_clock::now() - movementStart)
                            .count();
         long long steps = ms / 100;
-        double multiplier = std::pow(1.1, static_cast<double>(steps));
+        double multiplier =
+            std::min(10.0, std::pow(1.1, static_cast<double>(steps)));
 
         if (moveUp_)
           dy -= config_.nudgeAmount;

@@ -211,6 +211,7 @@ class QuickMenuState extends State<QuickMenu>
 
   void _dispose() {
     trk.stopTimer();
+    _clearRam?.cancel();
     PaintingBinding.instance.imageCache.clear();
     NativeHooks.removeListener(this);
     ClipboardHooks.removeListener(this);
@@ -338,6 +339,7 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.resetKeyboardSelection();
 
     if (visible) {
+      // ShowWindow(Win32.hWnd, SW_SHOW);
       // PaintingBinding.instance.imageCache.clear();
 
       if (Navigator.of(context).canPop()) {
@@ -373,8 +375,8 @@ class QuickMenuState extends State<QuickMenu>
         setState(() {});
       }
     } else {
-      // PaintingBinding.instance.imageCache.clear();
-      // PaintingBinding.instance.imageCache.clearLiveImages();
+      PaintingBinding.instance.imageCache.clear(); // <- this
+      PaintingBinding.instance.imageCache.clearLiveImages(); // <- this
       QuickMenuFunctions.syncSelectedBackdrop();
       lastTimeShown = DateTime.now();
       // FocusScope.of(context).unfocus();
@@ -382,33 +384,34 @@ class QuickMenuState extends State<QuickMenu>
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
       if (mounted) setState(() {});
+      // clearRAM();
+      EmptyWorkingSet(GetCurrentProcess());
     }
   }
 
+  Timer? _clearRam;
+  void clearRAM() {
+    _clearRam?.cancel();
+    _clearRam = Timer(const Duration(seconds: 10), () {
+      if (!QuickMenuFunctions.isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
+    });
+  }
+
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
-    // if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     Win32.setWindowInvisible(true);
     if (oldType == QuickMenuPage.quickClick) WinUtils.makeWindowClickThrough(false);
 
-    // Entering QuickClick: keep the window transparent (layered alpha 0), paint
-    // the QuickClick overlay, wait for the frame to actually rasterize, then
-    // reveal it. This is frame-synced rather than a blind delay, so the user
-    // never sees the previous page or a half-built QuickClick frame.
     if (newType == QuickMenuPage.quickClick) {
       Globals.quickMenuPage = newType;
       if (mounted) setState(() {});
-      // Two frames: the first builds QuickClickOverlay (its initState lays out
-      // monitor size/position), the second lets that geometry settle.
       await WidgetsBinding.instance.endOfFrame;
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
       Win32.setWindowInvisible(false);
     }
-    // SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
   }
 
   Future<void> _onQuickMenuVisible(QuickMenuPage type, bool center) async {
-    // SetLayeredWindowAttributes(Win32.hWnd, 0, 255, LWA_ALPHA);
     Win32.setWindowInvisible(false);
     tryPop = false;
     if (type != QuickMenuPage.quickClick) {
@@ -424,10 +427,7 @@ class QuickMenuState extends State<QuickMenu>
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         _requestQuickMenuFocus(focusWindow: true);
-        // await Future<void>.delayed(const Duration(milliseconds: 300));
-        // WidgetsBinding.instance.reassembleApplication(); // <- this.
       });
-      // setState(() {});
     }
   }
 

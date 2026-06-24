@@ -922,6 +922,21 @@ class Win32 {
     return true;
   }
 
+  static const MethodChannel _nativeWindowChannel = MethodChannel('tabame/native_window');
+
+  /// Asks the Flutter engine to request a new frame and repaint the view.
+  ///
+  /// DWM can discard a layered window's backing surface while it's hidden
+  /// (more likely under memory/GPU pressure), so after `ShowWindow(SW_SHOW)`
+  /// the engine may keep presenting a stale/partial frame until something
+  /// else (e.g. a resize) forces a full repaint. Call this right after
+  /// showing the window to force that repaint immediately instead.
+  static Future<void> forceRedraw() async {
+    try {
+      await _nativeWindowChannel.invokeMethod<void>('forceRedraw');
+    } catch (_) {}
+  }
+
   static void setWindowInvisible(bool invisible, {int? hWnd}) {
     hWnd ??= Win32.hWnd;
 
