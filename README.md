@@ -1,10 +1,14 @@
-<div align="center">
+<!--<div align="center">
      <img src="resources/logo_light.png" width="80px">
     <h1>Tabame</h1>
     <p><em>A taskbar replacement that turned into the Windows toolbox I always wanted.</em></p>
-</div>
+</div>-->
 
 ![promote](https://github.com/user-attachments/assets/db32c793-7358-4307-a4b1-3cdbc7167cb7)
+
+<!--![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
+
+![promote_dark](https://user-images.githubusercontent.com/20853986/204138108-e57e9b1b-4d2b-445e-b8cb-4480d188ebb9.png#gh-dark-mode-only)-->
 
 ## 🤔 What is this?
 
@@ -16,11 +20,29 @@ It's all made by one person (me), for the way I actually use my computer. It's f
 
 ### The best way to use it
 
-Everything starts from one hotkey. Pick something comfortable and bind the QuickMenu to it:
+### ● QuickMenu
+
+QuickMenu works best with mouse interaction, so try to use a Mouse Button:
 
 - **A mouse side button** - most mice have them, and it's the nicest way to summon the menu.
 - **Any extra mouse button** - open your mouse software, bind the button to something like `CTRL+ALT+SHIFT+F9`, then set that same combo inside Tabame.
-- **No spare buttons?** Use something easy for your fingers like `Alt+Shift+A` (or `Z`).
+- **No spare buttons?** Use something easy for your fingers like `WIN+SHIFT+Z` (or `A`).
+
+### ● Launcher
+
+Launcher works best with keyboard, so use a hotkey that is easy to reach:
+
+- `WIN+SHIFT+A` or `WIN+SPACE` or even `Double Alt` or `Right Alt`
+
+If you want to browse opened windows but do no want to open QuickMenu, setup a hotkey like `Win+Shift+D` that will have as trigger "Start Launcher with Prefix" and put the windows prefix `.`
+
+### ● QuickClick
+
+A easy to reach keyboard shortcut, like `Right Alt` or `ALT+,`
+
+### ● FancyShot
+
+You will need to use the mouse, so either setup the QuickMenu hotkey with a "move left/right" or hold duration to trigger Fancyshot.
 
 ### A small demo
 
@@ -139,7 +161,7 @@ Your open windows, listed out. Each row shows the icon, whether it's making soun
 
 You can show the menu at taskbar level or top-bar level, and order windows by monitor, by activity, or show only the current monitor. You can also **rewrite window titles with regex** if some app's titles annoy you:
 
-![example](https://user-images.githubusercontent.com/20853986/185778878-14ef5a6f-0981-4e7d-aa68-a5afc5b7feb4.png)
+<!--![example](https://user-images.githubusercontent.com/20853986/185778878-14ef5a6f-0981-4e7d-aa68-a5afc5b7feb4.png)-->
 
 ## Bottom bar
 
