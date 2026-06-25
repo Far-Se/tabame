@@ -14,4 +14,3 @@ call "E:\Program Files\Visual Studio\VC\Auxiliary\Build\vcvars64.bat"
 set "PATH=%PATH%;E:\Program Files\Visual Studio\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
 cmake -S "%REPO%\windows" -B "%REPO%\build\clangd" -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug
 endlocal
-

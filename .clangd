@@ -22,4 +22,3 @@ Diagnostics:
   # These files are #included fragments, not standalone units — unused
   # functions/variables are expected when viewed in isolation.
   UnusedIncludes: None
-
