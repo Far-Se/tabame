@@ -20,8 +20,6 @@ migrate_working_dir/
 *.zip
 *.ps1
 .idea/
-ISSUES.md
-/ISSUES.md
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
@@ -75,4 +73,9 @@ MICROSOFT*
 # Flutter Demon user preferences (not tracked)
 .fdemon/settings.local.toml
 docs/design-system/
+docs/
 website/
+.agent/
+ISSUES.md
+skills-lock.json
+.impeccable.md
