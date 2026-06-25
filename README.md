@@ -10,6 +10,8 @@
 
 ![promote_dark](https://user-images.githubusercontent.com/20853986/204138108-e57e9b1b-4d2b-445e-b8cb-4480d188ebb9.png#gh-dark-mode-only)-->
 
+# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
+
 ## 🤔 What is this?
 
 I started this just to replace the Windows taskbar. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
