@@ -36,7 +36,13 @@ concurrency:
 jobs:
   build-windows:
     name: Build and publish Windows package
-    runs-on: windows-latest
+    # Pinned to windows-2022 (VS 17 / older CMake). windows-latest floated to
+    # VS 18, whose newer toolchain breaks the build two ways: it turns the
+    # legacy <experimental/coroutine> header into a hard error (handled by the
+    # define in windows/CMakeLists.txt) and its CMake enables libarchive's
+    # strict secure-symlink check, which makes the audiotags plugin's
+    # tar extraction through Flutter's .plugin_symlinks fail.
+    runs-on: windows-2022
     timeout-minutes: 60
 
     steps:
