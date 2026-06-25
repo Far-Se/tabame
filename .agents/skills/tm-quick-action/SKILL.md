@@ -392,3 +392,4 @@ If the user asks for a new top-bar quick menu button and does not specify a styl
 - Use compact spacing and accent-tinted surfaces per the tokens in section 5.
 - Use hover-driven list rows or configuration cards (section 6) rather than large decorative components.
 - Preserve the existing Tabame quick menu tone: fast, utilitarian, polished, dense, and "instrument panel" precise.
+

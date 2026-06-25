@@ -504,3 +504,4 @@ Switch designs from the **QuickMenuDesign** action, and brand it as your own wit
 I started this to learn Dart and Flutter. In my head it was only ever going to be the QuickMenu - but every time I used it I had another idea, and it snowballed into Tabame (a random name I came up with). It's grown a lot, and I'm kind of proud of how much one person managed to cram into it.
 
 ### If you find it useful, you can [buy me a coffee](https://www.buymeacoffee.com/far.se) ☕
+

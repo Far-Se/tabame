@@ -153,3 +153,4 @@ class AppStartup {
     Debug.add("Set transparency");
   }
 }
+

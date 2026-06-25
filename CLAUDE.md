@@ -43,3 +43,4 @@ There isn't a router with multiple windows in one process — each "extra" surfa
 - UI follows the "Instrument Panel" design language described in `.impeccable.md`: high density, minimal padding, sharp low-opacity borders, subtle gradients only on key CTAs (not glows), `FontWeight.w600`/`w700` for UI text (never `w900`).
 - Imports are relative (`prefer_relative_imports` lint).
 - `.dartx` files (e.g. `lib/services/file_indexer.dartx`, `lib/pages/launcher.dartx`) are intentionally-excluded/old code kept for reference; they are not compiled.
+
