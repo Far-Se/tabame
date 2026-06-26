@@ -216,10 +216,12 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       Future<void>.delayed(
         const Duration(seconds: 1),
         () {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) => const BMACDialog(),
-          );
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) => const BMACDialog(),
+            );
+          }
         },
       );
     }

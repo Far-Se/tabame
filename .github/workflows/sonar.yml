@@ -50,7 +50,9 @@ jobs:
       - name: Run Build Wrapper
         shell: pwsh
         run: |
-          & "${{ steps.install_bw.outputs.build-wrapper-binary }}" --out-dir "$env:BUILD_WRAPPER_OUT_DIR" flutter build windows --release
+          # build-wrapper calls CreateProcess directly, which can't resolve flutter.bat
+          # on its own (no PATHEXT/shell resolution) - route it through cmd.exe /c.
+          & "${{ steps.install_bw.outputs.build-wrapper-binary }}" --out-dir "$env:BUILD_WRAPPER_OUT_DIR" cmd /c "flutter build windows --release"
 
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@v8

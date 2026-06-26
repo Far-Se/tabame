@@ -519,7 +519,7 @@ class VaultsWidgetState extends State<VaultsWidget> with SingleTickerProviderSta
           TextButton(
             onPressed: () async {
               await VaultManager.deleteVault(name);
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
               _loadVaults();
             },
             child: const Text("Delete", style: TextStyle(color: Colors.red)),
@@ -577,7 +577,8 @@ class _VaultRowState extends State<_VaultRow> {
                   Container(
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(color: widget.accent.withAlpha(26), borderRadius: BorderRadius.circular(10)),
+                    decoration:
+                        BoxDecoration(color: widget.accent.withAlpha(26), borderRadius: BorderRadius.circular(10)),
                     alignment: Alignment.center,
                     child: Icon(Icons.lock_person_rounded, size: 16, color: widget.accent),
                   ),
@@ -900,7 +901,8 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                   Container(
                     width: 30,
                     height: 30,
-                    decoration: BoxDecoration(color: widget.accent.withAlpha(24), borderRadius: BorderRadius.circular(9)),
+                    decoration:
+                        BoxDecoration(color: widget.accent.withAlpha(24), borderRadius: BorderRadius.circular(9)),
                     clipBehavior: Clip.antiAlias,
                     alignment: Alignment.center,
                     child: FutureBuilder<Uint8List?>(
@@ -938,9 +940,7 @@ class _VaultItemTileState extends State<_VaultItemTile> {
                   if (_copied)
                     Text("Copied!",
                         style: TextStyle(
-                            fontSize: Design.baseFontSize,
-                            color: widget.accent,
-                            fontWeight: FontWeight.bold)),
+                            fontSize: Design.baseFontSize, color: widget.accent, fontWeight: FontWeight.bold)),
                   if (_hovered && !_copied) ...<Widget>[
                     InkWell(
                       onTap: widget.onEdit,

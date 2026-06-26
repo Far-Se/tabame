@@ -720,13 +720,13 @@ class QMBottomBarState extends State<QMBottomBar> {
   }
 
   Future<void> _searchByIP() async {
-    final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
+    final http.Response ip = await http.get(Uri.parse("https://ifconfig.me/ip"));
     if (ip.statusCode == 200) {
-      final http.Response response = await http.get(Uri.parse("http://ip-api.com/json/${ip.body}"));
+      final http.Response response = await http.get(Uri.parse("https://ipwho.is/${ip.body}"));
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
-        if (data.containsKey("lat") && data.containsKey("lon")) {
-          final String e = "${data["lat"]}, ${data["lon"]}";
+        if (data.containsKey("latitude") && data.containsKey("longitude")) {
+          final String e = "${data["latitude"]}, ${data["longitude"]}";
           user.weatherLatLong = e;
           await Boxes.updateSettings("weather", user.weather);
           if (mounted) setState(() {});

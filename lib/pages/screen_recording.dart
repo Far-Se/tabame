@@ -1806,7 +1806,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                     });
                   } else {
                     Future<void>.delayed(const Duration(milliseconds: 200), () {
-                      Navigator.of(context).maybePop();
+                      if (context.mounted) Navigator.of(context).maybePop();
                       windowManager.close();
                     });
                   }
