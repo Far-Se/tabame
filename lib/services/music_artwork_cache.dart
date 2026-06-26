@@ -22,6 +22,11 @@ class MusicArtworkCache {
   static const int largeSize = 256;
   static const int jpegQuality = 82;
 
+  /// Ignore absurdly large embedded/folder art. Decoding a multi-hundred-MB
+  /// image would pin memory and CPU even on a background isolate, and it is
+  /// almost always a sign of a corrupt tag rather than real cover art.
+  static const int maxArtworkSourceBytes = 32 * 1024 * 1024;
+
   final MusicLibraryDb _db;
   final String _cacheDirectoryPath;
 
@@ -31,6 +36,10 @@ class MusicArtworkCache {
   }) async {
     final _ArtworkSource? source = await _findArtworkSource(audioFile: audioFile, pictures: pictures);
     if (source == null || source.bytes.isEmpty) return null;
+    if (source.bytes.length > maxArtworkSourceBytes) {
+      debugPrint('MusicArtworkCache: skipping oversized artwork (${source.bytes.length} bytes) for ${source.path}');
+      return null;
+    }
 
     final String hash = sha1.convert(source.bytes).toString();
     final MusicArtworkRecord? existing = await _db.getArtworkRecord(hash);
@@ -38,17 +47,32 @@ class MusicArtworkCache {
       return existing;
     }
 
-    final img.Image? decoded = img.decodeImage(source.bytes);
-    if (decoded == null) return null;
-
     final Directory cacheDirectory = Directory(_cacheDirectoryPath);
     if (!cacheDirectory.existsSync()) cacheDirectory.createSync(recursive: true);
 
     final String smallPath = p.join(cacheDirectory.path, '$hash-$smallSize.jpg');
     final String largePath = p.join(cacheDirectory.path, '$hash-$largeSize.jpg');
 
-    await _writeThumbnail(decoded, smallPath, smallSize);
-    await _writeThumbnail(decoded, largePath, largeSize);
+    final File smallFile = File(smallPath);
+    final File largeFile = File(largePath);
+    if (!smallFile.existsSync() || !largeFile.existsSync()) {
+      // Decode + resize + re-encode is the single heaviest step of indexing and
+      // is pure-Dart CPU work. Run it on a background isolate so a large library
+      // can't freeze the UI thread (and the rest of the PC) while indexing.
+      _ThumbnailBytes? thumbnails;
+      try {
+        thumbnails = await compute(
+          _buildThumbnails,
+          _ThumbnailRequest(bytes: source.bytes, smallSize: smallSize, largeSize: largeSize, quality: jpegQuality),
+        );
+      } catch (e) {
+        debugPrint('MusicArtworkCache: thumbnail generation failed for ${source.path}: $e');
+        return null;
+      }
+      if (thumbnails == null) return null;
+      if (!smallFile.existsSync()) await smallFile.writeAsBytes(thumbnails.small, flush: false);
+      if (!largeFile.existsSync()) await largeFile.writeAsBytes(thumbnails.large, flush: false);
+    }
 
     final MusicArtworkRecord record = MusicArtworkRecord(
       artworkHash: hash,
@@ -126,17 +150,48 @@ class MusicArtworkCache {
     }
   }
 
-  static Future<void> _writeThumbnail(img.Image decoded, String targetPath, int size) async {
-    final File target = File(targetPath);
-    if (target.existsSync()) return;
+  /// Runs on a background isolate via [compute]. Must stay a pure, top-level
+  /// style static function (no `this`) so it is safely sendable.
+  static _ThumbnailBytes? _buildThumbnails(_ThumbnailRequest request) {
+    final img.Image? decoded = img.decodeImage(request.bytes);
+    if (decoded == null) return null;
 
-    final img.Image thumbnail = img.copyResizeCropSquare(
+    final img.Image small = img.copyResizeCropSquare(
       decoded,
-      size: size,
+      size: request.smallSize,
       interpolation: img.Interpolation.average,
     );
-    await target.writeAsBytes(img.encodeJpg(thumbnail, quality: jpegQuality), flush: false);
+    final img.Image large = img.copyResizeCropSquare(
+      decoded,
+      size: request.largeSize,
+      interpolation: img.Interpolation.average,
+    );
+    return _ThumbnailBytes(
+      small: img.encodeJpg(small, quality: request.quality),
+      large: img.encodeJpg(large, quality: request.quality),
+    );
   }
+}
+
+class _ThumbnailRequest {
+  const _ThumbnailRequest({
+    required this.bytes,
+    required this.smallSize,
+    required this.largeSize,
+    required this.quality,
+  });
+
+  final Uint8List bytes;
+  final int smallSize;
+  final int largeSize;
+  final int quality;
+}
+
+class _ThumbnailBytes {
+  const _ThumbnailBytes({required this.small, required this.large});
+
+  final Uint8List small;
+  final Uint8List large;
 }
 
 class _ArtworkSource {

@@ -26,6 +26,18 @@ class MixedSearchHandler {
       return;
     }
 
+    if (searchMode == LauncherSearchMode.filesOnly && Boxes.searchFolders.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'noSearchFoldersInfo',
+          title: 'No Search Folders Configured',
+          subtitle: 'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
+          icon: Icons.folder_off_rounded,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
     final bool shouldRunFilesystem = shouldRunFilesystemSearch(
       searchMode: searchMode,
       normalizedQuery: context.normalizedQuery,

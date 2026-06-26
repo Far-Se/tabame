@@ -108,7 +108,7 @@ class QMBottomBarState extends State<QMBottomBar> {
             SwitchListTile(
               title: const Text("Show LibreHardwareMonitor Data",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              subtitle: Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp. Must run Tabame as admin!",
+              subtitle: Text("It will show CPU/GPU/RAM Usage and CPU/GPU Temp.",
                   style: TextStyle(fontSize: Design.baseFontSize + 2)),
               secondary: const Icon(Icons.insights, size: 20),
               value: user.libreStats,

@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:tabamewin32/tabamewin32.dart';
 
@@ -17,6 +16,19 @@ import '../../models/win32/win_utils.dart';
 import '../widgets/info_widget.dart';
 import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
+import 'hotkeys/hotkey_settings_dialog.dart';
+
+/// Identifies each first-run feature that is backed by a real [Hotkeys] entry
+/// in [Boxes.remap]. Each id is matched to its remap entry through the tabame
+/// function the entry triggers (see [_FirstRunState._matchValue]).
+enum _Feature {
+  quickMenu,
+  launcher,
+  quickClick,
+  fancyshot,
+  emojiPicker,
+  colorPicker,
+}
 
 class FirstRun extends StatefulWidget {
   const FirstRun({super.key});
@@ -27,105 +39,224 @@ class FirstRun extends StatefulWidget {
 class FirstRunState extends State<FirstRun> {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
   final PageController pageController = PageController();
-  final List<Hotkeys> hokeyObj = <Hotkeys>[];
+
+  /// Canonical, persisted list of hotkeys. Every feature row below points at
+  /// one entry in here, and edits go through [HotKeySettings] which writes back
+  /// to it directly — so nothing depends on a final "save" step anymore.
+  final List<Hotkeys> remap = Boxes.remap;
+
+  /// Resolved index of each feature inside [remap]. Recomputed whenever the
+  /// hotkey list changes so deletions/reorders from [HotKeySettings] can't
+  /// leave us pointing at the wrong entry.
+  final Map<_Feature, int> _featureIndex = <_Feature, int>{};
 
   int currentStep = 0;
 
-  // ── Modal State Setter ──
+  // ── Modal State Setter (QuickSnap toggle modal only) ──
   StateSetter? _activeModalState;
-
-  // ── QuickMenu ──
-  final FocusNode quickMenuFocus = FocusNode();
-  List<String> quickMenuModifiers = <String>[];
-  String quickMenuHotkey = "";
-  bool quickMenuListening = false;
-
-  // ── Launcher ──
-  final FocusNode launcherFocus = FocusNode();
-  List<String> launcherModifiers = <String>["WIN", "SHIFT"];
-  String launcherHotkey = "A";
-  bool launcherListening = false;
-
-  // ── QuickClick ──
-  final FocusNode quickClickFocus = FocusNode();
-  List<String> quickClickModifiers = <String>[];
-  String quickClickHotkey = "";
-  bool quickClickListening = false;
 
   // ── QuickSnap (toggle only) ──
   bool quickSnapEnabled = true;
 
-  // ── Fancyshot ──
-  final FocusNode fancyshotFocus = FocusNode();
-  List<String> fancyshotModifiers = <String>[];
-  String fancyshotHotkey = "";
-  bool fancyshotListening = false;
-
-  // ── EmojiPicker ──
-  final FocusNode emojiPickerFocus = FocusNode();
-  List<String> emojiPickerModifiers = <String>["WIN", "SHIFT"];
-  String emojiPickerHotkey = "E";
-  bool emojiPickerListening = false;
-
-  // ── Color Picker ──
-  final FocusNode colorPickerFocus = FocusNode();
-  List<String> colorPickerModifiers = <String>["WIN", "SHIFT"];
-  String colorPickerHotkey = "C";
-  bool colorPickerListening = false;
-
-  final List<String> quickMenuActions = <String>[
-    "Press once to open QuickMenu right next to your mouse cursor.",
-    "Hold to open Start.",
-    "Double press to focus the previous active window.",
-    "Hold and move up or down to change volume.",
-    "Hold and move left or right to switch virtual desktops.",
-    "Near screen corners it can also toggle Start, Desktop, or the taskbar depending on position.",
-    "On Chrome and Firefox tab bars, press to close the hovered tab or hold to open a new one.",
-    "Many more features you can check in Settings → Hotkeys.",
-  ];
-
   @override
   void initState() {
     super.initState();
-    for (Map<String, dynamic> x in mainHotkeyData) {
-      hokeyObj.add(Hotkeys.fromMap(x));
-    }
+    _resolveFeatureIndices();
+    _syncQuickClickEnabled();
     WinUtils.setStartUpShortcut(true);
     WinUtils.fixDrawBug();
   }
 
   @override
   void dispose() {
-    quickMenuFocus.dispose();
-    launcherFocus.dispose();
-    quickClickFocus.dispose();
-    fancyshotFocus.dispose();
-    emojiPickerFocus.dispose();
-    colorPickerFocus.dispose();
     pageController.dispose();
     super.dispose();
   }
 
-  // ─────────────────────────── MUTUAL EXCLUSION ──────────────────────────
+  // ─────────────────────── FEATURE / HOTKEY REGISTRY ──────────────────────
 
-  List<String> _getAvailableSpecialKeys(String currentAssignedKey) {
-    const List<String> allKeys = Hotkeys.specialBindingKeys;
-    final List<String> currentlyUsed = <String>[
-      quickMenuHotkey,
-      launcherHotkey,
-      quickClickHotkey,
-      fancyshotHotkey,
-      emojiPickerHotkey,
-      colorPickerHotkey,
-    ].where((String k) => Hotkeys.isSpecialBindingKey(k)).toList();
-
-    return allKeys.where((String k) => k == currentAssignedKey || !currentlyUsed.contains(k)).toList();
+  /// The tabame function value used to recognise an existing remap entry for a
+  /// feature (and the action seeded into a freshly created one).
+  String _matchValue(_Feature feature) {
+    switch (feature) {
+      case _Feature.quickMenu:
+        return "ToggleQuickMenu";
+      case _Feature.launcher:
+        return "OpenLauncher";
+      case _Feature.quickClick:
+        return "OpenQuickClick";
+      case _Feature.fancyshot:
+        return "OpenFrozenFancyShot";
+      case _Feature.emojiPicker:
+        return "OpenEmojiPicker";
+      case _Feature.colorPicker:
+        return "OpenColorPickerInstant";
+    }
   }
 
-  // ─────────────────────────── MODAL CONTROLLER ──────────────────────────
+  bool _entryHasFunction(Hotkeys hotkey, String value) =>
+      hotkey.keymaps.any((KeyMap keyMap) => keyMap.actions.any((KeyAction action) => action.value == value));
+
+  /// Builds the default [Hotkeys] entry seeded the first time the wizard runs.
+  /// QuickMenu reuses the rich default bundle (start menu, desktop switching,
+  /// volume, …) but starts with no trigger so the user must pick one. The rest
+  /// are single-action shortcuts with sensible suggested keys.
+  Hotkeys _defaultFor(_Feature feature) {
+    switch (feature) {
+      case _Feature.quickMenu:
+        return Hotkeys.fromMap(mainHotkeyData[0])
+          ..key = ""
+          ..modifiers = <String>[];
+      case _Feature.launcher:
+        return _simpleFeature(
+            key: "A", modifiers: <String>["WIN", "SHIFT"], name: "Launcher", function: "OpenLauncher");
+      case _Feature.quickClick:
+        return _simpleFeature(key: "", modifiers: <String>[], name: "QuickClick", function: "OpenQuickClick");
+      case _Feature.fancyshot:
+        return _fancyshotDefault();
+      case _Feature.emojiPicker:
+        return _simpleFeature(
+            key: "E", modifiers: <String>["WIN", "SHIFT"], name: "EmojiPicker", function: "OpenEmojiPicker");
+      case _Feature.colorPicker:
+        return _simpleFeature(
+            key: "C", modifiers: <String>["WIN", "SHIFT"], name: "Color Picker", function: "OpenColorPickerInstant");
+    }
+  }
+
+  Hotkeys _simpleFeature({
+    required String key,
+    required List<String> modifiers,
+    required String name,
+    required String function,
+  }) {
+    return Hotkeys(
+      key: key,
+      modifiers: Hotkeys.normalizeModifiers(modifiers),
+      prohibited: <String>[],
+      noopScreenBusy: false,
+      waitForDoublePress: false,
+      keymaps: <KeyMap>[
+        KeyMap(
+          enabled: true,
+          windowUnderMouse: false,
+          name: name,
+          windowsInfo: <String>["any", ""],
+          boundToRegion: false,
+          region: Region(),
+          triggerType: TriggerType.press,
+          triggerInfo: <int>[0, 0, 0],
+          actions: <KeyAction>[KeyAction(type: ActionType.tabameFunction, value: function)],
+          variableCheck: <String>["", ""],
+        ),
+      ],
+    );
+  }
+
+  /// Fancyshot is gesture-driven: a plain press grabs a frozen screenshot, while
+  /// holding the trigger and flicking the mouse in a direction picks a different
+  /// capture mode (matching the directions shown in the wizard description).
+  Hotkeys _fancyshotDefault() {
+    KeyMap movement(String name, int direction, String function) {
+      return KeyMap(
+        enabled: true,
+        windowUnderMouse: false,
+        name: name,
+        windowsInfo: <String>["any", ""],
+        boundToRegion: false,
+        region: Region(),
+        triggerType: TriggerType.movement,
+        // [directionIndex, distMin, distMax] — Left=0, Right=1, Up=2, Down=3.
+        triggerInfo: <int>[direction, 100, 9999],
+        actions: <KeyAction>[KeyAction(type: ActionType.tabameFunction, value: function)],
+        variableCheck: <String>["", ""],
+      );
+    }
+
+    return Hotkeys(
+      key: "",
+      modifiers: <String>[],
+      prohibited: <String>[],
+      noopScreenBusy: false,
+      waitForDoublePress: false,
+      keymaps: <KeyMap>[
+        // Just press → Frozen Screen Capture.
+        KeyMap(
+          enabled: true,
+          windowUnderMouse: false,
+          name: "Fancyshot",
+          windowsInfo: <String>["any", ""],
+          boundToRegion: false,
+          region: Region(),
+          triggerType: TriggerType.press,
+          triggerInfo: <int>[0, 0, 0],
+          actions: <KeyAction>[KeyAction(type: ActionType.tabameFunction, value: "OpenFrozenFancyShot")],
+          variableCheck: <String>["", ""],
+        ),
+        movement("Live Screen Capture", 0, "OpenLiveFancyShot"), // Hold + move Left
+        movement("Screen Recorder", 2, "OpenScreenRecording"), // Hold + move Up
+        movement("Screen Draw", 3, "OpenScreenDraw"), // Hold + move Down
+        movement("Spotlight", 1, "OpenSpotlight"), // Hold + move Right
+      ],
+    );
+  }
+
+  /// Finds the remap entry for every feature, lazily creating any that are
+  /// missing so all hotkeys are registered (and persisted) from the start.
+  void _resolveFeatureIndices() {
+    bool seeded = false;
+    for (final _Feature feature in _Feature.values) {
+      final String matchValue = _matchValue(feature);
+      int index = remap.indexWhere((Hotkeys hotkey) => _entryHasFunction(hotkey, matchValue));
+      if (index == -1) {
+        remap.add(_defaultFor(feature));
+        index = remap.length - 1;
+        seeded = true;
+      }
+      _featureIndex[feature] = index;
+    }
+    if (seeded) Boxes.updateSettings("remap", jsonEncode(remap));
+  }
+
+  Hotkeys _hotkeyFor(_Feature feature) => remap[_featureIndex[feature]!];
+
+  /// QuickClick has its own enabled flag separate from the trigger hotkey, so
+  /// turn it on automatically as soon as the user assigns it a shortcut.
+  void _syncQuickClickEnabled() {
+    final Hotkeys quickClick = _hotkeyFor(_Feature.quickClick);
+    if (quickClick.key.isNotEmpty && !user.quickClickEnabled) {
+      user.quickClickEnabled = true;
+      Boxes.updateSettings("quickClickEnabled", true);
+    }
+  }
+
+  /// Re-runs after every [HotKeySettings] interaction: the dialog can delete or
+  /// clone entries, so re-resolve indices, auto-enable QuickClick, and rebuild.
+  void _onHotkeysChanged() {
+    _resolveFeatureIndices();
+    _syncQuickClickEnabled();
+    if (mounted) setState(() {});
+  }
+
+  void _openHotkeySettings(_Feature feature) {
+    final int index = _featureIndex[feature]!;
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        contentPadding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: SizedBox(
+          width: 450,
+          height: 700,
+          child: HotKeySettings(hotkeyIndex: index, refresh: _onHotkeysChanged),
+        ),
+      ),
+    ).then((_) => _onHotkeysChanged());
+  }
+
+  // ─────────────────────────── QUICKSNAP MODAL ──────────────────────────
 
   void _showFeatureModal(ThemeData theme, Color accent, String title, Widget Function() contentBuilder) {
-    showDialog(
+    showDialog<void>(
       context: context,
       anchorPoint: const Offset(100, 200),
       builder: (BuildContext ctx) {
@@ -170,13 +301,7 @@ class FirstRunState extends State<FirstRun> {
       },
     ).whenComplete(() {
       _activeModalState = null;
-      quickMenuListening = false;
-      launcherListening = false;
-      quickClickListening = false;
-      fancyshotListening = false;
-      emojiPickerListening = false;
-      colorPickerListening = false;
-      setState(() {});
+      if (mounted) setState(() {});
     });
   }
 
@@ -380,16 +505,10 @@ class FirstRunState extends State<FirstRun> {
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.quickMenu,
             icon: Icons.rocket_launch_rounded,
             title: "QuickMenu Hotkey",
             subtitle: "Opens QuickMenu right next to your cursor.",
-            currentHotkey: quickMenuHotkey,
-            currentModifiers: quickMenuModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "QuickMenu Hotkey", () {
-                return _buildQuickMenuExpanded(theme, accent);
-              });
-            },
           ),
           const SizedBox(height: 10),
 
@@ -397,35 +516,10 @@ class FirstRunState extends State<FirstRun> {
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.launcher,
             icon: Icons.search_rounded,
             title: "Launcher",
             subtitle: "Full-screen launcher in the center of the screen.",
-            currentHotkey: launcherHotkey,
-            currentModifiers: launcherModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "Launcher", () {
-                return _buildGenericHotkeyExpanded(
-                  theme,
-                  accent,
-                  description:
-                      "Opens a full-screen launcher in the center of the screen — search apps, files, and commands. "
-                      "For file search to work, add Watched Folders in Settings → Launcher.\n"
-                      "Suggested hotkey: Win+Shift+A, or double Alt.",
-                  focusNode: launcherFocus,
-                  listening: launcherListening,
-                  hotkey: launcherHotkey,
-                  modifiers: launcherModifiers,
-                  onStartListening: () {
-                    launcherListening = !launcherListening;
-                    launcherFocus.requestFocus(launcherFocus);
-                    setState(() {});
-                    _activeModalState?.call(() {});
-                  },
-                  onKeyEvent: _handleLauncherKeyEvent,
-                  onSelectMouse: _selectLauncherMouseButton,
-                );
-              });
-            },
           ),
           const SizedBox(height: 10),
 
@@ -433,46 +527,20 @@ class FirstRunState extends State<FirstRun> {
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.quickClick,
             icon: Icons.open_with_rounded,
             title: "QuickClick",
-            subtitle: "Move the mouse with the keyboard.",
-            currentHotkey: quickClickHotkey,
-            currentModifiers: quickClickModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "QuickClick", () {
-                return _buildGenericHotkeyExpanded(
-                  theme,
-                  accent,
-                  description:
-                      "Move your cursor precisely using only the keyboard — navigate any UI without touching the mouse.\n"
-                      "Suggested hotkey: Right Alt (rarely conflicts with other shortcuts).",
-                  focusNode: quickClickFocus,
-                  listening: quickClickListening,
-                  hotkey: quickClickHotkey,
-                  modifiers: quickClickModifiers,
-                  onStartListening: () {
-                    quickClickListening = !quickClickListening;
-                    quickClickFocus.requestFocus(quickClickFocus);
-                    setState(() {});
-                    _activeModalState?.call(() {});
-                  },
-                  onKeyEvent: _handleQuickClickKeyEvent,
-                  onSelectMouse: _selectQuickClickMouseButton,
-                );
-              });
-            },
+            subtitle: "Move the mouse with the keyboard. Enables itself once set.",
           ),
           const SizedBox(height: 10),
 
-          // ── QuickSnap ──
+          // ── QuickSnap (toggle, no hotkey) ──
           _buildFeatureRow(
             theme,
             accent,
             icon: Icons.grid_view_rounded,
             title: "QuickSnap",
             subtitle: "Snap windows by dragging then right-clicking.",
-            currentHotkey: "",
-            currentModifiers: const <String>[],
             isToggle: true,
             toggleValue: quickSnapEnabled,
             onTap: () {
@@ -487,16 +555,10 @@ class FirstRunState extends State<FirstRun> {
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.fancyshot,
             icon: Icons.camera_alt_rounded,
             title: "Fancyshot",
             subtitle: "Screen capture with directional modes.",
-            currentHotkey: fancyshotHotkey,
-            currentModifiers: fancyshotModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "Fancyshot", () {
-                return _buildFancyshotExpanded(theme, accent);
-              });
-            },
           ),
           const SizedBox(height: 10),
 
@@ -504,91 +566,50 @@ class FirstRunState extends State<FirstRun> {
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.emojiPicker,
             icon: Icons.emoji_emotions_rounded,
             title: "EmojiPicker",
             subtitle: "Opens an emoji picker next to your cursor.",
-            currentHotkey: emojiPickerHotkey,
-            currentModifiers: emojiPickerModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "EmojiPicker", () {
-                return _buildGenericHotkeyExpanded(
-                  theme,
-                  accent,
-                  description:
-                      "Opens a searchable emoji picker right next to your cursor — just pick and it's inserted instantly.\n"
-                      "Suggested hotkey: Win+Shift+E.",
-                  focusNode: emojiPickerFocus,
-                  listening: emojiPickerListening,
-                  hotkey: emojiPickerHotkey,
-                  modifiers: emojiPickerModifiers,
-                  onStartListening: () {
-                    emojiPickerListening = !emojiPickerListening;
-                    emojiPickerFocus.requestFocus(emojiPickerFocus);
-                    setState(() {});
-                    _activeModalState?.call(() {});
-                  },
-                  onKeyEvent: _handleEmojiPickerKeyEvent,
-                  onSelectMouse: _selectEmojiPickerMouseButton,
-                );
-              });
-            },
           ),
           const SizedBox(height: 10),
+
           // ── Color Picker ──
           _buildFeatureRow(
             theme,
             accent,
+            feature: _Feature.colorPicker,
             icon: Icons.colorize_rounded,
             title: "Color Picker",
             subtitle: "Pick any color from your screen.",
-            currentHotkey: colorPickerHotkey,
-            currentModifiers: colorPickerModifiers,
-            onTap: () {
-              _showFeatureModal(theme, accent, "Color Picker", () {
-                return _buildGenericHotkeyExpanded(
-                  theme,
-                  accent,
-                  description: "Instantly grab any color from your screen and copy its hex code to your clipboard.\n"
-                      "Suggested hotkey: Win+Shift+C.",
-                  focusNode: colorPickerFocus,
-                  listening: colorPickerListening,
-                  hotkey: colorPickerHotkey,
-                  modifiers: colorPickerModifiers,
-                  onStartListening: () {
-                    colorPickerListening = !colorPickerListening;
-                    colorPickerFocus.requestFocus(colorPickerFocus);
-                    setState(() {});
-                    _activeModalState?.call(() {});
-                  },
-                  onKeyEvent: _handleColorPickerKeyEvent,
-                  onSelectMouse: _selectColorPickerMouseButton,
-                );
-              });
-            },
           ),
         ],
       ),
     );
   }
 
-  // ── Feature row: Tap to open modal ──
+  /// Feature row. When [feature] is supplied the badge reflects the live remap
+  /// entry and tapping opens the shared [HotKeySettings] editor; otherwise it
+  /// behaves as a toggle (QuickSnap) driving the supplied [onTap].
   Widget _buildFeatureRow(
     ThemeData theme,
     Color accent, {
     required IconData icon,
     required String title,
     required String subtitle,
-    required String currentHotkey,
-    required List<String> currentModifiers,
-    required VoidCallback onTap,
+    _Feature? feature,
+    VoidCallback? onTap,
     bool isToggle = false,
     bool toggleValue = false,
   }) {
+    final Hotkeys? hotkey = feature == null ? null : _hotkeyFor(feature);
+    final String currentHotkey = hotkey?.key ?? "";
+    final bool hasHotkey = currentHotkey.isNotEmpty;
+
     final String badgeLabel = isToggle
         ? (toggleValue ? "Enabled" : "Disabled")
-        : (currentHotkey.isEmpty
-            ? "Not set"
-            : Hotkeys.formatHotkeyLabel(key: currentHotkey, modifiers: currentModifiers));
+        : (hasHotkey ? Hotkeys.formatHotkeyLabel(key: currentHotkey, modifiers: hotkey!.modifiers) : "Not set");
+
+    final bool highlight = hasHotkey || (isToggle && toggleValue);
 
     return Container(
       decoration: BoxDecoration(
@@ -600,7 +621,7 @@ class FirstRunState extends State<FirstRun> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
+          onTap: onTap ?? (feature == null ? null : () => _openHotkeySettings(feature)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -629,7 +650,7 @@ class FirstRunState extends State<FirstRun> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: currentHotkey.isNotEmpty || (isToggle && toggleValue)
+                    color: highlight
                         ? accent.withValues(alpha: 0.12)
                         : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(8),
@@ -637,7 +658,7 @@ class FirstRunState extends State<FirstRun> {
                   child: Text(
                     badgeLabel,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: currentHotkey.isNotEmpty || (isToggle && toggleValue) ? accent : theme.hintColor,
+                      color: highlight ? accent : theme.hintColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -649,183 +670,6 @@ class FirstRunState extends State<FirstRun> {
           ),
         ),
       ),
-    );
-  }
-
-  // ── QuickMenu expanded panel ──
-  Widget _buildQuickMenuExpanded(ThemeData theme, Color accent) {
-    final List<String> availableSpecialKeys = _getAvailableSpecialKeys(quickMenuHotkey);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        _infoBox(
-          theme,
-          accent,
-          icon: Icons.mouse_rounded,
-          text: "This opens QuickMenu right next to your cursor — so pick something instant. "
-              "If your mouse has extra buttons, open your mouse software and bind one to an obscure combo "
-              "like Ctrl+Shift+Alt+Win+F8, then press it in the listener below. "
-              "No extra buttons? Try Alt+Z.",
-        ),
-        const SizedBox(height: 14),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: quickMenuListening ? Icons.keyboard_command_key_rounded : Icons.keyboard_alt_outlined,
-          title: "Keyboard shortcut",
-          subtitle: "Capture a keyboard combo to trigger QuickMenu.",
-          selected: !Hotkeys.isSpecialBindingKey(quickMenuHotkey),
-          child: _buildOriginalHotkeyListener(
-            theme,
-            accent,
-            focusNode: quickMenuFocus,
-            listening: quickMenuListening,
-            label: quickMenuHotkey.isEmpty
-                ? "Press here to set your shortcut"
-                : Hotkeys.formatHotkeyLabel(key: quickMenuHotkey, modifiers: quickMenuModifiers),
-            onTap: () {
-              quickMenuListening = !quickMenuListening;
-              quickMenuFocus.requestFocus();
-              setState(() {});
-              _activeModalState?.call(() {});
-            },
-            onKeyEvent: _handleQuickMenuKeyEvent,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildOrDivider(theme, accent),
-        const SizedBox(height: 10),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: Icons.mouse_rounded,
-          title: "Special triggers",
-          subtitle: "Pick a side button or the Double Alt trigger.",
-          selected: Hotkeys.isSpecialBindingKey(quickMenuHotkey),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                Hotkeys.isSpecialBindingKey(quickMenuHotkey)
-                    ? "Current shortcut: ${Hotkeys.displayKey(quickMenuHotkey)}"
-                    : "No special trigger selected",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text("Best for quick access if your mouse has extra thumb buttons.",
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4)),
-              const SizedBox(height: 12),
-              availableSpecialKeys.isEmpty
-                  ? Text("All special triggers are currently assigned to other features.",
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontStyle: FontStyle.italic))
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableSpecialKeys
-                          .map((String b) => _mouseButtonChip(
-                                theme,
-                                accent,
-                                b,
-                                selected: quickMenuHotkey == b,
-                                onTap: () => _selectQuickMenuMouseButton(b),
-                                description: _specialBindingDescription(b),
-                              ))
-                          .toList(),
-                    ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _tipsBlock(theme, "What this hotkey can do", quickMenuActions),
-      ],
-    );
-  }
-
-  // ── Generic keyboard + special-triggers expanded panel ──
-  Widget _buildGenericHotkeyExpanded(
-    ThemeData theme,
-    Color accent, {
-    required String description,
-    required FocusNode focusNode,
-    required bool listening,
-    required String hotkey,
-    required List<String> modifiers,
-    required VoidCallback onStartListening,
-    required KeyEventResult Function(FocusNode, KeyEvent) onKeyEvent,
-    required void Function(String) onSelectMouse,
-  }) {
-    final List<String> availableSpecialKeys = _getAvailableSpecialKeys(hotkey);
-    final String label = hotkey.isEmpty
-        ? "Press here to set your shortcut"
-        : Hotkeys.formatHotkeyLabel(key: hotkey, modifiers: modifiers);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(description, style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4)),
-        const SizedBox(height: 14),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: listening ? Icons.keyboard_command_key_rounded : Icons.keyboard_alt_outlined,
-          title: "Keyboard shortcut",
-          subtitle: "Capture a keyboard combo.",
-          selected: !Hotkeys.isSpecialBindingKey(hotkey),
-          child: _buildOriginalHotkeyListener(
-            theme,
-            accent,
-            focusNode: focusNode,
-            listening: listening,
-            label: label,
-            onTap: onStartListening,
-            onKeyEvent: onKeyEvent,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildOrDivider(theme, accent),
-        const SizedBox(height: 10),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: Icons.mouse_rounded,
-          title: "Special triggers",
-          subtitle: "Pick a side button or the Double Alt trigger.",
-          selected: Hotkeys.isSpecialBindingKey(hotkey),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                Hotkeys.isSpecialBindingKey(hotkey)
-                    ? "Current shortcut: ${Hotkeys.displayKey(hotkey)}"
-                    : "No special trigger selected",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text("Best for quick access if your mouse has extra thumb buttons.",
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4)),
-              const SizedBox(height: 12),
-              availableSpecialKeys.isEmpty
-                  ? Text("All special triggers are currently assigned to other features.",
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontStyle: FontStyle.italic))
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableSpecialKeys
-                          .map((String b) => _mouseButtonChip(
-                                theme,
-                                accent,
-                                b,
-                                selected: hotkey == b,
-                                onTap: () => onSelectMouse(b),
-                                description: _specialBindingDescription(b),
-                              ))
-                          .toList(),
-                    ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -854,123 +698,6 @@ class FirstRunState extends State<FirstRun> {
               },
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  // ── Fancyshot expanded panel ──
-  Widget _buildFancyshotExpanded(ThemeData theme, Color accent) {
-    final List<_FancyshotAction> actions = <_FancyshotAction>[
-      const _FancyshotAction(Icons.touch_app_rounded, "Just press", "Frozen Screen Capture"),
-      const _FancyshotAction(Icons.arrow_back_rounded, "Hold + move Left", "Live Screen Capture"),
-      const _FancyshotAction(Icons.arrow_upward_rounded, "Hold + move Up", "Screen Recorder"),
-      const _FancyshotAction(Icons.arrow_downward_rounded, "Hold + move Down", "Screen Draw"),
-      const _FancyshotAction(Icons.arrow_forward_rounded, "Hold + move Right", "Spotlight"),
-    ];
-    final List<String> availableSpecialKeys = _getAvailableSpecialKeys(fancyshotHotkey);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          "Hold the hotkey and move the mouse to pick a capture mode. Release to activate. You can create different hotkeys for each from Hotkeys Settings",
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: actions
-              .map((_FancyshotAction a) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: theme.dividerColor.withValues(alpha: 0.12)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(a.icon, size: 13, color: accent),
-                        const SizedBox(width: 6),
-                        Text(a.direction, style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
-                        const SizedBox(width: 4),
-                        Text("→", style: TextStyle(color: theme.hintColor, fontSize: Design.baseFontSize + 1)),
-                        const SizedBox(width: 4),
-                        Text(a.action, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 14),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: fancyshotListening ? Icons.keyboard_command_key_rounded : Icons.keyboard_alt_outlined,
-          title: "Keyboard shortcut",
-          subtitle: "Capture a keyboard combo.",
-          selected: !Hotkeys.isSpecialBindingKey(fancyshotHotkey),
-          child: _buildOriginalHotkeyListener(
-            theme,
-            accent,
-            focusNode: fancyshotFocus,
-            listening: fancyshotListening,
-            label: fancyshotHotkey.isEmpty
-                ? "Press here to set your shortcut"
-                : Hotkeys.formatHotkeyLabel(key: fancyshotHotkey, modifiers: fancyshotModifiers),
-            onTap: () {
-              fancyshotListening = !fancyshotListening;
-              launcherFocus.requestFocus();
-              setState(() {});
-              _activeModalState?.call(() {});
-            },
-            onKeyEvent: _handleFancyshotKeyEvent,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildOrDivider(theme, accent),
-        const SizedBox(height: 10),
-        _inputChoiceCard(
-          theme,
-          accent: accent,
-          icon: Icons.mouse_rounded,
-          title: "Special triggers",
-          subtitle: "Pick a side button or the Double Alt trigger.",
-          selected: Hotkeys.isSpecialBindingKey(fancyshotHotkey),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                Hotkeys.isSpecialBindingKey(fancyshotHotkey)
-                    ? "Current shortcut: ${Hotkeys.displayKey(fancyshotHotkey)}"
-                    : "No special trigger selected",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text("Best for quick access if your mouse has extra thumb buttons.",
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4)),
-              const SizedBox(height: 12),
-              availableSpecialKeys.isEmpty
-                  ? Text("All special triggers are currently assigned to other features.",
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontStyle: FontStyle.italic))
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableSpecialKeys
-                          .map((String b) => _mouseButtonChip(
-                                theme,
-                                accent,
-                                b,
-                                selected: fancyshotHotkey == b,
-                                onTap: () => _selectFancyshotMouseButton(b),
-                                description: _specialBindingDescription(b),
-                              ))
-                          .toList(),
-                    ),
-            ],
-          ),
         ),
       ],
     );
@@ -1227,6 +954,8 @@ class FirstRunState extends State<FirstRun> {
   Widget _buildStickyFooter(ThemeData theme, Color accent) {
     final bool isFirstStep = currentStep == 0;
     final bool isLastStep = currentStep == 2;
+    final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
+    final bool quickMenuSet = quickMenu.key.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
       child: Container(
@@ -1254,12 +983,12 @@ class FirstRunState extends State<FirstRun> {
             else
               Expanded(
                 child: Text(
-                  quickMenuHotkey.isEmpty
-                      ? "Set the QuickMenu hotkey to continue."
-                      : "QuickMenu: ${Hotkeys.formatHotkeyLabel(key: quickMenuHotkey, modifiers: quickMenuModifiers)}",
+                  quickMenuSet
+                      ? "QuickMenu: ${quickMenu.displayHotkey}"
+                      : "Set the QuickMenu hotkey to continue.",
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: quickMenuHotkey.isEmpty ? theme.hintColor : theme.colorScheme.onSurface,
-                    fontWeight: quickMenuHotkey.isEmpty ? FontWeight.w500 : FontWeight.w600,
+                    color: quickMenuSet ? theme.colorScheme.onSurface : theme.hintColor,
+                    fontWeight: quickMenuSet ? FontWeight.w600 : FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1267,7 +996,7 @@ class FirstRunState extends State<FirstRun> {
             if (!isFirstStep) const Spacer(),
             FilledButton.icon(
               onPressed: isFirstStep
-                  ? (quickMenuHotkey.isEmpty ? null : _continueSetup)
+                  ? (quickMenuSet ? _continueSetup : null)
                   : isLastStep
                       ? _finishSetup
                       : () => _goToStep(currentStep + 1),
@@ -1292,89 +1021,6 @@ class FirstRunState extends State<FirstRun> {
 
   // ─────────────────────── SHARED WIDGETS ─────────────────────────
 
-  /// The original hotkey listener widget, exactly as in the original code.
-  Widget _buildOriginalHotkeyListener(
-    ThemeData theme,
-    Color accent, {
-    required FocusNode focusNode,
-    required bool listening,
-    required String label,
-    required VoidCallback onTap,
-    required KeyEventResult Function(FocusNode, KeyEvent) onKeyEvent,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: listening ? accent.withValues(alpha: 0.10) : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: listening ? accent.withValues(alpha: 0.28) : theme.dividerColor.withValues(alpha: 0.12),
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Focus(
-                focusNode: focusNode,
-                onKeyEvent: onKeyEvent,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      listening ? "Listening now" : "Current keyboard shortcut",
-                      style: theme.textTheme.labelLarge?.copyWith(color: accent, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      label,
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            FilledButton.tonal(
-              onPressed: onTap,
-              style: FilledButton.styleFrom(
-                foregroundColor: accent,
-                backgroundColor: accent.withValues(alpha: 0.12),
-              ),
-              child: Text(listening ? "Press keys" : "Capture"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoBox(ThemeData theme, Color accent, {required IconData icon, required String text}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.16)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(icon, color: accent, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text, style: theme.textTheme.bodyMedium?.copyWith(height: 1.45)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _card(ThemeData theme, {required Widget child}) {
     return Container(
       width: double.infinity,
@@ -1385,171 +1031,6 @@ class FirstRunState extends State<FirstRun> {
         border: Border.all(color: theme.dividerColor.withValues(alpha: 0.12)),
       ),
       child: child,
-    );
-  }
-
-  Widget _buildOrDivider(ThemeData theme, Color accent) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: <Color>[
-                  Colors.transparent,
-                  accent.withValues(alpha: 0.18),
-                  accent.withValues(alpha: 0.08),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: accent.withValues(alpha: 0.14)),
-          ),
-          child: Text(
-            "Or",
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: accent,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: <Color>[
-                  accent.withValues(alpha: 0.08),
-                  accent.withValues(alpha: 0.18),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _inputChoiceCard(
-    ThemeData theme, {
-    required Color accent,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required Widget child,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: selected ? accent.withValues(alpha: 0.05) : theme.colorScheme.surface.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selected ? accent.withValues(alpha: 0.22) : theme.dividerColor.withValues(alpha: 0.10),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? accent.withValues(alpha: 0.12)
-                      : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, height: 1.35)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _mouseButtonChip(
-    ThemeData theme,
-    Color accent,
-    String button, {
-    required bool selected,
-    required VoidCallback onTap,
-    required String description,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? accent.withValues(alpha: 0.14) : theme.colorScheme.surface.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? accent.withValues(alpha: 0.30) : theme.dividerColor.withValues(alpha: 0.12),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                color: selected ? accent : theme.hintColor,
-                size: 15,
-              ),
-              const SizedBox(width: 7),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(Hotkeys.displayKey(button),
-                      style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  Text(description, style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tipsBlock(ThemeData theme, String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        ...items.map((String text) => _bulletItem(theme, text)),
-      ],
     );
   }
 
@@ -1638,166 +1119,6 @@ class FirstRunState extends State<FirstRun> {
     );
   }
 
-  // ─────────────────────── KEY EVENT HANDLERS ─────────────────────────
-
-  KeyEventResult _handleQuickMenuKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    quickMenuHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    quickMenuModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    quickMenuListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  KeyEventResult _handleLauncherKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    launcherHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    launcherModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    launcherListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  KeyEventResult _handleQuickClickKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    quickClickHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    quickClickModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    quickClickListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  KeyEventResult _handleFancyshotKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    fancyshotHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    fancyshotModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    fancyshotListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  KeyEventResult _handleEmojiPickerKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    emojiPickerHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    emojiPickerModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    emojiPickerListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  KeyEventResult _handleColorPickerKeyEvent(FocusNode e, KeyEvent k) {
-    final List<String> modifier = <String>[];
-    if (HardwareKeyboard.instance.isControlPressed) modifier.add("CTRL");
-    if (HardwareKeyboard.instance.isAltPressed) modifier.add("ALT");
-    if (HardwareKeyboard.instance.isShiftPressed) modifier.add("SHIFT");
-    if (HardwareKeyboard.instance.isMetaPressed) modifier.add("WIN");
-    if (k.logicalKey.synonyms.isNotEmpty) return KeyEventResult.handled;
-
-    colorPickerHotkey = Hotkeys.keyFromLogicalKey(k.logicalKey);
-    colorPickerModifiers = Hotkeys.normalizeModifiers(modifier);
-    FocusScope.of(context).unfocus();
-    colorPickerListening = false;
-    setState(() {});
-    _activeModalState?.call(() {});
-    return KeyEventResult.handled;
-  }
-
-  void _selectColorPickerMouseButton(String button) {
-    colorPickerModifiers.clear();
-    colorPickerHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-  // ── Mouse button selectors ──
-
-  void _selectQuickMenuMouseButton(String button) {
-    quickMenuModifiers.clear();
-    quickMenuHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-
-  void _selectLauncherMouseButton(String button) {
-    launcherModifiers.clear();
-    launcherHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-
-  void _selectQuickClickMouseButton(String button) {
-    quickClickModifiers.clear();
-    quickClickHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-
-  void _selectFancyshotMouseButton(String button) {
-    fancyshotModifiers.clear();
-    fancyshotHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-
-  void _selectEmojiPickerMouseButton(String button) {
-    emojiPickerModifiers.clear();
-    emojiPickerHotkey = button;
-    setState(() {});
-    _activeModalState?.call(() {});
-  }
-
-  String _specialBindingDescription(String binding) {
-    switch (binding) {
-      case Hotkeys.mouseButton4Key:
-        return "Usually the back thumb button.";
-      case Hotkeys.mouseButton5Key:
-        return "Usually the forward thumb button.";
-      case Hotkeys.doubleAltKey:
-        return "Tap Alt once, then press Alt again within 100ms.";
-      default:
-        return "Use this special input as a hotkey.";
-    }
-  }
-
   // ─────────────────────── NAVIGATION ─────────────────────────
 
   Future<void> _goToStep(int step) async {
@@ -1810,23 +1131,16 @@ class FirstRunState extends State<FirstRun> {
   }
 
   Future<void> _continueSetup() async {
-    final List<String> savedModifiers = Hotkeys.normalizeModifiers(quickMenuModifiers);
-    if (!kReleaseMode) {
-      hokeyObj.first.key = quickMenuHotkey;
-      hokeyObj.first.modifiers = savedModifiers;
-      Boxes.updateSettings("remap", jsonEncode(hokeyObj));
-    }
+    // Hotkeys are already persisted live through HotKeySettings; just record the
+    // install state and move on.
     Boxes.updateSettings("justInstalled", true);
     Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
     await _goToStep(1);
   }
 
   Future<void> _finishSetup() async {
+    _syncQuickClickEnabled();
     if (kReleaseMode) {
-      final List<String> savedModifiers = Hotkeys.normalizeModifiers(quickMenuModifiers);
-      hokeyObj.first.key = quickMenuHotkey;
-      hokeyObj.first.modifiers = savedModifiers;
-      Boxes.updateSettings("remap", jsonEncode(hokeyObj));
       WinUtils.reloadTabameQuickMenu();
       Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
     } else {
@@ -1867,11 +1181,4 @@ class _StepMeta {
   const _StepMeta(this.index, this.label);
   final int index;
   final String label;
-}
-
-class _FancyshotAction {
-  const _FancyshotAction(this.icon, this.direction, this.action);
-  final IconData icon;
-  final String direction;
-  final String action;
 }
