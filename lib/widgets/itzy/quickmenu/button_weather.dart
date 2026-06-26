@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -176,9 +178,15 @@ class _WeatherPanelState extends State<WeatherPanel> {
     required Color onSurface,
   }) {
     final _WeatherCondition? current = forecast?.current;
+    final List<double> hourlyTemps =
+        forecast?.hourly.map((WeatherHour hour) => hour.temperature).toList() ?? <double>[];
+    final double maxTemp = hourlyTemps.isNotEmpty ? hourlyTemps.reduce(math.max) : 0;
+    final int highlightIndex =
+        forecast == null ? -1 : forecast.hourly.indexWhere((WeatherHour hour) => _isCurrentHour(hour, forecast));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: accent.withAlpha(10),
         borderRadius: BorderRadius.circular(12),
@@ -196,81 +204,96 @@ class _WeatherPanelState extends State<WeatherPanel> {
                 });
               },
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withAlpha(16),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  current == null ? Icons.cloud_queue_rounded : _weatherIcon(current.weatherCode),
-                  size: 20,
-                  color: accent,
+        child: Stack(
+          children: <Widget>[
+            if (hourlyTemps.length >= 2)
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.5,
+                  child: CustomPaint(
+                    painter: _SparklinePainter(values: hourlyTemps, highlightIndex: highlightIndex),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(16),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      current == null ? Icons.cloud_queue_rounded : _weatherIcon(current.weatherCode),
+                      size: 20,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            location.displayName,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: onSurface,
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                location.displayName,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: onSurface,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (loading)
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: accent,
+                                ),
+                              )
+                            else
+                              Icon(Icons.chevron_right_rounded, size: 17, color: onSurface.withAlpha(115)),
+                          ],
                         ),
-                        if (loading)
-                          SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: accent,
-                            ),
+                        const SizedBox(height: 4),
+                        if (failed)
+                          Text(
+                            "Could not load weather.",
+                            style: TextStyle(fontSize: Design.baseFontSize + 2, color: Colors.redAccent.withAlpha(220)),
+                          )
+                        else if (current == null)
+                          Text(
+                            loading ? "Loading forecast..." : "No forecast loaded yet.",
+                            style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(145)),
                           )
                         else
-                          Icon(Icons.chevron_right_rounded, size: 17, color: onSurface.withAlpha(115)),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 5,
+                            children: <Widget>[
+                              _buildMetricChip(_formatTemp(current.temperature), accent, onSurface),
+                              _buildMetricChip("Max: ${_formatTemp(maxTemp.toDouble())}", accent, onSurface),
+                              _buildMetricChip(
+                                  "Feels like ${_formatTemp(current.apparentTemperature)}", accent, onSurface),
+                              _buildMetricChip(_weatherLabel(current.weatherCode), accent, onSurface),
+                              _buildMetricChip("Wind ${_formatSpeed(current.windSpeed)}", accent, onSurface),
+                            ],
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    if (failed)
-                      Text(
-                        "Could not load weather.",
-                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: Colors.redAccent.withAlpha(220)),
-                      )
-                    else if (current == null)
-                      Text(
-                        loading ? "Loading forecast..." : "No forecast loaded yet.",
-                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(145)),
-                      )
-                    else
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 5,
-                        children: <Widget>[
-                          _buildMetricChip(_formatTemp(current.temperature), accent, onSurface),
-                          _buildMetricChip("Feels like ${_formatTemp(current.apparentTemperature)}", accent, onSurface),
-                          _buildMetricChip(_weatherLabel(current.weatherCode), accent, onSurface),
-                          _buildMetricChip("Wind ${_formatSpeed(current.windSpeed)}", accent, onSurface),
-                        ],
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -522,21 +545,26 @@ class _WeatherPanelState extends State<WeatherPanel> {
             ),
             Expanded(
               child: ListView(
-                controller: _detailScrollController,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                children: _tab == _WeatherTab.today
-                    ? forecast.hourly
-                        .map(
-                          (WeatherHour hour) => _buildHourRow(
-                            hour,
-                            accent,
-                            onSurface,
-                            _isCurrentHour(hour, forecast),
-                          ),
-                        )
-                        .toList()
-                    : forecast.daily.map((WeatherDay day) => _buildDayRow(day, accent, onSurface)).toList(),
-              ),
+                  controller: _detailScrollController,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  children: <Widget>[
+                    // const SizedBox(height: 10),
+                    _buildTrendChart(forecast, accent, onSurface),
+                    const SizedBox(height: 10),
+                    ..._tab == _WeatherTab.today
+                        ? forecast.hourly
+                            .where((WeatherHour a) => !a.time.isBefore(_hourlyListCutoff))
+                            .map(
+                              (WeatherHour hour) => _buildHourRow(
+                                hour,
+                                accent,
+                                onSurface,
+                                _isCurrentHour(hour, forecast),
+                              ),
+                            )
+                            .toList()
+                        : forecast.daily.map((WeatherDay day) => _buildDayRow(day, accent, onSurface)).toList(),
+                  ]),
             ),
           ],
         ),
@@ -570,9 +598,19 @@ class _WeatherPanelState extends State<WeatherPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  _formatTemp(current.temperature),
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800, height: 1, color: onSurface),
+                Row(
+                  // crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Text(
+                      _formatTemp(current.temperature),
+                      style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800, height: 1, color: onSurface),
+                    ),
+                    Text(
+                      " ${_formatTemp(forecast.hourly.map((WeatherHour hour) => hour.temperature).reduce(math.max).toDouble())}",
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w800, height: 1, color: onSurface.withAlpha(155)),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -649,6 +687,240 @@ class _WeatherPanelState extends State<WeatherPanel> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTrendChart(_WeatherForecast forecast, Color accent, Color onSurface) {
+    if (_tab == _WeatherTab.today) {
+      return _buildHourlyChart(forecast, accent, onSurface);
+    }
+    return _buildDailyChart(forecast, accent, onSurface);
+  }
+
+  Widget _chartFrame({required Color onSurface, required Widget child}) {
+    return Container(
+      height: 150,
+      padding: const EdgeInsets.fromLTRB(4, 14, 10, 4),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildHourlyChart(_WeatherForecast forecast, Color accent, Color onSurface) {
+    final List<WeatherHour> hours = forecast.hourly;
+    if (hours.length < 2) return const SizedBox.shrink();
+
+    final int currentIndex = hours.indexWhere((WeatherHour hour) => _isCurrentHour(hour, forecast));
+    final List<double> values = hours.map((WeatherHour hour) => hour.temperature).toList();
+    final double minValue = values.reduce(math.min);
+    final double maxValue = values.reduce(math.max);
+    final double pad = (maxValue - minValue).abs() < 0.5 ? 1.5 : (maxValue - minValue) * 0.2;
+
+    return _chartFrame(
+      onSurface: onSurface,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (hours.length - 1).toDouble(),
+          minY: minValue - pad,
+          maxY: maxValue + pad,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: true,
+            verticalInterval: 3,
+            getDrawingHorizontalLine: (double value) => FlLine(color: onSurface.withAlpha(15), strokeWidth: 1),
+            getDrawingVerticalLine: (double value) => FlLine(color: onSurface.withAlpha(11), strokeWidth: 1),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 30,
+                getTitlesWidget: (double value, TitleMeta meta) => _chartAxisLabel("${value.round()}°", onSurface),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                interval: 1,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  final int index = value.round();
+                  if (index < 0 || index >= hours.length || index % 3 != 0) return const SizedBox.shrink();
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 6,
+                    child: _chartAxisLabel(DateFormat("HH").format(hours[index].time), onSurface),
+                  );
+                },
+              ),
+            ),
+          ),
+          extraLinesData: currentIndex < 0
+              ? const ExtraLinesData()
+              : ExtraLinesData(
+                  verticalLines: <VerticalLine>[
+                    VerticalLine(
+                      x: currentIndex.toDouble(),
+                      color: accent.withAlpha(130),
+                      strokeWidth: 1.5,
+                      dashArray: <int>[4, 3],
+                    ),
+                  ],
+                ),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              tooltipBorderRadius: const BorderRadius.all(Radius.circular(10)),
+              // Push the tooltip far below the point, then let fitInsideVertically
+              // pin it to the bottom edge of the chart so it never gets clipped above.
+              tooltipMargin: -10000,
+              fitInsideVertically: true,
+              fitInsideHorizontally: true,
+              getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                return touchedSpots.map((LineBarSpot spot) {
+                  final int index = spot.x.round();
+                  if (index < 0 || index >= hours.length) return null;
+                  final WeatherHour hour = hours[index];
+                  return LineTooltipItem(
+                    "${DateFormat("h a").format(hour.time)}\n${_formatTemp(hour.temperature)}  ${_weatherLabel(hour.weatherCode)}\n${hour.precipitationProbability.round()}% rain",
+                    TextStyle(color: onSurface, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+          lineBarsData: <LineChartBarData>[
+            LineChartBarData(
+              spots: <FlSpot>[for (int i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i])],
+              isCurved: true,
+              color: accent,
+              barWidth: 2.5,
+              isStrokeCapRound: true,
+              belowBarData: BarAreaData(show: true, color: accent.withAlpha(26)),
+              dotData: FlDotData(
+                show: true,
+                checkToShowDot: (FlSpot spot, LineChartBarData barData) => spot.x.round() == currentIndex,
+                getDotPainter: (FlSpot spot, double percent, LineChartBarData barData, int index) =>
+                    FlDotCirclePainter(radius: 3.5, color: accent, strokeWidth: 1.5, strokeColor: Design.background),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyChart(_WeatherForecast forecast, Color accent, Color onSurface) {
+    final List<WeatherDay> days = forecast.daily;
+    if (days.length < 2) return const SizedBox.shrink();
+
+    final List<double> highs = days.map((WeatherDay day) => day.high).toList();
+    final List<double> lows = days.map((WeatherDay day) => day.low).toList();
+    final double minValue = lows.reduce(math.min);
+    final double maxValue = highs.reduce(math.max);
+    final double pad = (maxValue - minValue).abs() < 0.5 ? 1.5 : (maxValue - minValue) * 0.18;
+
+    return _chartFrame(
+      onSurface: onSurface,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (days.length - 1).toDouble(),
+          minY: minValue - pad,
+          maxY: maxValue + pad,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: true,
+            verticalInterval: 1,
+            getDrawingHorizontalLine: (double value) => FlLine(color: onSurface.withAlpha(15), strokeWidth: 1),
+            getDrawingVerticalLine: (double value) => FlLine(color: onSurface.withAlpha(11), strokeWidth: 1),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 30,
+                getTitlesWidget: (double value, TitleMeta meta) => _chartAxisLabel("${value.round()}°", onSurface),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                interval: 1,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  final int index = value.round();
+                  if (index < 0 || index >= days.length) return const SizedBox.shrink();
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 6,
+                    child: _chartAxisLabel(DateFormat("EEE").format(days[index].date), onSurface),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              tooltipBorderRadius: const BorderRadius.all(Radius.circular(10)),
+              // Push the tooltip far below the point, then let fitInsideVertically
+              // pin it to the bottom edge of the chart so it never gets clipped above.
+              tooltipMargin: -10000,
+              fitInsideVertically: true,
+              fitInsideHorizontally: true,
+              getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                return touchedSpots.map((LineBarSpot spot) {
+                  final int index = spot.x.round();
+                  if (index < 0 || index >= days.length) return null;
+                  if (spot.barIndex != 0) return null;
+                  final WeatherDay day = days[index];
+                  return LineTooltipItem(
+                    "${DateFormat("EEE, MMM d").format(day.date)}\n${_formatTemp(day.high)} / ${_formatTemp(day.low)}\n${_weatherLabel(day.weatherCode)}",
+                    TextStyle(color: onSurface, fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+          lineBarsData: <LineChartBarData>[
+            LineChartBarData(
+              spots: <FlSpot>[for (int i = 0; i < highs.length; i++) FlSpot(i.toDouble(), highs[i])],
+              isCurved: true,
+              color: accent,
+              barWidth: 2.5,
+              isStrokeCapRound: true,
+              belowBarData: BarAreaData(show: true, color: accent.withAlpha(22)),
+              dotData: const FlDotData(show: false),
+            ),
+            LineChartBarData(
+              spots: <FlSpot>[for (int i = 0; i < lows.length; i++) FlSpot(i.toDouble(), lows[i])],
+              isCurved: true,
+              color: onSurface.withAlpha(110),
+              barWidth: 1.8,
+              isStrokeCapRound: true,
+              dashArray: <int>[5, 4],
+              dotData: const FlDotData(show: false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chartAxisLabel(String text, Color onSurface) {
+    return Text(
+      text,
+      style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(120), fontWeight: FontWeight.w600),
     );
   }
 
@@ -965,6 +1237,11 @@ class _WeatherPanelState extends State<WeatherPanel> {
     return _hourKey(hour.time) == _hourKey(forecast.current.time);
   }
 
+  DateTime get _hourlyListCutoff {
+    final DateTime now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, now.hour).subtract(const Duration(hours: 1));
+  }
+
   String _hourKey(DateTime value) {
     final String month = value.month.toString().padLeft(2, '0');
     final String day = value.day.toString().padLeft(2, '0');
@@ -1082,6 +1359,58 @@ enum _WeatherMode { overview, manage, detail }
 
 enum _WeatherTab { today, daily }
 
+class _SparklinePainter extends CustomPainter {
+  const _SparklinePainter({required this.values, required this.highlightIndex});
+
+  final List<double> values;
+  final int highlightIndex;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double minValue = values.reduce(math.min);
+    final double maxValue = values.reduce(math.max);
+    final double range = (maxValue - minValue).abs() < 0.5 ? 1 : maxValue - minValue;
+    final double stepX = size.width / (values.length - 1);
+
+    Offset pointAt(int index) {
+      final double normalized = (values[index] - minValue) / range;
+      return Offset(stepX * index, size.height - normalized * (size.height - 4) - 2);
+    }
+
+    final Path path = Path()..moveTo(pointAt(0).dx, pointAt(0).dy);
+    for (int index = 1; index < values.length; index++) {
+      path.lineTo(pointAt(index).dx, pointAt(index).dy);
+    }
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Design.accent.withAlpha(140)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    if (highlightIndex >= 0 && highlightIndex < values.length) {
+      final Offset point = pointAt(highlightIndex);
+      canvas.drawLine(
+        Offset(point.dx, 0),
+        Offset(point.dx, size.height),
+        Paint()
+          ..color = Design.accent.withAlpha(70)
+          ..strokeWidth = 1,
+      );
+      canvas.drawCircle(point, 2.6, Paint()..color = Design.accent.withAlpha(230));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.highlightIndex != highlightIndex;
+  }
+}
+
 class _WeatherLocation {
   const _WeatherLocation({
     required this.name,
@@ -1172,19 +1501,12 @@ class _WeatherForecast {
     final Map<String, dynamic> daily = Map<String, dynamic>.from(map["daily"] as Map<dynamic, dynamic>);
     final DateTime currentTime = DateTime.parse(current["time"].toString());
     final String todayKey = DateFormat("yyyy-MM-dd").format(currentTime);
-    final DateTime earliestHour = DateTime(
-      currentTime.year,
-      currentTime.month,
-      currentTime.day,
-      currentTime.hour,
-    ).subtract(const Duration(hours: 1));
     final List<dynamic> hourlyTimes = hourly["time"] as List<dynamic>? ?? <dynamic>[];
     final List<WeatherHour> hours = <WeatherHour>[];
 
     for (int index = 0; index < hourlyTimes.length; index++) {
       final DateTime time = DateTime.parse(hourlyTimes[index].toString());
       if (DateFormat("yyyy-MM-dd").format(time) != todayKey) continue;
-      if (time.isBefore(earliestHour)) continue;
       hours.add(
         WeatherHour(
           time: time,
