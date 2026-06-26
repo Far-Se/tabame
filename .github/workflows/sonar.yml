@@ -6,6 +6,7 @@ on:
       - master
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -13,7 +14,14 @@ permissions:
 jobs:
   sonar:
     name: SonarQube Cloud analysis
-    runs-on: ubuntu-latest
+    # Same pin as windows-build.yml: build-wrapper needs to observe the real
+    # CMake/MSBuild compile of the tabamewin32 plugin and windows/runner, and
+    # windows-latest's newer VS18 toolchain breaks that build (see
+    # windows-build.yml for details).
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      BUILD_WRAPPER_OUT_DIR: bw-output
 
     steps:
       - name: Check out repository
@@ -27,10 +35,27 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Enable Windows desktop
+        shell: pwsh
+        run: flutter config --enable-windows-desktop
+
       - name: Install dependencies
+        shell: pwsh
         run: flutter pub get
 
+      - name: Install Build Wrapper
+        id: install_bw
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v8
+
+      - name: Run Build Wrapper
+        shell: pwsh
+        run: |
+          & "${{ steps.install_bw.outputs.build-wrapper-binary }}" --out-dir "$env:BUILD_WRAPPER_OUT_DIR" flutter build windows --release
+
       - name: SonarQube Cloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            --define "sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
