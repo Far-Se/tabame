@@ -17,6 +17,7 @@ import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
+import '../models/util/system_power.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
@@ -214,6 +215,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       usage: r'$design serene',
       icon: Icons.palette_outlined,
       handler: _buildFunctionDesignResults,
+    ),
+    _LauncherFunctionCommand(
+      name: 'sys',
+      description: 'System power actions',
+      usage: r'$sys shutdown',
+      icon: Icons.power_settings_new_rounded,
+      aliases: <String>['system', 'power'],
+      handler: _buildFunctionSystemResults,
     ),
   ];
 
@@ -1402,6 +1411,42 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }).toList(growable: false);
   }
 
+  Future<List<LauncherSearchResultItem>> _buildFunctionSystemResults(String input) async {
+    final String trimmed = input.trim().toLowerCase();
+
+    final SystemPowerAction? exact = trimmed.isEmpty ? null : SystemPowerAction.byToken(trimmed);
+    final List<SystemPowerAction> matches = exact != null
+        ? <SystemPowerAction>[exact]
+        : trimmed.isEmpty
+            ? SystemPowerAction.all
+            : SystemPowerAction.all.where((SystemPowerAction a) => a.matchesQuery(trimmed)).toList();
+
+    if (matches.isEmpty) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-sys-help',
+          title: 'No system action found',
+          subtitle: r'Try $sys shutdown, restart, logoff, lock, sleep or hibernate',
+          icon: Icons.power_settings_new_rounded,
+        )),
+      ];
+    }
+
+    return matches.map((SystemPowerAction action) {
+      return LauncherSearchResultItem.quickAction(_buildFunctionAction(
+        id: 'function-sys:${action.id}',
+        title: action.label,
+        subtitle: action.description,
+        icon: action.icon,
+        searchTerms: <String>['sys', action.id, action.label, ...action.aliases],
+        onExecute: () {
+          action.execute();
+          _finishLauncherFunctionExecution();
+        },
+      ));
+    }).toList(growable: false);
+  }
+
   Future<List<LauncherSearchResultItem>> _buildFunctionUnitResults(String input) async {
     return _buildParserFunctionResults(
       idPrefix: 'function-unit',
@@ -2193,41 +2238,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 if (!hasInput && _results.isNotEmpty) _buildResultsHeaderWithBadges(accent, onSurface),
-                if (Boxes.searchFolders.isEmpty &&
-                    (_searchMode == LauncherSearchMode.filesOnly || _searchMode == LauncherSearchMode.mixed))
-                  Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(Icons.folder_off_rounded, size: 48, color: accent.withAlpha(40)),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No Search Folders Configured',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: onSurface.withAlpha(180),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Add folders in Settings -> Quickmenu -> Launcher'
-                              ' to start searching files.',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: onSurface.withAlpha(100),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Expanded(
+                Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: ValueListenableBuilder<int>(

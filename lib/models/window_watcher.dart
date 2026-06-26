@@ -155,6 +155,13 @@ class WindowWatcher {
       if (win.isAppx) {
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) {
           icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
+        } else {
+          // Manifest logo couldn't be resolved (common for ApplicationFrameHost-
+          // hosted apps) — fall back to the window's own HICON, the same icon
+          // Windows shows in the title bar and the real taskbar, instead of the
+          // blank placeholder. Left uncached on failure so a later cycle retries.
+          final ExtractedIcon winIcon = WinUtils.windowIcon(win.hWnd);
+          if (winIcon != null) icons[win.hWnd] = winIcon;
         }
         continue;
       }

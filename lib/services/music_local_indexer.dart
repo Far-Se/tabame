@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -88,6 +89,18 @@ class MusicLocalIndexer {
     '.mp4',
   };
 
+  /// Time-box reading a single file so one corrupt/locked track can never hang
+  /// the whole indexer (which previously looked like a permanent freeze at 0).
+  static const Duration perFileTimeout = Duration(seconds: 30);
+
+  /// Hand the event loop a chance to paint/handle input every N files so the UI
+  /// (and the rest of the desktop) stays responsive during a large index.
+  static const int yieldEveryFiles = 8;
+
+  /// Hard ceiling on files visited per scope. Guards against runaway traversal
+  /// from junctions/symlink loops or an accidentally huge root (e.g. C:\).
+  static const int maxFilesPerScope = 100000;
+
   final MusicLibraryDb _db;
   final MusicMetadataReader _metadataReader;
 
@@ -137,13 +150,29 @@ class MusicLocalIndexer {
     final String indexToken = DateTime.now().microsecondsSinceEpoch.toString();
     int indexed = 0;
     int skipped = 0;
+    int processed = 0;
 
     // Phase 1: collect all metadata outside any transaction so that
     // artwork DB writes (upsertArtworkRecord) on the same connection
     // don't execute inside an open transaction.
+    //
+    // This is the heavy phase (tag reads + artwork decoding), so it: updates
+    // live progress per file (instead of sitting at 0 until phase 2), yields to
+    // the event loop periodically, time-boxes each file, tolerates listing
+    // errors (e.g. permission-denied subfolders) instead of aborting the whole
+    // scan, and caps total files to avoid runaway traversal.
     final List<LocalMusicMetadata> collected = <LocalMusicMetadata>[];
-    await for (final FileSystemEntity entity in scope.list(recursive: true, followLinks: false)) {
+    final Stream<FileSystemEntity> entities =
+        scope.list(recursive: true, followLinks: false).handleError((Object error) {
+      debugPrint('MusicLocalIndexer: directory listing error under $scopePath: $error');
+    });
+    await for (final FileSystemEntity entity in entities) {
       if (entity is! File || !isSupportedAudioFile(entity.path)) continue;
+
+      if (processed >= maxFilesPerScope) {
+        debugPrint('MusicLocalIndexer: reached $maxFilesPerScope file cap for $scopePath; stopping scan.');
+        break;
+      }
 
       File fileToProcess = entity;
       final String oldPath = fileToProcess.path;
@@ -169,11 +198,21 @@ class MusicLocalIndexer {
       }
 
       try {
-        final LocalMusicMetadata metadata = await _metadataReader.read(fileToProcess, rootPath: rootPath);
+        final LocalMusicMetadata metadata =
+            await _metadataReader.read(fileToProcess, rootPath: rootPath).timeout(perFileTimeout);
         collected.add(metadata);
+      } on TimeoutException {
+        skipped++;
+        debugPrint('MusicLocalIndexer: timed out reading ${fileToProcess.path}; skipped.');
       } catch (e) {
         skipped++;
         debugPrint('MusicLocalIndexer: skipped ${fileToProcess.path}: $e');
+      }
+
+      processed++;
+      indexedCount.value++; // live progress while scanning (the slow phase)
+      if (processed % yieldEveryFiles == 0) {
+        await Future<void>.delayed(Duration.zero);
       }
     }
 
@@ -185,7 +224,6 @@ class MusicLocalIndexer {
         try {
           await _db.upsertSong(metadata, indexToken);
           indexed++;
-          indexedCount.value++;
         } catch (e) {
           skipped++;
           debugPrint('MusicLocalIndexer: upsert failed for ${metadata.path}: $e');
