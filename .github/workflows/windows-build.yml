@@ -23,14 +23,12 @@ on:
   push:
     tags:
       - "v*"
-  schedule:
-    - cron: "0 3 * * *"
 
 permissions:
   contents: write
 
 concurrency:
-  group: windows-release-${{ github.event_name == 'schedule' && 'nightly' || github.ref_name }}
+  group: windows-release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -86,9 +84,7 @@ jobs:
           $dateStamp = Get-Date -Format "yyyyMMdd"
           $releaseType = "${{ inputs.release_type }}"
 
-          if ("${{ github.event_name }}" -eq "schedule") {
-            $releaseType = "nightly"
-          } elseif ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
+          if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
             $releaseType = "official"
           } elseif ([string]::IsNullOrWhiteSpace($releaseType)) {
             $releaseType = "nightly"
@@ -185,7 +181,7 @@ jobs:
       - name: Write release notes
         shell: pwsh
         run: |
-          $notes = @"
+          $notes = @'
           Windows ${{ steps.meta.outputs.release_type }} build for Tabame.
 
           Version: ${{ steps.meta.outputs.app_version }}
@@ -193,7 +189,7 @@ jobs:
           Build date: ${{ steps.meta.outputs.date_stamp }}
 
           Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
-          "@
+          '@
 
           $notes | Set-Content -Path release-notes.md
 
