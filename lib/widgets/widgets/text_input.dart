@@ -16,6 +16,7 @@ class CustomTextInput extends StatefulWidget {
   final void Function(String val)? onSubmitted;
   final void Function(String val)? onUpdated;
   final bool multiline;
+  final int? maxLines;
   final TextInputType keyboardType;
   final bool showLabelSeparated;
   const CustomTextInput({
@@ -27,6 +28,7 @@ class CustomTextInput extends StatefulWidget {
     this.onSubmitted,
     this.onUpdated,
     this.multiline = false,
+    this.maxLines,
     this.keyboardType = TextInputType.text,
     this.decoration,
     this.showLabelSeparated = false,
@@ -158,7 +160,7 @@ class CustomTextInputState extends State<CustomTextInput> {
                       inputFormatters: widget.keyboardType == TextInputType.number
                           ? <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly]
                           : null,
-                      maxLines: widget.multiline ? null : 1,
+                      maxLines: widget.multiline ? widget.maxLines : 1,
                       decoration: widget.decoration ??
                           InputDecoration(
                             labelText: widget.labelText.toUpperCase(),

@@ -195,11 +195,25 @@ class QMBottomBarState extends State<QMBottomBar> {
                 if (mounted) setState(() {});
               },
             ),
-            if (user.showTrayBar)
+            if (user.showTrayBar) ...<Widget>[
+              SwitchListTile(
+                title:
+                    const Text("Merge Pinned Apps with Tray", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                subtitle: Text("Show pinned apps first, then continue with tray icons in a single bar",
+                    style: TextStyle(fontSize: Design.baseFontSize + 2)),
+                secondary: const Icon(Icons.join_full, size: 20),
+                value: user.mergePinnedTray,
+                onChanged: (bool newValue) async {
+                  user.mergePinnedTray = newValue;
+                  await Boxes.updateSettings("mergePinnedTray", user.mergePinnedTray);
+                  if (mounted) setState(() {});
+                },
+              ),
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: _buildTrayList(),
               ),
+            ],
           ],
         ),
       ),
@@ -514,10 +528,15 @@ class QMBottomBarState extends State<QMBottomBar> {
         ToggleButtons(
           constraints: const BoxConstraints(minHeight: 28, minWidth: 28),
           borderRadius: BorderRadius.circular(8),
-          isSelected: <bool>[item.isPinned, !item.isVisible],
+          isSelected: <bool>[
+            item.isPinned,
+            !item.isVisible,
+            Boxes.pref.getStringList("postMessageTray")?.contains(item.processExe) ?? false,
+          ],
           onPressed: (int index) async {
             final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
             final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
+            final List<String> postMessage = Boxes.pref.getStringList("postMessageTray") ?? <String>[];
             if (index == 0) {
               if (pinned.contains(item.processExe)) {
                 pinned.remove(item.processExe);
@@ -525,21 +544,29 @@ class QMBottomBarState extends State<QMBottomBar> {
                 pinned.add(item.processExe);
                 hidden.remove(item.processExe);
               }
-            } else {
+            } else if (index == 1) {
               if (hidden.contains(item.processExe)) {
                 hidden.remove(item.processExe);
               } else {
                 hidden.add(item.processExe);
                 pinned.remove(item.processExe);
               }
+            } else {
+              if (postMessage.contains(item.processExe)) {
+                postMessage.remove(item.processExe);
+              } else {
+                postMessage.add(item.processExe);
+              }
             }
             await Boxes.updateSettings("pinnedTray", pinned);
             await Boxes.updateSettings("hiddenTray", hidden);
+            await Boxes.updateSettings("postMessageTray", postMessage);
             setState(() {});
           },
           children: const <Widget>[
             CustomTooltip(message: "Pin to bar", child: Icon(Icons.push_pin, size: 14)),
             CustomTooltip(message: "Hide icon", child: Icon(Icons.visibility_off, size: 14)),
+            CustomTooltip(message: "Use PostMessage instead of simulated click", child: Icon(Icons.send, size: 14)),
           ],
         ),
         const SizedBox(width: 8),

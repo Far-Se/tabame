@@ -72,6 +72,7 @@ class Boxes {
       await pref.setBool("showMusicPlayerInTaskbar", true);
       await pref.setBool("showMediaSessionsInTaskbar", true);
       await pref.setBool("showTrayBar", true);
+      await pref.setBool("mergePinnedTray", false);
       await pref.setBool("showWeather", true);
       await pref.setBool("showSystemUsage", false);
       await pref.setBool("taskManagerStats", false);
@@ -133,6 +134,7 @@ class Boxes {
       ..customLogo = pref.getString("customLogo") ?? user.customLogo
       ..newVersion = pref.getString("newVersion") ?? user.newVersion
       ..showTrayBar = pref.getBool("showTrayBar") ?? user.showTrayBar
+      ..mergePinnedTray = pref.getBool("mergePinnedTray") ?? user.mergePinnedTray
       ..showWeather = pref.getBool("showWeather") ?? user.showWeather
       ..customSpash = pref.getString("customSpash") ?? user.customSpash
       ..volumeSetBack = pref.getBool("volumeSetBack") ?? user.volumeSetBack

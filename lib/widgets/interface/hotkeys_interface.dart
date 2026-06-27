@@ -298,6 +298,15 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
               ),
               const SizedBox(height: 8),
               TextButton.icon(
+                onPressed: _importHotkey,
+                icon: const Icon(Icons.file_upload_outlined, size: 16),
+                label: const Text("IMPORT HOTKEY"),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: colors.secondary,
+                ),
+              ),
+              TextButton.icon(
                 onPressed: _restoreDefaultHotkey,
                 icon: const Icon(Icons.history, size: 16),
                 label: const Text("RESTORE DEFAULT"),
@@ -409,6 +418,66 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
       ..modifiers = <String>[]);
     Boxes.updateSettings("remap", jsonEncode(remap));
     setState(() {});
+  }
+
+  void _importHotkey() {
+    String pastedJson = "";
+    String? error;
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, void Function(void Function()) setDialogState) {
+            return AlertDialog(
+              title: const Text("Import Hotkey"),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text("Paste the hotkey JSON (from Export) below."),
+                    const SizedBox(height: 12),
+                    CustomTextInput(
+                      labelText: "",
+                      hintText: "Paste hotkey JSON here...",
+                      multiline: true,
+                      maxLines: 10,
+                      onChanged: (String val) => pastedJson = val,
+                      onUpdated: (String val) => pastedJson = val,
+                    ),
+                    if (error != null) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    ],
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text("CANCEL"),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    try {
+                      final Hotkeys imported = Hotkeys.fromJson(pastedJson.trim());
+                      setState(() => remap.add(imported));
+                      Boxes.updateSettings("remap", jsonEncode(remap));
+                      Navigator.of(dialogContext).pop();
+                    } catch (_) {
+                      setDialogState(() => error = "Invalid hotkey JSON.");
+                    }
+                  },
+                  child: const Text("IMPORT"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _deleteHotkey(int index) {
@@ -646,9 +715,7 @@ class _HotkeyCardState extends State<_HotkeyCard> {
                               ),
                               icon: const Icon(Icons.add_rounded, size: 16),
                               label: Text("Action",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: Design.baseFontSize + 2)),
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: Design.baseFontSize + 2)),
                               onPressed: widget.onAddAction,
                             ),
                             const SizedBox(width: 6),
@@ -1305,8 +1372,7 @@ class _ScreenDrawHotkeyRowState extends State<_ScreenDrawHotkeyRow> {
                       const SizedBox(height: 2),
                       Text(
                         _binding.enabled ? _binding.displayHotkey : "Disabled",
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
+                        style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -1719,8 +1785,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                   const SizedBox(height: 2),
                   Text(
                     currentVk == 0 ? "Not set" : WinKeys.vk(currentVk).replaceAll("VK_", ""),
-                    style:
-                        TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1775,9 +1840,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                 children: <Widget>[
                   Text(title, style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(
-                          fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant)),
+                  Text(subtitle, style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -1812,8 +1875,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                   const SizedBox(height: 2),
                   Text(
                     WinKeys.vk(currentVk).replaceAll("VK_", ""),
-                    style:
-                        TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
+                    style: TextStyle(fontSize: Design.baseFontSize + 2, color: colors.onSurfaceVariant),
                   ),
                 ],
               ),

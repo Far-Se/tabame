@@ -13,7 +13,47 @@ import '../itzy/quickmenu/button_persistent_reminders.dart';
 import '../itzy/quickmenu/button_testing.dart';
 import '../itzy/quickmenu/list_pinned_apps.dart';
 import '../widgets/bar_with_buttons.dart';
+import '../widgets/windows_scroll.dart';
 import 'tray_bar.dart';
+
+class _MergedPinnedTray extends StatelessWidget {
+  const _MergedPinnedTray();
+
+  @override
+  Widget build(BuildContext context) {
+    // RepaintBoundary: this bar is right-aligned, so its content sits at a
+    // fractional x offset. Without isolation, every unrelated repaint in the
+    // QuickMenu (hover highlights, focus churn) re-samples the ShaderMask
+    // saveLayer over that fractional offset, which wobbles ~1px — the "jitter".
+    return RepaintBoundary(
+      child: ShaderMask(
+        shaderCallback: (Rect rect) {
+          return const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+            stops: <double>[0.0, 0.93, 1.0],
+          ).createShader(rect);
+        },
+        blendMode: BlendMode.dstOut,
+        child: WindowsScrollView(
+          scrollDirection: Axis.horizontal,
+          showScrollbar: false,
+          draggable: true,
+          // hardEdge: integer-pixel clip, no extra anti-aliased saveLayer to wobble.
+          clipBehavior: Clip.hardEdge,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const PinnedApps(wrapScroll: false),
+              if (user.showTrayBar) const TrayBar(wrapScroll: false),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class PinnedAndTrayList extends StatelessWidget {
   const PinnedAndTrayList({super.key});
@@ -28,35 +68,55 @@ class PinnedAndTrayList extends StatelessWidget {
       child: Padding(
         padding:
             !user.expandedTaskbar ? const EdgeInsets.fromLTRB(7, 3, 3, 3) : const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: user.bottomBarOnTop
-              ? <Widget>[
-                  Expanded(
-                    flex: 6,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const LogoDragButton(),
-                        const SizedBox(width: 3),
-                        const Expanded(child: BarWithQuickActions()),
-                        Theme(
-                            data: Theme.of(context)
-                                .copyWith(iconTheme: IconThemeData(size: 16, color: Theme.of(context).iconTheme.color)),
-                            child: const OpenSettingsButton()),
-                      ],
+        child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+          // The horizontal scroll view already shrink-wraps to min(content,
+          // maxWidth), so IntrinsicWidth was redundant — it only added an extra
+          // unbounded layout pass of the row on every (frequent) rebuild.
+          final Widget mergedTray = ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.5),
+            child: const ClipRRect(child: _MergedPinnedTray()),
+          );
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: user.bottomBarOnTop
+                ? <Widget>[
+                    //BarWithQuickActions Section
+                    Expanded(
+                      flex: 6,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const LogoDragButton(),
+                          const SizedBox(width: 3),
+                          const Expanded(child: BarWithQuickActions()),
+                          Theme(
+                              data: Theme.of(context).copyWith(
+                                  iconTheme: IconThemeData(size: 16, color: Theme.of(context).iconTheme.color)),
+                              child: const OpenSettingsButton()),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  if (user.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
-                ]
-              : <Widget>[
-                  if (user.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
-                  if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: PinnedApps()),
-                  if (user.showTrayBar) const Flexible(flex: 4, child: TrayBar()),
-                ],
-        ),
+                    if (user.mergePinnedTray)
+                      mergedTray
+                    else ...<Widget>[
+                      if (Boxes.pinnedApps.isNotEmpty)
+                        const Flexible(flex: 4, child: RepaintBoundary(child: PinnedApps())),
+                      if (user.showTrayBar) const Flexible(flex: 4, child: RepaintBoundary(child: TrayBar())),
+                    ],
+                  ]
+                : <Widget>[
+                    if (user.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
+                    if (user.mergePinnedTray)
+                      mergedTray
+                    else ...<Widget>[
+                      if (Boxes.pinnedApps.isNotEmpty)
+                        const Flexible(flex: 4, child: RepaintBoundary(child: PinnedApps())),
+                      if (user.showTrayBar) const Flexible(flex: 4, child: RepaintBoundary(child: TrayBar())),
+                    ],
+                  ],
+          );
+        }),
       ),
     );
   }

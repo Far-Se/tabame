@@ -32,6 +32,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
   // Live interaction state
   final Set<String> _pressedModifiers = <String>{};
   String? _conflictMessage;
+  bool _exported = false;
 
   @override
   void initState() {
@@ -241,31 +242,64 @@ class HotKeySettingsState extends State<HotKeySettings> {
                     _buildInstrumentCard(
                       colors: colors,
                       padding: EdgeInsets.zero,
-                      child: InkWell(
-                        onTap: () {
-                          remap.add(hotkey.copyWith(key: 'N', modifiers: <String>["CTRL", "ALT", "SHIFT"]));
-                          Boxes.updateSettings("remap", jsonEncode(remap));
-                          Navigator.of(context).pop();
-                          widget.refresh();
-                        },
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          child: Row(
-                            children: <Widget>[
-                              Icon(Icons.copy_all_rounded, size: 16, color: colors.onSurfaceVariant),
-                              const SizedBox(width: 10),
-                              Text(
-                                "CLONE CONFIGURATION",
-                                style: texts.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                  color: colors.onSurfaceVariant,
-                                ),
+                      child: Column(
+                        children: <Widget>[
+                          InkWell(
+                            onTap: () {
+                              remap.add(hotkey.copyWith(key: 'N', modifiers: <String>["CTRL", "ALT", "SHIFT"]));
+                              Boxes.updateSettings("remap", jsonEncode(remap));
+                              Navigator.of(context).pop();
+                              widget.refresh();
+                            },
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(Icons.copy_all_rounded, size: 16, color: colors.onSurfaceVariant),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "CLONE CONFIGURATION",
+                                    style: texts.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                          Divider(height: 1, color: colors.onSurface.withAlpha(12)),
+                          InkWell(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: hotkey.toJson()));
+                              setState(() => _exported = true);
+                              Future<void>.delayed(const Duration(seconds: 2), () {
+                                if (mounted) setState(() => _exported = false);
+                              });
+                            },
+                            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(_exported ? Icons.check_rounded : Icons.ios_share_rounded,
+                                      size: 16, color: _exported ? Design.accent : colors.onSurfaceVariant),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    _exported ? "COPIED TO CLIPBOARD" : "EXPORT CONFIGURATION",
+                                    style: texts.labelMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                      color: _exported ? Design.accent : colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

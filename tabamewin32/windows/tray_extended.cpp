@@ -108,6 +108,12 @@ static void ReadTrayToolbar(HWND toolbarWnd, bool isOverflow,
     icon.hIcon =
         td.hIcon; // GDI handles are kernel-global — valid cross-process
 
+    // Explorer keeps a stale toolbar button around (greyed, removed lazily on
+    // hover) when an app exits/crashes without calling Shell_NotifyIcon
+    // NIM_DELETE. Drop it here instead so it never reaches the QuickMenu tray.
+    if (icon.appHwnd && !IsWindow(icon.appHwnd))
+      continue;
+
     DWORD appPid = 0;
     if (td.hwnd)
       GetWindowThreadProcessId(td.hwnd, &appPid);

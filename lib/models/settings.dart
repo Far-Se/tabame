@@ -118,6 +118,7 @@ class Settings {
   bool autoCheckForUpdates = false;
   int quickMenuDesign = QuickMenuDesigns.modern.index;
   bool showTrayBar = true;
+  bool mergePinnedTray = false;
   bool showWeather = true;
   bool libreStats = false;
   bool isWindows10 = false;

@@ -18,7 +18,12 @@ import '../widgets/custom_tooltip.dart';
 import '../widgets/windows_scroll.dart';
 
 class TrayBar extends StatefulWidget {
-  const TrayBar({super.key});
+  const TrayBar({super.key, this.wrapScroll = true});
+
+  /// When false, only the row of tray icons is returned (no own scroll
+  /// view/shader mask), so callers can splice it into a shared scrollable
+  /// row (e.g. merging with the pinned apps bar).
+  final bool wrapScroll;
 
   @override
   // ignore: library_private_types_in_public_api
@@ -106,31 +111,22 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   Widget build(BuildContext context) {
     if (tray.isEmpty || !user.showTrayBar) return Container();
     Theme.of(context);
-    return ShaderMask(
-      shaderCallback: (Rect rect) {
-        return const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-          stops: <double>[0.0, 0.93, 1.0],
-        ).createShader(rect);
-      },
-      blendMode: BlendMode.dstOut,
-      child: WindowsScrollView(
-        scrollDirection: Axis.horizontal,
-        showScrollbar: false,
-        child: Row(
+    final Widget row = Row(
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             for (final TrayBarInfo info in tray)
               GestureDetector(
                 onSecondaryTap: () async {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  // sendTrayClick(info, TrayClickType.right);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                  // if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                  if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                  } else {
+                    sendTrayClick(info, TrayClickType.right);
+                  }
                 },
                 onLongPress: () {
                   if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
@@ -142,25 +138,37 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                 },
                 onTertiaryTapUp: (TapUpDetails e) {
                   if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinTray.click(info, clickType: TrayClickType.middle);
+                  if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                    WinTray.click(info, clickType: TrayClickType.middle);
+                  } else {
+                    sendTrayClick(info, TrayClickType.middle);
+                  }
                 },
                 child: InkWell(
                   hoverColor: Design.text.withAlpha(30),
                   borderRadius: BorderRadius.circular(3),
                   onTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    sendSimpleClick(info, TrayClickType.left);
-                    // sendTrayClick(info, TrayClickType.left);
+                    if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    } else {
+                      sendTrayClick(info, TrayClickType.left);
+                    }
                   },
                   onDoubleTap: () async {
                     if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    // sendTrayClick(info, TrayClickType.doubleClick);
 
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                    } else {
+                      sendTrayClick(info, TrayClickType.doubleClick);
+                    }
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
@@ -188,7 +196,25 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
               ),
             const SizedBox(width: 5.1),
           ],
-        ),
+        );
+    if (!widget.wrapScroll) return row;
+    return ShaderMask(
+      shaderCallback: (Rect rect) {
+        return const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, 0.93, 1.0],
+        ).createShader(rect);
+      },
+      blendMode: BlendMode.dstOut,
+      child: WindowsScrollView(
+        scrollDirection: Axis.horizontal,
+        showScrollbar: false,
+        // hardEdge: avoids the anti-aliased saveLayer clip that wobbles on
+        // re-raster for this fractionally-offset, right-aligned bar.
+        clipBehavior: Clip.hardEdge,
+        child: row,
       ),
     );
   }
@@ -220,18 +246,25 @@ int _packCoord(int low, int high) => (low & 0xFFFF) | ((high & 0xFFFF) << 16);
 /// (`NOTIFYICON_VERSION_4`) apps.
 ///
 /// We read icons straight off the tray toolbar and therefore don't know each
-/// icon's registered version, so:
+/// icon's registered version, unlike yasb/systray's `IconWidget.send_action`
+/// (systray_widget.py), which intercepts `NIM_SETVERSION` and so always sends
+/// the one correct wParam/lParam layout. To compensate:
 ///   1. We grant the owning process foreground rights first — otherwise
 ///      Windows' foreground lock silently swallows the context menu / window
 ///      the app tries to show (this is the main reason right-clicks were a
 ///      "hit or miss" with raw PostMessage).
-///   2. We send BOTH the legacy and the V4 wParam/lParam layouts. Each app only
-///      recognizes the layout matching its own version and ignores the other,
-///      so there's no double-trigger.
-///   3. After button-up we send `NIN_SELECT` / `NIN_CONTEXTMENU`, which V3+ apps
-///      act on instead of the raw `WM_*BUTTONUP`.
-///
-/// Mirrors yasb/systray's `IconWidget.send_action` (systray_widget.py).
+///   2. Raw button messages are sent ONCE using the legacy layout (the
+///      un-versioned default most apps still use). Sending both the legacy
+///      and V4 layouts back-to-back looked harmless, but apps that crack the
+///      message with `LOWORD(lParam)` (a very common idiom) read the
+///      notification code out of *either* layout and process the click
+///      twice — e.g. qBittorrent's window would restore but render blank
+///      until manually minimized/restored, because the second toggle raced
+///      the first window-show before it had finished painting.
+///   3. After button-up we additionally send `NIN_SELECT` / `NIN_CONTEXTMENU`
+///      using the V4 (coord-packed) layout — these are V3+-only notification
+///      codes that legacy apps don't recognize, so there's no double-trigger
+///      risk in sending just the one layout for them.
 void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
   if (info.hWnd == 0 || info.uCallbackMsg == 0) return;
 
@@ -247,6 +280,9 @@ void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
   void deliver(int message) {
     // Legacy layout: wParam = uID, lParam = message.
     SendNotifyMessage(info.hWnd, info.uCallbackMsg, info.uID, _packCoord(message, 0));
+  }
+
+  void deliverNotify(int message) {
     // V4 layout: wParam = cursor (x, y), lParam = (message, uID).
     SendNotifyMessage(info.hWnd, info.uCallbackMsg, _packCoord(cx, cy), _packCoord(message, info.uID));
   }
@@ -255,12 +291,12 @@ void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
     case TrayClickType.left:
       deliver(WM_LBUTTONDOWN);
       deliver(WM_LBUTTONUP);
-      deliver(_kNinSelect);
+      deliverNotify(_kNinSelect);
       break;
     case TrayClickType.right:
       deliver(WM_RBUTTONDOWN);
       deliver(WM_RBUTTONUP);
-      deliver(_kNinContextMenu);
+      deliverNotify(_kNinContextMenu);
       break;
     case TrayClickType.middle:
       deliver(WM_MBUTTONDOWN);
@@ -270,16 +306,4 @@ void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {
       deliver(WM_LBUTTONDBLCLK);
       break;
   }
-}
-
-void sendSimpleClick(ExtendedTrayIcon element, TrayClickType clickType) async {
-  final Pointer<POINT> point = calloc<POINT>();
-  GetCursorPos(point);
-  final int x = point.ref.x;
-  final int y = point.ref.y;
-  free(point);
-  WinTray.click(element, clickType: TrayClickType.left);
-  // interval 10ms move mosue back to pos
-  await Future<void>.delayed(const Duration(milliseconds: 400));
-  SetCursorPos(x, y);
 }

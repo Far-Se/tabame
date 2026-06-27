@@ -11,28 +11,38 @@ import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
 
 class PinnedApps extends StatelessWidget {
-  const PinnedApps({super.key});
+  const PinnedApps({super.key, this.wrapScroll = true});
+
+  /// When false, only the row of pinned app buttons is returned (no own
+  /// scroll view), so callers can splice it into a shared scrollable row
+  /// (e.g. merging with the tray bar).
+  final bool wrapScroll;
 
   @override
   Widget build(BuildContext context) {
     final List<String> pinned = Boxes.pinnedApps;
     if (pinned.isEmpty) return const SizedBox();
+    final Widget row = Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+      for (String item in pinned)
+        GestureDetector(
+          onSecondaryTap: () {
+            final int x = pinned.indexWhere((String element) => element == item);
+            WinKeys.send("{#WIN}{#ALT}${x + 1}");
+            if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+          },
+          child: _PinnedAppButton(path: item),
+        )
+    ]);
+    if (!wrapScroll) return row;
+    // hardEdge (not antiAliasWithSaveLayer): the anti-aliased saveLayer clip
+    // wobbles ~1px on re-raster when this right-aligned bar sits at a fractional
+    // offset. hardEdge clips on the integer pixel grid and is cheaper.
     return WindowsScrollView(
       scrollDirection: Axis.horizontal,
       showScrollbar: false,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
+      clipBehavior: Clip.hardEdge,
       friction: 0.5,
-      child: Row(children: <Widget>[
-        for (String item in pinned)
-          GestureDetector(
-            onSecondaryTap: () {
-              final int x = pinned.indexWhere((String element) => element == item);
-              WinKeys.send("{#WIN}{#ALT}${x + 1}");
-              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-            },
-            child: _PinnedAppButton(path: item),
-          )
-      ]),
+      child: row,
     );
   }
 }

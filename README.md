@@ -12,6 +12,8 @@
 
 # PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
 
+Tabame: Ta-ba-me -> **TA**sk**BA**r**ME**nu
+
 ## 🤔 What is this?
 
 I started this just to replace the Windows taskbar. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.

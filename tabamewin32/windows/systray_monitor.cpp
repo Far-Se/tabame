@@ -407,8 +407,16 @@ std::vector<ExtTrayIcon> SnapshotSystrayMonitorIcons() {
 
   std::vector<ExtTrayIcon> snapshot;
   std::lock_guard<std::mutex> lock(g_mutex);
-  snapshot.reserve(g_icons.size());
-  for (const auto &entry : g_icons)
-    snapshot.push_back(entry.second.icon);
+  // An app that exits/crashes without sending NIM_DELETE leaves its entry in
+  // g_icons forever, since we only ever remove on an explicit delete message.
+  // Drop (and forget) any whose owning window no longer exists.
+  for (auto it = g_icons.begin(); it != g_icons.end();) {
+    if (it->second.icon.appHwnd && !IsWindow(it->second.icon.appHwnd)) {
+      it = g_icons.erase(it);
+      continue;
+    }
+    snapshot.push_back(it->second.icon);
+    ++it;
+  }
   return snapshot;
 }

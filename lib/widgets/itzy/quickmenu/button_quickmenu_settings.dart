@@ -630,6 +630,20 @@ class _BottomBarTabState extends State<_BottomBarTab> {
                 QuickMenuFunctions.refreshQuickMenu();
               },
             ),
+            if (user.showTrayBar)
+              _toggle(
+                context: context,
+                title: "Merge Pinned Apps with Tray",
+                subtitle: "Show pinned apps first, then continue with tray icons",
+                value: user.mergePinnedTray,
+                onChanged: (bool v) async {
+                  user.mergePinnedTray = v;
+                  await Boxes.updateSettings("mergePinnedTray", v);
+                  if (!mounted) return;
+                  setState(() {});
+                  QuickMenuFunctions.refreshQuickMenu();
+                },
+              ),
             if (user.showTrayBar) ...<Widget>[
               const SizedBox(height: 4),
               _buildTrayList(context),
@@ -748,10 +762,15 @@ class _BottomBarTabState extends State<_BottomBarTab> {
           ToggleButtons(
             constraints: const BoxConstraints(minHeight: 26, minWidth: 26),
             borderRadius: BorderRadius.circular(6),
-            isSelected: <bool>[item.isPinned, !item.isVisible],
+            isSelected: <bool>[
+              item.isPinned,
+              !item.isVisible,
+              Boxes.pref.getStringList("postMessageTray")?.contains(item.processExe) ?? false,
+            ],
             onPressed: (int index) async {
               final List<String> pinned = Boxes.pref.getStringList("pinnedTray") ?? <String>[];
               final List<String> hidden = Boxes.pref.getStringList("hiddenTray") ?? <String>[];
+              final List<String> postMessage = Boxes.pref.getStringList("postMessageTray") ?? <String>[];
               if (index == 0) {
                 if (pinned.contains(item.processExe)) {
                   pinned.remove(item.processExe);
@@ -759,22 +778,31 @@ class _BottomBarTabState extends State<_BottomBarTab> {
                   pinned.add(item.processExe);
                   hidden.remove(item.processExe);
                 }
-              } else {
+              } else if (index == 1) {
                 if (hidden.contains(item.processExe)) {
                   hidden.remove(item.processExe);
                 } else {
                   hidden.add(item.processExe);
                   pinned.remove(item.processExe);
                 }
+              } else {
+                if (postMessage.contains(item.processExe)) {
+                  postMessage.remove(item.processExe);
+                } else {
+                  postMessage.add(item.processExe);
+                }
               }
               await Boxes.updateSettings("pinnedTray", pinned);
               await Boxes.updateSettings("hiddenTray", hidden);
+              await Boxes.updateSettings("postMessageTray", postMessage);
               if (!mounted) return;
               setState(() {});
             },
             children: const <Widget>[
               CustomTooltip(message: "Pin to bar", child: Icon(Icons.push_pin_rounded, size: 13)),
               CustomTooltip(message: "Hide icon", child: Icon(Icons.visibility_off_rounded, size: 13)),
+              CustomTooltip(
+                  message: "Use PostMessage instead of simulated click", child: Icon(Icons.send_rounded, size: 13)),
             ],
           ),
         ],
