@@ -92,6 +92,20 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
       {
         "enabled": true,
         "windowUnderMouse": false,
+        "name": "Actions Menu",
+        "windowsInfo": ["any", ""],
+        "boundToRegion": true,
+        "region": {"x1": 1, "y1": 0, "x2": 1, "y2": 99, "asPercentage": true, "anchorType": 1},
+        "triggerType": 0,
+        "triggerInfo": [0, 0, 0],
+        "actions": [
+          {"type": 0, "value": "{#WIN}A"}
+        ],
+        "variableCheck": ["", ""]
+      },
+      {
+        "enabled": true,
+        "windowUnderMouse": false,
         "name": "Move Desktop to Left",
         "windowsInfo": ["any", ""],
         "boundToRegion": false,

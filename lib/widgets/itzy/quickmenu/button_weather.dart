@@ -500,9 +500,9 @@ class _WeatherPanelState extends State<WeatherPanel> {
       );
     }
 
-    if (_tab == _WeatherTab.today) {
-      _scheduleCurrentHourCenter(location, forecast);
-    }
+    // if (_tab == _WeatherTab.today) {
+    //   _scheduleCurrentHourCenter(location, forecast);
+    // }
 
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
@@ -1190,6 +1190,7 @@ class _WeatherPanelState extends State<WeatherPanel> {
     return _WeatherForecast.fromMap(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
+  // ignore: unused_element
   void _scheduleCurrentHourCenter(_WeatherLocation location, _WeatherForecast forecast) {
     final WeatherHour? currentHour = _currentHour(forecast);
     if (currentHour == null) return;

@@ -73,8 +73,9 @@ class PinnedAndTrayList extends StatelessWidget {
           // maxWidth), so IntrinsicWidth was redundant — it only added an extra
           // unbounded layout pass of the row on every (frequent) rebuild.
           final Widget mergedTray = ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.5),
-            child: const ClipRRect(child: _MergedPinnedTray()),
+            constraints:
+                BoxConstraints(maxWidth: user.bottomBarOnTop ? constraints.maxWidth * 0.5 : constraints.maxWidth),
+            child: const ClipRRect(child: Center(child: _MergedPinnedTray())),
           );
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

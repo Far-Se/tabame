@@ -488,14 +488,15 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       onTap: () => _toggleStarred(item, !starred),
                     ),
                     SizedBox(width: gap),
-                    _TransportButton(
-                      icon:
-                          sequenceState?.shuffleModeEnabled == true ? Icons.shuffle_on_rounded : Icons.shuffle_rounded,
-                      active: sequenceState?.shuffleModeEnabled == true,
-                      tooltip: "Shuffle",
-                      size: secondarySize,
-                      onTap: () => MusicServerManager.player
-                          .setShuffleModeEnabled(!(sequenceState?.shuffleModeEnabled ?? false)),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: MusicServerManager.shuffleEnabledNotifier,
+                      builder: (BuildContext context, bool shuffleEnabled, _) => _TransportButton(
+                        icon: shuffleEnabled ? Icons.shuffle_on_rounded : Icons.shuffle_rounded,
+                        active: shuffleEnabled,
+                        tooltip: "Shuffle",
+                        size: secondarySize,
+                        onTap: () => MusicServerManager.setShuffleEnabled(!shuffleEnabled),
+                      ),
                     ),
                     SizedBox(width: gap),
                     _TransportButton(

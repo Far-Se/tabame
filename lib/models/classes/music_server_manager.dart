@@ -31,12 +31,27 @@ class MusicServerManager {
   static List<MusicItem> _queue = <MusicItem>[];
   static bool _listenersSetup = false;
   static String? _lastRecordedLocalPlayKey;
+  static final ValueNotifier<bool> shuffleEnabledNotifier = ValueNotifier<bool>(false);
 
   static List<MusicServerConfig> get configs => _configs;
   static String? get activeConfigId => _activeConfigId;
   static bool get isConnected => _isConnected;
   static bool get isLocalActive => _activeConfigId == localSourceId;
   static List<MusicItem> get queue => List<MusicItem>.unmodifiable(_queue);
+  static bool get shuffleEnabled => shuffleEnabledNotifier.value;
+
+  static Future<void> setShuffleEnabled(bool enabled) async {
+    shuffleEnabledNotifier.value = enabled;
+    await player.setShuffleModeEnabled(enabled);
+  }
+
+  // just_audio_windows drops shuffle mode on track navigation/queue reload; reassert our
+  // desired state so the toggle stays persistent instead of silently reverting.
+  static Future<void> _reapplyShuffleMode() async {
+    if (shuffleEnabledNotifier.value && !player.shuffleModeEnabled) {
+      await player.setShuffleModeEnabled(true);
+    }
+  }
 
   static Future<bool> get hasSavedQueue async {
     final File file = File(_queueFilePath);
@@ -75,6 +90,7 @@ class MusicServerManager {
       if (index != null) {
         _updateCacheIndex(index);
         _recordLocalPlayForIndex(index);
+        unawaited(_reapplyShuffleMode());
       }
     });
   }
@@ -813,6 +829,7 @@ class MusicServerManager {
             .toList(growable: false),
         initialIndex: initialIndex.clamp(0, playable.length - 1),
       );
+      await _reapplyShuffleMode();
       if (play) {
         final ProcessingState current = player.processingState;
         if (current == ProcessingState.idle || current == ProcessingState.loading) {
