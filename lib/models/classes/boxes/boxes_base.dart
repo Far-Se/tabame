@@ -682,14 +682,14 @@ class Boxes {
   static double? _quickMenuWidth;
   static set quickMenuWidth(double val) => _quickMenuWidth = val;
   static double get quickMenuWidth {
-    _quickMenuWidth ??= pref.getDouble("quickMenuWidth") ?? 650.0;
+    _quickMenuWidth ??= pref.getDouble("quickMenuWidth") ?? Globals.quickMenuSize.width;
     return _quickMenuWidth!;
   }
 
   static double? _launcherSizeWidth;
   static set launcherSizeWidth(double val) => _launcherSizeWidth = val;
   static double get launcherSizeWidth {
-    _launcherSizeWidth ??= pref.getDouble("launcherSizeWidth") ?? 650.0;
+    _launcherSizeWidth ??= pref.getDouble("launcherSizeWidth") ?? Globals.launcherSize.width;
     return _launcherSizeWidth!;
   }
 

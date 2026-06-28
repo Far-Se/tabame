@@ -72,11 +72,12 @@ class QuickMenuFunctions {
     currentTheme.backdropPath = nextPath;
   }
 
-  static void refreshQuickMenu() {
+  static Future<void> refreshQuickMenu() async {
     for (final QuickMenuTriggers listener in _listeners) {
       if (!_listeners.contains(listener)) continue;
-      listener.refreshQuickMenu();
+      await listener.refreshQuickMenu();
     }
+    return;
   }
 
   static void removeListener(QuickMenuTriggers listener) => _listeners.remove(listener);
@@ -133,25 +134,29 @@ class QuickMenuFunctions {
         if (type == QuickMenuPage.quickMenu) {
           triggerQuickAction("action:refreshTaskbar");
         }
-        Future<void>.delayed(const Duration(milliseconds: 110), () async {
-          Win32.setWindowInvisible(false);
-          // ShowWindow(Win32.hWnd, SW_SHOW);
-          Win32.forceRedraw();
-          if (forceReposition) {
-            if (center) {
-              Win32.setCenter(useMouse: true);
-            } else {
-              await Win32.setMainWindowToMousePos();
-            }
-          }
-          for (final QuickMenuTriggers listener in listeners) {
-            if (!_listeners.contains(listener)) continue;
-            await listener.onQuickMenuVisible(type, center);
-          }
-          shownTime = DateTime.now().millisecondsSinceEpoch;
+        // await Future<void>.delayed(const Duration(milliseconds: 110));
+        final Size value = await windowManager.getSize();
+        await windowManager.setSize(Size(value.width + 2, value.height + 2));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await windowManager.setSize(Size(value.width, value.height));
+        Win32.setWindowInvisible(false);
+        // ShowWindow(Win32.hWnd, SW_SHOW);
+        Win32.forceRedraw();
 
-          // if (IsWindowVisible(Win32.hWnd) == 0 && visible == true) ShowWindow(Win32.hWnd, SW_SHOW);
-        });
+        if (forceReposition) {
+          if (center) {
+            Win32.setCenter(useMouse: true);
+          } else {
+            await Win32.setMainWindowToMousePos();
+          }
+        }
+        for (final QuickMenuTriggers listener in listeners) {
+          if (!_listeners.contains(listener)) continue;
+          await listener.onQuickMenuVisible(type, center);
+        }
+        shownTime = DateTime.now().millisecondsSinceEpoch;
+
+        // if (IsWindowVisible(Win32.hWnd) == 0 && visible == true) ShowWindow(Win32.hWnd, SW_SHOW);
       } else {
         visible = false;
       }
@@ -162,6 +167,25 @@ class QuickMenuFunctions {
       Win32.setPosition(const Offset(-99999, -99999));
       // ShowWindow(Win32.hWnd, SW_HIDE);
       hidTime = DateTime.now().millisecondsSinceEpoch;
+
+      // await QuickMenuFunctions.refreshQuickMenu();
+      // if (!isQuickMenuVisible)
+      // EmptyWorkingSet(GetCurrentProcess());
+      // clearRAM();
+      Future<void>.delayed(const Duration(milliseconds: 200), () {
+        final Offset pos = Win32.getPosition(hwnd: Win32.hWnd);
+        if (!isQuickMenuVisible && pos.dx > 0 && pos.dy > 0) {
+          toggleQuickMenu(
+            visible: true,
+            type: type,
+            center: center,
+            forceReposition: forceReposition,
+            forcePop: forcePop,
+          );
+        }
+        //   SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+        //   // if (!isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
+      });
     }
   }
 
@@ -184,6 +208,6 @@ mixin class QuickMenuTriggers {
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {}
   Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {}
   void onVerticalArrow(bool up) {}
-  void refreshQuickMenu() async {}
+  Future<void> refreshQuickMenu() async {}
   void requestQuickMenuFocus() {}
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -52,6 +53,11 @@ class FirstRunState extends State<FirstRun> {
 
   int currentStep = 0;
 
+  // ── Install location (page 0) ──
+  String installLocation = WinUtils.getTabameAppDataFolder();
+  bool _installing = false;
+  int? _sourceSizeBytes;
+
   // ── Modal State Setter (QuickSnap toggle modal only) ──
   StateSetter? _activeModalState;
 
@@ -63,6 +69,7 @@ class FirstRunState extends State<FirstRun> {
     super.initState();
     _resolveFeatureIndices();
     _syncQuickClickEnabled();
+    _calculateSourceSize();
     WinUtils.setStartUpShortcut(true);
     WinUtils.fixDrawBug();
   }
@@ -329,6 +336,7 @@ class FirstRunState extends State<FirstRun> {
                     physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (int index) => setState(() => currentStep = index),
                     children: <Widget>[
+                      _buildInstallLocationPage(theme, accent),
                       _buildHotkeysPage(theme, accent),
                       _buildSetupPage(theme, accent),
                       _buildSettingsOutroPage(theme, accent),
@@ -353,9 +361,10 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildHero(ThemeData theme, Color accent) {
     const List<_StepMeta> steps = <_StepMeta>[
-      _StepMeta(0, "Hotkeys"),
-      _StepMeta(1, "Preferences"),
-      _StepMeta(2, "Settings"),
+      _StepMeta(0, "Install"),
+      _StepMeta(1, "Hotkeys"),
+      _StepMeta(2, "Preferences"),
+      _StepMeta(3, "Settings"),
     ];
 
     return Container(
@@ -407,8 +416,10 @@ class FirstRunState extends State<FirstRun> {
       case 0:
         return "Welcome to Tabame";
       case 1:
-        return "A few helpful defaults";
+        return "Set up your hotkeys";
       case 2:
+        return "A few helpful defaults";
+      case 3:
         return "One more thing";
       default:
         return "Welcome to Tabame";
@@ -418,10 +429,12 @@ class FirstRunState extends State<FirstRun> {
   String get _heroSubtitle {
     switch (currentStep) {
       case 0:
-        return "Set up your hotkeys — tap any item to configure its shortcut.";
+        return "Choose where Tabame should live on your computer.";
       case 1:
-        return "These settings cover startup behavior, admin access, updates, privacy-sensitive tracking, and extra tools.";
+        return "Set up your hotkeys — tap any item to configure its shortcut.";
       case 2:
+        return "These settings cover startup behavior, admin access, updates, privacy-sensitive tracking, and extra tools.";
+      case 3:
         return "Settings is where the real power lives — every feature has its own dedicated page.";
       default:
         return "";
@@ -485,7 +498,119 @@ class FirstRunState extends State<FirstRun> {
     );
   }
 
-  // ─────────────────────── PAGE 0: HOTKEYS ─────────────────────────
+  // ─────────────────────── PAGE 0: INSTALL LOCATION ─────────────────────────
+
+  Widget _buildInstallLocationPage(ThemeData theme, Color accent) {
+    return WindowsScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text("Choose install location", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            "Tabame will copy its files to this folder. You can browse to pick a different one.",
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          _card(
+            theme,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.folder_rounded, color: accent, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(installLocation, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _installing
+                      ? null
+                      : () async {
+                          final String folder = await WinUtils.folderPicker();
+                          if (folder.isEmpty) return;
+                          setState(() => installLocation = folder);
+                        },
+                  icon: const Icon(Icons.drive_folder_upload_rounded, size: 16),
+                  label: const Text("Browse"),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Icon(Icons.sd_storage_rounded, color: theme.hintColor, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                _sourceSizeBytes == null ? "Calculating size…" : "Needs about ${_formatBytes(_sourceSizeBytes!)}",
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+              ),
+            ],
+          ),
+          if (_installing) ...<Widget>[
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Text("Copying files…", style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _calculateSourceSize() async {
+    final String exeDir = File(Platform.resolvedExecutable).parent.path;
+    final int size = await _directorySize(Directory(exeDir));
+    if (!mounted) return;
+    setState(() => _sourceSizeBytes = size);
+  }
+
+  Future<int> _directorySize(Directory directory) async {
+    int total = 0;
+    try {
+      final List<FileSystemEntity> entities = await directory.list(recursive: true, followLinks: false).toList();
+      for (final FileSystemEntity entity in entities) {
+        if (entity is File) {
+          try {
+            total += await entity.length();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return "0 B";
+    const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB"];
+    final int index = math.min((math.log(bytes) / math.log(1024)).floor(), suffixes.length - 1);
+    final double value = bytes / math.pow(1024, index);
+    return "${value.toStringAsFixed(index == 0 ? 0 : 1)} ${suffixes[index]}";
+  }
+
+  Future<void> _continueInstall() async {
+    setState(() => _installing = true);
+    try {
+      final String exeDir = File(Platform.resolvedExecutable).parent.path;
+      await WinUtils.copyDirectoryContents(exeDir, installLocation);
+      WinUtils.registerUninstallEntry(installLocation: installLocation);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _installing = false);
+    await _goToStep(1);
+  }
+
+  // ─────────────────────── PAGE 1: HOTKEYS ─────────────────────────
 
   Widget _buildHotkeysPage(ThemeData theme, Color accent) {
     return WindowsScrollView(
@@ -952,10 +1077,20 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── FOOTER ─────────────────────────
 
   Widget _buildStickyFooter(ThemeData theme, Color accent) {
-    final bool isFirstStep = currentStep == 0;
-    final bool isLastStep = currentStep == 2;
+    final bool isInstallStep = currentStep == 0;
+    final bool isHotkeysStep = currentStep == 1;
+    final bool isLastStep = currentStep == 3;
     final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
     final bool quickMenuSet = quickMenu.key.isNotEmpty;
+
+    final VoidCallback? onContinue = isInstallStep
+        ? (_installing ? null : _continueInstall)
+        : isHotkeysStep
+            ? (quickMenuSet ? _continueSetup : null)
+            : isLastStep
+                ? _finishSetup
+                : () => _goToStep(currentStep + 1);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
       child: Container(
@@ -974,32 +1109,36 @@ class FirstRunState extends State<FirstRun> {
         ),
         child: Row(
           children: <Widget>[
-            if (!isFirstStep)
+            if (!isInstallStep) ...<Widget>[
               OutlinedButton.icon(
                 onPressed: () => _goToStep(currentStep - 1),
                 icon: const Icon(Icons.arrow_back_rounded),
                 label: const Text("Back"),
-              )
-            else
-              Expanded(
-                child: Text(
-                  quickMenuSet
-                      ? "QuickMenu: ${quickMenu.displayHotkey}"
-                      : "Set the QuickMenu hotkey to continue.",
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: quickMenuSet ? theme.colorScheme.onSurface : theme.hintColor,
-                    fontWeight: quickMenuSet ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
               ),
-            if (!isFirstStep) const Spacer(),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: isInstallStep
+                  ? Text(
+                      "Pick a folder, then continue to set your hotkeys.",
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : isHotkeysStep
+                      ? Text(
+                          quickMenuSet
+                              ? "QuickMenu: ${quickMenu.displayHotkey}"
+                              : "Set the QuickMenu hotkey to continue.",
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: quickMenuSet ? theme.colorScheme.onSurface : theme.hintColor,
+                            fontWeight: quickMenuSet ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const SizedBox.shrink(),
+            ),
             FilledButton.icon(
-              onPressed: isFirstStep
-                  ? (quickMenuSet ? _continueSetup : null)
-                  : isLastStep
-                      ? _finishSetup
-                      : () => _goToStep(currentStep + 1),
+              onPressed: onContinue,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Theme.of(context).colorScheme.surface,
@@ -1007,10 +1146,10 @@ class FirstRunState extends State<FirstRun> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               ),
               icon: Icon(isLastStep ? Icons.restart_alt_rounded : Icons.arrow_forward_rounded),
-              label: Text(isFirstStep
-                  ? "Continue"
-                  : isLastStep
-                      ? "Save and launch"
+              label: Text(isLastStep
+                  ? "Save and launch"
+                  : (isInstallStep || isHotkeysStep)
+                      ? "Continue"
                       : "Next"),
             ),
           ],
@@ -1135,7 +1274,7 @@ class FirstRunState extends State<FirstRun> {
     // install state and move on.
     Boxes.updateSettings("justInstalled", true);
     Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
-    await _goToStep(1);
+    await _goToStep(2);
   }
 
   Future<void> _finishSetup() async {

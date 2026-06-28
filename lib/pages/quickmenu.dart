@@ -146,7 +146,7 @@ class QuickMenuState extends State<QuickMenu>
   void onWindowResized() => _onWindowResized();
 
   @override
-  void refreshQuickMenu() => _refreshQuickMenu();
+  Future<void> refreshQuickMenu() async => _refreshQuickMenu();
 
   @override
   void onWindowBlur() => _onWindowBlur();
@@ -384,8 +384,8 @@ class QuickMenuState extends State<QuickMenu>
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
       if (mounted) setState(() {});
-      // clearRAM();
-      EmptyWorkingSet(GetCurrentProcess());
+      SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+      // EmptyWorkingSet(GetCurrentProcess());
     }
   }
 

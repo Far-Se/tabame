@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
+
 import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -16,6 +18,7 @@ class LauncherResultExecutor {
     required this.onOpenFile,
     required this.onOpenApp,
     required this.onOpenWindow,
+    required this.onOpenBrowserTab,
     required this.onOpenBookmark,
     required this.onOpenNotion,
     required this.onRunAction,
@@ -26,6 +29,7 @@ class LauncherResultExecutor {
   final LauncherFileOpen onOpenFile;
   final LauncherAppOpen onOpenApp;
   final void Function(Window window) onOpenWindow;
+  final void Function(BrowserTab browserTab) onOpenBrowserTab;
   final void Function(BookmarkSearchResult result) onOpenBookmark;
   final void Function(NotionResult result) onOpenNotion;
   final void Function(QuickActionMenuEntry action) onRunAction;
@@ -46,6 +50,8 @@ class LauncherResultExecutor {
         return;
       case LauncherWindowResult(window: final Window window):
         onOpenWindow(window);
+      case LauncherBrowserTabResult(browserTab: final BrowserTab browserTab):
+        onOpenBrowserTab(browserTab);
       case LauncherBookmarkResult(bookmarkResult: final BookmarkSearchResult bookmarkResult?) when result.isBookmark:
         onOpenBookmark(bookmarkResult);
       case LauncherBookmarkResult(notionResult: final NotionResult notionResult?) when result.isNotion:

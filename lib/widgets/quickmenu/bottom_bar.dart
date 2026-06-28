@@ -75,7 +75,8 @@ class PinnedAndTrayList extends StatelessWidget {
           final Widget mergedTray = ConstrainedBox(
             constraints:
                 BoxConstraints(maxWidth: user.bottomBarOnTop ? constraints.maxWidth * 0.5 : constraints.maxWidth),
-            child: const ClipRRect(child: Center(child: _MergedPinnedTray())),
+            child: ClipRRect(
+                child: user.bottomBarOnTop ? const _MergedPinnedTray() : const Center(child: _MergedPinnedTray())),
           );
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -156,7 +157,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   }
 
   @override
-  void refreshQuickMenu() {
+  Future<void> refreshQuickMenu() async {
     if (mounted) {
       setState(() {});
     } else {}

@@ -26,7 +26,7 @@ class _PersistentRemindersWidgetState extends State<PersistentRemindersWidget> w
   }
 
   @override
-  void refreshQuickMenu() {
+  Future<void> refreshQuickMenu() async {
     if (mounted) setState(() {});
   }
 

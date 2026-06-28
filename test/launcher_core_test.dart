@@ -16,6 +16,7 @@ void main() {
       final Map<String, (LauncherSearchMode, String)> cases = <String, (LauncherSearchMode, String)>{
         '/reload': (LauncherSearchMode.actionsOnly, 'reload'),
         '.chrome': (LauncherSearchMode.windowsOnly, 'chrome'),
+        ',gmail': (LauncherSearchMode.browserTabsOnly, 'gmail'),
         '> main.dart': (LauncherSearchMode.filesOnly, 'main.dart'),
         '? notes': (LauncherSearchMode.filesOnly, 'notes'),
         ' notes': (LauncherSearchMode.filesOnly, 'notes'),

@@ -30,7 +30,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   }
 
   @override
-  void refreshQuickMenu() {
+  Future<void> refreshQuickMenu() async {
     // PaintingBinding.instance.imageCache.clear();
     // PaintingBinding.instance.imageCache.clearLiveImages();
     _handleWindowSize();

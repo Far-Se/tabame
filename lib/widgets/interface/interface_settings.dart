@@ -2,7 +2,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:win32/win32.dart';
@@ -39,6 +38,20 @@ class SettingsPageState extends State<SettingsPage> {
   String updateResponse = "Check for Updates";
   bool showUpdateButtons = false;
   final Set<String> _expandedCards = <String>{"maintenance"};
+  final GlobalKey _uninstallKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (user.args.contains("-uninstall")) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final BuildContext? uninstallContext = _uninstallKey.currentContext;
+        if (uninstallContext != null) {
+          Scrollable.ensureVisible(uninstallContext, duration: const Duration(milliseconds: 300), alignment: 0.5);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -353,6 +366,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
           const SizedBox(height: 10),
           const SizedBox(height: 16),
           SizedBox(
+            key: _uninstallKey,
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () => _showUninstallConfirmation(accent, onSurface),
@@ -422,32 +436,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Future<void> _handleUninstall() async {
-    if (!kReleaseMode) return;
-
-    // 1. Disable startup entries
-    await WinUtils.setStartUpShortcut(false);
-
-    // 2. Remove Wizardly context menu integration
-    if (wizardlyContextMenu.isWizardlyInstalledInContextMenu()) {
-      wizardlyContextMenu.toggleWizardlyToContextMenu();
-    }
-
-    // 3. Launch detached cleanup script
-    final String exeDir = Directory(Platform.resolvedExecutable).parent.path;
-    final String appData = WinUtils.getTabameAppDataFolder();
-    WinUtils.toggleTaskbar(visible: true);
-    final String psCommand =
-        'Start-Sleep -Seconds 2; Remove-Item -Recurse -Force "$appData"; Remove-Item -Recurse -Force "$exeDir" -ErrorAction SilentlyContinue';
-
-    await Process.start(
-      'powershell.exe',
-      <String>['-NoProfile', '-WindowStyle', 'Hidden', '-Command', psCommand],
-      mode: ProcessStartMode.detached,
-    );
-
-    // 4. Close all Tabame windows and exit
-    WinUtils.closeAllTabameExProcesses();
-    exit(0);
+    await WinUtils.performUninstall();
   }
 
   Widget _buildWizardlyCard(Color accent, Color onSurface) {

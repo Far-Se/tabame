@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
+import '../../widgets/itzy/quickmenu/button_adb.dart';
 import '../../widgets/itzy/quickmenu/button_always_awake.dart';
 import '../../widgets/itzy/quickmenu/button_app_audio.dart';
 import '../../widgets/itzy/quickmenu/button_apps.dart';
@@ -282,10 +283,6 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.folder_off,
     widget: () => const ToggleHiddenFilesButton(),
   ),
-  "QuickActionsMenuButton": QuickAction(
-    icon: Icons.grid_view,
-    widget: () => const QuickActionsMenuButton(),
-  ),
   "ToggleDesktopButton": QuickAction(
     icon: Icons.desktop_windows_rounded,
     widget: () => const ToggleDesktopButton(),
@@ -314,10 +311,6 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.theater_comedy_sharp,
     widget: () => const ChangeThemeButton(),
   ),
-  "QuickMenuDesignButton": QuickAction(
-    icon: Icons.palette_rounded,
-    widget: () => const QuickMenuDesignButton(),
-  ),
   "DesktopFilesButton": QuickAction(
     icon: Icons.desktop_windows_outlined,
     widget: () => const DesktopFilesButton(),
@@ -326,8 +319,20 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.dashboard_customize_outlined,
     widget: () => const WorkspacesButton(),
   ),
+  "QuickMenuDesignButton": QuickAction(
+    icon: Icons.palette_rounded,
+    widget: () => const QuickMenuDesignButton(),
+  ),
+  "QuickActionsMenuButton": QuickAction(
+    icon: Icons.grid_view,
+    widget: () => const QuickActionsMenuButton(),
+  ),
   "QuickMenuSettingsButton": QuickAction(
     icon: Icons.tune_rounded,
     widget: () => const QuickMenuSettingsButton(),
+  ),
+  "AdbButton": QuickAction(
+    icon: Icons.android,
+    widget: () => const AdbButton(),
   ),
 };

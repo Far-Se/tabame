@@ -1906,3 +1906,60 @@ class ShellContextMenu {
     return result ?? false;
   }
 }
+
+/// A single open tab in a Chromium-based browser (Chrome/Edge/Brave/Opera/...),
+/// discovered through UI Automation. See [BrowserTabs].
+class BrowserTab {
+  const BrowserTab({
+    required this.browser,
+    required this.hWnd,
+    required this.index,
+    required this.title,
+  });
+
+  /// Friendly browser name, e.g. "Chrome", "Edge", "Brave", "Opera".
+  final String browser;
+
+  /// Top-level browser window handle that owns this tab.
+  final int hWnd;
+
+  /// Position of the tab within its window's tab strip.
+  final int index;
+
+  /// The tab/page title.
+  final String title;
+
+  factory BrowserTab.fromMap(Map<Object?, Object?> map) {
+    return BrowserTab(
+      browser: (map['browser'] as String?) ?? '',
+      hWnd: (map['hWnd'] as int?) ?? 0,
+      index: (map['index'] as int?) ?? 0,
+      title: (map['title'] as String?) ?? '',
+    );
+  }
+}
+
+/// Enumerate and activate Chromium-based browser tabs via UI Automation.
+class BrowserTabs {
+  /// Returns every open tab across all running Chromium-based browser windows.
+  static Future<List<BrowserTab>> getTabs() async {
+    final List<Object?>? raw =
+        await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getBrowserTabs');
+    if (raw == null) return const <BrowserTab>[];
+    return raw.whereType<Map<Object?, Object?>>().map(BrowserTab.fromMap).toList(growable: false);
+  }
+
+  /// Brings [hWnd]'s browser window to the foreground and switches to the tab
+  /// identified by [index] (falling back to [title] if the strip changed).
+  static Future<bool> focusTab({required int hWnd, required int index, required String title}) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'focusBrowserTab',
+      <String, dynamic>{
+        'hWnd': hWnd,
+        'index': index,
+        'title': title,
+      },
+    );
+    return result ?? false;
+  }
+}

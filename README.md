@@ -12,11 +12,9 @@
 
 # PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
 
-Tabame: Ta-ba-me -> **TA**sk**BA**r**ME**nu
-
 ## 🤔 What is this?
 
-I started this just to replace the Windows taskbar. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
+Tabame (Ta-ba-me -> **TA**sk**BA**r**ME**nu) started as a Windows taskbar replacement. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
 
 Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day.
 

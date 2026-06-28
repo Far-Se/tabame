@@ -55,6 +55,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 // ---------------------------------------------------------------------------
 #include "../system_stats.cpp"
 #include "appsfolder.cpp"
+#include "browser_tabs.cpp"
 #include "clipboard.cpp"
 #include "clipboard_extended.cpp"
 #include "desktop_wallpaper.cpp"
@@ -995,6 +996,50 @@ void GetFocusedElementCaretRectH(Tabamewin32Plugin *, const MethodCall &,
                                  MethodResult result) {
   OK(result, EVal(Encode::RectToMap(GetFocusedElementCaretRect())));
 }
+// ===== Browser tabs (UIA) =====
+void GetBrowserTabsH(Tabamewin32Plugin *, const MethodCall &,
+                     MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result]() {
+    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    const auto tabs = EnumerateBrowserTabs();
+    flutter::EncodableList list;
+    list.reserve(tabs.size());
+    for (const auto &t : tabs) {
+      EMap m;
+      m[EVal("browser")] = EVal(Encoding::WideToUtf8(t.browser));
+      m[EVal("hWnd")] = EVal(t.hwnd);
+      m[EVal("index")] = EVal(t.index);
+      m[EVal("title")] = EVal(Encoding::WideToUtf8(t.title));
+      list.emplace_back(EVal(std::move(m)));
+    }
+    shared_result->Success(EVal(std::move(list)));
+    CoUninitialize();
+  }).detach();
+}
+
+void FocusBrowserTabH(Tabamewin32Plugin *, const MethodCall &call,
+                      MethodResult result) {
+  auto &a = Args::Map(call);
+  const int hwnd = Args::Int(a, "hWnd");
+  const int index = Args::Int(a, "index");
+  const std::wstring title = Encoding::Utf8ToWide(Args::Str(a, "title"));
+
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result, hwnd, index, title]() {
+    CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    const bool ok = FocusBrowserTab(hwnd, index, title);
+    shared_result->Success(EVal(ok));
+    CoUninitialize();
+  }).detach();
+}
+
 // ===== Extended tray =====
 void EnumAllTrayIconsH(Tabamewin32Plugin *, const MethodCall &,
                        MethodResult result) {
@@ -1537,6 +1582,9 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"getFocusedElementRect", Handlers::GetFocusedElementRectH},
       {"getFocusedElementCaretRect", Handlers::GetFocusedElementCaretRectH},
       {"shutdownTaskbarUia", Handlers::ShutdownTaskbarUiaH},
+      // Browser tabs (UIA)
+      {"getBrowserTabs", Handlers::GetBrowserTabsH},
+      {"focusBrowserTab", Handlers::FocusBrowserTabH},
       // Extended tray
       {"enumAllTrayIcons", Handlers::EnumAllTrayIconsH},
       {"clickTrayNotifyIcon", Handlers::ClickTrayNotifyIconH},

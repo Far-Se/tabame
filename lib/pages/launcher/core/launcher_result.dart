@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
 
 import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
@@ -62,6 +63,7 @@ sealed class LauncherSearchResultItem {
   const factory LauncherSearchResultItem.app(LauncherAppResult appResult, [int? nodeId]) = LauncherFileResult.app;
   const factory LauncherSearchResultItem.quickAction(QuickActionMenuEntry quickAction) = LauncherActionResult;
   const factory LauncherSearchResultItem.window(Window window) = LauncherWindowResult;
+  const factory LauncherSearchResultItem.browserTab(BrowserTab browserTab) = LauncherBrowserTabResult;
   const factory LauncherSearchResultItem.bookmark(BookmarkSearchResult bookmarkResult) =
       LauncherBookmarkResult.bookmark;
   const factory LauncherSearchResultItem.notion(NotionResult notionResult) = LauncherBookmarkResult.notion;
@@ -73,6 +75,7 @@ sealed class LauncherSearchResultItem {
   LauncherAppResult? get appResult => null;
   QuickActionMenuEntry? get quickAction => null;
   Window? get window => null;
+  BrowserTab? get browserTab => null;
   BookmarkSearchResult? get bookmarkResult => null;
   NotionResult? get notionResult => null;
   LauncherInfoResult? get infoResult => null;
@@ -81,6 +84,7 @@ sealed class LauncherSearchResultItem {
   bool get isFile => false;
   bool get isApp => false;
   bool get isWindow => false;
+  bool get isBrowserTab => false;
   bool get isBookmark => false;
   bool get isNotion => false;
   bool get isInfo => false;
@@ -153,6 +157,19 @@ final class LauncherWindowResult extends LauncherSearchResultItem {
 
   @override
   String get id => 'window:${window.hWnd}';
+}
+
+final class LauncherBrowserTabResult extends LauncherSearchResultItem {
+  const LauncherBrowserTabResult(this.browserTab);
+
+  @override
+  final BrowserTab browserTab;
+
+  @override
+  bool get isBrowserTab => true;
+
+  @override
+  String get id => 'browserTab:${browserTab.hWnd}:${browserTab.index}';
 }
 
 final class LauncherUtilityResult extends LauncherSearchResultItem {

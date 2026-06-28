@@ -182,8 +182,13 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       _keepFetching = true;
       await _fetchWindows();
       _startTimer();
+      if (_scrollController.offset > 1) {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 100), curve: Curves.easeIn); // <- this
+      }
     } else {
       _keepFetching = false;
+      // _scrollController.animateTo(0, duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+      // _scrollController.jumpTo(0);
       if (mounted) setState(() {});
       _mainTimer?.cancel();
     }
@@ -300,6 +305,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
               },
               blendMode: BlendMode.dstOut,
               child: ListView.builder(
+                controller: _scrollController,
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 // Row 0 is always the carousel slot; it renders SizedBox.shrink

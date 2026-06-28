@@ -47,7 +47,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
   }
 
   @override
-  void refreshQuickMenu() {
+  Future<void> refreshQuickMenu() async {
     if (mounted) {
       setState(() {});
     } else {}

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
+import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs;
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
 import '../models/util/quickmenu_modal.dart';
@@ -30,9 +31,11 @@ import '../widgets/itzy/quickmenu/button_timers.dart';
 import '../widgets/itzy/quickmenu/button_persistent_reminders.dart';
 import 'launcher/result/result_item_app.dart';
 import 'launcher/result/result_item_bookmark.dart';
+import 'launcher/result/result_item_browser_tab.dart';
 import 'launcher/result/result_item_file.dart';
 import 'launcher/result/result_item_window.dart';
 import 'launcher/search/bookmarks_search_handler.dart';
+import 'launcher/search/browser_tabs_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
 import 'launcher/search/launcher_search_context.dart';
 import 'launcher/search/search_handler.dart';
@@ -238,6 +241,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       caption: 'Window Search',
       prefix: '.',
       icon: Icons.window_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: ',',
+      caption: 'Browser Tabs',
+      prefix: ',',
+      icon: Icons.tab_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: "> or ? or space",
@@ -881,6 +890,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     switch (searchMode) {
       case LauncherSearchMode.windowsOnly:
         WindowsSearchHandler.handle(context);
+        break;
+      case LauncherSearchMode.browserTabsOnly:
+        BrowserTabsSearchHandler.handle(context);
         break;
       case LauncherSearchMode.bookmarksOnly:
         BookmarksSearchHandler.handle(context);
@@ -1893,6 +1905,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onOpenFile: _openFile,
       onOpenApp: _openAppResult,
       onOpenWindow: _openWindow,
+      onOpenBrowserTab: _openBrowserTab,
       onOpenBookmark: _openBookmarkResult,
       onOpenNotion: _openNotionResult,
       onRunAction: _executeLauncherActionResult,
@@ -2050,6 +2063,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     await QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Win32.activateWindow(window.hWnd);
     Globals.lastFocusedWinHWND = window.hWnd;
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    user.launcherSearchText = '';
+  }
+
+  Future<void> _openBrowserTab(BrowserTab browserTab) async {
+    await QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
+    Win32.activateWindow(browserTab.hWnd);
+    await BrowserTabs.focusTab(
+      hWnd: browserTab.hWnd,
+      index: browserTab.index,
+      title: browserTab.title,
+    );
+    Globals.lastFocusedWinHWND = browserTab.hWnd;
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     user.launcherSearchText = '';
   }
@@ -2267,6 +2293,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                   } else if (result.isWindow) {
                                     resultWidget = _buildWindowResult(
                                         context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isBrowserTab) {
+                                    resultWidget = _buildBrowserTabResult(
+                                        context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
                                   } else if (result.isBookmark) {
                                     resultWidget = _buildBookmarkResult(
                                         context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
@@ -2729,6 +2758,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       accent: accent,
       onSurface: theme.colorScheme.onSurface,
       onTap: () => _openWindow(window),
+      onHover: () => _selectResultFromMouse(index),
+    );
+  }
+
+  Widget _buildBrowserTabResult(
+      BuildContext context, ThemeData theme, BrowserTab browserTab, int index, bool isSelected, bool isRepeatingKey) {
+    final Color accent = Design.accent;
+    return BrowserTabSearchListItem(
+      browserTab: browserTab,
+      isSelected: isSelected,
+      isRepeating: isRepeatingKey,
+      accent: accent,
+      onSurface: theme.colorScheme.onSurface,
+      onTap: () => _openBrowserTab(browserTab),
       onHover: () => _selectResultFromMouse(index),
     );
   }

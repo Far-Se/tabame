@@ -30,6 +30,9 @@ class QuickMenuDesignButton extends StatelessWidget {
     return ModalButton(
       actionName: "QuickMenu Design",
       icon: const Icon(Icons.palette_rounded),
+      onTap: () {
+        Navigator.of(context).maybePop();
+      },
       child: () => const _QuickMenuDesignPanel(),
       backdropFilter: false,
     );

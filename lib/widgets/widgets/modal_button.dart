@@ -17,6 +17,7 @@ class ModalButton extends StatelessWidget {
   final GestureDragUpdateCallback? onVerticalDragUpdate;
   final GestureDragEndCallback? onVerticalDragEnd;
   final GestureTapDownCallback? onTertiaryTapDown;
+  final Function()? onTap;
   const ModalButton({
     super.key,
     required this.actionName,
@@ -32,6 +33,7 @@ class ModalButton extends StatelessWidget {
     this.onVerticalDragEnd,
     this.onTertiaryTapDown,
     this.onTertiaryTapUp,
+    this.onTap,
   });
 
   @override
@@ -49,6 +51,7 @@ class ModalButton extends StatelessWidget {
       onTertiaryTapUp: onTertiaryTapUp,
       hoverColor: Theme.of(context).colorScheme.primary,
       onTap: () {
+        onTap?.call();
         showQuickMenuModal(
           context: context,
           heightFactor: heightFactor,

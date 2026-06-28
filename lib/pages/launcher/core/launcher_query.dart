@@ -3,6 +3,7 @@ enum LauncherSearchMode {
   actionsOnly,
   filesOnly,
   windowsOnly,
+  browserTabsOnly,
   bookmarksOnly,
   bookmarkOnly,
   cliOnly,
@@ -40,6 +41,7 @@ class LauncherQuery {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
     if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
     if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
+    if (query.startsWith(',')) return LauncherSearchMode.browserTabsOnly;
     if (query.startsWith(';')) return LauncherSearchMode.desktopOnly;
     if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
     if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
@@ -61,6 +63,7 @@ class LauncherQuery {
     if (query.startsWith('b ')) return query.substring(2).trimLeft();
     if (query.startsWith('/') ||
         query.startsWith('.') ||
+        query.startsWith(',') ||
         query.startsWith(r'$') ||
         query.startsWith('>') ||
         query.startsWith('?') ||

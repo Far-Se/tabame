@@ -238,10 +238,27 @@ class WinUtils {
 
   static String getTempFolder() {
     final LPWSTR tempPathBuffer = wsalloc(MAX_PATH);
-    GetTempPath(MAX_PATH, tempPathBuffer);
-    final String tempFolder = tempPathBuffer.toDartString();
-    free(tempPathBuffer);
-    return tempFolder;
+    final LPWSTR longPathBuffer = wsalloc(MAX_PATH);
+
+    try {
+      GetTempPath(MAX_PATH, tempPathBuffer);
+
+      final int result = GetLongPathName(
+        tempPathBuffer,
+        longPathBuffer,
+        MAX_PATH,
+      );
+
+      if (result == 0) {
+        // fallback if conversion fails
+        return tempPathBuffer.toDartString();
+      }
+
+      return longPathBuffer.toDartString();
+    } finally {
+      free(tempPathBuffer);
+      free(longPathBuffer);
+    }
   }
 
   static String getTabameAppDataFolder({bool settings = false}) {
@@ -267,6 +284,139 @@ class WinUtils {
 
   static Future<String> folderPicker() async {
     return await pickFolder();
+  }
+
+  // ── Install / Uninstall ──
+
+  static const String _uninstallRegistryRoot = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall';
+
+  /// Recursively copies every file and folder under [sourcePath] into
+  /// [destinationPath]. No-op if both paths point to the same folder.
+  static Future<void> copyDirectoryContents(String sourcePath, String destinationPath) async {
+    if (p.normalize(sourcePath).toLowerCase() == p.normalize(destinationPath).toLowerCase()) return;
+    final Directory destinationDir = Directory(destinationPath);
+    if (!destinationDir.existsSync()) destinationDir.createSync(recursive: true);
+    for (final FileSystemEntity entity in Directory(sourcePath).listSync()) {
+      final String newPath = p.join(destinationPath, p.basename(entity.path));
+      if (entity is Directory) {
+        await copyDirectoryContents(entity.path, newPath);
+      } else if (entity is File) {
+        try {
+          await entity.copy(newPath);
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Registers Tabame in Windows' "Apps & Features" / "Programs and Features"
+  /// list, with an uninstall command that re-launches the app in uninstall mode.
+  static void registerUninstallEntry({String? installLocation}) {
+    try {
+      final RegistryKey uninstallRoot = Registry.openPath(RegistryHive.currentUser,
+          path: _uninstallRegistryRoot, desiredAccessRights: AccessRights.allAccess);
+      if (uninstallRoot.subkeyNames.contains('Tabame')) uninstallRoot.deleteKey('Tabame');
+      final RegistryKey tabameKey = uninstallRoot.createKey('Tabame');
+      final String exe = Platform.resolvedExecutable;
+      tabameKey.createValue(const RegistryValue('DisplayName', RegistryValueType.string, 'Tabame'));
+      tabameKey.createValue(RegistryValue('UninstallString', RegistryValueType.string, '"$exe" -interface -uninstall'));
+      tabameKey.createValue(RegistryValue('DisplayIcon', RegistryValueType.string, exe));
+      tabameKey.createValue(
+          RegistryValue('InstallLocation', RegistryValueType.string, installLocation ?? File(exe).parent.path));
+      tabameKey.createValue(const RegistryValue('Publisher', RegistryValueType.string, 'Tabame'));
+      tabameKey.createValue(const RegistryValue('NoModify', RegistryValueType.int32, 1));
+      tabameKey.createValue(const RegistryValue('NoRepair', RegistryValueType.int32, 1));
+      tabameKey.close();
+      uninstallRoot.close();
+    } catch (_) {}
+  }
+
+  /// Removes the "Apps & Features" entry created by [registerUninstallEntry].
+  static void unregisterUninstallEntry() {
+    try {
+      final RegistryKey uninstallRoot = Registry.openPath(RegistryHive.currentUser,
+          path: _uninstallRegistryRoot, desiredAccessRights: AccessRights.allAccess);
+      if (uninstallRoot.subkeyNames.contains('Tabame')) uninstallRoot.deleteKey('Tabame');
+      uninstallRoot.close();
+    } catch (_) {}
+  }
+
+  /// Full uninstall flow: disables startup/context-menu integrations, removes
+  /// the Apps & Features entry, then deletes the install + app data folders via
+  /// a detached script (since the running exe can't delete its own files) and exits.
+
+  static Future<void> performUninstall() async {
+    if (!kReleaseMode) return;
+
+    await setStartUpShortcut(false);
+
+    final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
+    if (wizardlyContextMenu.isWizardlyInstalledInContextMenu()) {
+      wizardlyContextMenu.toggleWizardlyToContextMenu();
+    }
+
+    unregisterUninstallEntry();
+
+    // 1. Strip trailing slashes/backslashes to prevent path issues
+    final String exeDir = Directory(Platform.resolvedExecutable).parent.path.replaceAll(RegExp(r'[/\\]+$'), '');
+    final String appData = getTabameAppDataFolder().replaceAll(RegExp(r'[/\\]+$'), '');
+    final String exeName = p.basenameWithoutExtension(Platform.resolvedExecutable);
+    toggleTaskbar(visible: true);
+
+    final String tempDir = getTempFolder().replaceAll(RegExp(r'[/\\]+$'), '');
+    final String scriptPath = p.join(tempDir, 'uninstall_$exeName.ps1');
+    final String logPath = p.join(tempDir, 'uninstall_$exeName.log');
+
+    // 2. Use SINGLE quotes in PowerShell for all paths. Single quotes treat
+    // backslashes as literal characters, avoiding the `\"` escaping problem entirely.
+    final String psScript = '''
+  \$ErrorActionPreference = 'Continue'
+  Start-Transcript -Path '$logPath' -Force | Out-Null
+  try {
+    Set-Location -LiteralPath '$tempDir'
+    for (\$i = 0; \$i -lt 30; \$i++) {
+      Start-Sleep -Seconds 1
+      if (-not (Get-Process -Name '$exeName' -ErrorAction SilentlyContinue)) { break }
+    }
+    taskkill /F /IM '$exeName.exe' /T 2>\$null
+    Start-Sleep -Seconds 1
+
+    # Retry a few times in case file handles take a moment to release
+    for (\$r = 0; \$r -lt 5; \$r++) {
+      \$err1 = \$null
+      \$err2 = \$null
+      Remove-Item -LiteralPath '$appData' -Recurse -Force -ErrorVariable err1
+      Remove-Item -LiteralPath '$exeDir'  -Recurse -Force -ErrorVariable err2
+      if ((-not (Test-Path '$appData')) -and (-not (Test-Path '$exeDir'))) { break }
+      Start-Sleep -Seconds 1
+    }
+  } finally {
+    Stop-Transcript | Out-Null
+    Remove-Item -LiteralPath '$scriptPath' -Force -ErrorAction SilentlyContinue
+  }
+  ''';
+
+    await File(scriptPath).writeAsString(psScript);
+
+    // cmd /c start "" /b is the canonical way to fully orphan a child on Windows.
+    await Process.start(
+      'cmd.exe',
+      <String>[
+        '/c',
+        'start',
+        '""', // window title (required)
+        '/b', // no new window
+        'powershell.exe',
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-WindowStyle', 'Hidden',
+        '-File', scriptPath,
+      ],
+      mode: ProcessStartMode.detached,
+      workingDirectory: tempDir,
+    );
+
+    closeAllTabameExProcesses();
+    exit(0);
   }
 
   // Startup, desktop, and taskbar helpers
