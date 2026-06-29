@@ -26,6 +26,7 @@ Future<void> showMessage(List<String> arguments) async {
   );
 
   await Boxes.registerBoxes(justLoad: true);
+  checkThemeChange();
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);

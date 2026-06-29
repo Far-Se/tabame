@@ -19,7 +19,9 @@ import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
+import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../widgets/itzy/quickmenu/button_steam.dart';
 import 'launcher/result/result_item_bookmark.dart';
 import 'launcher_search_models.dart';
 
@@ -511,6 +513,14 @@ class _ActionsHeader extends StatelessWidget {
     }
     if (item.isNotion) {
       return (Icons.description_outlined, item.notionResult!.title, 'Notion');
+    }
+    if (item.isObsidian) {
+      final ObsidianNote note = item.obsidianResult!;
+      return (
+        Icons.menu_book_rounded,
+        note.name,
+        note.folder.isEmpty ? 'Obsidian · vault root' : 'Obsidian · ${note.folder}',
+      );
     }
     if (item.quickAction != null) {
       return (Icons.bolt_rounded, item.quickAction!.title, 'Quick Action');
@@ -1065,6 +1075,58 @@ class _ParametersDialog extends StatelessWidget {
             foregroundColor: Colors.white,
           ),
           child: const Text('Run'),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppendNoteDialog extends StatelessWidget {
+  const _AppendNoteDialog({
+    required this.title,
+    required this.controller,
+  });
+
+  final String title;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = Design.accent;
+
+    return AlertDialog(
+      backgroundColor: Colors.transparent,
+      title: Text(title, style: const TextStyle(fontSize: 14)),
+      content: SizedBox(
+        width: 360,
+        child: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 4,
+          maxLines: 10,
+          style: const TextStyle(fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Text to add to the end of the note...',
+            isDense: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: accent.withAlpha(80)),
+            ),
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop<String>(null),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop<String>(controller.text),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Append'),
         ),
       ],
     );

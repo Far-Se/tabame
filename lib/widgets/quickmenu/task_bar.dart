@@ -178,6 +178,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (type != QuickMenuPage.quickMenu) return;
     if (visible) {
       _keepFetching = true;
       await _fetchWindows();

@@ -5,7 +5,9 @@ import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
 
 import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
+import '../../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../../../widgets/itzy/quickmenu/button_steam.dart';
 import '../result/result_item_bookmark.dart';
 
 class LauncherShortcut {
@@ -67,6 +69,8 @@ sealed class LauncherSearchResultItem {
   const factory LauncherSearchResultItem.bookmark(BookmarkSearchResult bookmarkResult) =
       LauncherBookmarkResult.bookmark;
   const factory LauncherSearchResultItem.notion(NotionResult notionResult) = LauncherBookmarkResult.notion;
+  const factory LauncherSearchResultItem.obsidian(ObsidianNote obsidianResult) = LauncherObsidianResult;
+  const factory LauncherSearchResultItem.steam(SteamGame steamResult) = LauncherSteamResult;
   const factory LauncherSearchResultItem.shortcut(LauncherShortcut shortcut) = LauncherUtilityResult.shortcut;
   const factory LauncherSearchResultItem.info(LauncherInfoResult infoResult) = LauncherUtilityResult.info;
 
@@ -78,6 +82,8 @@ sealed class LauncherSearchResultItem {
   BrowserTab? get browserTab => null;
   BookmarkSearchResult? get bookmarkResult => null;
   NotionResult? get notionResult => null;
+  ObsidianNote? get obsidianResult => null;
+  SteamGame? get steamResult => null;
   LauncherInfoResult? get infoResult => null;
   LauncherShortcut? get shortcut => null;
 
@@ -87,6 +93,8 @@ sealed class LauncherSearchResultItem {
   bool get isBrowserTab => false;
   bool get isBookmark => false;
   bool get isNotion => false;
+  bool get isObsidian => false;
+  bool get isSteam => false;
   bool get isInfo => false;
   bool get isShortcut => false;
 
@@ -144,6 +152,32 @@ final class LauncherBookmarkResult extends LauncherSearchResultItem {
 
   @override
   String get id => isNotion ? 'notion:${notionResult!.id}' : 'bookmark:${bookmarkResult!.id}';
+}
+
+final class LauncherObsidianResult extends LauncherSearchResultItem {
+  const LauncherObsidianResult(this.obsidianResult);
+
+  @override
+  final ObsidianNote obsidianResult;
+
+  @override
+  bool get isObsidian => true;
+
+  @override
+  String get id => 'obsidian:${obsidianResult.absolutePath}';
+}
+
+final class LauncherSteamResult extends LauncherSearchResultItem {
+  const LauncherSteamResult(this.steamResult);
+
+  @override
+  final SteamGame steamResult;
+
+  @override
+  bool get isSteam => true;
+
+  @override
+  String get id => 'steam:${steamResult.appId}';
 }
 
 final class LauncherWindowResult extends LauncherSearchResultItem {

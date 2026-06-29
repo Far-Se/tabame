@@ -60,6 +60,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "clipboard_extended.cpp"
 #include "desktop_wallpaper.cpp"
 #include "get_changed_folders.cpp"
+#include "hdr_control.cpp"
 #include "hotkeys.cpp"
 #include "media_session.cpp"
 #include "quickClick/QuickClickController.cpp"
@@ -223,6 +224,36 @@ EMap RectToMap(const RECT &rect) {
   return m;
 }
 
+EMap CaretLayerResultToMap(const CaretLayerResult &layer) {
+  EMap m;
+  m[EVal("found")] = EVal(layer.found);
+  m[EVal("rect")] = EVal(RectToMap(layer.rect));
+  return m;
+}
+
+EMap CaretDebugResultToMap(const CaretDebugResult &dbg) {
+  EMap m;
+  m[EVal("win32Caret")] = EVal(CaretLayerResultToMap(dbg.win32Caret));
+  m[EVal("accessibleCaret")] = EVal(CaretLayerResultToMap(dbg.accessibleCaret));
+  m[EVal("uiaCaretRange")] = EVal(CaretLayerResultToMap(dbg.uiaCaretRange));
+  m[EVal("uiaSelection")] = EVal(CaretLayerResultToMap(dbg.uiaSelection));
+  m[EVal("imeCandidate")] = EVal(CaretLayerResultToMap(dbg.imeCandidate));
+  m[EVal("imeComposition")] = EVal(CaretLayerResultToMap(dbg.imeComposition));
+  m[EVal("uiaBoundingRect")] = EVal(CaretLayerResultToMap(dbg.uiaBoundingRect));
+  m[EVal("chosenLayer")] = EVal(dbg.chosenLayer);
+  m[EVal("found")] = EVal(dbg.found);
+  m[EVal("best")] = EVal(RectToMap(dbg.best));
+  m[EVal("hasFocusedElement")] = EVal(dbg.hasFocusedElement);
+  m[EVal("elementName")] = EVal(dbg.elementName);
+  m[EVal("elementClassName")] = EVal(dbg.elementClassName);
+  m[EVal("elementControlType")] = EVal(dbg.elementControlType);
+  m[EVal("supportsTextPattern")] = EVal(dbg.supportsTextPattern);
+  m[EVal("supportsTextPattern2")] = EVal(dbg.supportsTextPattern2);
+  m[EVal("supportsValuePattern")] = EVal(dbg.supportsValuePattern);
+  m[EVal("supportsLegacyIAccessible")] = EVal(dbg.supportsLegacyIAccessible);
+  return m;
+}
+
 EMap SystemStatsToMap(const SystemStats &stats, int memoryLoad) {
   EMap m;
   m[EVal("cpuLoad")] = EVal(stats.cpuUsage < 0 ? -1.0 : stats.cpuUsage / 100.0);
@@ -249,6 +280,17 @@ EMap AppBitmapToMap(const AppBitmap &bitmap) {
   m[EVal("pixels")] = EVal(bitmap.pixels);
   m[EVal("width")] = EVal(bitmap.width);
   m[EVal("height")] = EVal(bitmap.height);
+  return m;
+}
+
+EMap HDRDisplayToMap(const HDRDisplayInfo &d) {
+  EMap m;
+  m[EVal("adapterIdLow")] = EVal(static_cast<int64_t>(d.adapterIdLow));
+  m[EVal("adapterIdHigh")] = EVal(static_cast<int>(d.adapterIdHigh));
+  m[EVal("id")] = EVal(static_cast<int64_t>(d.id));
+  m[EVal("name")] = EVal(Encoding::WideToUtf8(d.name));
+  m[EVal("supportsHDR")] = EVal(d.supportsHDR);
+  m[EVal("isHDREnabled")] = EVal(d.isHDREnabled);
   return m;
 }
 
@@ -996,6 +1038,10 @@ void GetFocusedElementCaretRectH(Tabamewin32Plugin *, const MethodCall &,
                                  MethodResult result) {
   OK(result, EVal(Encode::RectToMap(GetFocusedElementCaretRect())));
 }
+void GetFocusedElementCaretRectDebugH(Tabamewin32Plugin *, const MethodCall &,
+                                      MethodResult result) {
+  OK(result, EVal(Encode::CaretDebugResultToMap(GetFocusedElementCaretRectDetailed())));
+}
 // ===== Browser tabs (UIA) =====
 void GetBrowserTabsH(Tabamewin32Plugin *, const MethodCall &,
                      MethodResult result) {
@@ -1109,6 +1155,24 @@ void SetWindowThemeH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   auto &a = Args::Map(call);
   OK(result, SetWindowTheme(Args::Int(a, "type")));
+}
+
+void GetHDRDisplaysH(Tabamewin32Plugin *, const MethodCall &,
+                     MethodResult result) {
+  flutter::EncodableList list;
+  for (const auto &d : GetHDRDisplays())
+    list.push_back(EVal(Encode::HDRDisplayToMap(d)));
+  OK(result, EVal(list));
+}
+
+void SetHDRStateH(Tabamewin32Plugin *, const MethodCall &call,
+                  MethodResult result) {
+  auto &a = Args::Map(call);
+  const bool ok = SetHDRStateForDisplay(
+      static_cast<uint32_t>(Args::Int64(a, "adapterIdLow")),
+      static_cast<int32_t>(Args::Int(a, "adapterIdHigh")),
+      static_cast<uint32_t>(Args::Int64(a, "id")), Args::Bool(a, "enable"));
+  OK(result, ok);
 }
 
 void CaptureMonitorH(Tabamewin32Plugin *, const MethodCall &call,
@@ -1581,6 +1645,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"getTaskbarItemHelpTexts", Handlers::GetTaskbarItemHelpTextsH},
       {"getFocusedElementRect", Handlers::GetFocusedElementRectH},
       {"getFocusedElementCaretRect", Handlers::GetFocusedElementCaretRectH},
+      {"getFocusedElementCaretRectDebug", Handlers::GetFocusedElementCaretRectDebugH},
       {"shutdownTaskbarUia", Handlers::ShutdownTaskbarUiaH},
       // Browser tabs (UIA)
       {"getBrowserTabs", Handlers::GetBrowserTabsH},
@@ -1593,6 +1658,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
        Handlers::SnapshotSystrayMonitorIconsH},
       {"stopSystrayMonitor", Handlers::StopSystrayMonitorH},
       {"setWindowTheme", Handlers::SetWindowThemeH},
+      {"getHDRDisplays", Handlers::GetHDRDisplaysH},
+      {"setHDRState", Handlers::SetHDRStateH},
       {"captureMonitor", Handlers::CaptureMonitorH},
       {"captureMonitorBitmapAlternative",
        Handlers::CaptureMonitorBitmapAlternativeH},

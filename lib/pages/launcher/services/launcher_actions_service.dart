@@ -13,6 +13,8 @@ class LauncherActionsBuilder {
     if (item.isWindow) return _buildWindowActions(item.window!);
     if (item.isBookmark) return _buildBookmarkActions(context, item.bookmarkResult!);
     if (item.isNotion) return _buildNotionActions(item.notionResult!);
+    if (item.isObsidian) return _buildObsidianActions(context, item.obsidianResult!);
+    if (item.isSteam) return _buildSteamActions(item.steamResult!);
     if (item.quickAction != null) return _buildQuickActionActions(context, item.quickAction!);
     return <LauncherAction>[];
   }
@@ -506,6 +508,101 @@ class LauncherActionsBuilder {
         icon: Icons.title_rounded,
         subtitle: result.title,
         onExecute: (_) => Clipboard.setData(ClipboardData(text: result.title)),
+      ),
+    ];
+  }
+
+  // == Obsidian ================================================================
+
+  static List<LauncherAction> _buildObsidianActions(BuildContext context, ObsidianNote note) {
+    return <LauncherAction>[
+      LauncherAction(
+        label: 'Open in Obsidian',
+        icon: Icons.open_in_new_rounded,
+        kbdHint: '↵',
+        onExecute: (_) {
+          WinUtils.open(note.obsidianProtocolUri);
+          _closeLauncher();
+        },
+      ),
+      LauncherAction(
+        label: 'Copy Obsidian URI',
+        icon: Icons.content_copy_rounded,
+        subtitle: note.obsidianProtocolUri,
+        onExecute: (_) => Clipboard.setData(ClipboardData(text: note.obsidianProtocolUri)),
+      ),
+      LauncherAction(
+        label: 'Copy File Path',
+        icon: Icons.content_copy_rounded,
+        subtitle: note.absolutePath,
+        onExecute: (_) => Clipboard.setData(ClipboardData(text: note.absolutePath)),
+      ),
+      LauncherAction(
+        label: 'Reveal in Explorer',
+        icon: Icons.folder_open_rounded,
+        onExecute: (_) {
+          WinUtils.open('explorer.exe', arguments: '/select,"${note.absolutePath}"', parseParamaters: true);
+        },
+      ),
+      LauncherAction(
+        label: 'Quick Append',
+        icon: Icons.post_add_rounded,
+        subtitle: 'Add text to the end of the note',
+        keepPanelOpen: true,
+        onExecute: (BuildContext ctx) async {
+          final TextEditingController controller = TextEditingController();
+          final String? text = await showDialog<String>(
+            context: ctx,
+            builder: (_) => _AppendNoteDialog(title: 'Append to "${note.name}"', controller: controller),
+          );
+          controller.dispose();
+          if (text == null || text.trim().isEmpty) return;
+          await ObsidianVaultService.appendToNote(note, text);
+        },
+      ),
+    ];
+  }
+
+  // == Steam ==================================================================
+
+  static List<LauncherAction> _buildSteamActions(SteamGame game) {
+    return <LauncherAction>[
+      LauncherAction(
+        label: 'Play',
+        icon: Icons.play_arrow_rounded,
+        kbdHint: '↵',
+        onExecute: (_) {
+          WinUtils.open(game.launchUri);
+          _closeLauncher();
+        },
+      ),
+      LauncherAction(
+        label: 'View in Store / Library',
+        icon: Icons.storefront_rounded,
+        onExecute: (_) {
+          WinUtils.open(game.storeUri);
+          _closeLauncher();
+        },
+      ),
+      LauncherAction(
+        label: 'Open Install Folder',
+        icon: Icons.folder_open_rounded,
+        subtitle: game.installDir,
+        onExecute: (_) {
+          if (Directory(game.installDir).existsSync()) WinUtils.open(game.installDir);
+        },
+      ),
+      LauncherAction(
+        label: 'Copy App ID',
+        icon: Icons.content_copy_rounded,
+        subtitle: game.appId,
+        onExecute: (_) => Clipboard.setData(ClipboardData(text: game.appId)),
+      ),
+      LauncherAction(
+        label: 'Copy Name',
+        icon: Icons.title_rounded,
+        subtitle: game.name,
+        onExecute: (_) => Clipboard.setData(ClipboardData(text: game.name)),
       ),
     ];
   }

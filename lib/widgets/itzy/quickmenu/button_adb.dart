@@ -243,10 +243,12 @@ class _AdbPanelState extends State<AdbPanel> {
     String? selected = _selectedSerial;
     final bool stillThere = devices.any((_AdbDevice d) => d.serial == selected && d.isReady);
     if (!stillThere) {
-      selected = devices.firstWhere(
-        (_AdbDevice d) => d.isReady,
-        orElse: () => const _AdbDevice("", ""),
-      ).serial;
+      selected = devices
+          .firstWhere(
+            (_AdbDevice d) => d.isReady,
+            orElse: () => const _AdbDevice("", ""),
+          )
+          .serial;
       if (selected.isEmpty) selected = null;
     }
 
@@ -329,7 +331,9 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _toggleWifi() {
     final bool target = !(_status?.wifi ?? false);
     return _toggle(
-      <List<String>>[<String>["shell", "svc", "wifi", target ? "enable" : "disable"]],
+      <List<String>>[
+        <String>["shell", "svc", "wifi", target ? "enable" : "disable"]
+      ],
       success: "Wi-Fi ${target ? "enabled" : "disabled"}",
     );
   }
@@ -337,7 +341,9 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _toggleMobileData() {
     final bool target = !(_status?.mobileData ?? false);
     return _toggle(
-      <List<String>>[<String>["shell", "svc", "data", target ? "enable" : "disable"]],
+      <List<String>>[
+        <String>["shell", "svc", "data", target ? "enable" : "disable"]
+      ],
       success: "Mobile data ${target ? "enabled" : "disabled"}",
     );
   }
@@ -366,8 +372,14 @@ class _AdbPanelState extends State<AdbPanel> {
       if (write.ok) {
         write = await _AdbService.run(
           <String>[
-            "shell", "am", "broadcast", "-a", "android.intent.action.AIRPLANE_MODE",
-            "--ez", "state", enable ? "true" : "false"
+            "shell",
+            "am",
+            "broadcast",
+            "-a",
+            "android.intent.action.AIRPLANE_MODE",
+            "--ez",
+            "state",
+            enable ? "true" : "false"
           ],
           serial: _selectedSerial,
         );
@@ -406,7 +418,9 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _toggleTouches() {
     final bool target = !(_status?.touches ?? false);
     return _toggle(
-      <List<String>>[<String>["shell", "settings", "put", "system", "show_touches", target ? "1" : "0"]],
+      <List<String>>[
+        <String>["shell", "settings", "put", "system", "show_touches", target ? "1" : "0"]
+      ],
       success: "Touch coordinates ${target ? "enabled" : "disabled"}",
     );
   }
@@ -414,7 +428,9 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _toggleDarkMode() {
     final bool target = !(_status?.darkMode ?? false);
     return _toggle(
-      <List<String>>[<String>["shell", "cmd", "uimode", "night", target ? "yes" : "no"]],
+      <List<String>>[
+        <String>["shell", "cmd", "uimode", "night", target ? "yes" : "no"]
+      ],
       success: "Dark mode ${target ? "enabled" : "disabled"}",
     );
   }
@@ -422,7 +438,9 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _toggleStayAwake() {
     final bool target = !(_status?.stayAwake ?? false);
     return _toggle(
-      <List<String>>[<String>["shell", "settings", "put", "global", "stay_on_while_plugged_in", target ? "3" : "0"]],
+      <List<String>>[
+        <String>["shell", "settings", "put", "global", "stay_on_while_plugged_in", target ? "3" : "0"]
+      ],
       success: "Stay awake ${target ? "enabled" : "disabled"}",
     );
   }
@@ -435,7 +453,8 @@ class _AdbPanelState extends State<AdbPanel> {
     if (_busy) return;
     setState(() => _busy = true);
     const String devicePath = "/sdcard/tabame_screenshot.png";
-    final _AdbResult capture = await _AdbService.run(<String>["shell", "screencap", "-p", devicePath], serial: _selectedSerial);
+    final _AdbResult capture =
+        await _AdbService.run(<String>["shell", "screencap", "-p", devicePath], serial: _selectedSerial);
     if (!capture.ok) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -499,7 +518,8 @@ class _AdbPanelState extends State<AdbPanel> {
 
   Future<void> _loadPackages() async {
     setState(() => _loadingPackages = true);
-    final _AdbResult result = await _AdbService.run(<String>["shell", "pm", "list", "packages", "-3"], serial: _selectedSerial);
+    final _AdbResult result =
+        await _AdbService.run(<String>["shell", "pm", "list", "packages", "-3"], serial: _selectedSerial);
     if (!mounted) return;
 
     final List<String> names = <String>[];
@@ -513,9 +533,7 @@ class _AdbPanelState extends State<AdbPanel> {
 
     setState(() {
       _loadingPackages = false;
-      _packages = names
-          .map((String name) => _AdbPackage(name, _favorites.contains(name)))
-          .toList(growable: false);
+      _packages = names.map((String name) => _AdbPackage(name, _favorites.contains(name))).toList(growable: false);
       if (!result.ok) _flash(result.stderr, error: true);
     });
   }
@@ -527,16 +545,24 @@ class _AdbPanelState extends State<AdbPanel> {
       } else {
         _favorites.add(name);
       }
-      _packages = _packages
-          ?.map((_AdbPackage p) => _AdbPackage(p.name, _favorites.contains(p.name)))
-          .toList(growable: false);
+      _packages =
+          _packages?.map((_AdbPackage p) => _AdbPackage(p.name, _favorites.contains(p.name))).toList(growable: false);
     });
     Boxes.updateSettings(_AdbService.favoritesKey, _favorites);
   }
 
   Future<String?> _resolveLauncherActivity(String packageName) async {
     final _AdbResult result = await _AdbService.run(
-      <String>["shell", "cmd", "package", "resolve-activity", "--brief", "-c", "android.intent.category.LAUNCHER", packageName],
+      <String>[
+        "shell",
+        "cmd",
+        "package",
+        "resolve-activity",
+        "--brief",
+        "-c",
+        "android.intent.category.LAUNCHER",
+        packageName
+      ],
       serial: _selectedSerial,
     );
     if (!result.ok) return null;
@@ -564,7 +590,8 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _restartPackage(String packageName) async {
     if (_busy) return;
     setState(() => _busy = true);
-    final _AdbResult stop = await _AdbService.run(<String>["shell", "am", "force-stop", packageName], serial: _selectedSerial);
+    final _AdbResult stop =
+        await _AdbService.run(<String>["shell", "am", "force-stop", packageName], serial: _selectedSerial);
     if (!stop.ok) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -583,7 +610,8 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _clearAndRestart(String packageName) async {
     if (_busy) return;
     setState(() => _busy = true);
-    final _AdbResult clear = await _AdbService.run(<String>["shell", "pm", "clear", packageName], serial: _selectedSerial);
+    final _AdbResult clear =
+        await _AdbService.run(<String>["shell", "pm", "clear", packageName], serial: _selectedSerial);
     if (!clear.ok) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -602,7 +630,8 @@ class _AdbPanelState extends State<AdbPanel> {
   Future<void> _changePermissions(String packageName, {required bool grant}) async {
     if (_busy) return;
     setState(() => _busy = true);
-    final _AdbResult dump = await _AdbService.run(<String>["shell", "dumpsys", "package", packageName], serial: _selectedSerial);
+    final _AdbResult dump =
+        await _AdbService.run(<String>["shell", "dumpsys", "package", packageName], serial: _selectedSerial);
     if (!dump.ok) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -650,7 +679,8 @@ class _AdbPanelState extends State<AdbPanel> {
   }
 
   Future<void> _uninstallPackage(String packageName) async {
-    final _AdbResult result = await _AdbService.run(<String>["shell", "pm", "uninstall", packageName], serial: _selectedSerial);
+    final _AdbResult result =
+        await _AdbService.run(<String>["shell", "pm", "uninstall", packageName], serial: _selectedSerial);
     if (!mounted) return;
     if (result.ok) {
       _favorites.remove(packageName);
@@ -677,7 +707,8 @@ class _AdbPanelState extends State<AdbPanel> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text("Uninstall $packageName?", style: TextStyle(fontSize: Design.baseFontSize + 3, color: Design.text)),
+          title:
+              Text("Uninstall $packageName?", style: TextStyle(fontSize: Design.baseFontSize + 3, color: Design.text)),
           content: Text(
             "This removes the app and all its data from the device.",
             style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(190)),
@@ -793,7 +824,9 @@ class _AdbPanelState extends State<AdbPanel> {
           extraActions: <Widget>[
             IconButton(
               icon: Icon(
-                (_activePackage != null && _favorites.contains(_activePackage)) ? Icons.star_rounded : Icons.star_border_rounded,
+                (_activePackage != null && _favorites.contains(_activePackage))
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
               ),
               tooltip: "Favorite",
               onPressed: _activePackage == null ? null : () => _toggleFavorite(_activePackage!),
@@ -819,7 +852,8 @@ class _AdbPanelState extends State<AdbPanel> {
       color: color.withAlpha(18),
       child: Row(
         children: <Widget>[
-          Icon(_messageIsError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, size: 13, color: color),
+          Icon(_messageIsError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              size: 13, color: color),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -889,9 +923,7 @@ class _AdbPanelState extends State<AdbPanel> {
 
   Widget _buildDeviceCard() {
     final bool connected = _selectedSerial != null;
-    final String title = connected
-        ? (_status?.model ?? _selectedSerial ?? "Device")
-        : "No device connected";
+    final String title = connected ? (_status?.model ?? _selectedSerial ?? "Device") : "No device connected";
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       decoration: BoxDecoration(
@@ -923,7 +955,7 @@ class _AdbPanelState extends State<AdbPanel> {
               if (connected && _status?.model != null)
                 Text(
                   _selectedSerial!,
-                  style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(140)),
+                  style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(140)),
                 ),
             ],
           ),
@@ -932,9 +964,7 @@ class _AdbPanelState extends State<AdbPanel> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: _devices
-                  .map((_AdbDevice device) => _buildDeviceChip(device))
-                  .toList(growable: false),
+              children: _devices.map((_AdbDevice device) => _buildDeviceChip(device)).toList(growable: false),
             ),
           ],
         ],
@@ -962,7 +992,7 @@ class _AdbPanelState extends State<AdbPanel> {
         child: Text(
           "${device.serial}${device.isReady ? "" : " (${device.state})"}",
           style: TextStyle(
-            fontSize: Design.baseFontSize - 1,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.w600,
             color: selected ? Design.accent : Design.text.withAlpha(170),
           ),
@@ -1003,10 +1033,17 @@ class _AdbPanelState extends State<AdbPanel> {
     final _DeviceStatus? status = _status;
     final List<Widget> tiles = <Widget>[
       _ToggleTile(icon: Icons.wifi_rounded, label: "Wi-Fi", value: status?.wifi, onTap: _toggleWifi),
-      _ToggleTile(icon: Icons.network_cell_rounded, label: "Mobile Data", value: status?.mobileData, onTap: _toggleMobileData),
-      _ToggleTile(icon: Icons.airplanemode_active_rounded, label: "Airplane", value: status?.airplane, onTap: _toggleAirplane),
-      _ToggleTile(icon: Icons.animation_rounded, label: "Animations", value: status?.animations, onTap: _toggleAnimations),
-      _ToggleTile(icon: Icons.grid_4x4_rounded, label: "Layout Bounds", value: status?.layoutBounds, onTap: _toggleLayoutBounds),
+      _ToggleTile(
+          icon: Icons.network_cell_rounded, label: "Mobile Data", value: status?.mobileData, onTap: _toggleMobileData),
+      _ToggleTile(
+          icon: Icons.airplanemode_active_rounded, label: "Airplane", value: status?.airplane, onTap: _toggleAirplane),
+      _ToggleTile(
+          icon: Icons.animation_rounded, label: "Animations", value: status?.animations, onTap: _toggleAnimations),
+      _ToggleTile(
+          icon: Icons.grid_4x4_rounded,
+          label: "Layout Bounds",
+          value: status?.layoutBounds,
+          onTap: _toggleLayoutBounds),
       _ToggleTile(icon: Icons.touch_app_rounded, label: "Show Touches", value: status?.touches, onTap: _toggleTouches),
       _ToggleTile(icon: Icons.dark_mode_rounded, label: "Dark Mode", value: status?.darkMode, onTap: _toggleDarkMode),
       _ToggleTile(icon: Icons.coffee_rounded, label: "Stay Awake", value: status?.stayAwake, onTap: _toggleStayAwake),
@@ -1071,9 +1108,7 @@ class _AdbPanelState extends State<AdbPanel> {
         return Wrap(
           spacing: gap,
           runSpacing: gap,
-          children: tiles
-              .map((Widget tile) => SizedBox(width: tileWidth, child: tile))
-              .toList(growable: false),
+          children: tiles.map((Widget tile) => SizedBox(width: tileWidth, child: tile)).toList(growable: false),
         );
       },
     );
@@ -1275,8 +1310,13 @@ class _AdbPanelState extends State<AdbPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _buildActionRow(icon: Icons.play_arrow_rounded, title: "Launch", subtitle: "am start", onTap: () => _launchPackage(pkg)),
-          _buildActionRow(icon: Icons.refresh_rounded, title: "Restart", subtitle: "force-stop + start", onTap: () => _restartPackage(pkg)),
+          _buildActionRow(
+              icon: Icons.play_arrow_rounded, title: "Launch", subtitle: "am start", onTap: () => _launchPackage(pkg)),
+          _buildActionRow(
+              icon: Icons.refresh_rounded,
+              title: "Restart",
+              subtitle: "force-stop + start",
+              onTap: () => _restartPackage(pkg)),
           _buildActionRow(
             icon: Icons.stop_circle_outlined,
             title: "Kill Process",
@@ -1295,19 +1335,37 @@ class _AdbPanelState extends State<AdbPanel> {
             subtitle: "pm clear",
             onTap: () => _exec(<String>["shell", "pm", "clear", pkg], success: "Cleared data for $pkg"),
           ),
-          _buildActionRow(icon: Icons.restore_page_rounded, title: "Clear Data & Restart", subtitle: "pm clear + start", onTap: () => _clearAndRestart(pkg)),
-          _buildActionRow(icon: Icons.verified_user_outlined, title: "Grant All Permissions", subtitle: "pm grant", onTap: () => _changePermissions(pkg, grant: true)),
-          _buildActionRow(icon: Icons.block_rounded, title: "Revoke All Permissions", subtitle: "pm revoke", onTap: () => _changePermissions(pkg, grant: false)),
+          _buildActionRow(
+              icon: Icons.restore_page_rounded,
+              title: "Clear Data & Restart",
+              subtitle: "pm clear + start",
+              onTap: () => _clearAndRestart(pkg)),
+          _buildActionRow(
+              icon: Icons.verified_user_outlined,
+              title: "Grant All Permissions",
+              subtitle: "pm grant",
+              onTap: () => _changePermissions(pkg, grant: true)),
+          _buildActionRow(
+              icon: Icons.block_rounded,
+              title: "Revoke All Permissions",
+              subtitle: "pm revoke",
+              onTap: () => _changePermissions(pkg, grant: false)),
           _buildActionRow(
             icon: Icons.link_rounded,
             title: "Open Deep Link",
             subtitle: "am start -p $pkg",
             onTap: () => setState(() => _showPackageDeepLink = !_showPackageDeepLink),
-            trailing: Icon(_showPackageDeepLink ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 16, color: Design.text.withAlpha(140)),
+            trailing: Icon(_showPackageDeepLink ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 16, color: Design.text.withAlpha(140)),
           ),
           if (_showPackageDeepLink) _buildPackageDeepLinkField(pkg),
           const SizedBox(height: 6),
-          _buildActionRow(icon: Icons.delete_outline_rounded, title: "Uninstall", subtitle: "pm uninstall", danger: true, onTap: () => _confirmUninstall(pkg)),
+          _buildActionRow(
+              icon: Icons.delete_outline_rounded,
+              title: "Uninstall",
+              subtitle: "pm uninstall",
+              danger: true,
+              onTap: () => _confirmUninstall(pkg)),
         ],
       ),
     );
@@ -1386,7 +1444,7 @@ class _AdbPanelState extends State<AdbPanel> {
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(130)),
+                      style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
                     ),
                   ],
                 ),
@@ -1425,7 +1483,8 @@ class _AdbPanelState extends State<AdbPanel> {
             controller: _screenshotFolderController,
             hint: "%USERPROFILE%\\Pictures",
             settingKey: _AdbService.screenshotFolderKey,
-            onPick: () => _pickFolder(_screenshotFolderController, _AdbService.screenshotFolderKey, "Select screenshot folder"),
+            onPick: () =>
+                _pickFolder(_screenshotFolderController, _AdbService.screenshotFolderKey, "Select screenshot folder"),
             pickIcon: Icons.folder_open_rounded,
           ),
           const SizedBox(height: 8),
@@ -1486,9 +1545,10 @@ class _AdbPanelState extends State<AdbPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
+          Text(title,
+              style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
           const SizedBox(height: 2),
-          Text(description, style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(140))),
+          Text(description, style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(140))),
           const SizedBox(height: 8),
           Row(
             children: <Widget>[
@@ -1504,7 +1564,8 @@ class _AdbPanelState extends State<AdbPanel> {
                     fillColor: Design.text.withAlpha(8),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    enabledBorder:
+                        OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Design.accent.withAlpha(90), width: 1),
@@ -1541,9 +1602,11 @@ class _AdbPanelState extends State<AdbPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
+                Text(title,
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
                 const SizedBox(height: 2),
-                Text(description, style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(140))),
+                Text(description, style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(140))),
               ],
             ),
           ),
@@ -1629,7 +1692,7 @@ class _ToggleTile extends StatelessWidget {
                 Text(
                   state,
                   style: TextStyle(
-                    fontSize: Design.baseFontSize - 1,
+                    fontSize: Design.baseFontSize,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                     color: on ? Design.accent : Design.text.withAlpha(120),

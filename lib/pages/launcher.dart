@@ -26,7 +26,9 @@ import '../models/window_watcher.dart';
 import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
+import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../widgets/itzy/quickmenu/button_steam.dart';
 import '../widgets/itzy/quickmenu/button_timers.dart';
 import '../widgets/itzy/quickmenu/button_persistent_reminders.dart';
 import 'launcher/result/result_item_app.dart';
@@ -289,6 +291,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       caption: 'Notion',
       prefix: 'n ',
       icon: Icons.description_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'o ',
+      caption: 'Obsidian',
+      prefix: 'o ',
+      icon: Icons.menu_book_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 's ',
+      caption: 'Steam Games',
+      prefix: 's ',
+      icon: Icons.sports_esports_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
@@ -911,6 +925,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         break;
       case LauncherSearchMode.notionOnly:
         _handleNotionSearch(context);
+        break;
+      case LauncherSearchMode.obsidianOnly:
+        _handleObsidianSearch(context);
+        break;
+      case LauncherSearchMode.steamOnly:
+        _handleSteamSearch(context);
         break;
       case LauncherSearchMode.timerCommand:
         _handleTimerCommand(context);
@@ -1738,6 +1758,32 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
   }
 
+  Future<void> _handleObsidianSearch(LauncherSearchContext context) async {
+    try {
+      final List<ObsidianNote> notes = await ObsidianVaultService.scan();
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      final List<ObsidianNote> filtered = ObsidianVaultService.filter(notes, context.normalizedQuery);
+      context.setResults(filtered.map(LauncherSearchResultItem.obsidian).toList(), isSearching: false);
+    } catch (_) {
+      if (context.isActiveSearch(context.requestId, context.query)) {
+        context.setResults(<LauncherSearchResultItem>[], isSearching: false);
+      }
+    }
+  }
+
+  Future<void> _handleSteamSearch(LauncherSearchContext context) async {
+    try {
+      final List<SteamGame> games = await SteamLibraryService.scan();
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      final List<SteamGame> filtered = SteamLibraryService.filter(games, context.normalizedQuery);
+      context.setResults(filtered.map(LauncherSearchResultItem.steam).toList(), isSearching: false);
+    } catch (_) {
+      if (context.isActiveSearch(context.requestId, context.query)) {
+        context.setResults(<LauncherSearchResultItem>[], isSearching: false);
+      }
+    }
+  }
+
   // bool _isActiveSearch(int requestId, String query, {bool trimLeft = false}) {
   //   if (!mounted || requestId != _searchRequestId) return false;
   //   return trimLeft ? _controller.text.trimLeft() == query : _controller.text == query;
@@ -1908,6 +1954,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       onOpenBrowserTab: _openBrowserTab,
       onOpenBookmark: _openBookmarkResult,
       onOpenNotion: _openNotionResult,
+      onOpenObsidian: _openObsidianResult,
+      onOpenSteam: _openSteamResult,
       onRunAction: _executeLauncherActionResult,
     ).execute(result);
 
@@ -2083,6 +2131,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _openNotionResult(NotionResult result) {
     if (result.url.isEmpty) return;
     WinUtils.open(result.url);
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    user.launcherSearchText = '';
+  }
+
+  void _openObsidianResult(ObsidianNote result) {
+    WinUtils.open(result.obsidianProtocolUri);
+    QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
+    Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    user.launcherSearchText = '';
+  }
+
+  void _openSteamResult(SteamGame result) {
+    WinUtils.open(result.launchUri);
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     user.launcherSearchText = '';
@@ -2302,6 +2364,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                   } else if (result.isNotion) {
                                     resultWidget = _buildNotionResult(
                                         context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isObsidian) {
+                                    resultWidget = _buildObsidianResult(
+                                        context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isSteam) {
+                                    resultWidget = _buildSteamResult(
+                                        context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
                                   } else if (result.isInfo) {
                                     resultWidget = _buildInfoResult(
                                         context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
@@ -2650,6 +2718,147 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                 ),
               ),
               Icon(Icons.open_in_new_rounded, size: 14, color: onSurface.withAlpha(100)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildObsidianResult(BuildContext context, ThemeData theme, ObsidianNote result, int index, bool isSelected,
+      bool isRepeatingKey) {
+    final Color accent = Design.accent;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: GestureDetector(
+        onTap: () => _openObsidianResult(result),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+          curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.highlightColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(isSelected ? 40 : 20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.menu_book_rounded, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      result.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'OBSIDIAN · ${result.folder.isEmpty ? "VAULT ROOT" : result.folder.toUpperCase()}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new_rounded, size: 14, color: onSurface.withAlpha(100)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSteamResult(BuildContext context, ThemeData theme, SteamGame result, int index, bool isSelected,
+      bool isRepeatingKey) {
+    final Color accent = Design.accent;
+    final Color onSurface = theme.colorScheme.onSurface;
+
+    Widget leading;
+    if (result.coverPath != null) {
+      leading = ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Image.file(
+          File(result.coverPath!),
+          width: 26,
+          height: 34,
+          fit: BoxFit.cover,
+          cacheWidth: 78,
+          gaplessPlayback: true,
+          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+              Icon(Icons.sports_esports_rounded, size: 18, color: accent),
+        ),
+      );
+    } else {
+      leading = Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: accent.withAlpha(isSelected ? 40 : 20),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(Icons.sports_esports_rounded, size: 18, color: accent),
+      );
+    }
+
+    return MouseRegion(
+      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+      child: GestureDetector(
+        onTap: () => _openSteamResult(result),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: isRepeatingKey ? 50 : 200),
+          curve: isRepeatingKey ? Curves.linear : Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.highlightColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: <Widget>[
+              leading,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      result.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      result.sizeLabel.isEmpty ? 'STEAM' : 'STEAM · ${result.sizeLabel}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: onSurface.withAlpha(140),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.play_arrow_rounded, size: 16, color: accent.withAlpha(180)),
             ],
           ),
         ),

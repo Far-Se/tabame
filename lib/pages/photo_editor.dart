@@ -64,6 +64,7 @@ Future<void> startPhotoEditor(List<String> arguments) async {
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     await Boxes.registerBoxes(justLoad: true);
+    checkThemeChange();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
     await windowManager.setMinimumSize(const Size(980, 720));

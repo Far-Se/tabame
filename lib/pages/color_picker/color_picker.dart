@@ -3,6 +3,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../logic/app_startup.dart';
 import '../../models/classes/boxes.dart';
+import '../../models/settings.dart';
 import 'color_picker_window.dart';
 
 Future<void> startColorPicker() async {
@@ -10,6 +11,7 @@ Future<void> startColorPicker() async {
   await AppStartup.initialize();
   // Load settings and themes only, without full app initialization
   await Boxes.registerBoxes(justLoad: true);
+  checkThemeChange();
 
   const WindowOptions windowOptions = WindowOptions(
     // Window adds a transparent 34 px cursor buffer around the painted picker.

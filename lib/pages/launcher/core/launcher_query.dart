@@ -10,6 +10,9 @@ enum LauncherSearchMode {
   appsOnly,
   desktopOnly,
   notionOnly,
+  obsidianOnly,
+  steamOnly,
+  terminalOnly,
   timerCommand,
   functionCommand,
 }
@@ -45,6 +48,8 @@ class LauncherQuery {
     if (query.startsWith(';')) return LauncherSearchMode.desktopOnly;
     if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
     if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
+    if (query.startsWith('o ')) return LauncherSearchMode.obsidianOnly;
+    if (query.startsWith('s ')) return LauncherSearchMode.steamOnly;
     if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
     if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
     if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
@@ -60,6 +65,8 @@ class LauncherQuery {
     if (query.startsWith('cli ')) return query.substring(4).trimLeft();
     if (query.startsWith('app ')) return query.substring(4).trimLeft();
     if (query.startsWith('n ')) return query.substring(2).trimLeft();
+    if (query.startsWith('o ')) return query.substring(2).trimLeft();
+    if (query.startsWith('s ')) return query.substring(2).trimLeft();
     if (query.startsWith('b ')) return query.substring(2).trimLeft();
     if (query.startsWith('/') ||
         query.startsWith('.') ||

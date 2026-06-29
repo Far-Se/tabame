@@ -54,6 +54,7 @@ Future<void> startScreenDraw() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppStartup.initialize();
   await Boxes.registerBoxes(justLoad: true);
+  checkThemeChange();
 
   // Use virtual desktop size so the initial window is large enough for all monitors.
   // setupOverlay() will reposition it precisely after HWND is known.
@@ -1601,7 +1602,8 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
           if (_captureStart != null &&
               _captureCurrent != null &&
               !_isLiveRegionTool(ctrl.activeTool) &&
-              ctrl.activeTool != DrawTool.magnifier)
+              ctrl.activeTool != DrawTool.magnifier &&
+              (ctrl.activeTool != DrawTool.imageDraw || _regionSnapshotReady))
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(

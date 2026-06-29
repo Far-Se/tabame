@@ -4,7 +4,9 @@ import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
 
 import '../../../models/win32/window.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
+import '../../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../../../widgets/itzy/quickmenu/button_steam.dart';
 import '../result/result_item_bookmark.dart';
 import 'launcher_result.dart';
 
@@ -21,6 +23,8 @@ class LauncherResultExecutor {
     required this.onOpenBrowserTab,
     required this.onOpenBookmark,
     required this.onOpenNotion,
+    required this.onOpenObsidian,
+    required this.onOpenSteam,
     required this.onRunAction,
   });
 
@@ -32,6 +36,8 @@ class LauncherResultExecutor {
   final void Function(BrowserTab browserTab) onOpenBrowserTab;
   final void Function(BookmarkSearchResult result) onOpenBookmark;
   final void Function(NotionResult result) onOpenNotion;
+  final void Function(ObsidianNote result) onOpenObsidian;
+  final void Function(SteamGame result) onOpenSteam;
   final void Function(QuickActionMenuEntry action) onRunAction;
 
   void execute(LauncherSearchResultItem result) {
@@ -58,6 +64,10 @@ class LauncherResultExecutor {
         onOpenNotion(notionResult);
       case LauncherBookmarkResult():
         return;
+      case LauncherObsidianResult(obsidianResult: final ObsidianNote note):
+        onOpenObsidian(note);
+      case LauncherSteamResult(steamResult: final SteamGame game):
+        onOpenSteam(game);
       case LauncherActionResult(quickAction: final QuickActionMenuEntry quickAction):
         onRunAction(quickAction);
       case LauncherUtilityResult():

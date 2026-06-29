@@ -383,7 +383,7 @@ class QuickMenuState extends State<QuickMenu>
       tryPop = true;
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
-      if (mounted) setState(() {});
+      // if (mounted) setState(() {});
       SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
       // EmptyWorkingSet(GetCurrentProcess());
     }

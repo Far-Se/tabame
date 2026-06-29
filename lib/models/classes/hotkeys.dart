@@ -912,7 +912,14 @@ class HotKeyInfo {
         await Future<void>.delayed(const Duration(milliseconds: 160));
       }
 
-      Globals.focusedRect = await getFocusedElementCaretRect();
+      if (Debug.enabled) {
+        final CaretDebugInfo caretDebug = await getFocusedElementCaretRectDebug();
+        Debug.add("OpenEmojiPicker caret debug: $caretDebug");
+        print(caretDebug);
+        Globals.focusedRect = caretDebug.best;
+      } else {
+        Globals.focusedRect = await getFocusedElementCaretRect();
+      }
       await QuickMenuFunctions.toggleQuickMenu(
           visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
     },

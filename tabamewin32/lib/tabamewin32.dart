@@ -426,6 +426,15 @@ Future<WinRect> getFocusedElementCaretRect() async {
   return WinRect.fromMap(result);
 }
 
+/// Same detection as [getFocusedElementCaretRect], but returns every layer's
+/// result individually instead of only the first one that fired. Useful for
+/// debugging apps where the caret rect comes out wrong/random (e.g. why the
+/// emoji picker opens at an odd spot in a given app).
+Future<CaretDebugInfo> getFocusedElementCaretRectDebug() async {
+  final Map<dynamic, dynamic> result = await tabameWin32MethodChannel.invokeMethod('getFocusedElementCaretRectDebug');
+  return CaretDebugInfo.fromMap(result);
+}
+
 Future<String> getHwndName(int hWnd) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'hWnd': hWnd,
@@ -474,6 +483,12 @@ class WinRect {
   int get width => right - left;
   int get height => bottom - top;
 
+  /// True for the all-zero sentinel returned when no caret/element rect
+  /// could be determined (e.g. [getFocusedElementCaretRect] found nothing
+  /// trustworthy). Callers should fall back to something else (mouse
+  /// position, last window rect, etc.) rather than positioning on this.
+  bool get isEmpty => left == 0 && top == 0 && right == 0 && bottom == 0;
+
   factory WinRect.fromMap(Map<dynamic, dynamic> map) {
     return WinRect(
       left: map['left'] as int? ?? 0,
@@ -485,6 +500,185 @@ class WinRect {
 
   @override
   String toString() => 'WinRect(left: $left, top: $top, right: $right, bottom: $bottom)';
+}
+
+/// The outcome of a single caret-detection strategy: whether it produced a
+/// rect at all, and what that rect was (zeroed if [found] is false).
+class CaretLayerResult {
+  bool found;
+  WinRect rect;
+
+  CaretLayerResult({required this.found, required this.rect});
+
+  factory CaretLayerResult.fromMap(Map<dynamic, dynamic> map) {
+    return CaretLayerResult(
+      found: map['found'] as bool? ?? false,
+      rect: WinRect.fromMap(map['rect'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{}),
+    );
+  }
+
+  @override
+  String toString() => found ? rect.toString() : 'not found';
+}
+
+/// Diagnostic breakdown of [getFocusedElementCaretRectDebug]: the result of
+/// every detection layer tried, plus which one was actually chosen as the
+/// "best" rect (the same value [getFocusedElementCaretRect] would return).
+///
+/// Layers, in the priority order they're tried:
+/// 1. [win32Caret] — `GetGUIThreadInfo().rcCaret`. Works for classic Win32
+///    edit/richedit controls regardless of which process owns them.
+/// 2. [accessibleCaret] — legacy MSAA `IAccessible` `OBJID_CARET`. Covers
+///    older/non-UIA-aware controls.
+/// 3. [uiaCaretRange] — UI Automation `TextPattern2.GetCaretRange`. The
+///    "proper" modern API; works in UWP/WinUI/most Win32 apps that implement
+///    UIA text patterns.
+/// 4. [uiaSelection] — UIA `TextPattern.GetSelection` bounding rect, used
+///    when there's no dedicated caret range but the (possibly empty)
+///    selection range still marks the caret position.
+/// 5. [imeCandidate] — `ImmGetCandidateWindow` on the focused window. This is
+///    the IMM32 channel apps set (via `ImmSetCandidateWindow`) specifically
+///    to anchor IME popup UI — candidate lists, and the system's own Win+.
+///    emoji panel — near the caret. Cross-platform toolkits (e.g. winit's
+///    `set_ime_cursor_area`, which GPUI-based editors like Zed are built on)
+///    call exactly this, even for apps with no other accessibility support,
+///    which is why the native emoji panel can land correctly in apps where
+///    every other layer here reports "not found".
+/// 6. [imeComposition] — `ImmGetCompositionWindow` on the focused window.
+///    A different IMM32 channel: where actively-composed (not yet committed)
+///    IME text is drawn. Useful when a field is mid IME-composition and the
+///    other layers go stale.
+/// 7. [uiaBoundingRect] — UIA bounding rect of the whole focused element.
+///    Last-resort fallback: not a caret position, just "the control is
+///    roughly here". If it ends up covering most of the focused window, the
+///    native layer treats it as untrustworthy (see [found]/[chosenLayer]) -
+///    that's UIA's generic "no accessibility support" passthrough, not a
+///    caret.
+class CaretDebugInfo {
+  CaretLayerResult win32Caret;
+  CaretLayerResult accessibleCaret;
+  CaretLayerResult uiaCaretRange;
+  CaretLayerResult uiaSelection;
+  CaretLayerResult imeCandidate;
+  CaretLayerResult imeComposition;
+  CaretLayerResult uiaBoundingRect;
+
+  /// Name of the layer that supplied [best], or `null` if none fired.
+  String? chosenLayer;
+
+  /// Whether any layer fired.
+  bool found;
+
+  /// The rect that [getFocusedElementCaretRect] would have returned.
+  WinRect best;
+
+  /// Whether `IUIAutomation.GetFocusedElement()` returned anything at all.
+  bool hasFocusedElement;
+
+  /// `CurrentName` of the focused UIA element, if any.
+  String elementName;
+
+  /// `CurrentClassName` of the focused UIA element, if any (often the native
+  /// Win32 window class for apps with no real accessibility implementation).
+  String elementClassName;
+
+  /// Human-readable `CurrentControlType` of the focused UIA element (e.g.
+  /// "Edit", "Document", "Pane"). A bare "Pane"/"Window" with none of the
+  /// `supports*` flags below set is the generic passthrough every HWND gets
+  /// for free — i.e. "this app implements no accessibility API".
+  String elementControlType;
+
+  /// Whether the focused element supports `TextPattern` (selection/caret via
+  /// [uiaSelection]).
+  bool supportsTextPattern;
+
+  /// Whether the focused element supports `TextPattern2` (caret via
+  /// [uiaCaretRange]).
+  bool supportsTextPattern2;
+
+  /// Whether the focused element supports `ValuePattern` (no caret info,
+  /// just the control's current value as a whole).
+  bool supportsValuePattern;
+
+  /// Whether the focused element supports the UIA-to-MSAA bridge
+  /// (`LegacyIAccessiblePattern`) — a different path to old-style
+  /// `IAccessible` data than calling `AccessibleObjectFromWindow` directly.
+  bool supportsLegacyIAccessible;
+
+  CaretDebugInfo({
+    required this.win32Caret,
+    required this.accessibleCaret,
+    required this.uiaCaretRange,
+    required this.uiaSelection,
+    required this.imeCandidate,
+    required this.imeComposition,
+    required this.uiaBoundingRect,
+    required this.chosenLayer,
+    required this.found,
+    required this.best,
+    required this.hasFocusedElement,
+    required this.elementName,
+    required this.elementClassName,
+    required this.elementControlType,
+    required this.supportsTextPattern,
+    required this.supportsTextPattern2,
+    required this.supportsValuePattern,
+    required this.supportsLegacyIAccessible,
+  });
+
+  factory CaretDebugInfo.fromMap(Map<dynamic, dynamic> map) {
+    CaretLayerResult layer(String key) =>
+        CaretLayerResult.fromMap(map[key] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{});
+
+    final String chosen = map['chosenLayer'] as String? ?? '';
+    return CaretDebugInfo(
+      win32Caret: layer('win32Caret'),
+      accessibleCaret: layer('accessibleCaret'),
+      uiaCaretRange: layer('uiaCaretRange'),
+      uiaSelection: layer('uiaSelection'),
+      imeCandidate: layer('imeCandidate'),
+      imeComposition: layer('imeComposition'),
+      uiaBoundingRect: layer('uiaBoundingRect'),
+      chosenLayer: chosen.isEmpty ? null : chosen,
+      found: map['found'] as bool? ?? false,
+      best: WinRect.fromMap(map['best'] as Map<dynamic, dynamic>? ?? const <dynamic, dynamic>{}),
+      hasFocusedElement: map['hasFocusedElement'] as bool? ?? false,
+      elementName: map['elementName'] as String? ?? '',
+      elementClassName: map['elementClassName'] as String? ?? '',
+      elementControlType: map['elementControlType'] as String? ?? '',
+      supportsTextPattern: map['supportsTextPattern'] as bool? ?? false,
+      supportsTextPattern2: map['supportsTextPattern2'] as bool? ?? false,
+      supportsValuePattern: map['supportsValuePattern'] as bool? ?? false,
+      supportsLegacyIAccessible: map['supportsLegacyIAccessible'] as bool? ?? false,
+    );
+  }
+
+  /// All layers keyed by name, in priority order — handy for iterating/logging.
+  Map<String, CaretLayerResult> get layers => <String, CaretLayerResult>{
+        'Win32Caret': win32Caret,
+        'AccessibleCaret': accessibleCaret,
+        'UIACaretRange': uiaCaretRange,
+        'UIASelection': uiaSelection,
+        'ImeCandidate': imeCandidate,
+        'ImeComposition': imeComposition,
+        'UIABoundingRect': uiaBoundingRect,
+      };
+
+  @override
+  String toString() {
+    final String layersStr =
+        layers.entries.map((MapEntry<String, CaretLayerResult> e) => '${e.key}: ${e.value}').join('\n');
+    final String patterns = <String>[
+      if (supportsTextPattern) 'TextPattern',
+      if (supportsTextPattern2) 'TextPattern2',
+      if (supportsValuePattern) 'ValuePattern',
+      if (supportsLegacyIAccessible) 'LegacyIAccessible',
+    ].join(', ');
+    final String element = hasFocusedElement
+        ? "name: '$elementName', class: '$elementClassName', controlType: $elementControlType, patterns: [${patterns.isEmpty ? 'none' : patterns}]"
+        : 'none';
+    return 'CaretDebugInfo(chosen: $chosenLayer, best: $best, focusedElement: {$element}, layers: \n{$layersStr})';
+  }
 }
 
 class MonitorCapture {
@@ -1943,8 +2137,7 @@ class BrowserTab {
 class BrowserTabs {
   /// Returns every open tab across all running Chromium-based browser windows.
   static Future<List<BrowserTab>> getTabs() async {
-    final List<Object?>? raw =
-        await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getBrowserTabs');
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getBrowserTabs');
     if (raw == null) return const <BrowserTab>[];
     return raw.whereType<Map<Object?, Object?>>().map(BrowserTab.fromMap).toList(growable: false);
   }
@@ -1958,6 +2151,73 @@ class BrowserTabs {
         'hWnd': hWnd,
         'index': index,
         'title': title,
+      },
+    );
+    return result ?? false;
+  }
+}
+
+/// A connected display along with its HDR (advanced color) capability/state.
+class HDRDisplay {
+  /// Low part of the adapter LUID — identifies the display together with
+  /// [adapterIdHigh] and [id] across re-queries.
+  final int adapterIdLow;
+
+  /// High part of the adapter LUID.
+  final int adapterIdHigh;
+
+  /// Target id of the display on its adapter.
+  final int id;
+
+  /// Friendly monitor name (e.g. "DELL U2720Q"), or "Display" if unavailable.
+  final String name;
+
+  /// Whether the display reports HDR (advanced color) support.
+  final bool supportsHDR;
+
+  /// Whether HDR is currently enabled on the display.
+  final bool isHDREnabled;
+
+  const HDRDisplay({
+    required this.adapterIdLow,
+    required this.adapterIdHigh,
+    required this.id,
+    required this.name,
+    required this.supportsHDR,
+    required this.isHDREnabled,
+  });
+
+  factory HDRDisplay.fromMap(Map<Object?, Object?> map) {
+    return HDRDisplay(
+      adapterIdLow: (map['adapterIdLow'] as int?) ?? 0,
+      adapterIdHigh: (map['adapterIdHigh'] as int?) ?? 0,
+      id: (map['id'] as int?) ?? 0,
+      name: (map['name'] as String?) ?? 'Display',
+      supportsHDR: (map['supportsHDR'] as bool?) ?? false,
+      isHDREnabled: (map['isHDREnabled'] as bool?) ?? false,
+    );
+  }
+}
+
+/// Enumerate displays and toggle HDR via the Win32 DisplayConfig API.
+class HDR {
+  /// Returns every active display with its HDR support/state.
+  static Future<List<HDRDisplay>> getDisplays() async {
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getHDRDisplays');
+    if (raw == null) return const <HDRDisplay>[];
+    return raw.whereType<Map<Object?, Object?>>().map(HDRDisplay.fromMap).toList(growable: false);
+  }
+
+  /// Enables or disables HDR for the display identified by [display].
+  /// Returns true when the change was applied successfully.
+  static Future<bool> setState(HDRDisplay display, bool enable) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'setHDRState',
+      <String, dynamic>{
+        'adapterIdLow': display.adapterIdLow,
+        'adapterIdHigh': display.adapterIdHigh,
+        'id': display.id,
+        'enable': enable,
       },
     );
     return result ?? false;

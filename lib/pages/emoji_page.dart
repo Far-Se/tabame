@@ -91,10 +91,11 @@ class _EmojiPageState extends State<EmojiPage> with QuickMenuTriggers, WindowLis
 
       await windowManager.setMinimumSize(const Size(320, 420));
       await windowManager.setSize(const Size(_windowWidth, _windowHeight));
-
+      // final CaretDebugInfo result = await getFocusedElementCaretRectDebug();
+      // print(result);
       focusedRect = Globals.focusedRect ?? await getFocusedElementCaretRect();
       // focusedRect = await getFocusedElementRect();
-      if (focusedRect.left < 0) {
+      if (focusedRect.left < 0 || focusedRect.isEmpty) {
         final List<int> mouse = WinUtils.getMousePosXY();
         focusedRect.left = mouse[0];
         focusedRect.top = mouse[1] - 30;

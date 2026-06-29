@@ -269,6 +269,7 @@ class Boxes {
     mediaControls = pref.getStringList("mediaControls") ??
         <String>["Spotify.exe", "chrome.exe", "firefox.exe", "brave.exe", "Music.UI.exe"];
 
+    checkThemeChange();
     if (user.previewTheme) return;
     if (justLoad) return;
 

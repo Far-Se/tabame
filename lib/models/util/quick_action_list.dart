@@ -22,10 +22,12 @@ import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
+import '../../widgets/itzy/quickmenu/button_edit_color.dart';
 import '../../widgets/itzy/quickmenu/button_emoji.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot.dart';
 import '../../widgets/itzy/quickmenu/button_fancyshot_browser.dart';
 import '../../widgets/itzy/quickmenu/button_folder_icon.dart';
+import '../../widgets/itzy/quickmenu/button_hdr.dart';
 import '../../widgets/itzy/quickmenu/button_hide_desktop_files.dart';
 // import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
 import '../../widgets/itzy/quickmenu/button_image_modifier.dart';
@@ -36,6 +38,7 @@ import '../../widgets/itzy/quickmenu/button_menu_design.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
 import '../../widgets/itzy/quickmenu/button_music_player.dart';
 import '../../widgets/itzy/quickmenu/button_notion.dart';
+import '../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../widgets/itzy/quickmenu/button_ocr.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
@@ -45,6 +48,7 @@ import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
+import '../../widgets/itzy/quickmenu/button_steam.dart';
 import '../../widgets/itzy/quickmenu/button_subscription.dart';
 import '../../widgets/itzy/quickmenu/button_task_manager.dart';
 import '../../widgets/itzy/quickmenu/button_timers.dart';
@@ -178,6 +182,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.description_rounded,
     widget: () => const NotionButton(),
   ),
+  "ObsidianButton": QuickAction(
+    icon: Icons.menu_book_rounded,
+    widget: () => const ObsidianButton(),
+  ),
   "WallpapersButton": QuickAction(
     icon: Icons.photo_library_outlined,
     widget: () => const WallpapersButton(),
@@ -229,6 +237,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "ColorPickerInstantButton": QuickAction(
     icon: Icons.colorize_outlined,
     widget: () => const ColorPickerInstantButton(),
+  ),
+  "EditColorButton": QuickAction(
+    icon: Icons.edit_rounded,
+    widget: () => const EditColorButton(),
   ),
   "ScreenDrawButton": QuickAction(
     icon: Icons.draw_outlined,
@@ -334,5 +346,13 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "AdbButton": QuickAction(
     icon: Icons.android,
     widget: () => const AdbButton(),
+  ),
+  "SteamButton": QuickAction(
+    icon: Icons.sports_esports_rounded,
+    widget: () => const SteamButton(),
+  ),
+  "HDRButton": QuickAction(
+    icon: Icons.hdr_on_rounded,
+    widget: () => const HDRButton(),
   ),
 };
