@@ -49,6 +49,7 @@ import 'launcher/launcher_design.dart';
 import 'launcher/launcher_design_builder.dart';
 import 'launcher/core/launcher_result_executor.dart';
 import 'launcher/services/launcher_app_catalog_service.dart';
+import 'launcher/services/windows_terminal_service.dart';
 
 export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
 
@@ -303,6 +304,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       caption: 'Steam Games',
       prefix: 's ',
       icon: Icons.sports_esports_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 't ',
+      caption: 'Terminal Profiles',
+      prefix: 't ',
+      icon: Icons.terminal_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
@@ -931,6 +938,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         break;
       case LauncherSearchMode.steamOnly:
         _handleSteamSearch(context);
+        break;
+      case LauncherSearchMode.terminalOnly:
+        _handleTerminalSearch(context);
         break;
       case LauncherSearchMode.timerCommand:
         _handleTimerCommand(context);
@@ -1782,6 +1792,52 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         context.setResults(<LauncherSearchResultItem>[], isSearching: false);
       }
     }
+  }
+
+  Future<void> _handleTerminalSearch(LauncherSearchContext context) async {
+    try {
+      final List<TerminalProfile> profiles = await WindowsTerminalService.scan();
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+
+      if (profiles.isEmpty) {
+        context.setResults(<LauncherSearchResultItem>[
+          const LauncherSearchResultItem.info(LauncherInfoResult(
+            id: 'terminal-none',
+            title: 'No Windows Terminal profiles found',
+            subtitle: 'Install Windows Terminal or check its settings.json',
+            icon: Icons.terminal_rounded,
+          )),
+        ], isSearching: false);
+        return;
+      }
+
+      final List<TerminalProfile> filtered = WindowsTerminalService.filter(profiles, context.normalizedQuery);
+      final List<LauncherSearchResultItem> results = filtered
+          .map((TerminalProfile profile) => LauncherSearchResultItem.quickAction(_buildTerminalQuickAction(profile)))
+          .toList(growable: false);
+      context.setResults(results, isSearching: false);
+    } catch (_) {
+      if (context.isActiveSearch(context.requestId, context.query)) {
+        context.setResults(<LauncherSearchResultItem>[], isSearching: false);
+      }
+    }
+  }
+
+  QuickActionMenuEntry _buildTerminalQuickAction(TerminalProfile profile) {
+    final String? commandline = profile.commandline?.trim();
+    return _buildFunctionAction(
+      id: 'terminal:${profile.guid.isNotEmpty ? profile.guid : profile.name}',
+      title: profile.name,
+      subtitle: commandline != null && commandline.isNotEmpty ? commandline : 'Open in Windows Terminal',
+      icon: Icons.terminal_rounded,
+      searchTerms: <String>['terminal', 'wt', profile.name],
+      onExecute: () => _launchTerminalProfile(profile),
+    );
+  }
+
+  void _launchTerminalProfile(TerminalProfile profile) {
+    WinUtils.open('wt.exe', arguments: profile.launchArguments, parseParamaters: false);
+    _finishLauncherFunctionExecution();
   }
 
   // bool _isActiveSearch(int requestId, String query, {bool trimLeft = false}) {

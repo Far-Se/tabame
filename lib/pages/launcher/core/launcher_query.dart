@@ -50,6 +50,7 @@ class LauncherQuery {
     if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
     if (query.startsWith('o ')) return LauncherSearchMode.obsidianOnly;
     if (query.startsWith('s ')) return LauncherSearchMode.steamOnly;
+    if (query.startsWith('t ')) return LauncherSearchMode.terminalOnly;
     if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
     if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
     if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
@@ -67,6 +68,7 @@ class LauncherQuery {
     if (query.startsWith('n ')) return query.substring(2).trimLeft();
     if (query.startsWith('o ')) return query.substring(2).trimLeft();
     if (query.startsWith('s ')) return query.substring(2).trimLeft();
+    if (query.startsWith('t ')) return query.substring(2).trimLeft();
     if (query.startsWith('b ')) return query.substring(2).trimLeft();
     if (query.startsWith('/') ||
         query.startsWith('.') ||
