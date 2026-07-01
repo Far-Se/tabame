@@ -271,12 +271,12 @@ class VaultsWidgetState extends State<VaultsWidget> with SingleTickerProviderSta
                     accent: accent,
                     onSurface: onSurface,
                     onTap: () async {
-                      final VaultData? data = await VaultManager.decryptVault(name, "n0p@s5");
+                      final VaultData? data = await VaultManager.decryptVault(name, "");
                       if (data != null) {
                         setState(() {
                           _selectedVaultName = name;
                           _decryptedData = data;
-                          _currentPassword = "n0p@s5";
+                          _currentPassword = "";
                         });
                       } else {
                         setState(() => _selectedVaultName = name);
@@ -467,8 +467,8 @@ class VaultsWidgetState extends State<VaultsWidget> with SingleTickerProviderSta
   void _createVault() async {
     if (_nameController.text.isEmpty) return;
 
-    final String password = _passController.text.isEmpty ? "n0p@s5" : _passController.text;
-    final String confirm = _passConfirmController.text.isEmpty ? "n0p@s5" : _passConfirmController.text;
+    final String password = _passController.text;
+    final String confirm = _passConfirmController.text;
 
     if (password != confirm) {
       setState(() => _errorMessage = "Passwords do not match!");
@@ -487,7 +487,7 @@ class VaultsWidgetState extends State<VaultsWidget> with SingleTickerProviderSta
   }
 
   void _unlockVault() async {
-    final String password = _passController.text.isEmpty ? "n0p@s5" : _passController.text;
+    final String password = _passController.text;
     final VaultData? data = await VaultManager.decryptVault(_selectedVaultName!, password);
     if (data == null) {
       setState(() => _errorMessage = "Incorrect password or corrupt vault!");

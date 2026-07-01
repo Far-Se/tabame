@@ -27,6 +27,11 @@ class MusicServerManager {
   static List<MusicServerConfig> _configs = <MusicServerConfig>[];
   static String? _activeConfigId;
   static bool _isConnected = false;
+
+  /// Human-readable reason the last [setActiveServer] attempt failed, or null on
+  /// success. Surfaced to the user so a broken Subsonic/Jellyfin connection can
+  /// explain itself instead of silently returning an empty library.
+  static String? lastConnectionError;
   static final AudioPlayer player = AudioPlayer();
   static List<MusicItem> _queue = <MusicItem>[];
   static bool _listenersSetup = false;
@@ -248,69 +253,155 @@ class MusicServerManager {
 
   static Future<bool> setActiveServer(MusicServerConfig config) async {
     if (config.id == localSourceId) return setLocalActive();
+    lastConnectionError = null;
     try {
-      String url = config.url;
-      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
-      if (url.endsWith('/rest')) url = url.substring(0, url.length - 5);
+      final String baseUrl = _normalizeServerUrl(config.url);
+      debugPrint("MusicServerManager: Testing connection to $baseUrl...");
 
-      final String salt = createSalt();
-      final String token = createToken(config.password, salt);
+      _PingResult result = await _pingServer(baseUrl, config);
 
-      debugPrint("MusicServerManager: Testing connection to $url...");
-
-      // Manual ping to avoid package crash on empty response
-      final String pingUrl = '$url/rest/ping.view?u=${config.username}&t=$token&s=$salt&c=Tabame&v=1.16.1&f=json';
-      final http.Response response = await http.get(Uri.parse(pingUrl));
-
-      final String? contentType = response.headers['content-type'];
-      debugPrint("MusicServerManager: Status: ${response.statusCode}, Content-Type: $contentType");
-
-      if (response.statusCode == 404) {
-        debugPrint(
-            "MusicServerManager: 404 Not Found. If using Jellyfin, ensure the Subsonic plugin is installed and try adding /sb to your URL.");
-        return false;
-      }
-
-      if (response.statusCode != 200) {
-        debugPrint("MusicServerManager: Server returned status ${response.statusCode}");
-        return false;
-      }
-
-      if (response.body.trim().isEmpty) {
-        debugPrint("MusicServerManager: Server returned empty body. Is the Subsonic API enabled?");
-        return false;
-      }
-
-      if (contentType != null &&
-          !contentType.contains('application/json') &&
-          !contentType.contains('text/javascript')) {
-        debugPrint("MusicServerManager: Expected JSON but got $contentType. Is this the correct URL?");
-        if (response.body.contains('<html') || response.body.contains('<!DOCTYPE html')) {
-          debugPrint("MusicServerManager: Received HTML response. This might be a login page or an error page.");
+      // Jellyfin only speaks Subsonic through its third-party "Subsonic API" plugin,
+      // which is commonly mounted under /sb. Auto-probe that path before giving up.
+      if (!result.ok && result.shouldRetryWithSb && !baseUrl.endsWith('/sb')) {
+        final _PingResult sbResult = await _pingServer('$baseUrl/sb', config);
+        if (sbResult.ok) {
+          await _rewriteServerUrl(config.id, '$baseUrl/sb');
+          result = sbResult;
         }
-        return false;
       }
 
-      final dynamic decoded = jsonDecode(response.body);
-      final dynamic subResponse = decoded['subsonic-response'];
-
-      if (subResponse != null && subResponse['status'] == 'ok') {
+      if (result.ok) {
         _activeConfigId = config.id;
         _isConnected = true;
+        lastConnectionError = null;
         await _saveActiveSourceId(config.id);
         debugPrint("MusicServerManager: Connected successfully!");
         return true;
       }
 
-      debugPrint("MusicServerManager: Ping failed with response: ${response.body}");
+      _isConnected = false;
+      lastConnectionError = result.error;
+      debugPrint("MusicServerManager: Connection failed: ${result.error}");
       return false;
     } catch (e, stack) {
       debugPrint("MusicServerManager.setActiveServer error: $e");
       debugPrint(stack.toString());
       _isConnected = false;
       _activeConfigId = null;
+      lastConnectionError = _friendlyNetworkError(e);
       return false;
     }
+  }
+
+  static String _normalizeServerUrl(String raw) {
+    String url = raw.trim();
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    if (url.endsWith('/rest')) url = url.substring(0, url.length - 5);
+    return url;
+  }
+
+  /// Pings a Subsonic-compatible endpoint and classifies the outcome into a
+  /// user-readable message. Network/socket failures are rethrown to the caller.
+  static Future<_PingResult> _pingServer(String baseUrl, MusicServerConfig config) async {
+    final Uri uri = Uri.parse('$baseUrl/rest/ping.view').replace(queryParameters: <String, String>{
+      'u': config.username,
+      ..._authParams(config),
+      'c': 'Tabame',
+      'v': '1.16.1',
+      'f': 'json',
+    });
+
+    final http.Response response = await http.get(uri).timeout(const Duration(seconds: 12));
+    final String? contentType = response.headers['content-type'];
+    debugPrint("MusicServerManager: ping $baseUrl -> ${response.statusCode} ($contentType)");
+
+    if (response.statusCode == 404) {
+      return _PingResult.fail(
+        'No Subsonic API found at $baseUrl (404). If this is Jellyfin, install the "Subsonic API" '
+        'plugin and restart the server — it is usually served under /sb.',
+        retryWithSb: true,
+      );
+    }
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      return _PingResult.fail('Server refused the login (HTTP ${response.statusCode}). Check the username and password.');
+    }
+    if (response.statusCode != 200) {
+      return _PingResult.fail('Server returned HTTP ${response.statusCode}.');
+    }
+
+    final String body = response.body.trim();
+    if (body.isEmpty) {
+      return _PingResult.fail('Server returned an empty response. Is the Subsonic API enabled?', retryWithSb: true);
+    }
+
+    final bool looksJson =
+        (contentType != null && (contentType.contains('json') || contentType.contains('text/javascript'))) ||
+            body.startsWith('{');
+    if (!looksJson || body.startsWith('<')) {
+      final bool html = body.contains('<html') || body.contains('<!DOCTYPE');
+      return _PingResult.fail(
+        html
+            ? 'Server returned a web page instead of the Subsonic API. Double-check the URL and port.'
+            : 'Server replied in an unexpected format${contentType == null ? '' : ' ($contentType)'}.',
+        retryWithSb: true,
+      );
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(body);
+    } catch (_) {
+      return _PingResult.fail('Could not parse the server response as JSON.', retryWithSb: true);
+    }
+
+    final dynamic sub = decoded is Map ? decoded['subsonic-response'] : null;
+    if (sub == null) {
+      return _PingResult.fail('Response was not a Subsonic reply. Is this a Subsonic-compatible server?',
+          retryWithSb: true);
+    }
+    if (sub['status'] == 'ok') return _PingResult.success();
+
+    // status == "failed": surface the server's own error, plus a Jellyfin hint on auth codes.
+    final dynamic err = sub['error'];
+    final int? code = err is Map ? (err['code'] is int ? err['code'] as int : int.tryParse('${err['code']}')) : null;
+    final String? serverMsg = err is Map && err['message'] != null ? err['message'].toString() : null;
+    final bool authError = code == 40 || code == 41 || code == 44 || code == 45;
+    final String hint = authError
+        ? ' If this is Jellyfin, its Subsonic plugin may not support the token login Tabame uses '
+            '(Jellyfin stores only hashed passwords).'
+        : '';
+    return _PingResult.fail(
+      'Server rejected the connection${serverMsg != null ? ': $serverMsg' : ''}'
+      '${code != null ? ' (code $code)' : ''}.$hint',
+    );
+  }
+
+  static Future<void> _rewriteServerUrl(String id, String newUrl) async {
+    final int idx = _configs.indexWhere((MusicServerConfig e) => e.id == id);
+    if (idx == -1) return;
+    final MusicServerConfig old = _configs[idx];
+    _configs[idx] = MusicServerConfig(
+      id: old.id,
+      name: old.name,
+      url: newUrl,
+      username: old.username,
+      password: old.password,
+      type: old.type,
+      isDefault: old.isDefault,
+    );
+    await saveConfigs();
+  }
+
+  static String _friendlyNetworkError(Object e) {
+    if (e is TimeoutException) {
+      return 'The server did not respond in time. Check the URL and that the server is reachable.';
+    }
+    if (e is SocketException) return 'Could not reach the server. Check the URL, port, and your network.';
+    if (e is HandshakeException) return 'TLS handshake failed. Check http vs https and the certificate.';
+    if (e is FormatException) return 'The server sent a malformed response.';
+    return 'Connection failed: $e';
   }
 
   static Future<void> resetPlayback() async {
@@ -365,17 +456,11 @@ class MusicServerManager {
     final MusicServerConfig? config = _configs.firstWhereOrNull((MusicServerConfig e) => e.id == _activeConfigId);
     if (config == null) return "";
 
-    String url = config.url;
-    if (url.endsWith('/')) url = url.substring(0, url.length - 1);
-    if (url.endsWith('/rest')) url = url.substring(0, url.length - 5);
-
-    final String salt = createSalt();
-    final String token = createToken(config.password, salt);
+    final String url = _normalizeServerUrl(config.url);
 
     final Uri uri = Uri.parse("$url/rest/$method.view").replace(queryParameters: <String, String>{
       'u': config.username,
-      't': token,
-      's': salt,
+      ..._authParams(config),
       'c': 'Tabame',
       'v': '1.16.1',
       'f': 'json',
@@ -972,4 +1057,35 @@ class MusicServerManager {
   static String createToken(String password, String salt) {
     return md5.convert(utf8.encode(password + salt)).toString();
   }
+
+  /// Builds the Subsonic authentication query parameters for [config].
+  ///
+  /// Subsonic/Navidrome use salted token auth (`t`/`s`), which is safe to send
+  /// over any transport. Jellyfin's Subsonic plugin can't validate that token
+  /// (Jellyfin stores only hashed passwords), so for [MusicServerType.jellyfin]
+  /// we fall back to legacy hex-encoded password auth (`p=enc:...`). That is
+  /// effectively cleartext on the wire — the UI warns users to prefer https.
+  static Map<String, String> _authParams(MusicServerConfig config) {
+    if (config.type == MusicServerType.jellyfin) {
+      return <String, String>{'p': 'enc:${_hexEncode(config.password)}'};
+    }
+    final String salt = createSalt();
+    return <String, String>{'t': createToken(config.password, salt), 's': salt};
+  }
+
+  static String _hexEncode(String value) {
+    return utf8.encode(value).map((int b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+}
+
+/// Outcome of a single Subsonic ping attempt. [shouldRetryWithSb] flags failures
+/// that are consistent with Jellyfin's Subsonic plugin living under /sb.
+class _PingResult {
+  const _PingResult._(this.ok, this.error, this.shouldRetryWithSb);
+  factory _PingResult.success() => const _PingResult._(true, null, false);
+  factory _PingResult.fail(String error, {bool retryWithSb = false}) => _PingResult._(false, error, retryWithSb);
+
+  final bool ok;
+  final String? error;
+  final bool shouldRetryWithSb;
 }

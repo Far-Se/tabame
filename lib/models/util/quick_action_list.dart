@@ -63,6 +63,7 @@ import '../../widgets/itzy/quickmenu/button_virtual_desktop.dart';
 import '../../widgets/itzy/quickmenu/button_wallpapers.dart';
 import '../../widgets/itzy/quickmenu/button_weather.dart';
 import '../../widgets/itzy/quickmenu/button_workspaces.dart';
+import '../../widgets/itzy/quickmenu/button_ytdlp.dart';
 import '../../widgets/itzy/quickmenu/toggle_windows_theme.dart';
 
 class QuickAction {
@@ -354,5 +355,9 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "HDRButton": QuickAction(
     icon: Icons.hdr_on_rounded,
     widget: () => const HDRButton(),
+  ),
+  "YtDlpButton": QuickAction(
+    icon: Icons.download_for_offline_outlined,
+    widget: () => const YtDlpButton(),
   ),
 };

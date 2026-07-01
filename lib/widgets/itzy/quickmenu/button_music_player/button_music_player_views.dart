@@ -1457,8 +1457,15 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             ),
           ),
           const SizedBox(height: 16),
-          const _SectionLabel(
-              icon: Icons.add_link_rounded, label: "Add Subsonic type Server", count: 0, hideCount: true),
+          const _SectionLabel(icon: Icons.add_link_rounded, label: "Add Music Server", count: 0, hideCount: true),
+          const SizedBox(height: 8),
+          const _InlinePanel(
+            icon: Icons.info_outline_rounded,
+            title: "Jellyfin / Navidrome compatibility",
+            subtitle: "Tabame connects over the Subsonic API. For Navidrome or Subsonic, keep Subsonic mode. "
+                "For Jellyfin, install its \"Subsonic API\" plugin and pick Jellyfin mode — Tabame auto-probes the "
+                "/sb path and uses plaintext auth, since Jellyfin can't verify Subsonic token logins.",
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(10),
@@ -1478,6 +1485,8 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                             _buildTextField(_passController, "Password", Icons.key_rounded, accent, isPassword: true)),
                   ],
                 ),
+                const SizedBox(height: 8),
+                _buildAuthModeSelector(accent),
                 const SizedBox(height: 10),
                 InkWell(
                   onTap: _addServer,
@@ -1494,7 +1503,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                       children: <Widget>[
                         Icon(Icons.add_rounded, size: 16, color: accent),
                         const SizedBox(width: 6),
-                        Text("Add Subsonic type Server",
+                        Text("Add ${_newServerType == MusicServerType.jellyfin ? 'Jellyfin' : 'Subsonic'} Server",
                             style: TextStyle(
                                 fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w800, color: accent)),
                       ],
@@ -1512,7 +1521,12 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
   Future<void> _activateServer(MusicServerConfig config) async {
     setState(() => _loading = true);
     final bool success = await MusicServerManager.setActiveServer(config);
-    _showInfo(success ? "Switched to ${config.name}." : "Failed to connect to ${config.name}.");
+    _showInfo(
+      success
+          ? "Switched to ${config.name}."
+          : (MusicServerManager.lastConnectionError ?? "Failed to connect to ${config.name}."),
+      duration: success ? null : 10,
+    );
     if (mounted) setState(() => _loading = false);
     if (success) unawaited(_refresh());
   }
@@ -1623,7 +1637,10 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
   Future<void> _testServer(MusicServerConfig config) async {
     setState(() => _loading = true);
     final bool success = await MusicServerManager.setActiveServer(config);
-    _showInfo(success ? "Connection OK." : "Connection failed.");
+    _showInfo(
+      success ? "Connection OK." : (MusicServerManager.lastConnectionError ?? "Connection failed."),
+      duration: success ? null : 10,
+    );
     if (mounted) setState(() => _loading = false);
   }
 
@@ -1639,6 +1656,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
       url: _urlController.text.trim(),
       username: _userController.text.trim(),
       password: _passController.text,
+      type: _newServerType,
     );
     await MusicServerManager.addServer(config);
     _nameController.clear();
@@ -1647,6 +1665,95 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     _passController.clear();
     _showInfo("Added ${config.name}.");
     if (mounted) setState(() {});
+  }
+
+  Widget _buildAuthModeSelector(Color accent) {
+    final bool jellyfin = _newServerType == MusicServerType.jellyfin;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+                child: _authModeChip(
+                    label: "Subsonic", hint: "Token auth", type: MusicServerType.subsonic, accent: accent)),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _authModeChip(
+                    label: "Jellyfin", hint: "Plaintext auth", type: MusicServerType.jellyfin, accent: accent)),
+          ],
+        ),
+        if (jellyfin) ...<Widget>[
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.orangeAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  "Jellyfin mode sends your password hex-encoded — effectively cleartext. Prefer an https:// server URL.",
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize, height: 1.25, color: Colors.orangeAccent.withAlpha(220)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _authModeChip({
+    required String label,
+    required String hint,
+    required MusicServerType type,
+    required Color accent,
+  }) {
+    final bool selected = _newServerType == type;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      onTap: () => setState(() => _newServerType = type),
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected ? accent.withAlpha(24) : onSurface.withAlpha(8),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: selected ? accent.withAlpha(110) : onSurface.withAlpha(18)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+              size: 15,
+              color: selected ? accent : onSurface.withAlpha(110),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1,
+                          fontWeight: FontWeight.w800,
+                          color: selected ? accent : onSurface)),
+                  Text(hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: Design.baseFontSize - 1, color: onSurface.withAlpha(120))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildTextField(

@@ -171,6 +171,7 @@ class _MusicServerPanelState extends State<MusicServerPanel> {
   bool _localEditorVisible = false;
   bool _savedQueueAvailable = false;
   bool _restoringSavedQueue = false;
+  MusicServerType _newServerType = MusicServerType.subsonic;
   String? _infoMessage;
   Timer? _infoTimer;
   Timer? _bufferingWarningTimer;

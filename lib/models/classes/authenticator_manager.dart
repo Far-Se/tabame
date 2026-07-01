@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:encrypt/encrypt.dart';
 
+import '../util/secret_crypto.dart';
 import '../win32/win_utils.dart';
 import 'authenticator_entry.dart';
 
@@ -21,7 +21,11 @@ class AuthenticatorStorageInfo {
 }
 
 class AuthenticatorManager {
-  static const String defaultEncryptionPassword = 'encrypted';
+  /// Legacy constant key. Files used to be AES-CBC sealed with
+  /// `sha256(password)`, and the "no password" choice used this constant — which
+  /// meant the file was effectively unprotected. It is kept only so existing
+  /// files can be read and migrated onto the device key (DPAPI).
+  static const String _legacyDefaultPassword = 'encrypted';
   static String get _filePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\authenticator.json";
 
   static Future<AuthenticatorStorageInfo> getStorageInfo() async {
@@ -38,12 +42,13 @@ class AuthenticatorManager {
       final String content = await file.readAsString();
       final Object? decoded = jsonDecode(content);
       if (decoded is Map<String, dynamic> && decoded['encrypted'] == true) {
-        final List<AuthenticatorEntry>? defaultEntries =
-            await _decryptEncryptedPayload(decoded, defaultEncryptionPassword);
+        // It can be opened without prompting when it is bound to this device
+        // (DPAPI) or is a legacy default-password file.
+        final bool openableWithoutPassword = _decodeEncryptedPayload(decoded, null) != null;
         return AuthenticatorStorageInfo(
           exists: true,
           isEncrypted: true,
-          requiresPasswordPrompt: defaultEntries == null,
+          requiresPasswordPrompt: !openableWithoutPassword,
         );
       }
     } catch (_) {
@@ -73,14 +78,12 @@ class AuthenticatorManager {
       final Object? decoded = jsonDecode(content);
       if (decoded is Map<String, dynamic> && decoded['encrypted'] == true) {
         encryptedPayload = true;
-        final List<AuthenticatorEntry>? decrypted = await _decryptEncryptedPayload(
-          decoded,
-          password ?? defaultEncryptionPassword,
-        );
+        final List<AuthenticatorEntry>? decrypted = _decodeEncryptedPayload(decoded, password);
         if (decrypted == null) {
           throw const FormatException('Incorrect password or corrupt authenticator file.');
         }
         _sortEntries(decrypted);
+        await _maybeMigrateLegacy(decoded, password, decrypted);
         return decrypted;
       }
 
@@ -112,25 +115,22 @@ class AuthenticatorManager {
       await file.create(recursive: true);
     }
 
-    if (password != null) {
-      final Key key = _deriveKey(password);
-      final IV iv = IV.fromSecureRandom(16);
-      final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
-      final Encrypted encrypted = encrypter.encrypt(
-        jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList()),
-        iv: iv,
-      );
-
-      await file.writeAsString(jsonEncode(<String, dynamic>{
-        'encrypted': true,
-        'iv': iv.base64,
-        'data': encrypted.base64,
-      }));
-    } else {
+    if (password == null) {
+      // Explicitly unencrypted (the user opted out of protection).
       await file.writeAsString(
         jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList()),
       );
+      return entries;
     }
+
+    final String plaintext = jsonEncode(entries.map((AuthenticatorEntry entry) => entry.toMap()).toList());
+    // Empty password => bind to this Windows account via DPAPI instead of the
+    // old constant key; otherwise derive a key with PBKDF2 and seal with GCM.
+    final Map<String, dynamic> envelope = password.isEmpty
+        ? SecretCrypto.sealWithMachineKey(plaintext)
+        : SecretCrypto.sealWithPassword(plaintext, password);
+    envelope['encrypted'] = true; // marker preserved for getStorageInfo()/back-compat
+    await file.writeAsString(jsonEncode(envelope));
     return entries;
   }
 
@@ -162,7 +162,8 @@ class AuthenticatorManager {
   }
 
   static Future<void> encryptEntries(List<AuthenticatorEntry> entries, String password) async {
-    await saveEntries(entries, password: password.isEmpty ? defaultEncryptionPassword : password);
+    // An empty password is handled by saveEntries as "device-bound" (DPAPI).
+    await saveEntries(entries, password: password);
   }
 
   static Future<void> removeStorageFile() async {
@@ -365,19 +366,36 @@ class AuthenticatorManager {
     return Uri.decodeComponent(value.replaceAll('+', '%20')).trim();
   }
 
-  static Future<List<AuthenticatorEntry>?> _decryptEncryptedPayload(
+  static List<AuthenticatorEntry>? _decodeEncryptedPayload(
     Map<String, dynamic> payload,
-    String password,
-  ) async {
+    String? password,
+  ) {
+    String? plaintext;
+    switch (payload['kdf']) {
+      case SecretCrypto.dpapiKdf:
+        plaintext = SecretCrypto.openWithMachineKey(payload);
+        break;
+      case SecretCrypto.pbkdf2Kdf:
+        if (password == null || password.isEmpty) return null; // needs the user's password
+        plaintext = SecretCrypto.openWithPassword(payload, password);
+        break;
+      default:
+        // Legacy AES-CBC + sha256(password); the "no password" choice used a
+        // constant key, so fall back to it when none is supplied.
+        final Object? iv = payload['iv'];
+        final Object? data = payload['data'];
+        if (iv is String && data is String) {
+          plaintext = SecretCrypto.legacyDecryptCbcSha256(
+            iv,
+            data,
+            (password == null || password.isEmpty) ? _legacyDefaultPassword : password,
+          );
+        }
+    }
+
+    if (plaintext == null) return null;
     try {
-      final Key key = _deriveKey(password);
-      final IV iv = IV.fromBase64((payload['iv'] ?? '').toString());
-      final Encrypter encrypter = Encrypter(AES(key, mode: AESMode.cbc));
-      final String decrypted = encrypter.decrypt(
-        Encrypted.fromBase64((payload['data'] ?? '').toString()),
-        iv: iv,
-      );
-      final List<dynamic> decoded = jsonDecode(decrypted) as List<dynamic>;
+      final List<dynamic> decoded = jsonDecode(plaintext) as List<dynamic>;
       return decoded
           .map((dynamic item) => AuthenticatorEntry.fromMap(item as Map<String, dynamic>))
           .where((AuthenticatorEntry item) => item.secret.trim().isNotEmpty)
@@ -387,10 +405,20 @@ class AuthenticatorManager {
     }
   }
 
-  static Key _deriveKey(String password) {
-    final List<int> bytes = utf8.encode(password);
-    final Digest digest = sha256.convert(bytes);
-    return Key(Uint8List.fromList(digest.bytes));
+  /// Re-seals a legacy (constant-key AES-CBC) file in the modern format the
+  /// first time it is opened, so the weak format stops existing on disk.
+  static Future<void> _maybeMigrateLegacy(
+    Map<String, dynamic> payload,
+    String? password,
+    List<AuthenticatorEntry> entries,
+  ) async {
+    if (payload['kdf'] != null) return; // already migrated
+    try {
+      final bool usedDefault = password == null || password.isEmpty || password == _legacyDefaultPassword;
+      await saveEntries(entries, password: usedDefault ? '' : password);
+    } catch (_) {
+      // Best-effort; the entries are already loaded and usable.
+    }
   }
 
   static Uint8List _decodeBase32(String input) {

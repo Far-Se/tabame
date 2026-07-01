@@ -111,7 +111,8 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
             return;
           }
         } else {
-          password = AuthenticatorManager.defaultEncryptionPassword;
+          // Bound to this device (DPAPI); unlocks without a user password.
+          password = '';
         }
       }
 
@@ -438,14 +439,14 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
     try {
       final bool wasEncrypted = _isEncrypted;
       await AuthenticatorManager.removeStorageFile();
-      final String effectivePassword = password.isEmpty ? AuthenticatorManager.defaultEncryptionPassword : password;
-      await AuthenticatorManager.encryptEntries(_entries, effectivePassword);
+      // Empty password => bound to this Windows account via DPAPI (no shared key).
+      await AuthenticatorManager.encryptEntries(_entries, password);
       if (!mounted) return;
       setState(() {
         _isEncrypted = true;
-        _activePassword = effectivePassword;
+        _activePassword = password;
         _infoMessage = password.isEmpty
-            ? 'Authenticator encrypted with the default password.'
+            ? 'Authenticator encrypted and bound to this device.'
             : wasEncrypted
                 ? 'Authenticator password updated.'
                 : 'Authenticator encrypted.';
@@ -1079,7 +1080,7 @@ class _AuthenticatorPasswordDialogState extends State<_AuthenticatorPasswordDial
             autofocus: true,
             decoration: InputDecoration(
               labelText:
-                  widget.allowEmpty && widget.emptyUsesDefault ? 'Password (empty uses "encrypted")' : 'Password',
+                  widget.allowEmpty && widget.emptyUsesDefault ? 'Password (empty binds to this device)' : 'Password',
             ),
             onSubmitted: (_) => _submit(),
           ),

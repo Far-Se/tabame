@@ -795,23 +795,6 @@ class WinUtils {
     );
   }
 
-  static Future<void> launchDeElevated(String target, {String? args}) async {
-    // We use RUNASINVOKER to drop the admin requirement for the child
-    // We use PowerShell because it handles nested quotes better than CMD
-    String shellCommand = 'set __COMPAT_LAYER=RUNASINVOKER; ' 'Start-Process "$target"';
-    if (args != null) {
-      args = args.replaceAll(' ', '\\ ').replaceAll('"', '\\"');
-      shellCommand = 'set __COMPAT_LAYER=RUNASINVOKER; '
-          'Start-Process "$target" -ArgumentList "$args"';
-    }
-
-    await Process.run(
-      'powershell',
-      <String>['-NoProfile', '-Command', shellCommand],
-      runInShell: true,
-    );
-  }
-
   static void open(String path, {String? arguments, bool parseParamaters = true, String? workingDirectory}) {
     final bool shouldParseParameters = parseParamaters;
     final String resolvedWorkingDirectory = workingDirectory ?? "";
@@ -833,43 +816,6 @@ class WinUtils {
       }
     }
     launchWithExplorer(path, arguments: arguments, workingDirectory: resolvedWorkingDirectory);
-    return;
-    // ignore: dead_code
-    if (arguments == null && !shouldParseParameters && user.runAsAdministrator && !path.startsWith("http")) {
-      //! you can gain admin priv with one command, but there is no command to de-elevate yourself or app you are launching.
-      //! only way I've found is to start powershell that starts explorer THAT starts the file.
-      runPowerShell(<String>['explorer.exe "$path"']);
-      return;
-    }
-
-    if (!shouldParseParameters) {
-      ShellExecute(
-        NULL,
-        TEXT("open"),
-        TEXT(path),
-        arguments == null ? nullptr : TEXT(arguments),
-        nullptr,
-        path == "code" ? SW_HIDE : SW_SHOWNORMAL,
-      );
-      return;
-    }
-    final RegExp commandPattern = RegExp(r"^([a-z0-9-_]+) (.*?)$");
-    if (commandPattern.hasMatch(path)) {
-      final RegExpMatch commandMatch = commandPattern.firstMatch(path)!;
-      if (!user.runAsAdministrator) {
-        ShellExecute(
-            NULL, TEXT("open"), TEXT(commandMatch.group(1)!), TEXT(commandMatch.group(2)!), nullptr, SW_SHOWNORMAL);
-        return;
-      }
-      final String launcherScriptPath = WinUtils.getScript(Scripts.open);
-      File(launcherScriptPath).writeAsStringSync("""
-Dim objShell
-Set objShell = CreateObject("Shell.Application")
-Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!.replaceAll('"', '""')}", "", "open", ${commandMatch.group(1) == "code" ? 0 : 1})""");
-      runPowerShell(<String>['explorer.exe "$launcherScriptPath"']);
-    } else {
-      runPowerShell(<String>['explorer.exe "$path"']);
-    }
   }
 
   static void runAsAdmin(String link, {String? arguments}) {
@@ -1135,12 +1081,18 @@ Call objShell.ShellExecute("${commandMatch.group(1)}", "${commandMatch.group(2)!
   static bool isScreenClipping() {
     final int foregroundWindowHandle = GetForegroundWindow();
     final Pointer<Uint32> processIdPointer = calloc<Uint32>();
+    final int processId;
+    try {
+      GetWindowThreadProcessId(foregroundWindowHandle, processIdPointer);
+      processId = processIdPointer.value;
+    } finally {
+      free(processIdPointer);
+    }
 
-    GetWindowThreadProcessId(foregroundWindowHandle, processIdPointer);
     final int processHandle = OpenProcess(
       PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
       FALSE,
-      processIdPointer.value,
+      processId,
     );
 
     if (processHandle == 0) {

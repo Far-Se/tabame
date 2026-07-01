@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../util/secret_crypto.dart';
+
 enum MusicServerType { subsonic, jellyfin }
 
 enum MusicItemType { song, artist, album, folder }
@@ -25,7 +27,9 @@ class MusicServerConfig {
   final String name;
   final String url;
   final String username;
-  final String password; // Stored as plain or hashed? Subsonic needs the secret to generate token/salt.
+  // Held in cleartext in memory because Subsonic needs the secret to generate
+  // its per-request token/salt, but persisted DPAPI-protected (see toMap/fromMap).
+  final String password;
   final MusicServerType type;
   final bool isDefault;
 
@@ -45,7 +49,7 @@ class MusicServerConfig {
       'name': name,
       'url': url,
       'username': username,
-      'password': password,
+      'password': SecretCrypto.protectField(password),
       'type': type.index,
       'isDefault': isDefault,
     };
@@ -57,7 +61,7 @@ class MusicServerConfig {
       name: map['name'] ?? '',
       url: map['url'] ?? '',
       username: map['username'] ?? '',
-      password: map['password'] ?? '',
+      password: SecretCrypto.unprotectField((map['password'] ?? '') as String),
       type: MusicServerType.values[map['type'] ?? 0],
       isDefault: map['isDefault'] ?? false,
     );
