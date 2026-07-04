@@ -205,7 +205,8 @@ class _LibreStatsState extends State<LibreStats> {
     // Each chip: [label][usage][gap][temp]  or  [label][usage]
     Widget cpuChip = Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: <Widget>[
         _fixedCell('CPU ', wCpuLbl, labelStyle),
         _fixedCell(cpuUsage, wUsage, valueStyle),
@@ -216,7 +217,8 @@ class _LibreStatsState extends State<LibreStats> {
 
     Widget ramChip = Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: <Widget>[
         _fixedCell('RAM ', wRamLbl, labelStyle),
         _fixedCell(ramUsage, wRam, valueStyle),
@@ -225,7 +227,8 @@ class _LibreStatsState extends State<LibreStats> {
 
     Widget gpuChip = Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: <Widget>[
         _fixedCell('GPU ', wGpuLbl, labelStyle),
         _fixedCell(gpuUsage, wUsage, valueStyle),

@@ -1618,6 +1618,27 @@ class WinClipboard {
   }
 }
 
+/// Metadata for a clipboard image that the native side captured, encoded, and
+/// wrote to disk (see [ClipboardExtended.saveImageToFile]). The PNG bytes never
+/// cross into the Dart isolate.
+class ClipboardImageInfo {
+  const ClipboardImageInfo({
+    required this.path,
+    required this.byteLength,
+    required this.hash,
+  });
+
+  /// Absolute path of the PNG file the native side wrote.
+  final String path;
+
+  /// Size of the written PNG, in bytes.
+  final int byteLength;
+
+  /// MD5 hex digest of the PNG bytes (matches Dart `md5.convert`), for
+  /// clipboard-history duplicate detection. Empty if hashing failed.
+  final String hash;
+}
+
 class ClipboardExtended {
   ClipboardExtended._();
 
@@ -1645,7 +1666,7 @@ class ClipboardExtended {
     final Map<String, dynamic> formats = <String, dynamic>{};
     if (text != null) formats['text/plain'] = text;
     if (html != null) formats['text/html'] = html;
-    if (pngBytes != null) formats['image/png'] = pngBytes.toList(growable: false);
+    if (pngBytes != null) formats['image/png'] = pngBytes; // typed data (Uint8List) — single buffer, not a boxed int list
 
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyMultiple',
@@ -1657,7 +1678,7 @@ class ClipboardExtended {
   static Future<bool> copyImage(Uint8List imageBytes) async {
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyImage',
-      <String, dynamic>{'imageBytes': imageBytes.toList(growable: false)},
+      <String, dynamic>{'imageBytes': imageBytes}, // typed data (Uint8List) — single buffer, not a boxed int list
     );
     return result ?? false;
   }
@@ -1689,6 +1710,25 @@ class ClipboardExtended {
     if (bytes is Uint8List) return bytes;
     if (bytes is List) return Uint8List.fromList(bytes.cast<int>());
     return null;
+  }
+
+  /// Captures the current clipboard image, encodes it to PNG, and writes it to
+  /// [path] — all on a native background thread. Only small metadata crosses the
+  /// method channel; the PNG bytes never enter the Dart isolate, so this does
+  /// not block Flutter's platform thread (which owns the global mouse hook).
+  /// Returns null when the clipboard holds no image, or throws a
+  /// [PlatformException] (code `PASTE_IMAGE_ERROR` when there is no image).
+  static Future<ClipboardImageInfo?> saveImageToFile(String path) async {
+    final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
+      'clipboardExtendedSaveImage',
+      <String, dynamic>{'path': path},
+    );
+    if (result == null || result['saved'] != true) return null;
+    return ClipboardImageInfo(
+      path: (result['path'] as String?) ?? path,
+      byteLength: (result['byteLength'] as int?) ?? 0,
+      hash: (result['hash'] as String?) ?? '',
+    );
   }
 
   static Future<String> getContentType() async {

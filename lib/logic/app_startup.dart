@@ -7,6 +7,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
@@ -50,6 +51,9 @@ class AppStartup {
       user.args = <String>[...arguments];
       if (argString.contains("interface")) {
         user.page = TPage.interface;
+        // This process is the Interface: bump the reload marker on settings writes so the
+        // running QuickMenu process live-reloads (see SavedStore + QuickMenu file watcher).
+        SavedStore.signalOnWrite = true;
       }
     }
     Debug.add("Parsed arguments ${user.page}");

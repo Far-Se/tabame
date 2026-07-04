@@ -597,13 +597,32 @@ class ClipboardHistoryStore {
   }
 
   static Future<ClipboardHistoryEntry?> _readImage() async {
-    final Uint8List? bytes = await _tryClipboardRead<Uint8List?>(
-      'image',
-      () => ClipboardExtended.pasteImage(),
-    );
-    if (bytes == null || bytes.isEmpty) return null;
+    final DateTime now = DateTime.now();
+    final String id = _entryId(now);
+    final Directory imageDir = Directory(imageDirectoryPath);
+    if (!imageDir.existsSync()) imageDir.createSync(recursive: true);
+    final String imagePath = '${imageDir.path}\\$id.png';
 
-    return _saveImageEntry(bytes);
+    // The native side captures, encodes, and writes the PNG on a background
+    // thread and returns only metadata — the image bytes never reach this
+    // isolate. That keeps the whole operation off the platform thread (which
+    // owns the global mouse hook), so copying an image no longer freezes input.
+    final ClipboardImageInfo? info = await _tryClipboardRead<ClipboardImageInfo?>(
+      'image',
+      () => ClipboardExtended.saveImageToFile(imagePath),
+    );
+    if (info == null) return null;
+
+    return ClipboardHistoryEntry(
+      id: id,
+      type: ClipboardHistoryType.image,
+      createdAt: now,
+      imagePath: info.path,
+      byteLength: info.byteLength,
+      // Content hash stored in `text` for dedup only (not shown in UI), matching
+      // _saveImageEntry / _contentHashFromBytes.
+      text: info.hash.isNotEmpty ? 'img-bytes:${info.hash}' : '',
+    );
   }
 
   static Future<ClipboardHistoryEntry?> _saveImageEntry(Uint8List bytes) async {

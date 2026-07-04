@@ -1683,6 +1683,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"clipboardExtendedPaste", Handlers::ClipboardExtendedH},
       {"clipboardExtendedPasteRichText", Handlers::ClipboardExtendedH},
       {"clipboardExtendedPasteImage", Handlers::ClipboardExtendedH},
+      {"clipboardExtendedSaveImage", Handlers::ClipboardExtendedH},
       {"clipboardExtendedGetContentType", Handlers::ClipboardExtendedH},
       {"clipboardExtendedHasData", Handlers::ClipboardExtendedH},
       {"clipboardExtendedClear", Handlers::ClipboardExtendedH},

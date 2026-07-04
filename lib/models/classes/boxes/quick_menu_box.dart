@@ -11,7 +11,7 @@ import 'boxes_base.dart';
 class QuickMenuFunctions {
   static bool isQuickMenuVisible = true;
   static bool keepOpen = false;
-  static int hidTime = 0;
+  static int hiddenTime = 0;
   static int shownTime = 0;
 
   static int taskBarSelectedIdx = -1;
@@ -130,7 +130,7 @@ class QuickMenuFunctions {
     if (visible) {
       Globals.quickMenuPage = type;
 
-      if (DateTime.now().millisecondsSinceEpoch - hidTime > 150) {
+      if (DateTime.now().millisecondsSinceEpoch - hiddenTime > 150) {
         if (type == QuickMenuPage.quickMenu) {
           triggerQuickAction("action:refreshTaskbar");
         }
@@ -166,26 +166,26 @@ class QuickMenuFunctions {
       if (kDebugMode && !Globals.debugHotkeys) return;
       Win32.setPosition(const Offset(-99999, -99999));
       // ShowWindow(Win32.hWnd, SW_HIDE);
-      hidTime = DateTime.now().millisecondsSinceEpoch;
+      hiddenTime = DateTime.now().millisecondsSinceEpoch;
 
       // await QuickMenuFunctions.refreshQuickMenu();
       // if (!isQuickMenuVisible)
       // EmptyWorkingSet(GetCurrentProcess());
       // clearRAM();
-      Future<void>.delayed(const Duration(milliseconds: 200), () {
-        final Offset pos = Win32.getPosition(hwnd: Win32.hWnd);
-        if (!isQuickMenuVisible && pos.dx > 0 && pos.dy > 0) {
-          toggleQuickMenu(
-            visible: true,
-            type: type,
-            center: center,
-            forceReposition: forceReposition,
-            forcePop: forcePop,
-          );
-        }
-        //   SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
-        //   // if (!isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
-      });
+      // Future<void>.delayed(const Duration(milliseconds: 200), () {
+      //   final Offset pos = Win32.getPosition(hwnd: Win32.hWnd);
+      //   if (!isQuickMenuVisible && pos.dx > 0 && pos.dy > 0) {
+      //     toggleQuickMenu(
+      //       visible: true,
+      //       type: type,
+      //       center: center,
+      //       forceReposition: forceReposition,
+      //       forcePop: forcePop,
+      //     );
+      //   }
+      //   //   SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
+      //   //   // if (!isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
+      // });
     }
   }
 

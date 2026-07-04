@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
+import '../../../logic/error_handler.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
@@ -25,6 +26,7 @@ import 'quick_timers_box.dart';
 import 'search_folder_box.dart';
 import 'search_history.dart';
 import 'tasks_box.dart';
+import 'win_hotkeys_box.dart';
 
 // --------------------------------------------------------------------------
 // Boxes
@@ -900,7 +902,70 @@ class Boxes {
     return _workspaces;
   }
 
-  static void reloadSettings() {}
+  static bool _reloading = false;
+
+  /// Live-reloads all settings from disk into memory and re-applies them to the
+  /// running QuickMenu — settings scalars, themes, native hotkeys, and the UI —
+  /// without restarting the process. Triggered by the Interface via the reload
+  /// marker file (see [SavedStore] signaling + the QuickMenu's file watcher).
+  static Future<void> reloadSettings() async {
+    if (_reloading) return; // re-entrancy guard
+    _reloading = true;
+    try {
+      final String previousRemapJson = pref.getString("remap") ?? ""; // capture BEFORE reload
+
+      _resetCaches(); // clear lazily-cached collections so their getters re-read from disk
+
+      // Reload is READ-ONLY: hydrate memory from disk but never write settings.json back.
+      // If this process re-wrote the whole file while the Interface is also writing it, the
+      // two non-atomic whole-file writes could clobber each other and drop settings.
+      SaveSettings.suppressWrites = true;
+      try {
+        await registerBoxes(reload: true, justLoad: true); // re-read pref + user scalars + themes
+      } finally {
+        SaveSettings.suppressWrites = false;
+      }
+
+      // Re-register native hotkeys only when they actually changed — avoids tearing down and
+      // reinstalling the global keyboard hook on every unrelated settings edit.
+      if ((pref.getString("remap") ?? "") != previousRemapJson) {
+        await WinHotkeys.update();
+      }
+
+      await QuickMenuFunctions.refreshQuickMenu(); // rebuild the QuickMenu UI tree
+      // Globals.themeChangeNotifier is already toggled inside registerBoxes -> MaterialApp rebuild.
+    } catch (e, s) {
+      await ErrorLogger.log('reloadSettings', e.toString(), s);
+    } finally {
+      _reloading = false;
+    }
+  }
+
+  /// Resets the lazily-cached static collections so their getters re-read from the
+  /// freshly-reloaded [pref]. Without this, [reloadSettings] would refresh scalar
+  /// `user.*` values but leave hotkeys/reminders/etc. stale (their getters only
+  /// re-read when the backing field is empty/null).
+  static void _resetCaches() {
+    _remap = <Hotkeys>[];
+    _reminders = null;
+    _wallpaperSchedules = null;
+    _quickActions = <QuickActions>[];
+    _screenDrawHotkeys = <ScreenDrawHotkeyBinding>[];
+    _runApi = <RunAPI>[];
+    _defaultVolume = <DefaultVolume>[];
+    _searchFolders = <SearchFolder>[];
+    _searchHistory = <SearchHistory>[];
+    _appAudioControls = <AppAudioControl>[];
+    _appCategories = <AppCategory>[];
+    _quickGrids = <QuickGrid>[];
+    _workspaces = <Workspace>[];
+    _taskBarRewrites = <String, String>{};
+    _iconsRewrite = <String, String>{};
+    _taskbarBadges = <String, List<String>>{};
+    _quickMenuWidth = null;
+    _launcherSizeWidth = null;
+    // `mediaControls` is re-read by registerBoxes (line ~269) — no reset needed.
+  }
   // --------------------------------------------------------------------------
   // Group: Quick timer runtime management
   // Purpose: Create, restore, and execute active quick timers.

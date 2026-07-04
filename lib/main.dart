@@ -14,6 +14,7 @@ import 'models/win32/win_utils.dart';
 import 'pages/color_picker/color_picker.dart';
 import 'pages/msgbox.dart';
 import 'pages/photo_editor.dart';
+import 'pages/quicksnap_standalone.dart';
 import 'pages/root_app.dart';
 import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
@@ -37,6 +38,7 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-screenRecording")) return startScreenRecordingPage();
   if (arguments.contains("-screenDraw")) return startScreenDraw();
   if (arguments.contains("-colorPicker")) return startColorPicker();
+  if (arguments.contains("-quickSnap")) return startQuickSnap();
   if (arguments.contains("-msgbox")) return showMessage(arguments);
   if (arguments.contains("-run")) return showRunStatus(arguments);
 

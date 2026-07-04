@@ -73,6 +73,8 @@ class QuickMenuState extends State<QuickMenu>
   // --------------------------------------------------------------------------
   final Future<int> quickMenuWindow = windowsSetupQuickMenu();
   final FocusNode focusNode = FocusNode();
+  StreamSubscription<FileSystemEvent>? _settingsWatchSub;
+  Timer? _settingsReloadDebounce;
   final HotkeyHandler handler = HotkeyHandler();
   final Trktivity trk = Trktivity.instance;
 
@@ -180,6 +182,7 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.syncSelectedBackdrop();
 
     WinHotkeys.update();
+    _startSettingsWatcher();
     ClipboardHistoryStore.clearCache();
     if (user.trktivityEnabled) enableTrcktivity(user.trktivityEnabled);
     Globals.changingPages = false;
@@ -218,7 +221,23 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.removeListener(this);
     WindowManager.instance.removeListener(this);
     _quickMenuFocusRetryTimer?.cancel();
+    _settingsWatchSub?.cancel();
+    _settingsReloadDebounce?.cancel();
     focusNode.dispose();
+  }
+
+  /// Watches the settings folder for the Interface's reload marker and live-reloads
+  /// (debounced) so hotkeys and settings changes apply without restarting the process.
+  void _startSettingsWatcher() {
+    final String dir = WinUtils.getTabameAppDataFolder(settings: true);
+    final File signal = File("$dir\\reload.signal");
+    if (!signal.existsSync()) signal.writeAsStringSync("0"); // ensure the watch target exists
+    _settingsWatchSub =
+        Directory(dir).watch(events: FileSystemEvent.modify | FileSystemEvent.create).listen((FileSystemEvent event) {
+      if (!event.path.endsWith("reload.signal")) return;
+      _settingsReloadDebounce?.cancel();
+      _settingsReloadDebounce = Timer(const Duration(milliseconds: 400), () => unawaited(Boxes.reloadSettings()));
+    });
   }
 
   bool get _canFocusQuickMenu {
@@ -383,7 +402,9 @@ class QuickMenuState extends State<QuickMenu>
       tryPop = true;
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
-      // if (mounted) setState(() {});
+      try {
+        if (mounted) setState(() {});
+      } catch (_) {}
       SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
       // EmptyWorkingSet(GetCurrentProcess());
     }

@@ -4,11 +4,15 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <shellapi.h>
+#include <ole2.h>
 #include <memory>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <thread>
+#include <fstream>
+#include <bcrypt.h>
 
 // GDI+ requires min/max macros which are disabled by NOMINMAX
 // Define them explicitly for GDI+ headers
@@ -29,6 +33,8 @@
 #undef max
 using namespace Gdiplus;
 #pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "bcrypt.lib")
+#pragma comment(lib, "ole32.lib")
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -38,6 +44,80 @@ using flutter::EncodableMap;
 using flutter::EncodableValue;
 
 namespace ClipboardExtended {
+
+// ── Local helpers for background-thread image saving ────────────────────────
+
+// Convert a UTF-8 string (as received over the method channel) to UTF-16 for
+// the Win32 file APIs.
+static std::wstring Utf8ToWideLocal(const std::string& s) {
+  if (s.empty()) return std::wstring();
+  const int needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(),
+                                         static_cast<int>(s.size()), nullptr, 0);
+  std::wstring w(needed, L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), &w[0],
+                      needed);
+  return w;
+}
+
+// Write raw bytes to a file at a wide path (binary, truncating any existing
+// file). Returns false if the file could not be opened or written.
+static bool WriteBytesToFileW(const std::wstring& path,
+                              const std::vector<uint8_t>& bytes) {
+  std::ofstream file(path.c_str(), std::ios::binary | std::ios::trunc);
+  if (!file.is_open()) return false;
+  if (!bytes.empty()) {
+    file.write(reinterpret_cast<const char*>(bytes.data()),
+               static_cast<std::streamsize>(bytes.size()));
+  }
+  return file.good();
+}
+
+// MD5 hex digest of a byte buffer, byte-for-byte identical to Dart's
+// `md5.convert(bytes).toString()`. Used so image entries dedup consistently with
+// the existing clipboard-history format (`img-bytes:<md5>`).
+static std::string Md5Hex(const std::vector<uint8_t>& data) {
+  std::string result;
+  BCRYPT_ALG_HANDLE alg = nullptr;
+  if (!BCRYPT_SUCCESS(
+          BCryptOpenAlgorithmProvider(&alg, BCRYPT_MD5_ALGORITHM, nullptr, 0))) {
+    return result;
+  }
+  BCRYPT_HASH_HANDLE hash = nullptr;
+  if (BCRYPT_SUCCESS(BCryptCreateHash(alg, &hash, nullptr, 0, nullptr, 0, 0))) {
+    if (BCRYPT_SUCCESS(BCryptHashData(
+            hash, reinterpret_cast<PUCHAR>(const_cast<uint8_t*>(data.data())),
+            static_cast<ULONG>(data.size()), 0))) {
+      UCHAR digest[16] = {0};
+      if (BCRYPT_SUCCESS(BCryptFinishHash(hash, digest, sizeof(digest), 0))) {
+        static const char* kHex = "0123456789abcdef";
+        result.reserve(32);
+        for (unsigned char b : digest) {
+          result.push_back(kHex[b >> 4]);
+          result.push_back(kHex[b & 0x0F]);
+        }
+      }
+    }
+    BCryptDestroyHash(hash);
+  }
+  BCryptCloseAlgorithmProvider(alg, 0);
+  return result;
+}
+
+// RAII initializer for an OLE/COM apartment on the calling thread. Browser
+// clipboard data (Chrome, Edge, …) is delivered through the OLE clipboard, and
+// GDI+ image codecs use COM internally — both require COM to be initialized on
+// whatever thread touches them. The platform thread already has this; a worker
+// thread does not, so clipboard image capture/encoding silently fails there
+// unless we initialize COM ourselves.
+struct ScopedOleApartment {
+  const HRESULT hr;
+  ScopedOleApartment() : hr(OleInitialize(nullptr)) {}
+  ~ScopedOleApartment() {
+    if (SUCCEEDED(hr)) OleUninitialize();
+  }
+  ScopedOleApartment(const ScopedOleApartment&) = delete;
+  ScopedOleApartment& operator=(const ScopedOleApartment&) = delete;
+};
 
 class ClipboardPluginImpl {
  public:
@@ -66,6 +146,8 @@ class ClipboardPluginImpl {
       HandlePasteRichText(std::move(result));
     } else if (method == "pasteImage" || method == "clipboardExtendedPasteImage") {
       HandlePasteImage(std::move(result));
+    } else if (method == "saveImage" || method == "clipboardExtendedSaveImage") {
+      HandleSaveImage(arguments, std::move(result));
     } else if (method == "getContentType" || method == "clipboardExtendedGetContentType") {
       HandleGetContentType(std::move(result));
     } else if (method == "hasData" || method == "clipboardExtendedHasData") {
@@ -220,9 +302,13 @@ class ClipboardPluginImpl {
       // Handle image first
       auto image_it = formats->find(EncodableValue("image/png"));
       if (image_it != formats->end()) {
-        const auto* image_bytes = std::get_if<EncodableList>(&image_it->second);
-        if (image_bytes && !image_bytes->empty()) {
-          std::vector<uint8_t> bytes;
+        std::vector<uint8_t> bytes;
+        // Fast path: typed data (Uint8List) — a single byte buffer, no unboxing.
+        if (const auto* byte_vec = std::get_if<std::vector<uint8_t>>(&image_it->second)) {
+          bytes = *byte_vec;
+        } else if (const auto* image_bytes = std::get_if<EncodableList>(&image_it->second)) {
+          // Backward-compat: list of ints.
+          bytes.reserve(image_bytes->size());
           for (const auto& byte_val : *image_bytes) {
             if (const auto* byte_int32 = std::get_if<int32_t>(&byte_val)) {
               bytes.push_back(static_cast<uint8_t>(*byte_int32));
@@ -230,9 +316,9 @@ class ClipboardPluginImpl {
               bytes.push_back(static_cast<uint8_t>(*byte_int64));
             }
           }
-          if (!bytes.empty()) {
-            SetClipboardImage(bytes);
-          }
+        }
+        if (!bytes.empty()) {
+          SetClipboardImage(bytes);
         }
       }
 
@@ -298,18 +384,19 @@ class ClipboardPluginImpl {
       return;
     }
 
-    const auto* image_bytes = std::get_if<EncodableList>(&image_bytes_it->second);
-    if (!image_bytes || image_bytes->empty()) {
-      result->Error("EMPTY_IMAGE", "Image bytes cannot be empty");
-      return;
-    }
-
     std::vector<uint8_t> bytes;
-    for (const auto& byte_val : *image_bytes) {
-      if (const auto* byte_int32 = std::get_if<int32_t>(&byte_val)) {
-        bytes.push_back(static_cast<uint8_t>(*byte_int32));
-      } else if (const auto* byte_int64 = std::get_if<int64_t>(&byte_val)) {
-        bytes.push_back(static_cast<uint8_t>(*byte_int64));
+    // Fast path: typed data (Uint8List) — a single byte buffer, no unboxing.
+    if (const auto* byte_vec = std::get_if<std::vector<uint8_t>>(&image_bytes_it->second)) {
+      bytes = *byte_vec;
+    } else if (const auto* image_bytes = std::get_if<EncodableList>(&image_bytes_it->second)) {
+      // Backward-compat: list of ints.
+      bytes.reserve(image_bytes->size());
+      for (const auto& byte_val : *image_bytes) {
+        if (const auto* byte_int32 = std::get_if<int32_t>(&byte_val)) {
+          bytes.push_back(static_cast<uint8_t>(*byte_int32));
+        } else if (const auto* byte_int64 = std::get_if<int64_t>(&byte_val)) {
+          bytes.push_back(static_cast<uint8_t>(*byte_int64));
+        }
       }
     }
 
@@ -550,9 +637,14 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
     }
   }
 
-  void HandlePasteImage(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
-    EncodableMap result_map;
-    
+  // Captures the current clipboard image and encodes it to PNG bytes into [out].
+  // Returns an empty string on success; otherwise a short error code (currently
+  // always "PASTE_IMAGE_ERROR") when no image could be produced. Shared by the
+  // synchronous paste path and the background-thread save path — it touches no
+  // instance state, so it is safe to call from a worker thread.
+  std::string CaptureClipboardPng(std::vector<uint8_t>& out) {
+    out.clear();
+
     // Initialize GDI+
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
@@ -737,20 +829,18 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
       CloseClipboard();
     }
 
-    // If we still don't have a bitmap, return error
+    // If we still don't have a bitmap, no image was available.
     if (!pBitmap) {
       GdiplusShutdown(gdiplusToken);
-      result->Error("PASTE_IMAGE_ERROR", "No image found in clipboard. Copy an image (not a file) or try pasting after copying image data from a browser/app.");
-      return;
+      return "PASTE_IMAGE_ERROR";
     }
 
-    // Convert bitmap to PNG bytes
+    // Convert bitmap to PNG bytes.
     IStream* pStream = nullptr;
     if (CreateStreamOnHGlobal(nullptr, TRUE, &pStream) != S_OK) {
       delete pBitmap;
       GdiplusShutdown(gdiplusToken);
-      result->Error("PASTE_IMAGE_ERROR", "Failed to create stream");
-      return;
+      return "PASTE_IMAGE_ERROR";
     }
 
     // Save as PNG
@@ -770,13 +860,13 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
           HRESULT hr = pStream->Read(pngBytes.data(), stat.cbSize.LowPart, &bytesRead);
           
           if (SUCCEEDED(hr) && bytesRead > 0) {
-            // Convert to EncodableList for Flutter
-            EncodableList imageBytes;
-            imageBytes.reserve(bytesRead);
-            for (ULONG i = 0; i < bytesRead; i++) {
-              imageBytes.push_back(EncodableValue(static_cast<int32_t>(pngBytes[i])));
-            }
-            result_map[EncodableValue("imageBytes")] = EncodableValue(imageBytes);
+            // Return the PNG as typed data (-> Dart Uint8List). Previously every
+            // byte was boxed into its own EncodableValue(int32); for a large
+            // image that blocked the platform thread — and therefore the
+            // low-level mouse hook that lives on it — long enough to freeze
+            // system input. A byte vector serializes as a single buffer.
+            if (bytesRead < pngBytes.size()) pngBytes.resize(bytesRead);
+            out = std::move(pngBytes);
           }
         }
       }
@@ -786,11 +876,70 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
     delete pBitmap;
     GdiplusShutdown(gdiplusToken);
 
-    if (result_map.find(EncodableValue("imageBytes")) != result_map.end()) {
-      result->Success(EncodableValue(result_map));
-    } else {
-      result->Error("PASTE_IMAGE_ERROR", "Failed to convert image to PNG format");
+    return out.empty() ? "PASTE_IMAGE_ERROR" : "";
+  }
+
+  void HandlePasteImage(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
+    std::vector<uint8_t> pngBytes;
+    const std::string error = CaptureClipboardPng(pngBytes);
+    if (!error.empty()) {
+      result->Error(error, "No image found in clipboard. Copy an image (not a file) or try pasting after copying image data from a browser/app.");
+      return;
     }
+    EncodableMap result_map;
+    result_map[EncodableValue("imageBytes")] = EncodableValue(std::move(pngBytes));
+    result->Success(EncodableValue(result_map));
+  }
+
+  // Capture + encode + write the current clipboard image to disk, then return
+  // only lightweight metadata (path, byte length, MD5 hash) to Dart. All heavy
+  // work runs on a detached background thread, so the platform thread — which
+  // owns the global WH_MOUSE_LL mouse hook — is never blocked; that is what
+  // keeps copying an image from freezing system input. The reply is delivered
+  // from the worker thread through a shared MethodResult, the same pattern the
+  // media-session handler in tabamewin32_plugin.cpp uses.
+  void HandleSaveImage(const EncodableMap* arguments,
+                       std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
+    if (!arguments) {
+      result->Error("INVALID_ARGUMENT", "Arguments are required");
+      return;
+    }
+    auto path_it = arguments->find(EncodableValue("path"));
+    const std::string* path_ptr = (path_it != arguments->end())
+                                      ? std::get_if<std::string>(&path_it->second)
+                                      : nullptr;
+    if (!path_ptr || path_ptr->empty()) {
+      result->Error("INVALID_ARGUMENT", "A non-empty 'path' is required");
+      return;
+    }
+    const std::string utf8Path = *path_ptr;
+
+    std::shared_ptr<flutter::MethodResult<EncodableValue>> shared_result(
+        std::move(result));
+
+    std::thread([this, shared_result, utf8Path]() {
+      // Browser OLE clipboard reads and GDI+ PNG encoding both need COM on this
+      // thread; without it, capture/encode fails and no image is produced.
+      const ScopedOleApartment ole;
+
+      std::vector<uint8_t> pngBytes;
+      const std::string error = CaptureClipboardPng(pngBytes);
+      if (!error.empty()) {
+        shared_result->Error(error, "No image found in clipboard.");
+        return;
+      }
+      if (!WriteBytesToFileW(Utf8ToWideLocal(utf8Path), pngBytes)) {
+        shared_result->Error("SAVE_IMAGE_ERROR", "Failed to write image file");
+        return;
+      }
+      EncodableMap out;
+      out[EncodableValue("saved")] = EncodableValue(true);
+      out[EncodableValue("path")] = EncodableValue(utf8Path);
+      out[EncodableValue("byteLength")] =
+          EncodableValue(static_cast<int32_t>(pngBytes.size()));
+      out[EncodableValue("hash")] = EncodableValue(Md5Hex(pngBytes));
+      shared_result->Success(EncodableValue(out));
+    }).detach();
   }
 
   void HandleGetContentType(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
