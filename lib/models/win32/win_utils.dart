@@ -282,6 +282,14 @@ class WinUtils {
     return user.fancyshotFolder;
   }
 
+  /// Root folder holding Rewindly's rolling segment buffer
+  /// (`<root>\<monitorIndex>\seg_<epochMs>.mp4`). Exported clips go to FancyShot.
+  static String getRewindlyFolder() {
+    final String dir = '${WinUtils.getTabameAppDataFolder()}\\rewindly';
+    if (!Directory(dir).existsSync()) Directory(dir).createSync(recursive: true);
+    return dir;
+  }
+
   static Future<String> folderPicker() async {
     return await pickFolder();
   }

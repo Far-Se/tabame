@@ -48,6 +48,7 @@ import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
 import '../../widgets/itzy/quickmenu/button_quicksnap_standalone.dart';
+import '../../widgets/itzy/quickmenu/button_rewindly.dart';
 import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
@@ -268,6 +269,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "ScreenRecordingButton": QuickAction(
     icon: Icons.camera,
     widget: () => const ScreenRecordingButton(),
+  ),
+  "RewindlyButton": QuickAction(
+    icon: Icons.history_rounded,
+    widget: () => const RewindlyButton(),
   ),
   "SpotlightButton": QuickAction(
     icon: Icons.featured_video_rounded,

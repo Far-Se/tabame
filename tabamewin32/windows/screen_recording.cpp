@@ -23,6 +23,7 @@
 #include <cstring>
 #include <deque>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -71,6 +72,10 @@ using winrt::Windows::Graphics::Capture::GraphicsCaptureSession;
 using winrt::Windows::Graphics::DirectX::DirectXPixelFormat;
 using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
 using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DSurface;
+#if defined(NTDDI_WIN10_CO)
+using winrt::Windows::Graphics::Capture::GraphicsCaptureAccess;
+using winrt::Windows::Graphics::Capture::GraphicsCaptureAccessKind;
+#endif
 
 constexpr int kAudioSampleRate = 48000;
 constexpr int kAudioChannels = 2;
@@ -80,6 +85,7 @@ constexpr int kAudioChunkFrames = 480;
 enum class TargetType { Region, Monitor, Window };
 
 struct Config {
+  int sessionId = 0;
   TargetType targetType = TargetType::Region;
   RECT region = {0, 0, 0, 0};
   int64_t monitorHandle = 0;
@@ -181,6 +187,30 @@ GetTextureFromFrame(const Direct3D11CaptureFrame &frame) {
     return nullptr;
   }
   return sourceTexture;
+}
+
+// On Windows 11 the yellow WGC capture border only disappears once the process
+// has been granted borderless capture access. Request it once, off-thread, so we
+// never block (or deadlock an STA) the caller; IsBorderRequired(false) then
+// actually takes effect. No-op on SDKs/OSes without the API.
+static void EnsureBorderlessCaptureAccess() {
+#if defined(NTDDI_WIN10_CO)
+  static std::once_flag onceFlag;
+  std::call_once(onceFlag, []() {
+    std::thread([]() {
+      try {
+        winrt::init_apartment(winrt::apartment_type::multi_threaded);
+      } catch (...) {
+      }
+      try {
+        GraphicsCaptureAccess::RequestAccessAsync(
+            GraphicsCaptureAccessKind::Borderless)
+            .get();
+      } catch (...) {
+      }
+    }).detach();
+  });
+#endif
 }
 
 static GraphicsCaptureItem CreateItemForMonitor(HMONITOR monitor) {
@@ -387,6 +417,9 @@ public:
       errorMessage = "Unable to initialize WinRT for screen recording.";
       return false;
     }
+    // Ask the OS (once) to allow borderless capture so the yellow WGC border can
+    // be suppressed via IsBorderRequired(false) below.
+    EnsureBorderlessCaptureAccess();
     if (!EnsureMediaFoundationStarted()) {
       errorCode = "MEDIA_FOUNDATION_INIT_FAILED";
       errorMessage = "Unable to initialize Media Foundation.";
@@ -412,8 +445,10 @@ public:
     }
 
     Config normalized = config;
+    // Accept any sane capture rate (Rewindly uses low rates like 2fps); fall
+    // back to 30 only for out-of-range garbage.
     normalized.frameRate =
-        normalized.frameRate == 24 || normalized.frameRate == 60
+        (normalized.frameRate >= 1 && normalized.frameRate <= 60)
             ? normalized.frameRate
             : 30;
     normalized.videoBitrateMbps =
@@ -1522,9 +1557,28 @@ private:
   winrt::com_ptr<IMFSinkWriter> sinkWriter_;
 };
 
-ScreenRecordingSession &GetSession() {
-  static ScreenRecordingSession session;
-  return session;
+// Registry of recorder sessions keyed by id. Id 0 is the default single-session
+// used by the standalone recorder page; Rewindly uses one id per monitor so
+// several WGC sessions can record concurrently in the same process.
+static std::mutex g_sessionRegistryMutex;
+static std::map<int, std::unique_ptr<ScreenRecordingSession>> g_sessions;
+
+ScreenRecordingSession &GetSession(int id) {
+  std::lock_guard<std::mutex> lock(g_sessionRegistryMutex);
+  auto it = g_sessions.find(id);
+  if (it == g_sessions.end()) {
+    it = g_sessions.emplace(id, std::make_unique<ScreenRecordingSession>())
+             .first;
+  }
+  return *it->second;
+}
+
+void ShutdownAllSessions() {
+  std::lock_guard<std::mutex> lock(g_sessionRegistryMutex);
+  for (auto &entry : g_sessions) {
+    if (entry.second)
+      entry.second->Shutdown();
+  }
 }
 
 } // namespace screen_recording
@@ -1532,34 +1586,137 @@ ScreenRecordingSession &GetSession() {
 static bool StartScreenRecording(const screen_recording::Config &config,
                                  std::string &errorCode,
                                  std::string &errorMessage) {
-  return screen_recording::GetSession().Start(config, errorCode, errorMessage);
+  return screen_recording::GetSession(config.sessionId)
+      .Start(config, errorCode, errorMessage);
 }
 
-static bool StopScreenRecording(ScreenRecordingStopResult &result,
+static bool StopScreenRecording(int sessionId,
+                                ScreenRecordingStopResult &result,
                                 std::string &errorCode,
                                 std::string &errorMessage) {
-  return screen_recording::GetSession().Stop(result, errorCode, errorMessage);
+  return screen_recording::GetSession(sessionId)
+      .Stop(result, errorCode, errorMessage);
 }
 
-static bool CancelScreenRecording(std::string &errorCode,
+static bool CancelScreenRecording(int sessionId, std::string &errorCode,
                                   std::string &errorMessage) {
-  return screen_recording::GetSession().Cancel(errorCode, errorMessage);
+  return screen_recording::GetSession(sessionId).Cancel(errorCode, errorMessage);
 }
 
-static bool PauseScreenRecording() {
-  return screen_recording::GetSession().Pause();
+static bool PauseScreenRecording(int sessionId) {
+  return screen_recording::GetSession(sessionId).Pause();
 }
 
-static bool ResumeScreenRecording() {
-  return screen_recording::GetSession().Resume();
+static bool ResumeScreenRecording(int sessionId) {
+  return screen_recording::GetSession(sessionId).Resume();
 }
 
-static ScreenRecordingStatus GetScreenRecordingStatus() {
-  return screen_recording::GetSession().GetStatus();
+static ScreenRecordingStatus GetScreenRecordingStatus(int sessionId) {
+  return screen_recording::GetSession(sessionId).GetStatus();
 }
 
 static void ShutdownScreenRecording() {
-  screen_recording::GetSession().Shutdown();
+  screen_recording::ShutdownAllSessions();
+}
+
+// Losslessly joins compressed mp4 segments into a single output file by copying
+// H.264 samples through a sink writer (no decode/encode). Sample timestamps are
+// rebased so playback is continuous across segment boundaries.
+static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
+                                   const std::wstring &outputPath,
+                                   std::string &errorCode,
+                                   std::string &errorMessage) {
+  if (inputs.empty()) {
+    errorCode = "no_inputs";
+    errorMessage = "No input segments provided";
+    return false;
+  }
+  if (!screen_recording::EnsureMediaFoundationStarted()) {
+    errorCode = "mf_startup_failed";
+    errorMessage = "Media Foundation failed to start";
+    return false;
+  }
+
+  const DWORD kVideoStream =
+      static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM);
+
+  winrt::com_ptr<IMFSinkWriter> writer;
+  DWORD outStreamIndex = 0;
+  bool writerReady = false;
+  LONGLONG timeOffset = 0; // running offset (100ns units) applied to samples
+
+  for (const std::wstring &input : inputs) {
+    winrt::com_ptr<IMFSourceReader> reader;
+    if (FAILED(MFCreateSourceReaderFromURL(input.c_str(), nullptr,
+                                           reader.put()))) {
+      continue; // skip an unreadable/partial segment
+    }
+    reader->SetStreamSelection(
+        static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS), FALSE);
+    reader->SetStreamSelection(kVideoStream, TRUE);
+
+    // Leaving the reader on its native (compressed) type means ReadSample
+    // returns H.264 samples verbatim — no decoder is inserted.
+    winrt::com_ptr<IMFMediaType> nativeType;
+    if (FAILED(reader->GetNativeMediaType(kVideoStream, 0, nativeType.put()))) {
+      continue;
+    }
+
+    if (!writerReady) {
+      if (FAILED(MFCreateSinkWriterFromURL(outputPath.c_str(), nullptr, nullptr,
+                                           writer.put()))) {
+        errorCode = "sink_create_failed";
+        errorMessage = "Could not create output writer";
+        return false;
+      }
+      if (FAILED(writer->AddStream(nativeType.get(), &outStreamIndex)) ||
+          FAILED(writer->SetInputMediaType(outStreamIndex, nativeType.get(),
+                                           nullptr)) ||
+          FAILED(writer->BeginWriting())) {
+        errorCode = "sink_init_failed";
+        errorMessage = "Could not initialize output stream";
+        return false;
+      }
+      writerReady = true;
+    }
+
+    LONGLONG segmentEnd = timeOffset;
+    while (true) {
+      DWORD streamFlags = 0;
+      LONGLONG timestamp = 0;
+      winrt::com_ptr<IMFSample> sample;
+      if (FAILED(reader->ReadSample(kVideoStream, 0, nullptr, &streamFlags,
+                                    &timestamp, sample.put()))) {
+        break;
+      }
+      if (streamFlags & MF_SOURCE_READERF_ENDOFSTREAM)
+        break;
+      if (!sample)
+        continue;
+
+      LONGLONG sampleTime = 0;
+      sample->GetSampleTime(&sampleTime);
+      LONGLONG duration = 0;
+      sample->GetSampleDuration(&duration);
+      const LONGLONG rebased = timeOffset + sampleTime;
+      sample->SetSampleTime(rebased);
+      writer->WriteSample(outStreamIndex, sample.get());
+      segmentEnd = rebased + (duration > 0 ? duration : 0);
+    }
+    timeOffset = segmentEnd; // next segment continues after this one
+  }
+
+  if (!writerReady) {
+    errorCode = "no_valid_inputs";
+    errorMessage = "None of the segments could be read";
+    return false;
+  }
+  if (FAILED(writer->Finalize())) {
+    errorCode = "finalize_failed";
+    errorMessage = "Could not finalize output file";
+    return false;
+  }
+  return true;
 }
 
 #endif

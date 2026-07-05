@@ -118,6 +118,18 @@ inline std::string Str(const EMap &m, const char *k) {
 inline std::vector<uint8_t> Bytes(const EMap &m, const char *k) {
   return std::get<std::vector<uint8_t>>(m.at(EVal(k)));
 }
+// Reads an optional "sessionId" from a call, defaulting to 0 when the call has
+// no argument map or no such key (keeps back-compat with single-session callers).
+inline int SessionId(const MethodCall &call) {
+  const auto *args = call.arguments();
+  if (args == nullptr || !std::holds_alternative<EMap>(*args))
+    return 0;
+  const EMap &m = std::get<EMap>(*args);
+  const auto it = m.find(EVal("sessionId"));
+  if (it == m.end() || !std::holds_alternative<int>(it->second))
+    return 0;
+  return std::get<int>(it->second);
+}
 } // namespace Args
 
 inline void OK(MethodResult &r, const EVal &v) { r->Success(v); }
@@ -1295,6 +1307,7 @@ void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
                            MethodResult result) {
   auto &a = Args::Map(call);
   screen_recording::Config config;
+  config.sessionId = a.count(EVal("sessionId")) ? Args::Int(a, "sessionId") : 0;
   const std::string targetType = Args::Str(a, "targetType");
   if (targetType == "monitor") {
     config.targetType = screen_recording::TargetType::Monitor;
@@ -1342,47 +1355,73 @@ void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
     result->Error(errorCode, errorMessage);
     return;
   }
-  OK(result,
-     EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
+  OK(result, EVal(Encode::ScreenRecordingStatusToMap(
+                 GetScreenRecordingStatus(config.sessionId))));
 }
 
-void StopScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+void StopScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
                           MethodResult result) {
+  const int sessionId = Args::SessionId(call);
   ScreenRecordingStopResult stopResult;
   std::string errorCode;
   std::string errorMessage;
-  if (!StopScreenRecording(stopResult, errorCode, errorMessage)) {
+  if (!StopScreenRecording(sessionId, stopResult, errorCode, errorMessage)) {
     result->Error(errorCode, errorMessage);
     return;
   }
   OK(result, EVal(Encode::ScreenRecordingStopResultToMap(stopResult)));
 }
 
-void CancelScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+void CancelScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
                             MethodResult result) {
+  const int sessionId = Args::SessionId(call);
   std::string errorCode;
   std::string errorMessage;
-  if (!CancelScreenRecording(errorCode, errorMessage)) {
+  if (!CancelScreenRecording(sessionId, errorCode, errorMessage)) {
     result->Error(errorCode, errorMessage);
     return;
   }
   OK(result, true);
 }
 
-void PauseScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+void PauseScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
                            MethodResult result) {
-  OK(result, PauseScreenRecording());
+  OK(result, PauseScreenRecording(Args::SessionId(call)));
 }
 
-void ResumeScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+void ResumeScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
                             MethodResult result) {
-  OK(result, ResumeScreenRecording());
+  OK(result, ResumeScreenRecording(Args::SessionId(call)));
 }
 
-void GetScreenRecordingStatusH(Tabamewin32Plugin *, const MethodCall &,
+void GetScreenRecordingStatusH(Tabamewin32Plugin *, const MethodCall &call,
                                MethodResult result) {
-  OK(result,
-     EVal(Encode::ScreenRecordingStatusToMap(GetScreenRecordingStatus())));
+  OK(result, EVal(Encode::ScreenRecordingStatusToMap(
+                 GetScreenRecordingStatus(Args::SessionId(call)))));
+}
+
+void ConcatScreenRecordingsH(Tabamewin32Plugin *, const MethodCall &call,
+                             MethodResult result) {
+  auto &a = Args::Map(call);
+  std::vector<std::wstring> inputs;
+  if (a.count(EVal("inputs"))) {
+    const auto &inputsVal = a.at(EVal("inputs"));
+    if (std::holds_alternative<flutter::EncodableList>(inputsVal)) {
+      for (const auto &v : std::get<flutter::EncodableList>(inputsVal)) {
+        if (std::holds_alternative<std::string>(v))
+          inputs.push_back(Encoding::Utf8ToWide(std::get<std::string>(v)));
+      }
+    }
+  }
+  const std::wstring outputPath =
+      Encoding::Utf8ToWide(Args::Str(a, "outputPath"));
+  std::string errorCode;
+  std::string errorMessage;
+  if (!ConcatScreenRecordings(inputs, outputPath, errorCode, errorMessage)) {
+    result->Error(errorCode, errorMessage);
+    return;
+  }
+  OK(result, true);
 }
 
 // ===== Changed Folders =====
@@ -1754,6 +1793,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"pauseScreenRecording", Handlers::PauseScreenRecordingH},
       {"resumeScreenRecording", Handlers::ResumeScreenRecordingH},
       {"getScreenRecordingStatus", Handlers::GetScreenRecordingStatusH},
+      {"concatScreenRecordings", Handlers::ConcatScreenRecordingsH},
       {"getChangedFolders", Handlers::GetChangedFoldersH},
       {"addFoldersToWatchlist", Handlers::AddFoldersToWatchlistH},
       {"removeFoldersFromWatchlist", Handlers::RemoveFoldersFromWatchlistH},

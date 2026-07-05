@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:tabamewin32/tabamewin32.dart';
+import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
@@ -155,6 +156,11 @@ class Settings {
   bool mediaSessionsInTaskbar = true;
   bool trktivitySaveAllTitles = false;
   bool quickMenuAtTaskbarLevel = true;
+  // Rewindly (background "instant replay" DVR)
+  bool rewindlyEnabled = false;
+  int rewindlyFps = 2; // capture frame rate, 1-10
+  int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
+  int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
   String customLogo = "";
   String customSpash = "";
   String launcherSearchText = "";
@@ -644,6 +650,13 @@ Future<void> registerAll() async {
       WinUtils.windowsNotificationRegistered = true;
     }
   });
+
+  // Rewindly background DVR — main/QuickMenu process only, never the Interface
+  // settings window (which runs as a separate process).
+  if (Globals.currentPage != Pages.interface) {
+    RewindlyService.instance.init();
+    Debug.add("Registered: Rewindly");
+  }
 }
 
 typedef Maa = MainAxisAlignment;

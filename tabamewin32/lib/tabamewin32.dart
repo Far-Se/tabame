@@ -800,7 +800,13 @@ class ScreenRecordingConfig {
     this.audioMode = ScreenRecordingAudioMode.none,
     this.micDeviceId,
     this.systemAudioDeviceId,
+    this.sessionId = 0,
   });
+
+  /// Identifies which native recorder session this config drives. Defaults to 0
+  /// (the single-session used by the standalone recorder page). Rewindly uses a
+  /// distinct id per monitor so several sessions can run concurrently.
+  final int sessionId;
 
   final ScreenRecordingTargetType targetType;
   final String outputPath;
@@ -841,6 +847,7 @@ class ScreenRecordingConfig {
         'systemAudioDeviceId': systemAudioDeviceId,
         'recordingFormat': 'mp4',
         'encoder': 'h264',
+        'sessionId': sessionId,
       }..removeWhere((Object key, Object? value) => value == null);
 }
 
@@ -1013,33 +1020,60 @@ Future<ScreenRecordingStatus> startScreenRecording(ScreenRecordingConfig config)
   return ScreenRecordingStatus.fromMap(result ?? const <String, dynamic>{});
 }
 
-Future<ScreenRecordingStopResult> stopScreenRecording() async {
-  final Map<dynamic, dynamic>? result =
-      await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>('stopScreenRecording');
+Future<ScreenRecordingStopResult> stopScreenRecording({int sessionId = 0}) async {
+  final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
+    'stopScreenRecording',
+    <String, dynamic>{'sessionId': sessionId},
+  );
   return ScreenRecordingStopResult.fromMap(result ?? const <String, dynamic>{});
 }
 
-Future<bool> cancelScreenRecording() async {
-  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('cancelScreenRecording');
+Future<bool> cancelScreenRecording({int sessionId = 0}) async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+    'cancelScreenRecording',
+    <String, dynamic>{'sessionId': sessionId},
+  );
   return result ?? false;
 }
 
 /// Pause an in-progress recording (WGC backend only). Paused wall-clock time is
 /// excluded from the output, so audio and video stay in sync across the pause.
-Future<bool> pauseScreenRecording() async {
-  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('pauseScreenRecording');
+Future<bool> pauseScreenRecording({int sessionId = 0}) async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+    'pauseScreenRecording',
+    <String, dynamic>{'sessionId': sessionId},
+  );
   return result ?? false;
 }
 
-Future<bool> resumeScreenRecording() async {
-  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('resumeScreenRecording');
+Future<bool> resumeScreenRecording({int sessionId = 0}) async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+    'resumeScreenRecording',
+    <String, dynamic>{'sessionId': sessionId},
+  );
   return result ?? false;
 }
 
-Future<ScreenRecordingStatus> getScreenRecordingStatus() async {
-  final Map<dynamic, dynamic>? result =
-      await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>('getScreenRecordingStatus');
+Future<ScreenRecordingStatus> getScreenRecordingStatus({int sessionId = 0}) async {
+  final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
+    'getScreenRecordingStatus',
+    <String, dynamic>{'sessionId': sessionId},
+  );
   return ScreenRecordingStatus.fromMap(result ?? const <String, dynamic>{});
+}
+
+/// Losslessly joins [inputs] (in order) into a single mp4 at [outputPath] by
+/// remuxing compressed samples through Media Foundation (no re-encode). Used by
+/// Rewindly to stitch its rolling segments into one exported clip.
+Future<bool> concatScreenRecordings({required List<String> inputs, required String outputPath}) async {
+  if (inputs.isEmpty) {
+    return false;
+  }
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+    'concatScreenRecordings',
+    <String, dynamic>{'inputs': inputs, 'outputPath': outputPath},
+  );
+  return result ?? false;
 }
 
 Future<MonitorCapture?> captureMonitorBitmapAlternative({required int monitorHandle}) async {
