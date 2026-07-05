@@ -46,6 +46,7 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE
   flutter
   flutter_wrapper_plugin
   d3d11
+  dxva2
   dxgi
   windowsapp
   mf

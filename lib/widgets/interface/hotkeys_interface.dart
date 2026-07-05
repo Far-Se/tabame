@@ -85,6 +85,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
           children: <Widget>[
             Expanded(child: _buildScreenDrawHotkeysTile(colors, texts)),
             Expanded(child: _buildQuickClickHotkeysTile(colors, texts)),
+            Expanded(child: _buildTextSnippetsTile(colors, texts)),
           ],
         ),
         Expanded(
@@ -262,6 +263,98 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
         ),
       ),
     );
+  }
+
+  Widget _buildTextSnippetsTile(ColorScheme colors, TextTheme texts) {
+    final Color accent = Design.accent;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      child: InkWell(
+        onTap: _openTextSnippetsHotkey,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: colors.onSurface.withAlpha(8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.onSurface.withAlpha(18)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.short_text_rounded, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "Insert snippet",
+                      style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Bind the Text Expander hotkey",
+                      style: texts.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 22, color: colors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Finds — or lazily creates — the hotkey whose action fires the `ExpandSnippet`
+  /// tabame function, then opens its settings so the user can bind a trigger key.
+  /// Manage the actual snippet list from the QuickMenu "Text Snippets" button.
+  void _openTextSnippetsHotkey() {
+    int index = remap.indexWhere(
+      (Hotkeys h) => h.keymaps.any(
+        (KeyMap k) => k.actions.any(
+          (KeyAction a) => a.type == ActionType.tabameFunction && a.value == "ExpandSnippet",
+        ),
+      ),
+    );
+    if (index == -1) {
+      remap.add(Hotkeys(
+        key: "",
+        modifiers: <String>[],
+        prohibited: <String>[],
+        noopScreenBusy: false,
+        waitForDoublePress: false,
+        keymaps: <KeyMap>[
+          KeyMap(
+            name: "Insert Snippet",
+            enabled: true,
+            boundToRegion: false,
+            windowUnderMouse: false,
+            region: Region(),
+            windowsInfo: <String>["any"],
+            triggerInfo: <int>[],
+            actions: <KeyAction>[
+              KeyAction(type: ActionType.tabameFunction, value: "ExpandSnippet"),
+            ],
+            triggerType: TriggerType.press,
+            variableCheck: <String>["", ""],
+          ),
+        ],
+      ));
+      Boxes.updateSettings("remap", jsonEncode(remap));
+      index = remap.length - 1;
+    }
+    _openHotkeySettings(index);
   }
 
   Widget _buildInterfaceHeader(BuildContext context, ColorScheme colors, TextTheme texts) {

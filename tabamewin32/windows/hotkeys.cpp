@@ -821,6 +821,12 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
   const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
   const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
 
+  // Feed the Text Snippets buffer with real typing (skips command chords and
+  // the insert-snippet hotkey combo internally). Runs before hotkey handling so
+  // the buffer is complete even if this key is later consumed as a hotkey.
+  if (keyDown)
+    RecordSnippetKey(wParam, keyInfo);
+
   if (keyInfo.vkCode == VK_RMENU && HasRegisteredHotkey(L"RIGHTALT")) {
     if (keyDown) {
       if (!hotkeyPressed) {

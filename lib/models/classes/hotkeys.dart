@@ -21,6 +21,7 @@ import '../win32/win32.dart';
 import '../win32/win_utils.dart';
 import '../window_watcher.dart';
 import 'boxes.dart';
+import 'text_snippet.dart';
 
 class Hotkeys {
   static const List<String> modifierOrder = <String>["CTRL", "ALT", "SHIFT", "WIN"];
@@ -986,6 +987,7 @@ class HotKeyInfo {
         QuickMenuFunctions.hideQuickMenu();
       });
     },
+    "ExpandSnippet": () => TextSnippetsManager.expand(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
     "SwitchAudioOutput": () => Audio.switchDefaultDevice(

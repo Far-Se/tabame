@@ -60,7 +60,9 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "clipboard_extended.cpp"
 #include "desktop_wallpaper.cpp"
 #include "get_changed_folders.cpp"
+#include "brightness_control.cpp"
 #include "hdr_control.cpp"
+#include "text_snippets.cpp"
 #include "hotkeys.cpp"
 #include "media_session.cpp"
 #include "quickClick/QuickClickController.cpp"
@@ -291,6 +293,17 @@ EMap HDRDisplayToMap(const HDRDisplayInfo &d) {
   m[EVal("name")] = EVal(Encoding::WideToUtf8(d.name));
   m[EVal("supportsHDR")] = EVal(d.supportsHDR);
   m[EVal("isHDREnabled")] = EVal(d.isHDREnabled);
+  return m;
+}
+
+EMap BrightnessDisplayToMap(const BrightnessDisplayInfo &d) {
+  EMap m;
+  m[EVal("id")] = EVal(d.id);
+  m[EVal("name")] = EVal(Encoding::WideToUtf8(d.name));
+  m[EVal("supported")] = EVal(d.supported);
+  m[EVal("min")] = EVal(d.minBrightness);
+  m[EVal("current")] = EVal(d.curBrightness);
+  m[EVal("max")] = EVal(d.maxBrightness);
   return m;
 }
 
@@ -1177,6 +1190,22 @@ void SetHDRStateH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, ok);
 }
 
+void GetBrightnessDisplaysH(Tabamewin32Plugin *, const MethodCall &,
+                            MethodResult result) {
+  flutter::EncodableList list;
+  for (const auto &d : GetBrightnessDisplays())
+    list.push_back(EVal(Encode::BrightnessDisplayToMap(d)));
+  OK(result, EVal(list));
+}
+
+void SetBrightnessH(Tabamewin32Plugin *, const MethodCall &call,
+                    MethodResult result) {
+  auto &a = Args::Map(call);
+  const bool ok =
+      SetBrightnessForDisplay(Args::Str(a, "id"), Args::Int(a, "value"));
+  OK(result, ok);
+}
+
 void CaptureMonitorH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   auto &a = Args::Map(call);
@@ -1580,6 +1609,42 @@ void InvokeShellMenuItemH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, ShellContextMenu::Invoke(path, verb, id, hWnd));
 }
 
+// ===== Text Snippets =====
+void SetTextSnippetsH(Tabamewin32Plugin *, const MethodCall &call,
+                      MethodResult result) {
+  auto &a = Args::Map(call);
+  std::vector<TextSnippet> snippets;
+  auto it = a.find(EVal("snippets"));
+  if (it != a.end() &&
+      std::holds_alternative<flutter::EncodableList>(it->second)) {
+    for (const auto &entry : std::get<flutter::EncodableList>(it->second)) {
+      if (!std::holds_alternative<EMap>(entry))
+        continue;
+      const auto &m = std::get<EMap>(entry);
+      TextSnippet snippet;
+      auto triggerIt = m.find(EVal("trigger"));
+      auto textIt = m.find(EVal("text"));
+      if (triggerIt != m.end() &&
+          std::holds_alternative<std::string>(triggerIt->second))
+        snippet.trigger =
+            Encoding::Utf8ToWide(std::get<std::string>(triggerIt->second));
+      if (textIt != m.end() &&
+          std::holds_alternative<std::string>(textIt->second))
+        snippet.text =
+            Encoding::Utf8ToWide(std::get<std::string>(textIt->second));
+      if (!snippet.trigger.empty())
+        snippets.push_back(std::move(snippet));
+    }
+  }
+  SetTextSnippets(std::move(snippets));
+  OK(result, true);
+}
+
+void ExpandTextSnippetH(Tabamewin32Plugin *, const MethodCall &,
+                        MethodResult result) {
+  OK(result, ExpandTextSnippet());
+}
+
 } // namespace Handlers
 
 // -----------------------------------------------------------------------
@@ -1674,6 +1739,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"setWindowTheme", Handlers::SetWindowThemeH},
       {"getHDRDisplays", Handlers::GetHDRDisplaysH},
       {"setHDRState", Handlers::SetHDRStateH},
+      {"getBrightnessDisplays", Handlers::GetBrightnessDisplaysH},
+      {"setBrightness", Handlers::SetBrightnessH},
       {"captureMonitor", Handlers::CaptureMonitorH},
       {"captureMonitorBitmapAlternative",
        Handlers::CaptureMonitorBitmapAlternativeH},
@@ -1715,6 +1782,9 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"disableQuickClick", Handlers::DisableQuickClickH},
       {"getShellMenuItems", Handlers::GetShellMenuItemsH},
       {"invokeShellMenuItem", Handlers::InvokeShellMenuItemH},
+      // Text Snippets
+      {"setTextSnippets", Handlers::SetTextSnippetsH},
+      {"expandTextSnippet", Handlers::ExpandTextSnippetH},
   };
   return table;
 }

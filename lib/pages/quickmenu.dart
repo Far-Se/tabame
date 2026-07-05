@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/classes/saved_maps.dart';
+import '../models/classes/text_snippet.dart';
 import '../models/clipboard_history.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
@@ -182,6 +183,7 @@ class QuickMenuState extends State<QuickMenu>
     QuickMenuFunctions.syncSelectedBackdrop();
 
     WinHotkeys.update();
+    TextSnippetsManager.pushToNative();
     _startSettingsWatcher();
     ClipboardHistoryStore.clearCache();
     if (user.trktivityEnabled) enableTrcktivity(user.trktivityEnabled);

@@ -1626,6 +1626,32 @@ Future<bool> enableDebug(String path) async {
   return true;
 }
 
+/// Native "Text Expander / Snippets" bridge.
+///
+/// The plugin keeps a rolling buffer of the most recently typed characters
+/// inside the low-level keyboard hook. [setSnippets] pushes the trigger/text
+/// rules; [expand] — called when the customizable insert hotkey fires — deletes
+/// the matched trigger from the focused control and types its expansion. See
+/// `windows/text_snippets.cpp`.
+class TextSnippets {
+  TextSnippets._();
+
+  /// Replace the native snippet list. Each entry is `{'trigger': ..., 'text': ...}`.
+  static Future<void> setSnippets(List<Map<String, String>> snippets) async {
+    await tabameWin32MethodChannel.invokeMethod<void>(
+      'setTextSnippets',
+      <String, dynamic>{'snippets': snippets},
+    );
+  }
+
+  /// Attempt to expand the trigger currently at the tail of the native buffer.
+  /// Returns true if a snippet was expanded.
+  static Future<bool> expand() async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('expandTextSnippet');
+    return result ?? false;
+  }
+}
+
 class WinClipboard {
   Future<void> saveClipboardToPng(String path) async {
     final Map<String, dynamic> arguments = <String, dynamic>{
@@ -1690,7 +1716,8 @@ class ClipboardExtended {
     final Map<String, dynamic> formats = <String, dynamic>{};
     if (text != null) formats['text/plain'] = text;
     if (html != null) formats['text/html'] = html;
-    if (pngBytes != null) formats['image/png'] = pngBytes; // typed data (Uint8List) — single buffer, not a boxed int list
+    if (pngBytes != null)
+      formats['image/png'] = pngBytes; // typed data (Uint8List) — single buffer, not a boxed int list
 
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyMultiple',
@@ -2282,6 +2309,73 @@ class HDR {
         'adapterIdHigh': display.adapterIdHigh,
         'id': display.id,
         'enable': enable,
+      },
+    );
+    return result ?? false;
+  }
+}
+
+/// A connected display along with its hardware brightness range/state.
+class BrightnessDisplay {
+  /// Opaque identity used to re-resolve the display when setting brightness
+  /// (e.g. "ddc:0:0" for DDC-CI, or "wmi:<instance>" for an internal panel).
+  final String id;
+
+  /// Friendly monitor description, or "Display" / "Built-in display".
+  final String name;
+
+  /// Whether brightness can actually be read/written for this display.
+  final bool supported;
+
+  /// Minimum brightness value the display accepts.
+  final int min;
+
+  /// Current brightness value.
+  final int current;
+
+  /// Maximum brightness value the display accepts.
+  final int max;
+
+  const BrightnessDisplay({
+    required this.id,
+    required this.name,
+    required this.supported,
+    required this.min,
+    required this.current,
+    required this.max,
+  });
+
+  factory BrightnessDisplay.fromMap(Map<Object?, Object?> map) {
+    return BrightnessDisplay(
+      id: (map['id'] as String?) ?? '',
+      name: (map['name'] as String?) ?? 'Display',
+      supported: (map['supported'] as bool?) ?? false,
+      min: (map['min'] as int?) ?? 0,
+      current: (map['current'] as int?) ?? 0,
+      max: (map['max'] as int?) ?? 100,
+    );
+  }
+}
+
+/// Enumerate displays and set hardware brightness via DDC-CI (dxva2) with a
+/// WMI fallback for internal laptop panels.
+class WinBrightness {
+  /// Returns every detected display with its brightness range/state.
+  static Future<List<BrightnessDisplay>> getDisplays() async {
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getBrightnessDisplays');
+    if (raw == null) return const <BrightnessDisplay>[];
+    return raw.whereType<Map<Object?, Object?>>().map(BrightnessDisplay.fromMap).toList(growable: false);
+  }
+
+  /// Sets the brightness of the display identified by [display] to [value]
+  /// (clamped to the display's own min/max). Returns true on success.
+  static Future<bool> setBrightness(BrightnessDisplay display, int value) async {
+    final int clamped = value.clamp(display.min, display.max);
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'setBrightness',
+      <String, dynamic>{
+        'id': display.id,
+        'value': clamped,
       },
     );
     return result ?? false;

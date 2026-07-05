@@ -8,6 +8,7 @@ import '../../widgets/itzy/quickmenu/button_apps.dart';
 import '../../widgets/itzy/quickmenu/button_audio.dart';
 import '../../widgets/itzy/quickmenu/button_authenticator.dart';
 import '../../widgets/itzy/quickmenu/button_bookmarks.dart';
+import '../../widgets/itzy/quickmenu/button_brightness.dart';
 import '../../widgets/itzy/quickmenu/button_calculator.dart';
 import '../../widgets/itzy/quickmenu/button_change_theme.dart';
 import '../../widgets/itzy/quickmenu/button_chars.dart';
@@ -21,6 +22,7 @@ import '../../widgets/itzy/quickmenu/button_color_picker_instant.dart';
 import '../../widgets/itzy/quickmenu/button_countdown.dart';
 import '../../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../../widgets/itzy/quickmenu/button_desktop_files.dart';
+import '../../widgets/itzy/quickmenu/button_dev_toolbox.dart';
 import '../../widgets/itzy/quickmenu/button_disk_cleanup.dart';
 import '../../widgets/itzy/quickmenu/button_edit_color.dart';
 import '../../widgets/itzy/quickmenu/button_emoji.dart';
@@ -36,6 +38,7 @@ import '../../widgets/itzy/quickmenu/button_media_control.dart';
 import '../../widgets/itzy/quickmenu/button_memo.dart';
 import '../../widgets/itzy/quickmenu/button_menu_design.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
+import '../../widgets/itzy/quickmenu/button_mouse_jiggler.dart';
 import '../../widgets/itzy/quickmenu/button_music_player.dart';
 import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_obsidian.dart';
@@ -52,6 +55,7 @@ import '../../widgets/itzy/quickmenu/button_spotlight.dart';
 import '../../widgets/itzy/quickmenu/button_steam.dart';
 import '../../widgets/itzy/quickmenu/button_subscription.dart';
 import '../../widgets/itzy/quickmenu/button_task_manager.dart';
+import '../../widgets/itzy/quickmenu/button_text_snippets.dart';
 import '../../widgets/itzy/quickmenu/button_timers.dart';
 import '../../widgets/itzy/quickmenu/button_timezone.dart';
 import '../../widgets/itzy/quickmenu/button_toggle_desktop.dart';
@@ -59,6 +63,7 @@ import '../../widgets/itzy/quickmenu/button_toggle_hidden_files.dart';
 import '../../widgets/itzy/quickmenu/button_toggle_taskbar.dart';
 import '../../widgets/itzy/quickmenu/button_toggle_wallpaper_mode.dart';
 import '../../widgets/itzy/quickmenu/button_translator.dart';
+import '../../widgets/itzy/quickmenu/button_universal_converter.dart';
 import '../../widgets/itzy/quickmenu/button_vault.dart';
 import '../../widgets/itzy/quickmenu/button_virtual_desktop.dart';
 import '../../widgets/itzy/quickmenu/button_wallpapers.dart';
@@ -208,6 +213,18 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.currency_exchange_rounded,
     widget: () => const CurrencyConverterButton(),
   ),
+  "UniversalConverterButton": QuickAction(
+    icon: Icons.straighten_rounded,
+    widget: () => const UniversalConverterButton(),
+  ),
+  "DevToolboxButton": QuickAction(
+    icon: Icons.terminal_rounded,
+    widget: () => const DevToolboxButton(),
+  ),
+  "BrightnessButton": QuickAction(
+    icon: Icons.brightness_6_rounded,
+    widget: () => const BrightnessButton(),
+  ),
   "DiskCleanupButton": QuickAction(
     icon: Icons.cleaning_services_rounded,
     widget: () => const DiskCleanupButton(),
@@ -289,6 +306,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.mic,
     widget: () => const MicMuteButton(),
   ),
+  "MouseJigglerButton": QuickAction(
+    icon: Icons.mouse_rounded,
+    widget: () => const MouseJigglerButton(),
+  ),
   "AlwaysAwakeButton": QuickAction(
     icon: Icons.running_with_errors,
     widget: () => const AlwaysAwakeButton(),
@@ -316,6 +337,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "CustomCharsButton": QuickAction(
     icon: Icons.format_quote,
     widget: () => const CustomCharsButton(),
+  ),
+  "TextSnippetsButton": QuickAction(
+    icon: Icons.short_text_rounded,
+    widget: () => const TextSnippetsButton(),
   ),
   "ShutDownButton": QuickAction(
     icon: Icons.power_settings_new_rounded,

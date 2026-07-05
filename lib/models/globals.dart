@@ -66,6 +66,7 @@ class Globals {
 
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;
+  static bool mouseJiggler = false;
   static bool audioBoxVisible = false;
 
   static bool taskbarVisible = true;
