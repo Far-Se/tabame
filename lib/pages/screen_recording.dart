@@ -216,6 +216,25 @@ enum VideoSource {
   ffmpeg,
 }
 
+/// Which H.264 encoder to prefer.
+enum VideoEncoder {
+  /// Let the backend choose (GPU when available). WGC hardware transforms on;
+  /// FFmpeg uses libx264.
+  auto,
+
+  /// Force the software encoder (libx264 / MF software).
+  cpu,
+
+  /// NVIDIA NVENC (FFmpeg h264_nvenc).
+  nvenc,
+
+  /// Intel Quick Sync (FFmpeg h264_qsv).
+  qsv,
+
+  /// AMD AMF (FFmpeg h264_amf).
+  amf,
+}
+
 class ScreenRecordingApp extends StatelessWidget {
   const ScreenRecordingApp({super.key});
 
@@ -247,7 +266,10 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   int _videoBitrateMbps = 12;
   bool _captureCursor = true;
   bool _captureBorder = false;
-  String _saveFolder = '';
+  int _countdownSeconds = 0;
+  int _maxDurationMinutes = 0;
+  VideoEncoder _videoEncoder = VideoEncoder.auto;
+  bool _globalHotkeysEnabled = true;
   String _selectedMicId = '';
   String _selectedSystemAudioId = '';
   bool _missingVirtualAudioCapturer = false;
@@ -275,6 +297,15 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   Timer? _hudTimer;
   Duration _elapsed = Duration.zero;
   String? _errorText;
+  bool _paused = false;
+  Duration _pausedAccumulated = Duration.zero;
+  DateTime? _pauseStartedAt;
+  bool _autoStopTriggered = false;
+  bool _countingDown = false;
+  int _countdown = 0;
+  int _fileSizeBytes = 0;
+  bool _stopHotkeyDown = false;
+  bool _pauseHotkeyDown = false;
 
   @override
   void initState() {
@@ -286,13 +317,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       RecordingOverlayWindow.disableClickThrough();
       await _loadAudioDevices();
       await _refreshVirtualBounds();
-      _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-        if (_recording) {
-          _syncRecordingInteractivity();
-        } else {
-          _refreshMonitorAndHover();
-        }
-      });
+      _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _onMonitorTick());
     });
   }
 
@@ -316,7 +341,14 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     _videoBitrateMbps = RecordingSettingsStore.getInt('videoBitrateMbps', 12);
     _captureCursor = RecordingSettingsStore.getBool('captureCursor', true);
     _captureBorder = RecordingSettingsStore.getBool('captureBorder', false);
-    _saveFolder = RecordingSettingsStore.getString('saveFolder', _defaultRecordingFolder());
+    _countdownSeconds = RecordingSettingsStore.getInt('countdownSeconds', 0);
+    _maxDurationMinutes = RecordingSettingsStore.getInt('maxDurationMinutes', 0);
+    final String videoEncoder = RecordingSettingsStore.getString('videoEncoder', 'auto');
+    _videoEncoder = VideoEncoder.values.firstWhere(
+      (VideoEncoder e) => e.name == videoEncoder,
+      orElse: () => VideoEncoder.auto,
+    );
+    _globalHotkeysEnabled = RecordingSettingsStore.getBool('globalHotkeysEnabled', true);
     _selectedMicId = RecordingSettingsStore.getString('micDeviceId', '');
     _selectedSystemAudioId = RecordingSettingsStore.getString('systemAudioDeviceId', '');
     final String videoSource = RecordingSettingsStore.getString('videoSource', 'wgc');
@@ -449,24 +481,23 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   String _defaultRecordingFolder() {
-    final DateTime now = DateTime.now();
-    final String month = intl.DateFormat('MMM').format(now);
-    return '${WinUtils.getFancyshotFolder()}\\recordings\\${now.year} - $month';
+    return '${WinUtils.getFancyshotFolder()}\\recordings';
   }
 
   Future<String> _buildOutputPath() async {
-    final Directory dir = Directory(_saveFolder);
+    final DateTime now = DateTime.now();
+    final String month = intl.DateFormat('MMM').format(now);
+    final Directory dir = Directory('${_defaultRecordingFolder()}\\${now.year} - $month');
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);
       WinUtils.setSortByDateModifiedDesc(dir.path);
     }
-    DateTime now = DateTime.now();
     final String ts = intl.DateFormat('d EEEE HH-mm-ss').format(now);
     return '${dir.path}\\$ts.mp4';
   }
 
   Future<void> _beginRecordingForRegion(Rect regionRect) async {
-    if (_startingRecording || _recording) return;
+    if (_startingRecording || _recording || _countingDown) return;
     final Rect normalized = Rect.fromPoints(regionRect.topLeft, regionRect.bottomRight).normalize();
     if (normalized.width < 8 || normalized.height < 8) return;
     final Rect screenRect = _localRectToScreen(normalized);
@@ -482,6 +513,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         videoBitrateMbps: _videoBitrateMbps,
         captureCursor: _captureCursor,
         captureBorder: _captureBorder,
+        useHardwareEncoder: _videoEncoder != VideoEncoder.cpu,
         audioMode: _audioMode,
         micDeviceId: _selectedMicId.isEmpty ? null : _selectedMicId,
         systemAudioDeviceId: _selectedSystemAudioId.isEmpty ? null : _selectedSystemAudioId,
@@ -491,7 +523,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   Future<void> _beginRecordingForWindow(int hwnd, Rect windowRect) async {
-    if (_startingRecording || _recording) return;
+    if (_startingRecording || _recording || _countingDown) return;
     await _startRecording(
       ScreenRecordingConfig(
         targetType: ScreenRecordingTargetType.window,
@@ -501,6 +533,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         videoBitrateMbps: _videoBitrateMbps,
         captureCursor: _captureCursor,
         captureBorder: _captureBorder,
+        useHardwareEncoder: _videoEncoder != VideoEncoder.cpu,
         audioMode: _audioMode,
         micDeviceId: _selectedMicId.isEmpty ? null : _selectedMicId,
         systemAudioDeviceId: _selectedSystemAudioId.isEmpty ? null : _selectedSystemAudioId,
@@ -510,7 +543,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   Future<void> _beginRecordingForMonitor(int monitorHandle, Rect monitorRect) async {
-    if (_startingRecording || _recording) return;
+    if (_startingRecording || _recording || _countingDown) return;
     await _startRecording(
       ScreenRecordingConfig(
         targetType: ScreenRecordingTargetType.monitor,
@@ -520,6 +553,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         videoBitrateMbps: _videoBitrateMbps,
         captureCursor: _captureCursor,
         captureBorder: _captureBorder,
+        useHardwareEncoder: _videoEncoder != VideoEncoder.cpu,
         audioMode: _audioMode,
         micDeviceId: _selectedMicId.isEmpty ? null : _selectedMicId,
         systemAudioDeviceId: _selectedSystemAudioId.isEmpty ? null : _selectedSystemAudioId,
@@ -528,7 +562,158 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     );
   }
 
+  /// Displays a full-screen 3-2-1 style countdown before capture begins.
+  /// No-op when the countdown setting is Off.
+  Future<void> _runCountdown() async {
+    if (_countdownSeconds <= 0) return;
+    for (int i = _countdownSeconds; i > 0; i--) {
+      if (!mounted) return;
+      setState(() {
+        _countingDown = true;
+        _countdown = i;
+      });
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+    if (mounted) {
+      setState(() {
+        _countingDown = false;
+        _countdown = 0;
+      });
+    }
+  }
+
+  void _resetTimingState() {
+    _recordingStartedAt = DateTime.now();
+    _elapsed = Duration.zero;
+    _paused = false;
+    _pausedAccumulated = Duration.zero;
+    _pauseStartedAt = null;
+    _autoStopTriggered = false;
+  }
+
+  /// Drives the recording HUD clock and the optional auto-stop timer. The
+  /// elapsed clock freezes while paused and excludes accumulated paused time,
+  /// matching the paused-adjusted timeline the native recorder writes.
+  void _tickHud() {
+    if (!mounted || !_recording) return;
+    final DateTime? started = _recordingStartedAt;
+    if (started == null) return;
+    int sizeBytes = _fileSizeBytes;
+    if (_recordingPath.isNotEmpty) {
+      try {
+        final File file = File(_recordingPath);
+        if (file.existsSync()) sizeBytes = file.lengthSync();
+      } catch (_) {}
+    }
+    if (!_paused) {
+      setState(() {
+        _elapsed = DateTime.now().difference(started) - _pausedAccumulated;
+        _fileSizeBytes = sizeBytes;
+      });
+    }
+    if (!_autoStopTriggered && _maxDurationMinutes > 0 && _elapsed.inSeconds >= _maxDurationMinutes * 60) {
+      _autoStopTriggered = true;
+      _stopRecording();
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 MB';
+    const double mb = 1024 * 1024;
+    final double megabytes = bytes / mb;
+    if (megabytes >= 1024) return '${(megabytes / 1024).toStringAsFixed(2)} GB';
+    return '${megabytes.toStringAsFixed(megabytes >= 100 ? 0 : 1)} MB';
+  }
+
+  /// Toggle pause/resume. Only the WGC backend supports pausing; FFmpeg cannot
+  /// be paused mid-encode without risking A/V desync, so the button is hidden
+  /// for it.
+  Future<void> _togglePause() async {
+    // Pause is WGC-only; FFmpeg has no clean mid-encode pause.
+    if (_videoSource != VideoSource.wgc || !_recording) return;
+    if (_paused) {
+      await resumeScreenRecording();
+      if (_pauseStartedAt != null) {
+        _pausedAccumulated += DateTime.now().difference(_pauseStartedAt!);
+        _pauseStartedAt = null;
+      }
+      if (mounted) setState(() => _paused = false);
+    } else {
+      await pauseScreenRecording();
+      _pauseStartedAt = DateTime.now();
+      if (mounted) setState(() => _paused = true);
+    }
+  }
+
+  void _onMonitorTick() {
+    if (_recording) {
+      _checkGlobalHotkeys();
+      _syncRecordingInteractivity();
+    } else {
+      _refreshMonitorAndHover();
+    }
+  }
+
+  // Global recording hotkeys, polled while recording so they work regardless of
+  // focus (the overlay is click-through during capture). Edge-triggered so a
+  // held combo fires once.
+  static const int _vkControl = 0x11;
+  static const int _vkShift = 0x10;
+  static const int _vkF8 = 0x77; // pause / resume
+  static const int _vkF9 = 0x78; // stop
+
+  void _checkGlobalHotkeys() {
+    if (!_globalHotkeysEnabled || !_recording) return;
+    final bool ctrl = (GetAsyncKeyState(_vkControl) & 0x8000) != 0;
+    final bool shift = (GetAsyncKeyState(_vkShift) & 0x8000) != 0;
+    final bool stopCombo = ctrl && shift && (GetAsyncKeyState(_vkF9) & 0x8000) != 0;
+    final bool pauseCombo = ctrl && shift && (GetAsyncKeyState(_vkF8) & 0x8000) != 0;
+
+    if (stopCombo && !_stopHotkeyDown) {
+      _stopHotkeyDown = true;
+      _stopRecording();
+    } else if (!stopCombo) {
+      _stopHotkeyDown = false;
+    }
+
+    if (pauseCombo && !_pauseHotkeyDown) {
+      _pauseHotkeyDown = true;
+      _togglePause();
+    } else if (!pauseCombo) {
+      _pauseHotkeyDown = false;
+    }
+  }
+
+  /// Guards against starting a recording with too little free space on the save
+  /// drive. Returns true when free space can't be determined (never blocks on
+  /// uncertainty).
+  bool _hasEnoughDiskSpace() {
+    const int minBytes = 500 * 1024 * 1024; // 500 MB headroom
+    String probe = _defaultRecordingFolder();
+    if (probe.isEmpty) return true;
+    if (probe.length >= 2 && probe[1] == ':') probe = '${probe.substring(0, 2)}\\';
+    final Pointer<Uint64> freeAvailable = calloc<Uint64>();
+    final Pointer<Utf16> dir = probe.toNativeUtf16();
+    try {
+      final int ok = GetDiskFreeSpaceEx(dir, freeAvailable, nullptr, nullptr);
+      if (ok == 0) return true;
+      return freeAvailable.value >= minBytes;
+    } finally {
+      calloc.free(freeAvailable);
+      calloc.free(dir);
+    }
+  }
+
   Future<void> _startRecording(ScreenRecordingConfig config, Rect targetRect) async {
+    if (!_hasEnoughDiskSpace()) {
+      if (mounted) {
+        setState(() => _errorText = 'Not enough free disk space on the save drive to start recording.');
+      }
+      return;
+    }
+    await _runCountdown();
+    if (!mounted) return;
+
     // If using an external ffmpeg-based source, delegate to the ffmpeg path.
     if (_videoSource == VideoSource.ffmpeg) {
       await _startFfmpegRecording(config, targetRect);
@@ -545,18 +730,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       final ScreenRecordingStatus status = await startScreenRecording(config);
       if (!mounted) return;
       _recordingPath = status.outputPath;
-      _recordingStartedAt = DateTime.now();
-      _elapsed = Duration.zero;
+      _resetTimingState();
       _hudTimer?.cancel();
-      _hudTimer = Timer.periodic(const Duration(milliseconds: 250), (_) async {
-        if (!mounted || !_recording) return;
-        final DateTime? started = _recordingStartedAt;
-        if (started != null) {
-          setState(() {
-            _elapsed = DateTime.now().difference(started);
-          });
-        }
-      });
+      _hudTimer = Timer.periodic(const Duration(milliseconds: 250), (_) => _tickHud());
       await RecordingOverlayWindow.showHud();
       if (!mounted) return;
       setState(() {
@@ -638,10 +814,8 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     } catch (_) {}
   }
 
-  /// Probe ffmpeg dshow for audio capture devices and return the first name
-  /// that looks like a loopback / stereo-mix device. Falls back to the first
-  /// available audio capture device, or null if none found.
-  Future<String?> _probeDshowAudioDevice() async {
+  /// Enumerate all ffmpeg dshow audio capture device names.
+  Future<List<String>> _listDshowAudioDevices() async {
     try {
       final ProcessResult result = await Process.run(
         r'ffmpeg.exe',
@@ -652,41 +826,107 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       _ffmpegLog('[dshow probe]\n$output');
 
       final List<String> audioDevices = <String>[];
-
       // Matches a string inside quotes, followed by "(audio)" later in the line
       final RegExp audioDeviceRegExp = RegExp(r'"([^"]+)"\s*\(audio\)');
-
       for (final String line in output.split('\n')) {
         final RegExpMatch? match = audioDeviceRegExp.firstMatch(line);
         if (match != null) {
           audioDevices.add(match.group(1)!);
         }
       }
-
       _ffmpegLog('[dshow probe] Found audio devices: $audioDevices');
-      if (audioDevices.isEmpty) return null;
-      // LEAVE THIS LIKE THIS, ITS THE ONLY ONE THAT TRULLY WORKS FOR AUDIO
-      if (audioDevices.contains("virtual-audio-capturer")) return "virtual-audio-capturer";
-      //JUNK CODE:
-      // Prefer loopback-style devices by keyword priority.
-      const List<String> preferred = <String>[
-        'stereo mix',
-        'loopback',
-        'wave out',
-        'what u hear',
-        'mixage',
-      ];
-      for (final String keyword in preferred) {
-        final String match = audioDevices.firstWhere(
-          (String d) => d.toLowerCase().contains(keyword),
-          orElse: () => '',
-        );
-        if (match.isNotEmpty) return match;
-      }
-      return audioDevices.first;
+      return audioDevices;
     } catch (e) {
       _ffmpegLog('[dshow probe] Exception: $e');
-      return null;
+      return <String>[];
+    }
+  }
+
+  static const List<String> _loopbackKeywords = <String>[
+    'virtual-audio-capturer',
+    'stereo mix',
+    'loopback',
+    'wave out',
+    'what u hear',
+    'mixage',
+  ];
+
+  /// Pick the dshow device that captures system/loopback audio, or null.
+  /// virtual-audio-capturer is by far the most reliable, so prefer it.
+  String? _pickLoopbackDevice(List<String> devices) {
+    if (devices.isEmpty) return null;
+    if (devices.contains('virtual-audio-capturer')) return 'virtual-audio-capturer';
+    for (final String keyword in _loopbackKeywords) {
+      for (final String d in devices) {
+        if (d.toLowerCase().contains(keyword)) return d;
+      }
+    }
+    return null;
+  }
+
+  /// The friendly name of the currently-selected WASAPI microphone, or ''.
+  String _selectedMicName() {
+    for (final AudioDevice d in _inputDevices) {
+      if (d.id == _selectedMicId) return d.name;
+    }
+    return '';
+  }
+
+  /// Pick the dshow microphone device that best matches the selected WASAPI mic
+  /// [wasapiName]. Falls back to the first non-loopback capture device.
+  /// [exclude] is skipped (e.g. the loopback device already claimed for system).
+  String? _pickMicDevice(List<String> devices, String wasapiName, {String? exclude}) {
+    final List<String> pool = devices.where((String d) => d != exclude).toList();
+    if (pool.isEmpty) return null;
+
+    if (wasapiName.isNotEmpty) {
+      final String want = wasapiName.toLowerCase();
+      for (final String d in pool) {
+        final String dl = d.toLowerCase();
+        if (dl == want || dl.contains(want) || want.contains(dl)) return d;
+      }
+      final Set<String> wantTokens = want.split(RegExp(r'[^a-z0-9]+')).where((String t) => t.length > 2).toSet();
+      for (final String d in pool) {
+        final Set<String> deviceTokens =
+            d.toLowerCase().split(RegExp(r'[^a-z0-9]+')).where((String t) => t.length > 2).toSet();
+        if (deviceTokens.intersection(wantTokens).isNotEmpty) return d;
+      }
+    }
+
+    for (final String d in pool) {
+      final String dl = d.toLowerCase();
+      if (!_loopbackKeywords.any((String k) => dl.contains(k))) return d;
+    }
+    return pool.first;
+  }
+
+  /// Returns the title text of [hwnd], or '' when unavailable.
+  String _windowTitle(int hwnd) {
+    if (hwnd == 0) return '';
+    final int len = GetWindowTextLength(hwnd);
+    if (len <= 0) return '';
+    final Pointer<Utf16> buffer = calloc<Uint16>(len + 1).cast<Utf16>();
+    try {
+      final int copied = GetWindowText(hwnd, buffer, len + 1);
+      if (copied <= 0) return '';
+      return buffer.toDartString();
+    } finally {
+      calloc.free(buffer);
+    }
+  }
+
+  /// Current on-screen rectangle of [hwnd] in physical desktop coordinates,
+  /// snapped to even dimensions (H.264 requires even width/height). Null on failure.
+  ({int x, int y, int w, int h})? _windowPhysicalRect(int hwnd) {
+    final Pointer<RECT> rect = calloc<RECT>();
+    try {
+      if (GetWindowRect(hwnd, rect) == 0) return null;
+      final int w = (rect.ref.right - rect.ref.left) & ~1;
+      final int h = (rect.ref.bottom - rect.ref.top) & ~1;
+      if (w <= 0 || h <= 0) return null;
+      return (x: rect.ref.left, y: rect.ref.top, w: w, h: h);
+    } finally {
+      calloc.free(rect);
     }
   }
 
@@ -694,15 +934,23 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   /// [audioDevice] is the dshow audio device name resolved before calling this.
   /// Build the default ffmpeg command (gdigrab for video, dshow for audio when enabled).
   /// [audioDevice] is the dshow audio device name resolved before calling this.
-  String _buildDefaultFfmpegCommand(String outputPath, {ScreenRecordingConfig? config, String? audioDevice}) {
+  String _buildDefaultFfmpegCommand(
+    String outputPath, {
+    ScreenRecordingConfig? config,
+    String? micAudioDevice,
+    String? systemAudioDevice,
+  }) {
     final int fps = _frameRate;
     final int br = _videoBitrateMbps;
 
-    // Build gdigrab input flags from config region/monitor if available.
+    // Build the gdigrab video input. Window targets capture by title (gdigrab
+    // re-grabs each frame, so it follows the window as it moves); everything
+    // else grabs a fixed desktop region.
     int x = 0;
     int y = 0;
     int w = 1920; // fallback default width
     int h = 1080; // fallback default height
+    String? windowTitle;
 
     if (config != null) {
       if (config.targetType == ScreenRecordingTargetType.region) {
@@ -719,32 +967,73 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
           w = sq.width & ~1;
           h = sq.height & ~1;
         }
+      } else if (config.targetType == ScreenRecordingTargetType.window && config.hWnd != null) {
+        final String title = _windowTitle(config.hWnd!);
+        if (title.isNotEmpty) {
+          windowTitle = title;
+        } else {
+          // Title unavailable — fall back to the window's current rect.
+          final ({int x, int y, int w, int h})? rect = _windowPhysicalRect(config.hWnd!);
+          if (rect != null) {
+            x = rect.x;
+            y = rect.y;
+            w = rect.w;
+            h = rect.h;
+          }
+        }
       }
     }
 
-    final bool withAudio = _audioMode != ScreenRecordingAudioMode.none && audioDevice != null;
+    final String gdigrabVideo = windowTitle != null
+        ? ' -f gdigrab -thread_queue_size 1024 -rtbufsize 256M'
+            ' -framerate $fps -draw_mouse ${_captureCursor ? 1 : 0} -i title="$windowTitle"'
+        : ' -f gdigrab -thread_queue_size 1024 -rtbufsize 256M'
+            ' -framerate $fps -offset_x $x -offset_y $y -video_size ${w}x$h'
+            ' -draw_mouse ${_captureCursor ? 1 : 0} -i desktop';
 
-    if (withAudio) {
-      // ORDER MATTERS: Audio must be the first input stream (-i) to prevent video buffer starvation!
-      return 'ffmpeg'
-          ' -f dshow -thread_queue_size 1024 -rtbufsize 256M -audio_buffer_size 80 -i audio="$audioDevice"'
-          ' -f gdigrab -thread_queue_size 1024 -rtbufsize 256M'
-          ' -framerate $fps -offset_x $x -offset_y $y -video_size ${w}x$h -draw_mouse ${_captureCursor ? 1 : 0} -i desktop'
-          ' -c:v libx264 -r $fps -preset ultrafast -tune zerolatency'
-          ' -b:v ${br}M'
-          ' -pix_fmt yuv420p -movflags +faststart'
-          ' -c:a aac -ac 2 -b:a 128k'
-          ' -y "$outputPath"';
+    // Audio inputs come BEFORE the video input to prevent video buffer
+    // starvation. Order: mic (index 0), system (index 1), video last.
+    final List<String> audioInputs = <String>[];
+    for (final String? dev in <String?>[micAudioDevice, systemAudioDevice]) {
+      if (dev != null && dev.isNotEmpty) {
+        audioInputs.add(' -f dshow -thread_queue_size 1024 -rtbufsize 256M -audio_buffer_size 80 -i audio="$dev"');
+      }
+    }
+    final int audioCount = audioInputs.length;
+    final int videoIndex = audioCount; // video input follows the audio inputs
+
+    // Video codec flags per selected encoder. Hardware encoders use minimal
+    // flags for maximum cross-build compatibility; libx264 keeps its low-latency
+    // preset. yuv420p is applied to all so the MP4 is broadly playable.
+    final String videoCodec;
+    switch (_videoEncoder) {
+      case VideoEncoder.nvenc:
+        videoCodec = '-c:v h264_nvenc -b:v ${br}M';
+      case VideoEncoder.qsv:
+        videoCodec = '-c:v h264_qsv -b:v ${br}M';
+      case VideoEncoder.amf:
+        videoCodec = '-c:v h264_amf -b:v ${br}M';
+      case VideoEncoder.cpu:
+      case VideoEncoder.auto:
+        videoCodec = '-c:v libx264 -preset ultrafast -tune zerolatency -b:v ${br}M';
     }
 
-    // Video-only optimization
-    return 'ffmpeg'
-        ' -f gdigrab -thread_queue_size 1024 -rtbufsize 256M'
-        ' -framerate $fps -offset_x $x -offset_y $y -video_size ${w}x$h -draw_mouse ${_captureCursor ? 1 : 0} -i desktop'
-        ' -c:v libx264 -r $fps -preset ultrafast -tune zerolatency'
-        ' -b:v ${br}M'
-        ' -pix_fmt yuv420p -movflags +faststart'
-        ' -y "$outputPath"';
+    final StringBuffer cmd = StringBuffer('ffmpeg');
+    for (final String input in audioInputs) {
+      cmd.write(input);
+    }
+    cmd.write(gdigrabVideo);
+    cmd.write(' -r $fps $videoCodec -pix_fmt yuv420p -movflags +faststart');
+
+    if (audioCount == 1) {
+      cmd.write(' -map $videoIndex:v -map 0:a -c:a aac -ac 2 -b:a 128k');
+    } else if (audioCount >= 2) {
+      // Mix mic + system down to a single stereo AAC track.
+      cmd.write(' -filter_complex "[0:a][1:a]amix=inputs=2:duration=longest[aout]"');
+      cmd.write(' -map $videoIndex:v -map "[aout]" -c:a aac -ac 2 -b:a 128k');
+    }
+    cmd.write(' -y "$outputPath"');
+    return cmd.toString();
   }
 
   Future<void> _startFfmpegRecording(ScreenRecordingConfig config, Rect targetRect) async {
@@ -757,17 +1046,29 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       final String outputPath = config.outputPath;
       _recordingPath = outputPath;
 
-      // Probe for a dshow loopback device if audio is requested (only for auto-command).
-      String? dshowAudioDevice;
+      // Resolve dshow audio devices if audio is requested (only for auto-command).
+      String? micDevice;
+      String? systemDevice;
       if (_ffmpegCommand.trim().isEmpty && _audioMode != ScreenRecordingAudioMode.none) {
-        dshowAudioDevice = await _probeDshowAudioDevice();
-        _ffmpegLog('dshow audio device selected: ${dshowAudioDevice ?? "(none — recording without audio)"}');
+        final List<String> devices = await _listDshowAudioDevices();
+        if (_audioMode == ScreenRecordingAudioMode.system || _audioMode == ScreenRecordingAudioMode.systemAndMic) {
+          systemDevice = _pickLoopbackDevice(devices);
+        }
+        if (_audioMode == ScreenRecordingAudioMode.mic || _audioMode == ScreenRecordingAudioMode.systemAndMic) {
+          micDevice = _pickMicDevice(devices, _selectedMicName(), exclude: systemDevice);
+        }
+        _ffmpegLog('dshow audio resolved — mic: ${micDevice ?? "(none)"}  system: ${systemDevice ?? "(none)"}');
       }
 
       // Build the command.
       String command = _ffmpegCommand.trim();
       if (command.isEmpty) {
-        command = _buildDefaultFfmpegCommand(outputPath, config: config, audioDevice: dshowAudioDevice);
+        command = _buildDefaultFfmpegCommand(
+          outputPath,
+          config: config,
+          micAudioDevice: micDevice,
+          systemAudioDevice: systemDevice,
+        );
       } else if (command.contains('{output}')) {
         command = command.replaceAll('{output}', '"$outputPath"');
       } else {
@@ -819,16 +1120,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         }
       });
 
-      _recordingStartedAt = DateTime.now();
-      _elapsed = Duration.zero;
+      _resetTimingState();
       _hudTimer?.cancel();
-      _hudTimer = Timer.periodic(const Duration(milliseconds: 250), (_) async {
-        if (!mounted || !_recording) return;
-        final DateTime? started = _recordingStartedAt;
-        if (started != null) {
-          setState(() => _elapsed = DateTime.now().difference(started));
-        }
-      });
+      _hudTimer = Timer.periodic(const Duration(milliseconds: 250), (_) => _tickHud());
 
       await RecordingOverlayWindow.showHud();
       if (!mounted) return;
@@ -932,6 +1226,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       _activeRecordingRect = Rect.zero;
     });
     Navigator.of(context).maybePop();
+    await windowManager.close();
   }
 
   /// Naively split a shell command into tokens (handles double-quoted segments).
@@ -1005,6 +1300,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       _activeRecordingRect = Rect.zero;
     });
     Navigator.of(context).maybePop();
+    await windowManager.close();
   }
 
   Future<void> _handleAfterAction(String filePath) async {
@@ -1017,7 +1313,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         await launchWithExplorer(filePath);
         break;
       case RecordingAfterAction.copyFilePath:
-        await Clipboard.setData(ClipboardData(text: filePath));
+        await ClipboardExtension.copyFile(filePath);
         break;
     }
     windowManager.close();
@@ -1051,11 +1347,11 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, void Function(void Function()) setModalState) {
-            Future<void> browseFolder() async {
-              final String folder = await WinUtils.folderPicker();
-              if (folder.isEmpty) return;
-              setModalState(() => _saveFolder = folder);
-            }
+            // Future<void> browseFolder() async {
+            //   final String folder = await WinUtils.folderPicker();
+            //   if (folder.isEmpty) return;
+            //   setModalState(() => _saveFolder = folder);
+            // }
 
             // ── design tokens ──────────────────────────────────────────
             const Color surface = Color(0xFF1A1D23);
@@ -1276,8 +1572,10 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               ),
                               toggleRow('Capture Cursor', 'Include mouse pointer in recording', _captureCursor,
                                   (bool v) => setModalState(() => _captureCursor = v)),
-                              toggleRow('Capture Border', 'Show window border highlight', _captureBorder,
-                                  (bool v) => setModalState(() => _captureBorder = v)),
+                              toggleRow('Capture Border', 'Show the yellow capture border (WGC backend only)',
+                                  _captureBorder, (bool v) => setModalState(() => _captureBorder = v)),
+                              toggleRow('Global Hotkeys', 'Ctrl+Shift+F9 stop · Ctrl+Shift+F8 pause',
+                                  _globalHotkeysEnabled, (bool v) => setModalState(() => _globalHotkeysEnabled = v)),
                             ]),
 
                             // ── Video section ─────────────────────────
@@ -1314,6 +1612,19 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                   (value: VideoSource.wgc, label: 'WGC', sublabel: 'Windows Graphics Capture'),
                                 ],
                                 onChanged: (VideoSource v) => _videoSource = v,
+                              ),
+                              settingsDropdown<VideoEncoder>(
+                                label: 'Encoder',
+                                sublabel: 'H.264 encoder',
+                                value: _videoEncoder,
+                                options: const <({VideoEncoder value, String label, String? sublabel})>[
+                                  (value: VideoEncoder.auto, label: 'Auto', sublabel: 'GPU when available'),
+                                  (value: VideoEncoder.cpu, label: 'Software', sublabel: 'CPU (libx264)'),
+                                  (value: VideoEncoder.nvenc, label: 'NVIDIA', sublabel: 'NVENC (FFmpeg only)'),
+                                  (value: VideoEncoder.qsv, label: 'Intel', sublabel: 'Quick Sync (FFmpeg only)'),
+                                  (value: VideoEncoder.amf, label: 'AMD', sublabel: 'AMF (FFmpeg only)'),
+                                ],
+                                onChanged: (VideoEncoder v) => _videoEncoder = v,
                               ),
                             ]),
 
@@ -1552,11 +1863,34 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                   ),
                                   (
                                     value: RecordingAfterAction.copyFilePath,
-                                    label: 'Copy Path',
-                                    sublabel: 'Copy file path to clipboard'
+                                    label: 'Copy File',
+                                    sublabel: 'Copy file to clipboard'
                                   ),
                                 ],
                                 onChanged: (RecordingAfterAction v) => _afterAction = v,
+                              ),
+                              settingsDropdown<int>(
+                                label: 'Countdown',
+                                sublabel: 'Delay before capture starts',
+                                value: _countdownSeconds,
+                                options: const <({int value, String label, String? sublabel})>[
+                                  (value: 0, label: 'Off', sublabel: 'Start immediately'),
+                                  (value: 3, label: '3 seconds', sublabel: '3-2-1 countdown'),
+                                  (value: 5, label: '5 seconds', sublabel: '5-4-3-2-1 countdown'),
+                                ],
+                                onChanged: (int v) => _countdownSeconds = v,
+                              ),
+                              settingsDropdown<int>(
+                                label: 'Auto-Stop',
+                                sublabel: 'Stop recording after a set time',
+                                value: _maxDurationMinutes,
+                                options: const <({int value, String label, String? sublabel})>[
+                                  (value: 0, label: 'Off', sublabel: 'Record until stopped'),
+                                  (value: 1, label: '1 minute', sublabel: null),
+                                  (value: 5, label: '5 minutes', sublabel: null),
+                                  (value: 15, label: '15 minutes', sublabel: null),
+                                ],
+                                onChanged: (int v) => _maxDurationMinutes = v,
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1568,14 +1902,14 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
                                     ),
                                     const SizedBox(height: 2),
-                                    Text('Directory where recordings are saved',
+                                    Text('You can change it from Interface -> Fancyshot',
                                         style: TextStyle(fontSize: Design.baseFontSize + 1, color: textSecondary)),
                                     const SizedBox(height: 8),
                                     Row(
                                       children: <Widget>[
                                         Expanded(
                                           child: TextFormField(
-                                            initialValue: _saveFolder,
+                                            initialValue: _defaultRecordingFolder(),
                                             style: TextStyle(fontSize: Design.baseFontSize + 2, color: textPrimary),
                                             decoration: InputDecoration(
                                               isDense: true,
@@ -1595,34 +1929,34 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                                 borderSide: const BorderSide(color: accent, width: 1.5),
                                               ),
                                             ),
-                                            onChanged: (String v) => _saveFolder = v,
+                                            // onChanged: (String v) => _saveFolder = v,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        GestureDetector(
-                                          onTap: browseFolder,
-                                          child: Container(
-                                            height: 36,
-                                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                                            decoration: BoxDecoration(
-                                              color: accent.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(7),
-                                              border: Border.all(color: accent.withValues(alpha: 0.35)),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Row(
-                                              children: <Widget>[
-                                                const Icon(Icons.folder_open_rounded, size: 14, color: accent),
-                                                const SizedBox(width: 5),
-                                                Text('Browse',
-                                                    style: TextStyle(
-                                                        fontSize: Design.baseFontSize + 2,
-                                                        color: accent,
-                                                        fontWeight: FontWeight.w600)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
+                                        // const SizedBox(width: 8),
+                                        // GestureDetector(
+                                        //   onTap: browseFolder,
+                                        //   child: Container(
+                                        //     height: 36,
+                                        //     padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        //     decoration: BoxDecoration(
+                                        //       color: accent.withValues(alpha: 0.15),
+                                        //       borderRadius: BorderRadius.circular(7),
+                                        //       border: Border.all(color: accent.withValues(alpha: 0.35)),
+                                        //     ),
+                                        //     alignment: Alignment.center,
+                                        //     child: Row(
+                                        //       children: <Widget>[
+                                        //         const Icon(Icons.folder_open_rounded, size: 14, color: accent),
+                                        //         const SizedBox(width: 5),
+                                        //         Text('Browse',
+                                        //             style: TextStyle(
+                                        //                 fontSize: Design.baseFontSize + 2,
+                                        //                 color: accent,
+                                        //                 fontWeight: FontWeight.w600)),
+                                        //       ],
+                                        //     ),
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
                                   ],
@@ -1671,7 +2005,11 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               RecordingSettingsStore.setInt('videoBitrateMbps', _videoBitrateMbps);
                               RecordingSettingsStore.setBool('captureCursor', _captureCursor);
                               RecordingSettingsStore.setBool('captureBorder', _captureBorder);
-                              RecordingSettingsStore.setString('saveFolder', _saveFolder);
+                              RecordingSettingsStore.setInt('countdownSeconds', _countdownSeconds);
+                              RecordingSettingsStore.setInt('maxDurationMinutes', _maxDurationMinutes);
+                              RecordingSettingsStore.setString('videoEncoder', _videoEncoder.name);
+                              RecordingSettingsStore.setBool('globalHotkeysEnabled', _globalHotkeysEnabled);
+                              // RecordingSettingsStore.setString('saveFolder', _saveFolder);
                               RecordingSettingsStore.setString('micDeviceId', _selectedMicId);
                               RecordingSettingsStore.setString('systemAudioDeviceId', _selectedSystemAudioId);
                               RecordingSettingsStore.setString('videoSource', _videoSource.name);
@@ -1764,7 +2102,11 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
             child: _RecordingHud(
               elapsed: _formatDuration(_elapsed),
               audioLabel: _audioMode.name,
+              sizeLabel: _formatBytes(_fileSizeBytes),
               filePath: _recordingPath,
+              paused: _paused,
+              canPause: _videoSource == VideoSource.wgc,
+              onPauseToggle: _togglePause,
               onStop: _stopRecording,
               onCancel: _cancelRecording,
             ),
@@ -1899,6 +2241,23 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
             const Center(
               child: CircularProgressIndicator(),
             ),
+          if (_countingDown)
+            Center(
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.72),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: settings_model.Design.accent, width: 3),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$_countdown',
+                  style: const TextStyle(fontSize: 56, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ),
           if (_errorText != null)
             Positioned(
               left: 24,
@@ -1950,7 +2309,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   Rect _hudRectForTarget(Rect target, Size screenSize) {
-    const double hudWidth = 260;
+    const double hudWidth = 410;
     const double hudHeight = 40;
     const double gap = 10;
     if (target == Rect.zero) {
@@ -2002,62 +2361,70 @@ class _RecordingHud extends StatelessWidget {
   const _RecordingHud({
     required this.elapsed,
     required this.audioLabel,
+    required this.sizeLabel,
     required this.filePath,
+    required this.paused,
+    required this.canPause,
+    required this.onPauseToggle,
     required this.onStop,
     required this.onCancel,
   });
 
   final String elapsed;
   final String audioLabel;
+  final String sizeLabel;
   final String filePath;
+  final bool paused;
+  final bool canPause;
+  final Future<void> Function() onPauseToggle;
   final Future<void> Function() onStop;
   final Future<void> Function() onCancel;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            // Red recording dot (pulsing feel via small size + vivid colour)
-            Container(
-              width: 7,
-              height: 7,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF3B30),
-                shape: BoxShape.circle,
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
-            ),
-            const SizedBox(width: 8),
-            // Elapsed time
-            Text(
-              elapsed,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 0.5,
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // Recording dot — red while capturing, amber while paused.
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: paused ? const Color(0xFFFFB74D) : const Color(0xFFFF3B30),
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            // Audio badge
-            if (audioLabel != 'none')
+              const SizedBox(width: 8),
+              // Elapsed time
+              Text(
+                elapsed,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // File-size badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
@@ -2065,25 +2432,49 @@ class _RecordingHud extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  audioLabel,
-                  style: const TextStyle(fontSize: 9, color: Colors.white60),
+                  sizeLabel,
+                  style: const TextStyle(fontSize: 9, color: Colors.white70),
                 ),
               ),
-            const SizedBox(width: 10),
-            // Stop button
-            _HudButton(
-              label: 'Stop',
-              filled: true,
-              onTap: onStop,
-            ),
-            const SizedBox(width: 6),
-            // Cancel button
-            _HudButton(
-              label: 'Cancel',
-              filled: false,
-              onTap: onCancel,
-            ),
-          ],
+              const SizedBox(width: 4),
+              // Audio badge
+              if (audioLabel != 'none')
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    audioLabel,
+                    style: const TextStyle(fontSize: 9, color: Colors.white60),
+                  ),
+                ),
+              const SizedBox(width: 10),
+              // Stop button
+              _HudButton(
+                label: 'Stop',
+                filled: true,
+                onTap: onStop,
+              ),
+              const SizedBox(width: 6),
+              // Pause / Resume button (WGC backend only) — sits between Stop and Cancel
+              if (canPause) ...<Widget>[
+                _HudButton(
+                  label: paused ? 'Resume' : 'Pause',
+                  filled: false,
+                  onTap: onPauseToggle,
+                ),
+                const SizedBox(width: 6),
+              ],
+              // Cancel button
+              _HudButton(
+                label: 'Cancel',
+                filled: false,
+                onTap: onCancel,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2138,17 +2529,13 @@ class _RecordingActivePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (highlightRect == Rect.zero) return;
-    final Paint glow = Paint()
-      ..color = accent.withValues(alpha: 0.18)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 8);
+    // No glow (it bleeds into gdigrab recordings) and the border is pushed 2px
+    // outward on every side so it sits outside the captured region.
     final Paint border = Paint()
       ..color = accent
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
-    canvas.drawRect(highlightRect, glow);
-    canvas.drawRect(highlightRect, border);
+    canvas.drawRect(highlightRect.inflate(2), border);
   }
 
   @override

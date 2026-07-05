@@ -796,6 +796,7 @@ class ScreenRecordingConfig {
     this.videoBitrateMbps = 12,
     this.captureCursor = true,
     this.captureBorder = false,
+    this.useHardwareEncoder = true,
     this.audioMode = ScreenRecordingAudioMode.none,
     this.micDeviceId,
     this.systemAudioDeviceId,
@@ -813,6 +814,10 @@ class ScreenRecordingConfig {
   final int videoBitrateMbps;
   final bool captureCursor;
   final bool captureBorder;
+
+  /// When true (default) the WGC backend allows Media Foundation to use a
+  /// hardware H.264 encoder (GPU); when false it forces the software encoder.
+  final bool useHardwareEncoder;
   final ScreenRecordingAudioMode audioMode;
   final String? micDeviceId;
   final String? systemAudioDeviceId;
@@ -830,6 +835,7 @@ class ScreenRecordingConfig {
         'videoBitrateMbps': videoBitrateMbps,
         'captureCursor': captureCursor,
         'captureBorder': captureBorder,
+        'useHardwareEncoder': useHardwareEncoder,
         'audioMode': audioMode.wireName,
         'micDeviceId': micDeviceId,
         'systemAudioDeviceId': systemAudioDeviceId,
@@ -1015,6 +1021,18 @@ Future<ScreenRecordingStopResult> stopScreenRecording() async {
 
 Future<bool> cancelScreenRecording() async {
   final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('cancelScreenRecording');
+  return result ?? false;
+}
+
+/// Pause an in-progress recording (WGC backend only). Paused wall-clock time is
+/// excluded from the output, so audio and video stay in sync across the pause.
+Future<bool> pauseScreenRecording() async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('pauseScreenRecording');
+  return result ?? false;
+}
+
+Future<bool> resumeScreenRecording() async {
+  final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('resumeScreenRecording');
   return result ?? false;
 }
 

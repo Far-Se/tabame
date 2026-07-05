@@ -104,7 +104,31 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     return result;
   }
 
+  // Matches a direct currency conversion like "100 usd to eur" / "$a ron to usd"
+  // (two 3-letter currency codes separated by to/in/into/->), no "/" prefix needed.
+  static final RegExp _directCurrencyRegExp =
+      RegExp(r'\b[a-z]{3}\s+(?:to|in|into|->)\s+[a-z]{3}\b', caseSensitive: false);
+
+  bool _isDirectCurrency(String expression) {
+    final String trimmed = expression.trim();
+    if (trimmed.isEmpty || trimmed.startsWith('/')) return false;
+    return _directCurrencyRegExp.hasMatch(trimmed.toLowerCase());
+  }
+
   Future<({double value, String display})?> _runConverter(String expression, Map<String, double> vars) async {
+    // Direct format (no "/" prefix): "100 usd to eur", "$a ron to usd".
+    if (_isDirectCurrency(expression)) {
+      final String input = _replaceVariables(expression.trim(), vars);
+      if (input.isEmpty) return null;
+      try {
+        final String target = Boxes.pref.getString(CurrencyConverterService.toKey) ?? 'usd';
+        final CurrencyConversionResult res =
+            await CurrencyConverterService().convert(input, defaultTargetCurrency: target);
+        return (value: res.convertedAmount, display: res.convertedLabel);
+      } catch (_) {}
+      return null;
+    }
+
     if (!expression.startsWith('/')) return null;
     final String input = _replaceVariables(expression.substring(1).trim(), vars);
     if (input.isEmpty) return null;
@@ -156,7 +180,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     for (int i = 0; i < _history.length; i++) {
       final CalcEntry entry = _history[i];
       try {
-        if (entry.expression.startsWith('/')) {
+        if (entry.expression.startsWith('/') || _isDirectCurrency(entry.expression)) {
           final ({double value, String display})? res = await _runConverter(entry.expression, vars);
           if (res != null) {
             entry.value = res.value;
@@ -189,7 +213,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
 
     final Map<String, double> vars = <String, double>{for (CalcEntry e in _history) e.name: e.value};
 
-    if (val.startsWith('/')) {
+    if (val.startsWith('/') || _isDirectCurrency(val)) {
       final ({double value, String display})? res = await _runConverter(val, vars);
       if (token != _previewToken) return;
       if (res != null) {
@@ -260,7 +284,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       double? result;
       String? display;
 
-      if (finalExpression.startsWith('/')) {
+      if (finalExpression.startsWith('/') || _isDirectCurrency(finalExpression)) {
         final ({double value, String display})? res = await _runConverter(finalExpression, vars);
         if (res != null) {
           result = res.value;
@@ -354,6 +378,15 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                   "Use variables like 'a', 'b', etc., in your expressions. "
                       "Each line you submit creates a new variable automatically.",
                   <String>["10 + 20", "a * 3", "b / 2"],
+                  accent,
+                  onSurface,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  "Currency Conversion",
+                  "Type an amount (or variable) with two 3-letter currency codes and "
+                      "'to' — no prefix needed. It auto-converts using live rates.",
+                  <String>["100 USD to EUR", "\$a RON to USD", "50 gbp to jpy"],
                   accent,
                   onSurface,
                 ),

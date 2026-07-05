@@ -85,6 +85,9 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   Timer? _mainTimer;
   final ScrollController _scrollController = ScrollController();
 
+  // 0 = no bottom shadow (at end / nothing to scroll), 1 = full shadow.
+  double _bottomFade = 0.0;
+
   // SMTC media sessions stream (all sessions)
 
   // Window sizing state
@@ -98,8 +101,23 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     if (mounted) {
       QuickMenuFunctions.addListener(this);
       NativeHooks.addListener(this);
+      _scrollController.addListener(_updateBottomFade);
       _fetchWindows();
       // _startTimer();
+    }
+  }
+
+  /// Fades the bottom shadow in proportion to how much scroll remains, so it
+  /// only appears when there is more to scroll and disappears at the end.
+  void _updateBottomFade() {
+    if (!_scrollController.hasClients) return;
+    final ScrollPosition pos = _scrollController.position;
+    if (!pos.hasContentDimensions) return;
+    final double remaining = pos.maxScrollExtent - pos.pixels;
+    // Ramp the shadow over the last 24px of scrollable distance.
+    final double fade = (remaining / 24.0).clamp(0.0, 1.0);
+    if ((fade - _bottomFade).abs() > 0.01 && mounted) {
+      setState(() => _bottomFade = fade);
     }
   }
 
@@ -114,6 +132,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void dispose() {
     // PaintingBinding.instance.imageCache.clear();
     _mainTimer?.cancel();
+    _scrollController.removeListener(_updateBottomFade);
     _scrollController.dispose();
     QuickMenuFunctions.removeListener(this);
     NativeHooks.removeListener(this); // Good practice to remove
@@ -286,6 +305,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     Globals.heights.taskbar = ((user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * _windows.length)
         .clamp(150, user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
 
+    // Recompute after layout so the shadow reflects content changes (windows
+    // added/removed) even when no scroll event fired.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateBottomFade());
+
     return MouseRegion(
       onEnter: (_) => setState(() => _keepFetching = true),
       child: Container(
@@ -297,11 +320,15 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 minHeight: 150, maxHeight: user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
             child: ShaderMask(
               shaderCallback: (Rect rect) {
-                return const LinearGradient(
+                return LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: <Color>[Colors.transparent, Colors.transparent, Colors.black],
-                  stops: <double>[0.00, 0.93, 1.0],
+                  colors: <Color>[
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withAlpha((_bottomFade * 255).round()),
+                  ],
+                  stops: const <double>[0.00, 0.93, 1.0],
                 ).createShader(rect);
               },
               blendMode: BlendMode.dstOut,

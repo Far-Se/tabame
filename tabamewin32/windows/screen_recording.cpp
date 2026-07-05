@@ -89,6 +89,7 @@ struct Config {
   int videoBitrateMbps = 12;
   bool captureCursor = true;
   bool captureBorder = false;
+  bool useHardwareEncoder = true;
   std::string audioMode = "none";
   std::wstring micDeviceId;
   std::wstring systemAudioDeviceId;
@@ -360,6 +361,16 @@ ResampleStereoToTargetRate(AudioSource &source,
   return output;
 }
 
+// IsBorderRequired lives on IGraphicsCaptureSession3, which is absent from
+// Windows SDK headers older than 10.0.19041. Declare its ABI interface directly
+// so this compiles regardless of the installed SDK; try_as() returns null (and
+// we simply skip it) when the running OS predates the API.
+struct __declspec(uuid("f2cdd966-22ae-5ea1-9596-3a289344c3be"))
+    IGraphicsCaptureSession3Abi : ::IInspectable {
+  virtual HRESULT __stdcall get_IsBorderRequired(boolean *value) = 0;
+  virtual HRESULT __stdcall put_IsBorderRequired(boolean value) = 0;
+};
+
 class ScreenRecordingSession {
 public:
   bool Start(const Config &config, std::string &errorCode,
@@ -457,6 +468,8 @@ public:
 
     stopRequested_ = false;
     cancelRequested_ = false;
+    paused_ = false;
+    pausedDurationUs_ = 0;
     frameCount_ = 0;
     droppedFrames_ = 0;
     audioFramesWritten_ = 0;
@@ -510,6 +523,16 @@ public:
           item_.Size());
       session_ = framePool_.CreateCaptureSession(item_);
       session_.IsCursorCaptureEnabled(normalized.captureCursor);
+      // IsBorderRequired controls the yellow capture border Windows draws around
+      // the captured surface. Reached via its ABI interface so it works on SDKs
+      // that don't project it; null when the OS is too old (Win10 pre-2004).
+      try {
+        if (auto borderApi = session_.try_as<IGraphicsCaptureSession3Abi>()) {
+          borderApi->put_IsBorderRequired(normalized.captureBorder ? TRUE
+                                                                   : FALSE);
+        }
+      } catch (...) {
+      }
       frameArrivedToken_ = framePool_.FrameArrived([this](auto &&, auto &&) {
         if (frameEvent_)
           SetEvent(frameEvent_.get());
@@ -555,6 +578,26 @@ public:
                              .count();
     }
     return status;
+  }
+
+  bool Pause() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!isRecording_ || paused_)
+      return false;
+    pauseStartedAt_ = std::chrono::steady_clock::now();
+    paused_ = true;
+    return true;
+  }
+
+  bool Resume() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!isRecording_ || !paused_)
+      return false;
+    pausedDurationUs_ += std::chrono::duration_cast<std::chrono::microseconds>(
+                             std::chrono::steady_clock::now() - pauseStartedAt_)
+                             .count();
+    paused_ = false;
+    return true;
   }
 
   void Shutdown() {
@@ -722,7 +765,8 @@ private:
       errorMessage = "Unable to create Media Foundation attributes.";
       return false;
     }
-    attributes->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE);
+    attributes->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS,
+                          config.useHardwareEncoder ? TRUE : FALSE);
     attributes->SetUINT32(MF_SINK_WRITER_DISABLE_THROTTLING, TRUE);
 
     if (FAILED(MFCreateSinkWriterFromURL(config.outputPath.c_str(), nullptr,
@@ -1135,6 +1179,17 @@ private:
       if (!ok)
         break;
 
+      // While paused, discard captured audio so the muxed track has no gap and
+      // stays aligned with the paused-adjusted video timeline. Pumping above
+      // still drains the WASAPI buffers so they don't back up.
+      if (paused_) {
+        for (AudioSource &source : audioSources_) {
+          source.pendingStereo.clear();
+        }
+        Sleep(5);
+        continue;
+      }
+
       bool canWrite = true;
       for (AudioSource &source : audioSources_) {
         if (static_cast<int>(source.pendingStereo.size() / 2) <
@@ -1208,6 +1263,12 @@ private:
           frame = framePool_.TryGetNextFrame();
         }
         if (!latestFrame)
+          continue;
+
+        // Drop frames while paused (we still drained the pool above so it
+        // doesn't back up). Timestamps subtract the accumulated paused span,
+        // so the encoded video has no gap across a pause.
+        if (paused_)
           continue;
 
         // Check wall-clock time to decide whether we should encode this frame.
@@ -1336,7 +1397,8 @@ private:
         std::chrono::duration_cast<
             std::chrono::duration<LONGLONG, std::ratio<1, 10'000'000>>>(
             std::chrono::steady_clock::now() - startTime_)
-            .count();
+            .count() -
+        pausedDurationUs_.load() * 10LL;
     const LONGLONG sampleDuration = 10'000'000LL / captureConfig_.frameRate;
     sample->SetSampleTime(sampleTime);
     sample->SetSampleDuration(sampleDuration);
@@ -1379,6 +1441,8 @@ private:
   void CleanupResourcesLocked() {
     isRecording_ = false;
     stopRequested_ = false;
+    paused_ = false;
+    pausedDurationUs_ = 0;
     cancelRequested_ = false;
     audioEnabled_ = false;
     videoStreamIndex_ = 0;
@@ -1420,6 +1484,9 @@ private:
   bool isRecording_ = false;
   bool audioEnabled_ = false;
   std::atomic<bool> stopRequested_{false};
+  std::atomic<bool> paused_{false};
+  std::atomic<int64_t> pausedDurationUs_{0};
+  std::chrono::steady_clock::time_point pauseStartedAt_{};
   bool cancelRequested_ = false;
   std::atomic<int> frameCount_{0};
   std::atomic<int> droppedFrames_{0};
@@ -1477,6 +1544,14 @@ static bool StopScreenRecording(ScreenRecordingStopResult &result,
 static bool CancelScreenRecording(std::string &errorCode,
                                   std::string &errorMessage) {
   return screen_recording::GetSession().Cancel(errorCode, errorMessage);
+}
+
+static bool PauseScreenRecording() {
+  return screen_recording::GetSession().Pause();
+}
+
+static bool ResumeScreenRecording() {
+  return screen_recording::GetSession().Resume();
 }
 
 static ScreenRecordingStatus GetScreenRecordingStatus() {

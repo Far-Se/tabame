@@ -1297,6 +1297,8 @@ void StartScreenRecordingH(Tabamewin32Plugin *, const MethodCall &call,
       !a.count(EVal("captureCursor")) || Args::Bool(a, "captureCursor");
   config.captureBorder =
       a.count(EVal("captureBorder")) && Args::Bool(a, "captureBorder");
+  config.useHardwareEncoder =
+      !a.count(EVal("useHardwareEncoder")) || Args::Bool(a, "useHardwareEncoder");
   config.audioMode =
       a.count(EVal("audioMode")) ? Args::Str(a, "audioMode") : "none";
   if (a.count(EVal("micDeviceId")))
@@ -1336,6 +1338,16 @@ void CancelScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
     return;
   }
   OK(result, true);
+}
+
+void PauseScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+                           MethodResult result) {
+  OK(result, PauseScreenRecording());
+}
+
+void ResumeScreenRecordingH(Tabamewin32Plugin *, const MethodCall &,
+                            MethodResult result) {
+  OK(result, ResumeScreenRecording());
 }
 
 void GetScreenRecordingStatusH(Tabamewin32Plugin *, const MethodCall &,
@@ -1672,6 +1684,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"startScreenRecording", Handlers::StartScreenRecordingH},
       {"stopScreenRecording", Handlers::StopScreenRecordingH},
       {"cancelScreenRecording", Handlers::CancelScreenRecordingH},
+      {"pauseScreenRecording", Handlers::PauseScreenRecordingH},
+      {"resumeScreenRecording", Handlers::ResumeScreenRecordingH},
       {"getScreenRecordingStatus", Handlers::GetScreenRecordingStatusH},
       {"getChangedFolders", Handlers::GetChangedFoldersH},
       {"addFoldersToWatchlist", Handlers::AddFoldersToWatchlistH},

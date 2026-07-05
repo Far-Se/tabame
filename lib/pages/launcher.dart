@@ -72,10 +72,11 @@ class _LauncherFunctionCommand {
     required this.description,
     required this.usage,
     required this.icon,
-    required this.handler,
+    this.handler,
+    this.streamingHandler,
     this.aliases = const <String>[],
     this.debounce = Duration.zero,
-  });
+  }) : assert(handler != null || streamingHandler != null, 'A command needs a handler or streamingHandler');
 
   final String name;
   final String description;
@@ -83,7 +84,15 @@ class _LauncherFunctionCommand {
   final IconData icon;
   final List<String> aliases;
   final Duration debounce;
-  final FutureOr<List<LauncherSearchResultItem>> Function(String input) handler;
+
+  /// Standard one-shot handler: computes every result, then returns them all at
+  /// once. The framework awaits it and calls `setResults` a single time.
+  final FutureOr<List<LauncherSearchResultItem>> Function(String input)? handler;
+
+  /// Streaming handler: takes ownership of the search context and pushes
+  /// results incrementally via `context.setResults` as they become available
+  /// (e.g. one row per network translation). Preferred over [handler] when set.
+  final Future<void> Function(String input, LauncherSearchContext context)? streamingHandler;
 
   bool matchesName(String value) => value == name || aliases.contains(value);
 
@@ -173,10 +182,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _LauncherFunctionCommand(
       name: 'translate',
       description: 'Translate text',
-      usage: r'$translate "hello" from en to ro',
+      usage: r'$t hello  •  $t hello from en  •  $t hello from en to ro',
       icon: Icons.translate_rounded,
-      debounce: const Duration(milliseconds: 650),
-      handler: _buildFunctionTranslateResults,
+      debounce: const Duration(milliseconds: 350),
+      aliases: <String>['t'],
+      streamingHandler: _streamFunctionTranslateResults,
     ),
     _LauncherFunctionCommand(
       name: 'reindex',
@@ -185,13 +195,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.manage_search_rounded,
       handler: _buildFunctionReindexResults,
     ),
-    // _LauncherFunctionCommand(
-    //   name: 'reload',
-    //   description: 'Reload Hotkeys',
-    //   usage: r'$reload settings',
-    //   icon: Icons.manage_search_rounded,
-    //   handler: _buildFunctionReloadSettingsResults,
-    // ),
     _LauncherFunctionCommand(
       name: 'unit',
       description: 'Convert units',
@@ -846,8 +849,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final int gen = ++_searchGeneration;
 
     final bool isBrowsingFolder = isFileBrowsingMode && _folderBrowsingStack.isNotEmpty;
-    if (!isBrowsingFolder &&
-        (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed))) {
+    if (!isBrowsingFolder && (query.isEmpty || (normalizedQuery.isEmpty && searchMode == LauncherSearchMode.mixed))) {
       setState(() {
         _searchMode = searchMode;
         _isSearching = false;
@@ -949,8 +951,90 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _handleFunctionCommand(context);
         break;
       default:
+        if (searchMode == LauncherSearchMode.mixed && _isCurrencyShorthand(context.normalizedQuery)) {
+          _handleCurrencyShorthand(context);
+          break;
+        }
+        if (searchMode == LauncherSearchMode.mixed && _isMathShorthand(context.normalizedQuery)) {
+          _handleMathShorthand(context);
+          break;
+        }
         MixedSearchHandler.handle(context, searchMode);
         break;
+    }
+  }
+
+  /// Matches the bare-word currency shorthand `100 usd to eur`, which is treated
+  /// exactly like `$cur 100 usd to eur`. Requires an amount, a 3-letter source
+  /// currency, a `to`/`in`/`into` connector, and a 3-letter target currency so it
+  /// doesn't hijack ordinary searches.
+  static final RegExp _currencyShorthandPattern = RegExp(
+    r'^\d+(?:[.,]\d+)?\s+[a-z]{3}\s+(?:to|in|into)\s+[a-z]{3}$',
+    caseSensitive: false,
+  );
+
+  bool _isCurrencyShorthand(String query) => _currencyShorthandPattern.hasMatch(query.trim());
+
+  /// Routes a bare-word currency shorthand query through the same handler as the
+  /// `$cur` function command.
+  Future<void> _handleCurrencyShorthand(LauncherSearchContext context) async {
+    context.setSearching(true);
+    try {
+      final List<LauncherSearchResultItem> results =
+          await _buildFunctionCurrencyResults(context.normalizedQuery.trim());
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(results, isSearching: false);
+    } catch (error) {
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'currency-shorthand-error:$error',
+          title: 'Currency conversion failed',
+          subtitle: error.toString(),
+          icon: Icons.error_outline_rounded,
+        )),
+      ], isSearching: false);
+    }
+  }
+
+  /// A bare arithmetic expression made up only of digits, whitespace and the
+  /// arithmetic characters `. ( ) + - * / ^ %`.
+  static final RegExp _mathShorthandPattern = RegExp(r'^[\d\s.()+\-*/^%]+$');
+
+  /// At least one binary operator, so plain numbers (`100`, `3.14`) stay ordinary
+  /// searches and only genuine expressions (`12*3`, `(2+3)/5`) are calculated.
+  static final RegExp _mathOperatorPattern = RegExp(r'[+\-*/^%]');
+
+  /// Detects a bare-word math expression such as `12*3+4`, treated exactly like
+  /// `$c 12*3+4`. Restricted to pure arithmetic so it doesn't hijack ordinary
+  /// searches; expressions with variables/functions still need the `$c` command.
+  bool _isMathShorthand(String query) {
+    final String trimmed = query.trim();
+    if (trimmed.isEmpty) return false;
+    if (!_mathShorthandPattern.hasMatch(trimmed)) return false;
+    if (!RegExp(r'\d').hasMatch(trimmed)) return false;
+    return _mathOperatorPattern.hasMatch(trimmed);
+  }
+
+  /// Routes a bare-word math expression through the same handler as the `$c`
+  /// function command.
+  Future<void> _handleMathShorthand(LauncherSearchContext context) async {
+    context.setSearching(true);
+    try {
+      final List<LauncherSearchResultItem> results =
+          await _buildFunctionCalculatorResults(context.normalizedQuery.trim());
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(results, isSearching: false);
+    } catch (error) {
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'math-shorthand-error:$error',
+          title: 'Calculation failed',
+          subtitle: error.toString(),
+          icon: Icons.error_outline_rounded,
+        )),
+      ], isSearching: false);
     }
   }
 
@@ -1164,7 +1248,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // _runSearch fires, so we must NOT delay again here (that doubled latency).
     context.setSearching(true);
     try {
-      final List<LauncherSearchResultItem> results = await command.handler(commandInput);
+      // Streaming handlers own the context and push results incrementally.
+      if (command.streamingHandler != null) {
+        await command.streamingHandler!(commandInput, context);
+        return;
+      }
+      final List<LauncherSearchResultItem> results = await command.handler!(commandInput);
       if (!context.isActiveSearch(context.requestId, context.query)) return;
       context.setResults(results, isSearching: false);
     } catch (error) {
@@ -1396,7 +1485,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     return _buildParserFunctionResults(
       idPrefix: 'function-calc',
       input: input,
-      emptyHelp: r'Format: $c 1+3/5',
+      emptyHelp: r'$c 1+3/5  •  Tip: just type 1+3/5 (no $c needed)',
       icon: Icons.calculate_rounded,
       parser: Parsers().calculator,
     );
@@ -1505,7 +1594,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         const LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'function-currency-help',
           title: 'Convert currency',
-          subtitle: r'Format: $cur 1 USD to EUR or $cur 1 USD',
+          subtitle: r'$cur 1 USD to EUR  •  Tip: just type 100 USD to EUR (no $cur needed)',
           icon: Icons.currency_exchange_rounded,
         )),
       ];
@@ -1575,24 +1664,39 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }).toList(growable: false);
   }
 
-  Future<List<LauncherSearchResultItem>> _buildFunctionTranslateResults(String input) async {
+  /// Streaming translate: emits each translation the moment it returns instead
+  /// of waiting for the whole batch, so results appear one-by-one.
+  Future<void> _streamFunctionTranslateResults(String input, LauncherSearchContext context) async {
     final _ParsedTranslateCommand? parsed = _parseTranslateCommand(input);
     if (parsed == null) {
-      return <LauncherSearchResultItem>[
-        const LauncherSearchResultItem.info(LauncherInfoResult(
+      context.setResults(const <LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'function-translate-help',
           title: 'Translate text',
-          subtitle: r'Use $translate message or $translate "message" from en to ro',
+          subtitle: r'$t hello (saved langs) • $t hello from en • $t hello from en to ro',
           icon: Icons.translate_rounded,
         )),
-      ];
+      ], isSearching: false);
+      return;
+    }
+
+    // Skip translating into the explicit source language (no-op identity).
+    final List<String> targets = parsed.targets
+        .where((String target) => parsed.from == 'auto' || target != parsed.from)
+        .toList(growable: false);
+    if (targets.isEmpty) {
+      context.setResults(const <LauncherSearchResultItem>[], isSearching: false);
+      return;
     }
 
     final GoogleTranslator translator = GoogleTranslator();
     final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
     try {
-      for (final String target in parsed.targets) {
+      for (int i = 0; i < targets.length; i++) {
+        final String target = targets[i];
         final GoogleTranslateResponse response = await translator.translate(parsed.text, from: parsed.from, to: target);
+        // Bail out if the query moved on while this request was in flight.
+        if (!context.isActiveSearch(context.requestId, context.query)) return;
         final String targetName = GoogleTranslator.languages[target] ?? target.toUpperCase();
         final String source = response.from.language.iso.isEmpty ? parsed.from : response.from.language.iso;
         results.add(LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
@@ -1602,32 +1706,67 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           icon: Icons.translate_rounded,
           value: response.text,
         )));
+        final bool isLast = i == targets.length - 1;
+        // Keep the spinner up until the last translation lands; only reset the
+        // selection on the first emit so the user's arrow-key position survives.
+        context.setResults(
+          List<LauncherSearchResultItem>.of(results),
+          isSearching: !isLast,
+          resetSelection: results.length == 1,
+        );
       }
     } finally {
       translator.close();
     }
-    return results;
   }
 
   _ParsedTranslateCommand? _parseTranslateCommand(String input) {
-    String text = input.trim();
-    if (text.isEmpty) return null;
+    final String raw = input.trim();
+    if (raw.isEmpty) return null;
 
-    String from = 'auto';
+    // Defaults come from the Translator panel's saved settings: source language
+    // (translatorFromLanguage) and the saved target languages.
+    String from = _loadTranslatorFrom();
     List<String> targets = _loadTranslatorTargets();
-    final RegExpMatch? explicit = RegExp(r'^(.+?)\s+from\s+(.+?)\s+to\s+(.+)$', caseSensitive: false).firstMatch(text);
+    String text = raw;
+
+    final RegExpMatch? explicit = RegExp(r'^(.+?)\s+from\s+(.+?)\s+to\s+(.+)$', caseSensitive: false).firstMatch(raw);
+    final RegExpMatch? fromOnly = RegExp(r'^(.+?)\s+from\s+(.+)$', caseSensitive: false).firstMatch(raw);
+
     if (explicit != null) {
-      text = _stripQuotes(explicit.group(1)!.trim());
+      // "<text> from <X> to <Y>" — explicit source and single target.
       final String? parsedFrom = GoogleTranslator.getIsoCode(explicit.group(2)!.trim());
       final String? parsedTo = GoogleTranslator.getIsoCode(explicit.group(3)!.trim());
-      if (parsedFrom == null || parsedTo == null) return null;
-      from = parsedFrom;
-      targets = <String>[parsedTo];
+      if (parsedFrom != null && parsedTo != null) {
+        text = _stripQuotes(explicit.group(1)!.trim());
+        from = parsedFrom;
+        targets = <String>[parsedTo];
+      } else {
+        text = _stripQuotes(raw);
+      }
+    } else if (fromOnly != null) {
+      // "<text> from <X>" — explicit source, translate to every saved target.
+      final String? parsedFrom = GoogleTranslator.getIsoCode(fromOnly.group(2)!.trim());
+      if (parsedFrom != null) {
+        text = _stripQuotes(fromOnly.group(1)!.trim());
+        from = parsedFrom;
+      } else {
+        text = _stripQuotes(raw);
+      }
     } else {
-      text = _stripQuotes(text);
+      text = _stripQuotes(raw);
     }
+
     if (text.isEmpty || targets.isEmpty) return null;
     return _ParsedTranslateCommand(text: text, from: from, targets: targets);
+  }
+
+  /// Loads the source language saved by the Translator panel
+  /// (`translatorFromLanguage`), falling back to auto-detect.
+  String _loadTranslatorFrom() {
+    final String? saved = Boxes.pref.getString('translatorFromLanguage');
+    if (saved == null || saved == 'auto') return 'auto';
+    return GoogleTranslator.languages.containsKey(saved) ? saved : 'auto';
   }
 
   List<String> _loadTranslatorTargets() {
@@ -2383,74 +2522,74 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
               children: <Widget>[
                 if (!hasInput && _results.isNotEmpty) _buildResultsHeaderWithBadges(accent, onSurface),
                 Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ValueListenableBuilder<int>(
-                        valueListenable: _activeIndexNotifier,
-                        builder: (BuildContext context, int activeIndex, Widget? child) {
-                          return ValueListenableBuilder<bool>(
-                            valueListenable: _isRepeatingKey,
-                            builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                              return ListView.builder(
-                                controller: _scrollController,
-                                shrinkWrap: true,
-                                itemCount: _results.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  final LauncherSearchResultItem result = _results[index];
-                                  final bool isSelected = index == activeIndex;
-                                  late final Widget resultWidget;
-                                  if (result.isShortcut) {
-                                    resultWidget = _buildShortcutResult(
-                                        context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isFile) {
-                                    resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
-                                        index, isSelected, isRepeatingKey);
-                                  } else if (result.isApp) {
-                                    resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
-                                        index, isSelected, isRepeatingKey);
-                                  } else if (result.isWindow) {
-                                    resultWidget = _buildWindowResult(
-                                        context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isBrowserTab) {
-                                    resultWidget = _buildBrowserTabResult(
-                                        context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isBookmark) {
-                                    resultWidget = _buildBookmarkResult(
-                                        context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isNotion) {
-                                    resultWidget = _buildNotionResult(
-                                        context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isObsidian) {
-                                    resultWidget = _buildObsidianResult(
-                                        context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isSteam) {
-                                    resultWidget = _buildSteamResult(
-                                        context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isInfo) {
-                                    resultWidget = _buildInfoResult(
-                                        context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                                  } else {
-                                    resultWidget = _buildQuickActionResult(
-                                        context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                                  }
-                                  return KeyedSubtree(
-                                    key: _resultKeys[_resultKeyId(result, index)],
-                                    child: MouseRegion(
-                                      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
-                                      child: Stack(
-                                        alignment: Alignment.centerRight,
-                                        children: <Widget>[resultWidget],
-                                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _activeIndexNotifier,
+                      builder: (BuildContext context, int activeIndex, Widget? child) {
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: _isRepeatingKey,
+                          builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                            return ListView.builder(
+                              controller: _scrollController,
+                              shrinkWrap: true,
+                              itemCount: _results.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final LauncherSearchResultItem result = _results[index];
+                                final bool isSelected = index == activeIndex;
+                                late final Widget resultWidget;
+                                if (result.isShortcut) {
+                                  resultWidget = _buildShortcutResult(
+                                      context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                                } else if (result.isFile) {
+                                  resultWidget = _buildFileResult(
+                                      context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
+                                } else if (result.isApp) {
+                                  resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
+                                      index, isSelected, isRepeatingKey);
+                                } else if (result.isWindow) {
+                                  resultWidget = _buildWindowResult(
+                                      context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                } else if (result.isBrowserTab) {
+                                  resultWidget = _buildBrowserTabResult(
+                                      context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
+                                } else if (result.isBookmark) {
+                                  resultWidget = _buildBookmarkResult(
+                                      context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isNotion) {
+                                  resultWidget = _buildNotionResult(
+                                      context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isObsidian) {
+                                  resultWidget = _buildObsidianResult(
+                                      context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isSteam) {
+                                  resultWidget = _buildSteamResult(
+                                      context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isInfo) {
+                                  resultWidget = _buildInfoResult(
+                                      context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                                } else {
+                                  resultWidget = _buildQuickActionResult(
+                                      context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                                }
+                                return KeyedSubtree(
+                                  key: _resultKeys[_resultKeyId(result, index)],
+                                  child: MouseRegion(
+                                    onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+                                    child: Stack(
+                                      alignment: Alignment.centerRight,
+                                      children: <Widget>[resultWidget],
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -2781,8 +2920,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     );
   }
 
-  Widget _buildObsidianResult(BuildContext context, ThemeData theme, ObsidianNote result, int index, bool isSelected,
-      bool isRepeatingKey) {
+  Widget _buildObsidianResult(
+      BuildContext context, ThemeData theme, ObsidianNote result, int index, bool isSelected, bool isRepeatingKey) {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
@@ -2842,8 +2981,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     );
   }
 
-  Widget _buildSteamResult(BuildContext context, ThemeData theme, SteamGame result, int index, bool isSelected,
-      bool isRepeatingKey) {
+  Widget _buildSteamResult(
+      BuildContext context, ThemeData theme, SteamGame result, int index, bool isSelected, bool isRepeatingKey) {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
