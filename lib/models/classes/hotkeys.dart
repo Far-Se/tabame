@@ -856,6 +856,14 @@ class HotKeyInfo {
     },
     "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
     "OpenColorPicker": () => WinUtils.startTabame(closeCurrent: false, arguments: "-colorPicker"),
+    "OpenQuickSnapStandalone": () {
+      final int windowHwnd = Win32.findWindow("Tabame QuickSnap");
+      if (windowHwnd != 0) {
+        Win32.closeWindow(windowHwnd);
+      } else {
+        WinUtils.startTabame(closeCurrent: false, arguments: "-quickSnap", admin: true);
+      }
+    },
     "OpenScreenDraw": () {
       final int windowHwnd = Win32.findWindow("Tabame Screen Draw");
       if (windowHwnd != 0) {

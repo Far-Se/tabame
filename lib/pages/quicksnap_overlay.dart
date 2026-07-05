@@ -10,6 +10,7 @@ import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/classes/quick_snap_apply.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
@@ -594,43 +595,10 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
   }
 
   void _applyQuickSnapZone(int hWnd, QuickGridRect zone, QuickGrid preset) {
-    final int monitorId = currentMonitor;
-    final Square monSize = monitorData;
-    final Dpi? dpi = Monitor.dpi[monitorId];
-    final double scaleX = dpi != null ? dpi.x / 96.0 : 1.0;
-    final double scaleY = dpi != null ? dpi.y / 96.0 : 1.0;
-
-    final double mx = monSize.x / scaleX;
-    final double my = monSize.y / scaleY;
-    final double mw = monSize.width / scaleX;
-    final double mh = monSize.height / scaleY;
-
-    Win32.restoreIfMaximized(hWnd);
-
     if (!Globals.snappedWindowOriginalSizes.containsKey(hWnd)) {
       Globals.snappedWindowOriginalSizes[hWnd] = <int>[nowPos.gridX, nowPos.gridY];
     }
-
-    final ({int bottom, int left, int right, int top}) border = Win32.getInvisibleBorder(hWnd);
-    final double borderLeft = border.left / scaleX;
-    final double borderTop = border.top / scaleY;
-    final double borderRight = border.right / scaleX;
-    final double borderBottom = border.bottom / scaleY;
-
-    final double g = preset.gap / scaleX;
-    final double half = g / 2;
-
-    final double zx = mx + zone.left * mw;
-    final double zy = my + zone.top * mh;
-    final double zw = (zone.right - zone.left) * mw;
-    final double zh = (zone.bottom - zone.top) * mh;
-
-    final int x = (zx - borderLeft + half).round();
-    final int y = (zy - borderTop + half).round();
-    final int w = (zw + borderLeft + borderRight - g).round().clamp(100, mw.round());
-    final int h = (zh + borderTop + borderBottom - g).round().clamp(60, mh.round());
-
-    Win32.setPosDPI(hWnd, PointXY(X: x, Y: y), logicalWidth: w, logicalHeight: h);
+    QuickSnapApply.apply(hWnd, zone, preset.gap, currentMonitor);
     visible = false;
     if (mounted) setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) => hideViews());

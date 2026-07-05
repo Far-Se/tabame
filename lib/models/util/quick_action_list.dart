@@ -44,6 +44,7 @@ import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
+import '../../widgets/itzy/quickmenu/button_quicksnap_standalone.dart';
 import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
@@ -254,6 +255,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "SpotlightButton": QuickAction(
     icon: Icons.featured_video_rounded,
     widget: () => const SpotlightButton(),
+  ),
+  "QuickSnapStandalone": QuickAction(
+    icon: Icons.view_quilt_rounded,
+    widget: () => const QuickSnapStandalone(),
   ),
   "FancyShotLiveButton": QuickAction(
     icon: Icons.center_focus_strong_outlined,

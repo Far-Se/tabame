@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/classes/quick_snap_apply.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
@@ -96,55 +97,10 @@ class _QuickSnapPickerState extends State<QuickSnapPicker> {
 
   void _applyZone(QuickGridRect zone) {
     final int monitorId = Win32.getWindowMonitor(Win32.hWnd);
-    Square? monSize = Monitor.monitorSizes[monitorId];
-    if (monSize == null && Monitor.monitorSizes.isNotEmpty) {
-      monSize = Monitor.monitorSizes.values.first;
-    }
-    if (monSize == null) return;
-
-    // Get DPI scale for this monitor
-    final Dpi? dpi = Monitor.dpi[monitorId];
-    final double scaleX = dpi != null ? dpi.x / 96.0 : 1.0;
-    final double scaleY = dpi != null ? dpi.y / 96.0 : 1.0;
-
-    // Convert physical monitor rect → logical
-    final double mx = monSize.x / scaleX;
-    final double my = monSize.y / scaleY;
-    final double mw = monSize.width / scaleX;
-    final double mh = monSize.height / scaleY;
-
-    Win32.restoreIfMaximized(widget.hWnd);
-
-    // Invisible border is in physical pixels — convert to logical
-    final ({int bottom, int left, int right, int top}) border = Win32.getInvisibleBorder(widget.hWnd);
-    final double borderLeft = border.left / scaleX;
-    final double borderTop = border.top / scaleY;
-    final double borderRight = border.right / scaleX;
-    final double borderBottom = border.bottom / scaleY;
-
-    final double g = (_selectedPreset?.gap ?? 0) / scaleX; // gap is likely logical already — adjust if not
-    final double half = g / 2;
-
-    // Zone rect in logical coords
-    final double zx = mx + zone.left * mw;
-    final double zy = my + zone.top * mh;
-    final double zw = (zone.right - zone.left) * mw;
-    final double zh = (zone.bottom - zone.top) * mh;
-
-    final int x = (zx - borderLeft + half).round();
-    final int y = (zy - borderTop + half).round();
-    final int w = (zw + borderLeft + borderRight - g).round().clamp(100, mw.round());
-    final int h = (zh + borderTop + borderBottom - g).round().clamp(60, mh.round());
 
     QuickMenuFunctions.keepOpen = true;
     SetForegroundWindow(widget.hWnd);
-    if (!Globals.snappedWindowOriginalSizes.containsKey(widget.hWnd)) {
-      final ({int height, int width}) size = Win32.getSize(hwnd: widget.hWnd);
-      Globals.snappedWindowOriginalSizes[widget.hWnd] = <int>[size.width, size.height];
-    }
-
-    // setPosDPI now receives logical coords and scales correctly
-    Win32.setPosDPI(widget.hWnd, PointXY(X: x, Y: y), logicalWidth: w, logicalHeight: h);
+    QuickSnapApply.apply(widget.hWnd, zone, _selectedPreset?.gap ?? 0, monitorId);
     Timer(const Duration(milliseconds: 1000), () => QuickMenuFunctions.keepOpen = false);
     Navigator.of(context).pop();
   }

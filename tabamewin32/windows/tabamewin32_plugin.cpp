@@ -936,7 +936,9 @@ void TrcktivityH(Tabamewin32Plugin *, const MethodCall &call,
 }
 
 void ViewsH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
-  isViewsEnabled = Args::Bool(Args::Map(call), "enabled");
+  const auto &a = Args::Map(call);
+  isViewsEnabled = Args::Bool(a, "enabled");
+  isViewsRightClickEnabled = Args::Bool(a, "rightClickToTrigger");
   OK(result, true);
 }
 

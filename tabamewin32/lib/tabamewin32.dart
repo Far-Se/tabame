@@ -1298,9 +1298,15 @@ Future<void> enableTrcktivity(bool enabled) async {
   await tabameWin32MethodChannel.invokeMethod('trcktivity', arguments);
 }
 
-Future<void> enableViews(bool enabled) async {
+/// Enables the native "views" hook that emits window move/snap events.
+///
+/// [rightClickToTrigger] controls whether the right-click-drag gesture opens
+/// the views picker. Enabled by default; the standalone QuickSnap disables it
+/// so only plain title-bar window drags (moveStart/moveEnd) drive snapping.
+Future<void> enableViews(bool enabled, {bool rightClickToTrigger = true}) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'enabled': enabled,
+    'rightClickToTrigger': rightClickToTrigger,
   };
   await tabameWin32MethodChannel.invokeMethod('views', arguments);
 }

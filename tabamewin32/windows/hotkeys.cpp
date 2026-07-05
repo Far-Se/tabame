@@ -71,6 +71,10 @@ static std::atomic_bool keyboardBlockerEnabled = false;
 static HWND foregroundWindow = nullptr;
 static HWND movingWindow = nullptr;
 static bool isViewsEnabled = false;
+// Whether the right-click-drag gesture opens the views picker. Default on;
+// the standalone QuickSnap turns it off so only title-bar window drags
+// (moveStart/moveEnd) drive snapping.
+static bool isViewsRightClickEnabled = true;
 static int viewsState = 0;
 
 // Trcktivity
@@ -1055,7 +1059,7 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
   }
 
   // ---- Views integration ----
-  if (isViewsEnabled && button == BTN_RIGHT) {
+  if (isViewsEnabled && isViewsRightClickEnabled && button == BTN_RIGHT) {
     if (viewsState == 1 && !down) {
       viewsState = 2;
       ViewsEvent("open", nullptr);
@@ -1067,8 +1071,8 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
       ViewsEvent("selected", nullptr);
     }
   }
-  if (isViewsEnabled && (button == BTN_SWUP || button == BTN_SWDOWN) &&
-      viewsState >= 2) {
+  if (isViewsEnabled && isViewsRightClickEnabled &&
+      (button == BTN_SWUP || button == BTN_SWDOWN) && viewsState >= 2) {
     ViewsEvent(button == BTN_SWUP ? "switchUp" : "switchDown", nullptr);
   }
 
