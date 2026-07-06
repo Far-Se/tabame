@@ -190,6 +190,11 @@ class Boxes {
       ..rewindlyFps = pref.getInt("rewindlyFps") ?? user.rewindlyFps
       ..rewindlyClipMinutes = pref.getInt("rewindlyClipMinutes") ?? user.rewindlyClipMinutes
       ..rewindlyRetentionMinutes = pref.getInt("rewindlyRetentionMinutes") ?? user.rewindlyRetentionMinutes
+      ..keystrokesShowClicks = pref.getBool("keystrokesShowClicks") ?? user.keystrokesShowClicks
+      ..keystrokesModifiersOnly = pref.getBool("keystrokesModifiersOnly") ?? user.keystrokesModifiersOnly
+      ..keystrokesPosition = pref.getInt("keystrokesPosition") ?? user.keystrokesPosition
+      ..keystrokesScale = pref.getInt("keystrokesScale") ?? user.keystrokesScale
+      ..keystrokesFadeMs = pref.getInt("keystrokesFadeMs") ?? user.keystrokesFadeMs
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // must be set after schedule
 
     Debug.add("Registered: Fetched All");

@@ -1060,7 +1060,7 @@ class HotKeyInfo {
     "ShowLastActiveWindow": () {
       QuickMenuFunctions.hideQuickMenu();
       WindowWatcher.focusSecondWindow();
-      Future<void>.delayed(const Duration(milliseconds: 50), () {
+      Future<void>.delayed(const Duration(milliseconds: 150), () {
         QuickMenuFunctions.hideQuickMenu();
       });
     },

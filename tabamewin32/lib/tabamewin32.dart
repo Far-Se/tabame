@@ -1350,6 +1350,17 @@ Future<void> enableTrcktivity(bool enabled) async {
   await tabameWin32MethodChannel.invokeMethod('trcktivity', arguments);
 }
 
+/// Enables the Keystroke & Click Visualizer event stream. When enabled the
+/// native side installs the global low-level keyboard/mouse hooks (in the
+/// calling process) and emits a [KeyVizEvent] for every real key-down and mouse
+/// button press/wheel, delivered via [TabameListener.onKeyVizEvent].
+Future<void> enableKeystrokeVisualizer(bool enabled) async {
+  final Map<String, dynamic> arguments = <String, dynamic>{
+    'enabled': enabled,
+  };
+  await tabameWin32MethodChannel.invokeMethod('keystrokeViz', arguments);
+}
+
 /// Enables the native "views" hook that emits window move/snap events.
 ///
 /// [rightClickToTrigger] controls whether the right-click-drag gesture opens
@@ -1456,6 +1467,37 @@ enum ViewsAction {
   switchDown,
 }
 
+/// A single key press or mouse click emitted by the Keystroke Visualizer hook.
+///
+/// [kind] is `"key"` (then [code] is a Win32 virtual-key code) or `"click"`
+/// (then [code] is a native mouse-button id: 0 left, 1 right, 2 middle,
+/// 3 wheel-up, 4 wheel-down, 5/6 X-buttons). For clicks [x]/[y] are the screen
+/// coordinates; for keys they are 0. Modifier flags reflect the live keyboard
+/// state at the moment of the event.
+class KeyVizEvent {
+  final String kind;
+  final int code;
+  final int x;
+  final int y;
+  final bool ctrl;
+  final bool alt;
+  final bool shift;
+  final bool win;
+  const KeyVizEvent({
+    required this.kind,
+    required this.code,
+    required this.x,
+    required this.y,
+    required this.ctrl,
+    required this.alt,
+    required this.shift,
+    required this.win,
+  });
+
+  bool get isKey => kind == "key";
+  bool get isClick => kind == "click";
+}
+
 abstract class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
   void onDisplayChange(MonitorEvent hotkeyInfo) {}
@@ -1464,6 +1506,7 @@ abstract class TabameListener {
   void onWinEventReceived(int hWnd, WinEventType type) {}
   void onViewsEvent(ViewsAction action, int hWnd) {}
   void onQuickClickEvent(String eventName, Map<String, String> params) {}
+  void onKeyVizEvent(KeyVizEvent event) {}
 }
 
 abstract class ClipboardEventListener {
@@ -1528,6 +1571,7 @@ class NativeHooks {
     if (!<String>[
       "HotKeyEvent",
       "TrktivityEvent",
+      "KeyVizEvent",
       "ViewsEvent",
       "WinEvent",
       "ClipboardUpdate",
@@ -1578,6 +1622,22 @@ class NativeHooks {
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) continue;
         listener.onTricktivityEvent(call.arguments["action"], call.arguments["info"]);
+      }
+    }
+    if (call.method == "KeyVizEvent") {
+      final KeyVizEvent event = KeyVizEvent(
+        kind: call.arguments["kind"] as String,
+        code: call.arguments["code"] as int,
+        x: call.arguments["x"] as int,
+        y: call.arguments["y"] as int,
+        ctrl: call.arguments["ctrl"] as bool,
+        alt: call.arguments["alt"] as bool,
+        shift: call.arguments["shift"] as bool,
+        win: call.arguments["win"] as bool,
+      );
+      for (final TabameListener listener in listeners) {
+        if (!listenersObv.contains(listener)) continue;
+        listener.onKeyVizEvent(event);
       }
     }
     if (call.method == "ViewsEvent") {

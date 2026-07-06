@@ -961,6 +961,23 @@ void TrcktivityH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, true);
 }
 
+// Toggles the Keystroke & Click Visualizer stream. Installs the global
+// low-level hooks in this process when enabled so the standalone overlay
+// receives system-wide key/click events (WH_*_LL hooks are per-process).
+void KeystrokeVizH(Tabamewin32Plugin *, const MethodCall &call,
+                   MethodResult result) {
+  isKeystrokeVizEnabled = Args::Bool(Args::Map(call), "enabled");
+  if (isKeystrokeVizEnabled) {
+    if (!g_MouseHook)
+      g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook,
+                                     GetModuleHandle(nullptr), 0);
+    if (!g_KeyboardHook)
+      g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook,
+                                        GetModuleHandle(nullptr), 0);
+  }
+  OK(result, true);
+}
+
 void ViewsH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
   const auto &a = Args::Map(call);
   isViewsEnabled = Args::Bool(a, "enabled");
@@ -1750,6 +1767,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"stopKeyboardBlocker", Handlers::StopKeyboardBlockerH},
       {"freeHotkey", Handlers::FreeHotkeyH},
       {"trcktivity", Handlers::TrcktivityH},
+      {"keystrokeViz", Handlers::KeystrokeVizH},
       {"views", Handlers::ViewsH},
       // Shell / Misc
       {"shellOpen", Handlers::ShellOpenH},

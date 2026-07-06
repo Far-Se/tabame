@@ -82,6 +82,8 @@ static int viewsState = 0;
 
 // Trcktivity
 static bool isTrcktivityEnabled = false;
+// Keystroke & Click Visualizer overlay (emits a per-event stream to Dart).
+static bool isKeystrokeVizEnabled = false;
 static int trkTimestamp = 0;
 static int trckMovementX = 0;
 static int trckMovementY = 0;
@@ -752,6 +754,27 @@ static void TrktivityEvent(const std::string &action, const std::string &info) {
                         std::make_unique<flutter::EncodableValue>(args));
 }
 
+// Emits a single key press or mouse click to the Keystroke Visualizer overlay.
+// kind: "key" -> code is a virtual-key code; "click" -> code is a mouseButtons
+// value. Modifier booleans reflect the live keyboard state at emit time.
+static void KeyVizEvent(const std::string &kind, int code, int x, int y) {
+  flutter::EncodableMap args;
+  args[flutter::EncodableValue("kind")] = flutter::EncodableValue(kind);
+  args[flutter::EncodableValue("code")] = flutter::EncodableValue(code);
+  args[flutter::EncodableValue("x")] = flutter::EncodableValue(x);
+  args[flutter::EncodableValue("y")] = flutter::EncodableValue(y);
+  args[flutter::EncodableValue("ctrl")] =
+      flutter::EncodableValue((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0);
+  args[flutter::EncodableValue("alt")] =
+      flutter::EncodableValue((GetAsyncKeyState(VK_MENU) & 0x8000) != 0);
+  args[flutter::EncodableValue("shift")] =
+      flutter::EncodableValue((GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0);
+  args[flutter::EncodableValue("win")] = flutter::EncodableValue(
+      ((GetAsyncKeyState(VK_LWIN) | GetAsyncKeyState(VK_RWIN)) & 0x8000) != 0);
+  channel->InvokeMethod("KeyVizEvent",
+                        std::make_unique<flutter::EncodableValue>(args));
+}
+
 static void ViewsEvent(const std::string &action, HWND hwnd) {
   flutter::EncodableMap args;
   args[flutter::EncodableValue("hwnd")] = flutter::EncodableValue(
@@ -1023,6 +1046,11 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
 
   const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
 
+  // Keystroke Visualizer: mirror every real key-down to the overlay before any
+  // hotkey handling might consume it. Never suppresses the key.
+  if (isKeystrokeVizEnabled && keyDown)
+    KeyVizEvent("key", static_cast<int>(keyInfo.vkCode), 0, 0);
+
   // Feed the Text Snippets buffer with real typing (skips command chords and
   // the insert-snippet hotkey combo internally). Runs before hotkey handling so
   // the buffer is complete even if this key is later consumed as a hotkey.
@@ -1193,6 +1221,12 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
     down = static_cast<std::make_signed_t<WORD>>(HIWORD(info->mouseData)) < 0;
     button = down ? BTN_SWDOWN : BTN_SWUP;
     break;
+  }
+
+  // ---- Keystroke Visualizer: mirror button presses + wheel to the overlay ----
+  if (isKeystrokeVizEnabled && button != BTN_NONE && (down || button == BTN_SWUP)) {
+    KeyVizEvent("click", static_cast<int>(button), static_cast<int>(info->pt.x),
+                static_cast<int>(info->pt.y));
   }
 
   // ---- Views integration ----

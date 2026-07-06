@@ -47,6 +47,8 @@ import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
+import '../../widgets/itzy/quickmenu/button_keystrokes.dart';
+import '../../widgets/itzy/quickmenu/button_present_mode.dart';
 import '../../widgets/itzy/quickmenu/button_quicksnap_standalone.dart';
 import '../../widgets/itzy/quickmenu/button_rewindly.dart';
 import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
@@ -64,6 +66,7 @@ import '../../widgets/itzy/quickmenu/button_toggle_hidden_files.dart';
 import '../../widgets/itzy/quickmenu/button_toggle_taskbar.dart';
 import '../../widgets/itzy/quickmenu/button_toggle_wallpaper_mode.dart';
 import '../../widgets/itzy/quickmenu/button_translator.dart';
+import '../../widgets/itzy/quickmenu/button_trktivity_today.dart';
 import '../../widgets/itzy/quickmenu/button_universal_converter.dart';
 import '../../widgets/itzy/quickmenu/button_vault.dart';
 import '../../widgets/itzy/quickmenu/button_virtual_desktop.dart';
@@ -265,6 +268,18 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "ScreenDrawButton": QuickAction(
     icon: Icons.draw_outlined,
     widget: () => const ScreenDrawButton(),
+  ),
+  "PresentModeButton": QuickAction(
+    icon: Icons.co_present_outlined,
+    widget: () => const PresentModeButton(),
+  ),
+  "KeystrokesButton": QuickAction(
+    icon: Icons.keyboard_alt_outlined,
+    widget: () => const KeystrokesButton(),
+  ),
+  "TrktivityTodayButton": QuickAction(
+    icon: Icons.insights_outlined,
+    widget: () => const TrktivityTodayButton(),
   ),
   "ScreenRecordingButton": QuickAction(
     icon: Icons.camera,

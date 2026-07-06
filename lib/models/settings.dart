@@ -161,6 +161,12 @@ class Settings {
   int rewindlyFps = 2; // capture frame rate, 1-10
   int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
   int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
+  // Keystroke & Click Visualizer overlay
+  bool keystrokesShowClicks = true; // render mouse click ripples
+  bool keystrokesModifiersOnly = false; // only show chords that use a modifier
+  int keystrokesPosition = 2; // 0 top-left, 1 top-center, 2 bottom-center, 3 bottom-right, 4 bottom-left
+  int keystrokesScale = 100; // badge size, percent 60-200
+  int keystrokesFadeMs = 2500; // how long a key badge stays before fading
   String customLogo = "";
   String customSpash = "";
   String launcherSearchText = "";

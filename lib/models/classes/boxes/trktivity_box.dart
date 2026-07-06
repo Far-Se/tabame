@@ -173,6 +173,41 @@ class TrktivityFilter {
   int get hashCode => exe.hashCode ^ titleSearch.hashCode ^ titleReplace.hashCode;
 }
 
+/// How an app counts toward the daily "productive vs distracting" ratio.
+enum TrktivityCategory { productive, neutral, distracting }
+
+/// A per-app rule: an optional daily time budget (minutes, 0 = none) and a
+/// productivity category. Matched against the tracked executable name (exe).
+class TrktivityAppRule {
+  String exe;
+  int dailyMinutes;
+  TrktivityCategory category;
+
+  TrktivityAppRule({
+    required this.exe,
+    this.dailyMinutes = 0,
+    this.category = TrktivityCategory.neutral,
+  });
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'exe': exe,
+        'dailyMinutes': dailyMinutes,
+        'category': category.index,
+      };
+
+  factory TrktivityAppRule.fromMap(Map<String, dynamic> map) {
+    return TrktivityAppRule(
+      exe: (map['exe'] ?? '') as String,
+      dailyMinutes: (map['dailyMinutes'] ?? 0) as int,
+      category: TrktivityCategory.values[(map['category'] ?? 1) as int],
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+  factory TrktivityAppRule.fromJson(String source) =>
+      TrktivityAppRule.fromMap(json.decode(source) as Map<String, dynamic>);
+}
+
 class Trktivity {
   Trktivity._();
   static final Trktivity instance = Trktivity._();
@@ -184,6 +219,77 @@ class Trktivity {
   String folder = "${WinUtils.getTabameAppDataFolder()}\\trktivity";
 
   set filters(List<TrktivityFilter> list) => _filters = list;
+
+  // ---- Per-app time budgets & categories (live, in-memory) ----------------
+  List<TrktivityAppRule> _appRules = <TrktivityAppRule>[];
+  bool _appRulesLoaded = false;
+  List<TrktivityAppRule> get appRules {
+    if (!_appRulesLoaded) {
+      _appRules = Boxes.getSavedMap<TrktivityAppRule>(TrktivityAppRule.fromJson, "trktivityAppRules");
+      _appRulesLoaded = true;
+    }
+    return _appRules;
+  }
+
+  set appRules(List<TrktivityAppRule> list) {
+    _appRules = list;
+    _appRulesLoaded = true;
+    Boxes.updateSettings(
+      "trktivityAppRules",
+      jsonEncode(list.map((TrktivityAppRule e) => e.toJson()).toList()),
+    );
+  }
+
+  /// Seconds spent in each exe today, accumulated as foreground segments close.
+  /// Drives budget nudges; reset automatically when the day rolls over.
+  final Map<String, int> todaySeconds = <String, int>{};
+  final Set<String> _notifiedToday = <String>{};
+  String _todayDate = "";
+  String _liveExe = "";
+  int _liveStart = 0;
+
+  void _rolloverIfNeeded() {
+    final String today = DateFormat("yyyy-MM-dd").format(DateTime.now());
+    if (today != _todayDate) {
+      _todayDate = today;
+      todaySeconds.clear();
+      _notifiedToday.clear();
+      _liveExe = "";
+      _liveStart = 0;
+    }
+  }
+
+  /// Closes the running foreground segment and starts a new one for [newExe].
+  void _recordLiveSegment(String newExe) {
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    _rolloverIfNeeded();
+    if (_liveExe.isNotEmpty && _liveStart != 0 && _liveExe != "idle.exe") {
+      final int secs = ((now - _liveStart) / 1000).round();
+      if (secs > 0 && secs < 3600) {
+        todaySeconds[_liveExe] = (todaySeconds[_liveExe] ?? 0) + secs;
+        _checkBudget(_liveExe);
+      }
+    }
+    _liveExe = newExe;
+    _liveStart = now;
+  }
+
+  void _checkBudget(String exe) {
+    if (_notifiedToday.contains(exe)) return;
+    for (final TrktivityAppRule rule in appRules) {
+      if (rule.dailyMinutes <= 0) continue;
+      if (rule.exe.toLowerCase() != exe.toLowerCase()) continue;
+      if ((todaySeconds[exe] ?? 0) >= rule.dailyMinutes * 60) {
+        _notifiedToday.add(exe);
+        WinUtils.showWindowsNotification(
+          title: "Tabame · Time budget reached",
+          body: "You've spent ${rule.dailyMinutes} min in $exe today.",
+          onClick: () {},
+        );
+      }
+      break;
+    }
+  }
 
   void onTrktivityEvent(String action, String info) {
     if (trktivityIdleState == 2) {
@@ -249,10 +355,14 @@ class Trktivity {
     if (!user.trktivityEnabled) return;
 
     if (type == TrktivityType.idle) {
+      _recordLiveSegment("idle.exe");
       final String data = TrktivityData(e: "idle.exe", t: "w", tl: "Idle").toJson();
       saved.add(TrktivitySave(ts: DateTime.now().millisecondsSinceEpoch, t: "w", d: data));
     } else if (type == TrktivityType.title || type == TrktivityType.window) {
       final TrkFilterInfo filterInfo = fitlerTitle(int.tryParse(value) ?? 0);
+      if (type == TrktivityType.window && filterInfo.exe.isNotEmpty) {
+        _recordLiveSegment(filterInfo.exe);
+      }
       String title = "";
       if (filterInfo.hasFilters) {
         title = filterInfo.result;
