@@ -88,10 +88,50 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
             Expanded(child: _buildTextSnippetsTile(colors, texts)),
           ],
         ),
+        _buildHotkeyToolbar(colors, texts),
         Expanded(
           child: remap.isEmpty ? _buildEmptyState(colors, texts) : _buildHotkeyContent(colors, texts),
         ),
       ],
+    );
+  }
+
+  Widget _buildHotkeyToolbar(ColorScheme colors, TextTheme texts) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      child: Row(
+        children: <Widget>[
+          TextButton.icon(
+            onPressed: _importHotkey,
+            icon: const Icon(Icons.file_upload_outlined, size: 16),
+            label: const Text("IMPORT HOTKEY"),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              foregroundColor: colors.secondary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: _restoreDefaultHotkey,
+            icon: const Icon(Icons.history, size: 16),
+            label: const Text("RESTORE DEFAULT"),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              foregroundColor: colors.secondary,
+            ),
+          ),
+          const Spacer(),
+          FilledButton.icon(
+            onPressed: _addNewHotkey,
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text("ADD HOTKEY"),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -373,42 +413,10 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                 const SizedBox(height: 4),
                 Text("Manage keyboard shortcuts and workflows that automate your desktop.",
                     style: texts.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
-                const SizedBox(height: 12),
-                const InfoText("Hotkeys sync after interface restart."),
+                // const SizedBox(height: 12),
+                // const InfoText("Hotkeys sync after interface restart."),
               ],
             ),
-          ),
-          Column(
-            children: <Widget>[
-              FilledButton.icon(
-                onPressed: _addNewHotkey,
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text("ADD HOTKEY"),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: _importHotkey,
-                icon: const Icon(Icons.file_upload_outlined, size: 16),
-                label: const Text("IMPORT HOTKEY"),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: colors.secondary,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _restoreDefaultHotkey,
-                icon: const Icon(Icons.history, size: 16),
-                label: const Text("RESTORE DEFAULT"),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: colors.secondary,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -881,11 +889,17 @@ class _HotkeyCardState extends State<_HotkeyCard> {
       child: Icon(
         widget.keymap.key.startsWith("MouseButton")
             ? Icons.mouse_rounded
-            : (widget.keymap.key == Hotkeys.doubleAltKey || widget.keymap.key == Hotkeys.rightAltKey)
+            : (widget.keymap.key == Hotkeys.doubleAltKey ||
+                    widget.keymap.key == Hotkeys.rightAltKey ||
+                    widget.keymap.key == Hotkeys.leftAltKey)
                 ? Icons.keyboard_option_key_rounded
-                : (widget.keymap.key == Hotkeys.rightControlKey)
+                : (widget.keymap.key == Hotkeys.rightControlKey || widget.keymap.key == Hotkeys.leftControlKey)
                     ? Icons.keyboard_control_key_rounded
-                    : Icons.keyboard_rounded,
+                    : (widget.keymap.key == Hotkeys.leftShiftKey || widget.keymap.key == Hotkeys.rightShiftKey)
+                        ? Icons.keyboard_capslock_rounded
+                        : (widget.keymap.key == Hotkeys.leftWinKey || widget.keymap.key == Hotkeys.rightWinKey)
+                            ? Icons.window_rounded
+                            : Icons.keyboard_rounded,
         color: widget.colors.onPrimaryContainer,
         size: 20,
       ),

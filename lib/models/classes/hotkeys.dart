@@ -24,25 +24,73 @@ import 'boxes.dart';
 import 'text_snippet.dart';
 
 class Hotkeys {
-  static const List<String> modifierOrder = <String>["CTRL", "ALT", "SHIFT", "WIN"];
+  // Modifier tokens are ordered family-first so normalizeModifiers produces a
+  // stable, human-readable order. Each family has an "either side" token plus
+  // explicit Left/Right variants (matched natively against the physical key).
+  static const List<String> modifierOrder = <String>[
+    "CTRL", "LCTRL", "RCTRL", //
+    "ALT", "LALT", "RALT", //
+    "SHIFT", "LSHIFT", "RSHIFT", //
+    "WIN", "LWIN", "RWIN", //
+  ];
+
+  /// Base modifier families exposed as tiles in the hotkey editor.
+  static const List<String> modifierFamilies = <String>["CTRL", "ALT", "SHIFT", "WIN"];
+
+  /// Modifier tokens per family. Index 0 = either side, 1 = Left, 2 = Right.
+  static const Map<String, List<String>> modifierVariants = <String, List<String>>{
+    "CTRL": <String>["CTRL", "LCTRL", "RCTRL"],
+    "ALT": <String>["ALT", "LALT", "RALT"],
+    "SHIFT": <String>["SHIFT", "LSHIFT", "RSHIFT"],
+    "WIN": <String>["WIN", "LWIN", "RWIN"],
+  };
+
+  /// Families that offer Left/Right side selection in the UI.
+  static const List<String> sidedModifierFamilies = <String>["CTRL", "ALT", "SHIFT", "WIN"];
+
+  static const Map<String, String> modifierDisplayLabels = <String, String>{
+    "CTRL": "Ctrl", "LCTRL": "L-Ctrl", "RCTRL": "R-Ctrl", //
+    "ALT": "Alt", "LALT": "L-Alt", "RALT": "R-Alt", //
+    "SHIFT": "Shift", "LSHIFT": "L-Shift", "RSHIFT": "R-Shift", //
+    "WIN": "Win", "LWIN": "L-Win", "RWIN": "R-Win", //
+  };
+
   static const String mouseButton4Key = "MouseButton4";
   static const String mouseButton5Key = "MouseButton5";
   static const String doubleAltKey = "DoubleAlt";
+  static const String leftAltKey = "LeftAlt";
   static const String rightAltKey = "RightAlt";
+  static const String leftControlKey = "LeftControl";
   static const String rightControlKey = "RightControl";
+  static const String leftShiftKey = "LeftShift";
+  static const String rightShiftKey = "RightShift";
+  static const String leftWinKey = "LeftWin";
+  static const String rightWinKey = "RightWin";
   static const List<String> specialBindingKeys = <String>[
     mouseButton4Key,
     mouseButton5Key,
     doubleAltKey,
-    rightAltKey,
+    leftControlKey,
     rightControlKey,
+    leftAltKey,
+    rightAltKey,
+    leftShiftKey,
+    rightShiftKey,
+    leftWinKey,
+    rightWinKey,
   ];
   static const Map<String, String> specialBindingLabels = <String, String>{
     mouseButton4Key: "Mouse Button 4",
     mouseButton5Key: "Mouse Button 5",
     doubleAltKey: "Double Alt",
-    rightAltKey: "Right Alt",
+    leftControlKey: "Left Control",
     rightControlKey: "Right Control",
+    leftAltKey: "Left Alt",
+    rightAltKey: "Right Alt",
+    leftShiftKey: "Left Shift",
+    rightShiftKey: "Right Shift",
+    leftWinKey: "Left Win",
+    rightWinKey: "Right Win",
   };
   static const Map<String, String> namedKeyAliases = <String, String>{
     // Existing
@@ -207,6 +255,40 @@ class Hotkeys {
     return orderedModifiers;
   }
 
+  /// Returns the base family ("CTRL"/"ALT"/"SHIFT"/"WIN") for any modifier token.
+  static String modifierFamilyOf(String modifier) {
+    final String upper = modifier.toUpperCase();
+    for (final MapEntry<String, List<String>> entry in modifierVariants.entries) {
+      if (entry.value.contains(upper)) return entry.key;
+    }
+    return upper;
+  }
+
+  /// Side of a modifier token: 0 = either side, 1 = Left, 2 = Right.
+  static int modifierSideOf(String modifier) {
+    final List<String>? variants = modifierVariants[modifierFamilyOf(modifier)];
+    if (variants == null) return 0;
+    final int index = variants.indexOf(modifier.toUpperCase());
+    return index < 0 ? 0 : index;
+  }
+
+  /// Builds the modifier token for [family] with the given [side] (0/1/2).
+  static String modifierWithSide(String family, int side) {
+    final List<String>? variants = modifierVariants[family];
+    if (variants == null || side <= 0 || side >= variants.length) return family;
+    return variants[side];
+  }
+
+  /// The active modifier token for [family] within [modifiers], or null if the
+  /// family is not present at all.
+  static String? activeModifierForFamily(Iterable<String> modifiers, String family) {
+    final List<String> variants = modifierVariants[family] ?? <String>[family];
+    for (final String modifier in modifiers) {
+      if (variants.contains(modifier.toUpperCase())) return modifier.toUpperCase();
+    }
+    return null;
+  }
+
   static String normalizeKeyName(String key) {
     if (key.isEmpty) return '';
     final String trimmed = key.trim();
@@ -276,10 +358,12 @@ class Hotkeys {
 
   static String formatHotkeyLabel({required String key, Iterable<String> modifiers = const <String>[]}) {
     final List<String> normalizedModifiers = normalizeModifiers(modifiers);
+    final List<String> displayModifiers =
+        normalizedModifiers.map((String modifier) => modifierDisplayLabels[modifier] ?? modifier).toList();
     final String displayKeyLabel = displayKey(key);
 
     if (normalizedModifiers.isEmpty && isSpecialBindingKey(key)) return displayKeyLabel;
-    if (normalizedModifiers.isNotEmpty) return '${normalizedModifiers.join('+')}+$displayKeyLabel';
+    if (displayModifiers.isNotEmpty) return '${displayModifiers.join('+')}+$displayKeyLabel';
     if (displayKeyLabel.isNotEmpty) return displayKeyLabel;
     return "NoKey";
   }

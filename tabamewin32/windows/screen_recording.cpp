@@ -121,6 +121,16 @@ struct AudioSource {
   std::deque<float> pendingStereo;
   std::vector<float> resampleCarry;
   double resamplePos = 0.0;
+  // Real-time position of the captured audio on the QPC clock (100-ns units,
+  // the same timebase steady_clock uses on Windows). capturedEndHns is the
+  // QPC time of the newest captured sample; qpcAnchorHns is the QPC time of the
+  // very first captured sample. Only deltas between the two are used, so the
+  // absolute epoch never matters. These anchor audio to the wall-clock video
+  // timeline instead of a running 48 kHz sample count (which drifts as the
+  // device sample clock diverges from the system clock over long recordings).
+  int64_t capturedEndHns = 0;
+  int64_t qpcAnchorHns = 0;
+  bool hasQpc = false;
   UINT32 bufferFrameCount = 0;
   int sampleRate = kAudioSampleRate;
   int channelCount = kAudioChannels;
@@ -508,6 +518,7 @@ public:
     frameCount_ = 0;
     droppedFrames_ = 0;
     audioFramesWritten_ = 0;
+    lastAudioPtsHns_ = 0;
     audioStartTime_ = {};
     audioInitDone_ = false;
     audioInitSucceeded_ = false;
@@ -1039,9 +1050,28 @@ private:
       BYTE *data = nullptr;
       UINT32 frames = 0;
       DWORD flags = 0;
-      hr = source.capture->GetBuffer(&data, &frames, &flags, nullptr, nullptr);
+      UINT64 devicePosition = 0;
+      UINT64 qpcPosition = 0;
+      hr = source.capture->GetBuffer(&data, &frames, &flags, &devicePosition,
+                                     &qpcPosition);
       if (FAILED(hr))
         return false;
+
+      // WASAPI reports the QPC value (in 100-ns units) at which the device
+      // captured the first frame of this packet. Track the real-time end of the
+      // captured audio from it so timestamps follow the wall clock (and hence
+      // the video) rather than an assumed-perfect 48 kHz sample count. If a gap
+      // or glitch drops samples, qpcPosition jumps forward and the audio PTS
+      // jumps with it, keeping A/V aligned.
+      if (qpcPosition != 0) {
+        if (!source.hasQpc) {
+          source.qpcAnchorHns = static_cast<int64_t>(qpcPosition);
+          source.hasQpc = true;
+        }
+        source.capturedEndHns =
+            static_cast<int64_t>(qpcPosition) +
+            static_cast<int64_t>(frames) * 10'000'000LL / source.sampleRate;
+      }
 
       std::vector<float> stereoFloat = ConvertCapturedFramesToStereoFloat(
           data, frames, source.format.get(), flags);
@@ -1061,6 +1091,15 @@ private:
   bool WriteMixedAudioChunk(int framesToWrite) {
     if (framesToWrite <= 0)
       return true;
+
+    // Depth of the primary source's queue *before* we drain this chunk. Used
+    // below to convert the newest captured-audio timestamp into the timestamp
+    // of the oldest (first) sample we are about to write.
+    const int64_t queuedBeforeWrite =
+        audioSources_.empty()
+            ? 0
+            : static_cast<int64_t>(audioSources_.front().pendingStereo.size() /
+                                   2);
 
     std::vector<int16_t> pcm;
     pcm.resize(static_cast<size_t>(framesToWrite) * kAudioChannels, 0);
@@ -1107,21 +1146,46 @@ private:
     if (FAILED(hr) || FAILED(sample->AddBuffer(buffer.get())))
       return false;
 
-    // Compute the timestamp for this chunk relative to the recording origin
-    // (startTime_).  audioStartTime_ marks when IAudioClient::Start() was
-    // called; audioFramesWritten_ counts samples since that moment.  Together
-    // they give a sample-accurate position on the same timeline as video.
+    // Timestamp this chunk on the same clock as the video stream. Video frames
+    // are stamped with wall-clock elapsed time (steady_clock, i.e. QPC on
+    // Windows); audio is anchored to the QPC values WASAPI reports for the
+    // captured data. audioStartTime_ marks when IAudioClient::Start() was
+    // called, giving the audio origin on the video timeline; the QPC delta
+    // (capturedEndHns - qpcAnchorHns) advances that origin by the *real*
+    // elapsed capture time, and subtracting the still-queued backlog lands us
+    // on the first sample of this chunk. Using QPC deltas keeps audio locked to
+    // the video timeline instead of drifting as the device sample clock
+    // diverges from the system clock over long recordings.
     const int64_t audioOriginHns =
         std::chrono::duration_cast<
             std::chrono::duration<int64_t, std::ratio<1, 10'000'000>>>(
             audioStartTime_ - startTime_)
             .count();
-    const LONGLONG sampleTime =
-        audioOriginHns + audioFramesWritten_ * 10'000'000LL / kAudioSampleRate;
+    LONGLONG sampleTime;
+    if (!audioSources_.empty() && audioSources_.front().hasQpc) {
+      const AudioSource &primary = audioSources_.front();
+      // The QPC delta keeps advancing while paused (the audio thread keeps
+      // pumping WASAPI), so back out accumulated paused time exactly as the
+      // video path does, keeping both timelines gap-free across a pause.
+      sampleTime = audioOriginHns +
+                   (primary.capturedEndHns - primary.qpcAnchorHns) -
+                   queuedBeforeWrite * 10'000'000LL / kAudioSampleRate -
+                   pausedDurationUs_.load() * 10LL;
+    } else {
+      // Fallback for devices that don't report a QPC position: the legacy
+      // sample-counted timeline relative to when capture started.
+      sampleTime = audioOriginHns +
+                   audioFramesWritten_ * 10'000'000LL / kAudioSampleRate;
+    }
+    // Guard against any backward step so the muxer always sees non-decreasing
+    // presentation timestamps.
+    if (sampleTime < lastAudioPtsHns_)
+      sampleTime = lastAudioPtsHns_;
     const LONGLONG sampleDuration =
         static_cast<LONGLONG>(framesToWrite) * 10'000'000LL / kAudioSampleRate;
     sample->SetSampleTime(sampleTime);
     sample->SetSampleDuration(sampleDuration);
+    lastAudioPtsHns_ = sampleTime + sampleDuration;
 
     {
       std::lock_guard<std::mutex> lock(sinkWriterMutex_);
@@ -1489,6 +1553,7 @@ private:
     targetWindow_ = nullptr;
     sourceRect_ = {0, 0, 0, 0};
     audioFramesWritten_ = 0;
+    lastAudioPtsHns_ = 0;
     audioSources_.clear();
     audioErrorCode_.clear();
     audioErrorMessage_.clear();
@@ -1526,6 +1591,7 @@ private:
   std::atomic<int> frameCount_{0};
   std::atomic<int> droppedFrames_{0};
   int64_t audioFramesWritten_ = 0;
+  int64_t lastAudioPtsHns_ = 0;
   std::chrono::steady_clock::time_point startTime_{};
   std::chrono::steady_clock::time_point audioStartTime_{};
   Config captureConfig_;

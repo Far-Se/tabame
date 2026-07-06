@@ -873,6 +873,7 @@ void HotkeyAddH(Tabamewin32Plugin *, const MethodCall &call,
   hk.hotkey = Encoding::Utf8ToWide(Args::Str(a, "hotkey"));
   hk.keyVK = Args::Int(a, "keyVK");
   hk.modifisers = Encoding::Utf8ToWide(Args::Str(a, "modifisers"));
+  hk.modifierTokens = ParseHotkeyModifierTokens(hk.modifisers);
   hk.matchWindowBy = Args::Str(a, "matchWindowBy");
   hk.matchWindowText = Encoding::Utf8ToWide(Args::Str(a, "matchWindowText"));
   hk.activateWindowUnderCursor = Args::Bool(a, "activateWindowUnderCursor");

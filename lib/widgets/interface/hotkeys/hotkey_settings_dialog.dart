@@ -490,19 +490,30 @@ class HotKeySettingsState extends State<HotKeySettings> {
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 200),
               opacity: listeningToHotkey ? 1.0 : 0.5,
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  _modifierStatusTile("CTRL",
-                      listeningToHotkey ? _pressedModifiers.contains("CTRL") : hotkey.modifiers.contains("CTRL")),
-                  const SizedBox(width: 6),
-                  _modifierStatusTile(
-                      "ALT", listeningToHotkey ? _pressedModifiers.contains("ALT") : hotkey.modifiers.contains("ALT")),
-                  const SizedBox(width: 6),
-                  _modifierStatusTile("SHIFT",
-                      listeningToHotkey ? _pressedModifiers.contains("SHIFT") : hotkey.modifiers.contains("SHIFT")),
-                  const SizedBox(width: 6),
-                  _modifierStatusTile(
-                      "WIN", listeningToHotkey ? _pressedModifiers.contains("WIN") : hotkey.modifiers.contains("WIN")),
+                  Row(
+                    children: <Widget>[
+                      for (int i = 0; i < Hotkeys.modifierFamilies.length; i++) ...<Widget>[
+                        if (i > 0) const SizedBox(width: 6),
+                        _modifierStatusTile(Hotkeys.modifierFamilies[i]),
+                      ],
+                    ],
+                  ),
+                  if (!listeningToHotkey) ...<Widget>[
+                    const SizedBox(height: 6),
+                    Text(
+                      "TAP TO CYCLE: EITHER → LEFT → RIGHT SIDE",
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontFamily: "monospace",
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        color: colors.onSurfaceVariant.withAlpha(110),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -558,9 +569,36 @@ class HotKeySettingsState extends State<HotKeySettings> {
     );
   }
 
-  Widget _modifierStatusTile(String label, bool isActive) {
+  // Cycles a modifier family through its states on tap:
+  //   Off -> Either -> Left -> Right -> Off  (Left/Right only for sided families).
+  void _cycleModifierFamily(String family) {
+    final List<String> variants = Hotkeys.modifierVariants[family] ?? <String>[family];
+    final String? current = Hotkeys.activeModifierForFamily(hotkey.modifiers, family);
+    hotkey.modifiers.removeWhere((String modifier) => variants.contains(modifier.toUpperCase()));
+
+    final bool sided = Hotkeys.sidedModifierFamilies.contains(family);
+    int nextSide;
+    if (current == null) {
+      nextSide = 0; // Off -> Either
+    } else if (!sided) {
+      nextSide = -1; // Either -> Off
+    } else {
+      nextSide = Hotkeys.modifierSideOf(current) + 1; // Either -> Left -> Right -> Off
+      if (nextSide > 2) nextSide = -1;
+    }
+
+    if (nextSide >= 0) hotkey.modifiers.add(Hotkeys.modifierWithSide(family, nextSide));
+    setState(() {});
+  }
+
+  Widget _modifierStatusTile(String family) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color accent = Design.accent;
+
+    final String? token = listeningToHotkey ? null : Hotkeys.activeModifierForFamily(hotkey.modifiers, family);
+    final bool isActive = listeningToHotkey ? _pressedModifiers.contains(family) : token != null;
+    final int side = token == null ? 0 : Hotkeys.modifierSideOf(token);
+    final String sidePrefix = side == 1 ? "L·" : (side == 2 ? "R·" : "");
 
     return Expanded(
       child: MouseRegion(
@@ -568,16 +606,11 @@ class HotKeySettingsState extends State<HotKeySettings> {
         child: GestureDetector(
           onTap: () {
             if (listeningToHotkey) return;
-            if (hotkey.modifiers.contains(label)) {
-              hotkey.modifiers.remove(label);
-            } else {
-              hotkey.modifiers.add(label);
-            }
-            setState(() {});
+            _cycleModifierFamily(family);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
             decoration: BoxDecoration(
               color: isActive ? accent.withAlpha(25) : colors.onSurface.withAlpha(10),
               borderRadius: BorderRadius.circular(6),
@@ -587,13 +620,16 @@ class HotKeySettingsState extends State<HotKeySettings> {
               ),
             ),
             alignment: Alignment.center,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-                color: isActive ? accent : colors.onSurfaceVariant.withAlpha(80),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                "$sidePrefix$family",
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                  color: isActive ? accent : colors.onSurfaceVariant.withAlpha(80),
+                ),
               ),
             ),
           ),
@@ -682,10 +718,22 @@ class HotKeySettingsState extends State<HotKeySettings> {
         return "Forward thumb button (Mouse Button 5).";
       case Hotkeys.doubleAltKey:
         return "Tap Alt once, then press again within 100ms.";
+      case Hotkeys.leftAltKey:
+        return "Press the Left Alt key to trigger this action.";
       case Hotkeys.rightAltKey:
         return "Press the Right Alt key to trigger this action.";
+      case Hotkeys.leftControlKey:
+        return "Press the Left Control key to trigger this action.";
       case Hotkeys.rightControlKey:
         return "Press the Right Control key to trigger this action.";
+      case Hotkeys.leftShiftKey:
+        return "Press the Left Shift key to trigger this action.";
+      case Hotkeys.rightShiftKey:
+        return "Press the Right Shift key to trigger this action.";
+      case Hotkeys.leftWinKey:
+        return "Press the Left Windows key to trigger this action.";
+      case Hotkeys.rightWinKey:
+        return "Press the Right Windows key to trigger this action.";
       default:
         return "Custom hardware trigger for this remapping.";
     }

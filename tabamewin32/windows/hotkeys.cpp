@@ -29,6 +29,9 @@ extern std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel;
 class Hotkey {
 public:
   std::wstring modifisers = L"";
+  // Required modifier tokens parsed from |modifisers| (e.g. CTRL, LCTRL, RALT).
+  // Empty means the hotkey must fire with no modifiers held.
+  std::vector<std::wstring> modifierTokens = {};
   std::wstring hotkey = L"";
   int keyVK = -1;
   bool activateWindowUnderCursor = false;
@@ -254,6 +257,95 @@ bool HasRegisteredHotkey(const std::wstring &hotkey) {
   return std::any_of(
       hotkeys.begin(), hotkeys.end(),
       [&hotkey](const Hotkey &hk) { return hk.hotkey == hotkey; });
+}
+
+// The key portion of a hotkey string is everything after the last '+', e.g.
+// "CTRL+ALT+F" -> "F". A modifier-less hotkey ("F1", "MOUSEBUTTON4") is returned
+// unchanged.
+std::wstring HotkeyKeyPortion(const std::wstring &hotkey) {
+  const size_t pos = hotkey.rfind(L'+');
+  return pos == std::wstring::npos ? hotkey : hotkey.substr(pos + 1);
+}
+
+// Split the "CTRL+RALT" style modifier list into individual tokens. The
+// "noModifiers" sentinel and empty strings yield an empty vector.
+std::vector<std::wstring>
+ParseHotkeyModifierTokens(const std::wstring &modifisers) {
+  std::vector<std::wstring> tokens;
+  if (modifisers.empty() || modifisers == L"noModifiers" ||
+      modifisers == L"NOMODIFIERS")
+    return tokens;
+
+  std::wstringstream ss(modifisers);
+  std::wstring token;
+  while (std::getline(ss, token, L'+')) {
+    if (!token.empty())
+      tokens.push_back(token);
+  }
+  return tokens;
+}
+
+enum class ModRequirement { NotAllowed, EitherSide, LeftSide, RightSide };
+
+bool KeyIsDown(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+
+bool RequirementSatisfied(ModRequirement req, bool leftDown, bool rightDown) {
+  switch (req) {
+  case ModRequirement::NotAllowed:
+    return !leftDown && !rightDown;
+  case ModRequirement::EitherSide:
+    return leftDown || rightDown;
+  case ModRequirement::LeftSide:
+    return leftDown;
+  case ModRequirement::RightSide:
+    return rightDown;
+  }
+  return false;
+}
+
+// Verify the current physical modifier state matches the hotkey's requirements.
+// Every modifier family that is NOT required must be released, so that e.g.
+// CTRL+F does not fire while ALT is also held. Left/Right tokens match only the
+// corresponding physical key; the plain token matches either side.
+bool HotkeyModifiersMatch(const Hotkey &hk) {
+  ModRequirement ctrl = ModRequirement::NotAllowed;
+  ModRequirement alt = ModRequirement::NotAllowed;
+  ModRequirement shift = ModRequirement::NotAllowed;
+  ModRequirement win = ModRequirement::NotAllowed;
+
+  for (const std::wstring &tok : hk.modifierTokens) {
+    if (tok == L"CTRL")
+      ctrl = ModRequirement::EitherSide;
+    else if (tok == L"LCTRL" || tok == L"LCONTROL")
+      ctrl = ModRequirement::LeftSide;
+    else if (tok == L"RCTRL" || tok == L"RCONTROL")
+      ctrl = ModRequirement::RightSide;
+    else if (tok == L"ALT")
+      alt = ModRequirement::EitherSide;
+    else if (tok == L"LALT" || tok == L"LMENU")
+      alt = ModRequirement::LeftSide;
+    else if (tok == L"RALT" || tok == L"RMENU")
+      alt = ModRequirement::RightSide;
+    else if (tok == L"SHIFT")
+      shift = ModRequirement::EitherSide;
+    else if (tok == L"LSHIFT")
+      shift = ModRequirement::LeftSide;
+    else if (tok == L"RSHIFT")
+      shift = ModRequirement::RightSide;
+    else if (tok == L"WIN")
+      win = ModRequirement::EitherSide;
+    else if (tok == L"LWIN")
+      win = ModRequirement::LeftSide;
+    else if (tok == L"RWIN")
+      win = ModRequirement::RightSide;
+  }
+
+  return RequirementSatisfied(ctrl, KeyIsDown(VK_LCONTROL),
+                              KeyIsDown(VK_RCONTROL)) &&
+         RequirementSatisfied(alt, KeyIsDown(VK_LMENU), KeyIsDown(VK_RMENU)) &&
+         RequirementSatisfied(shift, KeyIsDown(VK_LSHIFT),
+                              KeyIsDown(VK_RSHIFT)) &&
+         RequirementSatisfied(win, KeyIsDown(VK_LWIN), KeyIsDown(VK_RWIN));
 }
 
 bool IsActiveDoubleAltHotkey() {
@@ -490,95 +582,126 @@ static bool IsOnProhibitedWindow() {
 }
 
 // ---------------------------------------------------------------------------
-// Check all registered hotkeys against the pressed key combination
+// Evaluate a single already-matched hotkey (window filter + region/anchor) and,
+// when it qualifies, mark it active. Returns true when the caller should stop
+// scanning and report an immediate match; plain matches set |foundOne| instead.
+// ---------------------------------------------------------------------------
+static bool ActivateHotkeyCandidate(size_t i, bool &foundOne) {
+  const Hotkey &hk = hotkeys[i];
+  HWND hwnd = ResolveTargetWindow(hk);
+
+  // Match window filter
+  if (hk.matchWindowBy.length() > 1) {
+    wchar_t windowInfo[1024] = {};
+    GetWindowInfoByType(hwnd, hk.matchWindowBy, windowInfo, 1024);
+
+    bool matched = IsValidRegexMatch(windowInfo, hk.matchWindowText);
+    if (!matched)
+      return false;
+
+    if (hk.anchorType == 0) {
+      hotkeyCorrectName = true;
+      SetAsActiveHotkey(i, hwnd);
+      return true;
+    }
+  }
+
+  // Region / anchor check
+  if (hk.anchorType > 0) {
+    POINT lpPoint;
+    GetCursorPos(&lpPoint);
+    RECT lpRect;
+
+    if (hk.regionOnScreen) {
+      HWND desktop = GetDesktopWindow();
+      GetWindowRect(desktop, &lpRect);
+      while (lpPoint.x >= lpRect.right)
+        lpPoint.x -= lpRect.right;
+      while (lpPoint.y >= lpRect.bottom)
+        lpPoint.y -= lpRect.bottom;
+    } else {
+      GetWindowRect(hwnd, &lpRect);
+    }
+
+    int yTop = lpPoint.y - lpRect.top;
+    int yBottom = lpPoint.y - lpRect.bottom;
+    int xLeft = lpPoint.x - lpRect.left;
+    int xRight = lpPoint.x - lpRect.right;
+    int width = lpRect.right - lpRect.left;
+    int height = lpRect.bottom - lpRect.top;
+
+    int x = 0, y = 0;
+    switch (hk.anchorType) {
+    case 1:
+      x = xLeft;
+      y = yTop;
+      break;
+    case 2:
+      x = xRight;
+      y = yTop;
+      break;
+    case 3:
+      x = xLeft;
+      y = yBottom;
+      break;
+    case 4:
+      x = xRight;
+      y = yBottom;
+      break;
+    }
+    x = abs(x);
+    y = abs(y);
+
+    if (hk.regionAsPercentage && width > 0 && height > 0) {
+      x = static_cast<int>((static_cast<double>(x) / width) * 100);
+      y = static_cast<int>((static_cast<double>(y) / height) * 100);
+    }
+
+    if (x >= hk.regionX1 && x <= hk.regionX2 && y >= hk.regionY1 &&
+        y <= hk.regionY2) {
+      hotkeyCorrectName = true;
+      SetAsActiveHotkey(i, hwnd);
+      return true;
+    }
+    return false;
+  }
+
+  SetAsActiveHotkey(i, hwnd);
+  foundOne = true;
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Check all registered hotkeys against an exact pressed-hotkey string. Used by
+// the special bindings (mouse buttons, Double Alt, standalone modifier keys)
+// whose hotkey strings carry no modifier prefix.
 // ---------------------------------------------------------------------------
 static bool CheckForPressedHotKey(const std::wstring &pressedHotkey) {
   bool foundOne = false;
   for (size_t i = 0, e = hotkeys.size(); i != e; ++i) {
+    if (hotkeys[i].hotkey != pressedHotkey)
+      continue;
+    if (ActivateHotkeyCandidate(i, foundOne))
+      return true;
+  }
+  return foundOne;
+}
+
+// ---------------------------------------------------------------------------
+// Check registered hotkeys against a pressed key + the live modifier state.
+// A hotkey matches when its key portion equals |keyName| and the physical
+// Ctrl/Alt/Shift/Win state satisfies its (possibly side-specific) modifiers.
+// ---------------------------------------------------------------------------
+static bool CheckForPressedKeyboardHotkey(const std::wstring &keyName) {
+  bool foundOne = false;
+  for (size_t i = 0, e = hotkeys.size(); i != e; ++i) {
     const Hotkey &hk = hotkeys[i];
-    if (hk.hotkey != pressedHotkey)
+    if (HotkeyKeyPortion(hk.hotkey) != keyName)
       continue;
-
-    HWND hwnd = ResolveTargetWindow(hk);
-
-    // Match window filter
-    if (hk.matchWindowBy.length() > 1) {
-      wchar_t windowInfo[1024] = {};
-      GetWindowInfoByType(hwnd, hk.matchWindowBy, windowInfo, 1024);
-
-      bool matched = IsValidRegexMatch(windowInfo, hk.matchWindowText);
-      if (!matched)
-        continue;
-
-      if (hk.anchorType == 0) {
-        hotkeyCorrectName = true;
-        SetAsActiveHotkey(i, hwnd);
-        return true;
-      }
-    }
-
-    // Region / anchor check
-    if (hk.anchorType > 0) {
-      POINT lpPoint;
-      GetCursorPos(&lpPoint);
-      RECT lpRect;
-
-      if (hk.regionOnScreen) {
-        HWND desktop = GetDesktopWindow();
-        GetWindowRect(desktop, &lpRect);
-        while (lpPoint.x >= lpRect.right)
-          lpPoint.x -= lpRect.right;
-        while (lpPoint.y >= lpRect.bottom)
-          lpPoint.y -= lpRect.bottom;
-      } else {
-        GetWindowRect(hwnd, &lpRect);
-      }
-
-      int yTop = lpPoint.y - lpRect.top;
-      int yBottom = lpPoint.y - lpRect.bottom;
-      int xLeft = lpPoint.x - lpRect.left;
-      int xRight = lpPoint.x - lpRect.right;
-      int width = lpRect.right - lpRect.left;
-      int height = lpRect.bottom - lpRect.top;
-
-      int x = 0, y = 0;
-      switch (hk.anchorType) {
-      case 1:
-        x = xLeft;
-        y = yTop;
-        break;
-      case 2:
-        x = xRight;
-        y = yTop;
-        break;
-      case 3:
-        x = xLeft;
-        y = yBottom;
-        break;
-      case 4:
-        x = xRight;
-        y = yBottom;
-        break;
-      }
-      x = abs(x);
-      y = abs(y);
-
-      if (hk.regionAsPercentage && width > 0 && height > 0) {
-        x = static_cast<int>((static_cast<double>(x) / width) * 100);
-        y = static_cast<int>((static_cast<double>(y) / height) * 100);
-      }
-
-      if (x >= hk.regionX1 && x <= hk.regionX2 && y >= hk.regionY1 &&
-          y <= hk.regionY2) {
-        hotkeyCorrectName = true;
-        SetAsActiveHotkey(i, hwnd);
-        return true;
-      }
+    if (!HotkeyModifiersMatch(hk))
       continue;
-    }
-
-    SetAsActiveHotkey(i, hwnd);
-    foundOne = true;
+    if (ActivateHotkeyCandidate(i, foundOne))
+      return true;
   }
   return foundOne;
 }
@@ -804,6 +927,86 @@ static bool TryHandleDoubleAltGesture(WPARAM wParam,
 }
 
 // ---------------------------------------------------------------------------
+// Standalone modifier hotkeys (Left/Right Ctrl/Alt/Win pressed on their own).
+// Each physical modifier key can be bound as a hotkey in its own right; the
+// press is intercepted before the generic combo path so the bare key press
+// itself becomes the trigger.
+// ---------------------------------------------------------------------------
+namespace {
+struct StandaloneModifierHotkey {
+  DWORD vkCode;
+  const wchar_t *name;
+};
+constexpr StandaloneModifierHotkey kStandaloneModifierHotkeys[] = {
+    {VK_LMENU, L"LEFTALT"},        {VK_RMENU, L"RIGHTALT"},
+    {VK_LCONTROL, L"LEFTCONTROL"}, {VK_RCONTROL, L"RIGHTCONTROL"},
+    {VK_LSHIFT, L"LEFTSHIFT"},     {VK_RSHIFT, L"RIGHTSHIFT"},
+    {VK_LWIN, L"LEFTWIN"},         {VK_RWIN, L"RIGHTWIN"},
+};
+
+// Returns true if the event belongs to a registered standalone modifier hotkey
+// (whether it triggered, was suppressed, or was passed through). |result| holds
+// the value the hook should return in that case.
+bool TryHandleStandaloneModifierHotkey(int nCode, WPARAM wParam, LPARAM lParam,
+                                       const KBDLLHOOKSTRUCT &keyInfo,
+                                       LRESULT &result) {
+  const wchar_t *boundName = nullptr;
+  for (const auto &binding : kStandaloneModifierHotkeys) {
+    if (keyInfo.vkCode == binding.vkCode) {
+      boundName = binding.name;
+      break;
+    }
+  }
+  if (boundName == nullptr)
+    return false;
+
+  const std::wstring name(boundName);
+  if (!HasRegisteredHotkey(name))
+    return false;
+
+  const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+  const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
+
+  if (keyDown) {
+    if (!hotkeyPressed) {
+      if (CheckForPressedHotKey(name)) {
+        if (!ShouldSuppressHotkey()) {
+          const Hotkey *activeHotkey = GetActiveHotkey();
+          if (activeHotkey != nullptr) {
+            HotKeyEvent(activeHotkey->name, "pressed");
+            result = -1;
+            return true;
+          }
+        }
+        ResetActiveHotkeyState();
+      }
+    } else {
+      const Hotkey *activeHotkey = GetActiveHotkey();
+      if (activeHotkey != nullptr && activeHotkey->hotkey == name) {
+        result = -1;
+        return true;
+      }
+    }
+  } else if (keyUp) {
+    if (hotkeyPressed) {
+      const Hotkey *activeHotkey = GetActiveHotkey();
+      if (activeHotkey != nullptr && activeHotkey->hotkey == name) {
+        HotKeyEvent(activeHotkey->name, "released");
+        ResetActiveHotkeyState();
+        result = -1;
+        return true;
+      }
+    }
+  }
+
+  // The key belongs to a standalone binding but did not trigger this time; let
+  // it pass through so it still behaves as a normal modifier.
+  result = CallNextHookEx(nullptr, nCode, wParam, lParam);
+  return true;
+}
+} // namespace
+
+// ---------------------------------------------------------------------------
 // Keyboard hook callback
 // ---------------------------------------------------------------------------
 LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -819,7 +1022,6 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
 
   const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
-  const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
 
   // Feed the Text Snippets buffer with real typing (skips command chords and
   // the insert-snippet hotkey combo internally). Runs before hotkey handling so
@@ -827,71 +1029,10 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
   if (keyDown)
     RecordSnippetKey(wParam, keyInfo);
 
-  if (keyInfo.vkCode == VK_RMENU && HasRegisteredHotkey(L"RIGHTALT")) {
-    if (keyDown) {
-      if (!hotkeyPressed) {
-        if (CheckForPressedHotKey(L"RIGHTALT")) {
-          if (!ShouldSuppressHotkey()) {
-            const Hotkey *activeHotkey = GetActiveHotkey();
-            if (activeHotkey != nullptr) {
-              HotKeyEvent(activeHotkey->name, "pressed");
-              return -1;
-            }
-          }
-          ResetActiveHotkeyState();
-        }
-      } else {
-        const Hotkey *activeHotkey = GetActiveHotkey();
-        if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTALT") {
-          return -1;
-        }
-      }
-    } else if (keyUp) {
-      if (hotkeyPressed) {
-        const Hotkey *activeHotkey = GetActiveHotkey();
-        if (activeHotkey != nullptr && activeHotkey->hotkey == L"RIGHTALT") {
-          HotKeyEvent(activeHotkey->name, "released");
-          ResetActiveHotkeyState();
-          return -1;
-        }
-      }
-    }
-    return CallNextHookEx(nullptr, nCode, wParam, lParam);
-  }
-
-  if (keyInfo.vkCode == VK_RCONTROL && HasRegisteredHotkey(L"RIGHTCONTROL")) {
-    if (keyDown) {
-      if (!hotkeyPressed) {
-        if (CheckForPressedHotKey(L"RIGHTCONTROL")) {
-          if (!ShouldSuppressHotkey()) {
-            const Hotkey *activeHotkey = GetActiveHotkey();
-            if (activeHotkey != nullptr) {
-              HotKeyEvent(activeHotkey->name, "pressed");
-              return -1;
-            }
-          }
-          ResetActiveHotkeyState();
-        }
-      } else {
-        const Hotkey *activeHotkey = GetActiveHotkey();
-        if (activeHotkey != nullptr &&
-            activeHotkey->hotkey == L"RIGHTCONTROL") {
-          return -1;
-        }
-      }
-    } else if (keyUp) {
-      if (hotkeyPressed) {
-        const Hotkey *activeHotkey = GetActiveHotkey();
-        if (activeHotkey != nullptr &&
-            activeHotkey->hotkey == L"RIGHTCONTROL") {
-          HotKeyEvent(activeHotkey->name, "released");
-          ResetActiveHotkeyState();
-          return -1;
-        }
-      }
-    }
-    return CallNextHookEx(nullptr, nCode, wParam, lParam);
-  }
+  LRESULT standaloneResult = 0;
+  if (TryHandleStandaloneModifierHotkey(nCode, wParam, lParam, keyInfo,
+                                        standaloneResult))
+    return standaloneResult;
 
   LRESULT doubleAltResult = 0;
   if (TryHandleDoubleAltGesture(wParam, keyInfo, doubleAltResult))
@@ -903,17 +1044,6 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
   }
 
   if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !hotkeyPressed) {
-    std::wstring pressedHotkey;
-    if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
-      pressedHotkey.append(L"CTRL+");
-    if (GetAsyncKeyState(VK_MENU) & 0x8000)
-      pressedHotkey.append(L"ALT+");
-    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-      pressedHotkey.append(L"SHIFT+");
-    if ((GetAsyncKeyState(VK_LWIN) & 0x8000) ||
-        (GetAsyncKeyState(VK_RWIN) & 0x8000))
-      pressedHotkey.append(L"WIN+");
-
     wchar_t buffer[32] = {};
     UINT key = (keyInfo.scanCode << 16);
     GetKeyNameText(static_cast<LONG>(key), buffer, 32);
@@ -925,9 +1055,10 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
                    });
     keyName = NormalizePressedKeyName(keyInfo.vkCode, std::move(keyName));
 
-    pressedHotkey.append(keyName);
-
-    if (CheckForPressedHotKey(pressedHotkey)) {
+    // Match on the pressed key plus the live modifier state. This honours
+    // per-side (Left/Right) Ctrl/Alt/Win requirements while a plain modifier
+    // token still matches either side.
+    if (CheckForPressedKeyboardHotkey(keyName)) {
       if (ShouldSuppressHotkey())
         return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
@@ -940,7 +1071,7 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
       if (ActiveHotkeyUsesWindowsKey())
         NotifySystemWindowsHotkeyUsed();
 
-      hotkeyName = pressedHotkey;
+      hotkeyName = activeHotkey->hotkey;
       HotKeyEvent(activeHotkey->name, "pressedKbd");
       return -1;
     }
