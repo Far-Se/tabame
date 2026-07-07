@@ -11,7 +11,7 @@ class KeystrokesButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "Keystroke & Click Visualizer (for screencasts)",
+      message: "Input Visualizer",
       icon: const Icon(Icons.keyboard_alt_outlined),
       onTap: () {
         final int windowHwnd = Win32.findWindow("Tabame Keystrokes");

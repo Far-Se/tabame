@@ -11,7 +11,7 @@ class PresentModeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "Presentation Toolkit (spotlight / magnifier / ruler)",
+      message: "Presentation Toolkit",
       icon: const Icon(Icons.co_present_outlined),
       onTap: () {
         final int windowHwnd = Win32.findWindow("Tabame Present Mode");

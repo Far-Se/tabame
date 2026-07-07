@@ -44,6 +44,7 @@ import '../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../widgets/itzy/quickmenu/button_ocr.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
+import '../../widgets/itzy/quickmenu/button_plugin_manager.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
@@ -409,5 +410,9 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "YtDlpButton": QuickAction(
     icon: Icons.download_for_offline_outlined,
     widget: () => const YtDlpButton(),
+  ),
+  "PluginManagerButton": QuickAction(
+    icon: Icons.extension_outlined,
+    widget: () => const PluginManagerButton(),
   ),
 };

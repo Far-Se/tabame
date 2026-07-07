@@ -19,7 +19,7 @@ class TrktivityTodayButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ModalButton(
-      actionName: "Today's Activity (Trktivity)",
+      actionName: "Today's Trktivity",
       heightFactor: 0.9,
       icon: const Icon(Icons.insights_outlined),
       child: () => const _TrktivityTodayPanel(),
@@ -289,7 +289,8 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
               children: <Widget>[
                 Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 Text(label,
-                    style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
               ],
             ),
           ],
@@ -311,8 +312,7 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
           children: <Widget>[
             Text("Focus balance", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
             const Spacer(),
-            Text("$pct% active",
-                style: TextStyle(fontWeight: FontWeight.w700, color: scheme.primary)),
+            Text("$pct% active", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.primary)),
           ],
         ),
         const SizedBox(height: 6),
@@ -320,8 +320,7 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
           borderRadius: BorderRadius.circular(4),
           child: Row(
             children: <Widget>[
-              if (active > 0)
-                Expanded(flex: active, child: Container(height: 8, color: scheme.primary)),
+              if (active > 0) Expanded(flex: active, child: Container(height: 8, color: scheme.primary)),
               if (idle > 0)
                 Expanded(flex: idle, child: Container(height: 8, color: scheme.onSurface.withValues(alpha: 0.25))),
             ],
@@ -330,7 +329,8 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text("${_fmtDuration(active)} active  ·  ${_fmtDuration(idle)} idle",
-              style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
+              style:
+                  TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
         ),
       ],
     );
@@ -379,7 +379,8 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text("${_fmtDuration(dist)} distracting",
-                style: TextStyle(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6), fontWeight: FontWeight.w600)),
           ),
       ],
     );
@@ -398,7 +399,9 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
             children: <Widget>[
               Container(width: 8, height: 8, decoration: BoxDecoration(color: catColor, shape: BoxShape.circle)),
               const SizedBox(width: 8),
-              Expanded(child: Text(exe, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(
+                  child:
+                      Text(exe, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
               Text(_fmtDuration(secs), style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
             ],
           ),
@@ -438,8 +441,7 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text("Budgets & categories",
-            style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+        Text("Budgets & categories", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
         const SizedBox(height: 4),
         Text(
           "Match an app by its executable name (e.g. chrome.exe). Set a daily minute "
@@ -507,7 +509,10 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: _catColors[c], shape: BoxShape.circle)),
+                          Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(color: _catColors[c], shape: BoxShape.circle)),
                           const SizedBox(width: 5),
                           Text(c.name, style: const TextStyle(fontSize: 12)),
                         ],
@@ -612,9 +617,8 @@ class _HistoryChart extends StatelessWidget {
                     BarChartRodStackItem(active, active + idle, idleColor),
                   ],
                   color: Colors.transparent,
-                  borderSide: isSel
-                      ? BorderSide(color: scheme.onSurface.withValues(alpha: 0.7), width: 1.5)
-                      : BorderSide.none,
+                  borderSide:
+                      isSel ? BorderSide(color: scheme.onSurface.withValues(alpha: 0.7), width: 1.5) : BorderSide.none,
                 ),
               ],
             );

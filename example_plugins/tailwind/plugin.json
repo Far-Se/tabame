@@ -1,0 +1,9 @@
+{
+  "id": "tailwind",
+  "name": "Tailwind CSS",
+  "keyword": "tw",
+  "runtime": "node",
+  "entry": "main.js",
+  "icon": "palette",
+  "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs."
+}

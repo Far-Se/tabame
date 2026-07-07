@@ -48,6 +48,12 @@ import 'launcher/launcher_design.dart';
 
 import 'launcher/launcher_design_builder.dart';
 import 'launcher/core/launcher_result_executor.dart';
+import 'launcher/plugins/plugin_actions_panel.dart';
+import 'launcher/plugins/plugin_host.dart';
+import 'launcher/plugins/plugin_manifest.dart';
+import 'launcher/plugins/plugin_protocol.dart';
+import 'launcher/plugins/plugin_registry.dart';
+import 'launcher/plugins/plugin_view.dart';
 import 'launcher/services/launcher_app_catalog_service.dart';
 import 'launcher/services/windows_terminal_service.dart';
 
@@ -161,6 +167,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   bool _isSearching = false;
   bool _canConsumePendingInput = false;
   LauncherSearchMode _searchMode = LauncherSearchMode.mixed;
+
+  // ── Plugin runtime ─────────────────────────────────────────────────────────
+  // When a plugin keyword is active, the launcher hands its results area over to
+  // an external script: `_pluginFrame` holds the latest JSON-described UI and
+  // `_activePlugin` the running manifest. `_results` is empty in this mode.
+  late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame);
+  PluginManifest? _activePlugin;
+  PluginRenderFrame? _pluginFrame;
+  bool _pluginWindowWidened = false;
+  Timer? _pluginWidthCollapseTimer;
   String? _pendingLauncherQuickAction;
   int _pendingLauncherQuickActionAttempt = 0;
 
@@ -368,6 +384,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _openActionsForActiveResult() {
+    if (_activePlugin != null) {
+      _openPluginActions();
+      return;
+    }
     if (_results.isEmpty) return;
 
     final int idx = _activeIndexNotifier.value.clamp(0, _results.length - 1);
@@ -385,6 +405,238 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     );
   }
 
+  // ── Plugin runtime ─────────────────────────────────────────────────────────
+
+  /// Wider launcher window used while a plugin shows a split preview pane.
+  double get _pluginPreviewWidth => Boxes.launcherSizeWidth > 1080 ? Boxes.launcherSizeWidth : 1080;
+
+  /// Enters (or updates) a plugin's live mode for [query]. Starts the process on
+  /// first entry, otherwise just forwards the new query text.
+  void _routeToPlugin(PluginManifest plugin, String query) {
+    _searchDebounce?.cancel();
+    final String pluginQuery = PluginRegistry.queryAfterKeyword(query, plugin);
+    final bool switching = _activePlugin?.id != plugin.id;
+    _activePlugin = plugin;
+
+    if (switching) {
+      setState(() {
+        _searchMode = LauncherSearchMode.mixed;
+        _isSearching = true;
+        _results = const <LauncherSearchResultItem>[];
+        _pluginFrame = null;
+        _activeIndexNotifier.value = 0;
+      });
+      unawaited(_pluginHost.activate(plugin, initialQuery: pluginQuery));
+    } else {
+      _pluginHost.sendQuery(pluginQuery);
+    }
+  }
+
+  /// Leaves plugin mode: stops the process and restores the normal layout.
+  void _deactivatePlugin() {
+    if (_activePlugin == null && _pluginFrame == null) return;
+    _activePlugin = null;
+    unawaited(_pluginHost.deactivate());
+    _restorePluginWindowWidth();
+    if (mounted) setState(() => _pluginFrame = null);
+  }
+
+  /// Exits the plugin and clears the search back to the launcher home.
+  void _exitPlugin() {
+    _deactivatePlugin();
+    _controller.text = '';
+    _controller.selection = const TextSelection.collapsed(offset: 0);
+    _onSearchChanged('');
+  }
+
+  /// Applies a render frame pushed by the plugin process.
+  void _onPluginFrame(PluginRenderFrame frame) {
+    if (!mounted || _activePlugin == null) return;
+    setState(() {
+      _pluginFrame = frame;
+      _isSearching = frame.loading;
+      final int count = frame.items.length;
+      if (count == 0) {
+        _activeIndexNotifier.value = 0;
+      } else if (_activeIndexNotifier.value >= count) {
+        _activeIndexNotifier.value = count - 1;
+      }
+    });
+    _applyPluginWindowWidth(frame.hasPreview);
+  }
+
+  void _applyPluginWindowWidth(bool wide) {
+    if (wide) {
+      // A wide frame arrived: cancel any pending collapse so a transient narrow
+      // frame (loading / detail) that's immediately followed by a wide one never
+      // shrinks the window.
+      _pluginWidthCollapseTimer?.cancel();
+      _pluginWidthCollapseTimer = null;
+      if (_pluginWindowWidened) return;
+      _pluginWindowWidened = true;
+      WindowManager.instance.setSize(Size(_pluginPreviewWidth, Globals.launcherSize.height)).then((_) async {
+        WinUtils.fixDrawBug();
+        Win32.setCenter(useMouse: true);
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+
+    // Narrow frame: debounce the collapse. Each keystroke makes the plugin emit
+    // an intermediate loading frame (no preview) before the results frame (with
+    // preview); collapsing immediately would resize to default and back on every
+    // letter, causing jitter. Only shrink once the plugin has stayed narrow.
+    if (!_pluginWindowWidened) return;
+    _pluginWidthCollapseTimer?.cancel();
+    _pluginWidthCollapseTimer = Timer(const Duration(milliseconds: 400), () {
+      _pluginWidthCollapseTimer = null;
+      if (mounted) _restorePluginWindowWidth();
+    });
+  }
+
+  void _restorePluginWindowWidth() {
+    _pluginWidthCollapseTimer?.cancel();
+    _pluginWidthCollapseTimer = null;
+    if (!_pluginWindowWidened) return;
+    _pluginWindowWidened = false;
+    WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height)).then((_) async {
+      WinUtils.fixDrawBug();
+      Win32.setCenter(useMouse: true);
+      if (mounted) setState(() {});
+    });
+  }
+
+  /// Moves the plugin selection and notifies the script (drives the preview).
+  void _setPluginSelection(int index) {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null || index < 0 || index >= frame.items.length) return;
+    _activeIndexNotifier.value = index;
+    _pluginHost.sendSelect(frame.items[index].id);
+  }
+
+  /// Fires the default action for the selected plugin item (Enter / tap).
+  void _submitPluginItem() {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null || frame.items.isEmpty) return;
+    final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
+    _pluginHost.sendAction(frame.items[idx].id, 'default');
+  }
+
+  void _openPluginActions() {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null || frame.items.isEmpty) return;
+    final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
+    final PluginItem item = frame.items[idx];
+    if (item.actions.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      builder: (_) => PluginActionsPanel(
+        item: item,
+        onSelected: (String actionId) => _pluginHost.sendAction(item.id, actionId),
+      ),
+    );
+  }
+
+  /// Handles key events while a plugin owns the launcher. Returns
+  /// [KeyEventResult.ignored] to let the normal handler run.
+  KeyEventResult _handlePluginKey(KeyEvent event) {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null) {
+      // Process launched but no frame yet — still swallow Escape so it exits.
+      if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyDownEvent) {
+        _exitPlugin();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.keyK &&
+        HardwareKeyboard.instance.isControlPressed) {
+      _openPluginActions();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent) _exitPlugin();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      if (event is KeyDownEvent) _submitPluginItem();
+      return KeyEventResult.handled;
+    }
+
+    final int count = frame.items.length;
+    if (count == 0) return KeyEventResult.ignored;
+
+    final bool isGrid = frame.view == PluginViewType.grid;
+    final int cols = isGrid ? frame.gridColumns : 1;
+    int index = _activeIndexNotifier.value.clamp(0, count - 1);
+    final LogicalKeyboardKey key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      index = isGrid ? (index + cols).clamp(0, count - 1) : (index + 1) % count;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      index = isGrid ? (index - cols < 0 ? index : index - cols) : (index - 1 + count) % count;
+    } else if (isGrid && key == LogicalKeyboardKey.arrowRight) {
+      index = (index + 1).clamp(0, count - 1);
+    } else if (isGrid && key == LogicalKeyboardKey.arrowLeft) {
+      index = (index - 1).clamp(0, count - 1);
+    } else {
+      return KeyEventResult.ignored;
+    }
+
+    _setPluginSelection(index);
+    return KeyEventResult.handled;
+  }
+
+  Widget _buildPluginBody() {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null) {
+      return const Center(
+        child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    return ValueListenableBuilder<int>(
+      valueListenable: _activeIndexNotifier,
+      builder: (BuildContext context, int activeIndex, Widget? _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: _isRepeatingKey,
+          builder: (BuildContext context, bool isRepeating, Widget? __) {
+            return PluginView(
+              frame: frame,
+              activeIndex: activeIndex,
+              isRepeating: isRepeating,
+              onTapItem: (int i) {
+                _setPluginSelection(i);
+                _submitPluginItem();
+              },
+              onHoverItem: _setPluginSelection,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Launcher home shortcuts plus a discovery hint per installed plugin.
+  List<LauncherSearchResultItem> _shortcutResults() {
+    if (PluginRegistry.manifests.isEmpty) return _launcherShortcuts;
+    return <LauncherSearchResultItem>[
+      ..._launcherShortcuts,
+      for (final PluginManifest m in PluginRegistry.manifests)
+        if (m.enabled)
+          LauncherSearchResultItem.shortcut(LauncherShortcut(
+          label: m.keyword,
+          caption: m.name,
+          prefix: '${m.keyword} ',
+          icon: Icons.extension_rounded,
+        )),
+    ];
+  }
+
   void _openLauncherPanel(BuildContext context, Widget child) {
     showQuickMenuModal(
       context: context,
@@ -399,6 +651,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      // A running plugin owns navigation/selection/actions.
+      if (_activePlugin != null) {
+        final KeyEventResult pluginResult = _handlePluginKey(event);
+        if (pluginResult != KeyEventResult.ignored) return pluginResult;
+      }
       // Escape: go back to quickmenu
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyK &&
@@ -491,6 +748,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     super.initState();
     QuickMenuFunctions.addListener(this);
     _design = user.launcherDesign;
+    // Rescan the plugins folder so freshly-dropped plugins are available without
+    // an app restart. If a keyword becomes matchable after the scan, re-run the
+    // current query so it activates.
+    unawaited(PluginRegistry.load().then((_) {
+      if (!mounted || _activePlugin != null) return;
+      if (PluginRegistry.matchKeyword(_controller.text) != null) _onSearchChanged(_controller.text);
+    }));
     _controller.text = user.launcherSearchText;
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
@@ -534,6 +798,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
+    _pluginHost.dispose();
+    _restorePluginWindowWidth();
     _resultKeys.clear();
     _quickActionKeys.clear();
 
@@ -552,6 +818,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.clearQuickMenuSearchInput();
 
     _searchDebounce?.cancel();
+    _pluginWidthCollapseTimer?.cancel();
     _quickActionSplashTimer?.cancel();
     _keyRepeatTimer?.cancel();
     _windowRefreshTimer?.cancel();
@@ -827,6 +1094,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _onSearchChanged(String query) {
     user.launcherSearchText = query;
+
+    // Plugin routing takes precedence: a keyword owns the launcher until the
+    // query leaves it. Leaving the keyword tears the plugin down.
+    final PluginManifest? plugin = PluginRegistry.matchKeyword(query);
+    if (plugin != null) {
+      _routeToPlugin(plugin, query);
+      return;
+    }
+    if (_activePlugin != null) _deactivatePlugin();
+
     _scrollResultsToTopForQuery(query);
     _searchDebounce?.cancel();
 
@@ -854,7 +1131,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _searchMode = searchMode;
         _isSearching = false;
       });
-      _setResults(_launcherShortcuts, isSearching: false);
+      _setResults(_shortcutResults(), isSearching: false);
       return;
     }
     final Duration debounce = _debounceForMode(searchMode, normalizedQuery);
@@ -1681,9 +1958,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     // Skip translating into the explicit source language (no-op identity).
-    final List<String> targets = parsed.targets
-        .where((String target) => parsed.from == 'auto' || target != parsed.from)
-        .toList(growable: false);
+    final List<String> targets =
+        parsed.targets.where((String target) => parsed.from == 'auto' || target != parsed.from).toList(growable: false);
     if (targets.isEmpty) {
       context.setResults(const <LauncherSearchResultItem>[], isSearching: false);
       return;
@@ -2520,76 +2796,80 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (!hasInput && _results.isNotEmpty) _buildResultsHeaderWithBadges(accent, onSurface),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: _activeIndexNotifier,
-                      builder: (BuildContext context, int activeIndex, Widget? child) {
-                        return ValueListenableBuilder<bool>(
-                          valueListenable: _isRepeatingKey,
-                          builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                            return ListView.builder(
-                              controller: _scrollController,
-                              shrinkWrap: true,
-                              itemCount: _results.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final LauncherSearchResultItem result = _results[index];
-                                final bool isSelected = index == activeIndex;
-                                late final Widget resultWidget;
-                                if (result.isShortcut) {
-                                  resultWidget = _buildShortcutResult(
-                                      context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                } else if (result.isFile) {
-                                  resultWidget = _buildFileResult(
-                                      context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
-                                } else if (result.isApp) {
-                                  resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
-                                      index, isSelected, isRepeatingKey);
-                                } else if (result.isWindow) {
-                                  resultWidget = _buildWindowResult(
-                                      context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                } else if (result.isBrowserTab) {
-                                  resultWidget = _buildBrowserTabResult(
-                                      context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
-                                } else if (result.isBookmark) {
-                                  resultWidget = _buildBookmarkResult(
-                                      context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isNotion) {
-                                  resultWidget = _buildNotionResult(
-                                      context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isObsidian) {
-                                  resultWidget = _buildObsidianResult(
-                                      context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isSteam) {
-                                  resultWidget = _buildSteamResult(
-                                      context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isInfo) {
-                                  resultWidget = _buildInfoResult(
-                                      context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                                } else {
-                                  resultWidget = _buildQuickActionResult(
-                                      context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                                }
-                                return KeyedSubtree(
-                                  key: _resultKeys[_resultKeyId(result, index)],
-                                  child: MouseRegion(
-                                    onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
-                                    child: Stack(
-                                      alignment: Alignment.centerRight,
-                                      children: <Widget>[resultWidget],
+                if (_activePlugin == null && !hasInput && _results.isNotEmpty)
+                  _buildResultsHeaderWithBadges(accent, onSurface),
+                if (_activePlugin != null)
+                  Expanded(child: _buildPluginBody())
+                else
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _activeIndexNotifier,
+                        builder: (BuildContext context, int activeIndex, Widget? child) {
+                          return ValueListenableBuilder<bool>(
+                            valueListenable: _isRepeatingKey,
+                            builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                              return ListView.builder(
+                                controller: _scrollController,
+                                shrinkWrap: true,
+                                itemCount: _results.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final LauncherSearchResultItem result = _results[index];
+                                  final bool isSelected = index == activeIndex;
+                                  late final Widget resultWidget;
+                                  if (result.isShortcut) {
+                                    resultWidget = _buildShortcutResult(
+                                        context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isFile) {
+                                    resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
+                                        index, isSelected, isRepeatingKey);
+                                  } else if (result.isApp) {
+                                    resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
+                                        index, isSelected, isRepeatingKey);
+                                  } else if (result.isWindow) {
+                                    resultWidget = _buildWindowResult(
+                                        context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isBrowserTab) {
+                                    resultWidget = _buildBrowserTabResult(
+                                        context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isBookmark) {
+                                    resultWidget = _buildBookmarkResult(
+                                        context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isNotion) {
+                                    resultWidget = _buildNotionResult(
+                                        context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isObsidian) {
+                                    resultWidget = _buildObsidianResult(
+                                        context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isSteam) {
+                                    resultWidget = _buildSteamResult(
+                                        context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
+                                  } else if (result.isInfo) {
+                                    resultWidget = _buildInfoResult(
+                                        context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                                  } else {
+                                    resultWidget = _buildQuickActionResult(
+                                        context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                                  }
+                                  return KeyedSubtree(
+                                    key: _resultKeys[_resultKeyId(result, index)],
+                                    child: MouseRegion(
+                                      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+                                      child: Stack(
+                                        alignment: Alignment.centerRight,
+                                        children: <Widget>[resultWidget],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

@@ -1,0 +1,10 @@
+{
+  "id": "caniuse",
+  "name": "Can I Use",
+  "keyword": "ciu",
+  "description": "Search caniuse.com for web-platform feature browser compatibility",
+  "icon": "globe",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": []
+}

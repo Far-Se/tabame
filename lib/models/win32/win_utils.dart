@@ -277,6 +277,14 @@ class WinUtils {
     return appDataFolder;
   }
 
+  /// Root folder holding user-installed launcher plugins
+  /// (`<root>\plugins\<id>\plugin.json` + the plugin's script files).
+  static String getPluginsFolder() {
+    final String dir = '${WinUtils.getTabameAppDataFolder()}\\plugins';
+    if (!Directory(dir).existsSync()) Directory(dir).createSync(recursive: true);
+    return dir;
+  }
+
   static String getFancyshotFolder() {
     if (user.fancyshotFolder.isEmpty) return '${WinUtils.getTabameAppDataFolder()}\\fancyshot';
     return user.fancyshotFolder;

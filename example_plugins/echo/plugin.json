@@ -1,0 +1,10 @@
+{
+  "id": "echo",
+  "name": "Echo Demo",
+  "keyword": "echo",
+  "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions)",
+  "icon": "extension",
+  "runtime": "python",
+  "entry": "main.py",
+  "args": []
+}

@@ -1,0 +1,10 @@
+{
+  "id": "linear",
+  "name": "Linear",
+  "keyword": "lin",
+  "description": "Create, search and manage Linear issues, projects, docs and notifications",
+  "icon": "list",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": []
+}
