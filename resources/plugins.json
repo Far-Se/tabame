@@ -2,21 +2,6 @@
   "version": 1,
   "plugins": [
     {
-      "id": "echo",
-      "name": "Echo Demo",
-      "keyword": "echo",
-      "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions). A good starting point for writing your own plugin.",
-      "icon": "extension",
-      "runtime": "python",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/echo",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/echo/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/echo/main.py"
-      }
-    },
-    {
       "id": "caniuse",
       "name": "Can I Use",
       "keyword": "ciu",
@@ -62,6 +47,21 @@
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/tailwind/plugin.json",
         "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/tailwind/main.js"
+      }
+    },
+    {
+      "id": "timezone",
+      "name": "Timezone Converter",
+      "keyword": "tz",
+      "description": "Convert times between timezones",
+      "icon": "clock",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/timezone",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/main.py"
       }
     }
   ]
